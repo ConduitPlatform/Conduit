@@ -1,4 +1,4 @@
-import { ConduitModelOptions } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitModelOptions } from '@conduitplatform/grpc-sdk';
 
 export interface IDeclaredSchema {
   _id: string;

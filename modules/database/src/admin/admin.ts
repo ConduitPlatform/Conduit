@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   GrpcError,
   ConduitJson,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';

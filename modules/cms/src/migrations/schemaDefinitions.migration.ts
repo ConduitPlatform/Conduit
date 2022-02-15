@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitSchema, ConduitModelOptions, GrpcError } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, ConduitModelOptions, GrpcError } from '@conduitplatform/grpc-sdk';
 import { _DeclaredSchema } from '../models';
 import { status } from '@grpc/grpc-js';
 import { isNil, merge } from 'lodash';

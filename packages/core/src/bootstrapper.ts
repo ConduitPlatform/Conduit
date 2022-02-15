@@ -1,11 +1,11 @@
 import { App } from './app';
 import { ConduitApp } from './interfaces/ConduitApp';
-import AdminModule from '@conduitplatform/conduit-admin';
-import SecurityModule from '@conduitplatform/conduit-security';
-import ConfigManager from '@conduitplatform/conduit-config';
+import AdminModule from '@conduitplatform/admin';
+import SecurityModule from '@conduitplatform/security';
+import ConfigManager from '@conduitplatform/config';
 import path from 'path';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
-import { ConduitDefaultRouter } from '@conduitplatform/conduit-router';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitDefaultRouter } from '@conduitplatform/router';
 import convict from './utils/config';
 import { Server, ServerCredentials } from '@grpc/grpc-js';
 

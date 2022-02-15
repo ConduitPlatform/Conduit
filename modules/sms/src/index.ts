@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import SmsModule from './Sms';
 
 if (!process.env.CONDUIT_SERVER) {

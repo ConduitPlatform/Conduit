@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   ConduitRouteBuilder,
   ConduitRouteOptions,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 
 export class RouteBuilder extends ConduitRouteBuilder {
   private _path: string;

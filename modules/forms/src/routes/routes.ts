@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { Forms, FormReplies } from '../models';
 import { isNil } from 'lodash';
 import axios from 'axios';

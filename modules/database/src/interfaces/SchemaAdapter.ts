@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 
 export interface SchemaAdapter<T> {
   /**

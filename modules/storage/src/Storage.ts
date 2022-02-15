@@ -3,7 +3,7 @@ import { isNil } from 'lodash';
 import {
   ConduitServiceModule,
   GrpcServer,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import * as path from 'path';
 import { FileHandlers } from './handlers/file';

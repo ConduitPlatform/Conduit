@@ -5,7 +5,7 @@ import {
   ConduitRouteParameters,
   RouteOptionType,
   ConduitString,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { Client } from '../../models';
 
 export function getDeleteSecurityClientRoute() {

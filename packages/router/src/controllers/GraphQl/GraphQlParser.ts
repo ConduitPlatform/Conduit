@@ -1,5 +1,5 @@
 import { ConduitParser } from '../ConduitParser';
-import { ConduitModel } from '@conduitplatform/conduit-commons';
+import { ConduitModel } from '@conduitplatform/commons';
 
 export interface ResolverDefinition {
   [key: string]: {

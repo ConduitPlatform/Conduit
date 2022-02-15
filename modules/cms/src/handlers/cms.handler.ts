@@ -1,8 +1,9 @@
 import ConduitGrpcSdk, {
-  DatabaseProvider, GrpcError,
+  DatabaseProvider,
+  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { _DeclaredSchema } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -11,15 +12,15 @@ export class CmsHandlers {
   private database?: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.initDb(grpcSdk).then(() => {});
+    this.initDb(grpcSdk).then(() => {
+    });
   }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, sort, populate } = call.request.params;
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
-      ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      ?.findOne({ name: schemaName });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -39,13 +40,13 @@ export class CmsHandlers {
       skipNumber,
       limitNumber,
       sort,
-      populate
+      populate,
     );
     const countPromise = this.database?.countDocuments(schemaName, {});
     const [documents, count] = await Promise.all([
       documentsPromise,
       countPromise,
-    ]).catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    ]);
 
     return { documents, count };
   }
@@ -54,15 +55,14 @@ export class CmsHandlers {
     const { id, populate } = call.request.params;
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
-      ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      ?.findOne({ name: schemaName });
+
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    const document = await this.database
-      ?.findOne(schemaName, { _id: id }, undefined, populate)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    const document: { [key: string]: any } | undefined = await this.database
+      ?.findOne(schemaName, { _id: id }, undefined, populate);
     if (!document) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }
@@ -73,14 +73,12 @@ export class CmsHandlers {
     const inputDocument = call.request.params;
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
-      ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      ?.findOne({ name: schemaName });
+
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return this.database
-      ?.create(schemaName, inputDocument)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return this.database!.create(schemaName, inputDocument);
   }
 
   async createManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -88,14 +86,18 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
     const newDocuments = await this.database
       ?.createMany(schemaName, inputDocuments)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return { docs: newDocuments };
   }
@@ -106,17 +108,23 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
     let updatedDocument: any = await this.database
       ?.findByIdAndUpdate(schemaName, id, params)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     updatedDocument = await this.database
       ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return updatedDocument;
   }
@@ -127,17 +135,23 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
     let updatedDocument: any = await this.database
       ?.findByIdAndUpdate(schemaName, id, params, true)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     updatedDocument = await this.database
       ?.findOne(schemaName, { _id: updatedDocument._id }, undefined, params.populate)
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return updatedDocument;
   }
@@ -147,7 +161,9 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -156,7 +172,9 @@ export class CmsHandlers {
     for (const doc of params.docs) {
       const updatedDocument = await this.database
         ?.findByIdAndUpdate(schemaName, doc._id, doc)
-        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
       updatedDocuments.push(updatedDocument);
     }
 
@@ -168,7 +186,9 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -177,7 +197,9 @@ export class CmsHandlers {
     for (const doc of params.docs) {
       const updatedDocument = await this.database
         ?.findByIdAndUpdate(schemaName, doc._id, doc, true)
-        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
       updatedDocuments.push(updatedDocument);
     }
 
@@ -189,14 +211,18 @@ export class CmsHandlers {
     const schemaName = call.request.path.split('/')[2];
     const schema = await _DeclaredSchema.getInstance()
       ?.findOne({ name: schemaName })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (!schema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
     await this.database
       ?.deleteOne(schemaName, { _id: id })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return 'Ok';
   }

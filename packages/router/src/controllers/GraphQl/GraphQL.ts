@@ -5,7 +5,7 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   TYPE,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 import { GraphQlParser, ParseResult } from './GraphQlParser';
 import { findPopulation } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';

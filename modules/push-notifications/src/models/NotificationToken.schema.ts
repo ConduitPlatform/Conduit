@@ -3,7 +3,7 @@ import {
   DatabaseProvider,
   TYPE,
   PlatformTypesEnum,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { User } from './User.model';
 
 const schema = {

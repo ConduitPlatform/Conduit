@@ -8,7 +8,7 @@ import {
   isString,
   isEqual,
 } from 'lodash';
-import { TYPE } from '@conduitplatform/conduit-grpc-sdk';
+import { TYPE } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 

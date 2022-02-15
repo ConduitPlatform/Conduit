@@ -1,7 +1,7 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {

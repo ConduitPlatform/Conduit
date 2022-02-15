@@ -8,7 +8,7 @@ import {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import {

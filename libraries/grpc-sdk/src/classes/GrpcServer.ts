@@ -62,7 +62,7 @@ export class GrpcServer {
   }
 
   async wait(time: number) {
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let timeout = setTimeout(() => {
         clearTimeout(timeout);
         resolve();
@@ -74,7 +74,7 @@ export class GrpcServer {
     if (this.started) {
       this.started = false;
       //gracefully shutdown so that there are no service disruption
-      await new Promise((resolve) => this.grpcServer!.tryShutdown(() => resolve()));
+      await new Promise<void>((resolve) => this.grpcServer!.tryShutdown(() => resolve()));
     }
     await this.createNewServer();
     this._services.forEach((service) => {

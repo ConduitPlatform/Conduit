@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
-import { ConduitCommons } from '@conduitplatform/conduit-commons';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';

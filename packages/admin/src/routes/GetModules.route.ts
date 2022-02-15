@@ -4,7 +4,7 @@ import {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   TYPE,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 
 export function getModulesRoute(conduit: ConduitCommons) {
   return new ConduitRoute(

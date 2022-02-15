@@ -1,4 +1,4 @@
-import { ConduitError } from '@conduitplatform/conduit-commons';
+import { ConduitError } from '@conduitplatform/commons';
 import { ApolloError } from 'apollo-server-express';
 
 export const errorHandler = (err: Error | ConduitError | any) => {

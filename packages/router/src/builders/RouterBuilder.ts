@@ -3,7 +3,7 @@ import { RouteBuilder } from './RouteBuilder';
 import {
   ConduitRouteOptions,
   ConduitRouterBuilder,
-} from '@conduitplatform/conduit-commons';
+} from '@conduitplatform/commons';
 
 export class RouterBuilder extends ConduitRouterBuilder {
   private _path: string;

@@ -1,4 +1,4 @@
-import { GrpcRequest, GrpcResponse } from '@conduitplatform/conduit-grpc-sdk';
+import { GrpcRequest, GrpcResponse } from '@conduitplatform/grpc-sdk';
 
 type Schema = {
   name: string;
