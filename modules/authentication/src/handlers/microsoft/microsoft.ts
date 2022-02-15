@@ -53,6 +53,9 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
         path: '/init/microsoft',
         action: ConduitRouteActions.GET,
         description: `Begins the Microsoft authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
       this.redirect.bind(this),

@@ -82,6 +82,9 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         path: '/init/google',
         action: ConduitRouteActions.GET,
         description: `Begins the Google authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
       this.redirect.bind(this),

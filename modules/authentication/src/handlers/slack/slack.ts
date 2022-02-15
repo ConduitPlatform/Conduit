@@ -61,6 +61,9 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
         path: '/init/slack',
         action: ConduitRouteActions.GET,
         description: `Begins the Slack authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
       this.redirect.bind(this),

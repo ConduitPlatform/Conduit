@@ -77,6 +77,9 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
         path: '/init/twitch',
         description: `Begins the Twitch authentication.`,
         action: ConduitRouteActions.GET,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
       this.redirect.bind(this),

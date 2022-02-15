@@ -61,6 +61,9 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
         path: '/init/figma',
         action: ConduitRouteActions.GET,
         description: `Begins the Figma authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
       this.redirect.bind(this),

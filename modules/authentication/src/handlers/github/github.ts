@@ -48,6 +48,9 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
         path: '/init/github',
         action: ConduitRouteActions.GET,
         description: `Begins the Github authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
       this.redirect.bind(this),
