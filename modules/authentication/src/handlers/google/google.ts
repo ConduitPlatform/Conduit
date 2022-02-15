@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   GrpcError,
   RoutingManager,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 import { GoogleSettings } from './google.settings';

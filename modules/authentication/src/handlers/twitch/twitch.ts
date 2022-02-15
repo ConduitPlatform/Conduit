@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   RoutingManager,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { TwitchUser } from './twitch.user';
 import { TwitchSettings } from './twitch.settings';

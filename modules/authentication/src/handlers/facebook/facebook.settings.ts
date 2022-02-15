@@ -1,5 +1,5 @@
 import { OAuth2Settings } from '../AuthenticationProviders/interfaces/OAuth2Settings';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class FacebookSettings implements OAuth2Settings {
   accessTokenMethod: string;
