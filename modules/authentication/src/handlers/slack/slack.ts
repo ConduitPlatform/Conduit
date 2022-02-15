@@ -84,4 +84,8 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
       this.authorize.bind(this),
     );
   }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+    return Promise.resolve('');
+  }
 }

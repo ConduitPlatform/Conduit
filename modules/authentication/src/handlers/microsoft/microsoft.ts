@@ -75,4 +75,8 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
       this.authorize.bind(this),
     );
   }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+    return Promise.resolve('');
+  }
 }

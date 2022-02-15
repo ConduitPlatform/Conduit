@@ -12,12 +12,14 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { ConfigController } from '../../config/Config.controller';
+import { ConduitScopes } from '../../constants/ConduitScopes';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
   initialized: boolean = false;
+  protected mapScopes: any;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -46,6 +48,24 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     return true;
   }
 
+  checkScopes(scopes: string[]) {
+    if (isNil(scopes)) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Scopes parameter is missing',
+      );
+    }
+    let abortedScopes: string[] = [];
+    for (const scope of scopes)
+      if (ConduitScopes.indexOf(scope) === -1) abortedScopes.push(scope);
+
+    if (abortedScopes.length > 1) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `There is no support for ${abortedScopes} scopes`,
+      );
+    }
+  }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let options: any = {
@@ -54,9 +74,10 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       response_type: this.settings.responseType,
       scope: call.request.params?.scopes,
     };
-
+    this.checkScopes(options.scope);
+    let scopes = await this.constructScopes(options.scope);
     let baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + ',' + options.scope;
+    options['state'] = call.request.context.clientId + ',' + scopes
 
     let url = Object.keys(options).map((k: any) => {
       return k + '=' + options[k];
@@ -83,7 +104,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: state.slice(1,state.length),
+      scopes: state.slice(1, state.length),
     };
     let clientId = state.clientId;
     let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
@@ -167,7 +188,12 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       refreshToken: (refreshToken as any).token,
     };
   }
+
   abstract declareRoutes(): void;
+
   abstract async makeRequest(data: any): Promise<AxiosRequestConfig>;
+
   abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
+
+  abstract async constructScopes(scopes: string[]): Promise<string>;
 }

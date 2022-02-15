@@ -105,4 +105,8 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       this.authorize.bind(this),
     );
   }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+    return Promise.resolve('');
+  }
 }

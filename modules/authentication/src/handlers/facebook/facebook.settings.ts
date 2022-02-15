@@ -24,8 +24,6 @@ export class FacebookSettings implements OAuth2Settings {
     this.authorizeUrl = 'https://www.facebook.com/v11.0/dialog/oauth?';
     this.tokenUrl = 'https://graph.facebook.com/v12.0/oauth/access_token';
     this.accessTokenMethod = 'GET';
-
-
   }
 
 }

@@ -14,9 +14,22 @@ import { FacebookSettings } from './facebook.settings';
 import { FacebookUser } from './facebook.user';
 
 export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk,  private readonly routingManager: RoutingManager ,settings: FacebookSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FacebookSettings) {
     super(grpcSdk, 'facebook', settings);
+    this.mapScopes = {
+      email: 'email',
+      user: 'public_profile',
+    };
+  }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+
+    let constructedScopes = scopes.map((scope: any) => {
+      console.log(this.mapScopes[scope]);
+      return this.mapScopes[scope];
+    }).join(',');
+
+    return constructedScopes;
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: any }): Promise<FacebookUser> {
@@ -27,11 +40,11 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       url: 'https://graph.facebook.com/v5.0/me',
       params: {
         access_token: details.accessToken,
-        fields: "email,id,name"
+        fields: 'email,id,name',
       },
     };
 
-    const facebookResponse: any = await axios(facebookOptions).catch((e:any) => console.log(e.message));
+    const facebookResponse: any = await axios(facebookOptions).catch((e: any) => console.log(e.message));
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
@@ -80,6 +93,9 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
         path: '/init/facebook',
         action: ConduitRouteActions.GET,
         description: `Begins the Facebook authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
       this.redirect.bind(this),

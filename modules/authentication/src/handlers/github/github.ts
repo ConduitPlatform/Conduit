@@ -71,4 +71,8 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
       this.authorize.bind(this),
     );
   }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+    return Promise.resolve('');
+  }
 }
