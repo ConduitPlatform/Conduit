@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-} from '@conduitplatform/conduit-grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
@@ -168,6 +168,6 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     };
   }
   abstract declareRoutes(): void;
-  abstract async makeRequest(data: any): Promise<AxiosRequestConfig>;
-  abstract async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
+  abstract makeRequest(data: any): Promise<AxiosRequestConfig>;
+  abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 }

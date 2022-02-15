@@ -1,5 +1,5 @@
 import { OAuth2Settings } from '../../handlers/AuthenticationProviders/interfaces/OAuth2Settings';
-import ConduitGrpcSdk from '@conduitplatform/conduit-grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class FigmaSettings implements OAuth2Settings {
   accessTokenMethod: string;
