@@ -13,14 +13,15 @@ import ConduitGrpcSdk, {
   SocketResponse,
   TYPE,
 } from '@conduitplatform/conduit-grpc-sdk';
-import { ChatRoom, ChatMessage } from '../models';
+import { ChatMessage, ChatRoom } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateUsersInput } from '../utils';
 
 export class ChatRoutes {
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async createRoom(call: RouterRequest, callback: RouterResponse) {
     const { roomName, users } = JSON.parse(call.request.params);
@@ -54,7 +55,7 @@ export class ChatRoutes {
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: roomName, participants: (room as ChatRoom).participants })
+      JSON.stringify({ name: roomName, participants: (room as ChatRoom).participants }),
     );
     callback(null, { result: JSON.stringify({ roomId: (room as ChatRoom)._id }) });
   }
@@ -94,7 +95,7 @@ export class ChatRoutes {
     await ChatRoom.getInstance()
       .findByIdAndUpdate(
         (room as ChatRoom)._id,
-        { room }
+        { room },
       )
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -136,7 +137,7 @@ export class ChatRoutes {
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
           (room as ChatRoom)._id,
-          { room }
+          { room },
         )
         .catch((e: Error) => {
           errorMessage = e.message;
@@ -148,7 +149,7 @@ export class ChatRoutes {
 
     this.grpcSdk.bus?.publish(
       'chat:leaveRoom:ChatRoom',
-      JSON.stringify({ roomId, user: user._id })
+      JSON.stringify({ roomId, user: user._id }),
     );
 
     callback(null, { result: 'ok' });
@@ -175,7 +176,7 @@ export class ChatRoutes {
           undefined,
           skip,
           limit,
-          { createdAt: -1 }
+          { createdAt: -1 },
         );
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
@@ -199,7 +200,7 @@ export class ChatRoutes {
           undefined,
           skip,
           limit,
-          { createdAt: -1 }
+          { createdAt: -1 },
         );
       countPromise = ChatMessage.getInstance().countDocuments({ room: roomId });
     }
@@ -224,7 +225,7 @@ export class ChatRoutes {
         .findOne(
           { _id: id },
           undefined,
-          ['room']
+          ['room'],
         );
       if (!message) {
         return callback({ code: status.NOT_FOUND, message: 'Message not found!' });
@@ -256,7 +257,7 @@ export class ChatRoutes {
           skip,
           limit,
           undefined,
-          populate
+          populate,
         );
 
       let roomsCount = await ChatRoom.getInstance().countDocuments({
@@ -280,12 +281,12 @@ export class ChatRoutes {
         .findOne(
           { _id: id, participants: user._id },
           undefined,
-          populate
+          populate,
         );
       if (!room) {
         return callback({
           code: status.NOT_FOUND,
-          message: "Room doesn't exist or you don't have access",
+          message: 'Room doesn\'t exist or you don\'t have access',
         });
       }
 
@@ -351,12 +352,12 @@ export class ChatRoutes {
     ChatMessage.getInstance()
       .findByIdAndUpdate(
         (message as ChatMessage)._id,
-        { message }
+        { message },
       )
       .then(() => {
         this.grpcSdk.bus?.publish(
           'chat:edit:ChatMessage',
-          JSON.stringify({ id: messageId, newMessage: message })
+          JSON.stringify({ id: messageId, newMessage: message }),
         );
         callback(null, { result: 'message changed successfully' });
       })
@@ -366,102 +367,104 @@ export class ChatRoutes {
   }
 
   async connect(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
-    let errorMessage: string | null = null;
-    const rooms = await ChatRoom.getInstance()
-      .findMany({ participants: user._id })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+    try {
+      const { user } = JSON.parse(call.request.context);
+      const rooms = await ChatRoom.getInstance()
+        .findMany({ participants: user._id });
 
-    callback(null, { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) });
+      callback(null, { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) });
+    }catch (e) {
+      console.error('-----Failed to connect-----');
+      console.error('Context:', call.request.context);
+      console.error('Params:', call.request.params);
+      console.error('-----Connect parse error-----');
+      callback({
+        code: status.INTERNAL,
+        message: e.message,
+      });
+    }
   }
 
   async onMessage(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
-    const [roomId, message] = JSON.parse(call.request.params);
+    try {
+      const { user } = JSON.parse(call.request.context);
+      const [roomId, message] = JSON.parse(call.request.params);
+      let errorMessage: string | null = null;
+      const room = await ChatRoom.getInstance()
+        .findOne({ _id: roomId });
 
-    let errorMessage: string | null = null;
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
+      if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+        return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
+      }
+
+      ChatMessage.getInstance()
+        .create({
+          message,
+          senderUser: user._id,
+          room: roomId,
+          readBy: [user._id],
+        })
+        .then(() => {
+          callback(null, {
+            event: 'message',
+            receivers: [roomId],
+            data: JSON.stringify({ sender: user._id, message, room: roomId }),
+          });
+        });
+    } catch (e) {
+      console.error('-----Failed to parse message-----');
+      console.error('Context:', call.request.context);
+      console.error('Params:', call.request.params);
+      console.error('-----Message parse error-----');
+      callback({
+        code: status.INTERNAL,
+        message: e.message,
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
-    }
 
-    ChatMessage.getInstance()
-      .create({
-        message,
-        senderUser: user._id,
-        room: roomId,
-        readBy: [user._id],
-      })
-      .then(() => {
-        callback(null, {
-          event: 'message',
-          receivers: [roomId],
-          data: JSON.stringify({ sender: user._id, message, room: roomId }),
-        });
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
-      });
   }
 
   async onMessagesRead(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
-    const [roomId] = JSON.parse(call.request.params);
+    try {
+      const { user } = JSON.parse(call.request.context);
+      const [roomId] = JSON.parse(call.request.params);
 
-    let errorMessage: string | null = null;
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({
+      const room = await ChatRoom.getInstance()
+        .findOne({ _id: roomId });
+
+      if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'invalid room',
+        });
+      }
+
+      const filterQuery = {
+        room: (room as ChatRoom)._id,
+        readBy: { $ne: user._id },
+      };
+
+      ChatMessage.getInstance()
+        .updateMany(filterQuery, { $push: { readBy: user._id } })
+        .then(() => {
+          callback(null, {
+            event: 'messagesRead',
+            receivers: [(room as ChatRoom)._id],
+            data: JSON.stringify({ room: (room as ChatRoom)._id, readBy: user._id }),
+          });
+        });
+
+    } catch (e) {
+      console.error('-----Failed to parse read-----');
+      console.error('Context:', call.request.context);
+      console.error('Params:', call.request.params);
+      console.error('-----Read parse error-----');
+      callback({
         code: status.INTERNAL,
-        message: errorMessage,
+        message: e.message,
       });
     }
-
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'invalid room',
-      });
-    }
-
-    const filterQuery = {
-      room: (room as ChatRoom)._id,
-      readBy: { $ne: user._id },
-    };
-
-    ChatMessage.getInstance()
-      .updateMany(filterQuery, { $push: { readBy: user._id } })
-      .then(() => {
-        callback(null, {
-          event: 'messagesRead',
-          receivers: [(room as ChatRoom)._id],
-          data: JSON.stringify({ room: (room as ChatRoom)._id, readBy: user._id }),
-        });
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
-      });
   }
 
   async registerRoutes() {
@@ -506,9 +509,9 @@ export class ChatRoutes {
           new ConduitRouteReturnDefinition('CreateRoom', {
             roomId: TYPE.String,
           }),
-          'createRoom'
-        )
-      )
+          'createRoom',
+        ),
+      ),
     );
 
     routesArray.push(
@@ -526,9 +529,9 @@ export class ChatRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
-          'addUserToRoom'
-        )
-      )
+          'addUserToRoom',
+        ),
+      ),
     );
 
     routesArray.push(
@@ -543,9 +546,9 @@ export class ChatRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
-          'leaveRoom'
-        )
-      )
+          'leaveRoom',
+        ),
+      ),
     );
 
     routesArray.push(
@@ -569,9 +572,9 @@ export class ChatRoutes {
             createdAt: TYPE.Date,
             updatedAt: TYPE.Date,
           }),
-          'getRoom'
-        )
-      )
+          'getRoom',
+        ),
+      ),
     );
     routesArray.push(
       constructRoute(
@@ -589,9 +592,9 @@ export class ChatRoutes {
             rooms: ['ChatRoom'],
             count: TYPE.Number,
           }),
-          'getRooms'
-        )
-      )
+          'getRooms',
+        ),
+      ),
     );
 
     routesArray.push(
@@ -614,9 +617,9 @@ export class ChatRoutes {
             createdAt: TYPE.Date,
             updatedAt: TYPE.Date,
           }),
-          'getMessage'
-        )
-      )
+          'getMessage',
+        ),
+      ),
     );
 
     routesArray.push(
@@ -636,9 +639,9 @@ export class ChatRoutes {
             messages: ['ChatMessage'],
             count: TYPE.Number,
           }),
-          'getMessages'
-        )
-      )
+          'getMessages',
+        ),
+      ),
     );
 
     const config = await this.grpcSdk.config.get('chat');
@@ -655,9 +658,9 @@ export class ChatRoutes {
               middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
-            'deleteMessage'
-          )
-        )
+            'deleteMessage',
+          ),
+        ),
       );
     }
 
@@ -677,9 +680,9 @@ export class ChatRoutes {
               middlewares: ['authMiddleware'],
             },
             new ConduitRouteReturnDefinition('EditMessageResponse', 'String'),
-            'editMessage'
-          )
-        )
+            'editMessage',
+          ),
+        ),
       );
     }
 
@@ -711,9 +714,9 @@ export class ChatRoutes {
                 readBy: TYPE.String,
               }),
             },
-          }
-        )
-      )
+          },
+        ),
+      ),
     );
 
     return routesArray;
