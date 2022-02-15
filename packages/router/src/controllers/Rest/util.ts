@@ -43,7 +43,7 @@ export function extractRequestData(req: Request) {
 
 export function validateParams(
   params: { [key: string]: any },
-  routeDefinedParams: { [key: string]: any }
+  routeDefinedParams: { [key: string]: any },
 ) {
   for (const key of Object.keys(routeDefinedParams)) {
     if (
@@ -57,7 +57,7 @@ export function validateParams(
           key,
           routeDefinedParams[key].type,
           params[key],
-          routeDefinedParams[key]?.required || false
+          routeDefinedParams[key]?.required || false,
         );
       } else {
         validateObject(key, params[key], routeDefinedParams[key]);
@@ -71,7 +71,7 @@ export function validateParams(
 function validateArray(
   fieldName: string,
   param: { [key: string]: any }[],
-  routeDefinedArray: { [key: string]: any }[] | string[]
+  routeDefinedArray: { [key: string]: any }[] | string[],
 ) {
   const type = routeDefinedArray[0];
   if (isObject(type)) {
@@ -91,15 +91,14 @@ function validateArray(
     param.forEach((obj: any, index: number) => {
       param[index] = validateType(`${fieldName}[${index}]`, type, obj, false);
     });
-
-    return param;
   }
+  return param;
 }
 
 function validateObject(
   fieldName: string,
   param: { [key: string]: any },
-  routeDefinedObject: { [key: string]: any }
+  routeDefinedObject: { [key: string]: any },
 ) {
   if (routeDefinedObject.required && isNil(param)) {
     throw ConduitError.userInput(`${fieldName} is required`);
@@ -117,7 +116,7 @@ function validateType(
   fieldName: string,
   paramType: string,
   value: unknown,
-  required: boolean
+  required: boolean,
 ): any {
   if (required && isNil(value)) {
     throw ConduitError.userInput(`${fieldName} is required`);
@@ -157,7 +156,7 @@ function validateType(
     case TYPE.Date:
       if (typeof value !== 'string' && typeof value !== 'number') {
         throw ConduitError.userInput(
-          `${fieldName} must be a string representation of a date, or a number timestamp`
+          `${fieldName} must be a string representation of a date, or a number timestamp`,
         );
       }
 
