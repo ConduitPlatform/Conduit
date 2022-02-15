@@ -121,13 +121,16 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
+  getModuleWatcher() {
+    return this.emitter;
+  }
+
   async watchModules() {
     const self = this;
     this.emitter.setMaxListeners(150);
     let call;
     try {
       call = this.client!.watchModules({});
-
       for await (let data of call) {
         self.emitter.emit('module-registered', data.modules);
       }
@@ -135,6 +138,6 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       console.error('Connection to grpc server closed');
     }
 
-    return self.emitter;
+
   }
 }
