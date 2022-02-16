@@ -85,9 +85,6 @@ export class AdminHandlers {
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
-          queryParams: {
-            owner: ConduitString.Optional,
-          },
         },
         new ConduitRouteReturnDefinition('GetSchema', _DeclaredSchema.getInstance().fields),
         'getSchema'
@@ -102,7 +99,7 @@ export class AdminHandlers {
             search: ConduitString.Optional,
             sort: ConduitString.Optional,
             enabled: ConduitBoolean.Optional,
-            owner: ConduitString.Optional,
+            owner: [ConduitString.Optional],
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {

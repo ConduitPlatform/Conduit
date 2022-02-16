@@ -35,9 +35,6 @@ export class SchemaAdmin {
       _id: call.request.params.id,
       name: { $nin: CMS_SYSTEM_SCHEMAS },
     };
-    if (!isNil(call.request.params.owner)) {
-      query.ownerModule = call.request.params.owner;
-    }
     const requestedSchema = await _DeclaredSchema.getInstance().findOne(query);
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -46,12 +43,17 @@ export class SchemaAdmin {
   }
 
   async getSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, sort, enabled } = call.request.params;
+    const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
     let query: { [p: string]: any } = { name: { $nin: CMS_SYSTEM_SCHEMAS } };
-    if (!isNil(call.request.params.owner)) {
-      query.ownerModule = call.request.params.owner;
+    if (owner && owner.length !== 0) {
+      query = {
+        $and: [
+          query,
+          { ownerModule: { $in: owner } },
+        ]
+      };
     }
     let identifier;
     if (!isNil(search)) {
