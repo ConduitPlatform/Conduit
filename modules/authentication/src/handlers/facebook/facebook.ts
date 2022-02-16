@@ -69,7 +69,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
     let payload: FacebookUser = {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
-      data: {},
+      data: { ...facebookResponse.data },
     };
     return payload;
   }

@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -25,6 +21,9 @@ const schema = {
     tokenExpires: {
       type: TYPE.Date,
     },
+    data: {
+      type: TYPE.JSON,
+    },
   },
   google: {
     id: {
@@ -35,6 +34,9 @@ const schema = {
     },
     tokenExpires: {
       type: TYPE.Date,
+    },
+    data: {
+      type: TYPE.JSON,
     },
   },
   microsoft: {
@@ -47,6 +49,9 @@ const schema = {
     tokenExpires: {
       type: TYPE.Date,
     },
+    data: {
+      type: TYPE.JSON,
+    },
   },
   figma: {
     id: {
@@ -57,6 +62,9 @@ const schema = {
     },
     tokenExpires: {
       type: TYPE.Date,
+    },
+    data: {
+      type: TYPE.JSON,
     },
   },
   slack: {
@@ -69,6 +77,9 @@ const schema = {
     tokenExpires: {
       type: TYPE.Date,
     },
+    data: {
+      type: TYPE.JSON,
+    },
   },
   facebook: {
     id: {
@@ -77,9 +88,12 @@ const schema = {
     token: {
       type: TYPE.String,
     },
-    // tokenExpires: {
-    //   type: TYPE.String,
-    // },
+    tokenExpires: {
+      type: TYPE.String,
+    },
+    data: {
+      type: TYPE.JSON,
+    },
   },
   kakao: {
     id: {
@@ -103,6 +117,9 @@ const schema = {
     },
     tokenExpires: {
       type: TYPE.String,
+    },
+    data: {
+      type: TYPE.JSON,
     },
     profile_image_url: TYPE.String,
   },
@@ -146,11 +163,13 @@ export class User extends ConduitActiveSchema<User> {
     id: string;
     token: string;
     tokenExpires: Date;
+    data: any;
   };
   facebook?: {
     id: string;
     token: string;
-    // tokenExpires: string;
+    //tokenExpires: string;
+    data: any;
   };
   kakao?: {
     id: string;
@@ -164,7 +183,33 @@ export class User extends ConduitActiveSchema<User> {
     token: string;
     tokenExpires: string;
     profile_image_url?: string;
+    data: any;
   };
+  slack?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: any;
+  };
+  figma?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: any;
+  };
+  microsoft?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: any;
+  };
+  github?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: any;
+  };
+
   active: boolean;
   isVerified: boolean;
   hasTwoFA: boolean;

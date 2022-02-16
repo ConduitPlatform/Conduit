@@ -139,12 +139,11 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
         );
       }
 
-      if (isNil(user[this.providerName])) {
-        user[this.providerName] = payload;
-        // TODO look into this again, as the email the user has registered will still not be verified
-        if (!user.isVerified) user.isVerified = true;
-        user = await User.getInstance().findByIdAndUpdate(user._id, user);
-      }
+      user[this.providerName] = payload;
+      // TODO look into this again, as the email the user has registered will still not be verified
+      if (!user.isVerified) user.isVerified = true;
+      user = await User.getInstance().findByIdAndUpdate(user._id, user);
+
     } else {
       user = await User.getInstance().create({
         email: payload.email,
