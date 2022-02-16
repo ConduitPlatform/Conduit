@@ -1,5 +1,5 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ConduitSchema } from '../../classes';
+import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database-provider';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
@@ -58,14 +58,12 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  setSchemaExtension(schema: ConduitSchema): Promise<any> {
+  setSchemaExtension(extension: ConduitSchemaExtension): Promise<any> {
     return this.client!.setSchemaExtension(
       {
-         schema: {
-           name: schema.name,
-           modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
-           modelOptions: '{}',
-           collectionName: '',
+         extension: {
+           name: extension.name,
+           modelSchema: JSON.stringify(extension.fields ?? extension.modelSchema),
          },
       })
       .then(res => {

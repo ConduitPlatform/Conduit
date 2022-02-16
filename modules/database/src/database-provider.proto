@@ -9,6 +9,14 @@ message CreateSchemaResponse {
     Schema schema = 1;
 }
 
+message SetSchemaExtensionRequest {
+    SchemaExtension extension = 1;
+}
+
+message SetSchemaExtensionResponse {
+    Schema schema = 1;
+}
+
 message GetSchemaRequest {
     string schemaName = 1;
 }
@@ -32,6 +40,11 @@ message Schema {
     string modelSchema = 2;
     string modelOptions = 3;
     string collectionName = 4;
+}
+
+message SchemaExtension {
+    string name = 1;
+    string modelSchema = 2;
 }
 
 message FindOneRequest {
@@ -85,7 +98,7 @@ service DatabaseProvider {
     rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
-    rpc SetSchemaExtension(CreateSchemaRequest) returns (CreateSchemaResponse);
+    rpc SetSchemaExtension(SetSchemaExtensionRequest) returns (CreateSchemaResponse);
     // Database queries
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);
