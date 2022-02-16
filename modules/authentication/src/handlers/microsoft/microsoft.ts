@@ -79,7 +79,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     );
   }
 
-  async constructScopes(scopes: string[]): Promise<string> {
-    return Promise.resolve('');
+  async constructScopes(scopes: string[]): Promise<any> {
+    return scopes
   }
 }
