@@ -436,4 +436,13 @@ export class SchemaAdmin {
     (schema.modelOptions.conduit as any).permissions.canDelete =
       perms!.canDelete ?? (schema.modelOptions.conduit as any).permissions.canDelete;
   }
+
+  async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const modules: string[] = [];
+    const schemas = await _DeclaredSchema.getInstance().findMany({}, 'ownerModule');
+    schemas.forEach((schema) => {
+      if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
+    });
+    return { modules };
+  }
 }

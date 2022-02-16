@@ -55,6 +55,7 @@ export class AdminHandlers {
         toggleSchema: this.schemaAdmin.toggleSchema.bind(this.schemaAdmin),
         toggleSchemas: this.schemaAdmin.toggleSchemas.bind(this.schemaAdmin),
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
+        getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
@@ -78,6 +79,16 @@ export class AdminHandlers {
   private getRegisteredRoutes(): any[] {
     return [
       // Schemas
+      constructConduitRoute(
+        {
+          path: '/schemas/owners',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetSchemaOwners', {
+          modules: [ConduitString.Required],
+        }),
+        'getSchemaOwners'
+      ),
       constructConduitRoute(
         {
           path: '/schemas/:id',
