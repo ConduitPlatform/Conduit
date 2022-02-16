@@ -388,6 +388,20 @@ export class SchemaAdmin {
     };
   }
 
+  async setSchemaExtension(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const requestedSchema = await _DeclaredSchema.getInstance().findOne({ _id: call.request.params.schemaId });
+    if (!requestedSchema) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    const schema = new ConduitSchema(
+      requestedSchema.name,
+      call.request.params.fields,
+    )
+    await this.database.setSchemaExtension(schema)
+      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+    return await this.database.getSchema(requestedSchema.name);
+  }
+
   async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
 

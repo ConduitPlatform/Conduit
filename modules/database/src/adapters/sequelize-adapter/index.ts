@@ -4,6 +4,7 @@ import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
@@ -39,8 +40,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
 
     this.addSchemaPermissions(schema);
-
-    let newSchema = schemaConverter(schema);
+    const original: any = JSON.parse(JSON.stringify(schema));
+    stitchSchema(schema);
+    const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(
@@ -51,27 +53,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     );
     await this.models[schema.name].sync();
     if (schema.name !== '_DeclaredSchema') {
-      await this.saveSchemaToDatabase(schema);
+      await this.saveSchemaToDatabase(original);
     }
     return this.models![schema.name];
-  }
-
-  getSchema(schemaName: string): ConduitSchema {
-    if (this.models && this.models![schemaName]) {
-      return this.models[schemaName].originalSchema;
-    }
-    throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-  }
-
-  getSchemas(): ConduitSchema[] {
-    if (!this.models) {
-      return [];
-    }
-
-    const self = this;
-    return Object.keys(this.models).map((modelName) => {
-      return self.models![modelName].originalSchema;
-    });
   }
 
   async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {

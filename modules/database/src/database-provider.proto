@@ -85,6 +85,7 @@ service DatabaseProvider {
     rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
+    rpc SetSchemaExtension(CreateSchemaRequest) returns (CreateSchemaResponse);
     // Database queries
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);
