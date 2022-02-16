@@ -56,6 +56,7 @@ export class AdminHandlers {
         toggleSchemas: this.schemaAdmin.toggleSchemas.bind(this.schemaAdmin),
         setSchemaExtension: this.schemaAdmin.setSchemaExtension.bind(this.schemaAdmin),
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
+        getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
@@ -81,13 +82,20 @@ export class AdminHandlers {
       // Schemas
       constructConduitRoute(
         {
+          path: '/schemas/owners',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetSchemaOwners', {
+          modules: [ConduitString.Required],
+        }),
+        'getSchemaOwners'
+      ),
+      constructConduitRoute(
+        {
           path: '/schemas/:id',
           action: ConduitRouteActions.GET,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
-          },
-          queryParams: {
-            owner: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetSchema', _DeclaredSchema.getInstance().fields),
@@ -103,7 +111,7 @@ export class AdminHandlers {
             search: ConduitString.Optional,
             sort: ConduitString.Optional,
             enabled: ConduitBoolean.Optional,
-            owner: ConduitString.Optional,
+            owner: [ConduitString.Optional],
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
