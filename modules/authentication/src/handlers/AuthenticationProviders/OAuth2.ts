@@ -18,7 +18,9 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   private providerName: string;
   protected settings: S;
   initialized: boolean = false;
-  protected mapScopes: any;
+  mapScopes: any;
+  defaultScopes: any;
+
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -48,15 +50,15 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let scopes = call.request.params?.scopes;
+    let scopes = call.request.params?.scopes ?? this.defaultScopes;
     let options: any = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: scopes,
+      scope: await this.constructScopes(scopes),
     };
     let baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + ',' + scopes;
+    options['state'] = call.request.context.clientId + ',' + options.scope;
 
     let url = Object.keys(options).map((k: any) => {
       return k + '=' + options[k];

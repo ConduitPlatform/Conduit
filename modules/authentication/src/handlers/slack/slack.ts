@@ -16,6 +16,7 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: SlackSettings) {
     super(grpcSdk, 'slack', settings);
+    this.defaultScopes = ["users:read"];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<SlackUser> {
@@ -89,6 +90,6 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-    return Promise.resolve('');
+    return scopes.join(',');
   }
 }

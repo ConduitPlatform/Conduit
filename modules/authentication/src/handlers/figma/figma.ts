@@ -16,6 +16,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FigmaSettings) {
     super(grpcSdk, 'figma', settings);
+    this.defaultScopes = ["users:profile:read"];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FigmaUser> {
@@ -87,7 +88,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
     );
   }
 
-  async constructScopes(scopes: string[]): Promise<string> {
-    return Promise.resolve('');
+  async constructScopes(scopes: string[]): Promise<any> {
+    return scopes;
   }
 }

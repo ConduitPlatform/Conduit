@@ -12,11 +12,12 @@ export class GoogleSettings implements OAuth2Settings {
   providerName: string;
   tokenUrl: string;
   responseType: string;
+  grantType: string;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk, config: any, serverUrl: string) {
     this.providerName = 'google';
     this.accountLinking = config.google.accountLinking;
-    this.clientId  = config.google.clientId;
+    this.clientId = config.google.clientId;
     this.clientSecret = config.google.clientSecret;
     this.finalRedirect = config.google.redirect_uri;
     this.callbackUrl = serverUrl + '/hook/authentication/google';
@@ -24,5 +25,6 @@ export class GoogleSettings implements OAuth2Settings {
     this.authorizeUrl = 'https://accounts.google.com/o/oauth2/v2/auth?';
     this.tokenUrl = 'https://oauth2.googleapis.com/token';
     this.accessTokenMethod = 'POST';
+    this.grantType = 'authorization_code';
   }
 }

@@ -13,6 +13,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: MicrosoftSettings) {
     super(grpcSdk, 'microsoft', settings);
+    this.defaultScopes = ["openid"];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<MicrosoftUser> {
@@ -79,7 +80,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     );
   }
 
-  async constructScopes(scopes: string[]): Promise<any> {
-    return scopes
+  async constructScopes(scopes: string[]): Promise<string> {
+    return scopes.join(',')
   }
 }

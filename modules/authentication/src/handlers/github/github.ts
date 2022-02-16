@@ -13,6 +13,7 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GithubSettings) {
     super(grpcSdk, 'github', settings);
+    this.defaultScopes = ["read:user","repo"];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GithubUser> {
@@ -76,6 +77,6 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-    return Promise.resolve('');
+    return scopes.join(',');
   }
 }

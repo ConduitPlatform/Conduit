@@ -31,15 +31,22 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       user_age_range: 'age_range',
       user_likes: 'likes',
     };
+    this.defaultScopes = ["public_profile","email"];
+
+  }
+
+  async makeFields(scopes: string[]): Promise<string> {
+
+    let mappedScopes = scopes.map((scope: any) => {
+      return this.mapScopes[scope];
+    }).join(',');
+
+    return mappedScopes;
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
 
-    let constructedScopes = scopes.map((scope: any) => {
-      return this.mapScopes[scope];
-    }).join(',');
-
-    return constructedScopes;
+    return scopes.join(',');
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: any }): Promise<FacebookUser> {
@@ -51,7 +58,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       url: 'https://graph.facebook.com/v13.0/me',
       params: {
         access_token: details.accessToken,
-        fields: details.scope,
+        fields: await this.makeFields((details.scope).split(',')),
       },
     };
     const facebookResponse: any = await axios(facebookOptions).catch((e: any) => console.log(e.message));

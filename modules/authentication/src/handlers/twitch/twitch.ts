@@ -88,6 +88,6 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-    return Promise.resolve('');
+    return scopes.join(',');
   }
 }
