@@ -106,6 +106,22 @@ export class AuthenticationRoutes {
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
 
+      this._routingController.route(
+        {
+          path: '/local/phone',
+          action: ConduitRouteActions.POST,
+          description: `Endpoint that can be used to authenticate with phone. 
+              A message will be returned which indicates that a verification code has been sent.`,
+          bodyParams: {
+            phone: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('LoginResponse', {
+         message: ConduitString.Required,
+        }),
+        this.localHandlers.authenticateWithPhone.bind(this.localHandlers),
+      );
+
       if (authConfig.local.identifier !== 'username') {
         this._routingController.route(
           {

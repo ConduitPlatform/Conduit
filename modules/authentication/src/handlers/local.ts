@@ -23,7 +23,8 @@ export class LocalHandlers {
   private initialized: boolean = false;
   private identifier: string = 'email';
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
@@ -33,7 +34,7 @@ export class LocalHandlers {
       promise = this.grpcSdk.config.get('email').then((emailConfig: any) => {
         if (!emailConfig.active) {
           throw ConduitError.forbidden(
-            'Cannot use local authentication without email module being enabled'
+            'Cannot use local authentication without email module being enabled',
           );
         }
       });
@@ -67,7 +68,7 @@ export class LocalHandlers {
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters'
+        'Email contains unsupported characters',
       );
     }
 
@@ -125,7 +126,7 @@ export class LocalHandlers {
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters'
+        'Email contains unsupported characters',
       );
     }
 
@@ -133,7 +134,7 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne(
       { email },
-      '+hashedPassword'
+      '+hashedPassword',
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -141,7 +142,7 @@ export class LocalHandlers {
     if (!user.hashedPassword)
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
     const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch)
@@ -151,7 +152,7 @@ export class LocalHandlers {
     if (config.local.verificationRequired && !user.isVerified) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'You must verify your account to login'
+        'You must verify your account to login',
       );
     }
 
@@ -183,7 +184,7 @@ export class LocalHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
-      })
+      }),
     );
 
     const signTokenOptions: ISignTokenOptions = {
@@ -214,6 +215,64 @@ export class LocalHandlers {
       accessToken: accessToken.token,
       refreshToken: refreshToken.token,
     };
+  }
+
+  async authenticateWithPhone(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!this.initialized)
+      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
+
+    const { phone } = call.request.params;
+    const context = call.request.context;
+    if (isNil(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+    //const config = ConfigController.getInstance().config;
+    let user: User | null = await User.getInstance().findOne(
+      { phoneNumber: phone },
+    );
+    if (isNil(user)) {
+      user = await User.getInstance().create({
+        phoneNumber: phone,
+        isVerified: false,
+      });
+      this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
+      const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
+      if (verificationSid === '') {
+        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+      }
+      await Token.getInstance()
+        .deleteMany({
+          userId: context.user._id,
+          type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        })
+        .catch(console.error);
+
+      await Token.getInstance().create({
+        userId: context.user._id,
+        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        token: verificationSid,
+        data: {
+          phoneNumber: phone,
+        },
+      });
+      return {
+        message: "Verification code sent"
+      };
+    }
+    else{
+
+      if (!user.isVerified) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'You must verify your account to login',
+        );
+      }
+
+    }
+
+    return {
+      message: 'Verification code sent',
+    };
+
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -272,30 +331,30 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.userId },
-      '+hashedPassword'
+      '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
-      user.hashedPassword!
+      user.hashedPassword!,
     );
     if (passwordsMatch)
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        "Password can't be the same as the old one"
+        'Password can\'t be the same as the old one',
       );
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
-      user
+      user,
     );
     const tokenPromise = Token.getInstance().deleteOne(passwordResetTokenDoc);
 
@@ -303,8 +362,8 @@ export class LocalHandlers {
       [userPromise, tokenPromise].concat(
         AuthUtils.deleteUserTokens(this.grpcSdk, {
           userId: user._id,
-        })
-      )
+        }),
+      ),
     );
 
     return 'Password reset successful';
@@ -317,13 +376,13 @@ export class LocalHandlers {
     if (oldPassword === newPassword) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'The new password can not be the same as the old password'
+        'The new password can not be the same as the old password',
       );
     }
 
     const dbUser: User | null = await User.getInstance().findOne(
       { _id: user._id },
-      '+hashedPassword'
+      '+hashedPassword',
     );
 
     if (isNil(dbUser)) {
@@ -332,13 +391,13 @@ export class LocalHandlers {
     if (isNil(dbUser.hashedPassword)) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
     }
 
     const passwordsMatch = await AuthUtils.checkPassword(
       oldPassword,
-      dbUser.hashedPassword
+      dbUser.hashedPassword,
     );
     if (!passwordsMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
@@ -434,7 +493,7 @@ export class LocalHandlers {
     user.isVerified = true;
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
-      user
+      user,
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
 
@@ -468,7 +527,7 @@ export class LocalHandlers {
     if (isNil(verificationRecord))
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'No verification record for this user'
+        'No verification record for this user',
       );
 
     const verified = await this.sms.verify(verificationRecord.token, code);
@@ -490,7 +549,7 @@ export class LocalHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
-      })
+      }),
     );
 
     const signTokenOptions: ISignTokenOptions = {
@@ -570,7 +629,7 @@ export class LocalHandlers {
     if (isNil(verificationRecord))
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'No verification record for this user'
+        'No verification record for this user',
       );
 
     const verified = await this.sms.verify(verificationRecord.token, code);
@@ -596,7 +655,7 @@ export class LocalHandlers {
       JSON.stringify({
         id: context.user._id,
         phoneNumber: verificationRecord.data.phoneNumber,
-      })
+      }),
     );
 
     return 'twofa enabled';
@@ -614,7 +673,7 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish(
       'authentication:disableTwofa:user',
-      JSON.stringify({ id: context.user._id })
+      JSON.stringify({ id: context.user._id }),
     );
 
     return 'twofa disabled';
@@ -641,6 +700,14 @@ export class LocalHandlers {
       this.sms = this.grpcSdk.sms!;
     } else {
       console.log('sms 2fa not active');
+    }
+
+    if (config.phoneAuthenticate.enabled && !errorMessage) {
+      // maybe check if verify is enabled in sms module
+      await this.grpcSdk.waitForExistence('sms');
+      this.sms = this.grpcSdk.sms!;
+    } else {
+      console.log('phone authentication not active');
     }
 
     if (config.local.identifier === 'email') {
