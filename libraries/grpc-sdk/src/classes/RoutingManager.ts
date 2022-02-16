@@ -151,6 +151,7 @@ export class RoutingManager {
     }
     for (let option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
+      if (option === 'middlewares') continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
