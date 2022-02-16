@@ -11,6 +11,7 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
   CreateSchemaRequest,
+  CreateSchemaExtensionRequest,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -236,15 +237,15 @@ export class DatabaseProvider extends ConduitServiceModule {
    * @param call
    * @param callback
    */
-  async setSchemaExtension(call: CreateSchemaRequest, callback: SchemaResponse) {
-    const schemaName = call.request.schema.name;
-    const extOwner = (call as any).metadata.get('module-name')[0];
-    const extModel = JSON.parse(call.request.schema.modelSchema);
-    const schema = await this._activeAdapter.getBaseSchema(schemaName);
-    if (!schema) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
+  async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
+      const schemaName = call.request.extension.name;
+      const extOwner = (call as any).metadata.get('module-name')[0];
+      const extModel = JSON.parse(call.request.extension.modelSchema);
+      const schema = await this._activeAdapter.getBaseSchema(schemaName);
+      if (!schema) {
+        throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      }
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
         .then((schemaAdapter: SchemaAdapter<any>) => {
@@ -255,7 +256,7 @@ export class DatabaseProvider extends ConduitServiceModule {
             collectionName: schemaAdapter.originalSchema.collectionName,
           };
           this.publishSchema({
-            name: call.request.schema.name,
+            name: call.request.extension.name,
             modelSchema: schemaAdapter.model,
             modelOptions: schemaAdapter.originalSchema.schemaOptions,
             collectionName: schemaAdapter.originalSchema.collectionName,

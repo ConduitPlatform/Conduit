@@ -7,9 +7,19 @@ type Schema = {
   collectionName: string;
 };
 
+type SchemaExtension = {
+  name: string;
+  modelSchema: string;
+};
+
 export type CreateSchemaRequest = GrpcRequest<{
   schema: Schema;
 }>;
+
+export type CreateSchemaExtensionRequest = GrpcRequest<{
+  extension: SchemaExtension;
+}>;
+
 
 export type GetSchemaRequest = GrpcRequest<{
   schemaName: string;
