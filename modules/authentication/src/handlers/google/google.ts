@@ -14,6 +14,7 @@ import axios from 'axios';
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GoogleSettings) {
     super(grpcSdk, 'google', settings);
+    this.defaultScopes = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
@@ -82,6 +83,9 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         path: '/init/google',
         action: ConduitRouteActions.GET,
         description: `Begins the Google authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
       this.redirect.bind(this),
@@ -104,5 +108,9 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       }),
       this.authorize.bind(this),
     );
+  }
+
+  async constructScopes(scopes: string[]): Promise<string> {
+    return scopes.join(" ");
   }
 }

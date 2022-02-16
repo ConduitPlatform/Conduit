@@ -16,6 +16,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FigmaSettings) {
     super(grpcSdk, 'figma', settings);
+    this.defaultScopes = ["users:profile:read"];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FigmaUser> {
@@ -61,6 +62,9 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
         path: '/init/figma',
         action: ConduitRouteActions.GET,
         description: `Begins the Figma authentication`,
+        bodyParams: {
+          scopes: [ConduitString.Optional]
+        }
       },
       new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
       this.redirect.bind(this),
@@ -82,5 +86,9 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       }),
       this.authorize.bind(this),
     );
+  }
+
+  async constructScopes(scopes: string[]): Promise<any> {
+    return scopes;
   }
 }

@@ -25,7 +25,7 @@ export class MicrosoftSettings implements OAuth2Settings {
     this.clientSecret = config.microsoft.clientSecret;
     this.accessTokenMethod = 'POST';
     this.finalRedirect = config.microsoft.redirect_uri;
-    this.accountLinking = config.microsoft.accountLinkng;
+    this.accountLinking = config.microsoft.accountLinking;
     this.grantType = 'authorization_code';
     this.response_mode = 'form_post';
   }

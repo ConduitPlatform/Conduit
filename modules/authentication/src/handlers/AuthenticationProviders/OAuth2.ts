@@ -18,6 +18,9 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   private providerName: string;
   protected settings: S;
   initialized: boolean = false;
+  mapScopes: any;
+  defaultScopes: any;
+
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -46,15 +49,14 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     return true;
   }
 
-
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let scopes = call.request.params?.scopes ?? this.defaultScopes;
     let options: any = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: call.request.params?.scopes,
+      scope: await this.constructScopes(scopes),
     };
-
     let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
 
@@ -83,8 +85,9 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: state.slice(1,state.length),
+      scopes: await this.constructScopes(state.slice(1, state.length)),
     };
+
     let clientId = state.clientId;
     let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
     let user = await this.createOrUpdateUser(payload);
@@ -167,7 +170,12 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
       refreshToken: (refreshToken as any).token,
     };
   }
+
   abstract declareRoutes(): void;
+
   abstract makeRequest(data: any): Promise<AxiosRequestConfig>;
+
   abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
+
+  abstract constructScopes(scopes: string[]): Promise<string>;
 }
