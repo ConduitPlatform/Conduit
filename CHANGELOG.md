@@ -2,6 +2,230 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.11.0](https://github.com/ConduitPlatform/Conduit/compare/v0.10.6...v0.11.0) (2022-02-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cms:** Removed CMS.getSchemasFromOtherModules (GET: /admin/cms/schemasFromOtherModules)
+
+* feat(cms): remove getSchemas hackery for system schemas
+* **cms:** CMS.CreateDocuments URI is now
+[POST]: /admin/cms/schemas/:schemaName/docs/many
+* Dynamically generated form submission URIs now use the form's '_id' field.
+* Affected routes now return 'count'
+CMS.GetDocuments (GET: /admin/cms/query/:schemaName)
+CMS.GetSchemas   (GET: /admin/cms/schemas)
+CMS.getDocuments (GET: /admin/cms/${schemaName})
+Chat.GetRooms               (GET: /admin/chat/rooms)
+Database.GetDeclaredSchemasExtensions (GET: /admin/database/schemas/extensions)
+Email.GetTemplates          (GET: /admin/email/templates)
+Email.GetExternalTemplates  (GET: /admin/email/externalTemplates)
+Email.SyncExternalTemplates (PUT: /admin/email/syncExternalTemplates)
+Forms.DeleteForms           (DELETE: /admin/forms/delete)
+Payments.GetProducts        (GET: /admin/payments/products)
+Payments.GetCustomers       (GET: /admin/payments/customer)
+Payments.GetTransactions    (GET: /admin/payments/transactions)
+Payments.GetSubscriptions   (GET: /admin/payments/subscriptions)
+[GET] /admin/cms/schemasFromOtherModules now returns 'externalSchemas'
+Authentication.RenewServiceToken now accepts serviceId as a url param
+Authentication.RenewServiceToken PUT: /admin/authentication/services -> /admin/authentication/services/:id/token
+Authentication.ToggleUsers: POST: /admin/authentication/users/toggle -> /admin/authentication/users/many/toggle
+Authentication.DeleteUsers: DELETE: /admin/authentication/users -> /admin/authentication/users/many
+Chat.DeleteRooms:    DELETE: /admin/chat/rooms -> /admin/chat/rooms/many
+Chat.DeleteMessages: DELETE: /admin/chat/messages -> /admin/chat/messages/many
+CMS.DeleteSchemas:   DELETE: /admin/cms/schemas -> /admin/cms/schemas/many
+CMS.ToggleSchema:    PUT: /admin/cms/schemas/toggle/:id -> /admin/cms/schemas/:id/toggle
+CMS.ToggleSchemas:   PUT: /admin/cms/schemas/toggle -> /admin/cms/schemas/many/toggle
+CMS.SetSchemaPermissions: PATCH: /admin/cms/schemas/permissions/:id -> /admin/cms/schemas/:id/permissions
+CMS.GetDocument:     GET: /admin/cms/content/:schemaName/:id -> /admin/cms/schemas/:schemaName/docs/:id
+CMS.GetDocuments:    GET: /admin/cms/query/:schemaName -> /admin/cms/schemas/:schemaName/docs
+CMS.CreateDocument:  POST: /admin/cms/content/:schemaName -> /admin/cms/schemas/:schemaName/docs
+CMS.CreateDocuments: POST: /admin/cms/content/:schemaName/many -> /admin/cms/schemas/:schemaName/docs/many
+CMS.UpdateDocument:  POST: /admin/cms/schemas/:schemaName/:id -> /admin/cms/schemas/:schemaName/docs/:id
+CMS.UpdateDocuments: POST: /admin/cms/schemas/:schemaName/many -> /admin/cms/schemas/:schemaName/docs/many
+CMS.DeleteDocument:  DELETE: /admin/cms/schemas/:schemaName/:id -> /admin/cms/schemas/:schemaName/docs/:id
+Email.DeleteTemplates: DELETE: /admin/email/templates -> /admin/email/templates/many
+Forms.GetForms:      GET /admin/forms/get -> /admin/forms/forms
+Forms.CreateForm:    POST /admin/forms/new -> /admin/forms/forms
+Forms.UpdateForm:    POST /admin/forms/update/:formId -> /admin/forms/forms/:formId
+Forms.DeleteForms:   DELETE /admin/forms/delete -> /admin/forms/forms
+Forms.GetFormReplies: GET /admin/forms/replies/:formId -> /admin/forms/forms/:formId/replies
+Payments.GetCustomers: GET /admin/payments/customer -> /admin/payments/customers
+Payments.CreateCustomer: POST /admin/payments/customer -> /admin/payments/customers
+Storage.GetFile:     GET /admin/file/:id -> /admin/files/:id
+Storage.GetFiles:    GET /admin/file -> /admin/files
+Storage.CreateFiles: POST /admin/file -> /admin/files
+Storage.PatchFile:   PATCH /admin/file/:id -> /admin/files/:id
+Storage.DeleteFile:  DELETE /admin/file/:id -> /admin/files/:id
+Storage.GetFileUrl:  GET /admin/getFileUrl/:id -> /admin/files/:id/url
+Storage.GetFileData: GET /admin/files/:id/data -> /admin/files/:id/data
+Storage.GetFolders:  GET /admin/storage/folder -> /admin/storage/folders
+Storage.CreateFolder: POST /admin/storage/folder -> /admin/storage/folders
+Storage.DeleteFolder: DELETE /admin/storage/folder/:id -> /admin/storage/folders/:id
+Storage.GetContainers: GET /admin/storage/container -> /admin/storage/containers
+Storage.CreateContainer: POST /admin/storage/container -> /admin/storage/containers
+Storage.DeleteContainer: DELETE /admin/storage/container/:id -> /admin/storage/containers/:id
+CMS.ToggleSchema: /admin/cms/schemas/:id/toggle [PUT -> POST]
+CMS.ToggleSchemas: /admin/cms/schemas/many/toggle [PUT -> POST]
+Authentication.RenewServiceToken: /admin/authentication/services/:serviceId/token [PUT -> GET]
+Authentication.DeleteUsers: [DELETE] /admin/authentication/users/many -> /admin/authentication/users
+Authentication.ToggleUsers: [POST] /admin/authentication/users/many/toggle -> /admin/authentication/users/toggle
+Chat.DeleteRooms:     [DELETE]  /admin/chat/rooms/many -> /admin/chat/rooms
+Chat.DeleteMessages:  [DELETE]  /admin/chat/messages/many -> /admin/chat/messages
+CMS.DeleteSchemas:    [DELETE]  /admin/cms/schemas/many ->/admin/cms/schemas
+CMS.ToggleSchemas:    [POST]    /admin/cms/schemas/many/toggle -> /admin/cms/schemas/toggle
+CMS.GetDocuments:  *  [POST]  * /admin/cms/schemas/:schemaName/docs/many -> /admin/cms/schemas/:schemaName/query
+CMS.UpdateDocuments   [PUT]:    /admin/cms/schemas/:schemaName/docs/many -> /admin/cms/schemas/:schemaName/docs
+Email.DeleteTemplates [DELETE]: /admin/email/templates/many -> /admin/email/templates
+Forms.DeleteForms     [DELETE]: /admin/forms/forms/many -> /admin/forms/forms
+* Affected routes' 'ids' field moved to queryParams
+- Authentication.DeleteUsers
+- Chat.DeleteRooms
+- Chat.DeleteMessages
+- CMS.DeleteSchemas
+- Email.DeleteTemplates
+- Forms.DeleteForms
+* Authentication.DeleteService: id is now a urlParam
+Forms.GetReplies [GET]: /admin/forms/forms/:formId/replies -> /admin/forms/replies
+Forms.GetReplies [GET]: /admin/forms/replies now acceps formId as a query parameter
+* **cms,sms,push-notifications,authentication:** Affected route return types differ
+* **cms:** getSchemas now directly returns 'schemas' and 'documentsCount'
+* **modules,grpc-sdk:** renamed SERVICE_URL module env variable to SERVICE_IP
+* **storage:** using id to delete folder,container instead of using name and container
+* **storage:** return types of admin and non-admin routes getFile, createFile, editFile changed
+* **database:** renamed database-provider to 'database'
+* **security:** CreateSecurityClient return field nesting
+* **config:** GetConfig and UpdateConfig return field nesting
+
+### Features
+
+* **actor,authentication,chat,cms,forms,payments:** use nullish coalescing for optional params ([50d2666](https://github.com/ConduitPlatform/Conduit/commit/50d26662ab66928c1efc3c2f303684e427f6732b))
+* **actor:** return type referencing of GetFlow in GetFlows ([e2d18e8](https://github.com/ConduitPlatform/Conduit/commit/e2d18e89e36bec04936de462a9975611b319f996))
+* **admin,security:** exclude Admin Swagger route from admin, auth middlewares while in dev mode ([d3f63cd](https://github.com/ConduitPlatform/Conduit/commit/d3f63cd0f7925f1759901e101cc9613bda78b0e4))
+* **authentication:** user provider metadata stored in database ([#39](https://github.com/ConduitPlatform/Conduit/issues/39)) ([3863224](https://github.com/ConduitPlatform/Conduit/commit/38632241fc619ebd8681b65bf88ba7ce202b89bc))
+* **cms,database,commons,grpc-sdk:** phase out SchemaDefinitions ([a48fcef](https://github.com/ConduitPlatform/Conduit/commit/a48fcef6cad6e9e585399ee16ede06ba2085b708))
+* **cms,grpc-sdk,commons:** add permission params to createSchema, editSchema ([58d8d37](https://github.com/ConduitPlatform/Conduit/commit/58d8d375ac8c2e378f129aed1a5a23bde7783af2))
+* **cms:** GetCustomEndpoints pagination and count ([886b7d9](https://github.com/ConduitPlatform/Conduit/commit/886b7d9a5e754b298b6c9cf4275a745beae07f17))
+* **cms:** implement setSchemaPermission admin route ([bee726e](https://github.com/ConduitPlatform/Conduit/commit/bee726e303344054ef68113c270a3dde5b9706a8))
+* **cms:** migrate SchemaDefinitions -> _DeclaredSchema ([2fd0d07](https://github.com/ConduitPlatform/Conduit/commit/2fd0d07f4f02df065ae61300972e747f042ca493))
+* **cms:** remove cms-only filtering from getSchema, getSchemas ([#21](https://github.com/ConduitPlatform/Conduit/issues/21)) ([40a9d88](https://github.com/ConduitPlatform/Conduit/commit/40a9d889ba47c32a37028b8cd48d28e8b260b22f))
+* **commons,router:** add routerName string arg to grpcToConduitRoute() ([decb592](https://github.com/ConduitPlatform/Conduit/commit/decb592522b41caf4807fb85ee7f7ced7bb035f8))
+* **database,cms,grpc-sdk:** schema extensions ([#35](https://github.com/ConduitPlatform/Conduit/issues/35)) ([d8ff954](https://github.com/ConduitPlatform/Conduit/commit/d8ff9540bde68735173a889e071cc5db2cfd567d))
+* **database:** add permission checks for creation, modification, deletion, extension ([7c15ee4](https://github.com/ConduitPlatform/Conduit/commit/7c15ee4a4e02c3df30c74393330063f0b7204eee))
+* **database:** Database admin route, GetDeclaredSchemas() ([bce969c](https://github.com/ConduitPlatform/Conduit/commit/bce969c76505cf4d528a0bfeb0e1bd7825134fed))
+* **database:** migrate _DeclaredSchema.modelOptions ([3e74bf6](https://github.com/ConduitPlatform/Conduit/commit/3e74bf6c019ea6fdaebe44a359ff0723d5ddd7bb))
+* **examples:** update custom module example implementation [#20101](https://github.com/ConduitPlatform/Conduit/issues/20101)w7 ([#521](https://github.com/ConduitPlatform/Conduit/issues/521)) ([eb9029a](https://github.com/ConduitPlatform/Conduit/commit/eb9029a0f92e8286a3cf6a9573767a549e6e1ec2)), closes [#20101w7](https://github.com/ConduitPlatform/Conduit/issues/20101w7)
+* **grpc-sdk,commons,admin,config,database,cms:** remove ConduitModelOptions.systemRequired ([8228712](https://github.com/ConduitPlatform/Conduit/commit/8228712802abb178aff0f31d2d04e59f8713d425))
+* **grpc-sdk,commons,security,modules:** schema permissions ([c307991](https://github.com/ConduitPlatform/Conduit/commit/c3079919f97b08da6453fa82474862ca5e8d7d7c))
+* **grpc-sdk:** provide module name in grpc requests ([6c4116c](https://github.com/ConduitPlatform/Conduit/commit/6c4116ca0d451c93b4aeae40629040f0561a9746))
+* **modules,grpc-sdk:** module SERVICE_IP env variable (eg: '0.0.0.0:5000') ([fe0c3d0](https://github.com/ConduitPlatform/Conduit/commit/fe0c3d0188d72f6c8e6477298083b72325c2c4df))
+* **readme:** fix md formatting, add tables and code blocks, improve run commands ([#1](https://github.com/ConduitPlatform/Conduit/issues/1)) ([2982079](https://github.com/ConduitPlatform/Conduit/commit/2982079da23df42b0cea6384a53b66730e6aa466))
+* **router:** add support for required bodyParams to SwaggerParser ([85b6411](https://github.com/ConduitPlatform/Conduit/commit/85b6411f242723cd8b6d9176b1958c86cb23bd40))
+* **router:** implement SwaggerParser ([bfc18c2](https://github.com/ConduitPlatform/Conduit/commit/bfc18c224683ee3b2401710161803833d3d7d66a))
+* **security,modules:** specify sane initial schema permissions ([7f93019](https://github.com/ConduitPlatform/Conduit/commit/7f930192ea7052f5841938b531277771de9c2ccf))
+* **storage:** delete , create folder and container at local storage ([02707af](https://github.com/ConduitPlatform/Conduit/commit/02707af1b5004d759148bfeea821b49dd9c3a0ba))
+* **storage:** return type referencing of GetFile in GetFiles ([e0ce43c](https://github.com/ConduitPlatform/Conduit/commit/e0ce43c50345335578bb01bc35ae45c793dea7dd))
+
+
+### Bug Fixes
+
+* **actor,chat,cms,payments,storage:** remove return field encapsulation ([25d1b7a](https://github.com/ConduitPlatform/Conduit/commit/25d1b7a278df11996111d830ad03ff9fc2dd5904))
+* **admin,config,security,actor,authentication,chat,cms,database,email,forms,payments,push-notifications,storage:** add missing {required: true} to required schema fields ([bfbd17c](https://github.com/ConduitPlatform/Conduit/commit/bfbd17cd4a23b1637415edb61691a42f6d327f42))
+* **admin,config,security:** unnest ConduitRouteReturnDefinition return fields from 'result' ([18aae8f](https://github.com/ConduitPlatform/Conduit/commit/18aae8f3e0057737c88f8b6b63b89f4c4d5ed915))
+* **admin:** core package routes not registered ([fd26b21](https://github.com/ConduitPlatform/Conduit/commit/fd26b214da9c4c490f46a064fb5d7c8a90e91114))
+* **admin:** login routing check in auth middleware ([460e5d3](https://github.com/ConduitPlatform/Conduit/commit/460e5d356d98d89659d5ed5f79f3595e4ed624ce))
+* **admin:** routes not working properly ([4b114a1](https://github.com/ConduitPlatform/Conduit/commit/4b114a1a5412b5ecb57ab2f08e34266201665d6b))
+* **authentication,cms,email,payments,storage:** PATCH handlers exposed through PUT routes ([d35a6f4](https://github.com/ConduitPlatform/Conduit/commit/d35a6f4d98b825d3c0e88a8c0e4ce26edbd39928))
+* **authentication:** enableTwoFa handler returning object message ([#537](https://github.com/ConduitPlatform/Conduit/issues/537)) ([02dc145](https://github.com/ConduitPlatform/Conduit/commit/02dc14578fba8613c717f4f9976da6c83e13cfd1))
+* **authentication:** fix ConduitActiveSchema initialization order ([c5092ee](https://github.com/ConduitPlatform/Conduit/commit/c5092ee7fc7b9eaa7ea0f970f6a7458b867b394e))
+* **authentication:** import issues ([12f840d](https://github.com/ConduitPlatform/Conduit/commit/12f840da05f6d82be2a08ec999c7dfe422fbbfdd))
+* **authentication:** type fix ([1deccf8](https://github.com/ConduitPlatform/Conduit/commit/1deccf8a14de63d9f51491dc471b306f42f7e74e))
+* **chat,cms,payments:** remove implicit populate queryParam ([9e9972a](https://github.com/ConduitPlatform/Conduit/commit/9e9972ac7fc9809bc77ba5edbd93246f4f3bd0a5))
+* **chat,payments,push-notifications:** reference model User overwriting original schema ownership ([c4b6be4](https://github.com/ConduitPlatform/Conduit/commit/c4b6be498c5c71e700ddef8c6164c43645822b4e))
+* **chat:** leaveRoom fixed ([cce0a54](https://github.com/ConduitPlatform/Conduit/commit/cce0a548333143ed8c484db970a4329f0104517d))
+* CMS route GetSchemasFromOtherModules ([e6431c4](https://github.com/ConduitPlatform/Conduit/commit/e6431c4ebeffb7edf85cb224430e7a4655448b78))
+* **cms:** cheking whenever a field exists ([1d9145f](https://github.com/ConduitPlatform/Conduit/commit/1d9145f8fba289cb889626e778a203cb92716742))
+* **cms:** createCustomEndpoint valid operation check and route handler name ([f0e0191](https://github.com/ConduitPlatform/Conduit/commit/f0e019151ed4b3c1c925ee6ea265d276e0948eff))
+* **cms:** Declared schema not initializing properly ([e70ab3d](https://github.com/ConduitPlatform/Conduit/commit/e70ab3dd596a51628687b451ebe991982a18893a))
+* **cms:** duplicate route of POST  /content/schemaName ([0d6266e](https://github.com/ConduitPlatform/Conduit/commit/0d6266eec83e4a4452556559ad8ac51582286c91))
+* **cms:** editDocument argument must be of type ConduitJson ([5fd7374](https://github.com/ConduitPlatform/Conduit/commit/5fd7374b8168f7512ad48e65aad845e9c2d1b756))
+* **cms:** GetDocuments() must be POST request. Query var must be of type JSON. ([49e38b7](https://github.com/ConduitPlatform/Conduit/commit/49e38b754a1fb03f66913c2c2a5b74c77c90db3f))
+* **cms:** GetSchemas enabled accidentally required ([2a19ceb](https://github.com/ConduitPlatform/Conduit/commit/2a19cebe4dd38b533320f345d95e38b14e7671ab))
+* **cms:** getSchemas handler ([15572e5](https://github.com/ConduitPlatform/Conduit/commit/15572e5f80327fd10755d6841d2d653f44e0dbfb))
+* **cms:** query must be body parameter. ([cf01dac](https://github.com/ConduitPlatform/Conduit/commit/cf01dac6db69d7c74836eb09ca4cdf6d18e27b51))
+* **cms:** rename the endpoint ([52624e6](https://github.com/ConduitPlatform/Conduit/commit/52624e6e7c5d4b882599a8b8a503159fc8056eaf))
+* **cms:** return types ([e85ccdf](https://github.com/ConduitPlatform/Conduit/commit/e85ccdfdc39a77d95828a81f89b5e6fae5e3ca29))
+* **cms:** schema controller query ([11788bb](https://github.com/ConduitPlatform/Conduit/commit/11788bb928d917c95332d57866389f24bcbdbd56))
+* **cms:** schemaDefinitions migration ([5c98033](https://github.com/ConduitPlatform/Conduit/commit/5c980336d8cf54cfb98871922b328e0fe871d55e))
+* **cms:** schemaDefinitions migration missing try catch ([159057f](https://github.com/ConduitPlatform/Conduit/commit/159057fb6f32c0e5f3544380a52952c16b7d0f35))
+* **cms:** spacing ([91df34a](https://github.com/ConduitPlatform/Conduit/commit/91df34acdb7f84f9fb81a7492389d08fc74eceb2))
+* **cms:** throw error when a field does not exist when editting documents. ([693182a](https://github.com/ConduitPlatform/Conduit/commit/693182aa31f2ecd2fcd9e20304499658726ff7a1))
+* **cms:** toggleSchema, toggleSchemas handlers ([a14c79c](https://github.com/ConduitPlatform/Conduit/commit/a14c79c1539d9689722e8a50cf4fd5e0fa5a9bdd))
+* **config:** fix return case ([da88d0f](https://github.com/ConduitPlatform/Conduit/commit/da88d0f9e39553ba371d9dc0331bedb6717eda49))
+* **config:** PUT returning empty config for some modules ([e6d02a4](https://github.com/ConduitPlatform/Conduit/commit/e6d02a4c81aa66c6c98f062a05b886fe11fa7ba6))
+* **config:** wrong error response on config PUT for active=false ([14e56a0](https://github.com/ConduitPlatform/Conduit/commit/14e56a0aa9914d4877f3afe39cfdc198a2880afd))
+* **database-provider:** database-provider module renamed to 'database_provider' ([c016bdf](https://github.com/ConduitPlatform/Conduit/commit/c016bdf2abb5542f2b5b017151ccd9ab087f6e99))
+* **database-provider:** remove botched findmany query in database save ([#20](https://github.com/ConduitPlatform/Conduit/issues/20)) ([7ee7ae1](https://github.com/ConduitPlatform/Conduit/commit/7ee7ae182d89632d4139cb5f7384749396d31c22))
+* **database,cms:** migrations [Guided Migration] ([5ec7ac7](https://github.com/ConduitPlatform/Conduit/commit/5ec7ac7333762c2ec97c57cc1939c3be5e806bb1))
+* **database,cms:** requested changes in permissions ([f2d0371](https://github.com/ConduitPlatform/Conduit/commit/f2d0371c6cf6a35a8b56023763e6a34e06a115be))
+* **database:** createSchemaFromAdapter set modelOwner using grpc call's 'module-name' metadata ([be350ac](https://github.com/ConduitPlatform/Conduit/commit/be350acc1257a4663a80fd38470e2307f019fb8c))
+* **database:** database was talking to itself ([bb29a9e](https://github.com/ConduitPlatform/Conduit/commit/bb29a9e3096cd35097aa9b5a8939003b1d585f23))
+* **database:** DeclaredSchema class missing modelOptions field ([6e047dc](https://github.com/ConduitPlatform/Conduit/commit/6e047dc2049f6f53cf758d91bc85fc1df5b79001))
+* **database:** DeclaredSchema.schema.ts name var ([e58d533](https://github.com/ConduitPlatform/Conduit/commit/e58d533275e8f3bf71912dae6021206877e6c395))
+* **database:** extensions contained "type" ([f4baf08](https://github.com/ConduitPlatform/Conduit/commit/f4baf08d3584044451f4aef76d70f80c9209c0a1))
+* **database:** non-stringified queries in getDeclaredSchemas, getDeclaredSchemasExtensions ([#24](https://github.com/ConduitPlatform/Conduit/issues/24)) ([89a1a66](https://github.com/ConduitPlatform/Conduit/commit/89a1a6684f44ced288ca17bd7e2abbf654a05763))
+* **database:** rename DeclaredSchema back to _DeclaredSchema ([6fe6fb7](https://github.com/ConduitPlatform/Conduit/commit/6fe6fb7d6778797c40411d12144743f6ea4ab0c2))
+* **database:** rename getDeclaredSchemaExtensions to getDeclaredSchemasExtensions ([e714018](https://github.com/ConduitPlatform/Conduit/commit/e71401805ca5521fa6d0ade66ebf3d594da6ddbd))
+* dockerfile package names ([080a4ff](https://github.com/ConduitPlatform/Conduit/commit/080a4ff477e5ba5c79708a6afae0c87d51ea9ade))
+* **email:** ConduitActiveSchema externalId field typo ([36ef4ae](https://github.com/ConduitPlatform/Conduit/commit/36ef4ae0df6e669ebb0ef502aab90df60fd1b22d))
+* **email:** emails were not sent properly ([#540](https://github.com/ConduitPlatform/Conduit/issues/540)) ([bebc39a](https://github.com/ConduitPlatform/Conduit/commit/bebc39ab43ee5b92e3723bf301b075909e34fb1d))
+* **github:** payments provider deployment ([95b21ce](https://github.com/ConduitPlatform/Conduit/commit/95b21ce7f4a4737d5cf2979cfb1e5efa3a09d27d))
+* **grpc-sdk,commons,database,cms:** modelOptions conflict between ConduitSchema and SchemaDefinitions (ConduitSchema.modelOptions -> ConduitSchema.schemaOptions) ([e7a9381](https://github.com/ConduitPlatform/Conduit/commit/e7a93816b5ec7926ad3db3dfe142b556021a6c36))
+* **grpc-sdk,commons,database:** optimize permission checks ([1bece2f](https://github.com/ConduitPlatform/Conduit/commit/1bece2f4eadd357a74dd57ab608bdb0af21deed1))
+* **grpc-sdk:** explicitly rename auto-converted grpc metadata field moduleName to module-name ([d6c6d62](https://github.com/ConduitPlatform/Conduit/commit/d6c6d6267b2286b362649c3894a1172c9e671277))
+* **grpc-sdk:** modulename injection to modules ([a937344](https://github.com/ConduitPlatform/Conduit/commit/a937344126f9ef416e2ad9132ae4a5db1919ea6e))
+* **grpc-sdk:** remove readonly flag from ConduitSchema.modelOptions (CMS.editSchema requirement) ([5d85baa](https://github.com/ConduitPlatform/Conduit/commit/5d85baa71debea950bb5e7373abf7d934a4f1dc0))
+* **grpc-sdk:** routing manager middleware parsing ([83e261a](https://github.com/ConduitPlatform/Conduit/commit/83e261a41f061467ddceb19da7ff3e77d82979c4))
+* **payments:** editProduct route's optional stripe.subscriptionId being required ([306aee9](https://github.com/ConduitPlatform/Conduit/commit/306aee93bb20f045b079390dcf8a6ab39ebe0396))
+* **payments:** stripe object must contains only customerId ([703b064](https://github.com/ConduitPlatform/Conduit/commit/703b0640d39673b061577a729404b538f587a2ec))
+* **pushNotifications:** Prevent firebase app from initializing more than one time ([a971a0a](https://github.com/ConduitPlatform/Conduit/commit/a971a0a363ddb065b99d6f3f029ba654283798a4))
+* **router,admin:** route or getting registered routes moved to router package [#1](https://github.com/ConduitPlatform/Conduit/issues/1)jtc9dd ([3cdf4e7](https://github.com/ConduitPlatform/Conduit/commit/3cdf4e729b08d4d7a9ea7fa57497134402f23b2c)), closes [#1jtc9](https://github.com/ConduitPlatform/Conduit/issues/1jtc9)
+* **router:** GraphQlParser constructName() ([51813a2](https://github.com/ConduitPlatform/Conduit/commit/51813a222fde37d1fba4c017256e04d795295aaa))
+* **router:** GraphQlParser typeString formatting ([bef87ed](https://github.com/ConduitPlatform/Conduit/commit/bef87ed6af98d2b1b65cdc59bd8eb4b32cbfdeeb))
+* **router:** GraphQlParser.getResultFromObject() call to constructorResolver() ([c5e8747](https://github.com/ConduitPlatform/Conduit/commit/c5e8747821084a521f7e8a2bce7b08cc6ccda820))
+* **router:** swagger parser params ([6af9c73](https://github.com/ConduitPlatform/Conduit/commit/6af9c73f5d37be9f69450e367c2a8c187c05256f))
+* **router:** swagger parsing (up to a point) ([7b507d6](https://github.com/ConduitPlatform/Conduit/commit/7b507d69d24a3edfb0c706f1451ea6534270fa39))
+* **security:** GetSecurityClient route requiring a urlParam id ([34005b0](https://github.com/ConduitPlatform/Conduit/commit/34005b0a8712a1797e13855c9d530c6a7f115255))
+* SERVICE_URL rename to SERVICE_IP in all env variables ([0fcb08a](https://github.com/ConduitPlatform/Conduit/commit/0fcb08aa7d9a42f94aa3d4d5e4f63363e9332f38))
+* **sms:** send sms naming when register the route ([#542](https://github.com/ConduitPlatform/Conduit/issues/542)) ([eda7ad1](https://github.com/ConduitPlatform/Conduit/commit/eda7ad18dbabba6f3bc924129a1f4c582694297e))
+* **storage:** checking for active container ([fe92abb](https://github.com/ConduitPlatform/Conduit/commit/fe92abb5e547562af5f0196ad0e9d5b4918dcb1c))
+* **storage:** checking for Nil at createFile() ([15fa78c](https://github.com/ConduitPlatform/Conduit/commit/15fa78cbcbcb0426873355c024cde44eb818ae30))
+* **storage:** delete logs ([977e7fe](https://github.com/ConduitPlatform/Conduit/commit/977e7fe40bff1b8709778c1f8a7e02642c0b5acb))
+* **storage:** migrate non admin routes ([7e2291c](https://github.com/ConduitPlatform/Conduit/commit/7e2291c57653f8079c5c1c93b09e8f68734f1955))
+* **storage:** return types changed to File.getInstance().fields ([c9aebf4](https://github.com/ConduitPlatform/Conduit/commit/c9aebf44cc245a52b68cc4b289978d34db0ba62c))
+* **storage:** using id to delete folder,container instead of using name and container ([e063c00](https://github.com/ConduitPlatform/Conduit/commit/e063c0072460efe70829f3dc1cef1007089c8435))
+* upgrade @grpc/grpc-js from 1.4.3 to 1.5.0 ([#10](https://github.com/ConduitPlatform/Conduit/issues/10)) ([a98d078](https://github.com/ConduitPlatform/Conduit/commit/a98d0786312c6db036f0b675f5c19d667c6354db))
+* upgrade @grpc/grpc-js from 1.5.0 to 1.5.1 ([#16](https://github.com/ConduitPlatform/Conduit/issues/16)) ([c138378](https://github.com/ConduitPlatform/Conduit/commit/c1383781919236dc638c33982c55a2bb852f4f42))
+* upgrade @grpc/grpc-js from 1.5.1 to 1.5.2 ([#27](https://github.com/ConduitPlatform/Conduit/issues/27)) ([f293e04](https://github.com/ConduitPlatform/Conduit/commit/f293e041bdd11b92ae2a7b68074f38b93232ff1e))
+* upgrade @grpc/grpc-js from 1.5.2 to 1.5.3 ([#28](https://github.com/ConduitPlatform/Conduit/issues/28)) ([ec18e05](https://github.com/ConduitPlatform/Conduit/commit/ec18e05b35397e8828b5e4c38a198a104086e1c0))
+* upgrade @grpc/proto-loader from 0.5.4 to 0.6.9 ([#5](https://github.com/ConduitPlatform/Conduit/issues/5)) ([463e600](https://github.com/ConduitPlatform/Conduit/commit/463e600de810ecd09f0e9aad23c2987bf3eeab77))
+* upgrade @types/google-protobuf from 3.7.2 to 3.15.5 ([#7](https://github.com/ConduitPlatform/Conduit/issues/7)) ([a0173c9](https://github.com/ConduitPlatform/Conduit/commit/a0173c9f7d469e7a521138dc8c959fa2b66db175))
+* upgrade @types/ioredis from 4.28.1 to 4.28.7 ([#9](https://github.com/ConduitPlatform/Conduit/issues/9)) ([6652d03](https://github.com/ConduitPlatform/Conduit/commit/6652d0318cc7705e7fac6a74f1c4aee16237a347))
+* upgrade @types/lodash from 4.14.150 to 4.14.178 ([#6](https://github.com/ConduitPlatform/Conduit/issues/6)) ([14406bd](https://github.com/ConduitPlatform/Conduit/commit/14406bd1faa6e6ea9ba783049f3aa94b5b117afa))
+* upgrade ioredis from 4.28.0 to 4.28.3 ([#11](https://github.com/ConduitPlatform/Conduit/issues/11)) ([ceec73c](https://github.com/ConduitPlatform/Conduit/commit/ceec73cff29beb488e0afd5e9a286ea7fc662003))
+* upgrade lodash from 4.17.15 to 4.17.21 ([#8](https://github.com/ConduitPlatform/Conduit/issues/8)) ([ad8239f](https://github.com/ConduitPlatform/Conduit/commit/ad8239f3def9ee7432367c2b0c988d6f38a1683a))
+
+
+* Generate form submission routes based on form id #225fw4q, refactor user routes async #1y7np0w (#532) ([c287065](https://github.com/ConduitPlatform/Conduit/commit/c287065a5d6e1cac087a5c08ef6b2d0c0e439c57)), closes [#225fw4](https://github.com/ConduitPlatform/Conduit/issues/225fw4) [#1y7np0](https://github.com/ConduitPlatform/Conduit/issues/1y7np0) [#532](https://github.com/ConduitPlatform/Conduit/issues/532)
+* Route consistency changes #1vx9zpy (#518) ([aa1c8ab](https://github.com/ConduitPlatform/Conduit/commit/aa1c8ab42200afe61dbe7b6d2429c4260297bf2e)), closes [#1vx9](https://github.com/ConduitPlatform/Conduit/issues/1vx9) [#518](https://github.com/ConduitPlatform/Conduit/issues/518)
+* **cms,sms,push-notifications,authentication:** {message} routes now return a String type ([dbd2f2f](https://github.com/ConduitPlatform/Conduit/commit/dbd2f2f92d86e9ec621f149e29998b6ca7bb4157))
+* **cms:** unnest getSchemas return fields from 'results' ([9001254](https://github.com/ConduitPlatform/Conduit/commit/90012546eaabf4270e7b11ab88b000c45a081fd1))
+* **cms:** user routes async [#1](https://github.com/ConduitPlatform/Conduit/issues/1)y7np0w ([#535](https://github.com/ConduitPlatform/Conduit/issues/535)) ([c8e3ad0](https://github.com/ConduitPlatform/Conduit/commit/c8e3ad0bf894e6f2dc407388450ce7693cc58dd9)), closes [#1y7np0](https://github.com/ConduitPlatform/Conduit/issues/1y7np0)
+* **config:** convert admin routes to ConduitRoutes ([b0cf6cc](https://github.com/ConduitPlatform/Conduit/commit/b0cf6ccdc158b796855fb93b3ec2f7d0f1a3a371))
+* **database:** renamed database-provider module to 'database' ([1a4d1b6](https://github.com/ConduitPlatform/Conduit/commit/1a4d1b6f19d4659d9b30ce8bf746012eba6fef78))
+* **security:** convert admin routes to ConduitRoutes ([f1c61d4](https://github.com/ConduitPlatform/Conduit/commit/f1c61d4daf219cf35cafcc137e8a3635542bcb98))
+
 ### [0.10.6](https://github.com/ConduitPlatform/Conduit/compare/v0.10.5...v0.10.6) (2021-12-06)
 
 
