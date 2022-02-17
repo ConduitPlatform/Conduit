@@ -220,12 +220,12 @@ export class LocalHandlers {
   async authenticateWithPhone(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-
     const { phone } = call.request.params;
     const context = call.request.context;
+    const clientId = context.clientId;
+    const config = ConfigController.getInstance().config;
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    //const config = ConfigController.getInstance().config;
     let user: User | null = await User.getInstance().findOne(
       { phoneNumber: phone },
     );
@@ -235,44 +235,66 @@ export class LocalHandlers {
         isVerified: false,
       });
       this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
+
+      await Promise.all(
+        AuthUtils.deleteUserTokens(this.grpcSdk, {
+          userId: user._id,
+          clientId,
+        }),
+      );
+
+      const signTokenOptions: ISignTokenOptions = {
+        secret: config.jwtSecret,
+        expiresIn: config.tokenInvalidationPeriod,
+      };
+
+      const accessToken: AccessToken = await AccessToken.getInstance().create({
+        userId: user._id,
+        clientId,
+        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
+        expiresOn: moment()
+          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      });
+
+      const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
+        userId: user._id,
+        clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      });
+
+      return {
+        userId: user._id.toString(),
+        accessToken: accessToken.token,
+        refreshToken: refreshToken.token,
+      };
+
+    } else {
       const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
+
       await Token.getInstance()
         .deleteMany({
-          userId: context.user._id,
-          type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+          userId: user._id,
+          type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         })
         .catch(console.error);
 
-      await Token.getInstance().create({
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      const verificationToken = await Token.getInstance().create({
+        userId: user._id,
+        type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         token: verificationSid,
-        data: {
-          phoneNumber: phone,
-        },
       });
       return {
-        message: "Verification code sent"
+        message: 'Login verification code sent!',
       };
-    }
-    else{
-
-      if (!user.isVerified) {
-        throw new GrpcError(
-          status.PERMISSION_DENIED,
-          'You must verify your account to login',
-        );
-      }
 
     }
-
-    return {
-      message: 'Verification code sent',
-    };
-
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -507,22 +529,38 @@ export class LocalHandlers {
     return 'Email verified';
   }
 
-  async verify(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async phoneLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
 
+    const { phone, code } = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
+    return await this.verify(clientId, user, TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN, code);
+  }
+
+  async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
+    if (isNil(context) || isEmpty(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+    const clientId = context.clientId;
     const { email, code } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
+    return await this.verify(clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
+  }
+
+  async verify(clientId: string, user: User, tokenType: string, code: string): Promise<any> {
+
     const verificationRecord: Token | null = await Token.getInstance().findOne({
       userId: user._id,
-      type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+      type: tokenType,
     });
     if (isNil(verificationRecord))
       throw new GrpcError(
@@ -539,7 +577,7 @@ export class LocalHandlers {
     await Token.getInstance()
       .deleteMany({
         userId: user._id,
-        type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+        type: tokenType,
       })
       .catch(console.error);
 
@@ -581,6 +619,7 @@ export class LocalHandlers {
       refreshToken: refreshToken.token,
     };
   }
+
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { phoneNumber } = call.request.params;
@@ -702,7 +741,7 @@ export class LocalHandlers {
       console.log('sms 2fa not active');
     }
 
-    if (config.phoneAuthenticate.enabled && !errorMessage) {
+    if ((config.phoneAuthenticate.enabled) && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.sms = this.grpcSdk.sms!;

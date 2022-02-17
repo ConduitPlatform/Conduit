@@ -117,7 +117,7 @@ export class AuthenticationRoutes {
           },
         },
         new ConduitRouteReturnDefinition('LoginResponse', {
-         message: ConduitString.Required,
+          message: ConduitString.Required,
         }),
         this.localHandlers.authenticateWithPhone.bind(this.localHandlers),
       );
@@ -192,8 +192,29 @@ export class AuthenticationRoutes {
           new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
           this.localHandlers.verifyEmail.bind(this.localHandlers),
         );
-      }
 
+      }
+      if (authConfig?.phoneAuthenticate.enabled) {
+        this._routingController.route(
+          {
+            path: '/local/phone-login',
+            action: ConduitRouteActions.POST,
+            description: `Verifies the token which is used for phone authentication`,
+            bodyParams: {
+              code: ConduitString.Required,
+              phone: ConduitString.Required
+            },
+          },
+          new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
+            userId: ConduitString.Optional,
+            accessToken: ConduitString.Optional,
+            refreshToken: ConduitString.Optional,
+            message: ConduitString.Optional,
+          }),
+          this.localHandlers.phoneLogin.bind(this.localHandlers),
+        );
+
+      }
       if (authConfig?.twofa.enabled) {
         this._routingController.route(
           {
@@ -201,7 +222,7 @@ export class AuthenticationRoutes {
             action: ConduitRouteActions.POST,
             description: `Verifies the 2FA token.`,
             bodyParams: {
-              email: ConduitString.Required,
+              email: ConduitString.Optional,
               code: ConduitString.Required,
             },
           },
@@ -211,7 +232,7 @@ export class AuthenticationRoutes {
             refreshToken: ConduitString.Optional,
             message: ConduitString.Optional,
           }),
-          this.localHandlers.verify.bind(this.localHandlers),
+          this.localHandlers.verify2FA.bind(this.localHandlers),
         );
 
         this._routingController.route(
