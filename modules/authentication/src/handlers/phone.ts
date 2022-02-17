@@ -27,11 +27,20 @@ export class PhoneHandlers {
 
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
-    if (!config.phoneAuthentication.enabled) {
+    let errorMessage = null;
+    await this.grpcSdk.config
+      .moduleExists('sms')
+      .catch((e: any) => (errorMessage = e.message));
+    if (config.phoneAuthentication.enabled && !errorMessage) {
+      // maybe check if verify is enabled in sms module
+      await this.grpcSdk.waitForExistence('sms');
+      this.sms = this.grpcSdk.sms!;
+      this.initialized = true;
+      return true;
+    } else {
+      console.log('sms phone authentication not active');
       return false;
     }
-    this.initialized = true;
-    return true;
   }
 
   async declareRoutes() {
@@ -48,7 +57,7 @@ export class PhoneHandlers {
       new ConduitRouteReturnDefinition('LoginResponse', {
         message: ConduitString.Required,
       }),
-      this.authenticate.bind(this)
+      this.authenticate.bind(this),
     );
     this.routingManager.route(
       {
@@ -80,7 +89,7 @@ export class PhoneHandlers {
     const { phone, code } = call.request.params;
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    return await AuthUtils.verifyCode(this.grpcSdk,clientId, user, TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN, code);
+    return await AuthUtils.verifyCode(this.grpcSdk, clientId, user, TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN, code);
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -139,7 +148,7 @@ export class PhoneHandlers {
       };
 
     } else {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.grpcSdk.sms!,user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.sms!, user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
