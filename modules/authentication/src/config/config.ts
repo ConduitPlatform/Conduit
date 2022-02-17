@@ -226,7 +226,7 @@ export default {
       default: false,
     },
   },
-  phoneAuthenticate: {
+  phoneAuthentication: {
     enabled: {
       format: 'Boolean',
       default: false,

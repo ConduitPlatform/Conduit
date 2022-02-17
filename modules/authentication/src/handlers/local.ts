@@ -157,7 +157,7 @@ export class LocalHandlers {
     }
 
     if (user.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -215,86 +215,6 @@ export class LocalHandlers {
       accessToken: accessToken.token,
       refreshToken: refreshToken.token,
     };
-  }
-
-  async authenticateWithPhone(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const { phone } = call.request.params;
-    const context = call.request.context;
-    const clientId = context.clientId;
-    const config = ConfigController.getInstance().config;
-    if (isNil(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    let user: User | null = await User.getInstance().findOne(
-      { phoneNumber: phone },
-    );
-    if (isNil(user)) {
-      user = await User.getInstance().create({
-        phoneNumber: phone,
-        isVerified: false,
-      });
-      this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
-
-      await Promise.all(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-          clientId,
-        }),
-      );
-
-      const signTokenOptions: ISignTokenOptions = {
-        secret: config.jwtSecret,
-        expiresIn: config.tokenInvalidationPeriod,
-      };
-
-      const accessToken: AccessToken = await AccessToken.getInstance().create({
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      });
-
-      const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      });
-
-      return {
-        userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
-      };
-
-    } else {
-      const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
-      if (verificationSid === '') {
-        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
-      }
-
-      await Token.getInstance()
-        .deleteMany({
-          userId: user._id,
-          type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-        })
-        .catch(console.error);
-
-      const verificationToken = await Token.getInstance().create({
-        userId: user._id,
-        type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-        token: verificationSid,
-      });
-      return {
-        message: 'Login verification code sent!',
-      };
-
-    }
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -428,7 +348,7 @@ export class LocalHandlers {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,dbUser.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -529,19 +449,6 @@ export class LocalHandlers {
     return 'Email verified';
   }
 
-  async phoneLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    if (isNil(context) || isEmpty(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
-    const clientId = context.clientId;
-
-    const { phone, code } = call.request.params;
-    const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
-    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    return await this.verify(clientId, user, TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN, code);
-  }
-
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
@@ -553,73 +460,8 @@ export class LocalHandlers {
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    return await this.verify(clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
+    return await AuthUtils.verifyCode(this.grpcSdk,clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
   }
-
-  async verify(clientId: string, user: User, tokenType: string, code: string): Promise<any> {
-
-    const verificationRecord: Token | null = await Token.getInstance().findOne({
-      userId: user._id,
-      type: tokenType,
-    });
-    if (isNil(verificationRecord))
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No verification record for this user',
-      );
-
-    const verified = await this.sms.verify(verificationRecord.token, code);
-
-    if (!verified.verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
-    }
-
-    await Token.getInstance()
-      .deleteMany({
-        userId: user._id,
-        type: tokenType,
-      })
-      .catch(console.error);
-
-    const config = ConfigController.getInstance().config;
-
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-        clientId,
-      }),
-    );
-
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment()
-        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
-    };
-  }
-
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { phoneNumber } = call.request.params;
@@ -629,7 +471,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    const verificationSid = await this.sendVerificationCode(phoneNumber);
+    const verificationSid = await AuthUtils.sendVerificationCode(this.sms,phoneNumber);
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
@@ -772,8 +614,4 @@ export class LocalHandlers {
       });
   }
 
-  private async sendVerificationCode(to: string) {
-    const verificationSid = await this.sms.sendVerificationCode(to);
-    return verificationSid.verificationSid || '';
-  }
 }

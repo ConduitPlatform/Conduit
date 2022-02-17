@@ -30,11 +30,13 @@ import { FigmaHandlers } from '../handlers/figma/figma';
 import { FigmaSettings } from '../handlers/figma/figma.settings';
 import { MicrosoftHandlers } from '../handlers/microsoft/microsoft';
 import { MicrosoftSettings } from '../handlers/microsoft/microsoft.settings';
+import { PhoneHandlers } from '../handlers/phone';
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
+  private readonly phoneHandlers: PhoneHandlers;
   private facebookHandlers: FacebookHandlers;
   private googleHandlers: GoogleHandlers;
   private twitchHandlers: TwitchHandlers;
@@ -49,6 +51,7 @@ export class AuthenticationRoutes {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
+    this.phoneHandlers = new PhoneHandlers(grpcSdk,this._routingController);
   }
 
   async registerRoutes() {
@@ -56,8 +59,15 @@ export class AuthenticationRoutes {
     let serverConfig = null;
     this._routingController.clear();
     let enabled = false;
-
     let errorMessage = null;
+    let phoneActive = await this.phoneHandlers
+      .validate()
+      .catch((e:any ) => (errorMessage = e))
+
+    if (phoneActive && !errorMessage) {
+      await this.phoneHandlers.declareRoutes();
+    }
+
     let authActive = await this.localHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -105,23 +115,6 @@ export class AuthenticationRoutes {
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
-
-      this._routingController.route(
-        {
-          path: '/local/phone',
-          action: ConduitRouteActions.POST,
-          description: `Endpoint that can be used to authenticate with phone. 
-              A message will be returned which indicates that a verification code has been sent.`,
-          bodyParams: {
-            phone: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('LoginResponse', {
-          message: ConduitString.Required,
-        }),
-        this.localHandlers.authenticateWithPhone.bind(this.localHandlers),
-      );
-
       if (authConfig.local.identifier !== 'username') {
         this._routingController.route(
           {
@@ -194,27 +187,6 @@ export class AuthenticationRoutes {
         );
 
       }
-      if (authConfig?.phoneAuthenticate.enabled) {
-        this._routingController.route(
-          {
-            path: '/local/phone-login',
-            action: ConduitRouteActions.POST,
-            description: `Verifies the token which is used for phone authentication`,
-            bodyParams: {
-              code: ConduitString.Required,
-              phone: ConduitString.Required
-            },
-          },
-          new ConduitRouteReturnDefinition('VerifyPhoneLoginResponse', {
-            userId: ConduitString.Optional,
-            accessToken: ConduitString.Optional,
-            refreshToken: ConduitString.Optional,
-            message: ConduitString.Optional,
-          }),
-          this.localHandlers.phoneLogin.bind(this.localHandlers),
-        );
-
-      }
       if (authConfig?.twofa.enabled) {
         this._routingController.route(
           {
@@ -222,7 +194,7 @@ export class AuthenticationRoutes {
             action: ConduitRouteActions.POST,
             description: `Verifies the 2FA token.`,
             bodyParams: {
-              email: ConduitString.Optional,
+              email: ConduitString.Required,
               code: ConduitString.Required,
             },
           },
