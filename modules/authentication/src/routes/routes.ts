@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RoutingManager,
   UnparsedRouterResponse,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
 import { GoogleHandlers } from '../handlers/google/google';
@@ -18,7 +19,6 @@ import { TwitchHandlers } from '../handlers/twitch/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import { ConfigController } from '../config/Config.controller';
 import { GoogleSettings } from '../handlers/google/google.settings';
 import { FacebookSettings } from '../handlers/facebook/facebook.settings';
 import { TwitchSettings } from '../handlers/twitch/twitch.settings';

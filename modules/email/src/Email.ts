@@ -3,7 +3,7 @@ import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import EmailConfigSchema from './config';
 import { isNil } from 'lodash';
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   GrpcRequest,
   GrpcResponse,
@@ -42,6 +42,11 @@ export default class EmailModule extends ConduitServiceModule {
   private emailService: EmailService;
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
+  }
 
   async initialize(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

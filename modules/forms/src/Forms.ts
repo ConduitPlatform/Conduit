@@ -1,7 +1,7 @@
 import * as models from './models';
 import { AdminHandlers } from './admin/admin';
 import FormsConfigSchema from './config';
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -19,6 +19,11 @@ export default class FormsModule extends ConduitServiceModule {
   private isRunning: boolean = false;
   private _router: FormsRoutes;
   private _formController: FormsController;
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
+  }
 
   async initialize(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

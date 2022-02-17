@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -11,7 +12,6 @@ import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
-import { ConfigController } from '../../config/Config.controller';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;

@@ -10,9 +10,9 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   SMS,
   UnparsedRouterResponse,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
-import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');

@@ -8,4 +8,7 @@ export * from './ConduitActiveSchema';
 export * from './GrpcServer';
 export * from './ConduitSocket';
 export * from './ConduitServiceModule';
+export * from './ManagedModule';
+export * from './ModuleManager';
 export * from './RoutingManager';
+export * from './ConfigController'

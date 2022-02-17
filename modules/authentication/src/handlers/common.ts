@@ -6,9 +6,9 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { ConfigController } from '../config/Config.controller';
 import { AccessToken, RefreshToken, User } from '../models';
 
 export class CommonHandlers {

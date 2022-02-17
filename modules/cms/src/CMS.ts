@@ -1,5 +1,5 @@
 import { AdminHandlers } from './admin/admin';
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   GrpcServer,
 } from '@conduitplatform/grpc-sdk';
@@ -10,6 +10,11 @@ import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migrati
 
 export class CMS extends ConduitServiceModule {
   private stateActive = true;
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
+  }
 
   async initialize(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   DatabaseProvider,
   GrpcServer,
@@ -20,6 +20,11 @@ export default class ChatModule extends ConduitServiceModule {
   private _admin: AdminHandlers;
   private isRunning: boolean = false;
   private _router: ChatRoutes;
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
+  }
 
   async initialize(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

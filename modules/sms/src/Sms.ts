@@ -3,7 +3,7 @@ import { TwilioProvider } from './providers/twilio';
 import SmsConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { isNil } from 'lodash';
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   GrpcServer,
   SetConfigRequest,
@@ -24,6 +24,11 @@ export default class SmsModule extends ConduitServiceModule {
   private _provider: ISmsProvider | undefined;
   private adminHandlers: AdminHandlers;
   private isRunning: boolean = false;
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
+  }
 
   async initialize(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);
