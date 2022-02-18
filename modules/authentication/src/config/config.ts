@@ -226,6 +226,12 @@ export default {
       default: false,
     },
   },
+  phoneAuthentication: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+  },
   generateRefreshToken: {
     doc: 'If the module should generate refresh tokens along with the access tokens',
     format: 'Boolean',

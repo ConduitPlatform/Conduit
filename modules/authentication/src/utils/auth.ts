@@ -2,8 +2,12 @@ import * as crypto from 'crypto';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError, SMS } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
+import { AccessToken, RefreshToken, Token, User } from '../models';
+import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
+import { ConfigController } from '../config/Config.controller';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -48,6 +52,70 @@ export namespace AuthUtils {
     return Promise.all(deleteUserTokens(sdk, query));
   }
 
+  export async function verifyCode(grpcSdk: ConduitGrpcSdk, clientId: string, user: User, tokenType: string, code: string): Promise<any> {
+
+    const verificationRecord: Token | null = await Token.getInstance().findOne({
+      userId: user._id,
+      type: tokenType,
+    });
+    if (isNil(verificationRecord))
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'No verification record for this user',
+      );
+
+    const verified = await grpcSdk.sms!.verify(verificationRecord.token, code);
+
+    if (!verified.verified) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+    }
+
+    await Token.getInstance()
+      .deleteMany({
+        userId: user._id,
+        type: tokenType,
+      })
+      .catch(console.error);
+
+    const config = ConfigController.getInstance().config;
+
+    await Promise.all(
+      deleteUserTokens(grpcSdk, {
+        userId: user._id,
+        clientId,
+      }),
+    );
+
+    const signTokenOptions: ISignTokenOptions = {
+      secret: config.jwtSecret,
+      expiresIn: config.tokenInvalidationPeriod,
+    };
+
+    const accessToken: AccessToken = await AccessToken.getInstance().create({
+      userId: user._id,
+      clientId,
+      token: signToken({ id: user._id }, signTokenOptions),
+      expiresOn: moment()
+        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
+
+    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
+      userId: user._id,
+      clientId,
+      token: randomToken(),
+      expiresOn: moment()
+        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+        .toDate(),
+    });
+
+    return {
+      userId: user._id.toString(),
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+    };
+  }
+
   export function createUserTokens(sdk: ConduitGrpcSdk, tokenOptions: TokenOptions) {
     const signTokenOptions: ISignTokenOptions = {
       secret: tokenOptions.config.jwtSecret,
@@ -79,5 +147,10 @@ export namespace AuthUtils {
     tokenOptions: TokenOptions,
   ) {
     return Promise.all(createUserTokens(sdk, tokenOptions));
+  }
+
+  export async function sendVerificationCode(sms: SMS,to: string) {
+    const verificationSid = await sms.sendVerificationCode(to);
+    return verificationSid.verificationSid || '';
   }
 }

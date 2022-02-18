@@ -23,7 +23,8 @@ export class LocalHandlers {
   private initialized: boolean = false;
   private identifier: string = 'email';
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
@@ -33,7 +34,7 @@ export class LocalHandlers {
       promise = this.grpcSdk.config.get('email').then((emailConfig: any) => {
         if (!emailConfig.active) {
           throw ConduitError.forbidden(
-            'Cannot use local authentication without email module being enabled'
+            'Cannot use local authentication without email module being enabled',
           );
         }
       });
@@ -67,7 +68,7 @@ export class LocalHandlers {
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters'
+        'Email contains unsupported characters',
       );
     }
 
@@ -125,7 +126,7 @@ export class LocalHandlers {
     if (email.indexOf('+') !== -1) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters'
+        'Email contains unsupported characters',
       );
     }
 
@@ -133,7 +134,7 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne(
       { email },
-      '+hashedPassword'
+      '+hashedPassword',
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -141,7 +142,7 @@ export class LocalHandlers {
     if (!user.hashedPassword)
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
     const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
     if (!passwordsMatch)
@@ -151,12 +152,12 @@ export class LocalHandlers {
     if (config.local.verificationRequired && !user.isVerified) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'You must verify your account to login'
+        'You must verify your account to login',
       );
     }
 
     if (user.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -183,7 +184,7 @@ export class LocalHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
-      })
+      }),
     );
 
     const signTokenOptions: ISignTokenOptions = {
@@ -272,30 +273,30 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne(
       { _id: passwordResetTokenDoc.userId },
-      '+hashedPassword'
+      '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
 
     const passwordsMatch = await AuthUtils.checkPassword(
       newPassword,
-      user.hashedPassword!
+      user.hashedPassword!,
     );
     if (passwordsMatch)
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        "Password can't be the same as the old one"
+        'Password can\'t be the same as the old one',
       );
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
-      user
+      user,
     );
     const tokenPromise = Token.getInstance().deleteOne(passwordResetTokenDoc);
 
@@ -303,8 +304,8 @@ export class LocalHandlers {
       [userPromise, tokenPromise].concat(
         AuthUtils.deleteUserTokens(this.grpcSdk, {
           userId: user._id,
-        })
-      )
+        }),
+      ),
     );
 
     return 'Password reset successful';
@@ -317,13 +318,13 @@ export class LocalHandlers {
     if (oldPassword === newPassword) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'The new password can not be the same as the old password'
+        'The new password can not be the same as the old password',
       );
     }
 
     const dbUser: User | null = await User.getInstance().findOne(
       { _id: user._id },
-      '+hashedPassword'
+      '+hashedPassword',
     );
 
     if (isNil(dbUser)) {
@@ -332,13 +333,13 @@ export class LocalHandlers {
     if (isNil(dbUser.hashedPassword)) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not use password authentication'
+        'User does not use password authentication',
       );
     }
 
     const passwordsMatch = await AuthUtils.checkPassword(
       oldPassword,
-      dbUser.hashedPassword
+      dbUser.hashedPassword,
     );
     if (!passwordsMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
@@ -347,7 +348,7 @@ export class LocalHandlers {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await this.sendVerificationCode(dbUser.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,dbUser.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -434,7 +435,7 @@ export class LocalHandlers {
     user.isVerified = true;
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
-      user
+      user,
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
 
@@ -448,79 +449,18 @@ export class LocalHandlers {
     return 'Email verified';
   }
 
-  async verify(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
     const clientId = context.clientId;
-
     const { email, code } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    const verificationRecord: Token | null = await Token.getInstance().findOne({
-      userId: user._id,
-      type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-    });
-    if (isNil(verificationRecord))
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No verification record for this user'
-      );
-
-    const verified = await this.sms.verify(verificationRecord.token, code);
-
-    if (!verified.verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
-    }
-
-    await Token.getInstance()
-      .deleteMany({
-        userId: user._id,
-        type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-      })
-      .catch(console.error);
-
-    const config = ConfigController.getInstance().config;
-
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-        clientId,
-      })
-    );
-
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment()
-        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
-    };
+    return await AuthUtils.verifyCode(this.grpcSdk,clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -531,7 +471,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    const verificationSid = await this.sendVerificationCode(phoneNumber);
+    const verificationSid = await AuthUtils.sendVerificationCode(this.sms,phoneNumber);
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
@@ -570,7 +510,7 @@ export class LocalHandlers {
     if (isNil(verificationRecord))
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'No verification record for this user'
+        'No verification record for this user',
       );
 
     const verified = await this.sms.verify(verificationRecord.token, code);
@@ -596,7 +536,7 @@ export class LocalHandlers {
       JSON.stringify({
         id: context.user._id,
         phoneNumber: verificationRecord.data.phoneNumber,
-      })
+      }),
     );
 
     return 'twofa enabled';
@@ -614,7 +554,7 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish(
       'authentication:disableTwofa:user',
-      JSON.stringify({ id: context.user._id })
+      JSON.stringify({ id: context.user._id }),
     );
 
     return 'twofa disabled';
@@ -643,6 +583,14 @@ export class LocalHandlers {
       console.log('sms 2fa not active');
     }
 
+    if ((config.phoneAuthenticate.enabled) && !errorMessage) {
+      // maybe check if verify is enabled in sms module
+      await this.grpcSdk.waitForExistence('sms');
+      this.sms = this.grpcSdk.sms!;
+    } else {
+      console.log('phone authentication not active');
+    }
+
     if (config.local.identifier === 'email') {
       this.registerTemplates();
     }
@@ -666,8 +614,4 @@ export class LocalHandlers {
       });
   }
 
-  private async sendVerificationCode(to: string) {
-    const verificationSid = await this.sms.sendVerificationCode(to);
-    return verificationSid.verificationSid || '';
-  }
 }
