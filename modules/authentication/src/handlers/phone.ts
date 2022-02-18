@@ -54,14 +54,14 @@ export class PhoneHandlers {
           phone: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('LoginResponse', {
+      new ConduitRouteReturnDefinition('PhoneAuthenticateResponse', {
         message: ConduitString.Required,
       }),
       this.authenticate.bind(this),
     );
     this.routingManager.route(
       {
-        path: '/phone-login',
+        path: '/phone/verify',
         action: ConduitRouteActions.POST,
         description: `Verifies the token which is used for phone authentication`,
         bodyParams: {
