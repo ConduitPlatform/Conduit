@@ -16,13 +16,17 @@ import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
 import { StateManager } from './utilities/StateManager';
+import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
+import { ConduitModule } from './classes/ConduitModule';
+import { Client } from 'nice-grpc';
+import { AuthenticationDefinition } from './protoUtils/authentication';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
   private readonly _config: Config;
   private readonly _admin: Admin;
   private readonly _router: Router;
-  private readonly _modules: any = {};
+  private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     database: DatabaseProvider,
     storage: Storage,
@@ -34,6 +38,8 @@ export default class ConduitGrpcSdk {
     chat: Chat,
     forms: Forms,
   };
+
+  private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
@@ -86,7 +92,7 @@ export default class ConduitGrpcSdk {
 
   get databaseProvider(): DatabaseProvider | null {
     if (this._modules['database']) {
-      return this._modules['database'];
+      return this._modules['database'] as DatabaseProvider;
     } else {
       console.warn('Database provider not up yet!');
       return null;
@@ -95,7 +101,7 @@ export default class ConduitGrpcSdk {
 
   get storage(): Storage | null {
     if (this._modules['storage']) {
-      return this._modules['storage'];
+      return this._modules['storage'] as Storage;
     } else {
       console.warn('Storage module not up yet!');
       return null;
@@ -104,7 +110,7 @@ export default class ConduitGrpcSdk {
 
   get forms(): Forms | null {
     if (this._modules['forms']) {
-      return this._modules['forms'];
+      return this._modules['forms'] as Forms;
     } else {
       console.warn('Forms module not up yet!');
       return null;
@@ -113,7 +119,7 @@ export default class ConduitGrpcSdk {
 
   get emailProvider(): Email | null {
     if (this._modules['email']) {
-      return this._modules['email'];
+      return this._modules['email'] as Email;
     } else {
       console.warn('Email provider not up yet!');
       return null;
@@ -122,7 +128,7 @@ export default class ConduitGrpcSdk {
 
   get pushNotifications(): PushNotifications | null {
     if (this._modules['pushNotifications']) {
-      return this._modules['pushNotifications'];
+      return this._modules['pushNotifications'] as PushNotifications;
     } else {
       console.warn('Push notifications module not up yet!');
       return null;
@@ -131,7 +137,7 @@ export default class ConduitGrpcSdk {
 
   get authentication(): Authentication | null {
     if (this._modules['authentication']) {
-      return this._modules['authentication'];
+      return this._modules['authentication'] as Authentication;
     } else {
       console.warn('Authentication module not up yet!');
       return null;
@@ -140,7 +146,7 @@ export default class ConduitGrpcSdk {
 
   get cms(): CMS | null {
     if (this._modules['cms']) {
-      return this._modules['cms'];
+      return this._modules['cms'] as CMS;
     } else {
       console.warn('Cms module not up yet!');
       return null;
@@ -149,7 +155,7 @@ export default class ConduitGrpcSdk {
 
   get sms(): SMS | null {
     if (this._modules['sms']) {
-      return this._modules['sms'];
+      return this._modules['sms'] as SMS;
     } else {
       console.warn('SMS module not up yet!');
       return null;
@@ -158,7 +164,7 @@ export default class ConduitGrpcSdk {
 
   get chat(): Chat | null {
     if (this._modules['chat']) {
-      return this._modules['chat'];
+      return this._modules['chat'] as Chat;
     } else {
       console.warn('Chat module not up yet!');
       return null;
@@ -176,14 +182,10 @@ export default class ConduitGrpcSdk {
         }
       });
       modules.forEach((m: any) => {
-        if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](
-            this.name,
-            m.url,
-          );
-        } else if (this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName]?.initializeClient();
+        if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+          this._modules[m.moduleName]?.openConnection();
         }
+        this.createModuleClient(m.moduleName, m.url);
       });
     });
   }
@@ -213,12 +215,7 @@ export default class ConduitGrpcSdk {
       .then((r) => {
         this.lastSearch = Date.now();
         r.forEach((m) => {
-          if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](
-              this.name,
-              m.url,
-            );
-          }
+          this.createModuleClient(m.moduleName, m.url);
         });
         return 'ok';
       })
@@ -229,7 +226,29 @@ export default class ConduitGrpcSdk {
       });
   }
 
+  createModuleClient(moduleName: string, moduleUrl: string) {
+    if (this._modules[moduleName] || (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])) return;
+    if (this._availableModules[moduleName]) {
+      this._modules[moduleName] = new this._availableModules[moduleName](
+        moduleName,
+        moduleUrl,
+      );
+    } else if (this._dynamicModules[moduleName]) {
+      this._modules[moduleName] = new ConduitModule(moduleName, moduleUrl);
+      this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
+    }
+  }
+
+  moduleClient(name: string, type: CompatServiceDefinition): void {
+    this._dynamicModules[name] = type;
+  }
+
+  getModule<T extends CompatServiceDefinition>(name: string): Client<T> | undefined {
+    if (this._modules[name]) return this._modules[name].client!;
+  }
+
   isAvailable(moduleName: string) {
+    this.getModule<typeof AuthenticationDefinition>('authentication');
     return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
