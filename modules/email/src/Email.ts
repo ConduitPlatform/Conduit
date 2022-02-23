@@ -61,20 +61,6 @@ export default class Authentication extends ManagedModule {
     this.database = this.grpcSdk.databaseProvider!;
   }
 
-  async onRegister() {
-    this.grpcSdk.bus!.subscribe('email-provider:status:activated', (message: string) => {
-      if (message === 'enabled') {
-        this.onConfig()
-          .then(() => {
-            console.log('Updated authentication configuration');
-          })
-          .catch(() => {
-            console.log('Failed to update authentication config');
-          });
-      }
-    });
-  }
-
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
