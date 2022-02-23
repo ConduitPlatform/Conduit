@@ -23,12 +23,13 @@ export class ModuleManager {
 
   start() {
     this.module.initialize(this.grpcSdk);
+    const self = this;
     this.preRegisterLifecycle()
       .then(() => {
         const url = (process.env.REGISTER_NAME === 'true'
-          ? `${this.module.name}:`
-          : `${this.serviceAddress}:`) + this.module.port;
-        return this.grpcSdk.config.registerModule(this.module.name, url);
+          ? `${self.module.name}:`
+          : `${self.serviceAddress}:`) + self.module.port;
+        return self.grpcSdk.config.registerModule(self.module.name, url);
       })
       .catch((err: Error) => {
         console.log('Failed to initialize server');
