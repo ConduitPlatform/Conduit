@@ -9,7 +9,6 @@ import { ChatRoutes } from './routes/routes';
 import * as models from './models';
 import { validateUsersInput } from './utils';
 import { ChatMessage, ChatRoom } from './models';
-import ChatConfigSchema from './config';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -40,16 +39,6 @@ export default class Authentication extends ManagedModule {
     this.database = this.grpcSdk.databaseProvider!;
   }
 
-  protected registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
-      const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
-        return this.database.createSchemaFromAdapter(modelInstance);
-      }
-    });
-    return Promise.all(promises);
-  }
-
   async onConfig() {
     if (!this.isRunning) {
       await this.registerSchemas();
@@ -58,6 +47,16 @@ export default class Authentication extends ManagedModule {
       this.isRunning = true;
     }
     await this.userRouter.registerRoutes();
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      const modelInstance = model.getInstance(this.database);
+      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+        return this.database.createSchemaFromAdapter(modelInstance);
+      }
+    });
+    return Promise.all(promises);
   }
 
   // gRPC Service
@@ -191,42 +190,5 @@ export default class Authentication extends ManagedModule {
         participants: room.participants,
       }),
     });
-  }
-
-  async activate() {
-    await this.grpcSdk.waitForExistence('database');
-    await this.grpcSdk.initializeEventBus();
-    this.grpcSdk.bus?.subscribe('chat', (message: string) => {
-      if (message === 'config-update') {
-        this.enableModule()
-          .then(() => {
-            console.log('Updated chat configuration');
-          })
-          .catch(() => {
-            console.log('Failed to update chat config');
-          });
-      }
-    });
-    try {
-      await this.grpcSdk.config.get('chat');
-    } catch (e) {
-      await this.grpcSdk.config.updateConfig(ChatConfigSchema.getProperties(), 'chat');
-    }
-    let config = await this.grpcSdk.config.addFieldstoConfig(
-      ChatConfigSchema.getProperties(),
-      'chat'
-    );
-    if (config.active) await this.enableModule();
-  }
-
-  private async enableModule() {
-    if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider!;
-      await this.registerSchemas();
-      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
-    }
-    await this.userRouter.registerRoutes();
   }
 }
