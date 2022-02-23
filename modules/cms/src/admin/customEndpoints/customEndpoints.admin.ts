@@ -30,6 +30,7 @@ export class CustomEndpointsAdmin {
   }
 
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { schemaName } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let identifier, query : any = {};
@@ -39,6 +40,14 @@ export class CustomEndpointsAdmin {
     }
     if (!isNil(call.request.params.operation)) {
       query['operation'] = call.request.params.operation;
+    }
+    if (schemaName && schemaName.length !== 0) {
+      query = {
+        $and: [
+          query,
+          { selectedSchemaName: { $in: schemaName } },
+        ]
+      };
     }
     const customEndpoints = await CustomEndpoints.getInstance()
       .findMany(
