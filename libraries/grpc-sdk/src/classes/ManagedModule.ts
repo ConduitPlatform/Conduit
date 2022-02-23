@@ -31,7 +31,7 @@ export abstract class ManagedModule extends ConduitServiceModule {
 
   async onRegister() {}
 
-  async preConfig(config: any) {}
+  async preConfig(config: any) { return config }
 
   async onConfig() {}
 
@@ -53,17 +53,17 @@ export abstract class ManagedModule extends ConduitServiceModule {
           message: 'Module is not configurable',
         });
       }
-      const newConfig = JSON.parse(call.request.newConfig);
-      await this.preConfig(newConfig);
+      let config = JSON.parse(call.request.newConfig);
+      config = await this.preConfig(config);
       try {
-        this.config.load(newConfig).validate();
+        this.config.load(config).validate();
       } catch (e) {
         return callback({
           code: status.INVALID_ARGUMENT,
           message: 'Invalid configuration values',
         });
       }
-      const moduleConfig = await this.grpcSdk.config.updateConfig(newConfig, this.name);
+      const moduleConfig = await this.grpcSdk.config.updateConfig(config, this.name);
       ConfigController.getInstance().config = moduleConfig;
       await this.onConfig();
       this.grpcSdk.bus?.publish(kebabCase(this.name) + ':config:update', JSON.stringify(moduleConfig));

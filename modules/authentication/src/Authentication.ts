@@ -45,7 +45,7 @@ export default class Authentication extends ManagedModule {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email-provider:status:activated', (message: string) => {
+    this.grpcSdk.bus!.subscribe('email:status:activated', (message: string) => {
       if (message === 'enabled') {
         this.onConfig()
           .then(() => {
