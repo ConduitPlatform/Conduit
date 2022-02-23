@@ -1,11 +1,7 @@
 import ConduitGrpcSdk, {
   ManagedModule,
   ConfigController,
-  SetConfigRequest,
-  SetConfigResponse,
 } from '..';
-import { kebabCase } from 'lodash';
-import { status } from '@grpc/grpc-js';
 
 export class ModuleManager {
   private readonly serviceAddress: string;
@@ -26,7 +22,7 @@ export class ModuleManager {
   }
 
   start() {
-    this.module.initialize(this.grpcSdk, this);
+    this.module.initialize(this.grpcSdk);
     this.preRegisterLifecycle()
       .then(() => {
         const url = (process.env.REGISTER_NAME === 'true'
@@ -71,37 +67,9 @@ export class ModuleManager {
           this.module.name,
         );
       }
-      ConfigController.getInstance(this.module);
+      ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active) await this.module.onConfig();
-    }
-  }
-
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
-    try {
-      if (!this.module.config) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Module is not configurable',
-        });
-      }
-      const newConfig = JSON.parse(call.request.newConfig);
-      await this.module.preConfig(newConfig);
-      try {
-        this.module.config.load(newConfig).validate();
-      } catch (e) {
-        return callback({
-          code: status.INVALID_ARGUMENT,
-          message: 'Invalid configuration values',
-        });
-      }
-      const moduleConfig = await this.grpcSdk.config.updateConfig(newConfig, this.module.name);
-      ConfigController.getInstance().config = moduleConfig;
-      await this.module.onConfig();
-      this.grpcSdk.bus?.publish(kebabCase(this.module.name) + ':config:update', JSON.stringify(moduleConfig));
-      return callback(null, { updatedConfig: JSON.stringify(moduleConfig) });
-    } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
     }
   }
 }

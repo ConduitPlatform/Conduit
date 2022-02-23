@@ -1,4 +1,8 @@
-import { ManagedModule, ConfigController } from "@conduitplatform/grpc-sdk";
+import {
+  ManagedModule,
+  ConfigController,
+  DatabaseProvider
+} from "@conduitplatform/grpc-sdk";
 
 import path from "path";
 import { isNil } from "lodash";
@@ -26,16 +30,18 @@ export default class Authentication extends ManagedModule {
       userDelete: this.userDelete.bind(this),
     },
   };
-  private isRunning: boolean = false; // possible abstraction
+  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
+  private database: DatabaseProvider;
 
-  constructor(moduleName: string) {
-    super(moduleName);
+  constructor() {
+    super('authentication');
   }
 
   async onServerStart() {
-    await this.useDatabase();
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.databaseProvider!;
   }
 
   async onRegister() {

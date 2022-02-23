@@ -1,19 +1,17 @@
 import ConduitGrpcSdk, {
-  DatabaseProvider,
   GrpcServer,
   ConduitService,
-  ModuleManager,
   SetConfigRequest,
   SetConfigResponse
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
-import { camelCase } from 'lodash';
+import { camelCase, kebabCase } from 'lodash';
+import { status } from "@grpc/grpc-js";
 import convict from 'convict';
 
 export abstract class ManagedModule extends ConduitServiceModule {
   readonly name: string;
-  private manager: ModuleManager | undefined;
   abstract readonly config?: convict.Config<any>;
   service?: ConduitService;
 
@@ -21,19 +19,10 @@ export abstract class ManagedModule extends ConduitServiceModule {
     moduleName = camelCase(moduleName);
     super();
     this.name = moduleName;
-    this._database = undefined;
   }
 
-  initialize(grpcSdk: ConduitGrpcSdk, manager: ModuleManager) {
+  initialize(grpcSdk: ConduitGrpcSdk) {
     this.grpcSdk = grpcSdk;
-    this.manager = manager;
-  }
-
-  private _database: DatabaseProvider | undefined;
-
-  protected get database(): DatabaseProvider {
-    if (!this._database) throw new Error('Database not currently requested. Call useDatabase() first.');
-    return this._database;
   }
 
   async onServerStart() {}
@@ -57,12 +46,31 @@ export abstract class ManagedModule extends ConduitServiceModule {
   }
 
   async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
-    this.manager!.setConfig(call, callback);
-  }
-
-  protected async useDatabase() {
-    await this.grpcSdk.waitForExistence('database');
-    this._database = this.grpcSdk.databaseProvider!;
+    try {
+      if (!this.config) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Module is not configurable',
+        });
+      }
+      const newConfig = JSON.parse(call.request.newConfig);
+      await this.preConfig(newConfig);
+      try {
+        this.config.load(newConfig).validate();
+      } catch (e) {
+        return callback({
+          code: status.INVALID_ARGUMENT,
+          message: 'Invalid configuration values',
+        });
+      }
+      const moduleConfig = await this.grpcSdk.config.updateConfig(newConfig, this.name);
+      ConfigController.getInstance().config = moduleConfig;
+      await this.onConfig();
+      this.grpcSdk.bus?.publish(kebabCase(this.name) + ':config:update', JSON.stringify(moduleConfig));
+      return callback(null, { updatedConfig: JSON.stringify(moduleConfig) });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: e.message });
+    }
   }
 
   protected async updateConfig(config?: any) {
@@ -71,7 +79,6 @@ export abstract class ManagedModule extends ConduitServiceModule {
     }
     if (config) {
       ConfigController.getInstance().config = config;
-      // await ConfigController.getInstance().addConfigService(this.grpcServer, this.name);
       return Promise.resolve();
     } else {
       return this.grpcSdk.config.get(this.name).then((config: any) => {
