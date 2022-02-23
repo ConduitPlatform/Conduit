@@ -367,6 +367,7 @@ export class AdminHandlers {
           queryParams: {
             search: ConduitString.Optional,
             operation: ConduitString.Optional,
+            schemaName: [ConduitString.Optional],
           }
         },
         new ConduitRouteReturnDefinition('GetCustomEndpoints', {
