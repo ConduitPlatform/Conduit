@@ -39,8 +39,9 @@ export class DatabaseProvider extends ConduitServiceModule {
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
   private _admin: AdminHandlers;
 
-  constructor(protected readonly grpcSdk: ConduitGrpcSdk) {
-    super(grpcSdk);
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
     const dbType = process.env.databaseType ?? 'mongodb';
     const databaseUrl = process.env.databaseURL ?? 'mongodb://localhost:27017';
 

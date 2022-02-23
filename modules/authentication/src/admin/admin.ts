@@ -11,11 +11,11 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   TYPE,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ServiceAdmin } from './service';
-import { ConfigController } from '../config/Config.controller';
 import { AuthUtils } from '../utils/auth';
 import { User, Service } from '../models';
 

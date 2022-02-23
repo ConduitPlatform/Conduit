@@ -1,8 +1,6 @@
 export class ConfigController {
   private static instance: ConfigController;
 
-  private constructor() {}
-
   private _config: any;
 
   get config() {

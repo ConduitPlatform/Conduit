@@ -1,6 +1,6 @@
 import StorageConfigSchema from './config';
 import { isNil } from 'lodash';
-import {
+import ConduitGrpcSdk, {
   ConduitServiceModule,
   GrpcServer,
 } from '@conduitplatform/grpc-sdk';
@@ -22,6 +22,11 @@ export class StorageModule extends ConduitServiceModule {
 
   get routes() {
     return this._routes;
+  }
+
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super();
+    this.grpcSdk = grpcSdk;
   }
 
   async initialize(servicePort?: string) {
