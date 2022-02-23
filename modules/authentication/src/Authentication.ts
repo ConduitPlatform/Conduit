@@ -68,7 +68,6 @@ export default class Authentication extends ManagedModule {
   }
 
   async onConfig() {
-    // await this.updateConfig(); // was here for ConfigManager.config = ..., move to setConfig
     if (!this.isRunning) {
       await this.registerSchemas();
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
