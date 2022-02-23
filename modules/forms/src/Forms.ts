@@ -1,62 +1,44 @@
-import * as models from './models';
-import { AdminHandlers } from './admin/admin';
-import FormsConfigSchema from './config';
-import ConduitGrpcSdk, {
-  ConduitServiceModule,
-  GrpcServer,
-  SetConfigRequest,
-  SetConfigResponse,
+import {
+  ManagedModule,
+  DatabaseProvider
 } from '@conduitplatform/grpc-sdk';
-import path from 'path';
+import AppConfigSchema from './config';
+import { FormSubmissionTemplate } from './templates';
+import { AdminHandlers } from './admin/admin';
 import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';
-import { FormSubmissionTemplate } from './templates';
-import { status } from '@grpc/grpc-js';
+import * as models from './models';
+import path from 'path';
 
-export default class FormsModule extends ConduitServiceModule {
-  private database: any;
-  private _admin: AdminHandlers;
+export default class Authentication extends ManagedModule {
+  config = AppConfigSchema;
+  service = {
+    protoPath: path.resolve(__dirname, 'forms.proto'),
+    protoDescription: 'forms.Forms',
+    functions: {
+      setConfig: this.setConfig.bind(this),
+    },
+  };
   private isRunning: boolean = false;
-  private _router: FormsRoutes;
-  private _formController: FormsController;
+  private adminRouter: AdminHandlers;
+  private userRouter: FormsRoutes;
+  private database: DatabaseProvider;
+  private formController: FormsController;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    super();
-    this.grpcSdk = grpcSdk;
+  constructor() {
+    super('forms');
   }
 
-  async initialize(servicePort?: string) {
-    this.grpcServer = new GrpcServer(servicePort);
-    this._port = (await this.grpcServer.createNewServer()).toString();
-    await this.grpcServer.addService(
-      path.resolve(__dirname, './forms.proto'),
-      'forms.Forms',
-      {
-        setConfig: this.setConfig.bind(this),
-      }
-    );
-    this.grpcServer.start();
-  }
-
-  async activate() {
+  async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     await this.grpcSdk.waitForExistence('email');
-    await this.grpcSdk.initializeEventBus();
+    this.database = this.grpcSdk.databaseProvider!;
+  }
 
-    this.grpcSdk.bus?.subscribe('forms', (message: string) => {
-      if (message === 'config-update') {
-        this.enableModule()
-          .then(() => {
-            console.log('Updated forms configuration');
-          })
-          .catch(() => {
-            console.log('Failed to update forms config');
-          });
-      }
-    });
-    this.grpcSdk.bus?.subscribe('email-provider', (message: string) => {
+  async onRegister() {
+    this.grpcSdk.bus!.subscribe('email-provider:status:activated', (message: string) => {
       if (message === 'enabled') {
-        this.enableModule()
+        this.onConfig()
           .then(() => {
             console.log('Updated forms configuration');
           })
@@ -65,76 +47,24 @@ export default class FormsModule extends ConduitServiceModule {
           });
       }
     });
-    try {
-      await this.grpcSdk.config.get('forms');
-    } catch (e) {
-      await this.grpcSdk.config.updateConfig(FormsConfigSchema.getProperties(), 'forms');
-    }
-    const config = await this.grpcSdk.config.addFieldstoConfig(
-      FormsConfigSchema.getProperties(),
-      'forms'
-    );
-    if (config.active) await this.enableModule();
   }
 
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
-    const newConfig = JSON.parse(call.request.newConfig);
-    try {
-      FormsConfigSchema.load(newConfig).validate();
-    } catch (e) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Invalid configuration values',
-      });
-    }
-
-    let errorMessage: string | null = null;
-    const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, 'forms')
-      .catch((e: Error) => { errorMessage = e.message; });
-    if (errorMessage) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
-    const formsConfig = await this.grpcSdk.config.get('forms');
-    if (formsConfig.active) {
-      await this.enableModule()
-        .catch((e: Error) => { errorMessage = e.message; });
-      if (errorMessage) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
-      this.grpcSdk.bus?.publish('forms', 'config-update');
-    } else {
-      return callback({
-        code: status.FAILED_PRECONDITION,
-        message: 'Module is not active',
-      });
-    }
-
-    return callback(null, { updatedConfig: JSON.stringify(updateResult) });
-  }
-
-  private async enableModule() {
-    if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider;
-      await this.registerSchemas();
-      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this._router = new FormsRoutes(this.grpcServer, this.grpcSdk);
-      this._formController = new FormsController(this.grpcSdk, this._router);
-      this._admin = new AdminHandlers(
-        this.grpcServer,
-        this.grpcSdk,
-        this._formController
-      );
-      this.isRunning = true;
-    }
-  }
-
-  private registerSchemas() {
+  protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
-      let modelInstance = model.getInstance(this.database);
+      const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
+  }
+
+  async onConfig() {
+    if (!this.isRunning) {
+      await this.registerSchemas();
+      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
+      this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+      this.formController = new FormsController(this.grpcSdk, this.userRouter);
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
+      this.isRunning = true;
+    }
   }
 }
