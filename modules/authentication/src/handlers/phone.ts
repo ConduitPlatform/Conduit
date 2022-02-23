@@ -7,8 +7,8 @@ import ConduitGrpcSdk, {
   RoutingManager,
   SMS,
   UnparsedRouterResponse,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
-import { ConfigController } from '../config/Config.controller';
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, Token, User } from '../models';
