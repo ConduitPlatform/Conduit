@@ -1,5 +1,5 @@
-import { ConduitParser } from '../ConduitParser';
 import { ConduitModel } from '@conduitplatform/commons';
+import { ConduitParser } from '@conduitplatform/grpc-sdk';
 
 export interface ResolverDefinition {
   [key: string]: {

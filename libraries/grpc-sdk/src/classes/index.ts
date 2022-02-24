@@ -12,3 +12,4 @@ export * from './ManagedModule';
 export * from './ModuleManager';
 export * from './RoutingManager';
 export * from './ConfigController'
+export * from './ConduitParser'
