@@ -47,12 +47,12 @@ export class CustomEndpointsAdmin {
     }
     const customEndpoints = await this.database.getSchemaModel('CustomEndpoints').model
       .findMany(
-        JSON.stringify(query),
+        query,
         undefined,
         skip,
         limit,
       );
-    const count: number = await this.database.getSchemaModel('CustomEndpoints').model.countDocuments(JSON.stringify(query));
+    const count: number = await this.database.getSchemaModel('CustomEndpoints').model.countDocuments(query);
 
     return { customEndpoints, count };
   }
@@ -98,7 +98,7 @@ export class CustomEndpointsAdmin {
       if (selectedSchema.length === 0) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'selectedSchema must not be empty');
       }
-      findSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(JSON.stringify({ _id: selectedSchema }));
+      findSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ _id: selectedSchema });
     } else {
       // Find schema using selectedSchemaName
       if (selectedSchemaName.length === 0) {
@@ -192,7 +192,7 @@ export class CustomEndpointsAdmin {
       endpoint.assignments = assignments;
     }
 
-    const customEndpoint = await this.database.getSchemaModel('CustomEndpoints').model.create(JSON.stringify(endpoint));
+    const customEndpoint = await this.database.getSchemaModel('CustomEndpoints').model.create(endpoint);
     if (isNil(customEndpoint)) {
       throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
     }
@@ -217,7 +217,7 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Either selectedSchema or selectedSchemaName must be specified');
     }
 
-    const found = await this.database.getSchemaModel('CustomEndpoints').model.findOne(JSON.stringify({ _id: id }));
+    const found = await this.database.getSchemaModel('CustomEndpoints').model.findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -225,7 +225,7 @@ export class CustomEndpointsAdmin {
     let findSchema: any;
     if (!isNil(selectedSchema)) {
       // Find schema using selectedSchema
-      findSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(JSON.stringify({ _id: selectedSchema }));
+      findSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ _id: selectedSchema });
       if (isNil(findSchema)) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
       }
@@ -325,11 +325,11 @@ export class CustomEndpointsAdmin {
     if (call.request.params.id.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'id must not be empty');
     }
-    const customEndpoint = await this.database.getSchemaModel('CustomEndpoints').model.findOne(JSON.stringify({ _id: call.request.params.id }));
+    const customEndpoint = await this.database.getSchemaModel('CustomEndpoints').model.findOne({ _id: call.request.params.id });
     if (isNil(customEndpoint)) {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
-    await this.database.getSchemaModel('CustomEndpoints').model.deleteOne(JSON.stringify({ _id: call.request.params.id }))
+    await this.database.getSchemaModel('CustomEndpoints').model.deleteOne({ _id: call.request.params.id })
       .catch((e: any) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });

@@ -36,7 +36,7 @@ export class SchemaAdmin {
       _id: call.request.params.id,
       name: { $nin: CMS_SYSTEM_SCHEMAS },
     };
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(JSON.stringify(query));
+    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(query);
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -73,13 +73,13 @@ export class SchemaAdmin {
     }
 
     const schemasPromise = await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
-      JSON.stringify(query),
+      query,
       undefined,
       skip,
       limit,
       sort,
     );
-    const documentsCountPromise = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments(JSON.stringify(query));
+    const documentsCountPromise = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments(query);
 
     const [schemas, count] = await Promise.all([
       schemasPromise,
