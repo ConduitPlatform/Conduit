@@ -84,13 +84,17 @@ export default class ConduitGrpcSdk {
     return this._router;
   }
 
-  get databaseProvider(): DatabaseProvider | null {
+  get database(): DatabaseProvider | null {
     if (this._modules['database']) {
       return this._modules['database'];
     } else {
       console.warn('Database provider not up yet!');
       return null;
     }
+  }
+
+  get databaseProvider(): DatabaseProvider | null {
+    return this.database;
   }
 
   get storage(): Storage | null {

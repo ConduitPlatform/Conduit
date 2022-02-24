@@ -1,7 +1,7 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
-import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
-import { CmsRoutes } from '../../routes/routes';
+import { ICustomEndpoint } from '../../interfaces';
+import { DatabaseRoutes } from '../../routes/routes';
 import { createCustomEndpointRoute } from './utils';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
@@ -12,7 +12,7 @@ export class CustomEndpointController {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-    private router: CmsRoutes,
+    private router: DatabaseRoutes,
   ) {
     this.refreshRoutes()
       .catch((err: any) => {
@@ -22,10 +22,8 @@ export class CustomEndpointController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe('cms', (message: string) => {
-      if (message === 'customEndpoint') {
-        this.refreshRoutes();
-      }
+    this.grpcSdk.bus?.subscribe('database:customEndpoints:refresh', (message: string) => {
+      this.refreshRoutes();
     });
   }
 
@@ -52,7 +50,7 @@ export class CustomEndpointController {
   }
 
   refreshEndpoints(): void {
-    this.grpcSdk.bus?.publish('cms', 'customEndpoint');
+    this.grpcSdk.bus?.publish('database:customEndpoints:refresh', '');
     this.refreshRoutes().then((r: any) => {
       console.log('Refreshed routes');
     });

@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
-import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
+import { ICustomEndpoint } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
 

@@ -6,14 +6,10 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   constructConduitRoute,
-  GrpcError,
   GrpcServer,
-  ParsedRouterRequest,
   RouteOptionType,
   TYPE,
-  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
@@ -22,8 +18,7 @@ import { DocumentsAdmin } from './documents.admin';
 import { SchemaAdmin } from './schema.admin';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import *  as CustomEndpoints from '../models/CustomEndpoints.schema';
-import * as DeclaredSchema from '../models/DeclaredSchema.schema';
+import { DeclaredSchema, CustomEndpoints } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -39,76 +34,27 @@ export class AdminHandlers {
   ) {
     this.schemaAdmin = new SchemaAdmin(
       this.grpcSdk,
-      _activeAdapter,
+      this._activeAdapter,
       this.schemaController,
       this.customEndpointController,
     );
     this.documentsAdmin = new DocumentsAdmin(this.grpcSdk, _activeAdapter);
     this.customEndpointsAdmin = new CustomEndpointsAdmin(
       this.grpcSdk,
-      _activeAdapter,
+      this._activeAdapter,
       this.customEndpointController,
     );
     this.registerAdminRoutes();
-  }
-
-  async getDeclaredSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query = '{}';
-    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
-    const declaredSchemasDocumentsPromise = schemaAdapter.model
-      .findMany(
-        query,
-        undefined,
-        skip,
-        limit,
-        undefined,
-      );
-    const totalCountPromise = schemaAdapter.model.countDocuments(query);
-
-    const [declaredSchemasDocuments, totalCount] = await Promise.all([
-      declaredSchemasDocumentsPromise,
-      totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-
-    return { declaredSchemasDocuments, totalCount };
-  }
-
-  async getDeclaredSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query = '{}';
-    const schemaAdapter = this._activeAdapter.getSchemaModel('_DeclaredSchema');
-    const declaredSchemasExtensionsPromise = schemaAdapter.model
-      .findMany(
-        query,
-        skip,
-        limit,
-        'name extensions',
-        undefined,
-      );
-    const totalCountPromise = schemaAdapter.model.countDocuments(query);
-
-    const [declaredSchemasExtensions, totalCount] = await Promise.all([
-      declaredSchemasExtensionsPromise,
-      totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-    return { declaredSchemasExtensions, totalCount };
   }
 
   private registerAdminRoutes() {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        getDeclaredSchemas: this.getDeclaredSchemas.bind(this),
-        getDeclaredSchemasExtensions: this.getDeclaredSchemasExtensions.bind(this),
+        // Schemas
         getSchema: this.schemaAdmin.getSchema.bind(this.schemaAdmin),
         getSchemas: this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
+        getSchemasExtensions: this.schemaAdmin.getSchemasExtensions.bind(this.schemaAdmin),
         createSchema: this.schemaAdmin.createSchema.bind(this.schemaAdmin),
         patchSchema: this.schemaAdmin.patchSchema.bind(this.schemaAdmin),
         deleteSchema: this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),
@@ -143,35 +89,6 @@ export class AdminHandlers {
       // Schemas
       constructConduitRoute(
         {
-          path: '/schemas',
-          action: ConduitRouteActions.GET,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemas', this._activeAdapter.models!['_DeclaredSchema'].originalSchema.fields),
-
-        'getDeclaredSchemas',
-      ),
-      constructConduitRoute(
-        {
-          path: '/schemas/extensions',
-          action: ConduitRouteActions.GET,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('GetDeclaredSchemasExtensions', {
-          declaredSchemasExtensions: [ConduitJson.Required],
-          count: ConduitNumber.Required,
-        }),
-        'getDeclaredSchemasExtensions',
-      ),
-      // Schemas
-      constructConduitRoute(
-        {
           path: '/schemas/owners',
           action: ConduitRouteActions.GET,
         },
@@ -182,13 +99,28 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
+          path: '/schemas/extensions',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('GetSchemasExtensions', {
+          schemasExtensions: [ConduitJson.Required],
+          count: ConduitNumber.Required,
+        }),
+        'getSchemasExtensions',
+      ),
+      constructConduitRoute(
+        {
           path: '/schemas/:id',
           action: ConduitRouteActions.GET,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetSchema', DeclaredSchema.default.fields),
+        new ConduitRouteReturnDefinition('GetSchema', DeclaredSchema.fields),
         'getSchema',
       ),
       constructConduitRoute(
@@ -205,7 +137,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
-          schemas: [DeclaredSchema.default.fields],
+          schemas: [DeclaredSchema.fields],
           count: ConduitNumber.Required,
         }),
         'getSchemas',
@@ -229,7 +161,7 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('CreateSchema', DeclaredSchema.default.fields),
+        new ConduitRouteReturnDefinition('CreateSchema', DeclaredSchema.fields),
         'createSchema',
       ),
       constructConduitRoute(
@@ -254,7 +186,7 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('PatchSchema', DeclaredSchema.default.fields),
+        new ConduitRouteReturnDefinition('PatchSchema', DeclaredSchema.fields),
         'patchSchema',
       ),
       constructConduitRoute(
@@ -292,7 +224,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('ToggleSchemas', {
-          updatedSchemas: [DeclaredSchema.default.fields],
+          updatedSchemas: [DeclaredSchema.fields],
           enabled: ConduitBoolean.Required,
         }),
         'toggleSchemas',
@@ -322,7 +254,7 @@ export class AdminHandlers {
             fields: ConduitJson.Required,
           },
         },
-        new ConduitRouteReturnDefinition('SetSchemaExtension', DeclaredSchema.default.fields),
+        new ConduitRouteReturnDefinition('SetSchemaExtension', DeclaredSchema.fields),
         'setSchemaExtension',
       ),
       constructConduitRoute(
@@ -461,7 +393,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetCustomEndpoints', {
-          customEndpoints: [CustomEndpoints.default.fields],
+          customEndpoints: [CustomEndpoints.fields],
           count: ConduitNumber.Required,
         }),
         'getCustomEndpoints',
@@ -483,7 +415,7 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateCustomEndpoint', CustomEndpoints.default.fields),
+        new ConduitRouteReturnDefinition('CreateCustomEndpoint', CustomEndpoints.fields),
         'createCustomEndpoint',
       ),
       constructConduitRoute(
@@ -504,7 +436,7 @@ export class AdminHandlers {
             paginated: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('PatchCustomEndpoint', CustomEndpoints.default.fields),
+        new ConduitRouteReturnDefinition('PatchCustomEndpoint', CustomEndpoints.fields),
         'patchCustomEndpoint',
       ),
       constructConduitRoute(

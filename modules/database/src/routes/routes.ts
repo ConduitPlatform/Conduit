@@ -5,7 +5,7 @@ import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
-export class CmsRoutes {
+export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;
   private readonly customEndpointHandler: CustomEndpointHandler;
   //todo change this since now routes are getting appended

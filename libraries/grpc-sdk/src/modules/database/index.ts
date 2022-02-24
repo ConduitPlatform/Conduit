@@ -1,6 +1,6 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
-import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database-provider';
+import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(moduleName: string, url: string) {

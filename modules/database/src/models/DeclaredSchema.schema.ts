@@ -1,6 +1,6 @@
 import { ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
 
-const schema = new ConduitSchema(
+export const DeclaredSchema = new ConduitSchema(
   '_DeclaredSchema',
   {
     _id: TYPE.ObjectId,
@@ -50,5 +50,3 @@ const schema = new ConduitSchema(
     },
   },
 );
-
-export default schema;

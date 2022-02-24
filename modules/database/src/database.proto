@@ -1,5 +1,5 @@
 syntax = 'proto3';
-package databaseprovider;
+package database;
 
 message CreateSchemaRequest {
     Schema schema = 1;

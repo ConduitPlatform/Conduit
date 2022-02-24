@@ -19,7 +19,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-const CMS_SYSTEM_SCHEMAS = ['CustomEndpoints']; // excluded DeclaredSchemas
+const SYSTEM_SCHEMAS = ['CustomEndpoints']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
 
@@ -34,7 +34,7 @@ export class SchemaAdmin {
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: { [p: string]: any } = {
       _id: call.request.params.id,
-      name: { $nin: CMS_SYSTEM_SCHEMAS },
+      name: { $nin: SYSTEM_SCHEMAS },
     };
     const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(query);
     if (isNil(requestedSchema)) {
@@ -47,7 +47,7 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: { [p: string]: any } = { name: { $nin: CMS_SYSTEM_SCHEMAS } };
+    let query: { [p: string]: any } = { name: { $nin: SYSTEM_SCHEMAS } };
     if (owner && owner.length !== 0) {
       query = {
         $and: [
@@ -62,7 +62,7 @@ export class SchemaAdmin {
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
     if (!isNil(enabled)) {
-      const enabledQuery = { $or: [{ ownerModule: { $ne: 'cms' } }, { 'modelOptions.conduit.cms.enabled': true }] };
+      const enabledQuery = { $or: [{ ownerModule: { $ne: 'database' } }, { 'modelOptions.conduit.cms.enabled': true }] };
       const disabledQuery = { 'modelOptions.conduit.cms.enabled': false };
       query = {
         $and: [
@@ -74,7 +74,6 @@ export class SchemaAdmin {
 
     const schemasPromise = await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
       query,
-      undefined,
       skip,
       limit,
       sort,
@@ -87,6 +86,30 @@ export class SchemaAdmin {
     ]);
 
     return { schemas, count };
+  }
+
+  async getSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const query = '{}';
+    const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
+    const schemasExtensionsPromise = schemaAdapter.model
+      .findMany(
+        query,
+        skip,
+        limit,
+        'name extensions',
+        undefined,
+      );
+    const totalCountPromise = schemaAdapter.model.countDocuments(query);
+
+    const [schemasExtensions, totalCount] = await Promise.all([
+      schemasExtensionsPromise,
+      totalCountPromise,
+    ]).catch((e: Error) => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    return { schemasExtensions, totalCount };
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -160,7 +183,7 @@ export class SchemaAdmin {
     }
 
     const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: id,
     });
     if (isNil(requestedSchema)) {
@@ -187,7 +210,7 @@ export class SchemaAdmin {
 
 
     const updatedSchema = await this.database
-      .createSchemaFromAdapter(
+      .createCustomSchemaFromAdapter(
         new ConduitSchema(
           requestedSchema.name,
           requestedSchema.fields,
@@ -209,14 +232,15 @@ export class SchemaAdmin {
       );
     }
 
-    return updatedSchema;
+    return updatedSchema.originalSchema;
   }
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, deleteData } = call.request.params;
 
     const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database',
+      name: { $nin: SYSTEM_SCHEMAS },
       _id: id,
     });
     if (isNil(requestedSchema)) {
@@ -257,21 +281,22 @@ export class SchemaAdmin {
     }
 
     const requestedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database',
+      name: { $nin: SYSTEM_SCHEMAS },
       _id: { $in: ids },
     });
-    if (isNil(requestedSchemas)) {
+    if (requestedSchemas.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
     const foundSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: { $in: ids },
     });
     if (foundSchemas !== requestedSchemas.length) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
 
-    for (let schema of requestedSchemas) {
+    for (const schema of requestedSchemas) {
       const endpoints = await this.database.getSchemaModel('CustomEndpoints').model.countDocuments({
         selectedSchema: schema._id,
       });
@@ -297,7 +322,7 @@ export class SchemaAdmin {
 
   async toggleSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: call.request.params.id,
     });
     if (isNil(requestedSchema)) {
@@ -349,14 +374,14 @@ export class SchemaAdmin {
     }
 
     const requestedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: { $in: ids },
     });
     if (isNil(requestedSchemas)) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
     const foundDocumentsCount = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: { $in: ids },
     });
     if (foundDocumentsCount !== requestedSchemas.length) {
@@ -365,7 +390,7 @@ export class SchemaAdmin {
 
     const updatedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.updateMany(
       {
-        ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+        ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
         _id: { $in: ids },
       },
       { 'modelOptions.conduit.cms.enabled': enabled },
@@ -412,7 +437,7 @@ export class SchemaAdmin {
     let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
 
     const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'cms', name: { $nin: CMS_SYSTEM_SCHEMAS },
+      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
       _id: id,
     });
     if (isNil(requestedSchema)) {

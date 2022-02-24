@@ -25,6 +25,8 @@ export abstract class ManagedModule extends ConduitServiceModule {
     this.grpcSdk = grpcSdk;
   }
 
+  async preServerStart() {}
+
   async onServerStart() {}
 
   async preRegister() {}

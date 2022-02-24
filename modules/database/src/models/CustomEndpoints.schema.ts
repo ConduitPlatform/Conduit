@@ -1,6 +1,6 @@
 import { ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
 
-const schema = new ConduitSchema(
+export const CustomEndpoints = new ConduitSchema(
   'CustomEndpoints',
   {
     _id: TYPE.ObjectId,
@@ -66,5 +66,3 @@ const schema = new ConduitSchema(
     },
   },
 );
-
-export default schema;

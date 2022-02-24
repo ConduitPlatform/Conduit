@@ -6,7 +6,7 @@ import {
   constructRoute,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ICustomEndpoint } from '../../models/CustomEndpoint.interface';
+import { ICustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
 
 function getOperation(op: number) {

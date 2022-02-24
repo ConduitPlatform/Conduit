@@ -1,117 +1,89 @@
-import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { SequelizeAdapter } from './adapters/sequelize-adapter';
-import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcError, GrpcServer } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
-import path from 'path';
+import {
+  ManagedModule,
+  ConduitSchema,
+  GrpcError,
+} from "@conduitplatform/grpc-sdk";
+
+import { AdminHandlers } from './admin/admin';
+import { DatabaseRoutes } from './routes/routes';
+import * as models from './models';
 import {
   CreateSchemaExtensionRequest,
   CreateSchemaRequest,
-  DropCollectionRequest,
-  DropCollectionResponse,
-  FindOneRequest,
-  FindRequest,
+  DropCollectionRequest, DropCollectionResponse, FindOneRequest, FindRequest,
   GetSchemaRequest,
-  GetSchemasRequest,
-  QueryRequest,
-  QueryResponse,
+  GetSchemasRequest, QueryRequest, QueryResponse,
   SchemaResponse,
-  SchemasResponse,
-  UpdateManyRequest,
-  UpdateRequest,
-} from './types';
-import * as models from './models/DeclaredSchema.schema';
-import { canCreate, canDelete, canModify } from './permissions';
+  SchemasResponse, UpdateManyRequest, UpdateRequest
+} from "./types";
+import { DatabaseAdapter } from './adapters/DatabaseAdapter';
+import { MongooseAdapter } from './adapters/mongoose-adapter';
+import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { DatabaseAdapter } from './adapters/DatabaseAdapter';
-import { AdminHandlers } from './admin/admin';
-import { migrateModelOptions } from './migrations/modelOptions.migration';
-import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migration';
-import { migrateCustomEndpoints } from './migrations/customEndpoint.migration';
-import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { SchemaController } from './controllers/cms/schema.controller';
-import { CmsRoutes } from './routes/routes';
-import { runMigrations } from './migrations';
+import { SchemaAdapter } from "./interfaces";
+import { canCreate, canDelete, canModify } from "./permissions";
+import { runMigrations } from "./migrations";
+import { SchemaController } from "./controllers/cms/schema.controller";
+import { CustomEndpointController } from "./controllers/customEndpoints/customEndpoint.controller";
+import path from 'path';
+import { status } from '@grpc/grpc-js';
 
-const MODULE_NAME = 'database';
-
-export class DatabaseProvider extends ConduitServiceModule {
+export default class Authentication extends ManagedModule {
+  config = undefined;
+  service = {
+    protoPath: path.resolve(__dirname, 'database.proto'),
+    protoDescription: 'database.DatabaseProvider',
+    functions: {
+      createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
+      getSchema: this.getSchema.bind(this),
+      getSchemas: this.getSchemas.bind(this),
+      deleteSchema: this.deleteSchema.bind(this),
+      setSchemaExtension: this.setSchemaExtension.bind(this),
+      findOne: this.findOne.bind(this),
+      findMany: this.findMany.bind(this),
+      create: this.create.bind(this),
+      createMany: this.createMany.bind(this),
+      findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
+      updateMany: this.updateMany.bind(this),
+      deleteOne: this.deleteOne.bind(this),
+      deleteMany: this.deleteMany.bind(this),
+      countDocuments: this.countDocuments.bind(this),
+    },
+  };
+  private adminRouter: AdminHandlers;
+  private userRouter: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
-  private _admin: AdminHandlers;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    super();
-    this.grpcSdk = grpcSdk;
-    const dbType = process.env.databaseType ?? 'mongodb';
-    const databaseUrl = process.env.databaseURL ?? 'mongodb://localhost:27017';
-
+  constructor(dbType: string, dbUrl: string) {
+    super('database');
     if (dbType === 'mongodb') {
-      this._activeAdapter = new MongooseAdapter(databaseUrl);
+      this._activeAdapter = new MongooseAdapter(dbUrl);
     } else if (dbType === 'sql') {
-      this._activeAdapter = new SequelizeAdapter(databaseUrl);
+      this._activeAdapter = new SequelizeAdapter(dbUrl);
     } else {
-      throw new Error('Arguments not supported');
+      throw new Error('Database type not supported');
     }
   }
 
-  publishSchema(schema: any) {
-    let sendingSchema = JSON.stringify(schema);
-    this.grpcSdk.bus!.publish('database', sendingSchema);
-    console.log('Updated state');
+  async preServerStart() {
+    await this._activeAdapter.ensureConnected();
   }
 
-  async initialize(servicePort?: string) {
-    await this._activeAdapter.ensureConnected();
-    this.grpcServer = new GrpcServer(servicePort);
-    this._port = (await this.grpcServer.createNewServer()).toString();
-    await this.grpcServer.addService(
-      path.resolve(__dirname, './database-provider.proto'),
-      'databaseprovider.DatabaseProvider',
-      {
-        createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
-        getSchema: this.getSchema.bind(this),
-        getSchemas: this.getSchemas.bind(this),
-        deleteSchema: this.deleteSchema.bind(this),
-        setSchemaExtension: this.setSchemaExtension.bind(this),
-        findOne: this.findOne.bind(this),
-        findMany: this.findMany.bind(this),
-        create: this.create.bind(this),
-        createMany: this.createMany.bind(this),
-        findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
-        updateMany: this.updateMany.bind(this),
-        deleteOne: this.deleteOne.bind(this),
-        deleteMany: this.deleteMany.bind(this),
-        countDocuments: this.countDocuments.bind(this),
-      },
-    );
-    let modelPromises = Object.values(models).map((model: any) => {
+  async onServerStart() {
+    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    const modelPromises = Object.values(models).flatMap((model: any) => {
+      if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
     });
-
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
     await this._activeAdapter.recoverSchemasFromDatabase();
-    const consumerRoutes = new CmsRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
-    const schemaController = new SchemaController(
-      this.grpcSdk,
-      this._activeAdapter,
-      consumerRoutes,
-    );
-    const customEndpointController = new CustomEndpointController(
-      this.grpcSdk,
-      this._activeAdapter,
-      consumerRoutes,
-    );
-    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter, schemaController,
-      customEndpointController);
-    await this.grpcServer.start();
+    this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
   }
 
-  async activate() {
+  async onRegister() {
     const self = this;
-    await this.grpcSdk.initializeEventBus();
-
     self.grpcSdk.bus?.subscribe('database', (message: string) => {
       if (message === 'request') {
         self._activeAdapter.registeredSchemas.forEach((k) => {
@@ -141,8 +113,32 @@ export class DatabaseProvider extends ConduitServiceModule {
         console.error('Something was wrong with the message');
       }
     });
+    const schemaController = new SchemaController(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.userRouter,
+    );
+    const customEndpointController = new CustomEndpointController(
+      this.grpcSdk,
+      this._activeAdapter,
+      this.userRouter,
+    );
+    this.adminRouter = new AdminHandlers(
+      this.grpcServer,
+      this.grpcSdk,
+      this._activeAdapter,
+      schemaController,
+      customEndpointController
+    );
   }
 
+  publishSchema(schema: any) {
+    const sendingSchema = JSON.stringify(schema);
+    this.grpcSdk.bus!.publish('database', sendingSchema);
+    console.log('Updated state');
+  }
+
+  // gRPC Service
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param call
@@ -360,7 +356,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const doc = await schemaAdapter.model.create(call.request.query);
       const docString = JSON.stringify(doc);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:create:${schemaName}`, docString);
+      this.grpcSdk.bus?.publish(`${this.name}:create:${schemaName}`, docString);
 
       callback(null, { result: docString });
     } catch (err) {
@@ -386,7 +382,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const docs = await schemaAdapter.model.createMany(call.request.query);
       const docsString = JSON.stringify(docs);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:createMany:${schemaName}`, docsString);
+      this.grpcSdk.bus?.publish(`${this.name}:createMany:${schemaName}`, docsString);
 
       callback(null, { result: docsString });
     } catch (err) {
@@ -418,7 +414,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:update:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -448,7 +444,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       );
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:updateMany:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -474,7 +470,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.deleteOne(query);
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -500,7 +496,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.deleteMany(query);
       const resultString = JSON.stringify(result);
 
-      this.grpcSdk.bus?.publish(`${MODULE_NAME}:delete:${schemaName}`, resultString);
+      this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
