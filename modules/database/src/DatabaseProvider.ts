@@ -1,17 +1,12 @@
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { SchemaAdapter } from './interfaces';
-import ConduitGrpcSdk, {
-  ConduitSchema,
-  ConduitServiceModule,
-  GrpcServer,
-  GrpcError,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, ConduitServiceModule, GrpcError, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import {
-  CreateSchemaRequest,
   CreateSchemaExtensionRequest,
+  CreateSchemaRequest,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -32,6 +27,12 @@ import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { AdminHandlers } from './admin/admin';
 import { migrateModelOptions } from './migrations/modelOptions.migration';
+import { migrateSchemaDefinitions } from './migrations/schemaDefinitions.migration';
+import { migrateCustomEndpoints } from './migrations/customEndpoint.migration';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
+import { SchemaController } from './controllers/cms/schema.controller';
+import { CmsRoutes } from './routes/routes';
+import { runMigrations } from './migrations';
 
 const MODULE_NAME = 'database';
 
@@ -82,12 +83,28 @@ export class DatabaseProvider extends ConduitServiceModule {
         deleteOne: this.deleteOne.bind(this),
         deleteMany: this.deleteMany.bind(this),
         countDocuments: this.countDocuments.bind(this),
-      }
+      },
     );
-    await this._activeAdapter.createSchemaFromAdapter(models.default);
-    await migrateModelOptions(this._activeAdapter);
+    let modelPromises = Object.values(models).map((model: any) => {
+      return this._activeAdapter.createSchemaFromAdapter(model);
+    });
+
+    await Promise.all(modelPromises);
+    await runMigrations(this._activeAdapter);
     await this._activeAdapter.recoverSchemasFromDatabase();
-    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter);
+    const consumerRoutes = new CmsRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
+    const schemaController = new SchemaController(
+      this.grpcSdk,
+      this._activeAdapter,
+      consumerRoutes,
+    );
+    const customEndpointController = new CustomEndpointController(
+      this.grpcSdk,
+      this._activeAdapter,
+      consumerRoutes,
+    );
+    this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk, this._activeAdapter, schemaController,
+      customEndpointController);
     await this.grpcServer.start();
   }
 
@@ -109,12 +126,13 @@ export class DatabaseProvider extends ConduitServiceModule {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName
+            receivedSchema.collectionName,
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
-            .then(() => {})
+            .then(() => {
+            })
             .catch(() => {
               console.log('Failed to create/update schema');
             });
@@ -135,7 +153,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
       JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName
+      call.request.schema.collectionName,
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -222,7 +240,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as any).metadata.get('module-name')[0]
+        (call as any).metadata.get('module-name')[0],
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -288,7 +306,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -316,7 +334,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         select,
         sort,
         populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -396,7 +414,7 @@ export class DatabaseProvider extends ConduitServiceModule {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       const resultString = JSON.stringify(result);
 
@@ -426,7 +444,7 @@ export class DatabaseProvider extends ConduitServiceModule {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly
+        call.request.updateProvidedOnly,
       );
       const resultString = JSON.stringify(result);
 

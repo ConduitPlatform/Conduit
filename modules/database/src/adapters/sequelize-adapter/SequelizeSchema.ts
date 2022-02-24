@@ -1,9 +1,9 @@
 import _, { isNil } from 'lodash';
 import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
-import { SchemaAdapter } from '../../interfaces';
-import { parseQuery } from './utils';
-import { createWithPopulations } from './utils';
+import { MultiDocQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
+import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
+
 const deepdash = require('deepdash/standalone');
 
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
@@ -16,7 +16,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     sequelize: Sequelize,
     schema: any,
     originalSchema: any,
-    private readonly adapter: SequelizeAdapter
+    private readonly adapter: SequelizeAdapter,
   ) {
     this.originalSchema = originalSchema;
     this.excludedFields = [];
@@ -42,7 +42,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         ) {
           this.relations[key] = parentValue[key].model;
         }
-      }
+      },
     );
 
     schema.modelSchema._id = {
@@ -61,20 +61,26 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.sync({ alter: true });
   }
 
-  private async createWithPopulations(document: any): Promise<any> {
-    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
-  }
-
-  async create(query: string): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+  async create(query: SingleDocQuery): Promise<any> {
+    let parsedQuery: { [key: string]: any };
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
     return this.model.create(parsedQuery, { raw: true });
   }
 
-  async createMany(query: string): Promise<any> {
-    let parsedQuery: any[] = JSON.parse(query);
+  async createMany(query: MultiDocQuery): Promise<any> {
+    let parsedQuery: [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     let date = new Date();
     for (const doc of parsedQuery) {
       doc.createdAt = date;
@@ -86,12 +92,17 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   async findOne(
-    query: string,
+    query: Query,
     select?: string,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
     if (!isNil(select) && select !== '') {
@@ -116,15 +127,20 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   async findMany(
-    query: string,
+    query: Query,
     skip?: number,
     limit?: number,
     select?: string,
     sort?: any,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
     options.attributes = { exclude: [...this.excludedFields] };
     if (!isNil(skip)) {
@@ -151,7 +167,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               if (!cache.hasOwnProperty(document[relation])) {
                 cache[document[relation]] = await relations[
                   this.relations[relation]
-                ].findOne({ _id: document[relation] });
+                  ].findOne({ _id: document[relation] });
               }
               document[relation] = cache[document[relation]];
             }
@@ -163,24 +179,39 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return documents;
   }
 
-  deleteOne(query: string): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+  deleteOne(query: Query): Promise<any> {
+    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     return this.model.destroy({ where: parseQuery(parsedQuery), limit: 1 });
   }
 
-  deleteMany(query: string): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+  deleteMany(query: Query): Promise<any> {
+    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     return this.model.destroy({ where: parseQuery(parsedQuery) });
   }
 
   async findByIdAndUpdate(
     id: string,
-    query: string,
+    query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any> {
-    let parsedQuery = JSON.parse(query);
+    let parsedQuery: { [key: string]: any };
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     if (parsedQuery.hasOwnProperty('$inc')) {
       await this.model
         .increment(parsedQuery['$inc'], { where: { _id: id } })
@@ -209,10 +240,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               [key]: Sequelize.fn(
                 'array_append',
                 Sequelize.col(key),
-                parsedQuery['$push'][key]
+                parsedQuery['$push'][key],
               ),
             },
-            { where: { _id: id } }
+            { where: { _id: id } },
           )
           .catch(console.error);
       }
@@ -237,16 +268,16 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
         let cache: any = {};
-          if (this.relations.hasOwnProperty(relation)) {
-            if (relations.hasOwnProperty(this.relations[relation])) {
-              if (!cache.hasOwnProperty(document[relation])) {
-                cache[document[relation]] = await relations[
-                  this.relations[relation]
-                  ].findOne({ _id: document[relation] });
-              }
-              document[relation] = cache[document[relation]];
+        if (this.relations.hasOwnProperty(relation)) {
+          if (relations.hasOwnProperty(this.relations[relation])) {
+            if (!cache.hasOwnProperty(document[relation])) {
+              cache[document[relation]] = await relations[
+                this.relations[relation]
+                ].findOne({ _id: document[relation] });
             }
+            document[relation] = cache[document[relation]];
           }
+        }
       }
     }
 
@@ -254,15 +285,27 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   async updateMany(
-    filterQuery: string,
-    query: string,
-    updateProvidedOnly: boolean = false
+    filterQuery: Query,
+    query: SingleDocQuery,
+    updateProvidedOnly: boolean = false,
   ): Promise<any> {
-    let parsedQuery = JSON.parse(query);
-    let parsedFilter = JSON.parse(filterQuery);
+    let parsedQuery: { [key: string]: any };
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    let parsedFilter: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof filterQuery === 'string') {
+      parsedFilter = JSON.parse(filterQuery);
+    } else {
+      parsedFilter = filterQuery;
+    }
+
     parsedFilter = parseQuery(parsedFilter);
     if (query.hasOwnProperty('$inc')) {
       await this.model
+        // @ts-ignore
         .increment(parsedQuery['$inc'] as any, { where: parsedFilter })
         .catch(console.error);
       delete parsedQuery['$inc'];
@@ -270,6 +313,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (updateProvidedOnly) {
       const record = await this.model
+        // @ts-ignore
         .findOne({ where: parsedFilter, raw: true })
         .catch(console.error);
       if (!isNil(record)) {
@@ -285,10 +329,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               [key]: Sequelize.fn(
                 'array_append',
                 Sequelize.col(key),
-                parsedQuery['$push'][key]
+                parsedQuery['$push'][key],
               ),
             },
-            { where: parsedFilter }
+            // @ts-ignore
+            { where: parsedFilter },
           )
           .catch(console.error);
       }
@@ -304,6 +349,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
             document[key].splice(ind, 1);
           }
         }
+        // @ts-ignore
         await this.model.update(document, { where: parsedFilter }).catch(console.error);
       }
       delete parsedQuery['$pull'];
@@ -311,12 +357,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
+    // @ts-ignore
     return this.model.update(parsedQuery, { where: parsedFilter });
   }
 
-  countDocuments(query: any): Promise<number> {
-    let parsedQuery = JSON.parse(query);
+  countDocuments(query: Query): Promise<number> {
+    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
     return this.model.count({ where: parseQuery(parsedQuery) });
+  }
+
+  private async createWithPopulations(document: any): Promise<any> {
+    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
   private parseSelect(select: string): string[] | { exclude: string[] } {
