@@ -113,10 +113,12 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/replies',
+          path: '/replies/:formId',
           action: ConduitRouteActions.GET,
+          urlParams: {
+            formId: { type: RouteOptionType.String, required: true },
+          },
           queryParams: {
-            formId: ConduitString.Required,
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
           },
