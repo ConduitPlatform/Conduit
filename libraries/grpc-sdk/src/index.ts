@@ -248,7 +248,6 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    this.getModule<typeof AuthenticationDefinition>('authentication');
     return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
