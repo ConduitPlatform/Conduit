@@ -1,47 +1,65 @@
-import ConduitGrpcSdk, {
-  ConduitServiceModule,
+import {
+  ManagedModule,
   DatabaseProvider,
-  GrpcServer,
-  SetConfigRequest,
-  SetConfigResponse,
-} from '@conduitplatform/grpc-sdk';
-import ChatConfigSchema from './config';
-import { status } from '@grpc/grpc-js';
-import path from 'path';
-import { isArray, isNil } from 'lodash';
+} from "@conduitplatform/grpc-sdk";
+
+import AppConfigSchema from './config';
+import { AdminHandlers } from './admin/admin';
 import { ChatRoutes } from './routes/routes';
 import * as models from './models';
-import { ChatMessage, ChatRoom } from './models';
-import { AdminHandlers } from './admin/admin';
 import { validateUsersInput } from './utils';
+import { ChatMessage, ChatRoom } from './models';
+import path from 'path';
+import { isArray, isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
 
-export default class ChatModule extends ConduitServiceModule {
-  private database: DatabaseProvider;
-  private _admin: AdminHandlers;
+export default class Authentication extends ManagedModule {
+  config = AppConfigSchema;
+  service = {
+    protoPath: path.resolve(__dirname, 'chat.proto'),
+    protoDescription: 'chat.Chat',
+    functions: {
+      setConfig: this.setConfig.bind(this),
+      createRoom: this.createRoom.bind(this),
+      deleteRoom: this.deleteRoom.bind(this),
+      sendMessage: this.sendMessage.bind(this),
+    },
+  };
   private isRunning: boolean = false;
-  private _router: ChatRoutes;
+  private adminRouter: AdminHandlers;
+  private userRouter: ChatRoutes;
+  private database: DatabaseProvider;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
-    super();
-    this.grpcSdk = grpcSdk;
+  constructor() {
+    super('chat');
   }
 
-  async initialize(servicePort?: string) {
-    this.grpcServer = new GrpcServer(servicePort);
-    this._port = (await this.grpcServer.createNewServer()).toString();
-    await this.grpcServer.addService(
-      path.resolve(__dirname, './chat.proto'),
-      'chat.Chat',
-      {
-        setConfig: this.setConfig.bind(this),
-        createRoom: this.createRoom.bind(this),
-        deleteRoom: this.deleteRoom.bind(this),
-        sendMessage: this.sendMessage.bind(this),
+  async onServerStart() {
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.databaseProvider!;
+  }
+
+  async onConfig() {
+    if (!this.isRunning) {
+      await this.registerSchemas();
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
+      this.isRunning = true;
+    }
+    await this.userRouter.registerRoutes();
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map((model: any) => {
+      const modelInstance = model.getInstance(this.database);
+      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+        return this.database.createSchemaFromAdapter(modelInstance);
       }
-    );
-    await this.grpcServer.start();
+    });
+    return Promise.all(promises);
   }
 
+  // gRPC Service
   async createRoom(call: any, callback: any) {
     const { name, participants } = call.request;
 
@@ -172,91 +190,5 @@ export default class ChatModule extends ConduitServiceModule {
         participants: room.participants,
       }),
     });
-  }
-
-  async activate() {
-    await this.grpcSdk.waitForExistence('database');
-    await this.grpcSdk.initializeEventBus();
-    this.grpcSdk.bus?.subscribe('chat', (message: string) => {
-      if (message === 'config-update') {
-        this.enableModule()
-          .then(() => {
-            console.log('Updated chat configuration');
-          })
-          .catch(() => {
-            console.log('Failed to update chat config');
-          });
-      }
-    });
-    try {
-      await this.grpcSdk.config.get('chat');
-    } catch (e) {
-      await this.grpcSdk.config.updateConfig(ChatConfigSchema.getProperties(), 'chat');
-    }
-    let config = await this.grpcSdk.config.addFieldstoConfig(
-      ChatConfigSchema.getProperties(),
-      'chat'
-    );
-    if (config.active) await this.enableModule();
-  }
-
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
-    const newConfig = JSON.parse(call.request.newConfig);
-    try {
-      ChatConfigSchema.load(newConfig).validate();
-    } catch (e) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Module is not active',
-      });
-    }
-
-    let errorMessage: string | null = null;
-    const updateResult = await this.grpcSdk.config
-      .updateConfig(newConfig, 'chat')
-      .catch((e: Error) => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
-    const chatConfig = await this.grpcSdk.config.get('chat');
-    if (chatConfig.active) {
-      await this.enableModule().catch((e: Error) => (errorMessage = e.message));
-      if (!isNil(errorMessage)) {
-        return callback({ code: status.INTERNAL, message: errorMessage });
-      }
-      this.grpcSdk.bus?.publish('chat', 'config-update');
-    } else {
-      return callback({
-        code: status.FAILED_PRECONDITION,
-        message: 'Module is not active',
-      });
-    }
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
-    return callback(null, { updatedConfig: JSON.stringify(updateResult) });
-  }
-
-  private async enableModule() {
-    if (!this.isRunning) {
-      this.database = this.grpcSdk.databaseProvider!;
-      await this.registerSchemas();
-      this._router = new ChatRoutes(this.grpcServer, this.grpcSdk);
-      this._admin = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
-    }
-    await this._router.registerRoutes();
-  }
-
-  private registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
-      let modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
-        return this.database.createSchemaFromAdapter(modelInstance);
-      }
-    });
-    return Promise.all(promises);
   }
 }
