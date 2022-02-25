@@ -387,6 +387,8 @@ export class AdminHandlers {
           path: '/customEndpoints',
           action: ConduitRouteActions.GET,
           queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
             search: ConduitString.Optional,
             operation: ConduitString.Optional,
             schemaName: [ConduitString.Optional],

@@ -51,7 +51,6 @@ export class DocumentsAdmin {
 
     const documentsPromise = this.database.getSchemaModel(schemaName).model.findMany(
       query,
-      undefined,
       skip,
       limit,
     );

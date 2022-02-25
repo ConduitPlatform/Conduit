@@ -48,7 +48,6 @@ export class CustomEndpointsAdmin {
     const customEndpoints = await this.database.getSchemaModel('CustomEndpoints').model
       .findMany(
         query,
-        undefined,
         skip,
         limit,
       );

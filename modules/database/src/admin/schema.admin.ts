@@ -462,7 +462,12 @@ export class SchemaAdmin {
 
   async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const modules: string[] = [];
-    const schemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({}, undefined, undefined, 'ownerModule');
+    const schemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
+      {},
+      undefined,
+      undefined,
+      'ownerModule'
+    );
     schemas.forEach((schema: any) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
