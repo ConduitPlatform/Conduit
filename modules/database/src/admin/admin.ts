@@ -77,6 +77,7 @@ export class AdminHandlers {
         createCustomEndpoint: this.customEndpointsAdmin.createCustomEndpoint.bind(this.customEndpointsAdmin),
         patchCustomEndpoint: this.customEndpointsAdmin.patchCustomEndpoint.bind(this.customEndpointsAdmin),
         deleteCustomEndpoint: this.customEndpointsAdmin.deleteCustomEndpoint.bind(this.customEndpointsAdmin),
+        getSchemasWithCustomEndpoints: this.customEndpointsAdmin.getSchemasWithCustomEndpoints.bind(this.customEndpointsAdmin)
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -382,6 +383,17 @@ export class AdminHandlers {
         'deleteDocument',
       ),
       // Custom Endpoints
+      constructConduitRoute(
+        {
+          path: '/customEndpoints/schemas',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetSchemasWithCustomEndpoints', {
+          schemaNames: [ConduitString.Required],
+          schemaIds: [ConduitNumber.Required],
+        }),
+        'getSchemasWithCustomEndpoints',
+      ),
       constructConduitRoute(
         {
           path: '/customEndpoints',

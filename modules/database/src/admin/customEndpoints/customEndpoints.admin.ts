@@ -1,4 +1,8 @@
-import ConduitGrpcSdk, { GrpcError, ParsedRouterRequest, UnparsedRouterResponse } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { assignmentValidation, inputValidation, queryValidation } from './utils';
 import { isNil, isPlainObject } from 'lodash';
@@ -334,5 +338,30 @@ export class CustomEndpointsAdmin {
       });
     this.customEndpointController.refreshEndpoints();
     return 'Custom Endpoint deleted';
+  }
+
+  async getSchemasWithCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const schemaIds: string[] = [];
+    const schemaNames: string[] = [];
+    const customEndpoints = await this.database.getSchemaModel('CustomEndpoints').model.findMany(
+      {},
+      undefined,
+      undefined,
+      'selectedSchema selectedSchemaName'
+    );
+    customEndpoints.forEach((endpoint: any) => {
+      if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
+        schemaIds.push(endpoint.selectedSchema.toString());
+        schemaNames.push(endpoint.selectedSchemaName);
+      }
+    });
+    const schemas: { id: string, name: string }[] = [];
+    for (let i = 0; i < schemaIds.length; i++) {
+      schemas.push({
+        id: schemaIds[i],
+        name: schemaNames[i],
+      })
+    }
+    return { schemas };
   }
 }
