@@ -4,9 +4,10 @@ import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   active: boolean = false;
-  protected client?: Client<T>;
+  private _client?: Client<T>;
   protected channel?: Channel;
   protected protoPath?: string;
+  protected type?: T;
   protected readonly _name: string;
   protected readonly _url: string;
 
@@ -21,25 +22,33 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   initializeClient(type: T): Client<T> {
-    if (this.client) return this.client;
+    if (this._client) return this._client;
+    this.type = type;
+    this.openConnection();
+    return this._client!;
+  }
+
+  openConnection() {
     this.channel = createChannel(this._url, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
-    this.client = createClientFactory()
+    this._client = createClientFactory()
       .use(getModuleNameInterceptor(this._name))
       .create(
-        type,
+        this.type!,
         this.channel,
       );
     this.active = true;
-    return this.client;
+  }
+
+  get client(): Client<T> | undefined{
+    return this._client;
   }
 
   closeConnection() {
     if (!this.channel) return;
     this.channel.close();
-    this.client = undefined;
     this.channel = undefined;
     this.active = false;
   }
