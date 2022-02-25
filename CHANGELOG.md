@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.12.0](https://github.com/ConduitPlatform/Conduit/compare/v0.11.1...v0.12.0) (2022-02-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* - All /admin/cms/* routes are now available under /database/cms
+- [GET] /admin/database/schemas/extensions return definition change
+  'declaredSchemaExtensions' -> 'schemaExtensions'
+
+* fix(database): unparsed ints in getCustomEndpoints due to route definition missing skip,limit query params
+
+* feat(database): getSchemasWithCustomEndpoints admin route
+
+* chore(cms,grpc-sdk): delete CMS module
+
+Co-authored-by: Konstantinos Feretos <konferetos@tutanota.com>
+* GetFormReplies now properly accepts form id as a url param
+* ConduitServiceModule does not receive a ConduitGrpcSdk arg anymore.
+Constructors of modules extending ConduitServiceModule directly should explicitly set this.grpcSdk instead of passing it as an arg to base constructor.
+
+* chore(grpc-sdk,authentication): requested changes
+
+### Features
+
+* **cms:** getCustomEndpoints schemaName array filter ([#45](https://github.com/ConduitPlatform/Conduit/issues/45)) ([b6955c3](https://github.com/ConduitPlatform/Conduit/commit/b6955c3b932546d9f1276c9b21aedde9782678a1))
+
+
+### Bug Fixes
+
+* **authentication:** ConfigController import ([#46](https://github.com/ConduitPlatform/Conduit/issues/46)) ([35f87e0](https://github.com/ConduitPlatform/Conduit/commit/35f87e001a23433746a84a48eba1bfeae61ec160))
+* **grpc-sdk:** import in ConduitParser.ts ([98099ca](https://github.com/ConduitPlatform/Conduit/commit/98099cafd5db50626d9cebea7a3bd8f073ed01f0))
+* **grpc-sdk:** missing convict dependency ([4a58e66](https://github.com/ConduitPlatform/Conduit/commit/4a58e66705c24a856ed49970007322639c6cb2a8))
+* **grpc-sdk:** scope resolution in promise ([#50](https://github.com/ConduitPlatform/Conduit/issues/50)) ([81015f8](https://github.com/ConduitPlatform/Conduit/commit/81015f84085dcee8473d10e1c0d550e16f7fb38b))
+
+
+* Cms db merge (#53) ([f5b054b](https://github.com/ConduitPlatform/Conduit/commit/f5b054be4cc42bc8ea500f8c7f3e2e3854e43da2)), closes [#53](https://github.com/ConduitPlatform/Conduit/issues/53)
+* ManagedModule Refactor for Forms (#52) ([2d9777f](https://github.com/ConduitPlatform/Conduit/commit/2d9777f277a53c474b5437588dcc3780c671d69f)), closes [#52](https://github.com/ConduitPlatform/Conduit/issues/52)
+* Module initialization using lifecycle hooks (ManagedModule) (#44) ([de28fc7](https://github.com/ConduitPlatform/Conduit/commit/de28fc7e53ba4dc656ddb6063a918c9b3c363d39)), closes [#44](https://github.com/ConduitPlatform/Conduit/issues/44)
+
 ### [0.11.1](https://github.com/ConduitPlatform/Conduit/compare/v0.11.0...v0.11.1) (2022-02-18)
 
 ## [0.11.0](https://github.com/ConduitPlatform/Conduit/compare/v0.10.6...v0.11.0) (2022-02-17)
