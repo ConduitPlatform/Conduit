@@ -1,6 +1,5 @@
-import { ConduitParser } from '../ConduitParser';
 import { ConduitModel } from '@conduitplatform/commons';
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitParser, TYPE } from '@conduitplatform/grpc-sdk';
 
 export interface ParseResult {
   type: string;
