@@ -1,5 +1,9 @@
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 
+export type SingleDocQuery = string | { [key: string]: any };
+export type MultiDocQuery = string | [{ [key: string]: any }];
+export type Query = SingleDocQuery | MultiDocQuery;
+
 export interface SchemaAdapter<T> {
   /**
    * The actual underlying model
@@ -17,10 +21,10 @@ export interface SchemaAdapter<T> {
    * @param populate
    */
   findOne(
-    query: string,
+    query: Query,
     select?: string,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any>;
 
   /**
@@ -32,40 +36,40 @@ export interface SchemaAdapter<T> {
    * @param sort
    */
   findMany(
-    query: string,
+    query: Query,
     skip?: number,
     limit?: number,
     select?: string,
     sort?: any,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any>;
 
   /**
    * Should create
    * @param query
    */
-  create(query: string): Promise<any>;
+  create(query: SingleDocQuery): Promise<any>;
 
-  createMany(query: string): Promise<any>;
+  createMany(query: MultiDocQuery): Promise<any>;
 
-  deleteOne(query: string): Promise<any>;
+  deleteOne(query: Query): Promise<any>;
 
-  deleteMany(query: string): Promise<any>;
+  deleteMany(query: Query): Promise<any>;
 
   findByIdAndUpdate(
     id: any,
-    document: string,
+    document: SingleDocQuery,
     updateProvidedOnly?: boolean,
     populate?: string[],
-    relations?: any
+    relations?: any,
   ): Promise<any>;
 
   updateMany(
-    filterQuery: string,
-    query: string,
-    updateProvidedOnly?: boolean
+    filterQuery: Query,
+    query: SingleDocQuery,
+    updateProvidedOnly?: boolean,
   ): Promise<any>;
 
-  countDocuments(query: string): Promise<number>;
+  countDocuments(query: Query): Promise<number>;
 }

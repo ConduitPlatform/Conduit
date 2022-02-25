@@ -1,7 +1,8 @@
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
-import { status } from "@grpc/grpc-js";
+import { status } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -12,6 +13,11 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
    * @param schema
    */
   abstract createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter<any>>;
+
+  async createCustomSchemaFromAdapter(schema: ConduitSchema) {
+    schema.ownerModule = 'database';
+    return this.createSchemaFromAdapter(schema);
+  }
 
   /**
    * Given a schema name, returns the schema adapter assigned
@@ -56,11 +62,19 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     schemaName: string
   ): { model: SchemaAdapter<any>; relations: any };
 
+  async fixDatabaseSchemaOwnership(schema: ConduitSchema) {
+    const dbSchemas = ['CustomEndpoints'];
+    if (dbSchemas.includes(schema.name)) {
+      schema.ownerModule = 'database';
+    }
+  }
+
   async checkModelOwnership(schema: ConduitSchema) {
+    this.fixDatabaseSchemaOwnership(schema);
     if (schema.name === '_DeclaredSchema') return true;
 
     const model = await this.models!['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
-    if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'unknown'))) {
+    if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'cms'))) {
       return true;
     } else if (model) {
       return false;
@@ -156,8 +170,6 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
         (schema as any).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
       }
     }
-    // (schema as any).schemaOptions = (schema as any).modelOptions;
-    // delete (schema as any).modelOptions;
     return this.createSchemaFromAdapter(schema);
   }
 
@@ -168,8 +180,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
       canModify: 'Everything',
       canDelete: true,
     } as const;
-    if (!schema.schemaOptions.hasOwnProperty('conduit')) schema.schemaOptions.conduit = {};
-    if (!schema.schemaOptions.conduit!.hasOwnProperty('permissions')) {
+    if (isNil(schema.schemaOptions.conduit)) schema.schemaOptions.conduit = {};
+    if (isNil(schema.schemaOptions.conduit.permissions)) {
       schema.schemaOptions.conduit!.permissions = defaultPermissions;
     } else {
       Object.keys(defaultPermissions).forEach((perm) => {

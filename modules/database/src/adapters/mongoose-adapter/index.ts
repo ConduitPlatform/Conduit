@@ -112,7 +112,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.saveSchemaToDatabase(original);
     }
 
-    return this.models![schema.name];
+    return this.models[schema.name];
   }
 
   getSchemaModel(schemaName: string): { model: MongooseSchema; relations: any } {

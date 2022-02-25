@@ -1,7 +1,6 @@
 import {
   Admin,
   Chat,
-  CMS,
   Config,
   DatabaseProvider,
   Email,
@@ -29,7 +28,6 @@ export default class ConduitGrpcSdk {
     email: Email,
     pushNotifications: PushNotifications,
     authentication: Authentication,
-    cms: CMS,
     sms: SMS,
     chat: Chat,
     forms: Forms,
@@ -84,13 +82,17 @@ export default class ConduitGrpcSdk {
     return this._router;
   }
 
-  get databaseProvider(): DatabaseProvider | null {
+  get database(): DatabaseProvider | null {
     if (this._modules['database']) {
       return this._modules['database'];
     } else {
       console.warn('Database provider not up yet!');
       return null;
     }
+  }
+
+  get databaseProvider(): DatabaseProvider | null {
+    return this.database;
   }
 
   get storage(): Storage | null {
@@ -134,15 +136,6 @@ export default class ConduitGrpcSdk {
       return this._modules['authentication'];
     } else {
       console.warn('Authentication module not up yet!');
-      return null;
-    }
-  }
-
-  get cms(): CMS | null {
-    if (this._modules['cms']) {
-      return this._modules['cms'];
-    } else {
-      console.warn('Cms module not up yet!');
       return null;
     }
   }
