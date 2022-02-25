@@ -1,7 +1,6 @@
 import {
   Admin,
   Chat,
-  CMS,
   Config,
   DatabaseProvider,
   Email,
@@ -19,7 +18,6 @@ import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
-import { AuthenticationDefinition } from './protoUtils/authentication';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -33,7 +31,6 @@ export default class ConduitGrpcSdk {
     email: Email,
     pushNotifications: PushNotifications,
     authentication: Authentication,
-    cms: CMS,
     sms: SMS,
     chat: Chat,
     forms: Forms,
@@ -140,15 +137,6 @@ export default class ConduitGrpcSdk {
       return this._modules['authentication'] as Authentication;
     } else {
       console.warn('Authentication module not up yet!');
-      return null;
-    }
-  }
-
-  get cms(): CMS | null {
-    if (this._modules['cms']) {
-      return this._modules['cms'] as CMS;
-    } else {
-      console.warn('Cms module not up yet!');
       return null;
     }
   }
