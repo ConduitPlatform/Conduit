@@ -1,4 +1,4 @@
-import { ConduitModel } from '@conduitplatform/commons';
+import { ConduitModel } from '../interfaces';
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
