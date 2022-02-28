@@ -25,6 +25,7 @@
     "mariadb": "^2.5.4",
     "mongodb-extended-json": "^1.11.0",
     "mongoose": "5.13.13",
+    "escape-string-regexp": "^4.0.0",
     "mongoose-deep-populate": "^3.2.0",
     "mysql2": "^2.3.0",
     "pg": "^8.6.0",
