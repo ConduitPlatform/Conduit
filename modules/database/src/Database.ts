@@ -29,7 +29,7 @@ import { CustomEndpointController } from "./controllers/customEndpoints/customEn
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 
-export default class Authentication extends ManagedModule {
+export default class DatabaseModule extends ManagedModule {
   config = undefined;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),

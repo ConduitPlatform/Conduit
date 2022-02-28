@@ -222,11 +222,11 @@ export default class ConduitGrpcSdk {
     if (this._modules[moduleName] || (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])) return;
     if (this._availableModules[moduleName]) {
       this._modules[moduleName] = new this._availableModules[moduleName](
-        moduleName,
+        this.name,
         moduleUrl,
       );
     } else if (this._dynamicModules[moduleName]) {
-      this._modules[moduleName] = new ConduitModule(moduleName, moduleUrl);
+      this._modules[moduleName] = new ConduitModule(this.name, moduleUrl);
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
     }
   }
