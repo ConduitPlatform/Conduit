@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.1](https://github.com/ConduitPlatform/Conduit/compare/v0.12.0...v0.12.1) (2022-02-28)
+
+
+### Bug Fixes
+
+* **database:** missing escape-string-regexp ([1897b9b](https://github.com/ConduitPlatform/Conduit/commit/1897b9b5b05f22e2a4e64424f39987f9274dbf04))
+* **database:** schema migrations from CMS not working properly ([#59](https://github.com/ConduitPlatform/Conduit/issues/59)) ([b81774c](https://github.com/ConduitPlatform/Conduit/commit/b81774c6af7d85c92da88c4c7bcdb2ce92d02057))
+
 ## [0.12.0](https://github.com/ConduitPlatform/Conduit/compare/v0.11.1...v0.12.0) (2022-02-25)
 
 
