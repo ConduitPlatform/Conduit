@@ -1,6 +1,7 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest/Rest';
 import {
+  ConduitCommons,
   ConduitRoute,
   ConduitMiddleware,
   ConduitSocket,
@@ -15,11 +16,13 @@ export class ConduitRoutingController {
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
   private _app: Application;
+  private _conduitSdk: ConduitCommons;
   private _middlewareRouter: Router;
 
-  constructor(app: Application) {
+  constructor(app: Application, conduitSdk: ConduitCommons) {
     this._app = app;
-    this._restRouter = new RestController(this._app);
+    this._conduitSdk = conduitSdk;
+    this._restRouter = new RestController(this._conduitSdk);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();
@@ -45,11 +48,11 @@ export class ConduitRoutingController {
   }
 
   initGraphQL() {
-    this._graphQLRouter = new GraphQLController(this._app);
+    this._graphQLRouter = new GraphQLController(this._conduitSdk);
   }
 
   initSockets() {
-    this._socketRouter = new SocketController(this._app);
+    this._socketRouter = new SocketController(this._conduitSdk, this._app);
   }
 
   registerMiddleware(

@@ -4,14 +4,14 @@ import {
   ConduitRoute,
   ConduitRouteParameters,
 } from '@conduitplatform/commons';
-import { Application, NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 
 export abstract class ConduitRouter {
   protected _expressRouter: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
 
-  constructor(protected readonly app: Application) {
+  constructor(protected readonly conduitSdk: ConduitCommons) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
   }
@@ -37,13 +37,13 @@ export abstract class ConduitRouter {
   }
 
   protected findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitCommons)
+    return this.conduitSdk
       .getState()
       .getKey('hash-' + hashKey);
   }
   // age is in seconds
   protected storeInCache(hashKey: string, data: any, age: number) {
-    ((this.app as any).conduit as ConduitCommons)
+    this.conduitSdk
       .getState()
       .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }

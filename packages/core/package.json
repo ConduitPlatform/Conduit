@@ -33,7 +33,10 @@
     "debug": "~2.6.9",
     "express": "~4.16.1",
     "express-winston": "^4.0.2",
+    "fastify": "^3.27.2",
+    "fastify-express": "^0.3.3",
     "lodash": "^4.17.15",
+    "middie": "^6.0.0",
     "winston": "^3.2.1"
   },
   "devDependencies": {
@@ -43,7 +46,7 @@
     "@types/cookie-parser": "^1.4.2",
     "@types/cors": "^2.8.6",
     "@types/debug": "^4.1.5",
-    "@types/express": "~4.16.1",
+    "@types/express": "^4.17.13",
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.2",
     "@types/node": "^13.11.1",

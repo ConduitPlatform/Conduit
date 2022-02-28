@@ -1,4 +1,3 @@
-import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
@@ -19,43 +18,38 @@ import AdminConfigSchema from './config';
 import * as models from './models';
 
 export default class AdminModule extends IConduitAdmin {
-  conduit: ConduitCommons;
-  grpcSdk: ConduitGrpcSdk;
-  private readonly _app: Application;
+  private readonly conduitSdk: ConduitCommons;
+  private readonly grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _sdkRoutes: ConduitRoute[];
-  private _grpcRoutes: any = {};
+  private readonly _grpcRoutes: any = {};
 
   constructor(
-    app: Application,
+    conduitSdk: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
-    conduit: ConduitCommons,
     packageDefinition: any,
     server: Server,
   ) {
     super();
-    this.conduit = conduit;
+    this.conduitSdk = conduitSdk;
     this.grpcSdk = grpcSdk;
-
-    this._app = app;
-    this._restRouter = new RestController(this._app);
-
-    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
+    this._restRouter = new RestController(this.conduitSdk);
+    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduitSdk));
     this._restRouter.registerRoute(
       '*',
-      middleware.getAuthMiddleware(this.grpcSdk, this.conduit),
+      middleware.getAuthMiddleware(this.grpcSdk, this.conduitSdk),
     );
     // Register Pre-Auth-Middleware routes
     const preAuthMiddlewareRoutes: ConduitRoute[] = [];
-    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit));
-    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
+    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduitSdk));
+    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduitSdk));
     preAuthMiddlewareRoutes.forEach((route) => {
       this._restRouter.registerConduitRoute(route);
     }, this);
 
     this._grpcRoutes = {};
     this._sdkRoutes = [
-      adminRoutes.getCreateAdminRoute(this.conduit),
+      adminRoutes.getCreateAdminRoute(this.conduitSdk),
     ];
 
     // Register Post-Auth-Middleware routes
@@ -73,7 +67,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize() {
-    await this.conduit
+    await this.conduitSdk
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     await this.handleDatabase().catch(console.log);
@@ -88,7 +82,7 @@ export default class AdminModule extends IConduitAdmin {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        let result = this.conduit
+        let result = this.conduitSdk
           .getConfigManager()!
           .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
@@ -128,13 +122,13 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private attachRouter() {
-    this.conduit.getRouter().registerExpressRouter('/admin', (req, res, next) => {
+    this.conduitSdk.getRouter().registerExpressRouter('/admin', (req, res, next) => {
       this._restRouter.handleRequest(req, res, next);
     });
   }
 
   private async highAvailability() {
-    let r = await this.conduit.getState().getKey('admin');
+    let r = await this.conduitSdk.getState().getKey('admin');
     if (!r || r.length === 0) {
       this.cleanupRoutes();
       return;
@@ -152,7 +146,7 @@ export default class AdminModule extends IConduitAdmin {
     }
     this.cleanupRoutes();
 
-    this.conduit.getBus().subscribe('admin', (message: string) => {
+    this.conduitSdk.getBus().subscribe('admin', (message: string) => {
       let messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
@@ -168,7 +162,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private updateState(protofile: string, routes: any, url: string) {
-    this.conduit
+    this.conduitSdk
       .getState()
       .getKey('admin')
       .then((r: any) => {
@@ -189,7 +183,7 @@ export default class AdminModule extends IConduitAdmin {
             url,
           });
         }
-        return this.conduit.getState().setKey('admin', JSON.stringify(state));
+        return this.conduitSdk.getState().setKey('admin', JSON.stringify(state));
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
@@ -201,7 +195,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private publishAdminRouteData(protofile: string, routes: any, url: string) {
-    this.conduit.getBus().publish(
+    this.conduitSdk.getBus().publish(
       'admin',
       JSON.stringify({
         protofile,
@@ -220,7 +214,7 @@ export default class AdminModule extends IConduitAdmin {
       .findOne({ username: 'admin' })
       .then(async (existing: any) => {
         if (isNil(existing)) {
-          const adminConfig = await this.conduit.getConfigManager().get('admin');
+          const adminConfig = await this.conduitSdk.getConfigManager().get('admin');
           const hashRounds = adminConfig.auth.hashRounds;
           return hashPassword('admin', hashRounds);
         }

@@ -4,6 +4,7 @@ import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
+  ConduitCommons,
   ConduitError,
   ConduitSocket,
   EventResponse,
@@ -27,8 +28,8 @@ export class SocketController extends ConduitRouter {
     next: NextFunction
   ) => void)[];
 
-  constructor(readonly app: Application) {
-    super(app);
+  constructor(conduitSdk: ConduitCommons, app: Application) {
+    super(conduitSdk);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
       console.error('Redis IP not defined');
       process.exit(-1);
