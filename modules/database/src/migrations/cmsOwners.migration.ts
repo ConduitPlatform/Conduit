@@ -10,7 +10,7 @@ export async function cmsOwnersMigration(adapter: DatabaseAdapter<MongooseSchema
     .catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-  if (schemas.filter((schema: any) => schema.name === 'SchemaDefinitions').length === 0)
+  if (schemas.filter((schema: any) => schema.name !== 'SchemaDefinitions').length === 0)
     return;
   if (schemas.length > 0) {
     await adapter.getSchemaModel('_DeclaredSchema').model
