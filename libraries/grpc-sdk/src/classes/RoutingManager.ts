@@ -181,7 +181,7 @@ export class RoutingManager {
   }
 
   async registerRoutes() {
-    return this._router.registerRouterAsync(this._server, Object.values(this._moduleRoutes), this._routeHandlers);
+    return this._router.registerRouter(this._server, Object.values(this._moduleRoutes), this._routeHandlers);
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {
