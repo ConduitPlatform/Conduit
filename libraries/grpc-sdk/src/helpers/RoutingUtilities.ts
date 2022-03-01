@@ -1,5 +1,5 @@
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
-import { wrapRouterGrpcFunction } from './wrapRouterFunctions';
+import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
 import { SocketProtoDescription } from '../interfaces';
 import path from 'path';
 import fs from 'fs';
@@ -57,8 +57,7 @@ function getFormattedModuleName(moduleName: string) {
 }
 
 export function wrapFunctionsAsync(functions: {
-  [name: string]:
-    (call: ParsedRouterRequest) => Promise<UnparsedRouterResponse>
+  [name: string]: RequestHandlers
 }): { [name: string]: (call: any, callback?: any) => void } {
   let modifiedFunctions: { [name: string]: (call: any, callback?: any) => void } = {};
   Object.keys(functions).forEach((key) => {
