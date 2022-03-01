@@ -3,7 +3,7 @@ import {
   ConduitModel,
   ConduitRouteActions,
   ConduitRouteOption,
-  ConduitRouteOptions, ConduitSocketEvent, ConduitSocketOptions,
+  ConduitRouteOptions, ConduitSocketEvent, ConduitSocketEventHandler, ConduitSocketOptions, EventsProtoDescription,
 } from '../interfaces';
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { ConduitRouteReturnDefinition, GrpcServer } from '../classes';
@@ -181,25 +181,40 @@ export class RoutingManager {
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
-  // socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEvent>, handler: RequestHandlers) {
-  //   let routeObject: any = {
-  //     options: input,
-  //     // events: JSON.stringify(eventsObj),
-  //     events: "",
-  //
-  // };
-  //
-  //   if (!routeObject.options.middlewares) {
-  //     routeObject.options.middlewares = [];
-  //   }
-  //   for (let option in routeObject.options) {
-  //     if (!routeObject.options.hasOwnProperty(option)) continue;
-  //     if (option === 'middlewares') continue;
-  //     routeObject.options[option] = JSON.stringify(routeObject.options[option]);
-  //   }
-  //   this._moduleRoutes[routeObject.grpcFunction] = routeObject;
-  //   this._routeHandlers[routeObject.grpcFunction] = handler;
-  // }
+  socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
+    let routeObject: any = {
+      options: input,
+      events: "",
+
+  };
+    let eventsObj: EventsProtoDescription = {};
+    if (!routeObject.options.middlewares) {
+      routeObject.options.middlewares = [];
+    }
+    for (let option in routeObject.options) {
+      if (!routeObject.options.hasOwnProperty(option)) continue;
+      if (option === 'middlewares') continue;
+      routeObject.options[option] = JSON.stringify(routeObject.options[option]);
+    }
+    let primary:string;
+    Object.keys(events).forEach((eventName: string) => {
+      if(!primary) primary = eventName;
+      const event = events[eventName];
+      eventsObj[eventName] = {
+        grpcFunction: eventName,
+        params: JSON.stringify(event.params),
+        returns: {
+          name: event.returnType?.name ?? "",
+          fields: JSON.stringify(event.returnType?.fields),
+        },
+      };
+      this._routeHandlers[eventName] = event.handler;
+    });
+    routeObject.events = JSON.stringify(eventsObj);
+
+    this._moduleRoutes[primary!] = routeObject;
+
+  }
 
   async registerRoutes() {
     let modifiedFunctions: { [name: string]: (call: any, callback: any) => void } = wrapFunctionsAsync(this._routeHandlers);

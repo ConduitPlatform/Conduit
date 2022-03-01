@@ -1,19 +1,14 @@
 import ConduitGrpcSdk, {
-  ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitSocket,
   ConduitString,
-  constructRoute,
-  constructSocket,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
   RoutingManager,
-  SocketRequest,
-  SocketResponse,
   TYPE,
   UnparsedRouterResponse,
+  UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
 import { ChatMessage, ChatRoom } from '../models';
 import { isArray, isNil } from 'lodash';
@@ -294,67 +289,45 @@ export class ChatRoutes {
     return 'Message updated successfully';
   }
 
-  async connect(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
+  async connect(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+    const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
-      .findMany({ participants: user._id })
-      .catch((e: Error) => {
-        return callback({ code: status.INTERNAL, message: e.message });
-      });
-    callback(null, { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) });
+      .findMany({ participants: user._id });
+    return { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) };
   }
 
-  async onMessage(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
-    const [roomId, message] = JSON.parse(call.request.params);
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        return callback({ code: status.INTERNAL, message: e.message });
-      });
+  async onMessage(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+    const { user } = call.request.context;
+    const { roomId, message } = call.request.params;
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Room does not exist or you don\'t have access',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT,
+        'Room does not exist or you don\'t have access');
     }
 
-    ChatMessage.getInstance()
+    await ChatMessage.getInstance()
       .create({
         message,
         senderUser: user._id,
         room: roomId,
         readBy: [user._id],
-      })
-      .then(() => {
-        callback(null, {
-          event: 'message',
-          receivers: [roomId],
-          data: JSON.stringify({ sender: user._id, message, room: roomId }),
-        });
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
       });
+    return {
+      event: 'message',
+      receivers: [roomId],
+      data: { sender: user._id, message, room: roomId },
+    };
   }
 
-  async onMessagesRead(call: SocketRequest, callback: SocketResponse) {
-    const { user } = JSON.parse(call.request.context);
-    const [roomId] = JSON.parse(call.request.params);
+  async onMessagesRead(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+    const { user } = call.request.context;
+    const { roomId } = call.request.params;
     const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        return callback({ code: status.INTERNAL, message: e.message });
-      });
+      .findOne({ _id: roomId });
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Room does not exist or you don\'t have access',
-      });
+      throw new GrpcError(status.INVALID_ARGUMENT,
+        'Room does not exist or you don\'t have access');
     }
 
     const filterQuery = {
@@ -362,21 +335,13 @@ export class ChatRoutes {
       readBy: { $ne: user._id },
     };
 
-    ChatMessage.getInstance()
-      .updateMany(filterQuery, { $push: { readBy: user._id } })
-      .then(() => {
-        callback(null, {
-          event: 'messagesRead',
-          receivers: [(room as ChatRoom)._id],
-          data: JSON.stringify({ room: (room as ChatRoom)._id, readBy: user._id }),
-        });
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
-      });
+    await ChatMessage.getInstance()
+      .updateMany(filterQuery, { $push: { readBy: user._id } });
+    return {
+      event: 'messagesRead',
+      receivers: [(room as ChatRoom)._id],
+      data: { room: (room as ChatRoom)._id, readBy: user._id },
+    };
   }
 
   async registerRoutes() {
@@ -399,161 +364,157 @@ export class ChatRoutes {
     );
 
     this._routingController.route(
-          {
-            path: '/add/:roomId',
-            action: ConduitRouteActions.UPDATE,
-            urlParams: {
-              roomId: TYPE.String,
-            },
-            bodyParams: {
-              users: [TYPE.String],
-            },
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
+      {
+        path: '/add/:roomId',
+        action: ConduitRouteActions.UPDATE,
+        urlParams: {
+          roomId: TYPE.String,
+        },
+        bodyParams: {
+          users: [TYPE.String],
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
       this.addUserToRoom.bind(this),
     );
 
     this._routingController.route(
-          {
-            path: '/leave/:roomId',
-            action: ConduitRouteActions.UPDATE,
-            urlParams: {
-              roomId: TYPE.String,
-            },
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
-          this.leaveRoom.bind(this),
+      {
+        path: '/leave/:roomId',
+        action: ConduitRouteActions.UPDATE,
+        urlParams: {
+          roomId: TYPE.String,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('LeaveRoom', 'String'),
+      this.leaveRoom.bind(this),
     );
 
     this._routingController.route(
-          {
-            urlParams: {
-              id: ConduitString.Required,
-            },
-            path: '/rooms/:id',
-            action: ConduitRouteActions.GET,
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
-          this.getRoom.bind(this),
+      {
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        path: '/rooms/:id',
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
+      this.getRoom.bind(this),
     );
     this._routingController.route(
-          {
-            path: '/rooms',
-            queryParams: {
-              skip: TYPE.Number,
-              limit: TYPE.Number,
-            },
-            action: ConduitRouteActions.GET,
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('ChatRoomsResponse', {
-            rooms: ['ChatRoom'],
-            count: TYPE.Number,
-          }),
-          this.getRooms.bind(this),
-    );
-
-    this._routingController.route(
-          {
-            urlParams: {
-              id: ConduitString.Required,
-            },
-            path: '/messages/:id',
-            action: ConduitRouteActions.GET,
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
-          this.getMessage.bind(this),
+      {
+        path: '/rooms',
+        queryParams: {
+          skip: TYPE.Number,
+          limit: TYPE.Number,
+        },
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChatRoomsResponse', {
+        rooms: ['ChatRoom'],
+        count: TYPE.Number,
+      }),
+      this.getRooms.bind(this),
     );
 
     this._routingController.route(
-          {
-            path: '/messages',
-            action: ConduitRouteActions.GET,
-            queryParams: {
-              roomId: TYPE.String,
-              skip: TYPE.Number,
-              limit: TYPE.Number,
-            },
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('ChatMessagesResponse', {
-            messages: ['ChatMessage'],
-            count: TYPE.Number,
-          }),
-          this.getMessages.bind(this),
+      {
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        path: '/messages/:id',
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
+      this.getMessage.bind(this),
+    );
+
+    this._routingController.route(
+      {
+        path: '/messages',
+        action: ConduitRouteActions.GET,
+        queryParams: {
+          roomId: TYPE.String,
+          skip: TYPE.Number,
+          limit: TYPE.Number,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChatMessagesResponse', {
+        messages: ['ChatMessage'],
+        count: TYPE.Number,
+      }),
+      this.getMessages.bind(this),
     );
 
     const config = await this.grpcSdk.config.get('chat');
     if (config.allowMessageDelete) {
       this._routingController.route(
-            {
-              path: '/messages/:messageId',
-              action: ConduitRouteActions.DELETE,
-              urlParams: {
-                messageId: TYPE.String,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
-            this.deleteMessage.bind(this),
+        {
+          path: '/messages/:messageId',
+          action: ConduitRouteActions.DELETE,
+          urlParams: {
+            messageId: TYPE.String,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('DeleteMessageResponse', 'String'),
+        this.deleteMessage.bind(this),
       );
     }
 
     if (config.allowMessageEdit) {
       this._routingController.route(
-            {
-              path: '/messages/:messageId',
-              action: ConduitRouteActions.UPDATE,
-              urlParams: {
-                messageId: TYPE.String,
-              },
-              bodyParams: {
-                newMessage: TYPE.String,
-              },
-              middlewares: ['authMiddleware'],
-            },
-            new ConduitRouteReturnDefinition('PatchMessageResponse', 'String'),
-            this.patchMessage.bind(this),
+        {
+          path: '/messages/:messageId',
+          action: ConduitRouteActions.UPDATE,
+          urlParams: {
+            messageId: TYPE.String,
+          },
+          bodyParams: {
+            newMessage: TYPE.String,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('PatchMessageResponse', 'String'),
+        this.patchMessage.bind(this),
       );
     }
 
     // TODO refactor socket registration process.
-    // routesArray.push(
-    //   constructSocket(
-    //     new ConduitSocket(
-    //       {
-    //         path: '/',
-    //         middlewares: ['authMiddleware'],
-    //       },
-    //       {
-    //         connect: {
-    //           handler: 'connect',
-    //         },
-    //         message: {
-    //           handler: 'onMessage',
-    //           params: [TYPE.String, TYPE.String],
-    //           returnType: new ConduitRouteReturnDefinition('MessageResponse', {
-    //             sender: TYPE.String,
-    //             message: TYPE.String,
-    //             room: TYPE.String,
-    //           }),
-    //         },
-    //         messagesRead: {
-    //           handler: 'onMessagesRead',
-    //           params: [TYPE.String],
-    //           returnType: new ConduitRouteReturnDefinition('MessagesReadResponse', {
-    //             room: TYPE.String,
-    //             readBy: TYPE.String,
-    //           }),
-    //         },
-    //       },
-    //     ),
-    //   ),
-    // );
+    this._routingController.socket(
+      {
+        path: '/',
+        middlewares: ['authMiddleware'],
+      },
+      {
+        connect: {
+          handler: this.connect.bind(this),
+        },
+        message: {
+          handler: this.onMessage.bind(this),
+          params: [TYPE.String, TYPE.String],
+          returnType: new ConduitRouteReturnDefinition('MessageResponse', {
+            sender: TYPE.String,
+            message: TYPE.String,
+            room: TYPE.String,
+          }),
+        },
+        messagesRead: {
+          handler: this.onMessagesRead.bind(this),
+          params: [TYPE.String],
+          returnType: new ConduitRouteReturnDefinition('MessagesReadResponse', {
+            room: TYPE.String,
+            readBy: TYPE.String,
+          }),
+        },
+      },
+    );
     return this._routingController.registerRoutes();
   }
 }
