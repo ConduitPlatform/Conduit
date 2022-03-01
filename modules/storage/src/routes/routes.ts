@@ -6,37 +6,25 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   constructRoute,
   GrpcServer,
+  RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
 export class StorageRoutes {
+  private _routingController: RoutingManager;
+
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly fileHandlers: FileHandlers
-  ) {}
-  async registerRoutes() {
-    let activeRoutes = await this.getRegisteredRoutes();
-    this.grpcSdk.router
-      .registerRouterAsync(this.server, activeRoutes, {
-        createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
-        getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
-        getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
-        getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
-        deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
-        updateFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
-      })
-      .catch((err: Error) => {
-        console.log('Failed to register routes for module');
-        console.log(err);
-      });
+    private readonly fileHandlers: FileHandlers,
+  ) {
+    this._routingController = new RoutingManager(this.grpcSdk.router, server);
+
   }
 
-  async getRegisteredRoutes(): Promise<any[]>  {
-    let routesArray: any = [];
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+  async registerRoutes() {
+    this._routingController.clear();
+    this._routingController.route(
           {
             bodyParams: {
               name: { type: TYPE.String, required: true },
@@ -51,14 +39,10 @@ export class StorageRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('File', File.getInstance().fields),
-          'createFile'
-        )
-      )
+      this.fileHandlers.createFile.bind(this.fileHandlers),
     );
 
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+    this._routingController.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -67,14 +51,10 @@ export class StorageRoutes {
             path: '/storage/file/:id',
           },
           new ConduitRouteReturnDefinition('File', File.getInstance().fields),
-          'getFile'
-        )
-      )
+      this.fileHandlers.getFile.bind(this.fileHandlers),
     );
 
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+    this._routingController.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -86,33 +66,25 @@ export class StorageRoutes {
           new ConduitRouteReturnDefinition('File', {
             data: TYPE.String,
           }),
-          'getFileData'
-        )
-      )
+      this.fileHandlers.getFileData.bind(this.fileHandlers),
     );
 
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+    this._routingController.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
             },
-            queryParams:{
-              redirect: { type: TYPE.Boolean, required: false}
+            queryParams: {
+              redirect: { type: TYPE.Boolean, required: false },
             },
             action: ConduitRouteActions.GET,
             path: '/storage/getFileUrl/:id',
           },
           new ConduitRouteReturnDefinition('FileUrl', 'String'),
-          'getFileUrl'
-        )
-      )
+      this.fileHandlers.getFileUrl.bind(this.fileHandlers),
     );
 
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+    this._routingController.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -124,14 +96,10 @@ export class StorageRoutes {
           new ConduitRouteReturnDefinition('FileDeleteResponse', {
             success: TYPE.Boolean,
           }),
-          'deleteFile'
-        )
-      )
+      this.fileHandlers.deleteFile.bind(this.fileHandlers),
     );
 
-    routesArray.push(
-      constructRoute(
-        new ConduitRoute(
+    this._routingController.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -148,11 +116,9 @@ export class StorageRoutes {
             middlewares: ['authMiddleware'],
           },
           new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
-          'updateFile'
-        )
-      )
+      this.fileHandlers.updateFile.bind(this.fileHandlers),
     );
-
-    return routesArray;
+   await this._routingController.registerRoutes();
   }
+
 }
