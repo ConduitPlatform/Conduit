@@ -18,6 +18,7 @@ import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
+import { sleep } from './utilities';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -245,16 +246,11 @@ export default class ConduitGrpcSdk {
 
   async waitForExistence(moduleName: string) {
     while (!this._modules[moduleName]) {
-      await this.sleep(1000);
+      await sleep(1000);
     }
     return true;
   }
 
-  sleep(ms: number) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }
 
   /**
    * Used to refresh all modules to check for new registrations

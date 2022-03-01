@@ -4,6 +4,7 @@ import fs from 'fs';
 import { GrpcServer } from '../../classes';
 import { AdminDefinition } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
+import { sleep } from '../../utilities';
 
 let protofile_template = `
 syntax = "proto3";
@@ -30,12 +31,6 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(private readonly moduleName: string, url: string) {
     super(moduleName, url);
     this.initializeClient(AdminDefinition);
-  }
-
-  sleep(ms: number) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
   }
 
   async registerAdminAsync(
@@ -68,7 +63,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     // not have the url of the service yet. In order to avoid this I've added the sleep period.
     // One case is to register to config module X and the admin package to request the url from
     // config module Y that hasn't been informed yet. It may be a rare case but this will help defend against it.
-    return this.sleep(3000).then(() => this.register(paths, protoFile));
+    return sleep(3000).then(() => this.register(paths, protoFile));
   }
 
   register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
