@@ -153,7 +153,6 @@ export default class PushNotificationsModule extends ConduitServiceModule {
       await this.initProvider();
       await this.registerSchemas();
       let router = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-      this._routes = router.registeredRoutes;
       this.adminHandlers = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
