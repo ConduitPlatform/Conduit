@@ -101,13 +101,7 @@ export class FormsRoutes {
     return 'Ok';
   }
 
-  addRoutes(routes: any[]) {
-    this.forms = routes;
-  }
-
   requestRefresh() {
-    if (this.forms && this.forms.length !== 0) {
-      this._routingManager.registerRoutes();
-    }
+    this._routingManager.registerRoutes();
   }
 }
