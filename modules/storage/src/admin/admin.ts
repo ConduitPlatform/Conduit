@@ -246,25 +246,23 @@ export class AdminRoutes {
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, folder, search } = call.request.params;
-    let query: { container: string; folder?: string | null; name?: any } = { container: call.request.params.container };
+    const query: { container: string; folder?: string ; name?: any } = { container: call.request.params.container };
 
     if (!isNil(folder)) {
       query.folder = (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
-    } else {
-      query.folder = null;
     }
     if (!isNil(search)) {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
-    let files = await File.getInstance()
+    const files = await File.getInstance()
       .findMany(
         query,
         undefined,
         skip,
         limit,
       );
-    let filesCount = await File.getInstance().countDocuments(query);
+    const filesCount = await File.getInstance().countDocuments(query);
 
     return { files, filesCount };
   }

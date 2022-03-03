@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConfigController,
   DatabaseProvider,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -6,7 +7,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
-import { ConfigController } from '../config/Config.controller';
 import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 
