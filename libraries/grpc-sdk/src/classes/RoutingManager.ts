@@ -3,7 +3,10 @@ import {
   ConduitModel,
   ConduitRouteActions,
   ConduitRouteOption,
-  ConduitRouteOptions, ConduitSocketEvent, ConduitSocketEventHandler, ConduitSocketOptions, EventsProtoDescription,
+  ConduitRouteOptions,
+  ConduitSocketEventHandler,
+  ConduitSocketOptions,
+  EventsProtoDescription,
 } from '../interfaces';
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { ConduitRouteReturnDefinition, GrpcServer } from '../classes';
@@ -184,9 +187,9 @@ export class RoutingManager {
   socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
     let routeObject: any = {
       options: input,
-      events: "",
+      events: '',
 
-  };
+    };
     let eventsObj: EventsProtoDescription = {};
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
@@ -196,15 +199,15 @@ export class RoutingManager {
       if (option === 'middlewares') continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
-    let primary:string;
+    let primary: string;
     Object.keys(events).forEach((eventName: string) => {
-      if(!primary) primary = eventName;
+      if (!primary) primary = eventName;
       const event = events[eventName];
       eventsObj[eventName] = {
         grpcFunction: eventName,
         params: JSON.stringify(event.params),
         returns: {
-          name: event.returnType?.name ?? "",
+          name: event.returnType?.name ?? '',
           fields: JSON.stringify(event.returnType?.fields),
         },
       };
@@ -217,13 +220,14 @@ export class RoutingManager {
   }
 
   async registerRoutes() {
+    if (Object.keys(this._routeHandlers).length === 0) return;
     let modifiedFunctions: { [name: string]: (call: any, callback: any) => void } = wrapFunctionsAsync(this._routeHandlers);
-    let protoDescriptions = constructProtoFile(this._router.moduleName,  Object.values(this._moduleRoutes));
+    let protoDescriptions = constructProtoFile(this._router.moduleName, Object.values(this._moduleRoutes));
     await this._server.addService(
       protoDescriptions.path, protoDescriptions.name + '.router.Router',
       modifiedFunctions,
     );
-    return this._router.register( Object.values(this._moduleRoutes), protoDescriptions.file);
+    return this._router.register(Object.values(this._moduleRoutes), protoDescriptions.file);
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {
