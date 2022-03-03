@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.11.2](https://github.com/ConduitPlatform/Conduit/compare/v0.11.1...v0.11.2) (2022-03-03)
+
+
+### Bug Fixes
+
+* **storage:** getFiles broken query on unspecified folder ([8fc65b7](https://github.com/ConduitPlatform/Conduit/commit/8fc65b75c8a7003e7c698990037e098693ecd4ca))
+
 ### [0.11.1](https://github.com/ConduitPlatform/Conduit/compare/v0.11.0...v0.11.1) (2022-02-18)
 
 ## [0.11.0](https://github.com/ConduitPlatform/Conduit/compare/v0.10.6...v0.11.0) (2022-02-17)
