@@ -59,16 +59,16 @@ export class ModuleManager {
       let config;
       try {
         await this.grpcSdk.config.get(this.module.name);
-        config = await this.grpcSdk.config.addFieldstoConfig(
-          this.module.config.getProperties(),
-          this.module.name,
-        );
       } catch (e) {
         await this.grpcSdk.config.updateConfig(
           this.module.config.getProperties(),
           this.module.name,
         );
       }
+      config = await this.grpcSdk.config.addFieldstoConfig(
+        this.module.config.getProperties(),
+        this.module.name,
+      );
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active) await this.module.onConfig();
