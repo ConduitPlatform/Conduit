@@ -1,4 +1,4 @@
-import { ModuleManager } from "@conduitplatform/grpc-sdk";
+import { ModuleManager } from '@conduitplatform/grpc-sdk';
 import EmailModule from './Email';
 
 const email = new EmailModule();

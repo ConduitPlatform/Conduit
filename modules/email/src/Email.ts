@@ -4,7 +4,7 @@ import {
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse
-} from "@conduitplatform/grpc-sdk";
+} from '@conduitplatform/grpc-sdk';
 import path from "path";
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
@@ -35,7 +35,7 @@ type SendEmailRequest = GrpcRequest<{
 }>;
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
-export default class Authentication extends ManagedModule {
+export default class Email extends ManagedModule {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
