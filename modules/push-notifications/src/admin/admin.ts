@@ -103,7 +103,7 @@ export class AdminHandlers {
 
   async sendNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const params = {
-      sendTo: call.request.params.userIds,
+      sendTo: call.request.params.userId,
       title: call.request.params.title,
       body: call.request.params.body,
       data: call.request.params.data,
