@@ -583,7 +583,7 @@ export class LocalHandlers {
       console.log('sms 2fa not active');
     }
 
-    if ((config.phoneAuthenticate.enabled) && !errorMessage) {
+    if ((config.phoneAuthentication.enabled) && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.sms = this.grpcSdk.sms!;
