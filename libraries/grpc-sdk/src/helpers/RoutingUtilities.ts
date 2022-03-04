@@ -90,7 +90,7 @@ function createProtoFunctionsForSocket(
   Object.keys(events).forEach((event) => {
     const newFunction = createGrpcFunctionName(events[event].grpcFunction);
 
-    if (protoFunctions.indexOf(newFunction) !== -1) {
+    if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
       return;
     }
 
@@ -103,7 +103,7 @@ function createProtoFunctionsForSocket(
 function createProtoFunctionForRoute(path: any, protoFunctions: string) {
   const newFunction = createGrpcFunctionName(path.grpcFunction);
 
-  if (protoFunctions.indexOf(newFunction) !== -1) {
+  if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
     return '';
   }
 
