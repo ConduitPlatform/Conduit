@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.2](https://github.com/ConduitPlatform/Conduit/compare/v0.12.1...v0.12.2) (2022-03-04)
+
+
+### Bug Fixes
+
+* **authentication:** local auth not enabled due to config field typo ([#64](https://github.com/ConduitPlatform/Conduit/issues/64)) ([c77382d](https://github.com/ConduitPlatform/Conduit/commit/c77382d1e9fb9c157e073f17a41bf2209630d1b6))
+* **grpc-sdk:** route rpc strings not generated for function names comprised of registered subsets" ([#65](https://github.com/ConduitPlatform/Conduit/issues/65)) ([51e14b8](https://github.com/ConduitPlatform/Conduit/commit/51e14b81b2ee64363dfa3fa0720e483f7ebf21e7))
+
 ### [0.12.1](https://github.com/ConduitPlatform/Conduit/compare/v0.12.0...v0.12.1) (2022-02-28)
 
 
