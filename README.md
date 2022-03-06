@@ -1,10 +1,21 @@
-[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
+<p align="center">
+<br>
+<a href="https://getconduit.dev" target="_blank"><img src="https://getconduit.dev/conduitLogo.svg" alt="logo"></a>
+<br/>
+<strong>The only Backend you'll ever need. Written in NodeJS, works with any stack</strong>
+</p>
 
+[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/ConduitPlatform/Conduit)
+![GitHub](https://img.shields.io/github/license/ConduitPlatform/Conduit)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit)
 # Conduit Platform
 
 Conduit is a NodeJS-based Backend as a Service, that aims to cut down development times
 by providing ready-made modules that offer common functionality out of the box, and allowing
 maximum flexibility to add custom functionality.
+
+Check out our docs here: [Documentation](https://getconduit.dev/docs)
 
 # Features ✔️
 
@@ -31,8 +42,20 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - NodeJS > 14
 - MongoDB or PostgreSQL
 - Desire to create something awesome
+# Quickstart
+This script uses docker compose to spin up some basic modules for you to test.
+```sh
+source <(curl -s https://getconduit.dev/bootstrap)
+```
+Open http://localhost:8080 to check the admin panel username:admin password: admin
 
-# Running 🔨
+Your API will be on http://localhost:3000
+
+Checkout swagger on: /swagger
+
+Checkout GraphQL on /graphql (you'll need to generate clientid/secret throught the admin panel to access)
+
+# Running from source 🔨
 
 ```sh
 yarn
