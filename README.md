@@ -1,6 +1,6 @@
 <p align="center">
 <br>
-<a href="https://getconduit.dev" target="_blank"><img src="https://getconduit.dev/conduitLogo.svg" alt="logo"></a>
+<a href="https://getconduit.dev" target="_blank"><img src="https://getconduit.dev/conduitLogo.svg" alt="logo"/></a>
 <br/>
 <strong>The only Backend you'll ever need. Written in NodeJS, works with any stack</strong>
 </p>
