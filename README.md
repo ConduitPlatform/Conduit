@@ -70,16 +70,16 @@ Then repeat the last step for every additional module you need to bring online.
 CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
 ```
 
-# Environment Variables 📃 <a name="env-vars"></a>
+## Environment Variables 📃 <a name="env-vars"></a>
 
-## Core:
+### Core:
 
 |  Variable        |  Description   | Required |  Example        |
 | :--------------: | :------------- | :------: | :-------------: |
 | `REDIS_HOST`     | Redis address  |   True   | `localhost`     |
 | `REDIS_PORT`     | Redis port     |   True   | `6379`          |
 
-## Database
+### Database
 
 |  Variable        |  Description   | Required |  Example        |  Default                    |
 | :--------------: | :------------- | :------: | :-------------: | :-------------------------: |
@@ -88,7 +88,7 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 
 Generic module env variables are also supported, with required ones being obligatory.
 
-## General Module
+### Generic Module
 
 |  Variable        |  Description                                  | Required |  Example        |
 | :--------------: | :-------------------------------------------- | :------: | :-------------: |
@@ -97,11 +97,12 @@ Generic module env variables are also supported, with required ones being obliga
 | `SERVICE_URL`    | **Deprecated** in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
 | `REGISTER_NAME`  | Set to `true` if running in Kubernetes        |   False  | `true`          |
 
-# Information ℹ️
+## Information ℹ️
 
 - Core HTTP Server runs at: `http://localhost:3000`
 - Core Grpc Server runs at: `localhost:55152`
 - Core Socket Server runs at: `localhost:3001`
+- Admin Server runs at: `localhost:8080`
 
 # Roadmap 🏁
 
