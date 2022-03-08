@@ -1,10 +1,11 @@
-import Mail from "nodemailer/lib/mailer";
-import { CreateEmailTemplate } from "../interfaces/CreateEmailTemplate";
-import { DeleteEmailTemplate } from "../interfaces/DeleteEmailTemplate";
-import { Template } from "../interfaces/Template";
-import { UpdateEmailTemplate } from "../interfaces/UpdateEmailTemplate";
-import { EmailBuilderClass } from "./EmailBuilderClass";
-export abstract class EmailProviderClass{
+import Mail from 'nodemailer/lib/mailer';
+import { CreateEmailTemplate } from '../interfaces/CreateEmailTemplate';
+import { DeleteEmailTemplate } from '../interfaces/DeleteEmailTemplate';
+import { Template } from '../interfaces/Template';
+import { UpdateEmailTemplate } from '../interfaces/UpdateEmailTemplate';
+import { EmailBuilderClass } from './EmailBuilderClass';
+
+export abstract class EmailProviderClass {
     _transport?: Mail;
     
     constructor(transport: Mail){

@@ -11,6 +11,5 @@ export interface Template{
         active:boolean;
         updatedAt:string; // h Date type
         variables?: string[];
-        
     }[];
 }
