@@ -13,7 +13,7 @@ export interface MandrillTemplate {
   publish_from_email: string;
   publish_from_name: string;
   publish_text: string;
-  published_at: any;
-  created_at: any;
-  updated_at: any;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
 }

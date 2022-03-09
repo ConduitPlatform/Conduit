@@ -2,9 +2,9 @@ export interface MailgunTemplate  {
     template: {
         name: string;
         description: string;
-        createdAt: any;
-        createdBy:any;
-        id: any;
+        createdAt: string;
+        createdBy: string;
+        id: string;
         version: {
             tag: string;
             template: string;

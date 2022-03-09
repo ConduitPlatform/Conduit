@@ -3,7 +3,7 @@ export interface SendgridTemplate {
     id: string;
     name: string;
     generation: string;
-    updated_at: any;
+    updated_at: string;
     versions: [{    // versions not supported at sendgrid
       id: string;
       user_id: number
