@@ -12,6 +12,7 @@ import { MailgunConfig } from './mailgun.config';
 import { MailgunMailBuilder } from './mailgunMailBuilder';
 import mailgun, { Mailgun } from 'mailgun-js';
 import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
+import { MailgunTemplate } from '../../interfaces/mailgun/MailgunTemplate';
 
 export class MailgunProvider extends EmailProviderClass {
   protected _mailgunSdk: Mailgun;
@@ -32,15 +33,15 @@ export class MailgunProvider extends EmailProviderClass {
   async listTemplates(): Promise<Template[]> {
     const templates = await this._mailgunSdk.get(`/${this.domain}/templates`);
     const retList: Template[] = templates.items.map(
-      async (element: Template) => await this.getTemplateInfo(element.name)
+      async (element: Template) => await this.getTemplateInfo(element.name),
     );
     return Promise.all(retList);
   }
 
   async getTemplateInfo(template_name: string): Promise<Template> {
-    const response = await this._mailgunSdk.get(
+    const response: MailgunTemplate = await this._mailgunSdk.get(
       `/${this.domain}/templates/${template_name}`,
-      { active: 'yes' }
+      { active: 'yes' },
     );
     let info: Template = {
       name: response.template.name,
@@ -70,7 +71,7 @@ export class MailgunProvider extends EmailProviderClass {
     };
 
     const [err, response] = (await to(
-      this._mailgunSdk.post(`/${this.domain}/templates`, mailgun_input)
+      this._mailgunSdk.post(`/${this.domain}/templates`, mailgun_input),
     )) as any;
     if (err) {
       throw new Error(err.message);
@@ -99,7 +100,7 @@ export class MailgunProvider extends EmailProviderClass {
       this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`, {
         template: data.body,
         active: data.active,
-      })
+      }),
     );
 
     if (err) {
@@ -109,16 +110,16 @@ export class MailgunProvider extends EmailProviderClass {
     return this.getTemplateInfo(template.template.name);
   }
 
-  async deleteTemplate(id:string): Promise<DeleteEmailTemplate>{
+  async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
 
-    const [err,resp] = await to (this._mailgunSdk.delete(`/${this.domain}/templates/${id}`));
-    if(err){
+    const [err, resp] = await to(this._mailgunSdk.delete(`/${this.domain}/templates/${id}`));
+    if (err) {
       throw new Error(err.message);
     }
     return {
       id: id,
-      message: resp.message
-    }
+      message: resp.message,
+    };
   }
 
   getBuilder(): EmailBuilderClass<Options> {
