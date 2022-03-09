@@ -1,14 +1,16 @@
-import { EmailProviderClass } from "../../models/EmailProviderClass";
-import { SendGridConfig } from "./sendgrid.config";
-import { createTransport } from "nodemailer";
-import {Client} from '@sendgrid/client';
-import { Template } from "../../interfaces/Template";
-import { CreateEmailTemplate } from "../../interfaces/CreateEmailTemplate";
-import { SendgridMailBuilder } from "./sendgridMailBuilder";
-import { getHBValues } from "../../parse-test/getHBValues";
-import { UpdateEmailTemplate } from "../../interfaces/UpdateEmailTemplate";
+import { EmailProviderClass } from '../../models/EmailProviderClass';
+import { SendGridConfig } from './sendgrid.config';
+import { createTransport } from 'nodemailer';
+import { Client } from '@sendgrid/client';
+import { Template } from '../../interfaces/Template';
+import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
+import { SendgridMailBuilder } from './sendgridMailBuilder';
+import { getHBValues } from '../../parse-test/getHBValues';
+import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
+import { SendgridTemplate } from '../../interfaces/sendgrid/SendgridTemplate';
+
 var sgTransport = require('nodemailer-sendgrid');
-export class SendgridProvider extends EmailProviderClass{
+export class SendgridProvider extends EmailProviderClass {
     private _sgClient: any;
     constructor(sgSettings: SendGridConfig){
         super(createTransport(sgTransport(sgSettings)));
@@ -26,7 +28,7 @@ export class SendgridProvider extends EmailProviderClass{
                 
             }
         }
-        const template_res = (await  this._sgClient.request(create_request))[0];
+        const template_res: SendgridTemplate = (await  this._sgClient.request(create_request))[0];
         let info : Template = {
             name: template_res.body.id,
             id: template_res.body.name,

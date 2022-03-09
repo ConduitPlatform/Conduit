@@ -1,7 +1,7 @@
 import Mail from 'nodemailer/lib/mailer';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { isNil} from 'lodash';
+import { isNil } from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
 import { EmailBuilderClass } from './models/EmailBuilderClass';
 import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
@@ -10,6 +10,7 @@ import { MailgunProvider } from './transports/mailgun/MailgunProvider';
 import { MandrillProvider } from './transports/mandrill/MandrilProvider';
 import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
 import { SmtpProvider } from './transports/smtp/SmtpProvider';
+
 export class EmailProvider {
   _transport?: EmailProviderClass;
   _transportName?: string;
@@ -61,7 +62,7 @@ export class EmailProvider {
       this._transportName = 'sendgrid';
 
       const sgSettings: SendGridConfig = {
-            apiKey : transportSettings.apiKey,
+            apiKey : transportSettings['sendgrid'].apiKey,
   
       };
       this._transport = new SendgridProvider(sgSettings);
