@@ -1,0 +1,125 @@
+import { IStorageProvider, StorageConfig } from '../../interfaces';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+import fs from 'fs';
+
+async function streamToString(stream: Readable): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+  });
+}
+
+// interface ConfigParams {
+//   accessKeyId: string;
+//   secretKey: string;
+// }
+
+export class AWSS3Storage implements IStorageProvider {
+  private _storage: S3Client;
+  // private _configParams: ConfigParams;
+  private _activeContainer: string = '';
+
+  constructor(options: StorageConfig) {
+    this._storage = new S3Client({
+      region: options.aws.region,
+      credentials: {
+        accessKeyId: options.aws.accessKeyId,
+        secretAccessKey: options.aws.secretAccessKey,
+      },
+    });
+    // this._configParams = {
+    //   accessKeyId: options.aws.accessKeyId,
+    //   secretKey: options.aws.secretAccessKey,
+    // };
+  }
+
+  container(name: string): IStorageProvider {
+    this._activeContainer = name;
+    return this;
+  }
+
+  async store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error> {
+    await this._storage.send(
+      new PutObjectCommand({
+        Bucket: this._activeContainer,
+        Key: fileName,
+        Body: data.toString(),
+      })
+    );
+    return true;
+  }
+  async get(fileName: string, downloadPath?: string): Promise<any | Error> {
+    let stream = await this._storage.send(
+      new GetObjectCommand({
+        Bucket: this._activeContainer,
+        Key: fileName,
+      })
+    );
+
+    const data = await streamToString(stream.Body as Readable);
+    if (downloadPath) {
+      fs.writeFileSync(downloadPath, data);
+    }
+    return data;
+  }
+
+  async createFolder(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async folderExists(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async createContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async containerExists(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async deleteContainer(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async deleteFolder(name: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async delete(fileName: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async exists(fileName: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async getSignedUrl(fileName: string): Promise<any> {
+    throw new Error('Method not implemented.');
+  }
+  async getPublicUrl(fileName: string): Promise<any> {
+    throw new Error('Method not implemented.');
+  }
+  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async moveToFolderAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newFolder: string
+  ): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async moveToContainer(
+    filename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+  async moveToContainerAndRename(
+    currentFilename: string,
+    newFilename: string,
+    newContainer: string
+  ): Promise<boolean | Error> {
+    throw new Error('Method not implemented.');
+  }
+}

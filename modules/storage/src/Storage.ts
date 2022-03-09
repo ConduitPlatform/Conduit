@@ -46,7 +46,7 @@ export default class Storage extends ManagedModule {
   async onConfig() {
     await this.updateConfig();
     const storageConfig = ConfigController.getInstance().config;
-    const { provider, local, google, azure } = storageConfig;
+    const { provider, local, google, azure, aws } = storageConfig;
 
     if (!this.isRunning) {
       await this.registerSchemas();
@@ -57,9 +57,14 @@ export default class Storage extends ManagedModule {
       local,
       google,
       azure,
+      aws,
     });
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    this.userRouter = new StorageRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    this.userRouter = new StorageRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this._fileHandlers
+    );
     this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     this._fileHandlers.updateProvider(this.storageProvider);
     await this.userRouter.registerRoutes();
@@ -68,7 +73,8 @@ export default class Storage extends ManagedModule {
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
         return this.database.createSchemaFromAdapter(modelInstance);
       }
     });

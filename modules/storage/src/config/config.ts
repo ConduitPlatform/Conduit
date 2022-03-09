@@ -24,10 +24,24 @@ export default {
   azure: {
     connectionString: { type: String, default: '' },
   },
-  local:{
+  aws: {
+    region: {
+      type: String,
+      default: '',
+    },
+    accessKeyId: {
+      type: String,
+      default: '',
+    },
+    secretAccessKey: {
+      type: String,
+      default: '',
+    },
+  },
+  local: {
     storagePath: {
       type: String,
       default: '/var/tmp',
     },
-  }
+  },
 };
