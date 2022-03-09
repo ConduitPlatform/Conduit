@@ -28,8 +28,8 @@ export class GraphQLController extends ConduitRouter {
   resolvers: any;
   private _apollo?: any;
   private _relationTypes: string[] = [];
-  private _scheduledGraphQLTimeout: any = null;
-  private _scheduledRouterTimeout: any = null;
+  private _scheduledGraphQLTimeout: NodeJS.Timeout | null = null;
+  private _scheduledRouterTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
   constructor(readonly app: Application) {
