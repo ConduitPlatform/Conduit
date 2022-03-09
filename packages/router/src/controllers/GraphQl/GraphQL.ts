@@ -28,7 +28,8 @@ export class GraphQLController extends ConduitRouter {
   resolvers: any;
   private _apollo?: any;
   private _relationTypes: string[] = [];
-  private _scheduledTimeout: any = null;
+  private _scheduledGraphQLTimeout: NodeJS.Timeout | null = null;
+  private _scheduledRouterTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
   constructor(readonly app: Application) {
@@ -188,10 +189,11 @@ export class GraphQLController extends ConduitRouter {
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
     if (registered) {
-      this.refreshRouter();
+      // this.refreshRouter();
+      this._scheduleRouterTimeout();
     } else {
       this.addConduitRoute(route);
-      this._scheduleTimeout();
+      this._scheduleGraphQLTimeout();
     }
   }
 
@@ -203,7 +205,7 @@ export class GraphQLController extends ConduitRouter {
       // but it needs to be done carefully
       this.addConduitRoute(route);
     });
-    this._scheduleTimeout();
+    this._scheduleGraphQLTimeout();
   }
 
   private initialize() {
@@ -410,19 +412,33 @@ export class GraphQLController extends ConduitRouter {
     }
   }
 
-  private _scheduleTimeout() {
-    if (this._scheduledTimeout) {
-      clearTimeout(this._scheduledTimeout);
-      this._scheduledTimeout = null;
+  private _scheduleRouterTimeout() {
+    if (this._scheduledRouterTimeout) {
+      clearTimeout(this._scheduledRouterTimeout);
+      this._scheduledRouterTimeout = null;
     }
+    this._scheduledRouterTimeout = setTimeout(() => {
+      try {
+        this.refreshRouter();
+      } catch (err) {
+        console.error(err);
+      }
+      this._scheduledRouterTimeout = null;
+    }, 250);
+  }
 
-    this._scheduledTimeout = setTimeout(() => {
+  private _scheduleGraphQLTimeout() {
+    if (this._scheduledGraphQLTimeout) {
+      clearTimeout(this._scheduledGraphQLTimeout);
+      this._scheduledGraphQLTimeout = null;
+    }
+    this._scheduledGraphQLTimeout = setTimeout(() => {
       try {
         this.refreshGQLServer();
       } catch (err) {
         console.error(err);
       }
-      this._scheduledTimeout = null;
+      this._scheduledGraphQLTimeout = null;
     }, 3000);
   }
 }
