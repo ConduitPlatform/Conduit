@@ -1,6 +1,14 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  BucketAlreadyExists,
+  CreateBucketCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
+import { streamToBuffer } from '../../../utils/utils';
 import fs from 'fs';
 
 export class AWSS3Storage implements IStorageProvider {
@@ -40,7 +48,7 @@ export class AWSS3Storage implements IStorageProvider {
       })
     );
 
-    const data = this.streamToBuffer(stream.Body);
+    const data = await streamToBuffer(stream.Body as Readable);
     if (downloadPath) {
       fs.writeFileSync(downloadPath, data);
     }
@@ -50,14 +58,28 @@ export class AWSS3Storage implements IStorageProvider {
   async createFolder(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   async folderExists(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   async createContainer(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    await this._storage.send(
+      new CreateBucketCommand({
+        Bucket: name,
+      })
+    );
+    this._activeContainer = name;
+    return true;
   }
-  async containerExists(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+
+  async containerExists(name: string): Promise<boolean> {
+    try {
+      await this._storage.send(new HeadBucketCommand({ Bucket: name }));
+      return true;
+    } catch (error: any) {
+      return false;
+    }
   }
   async deleteContainer(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
@@ -102,9 +124,5 @@ export class AWSS3Storage implements IStorageProvider {
     newContainer: string
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
-  }
-
-  private streamToBuffer(stream: Readable | ReadableStream<any> | Blob | undefined): Buffer {
-    // TODO
   }
 }

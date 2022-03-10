@@ -14,18 +14,13 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
-import {
-  _StorageContainer,
-  _StorageFolder,
-  File,
-} from '../models';
+import { _StorageContainer, _StorageFolder, File } from '../models';
 
 export class AdminRoutes {
-
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly fileHandlers: FileHandlers,
+    private readonly fileHandlers: FileHandlers
   ) {
     this.registerAdminRoutes();
   }
@@ -65,7 +60,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('File', File.getInstance().fields),
-        'getFile',
+        'getFile'
       ),
       constructConduitRoute(
         {
@@ -83,7 +78,7 @@ export class AdminRoutes {
           files: ['File'],
           filesCount: ConduitNumber.Required,
         }),
-        'getFiles',
+        'getFiles'
       ),
       constructConduitRoute(
         {
@@ -99,7 +94,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
-        'createFile',
+        'createFile'
       ),
       constructConduitRoute(
         {
@@ -117,7 +112,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('PatchFile', File.getInstance().fields),
-        'patchFile',
+        'patchFile'
       ),
       constructConduitRoute(
         {
@@ -130,7 +125,7 @@ export class AdminRoutes {
         new ConduitRouteReturnDefinition('DeleteFile', {
           success: ConduitString.Required,
         }),
-        'deleteFile',
+        'deleteFile'
       ),
       constructConduitRoute(
         {
@@ -147,7 +142,7 @@ export class AdminRoutes {
           url: ConduitString.Optional,
           redirect: ConduitString.Optional,
         }),
-        'getFileUrl',
+        'getFileUrl'
       ),
       constructConduitRoute(
         {
@@ -160,7 +155,7 @@ export class AdminRoutes {
         new ConduitRouteReturnDefinition('GetFileData', {
           data: ConduitString.Required,
         }),
-        'getFileData',
+        'getFileData'
       ),
       constructConduitRoute(
         {
@@ -177,7 +172,7 @@ export class AdminRoutes {
           folders: [_StorageFolder.getInstance().fields],
           folderCount: ConduitNumber.Required,
         }),
-        'getFolders',
+        'getFolders'
       ),
       constructConduitRoute(
         {
@@ -189,8 +184,11 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.getInstance().fields),
-        'createFolder',
+        new ConduitRouteReturnDefinition(
+          'CreateFolder',
+          _StorageFolder.getInstance().fields
+        ),
+        'createFolder'
       ),
       constructConduitRoute(
         {
@@ -201,7 +199,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
-        'deleteFolder',
+        'deleteFolder'
       ),
       constructConduitRoute(
         {
@@ -216,7 +214,7 @@ export class AdminRoutes {
           containers: [_StorageContainer.getInstance().fields],
           containersCount: ConduitNumber.Required,
         }),
-        'getContainers',
+        'getContainers'
       ),
       constructConduitRoute(
         {
@@ -227,8 +225,11 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateContainer', _StorageContainer.getInstance().fields),
-        'createContainer',
+        new ConduitRouteReturnDefinition(
+          'CreateContainer',
+          _StorageContainer.getInstance().fields
+        ),
+        'createContainer'
       ),
       constructConduitRoute(
         {
@@ -238,30 +239,30 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.getInstance().fields),
-        'deleteContainer',
+        new ConduitRouteReturnDefinition(
+          'DeleteContainer',
+          _StorageContainer.getInstance().fields
+        ),
+        'deleteContainer'
       ),
     ];
   }
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, folder, search } = call.request.params;
-    const query: { container: string; folder?: string ; name?: any } = { container: call.request.params.container };
+    const query: { container: string; folder?: string; name?: any } = {
+      container: call.request.params.container,
+    };
 
     if (!isNil(folder)) {
-      query.folder = (folder.trim().slice(-1) !== '/') ? folder.trim() + '/' : folder.trim();
+      query.folder =
+        folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
     }
     if (!isNil(search)) {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
-    const files = await File.getInstance()
-      .findMany(
-        query,
-        undefined,
-        skip,
-        limit,
-      );
+    const files = await File.getInstance().findMany(query, undefined, skip, limit);
     const filesCount = await File.getInstance().countDocuments(query);
 
     return { files, filesCount };
@@ -272,41 +273,39 @@ export class AdminRoutes {
       container: call.request.params.container,
     };
     if (!isNil(call.request.params.parent)) {
-      query.name = { $regex: `${call.request.params.parent}\/([^\/]+)\/?$`, $options: 'i' };
+      query.name = {
+        $regex: `${call.request.params.parent}\/([^\/]+)\/?$`,
+        $options: 'i',
+      };
     }
-    let folders = await _StorageFolder.getInstance()
-      .findMany(
-        query,
-        undefined,
-        call.request.params.skip,
-        call.request.params.limit,
-      );
+    let folders = await _StorageFolder
+      .getInstance()
+      .findMany(query, undefined, call.request.params.skip, call.request.params.limit);
     let folderCount = await _StorageFolder.getInstance().countDocuments(query);
     return { folders, folderCount };
   }
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, container, isPublic } = call.request.params;
-    let containerDocument = await _StorageContainer.getInstance().findOne({ name: container });
+    let containerDocument = await _StorageContainer
+      .getInstance()
+      .findOne({ name: container });
     if (isNil(containerDocument)) {
-      await this._createContainer(container, isPublic)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+      await this._createContainer(container, isPublic).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     }
-    const newName = (name.trim().slice(-1) !== '/') ? name.trim() + '/' : name.trim();
-    let folder = await _StorageFolder.getInstance()
-      .findOne({
+    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
+    let folder = await _StorageFolder.getInstance().findOne({
+      name: newName,
+      container,
+    });
+    if (isNil(folder)) {
+      folder = await _StorageFolder.getInstance().create({
         name: newName,
         container,
+        isPublic,
       });
-    if (isNil(folder)) {
-      folder = await _StorageFolder.getInstance()
-        .create({
-          name: newName,
-          container,
-          isPublic,
-        });
       let exists = await this.fileHandlers.storage
         .container(container)
         .folderExists(newName);
@@ -322,36 +321,31 @@ export class AdminRoutes {
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
 
-    let folder = await _StorageFolder.getInstance()
-      .findOne({
-        _id: id,
-      });
+    let folder = await _StorageFolder.getInstance().findOne({
+      _id: id,
+    });
     if (isNil(folder)) {
       throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
     } else {
-      await this.fileHandlers.storage.container(folder.container).deleteFolder(folder.name);
-      await _StorageFolder.getInstance()
-        .deleteOne({
-          name: folder.name,
-          container: folder.container,
-        });
-      await File.getInstance()
-        .deleteMany({
-          folder: folder.name,
-          container: folder.container,
-        });
+      await this.fileHandlers.storage
+        .container(folder.container)
+        .deleteFolder(folder.name);
+      await _StorageFolder.getInstance().deleteOne({
+        name: folder.name,
+        container: folder.container,
+      });
+      await File.getInstance().deleteMany({
+        folder: folder.name,
+        container: folder.container,
+      });
     }
     return 'OK';
   }
 
   async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let containers = await _StorageContainer.getInstance()
-      .findMany(
-        {},
-        undefined,
-        call.request.params.skip,
-        call.request.params.limit,
-      );
+    let containers = await _StorageContainer
+      .getInstance()
+      .findMany({}, undefined, call.request.params.skip, call.request.params.limit);
     let containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return { containers, containersCount };
@@ -365,56 +359,56 @@ export class AdminRoutes {
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     try {
-      let container = await _StorageContainer.getInstance()
-        .findOne({
-          _id: id,
-        });
+      let container = await _StorageContainer.getInstance().findOne({
+        _id: id,
+      });
       if (isNil(container)) {
         throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
       } else {
         await this.fileHandlers.storage.deleteContainer(container.name);
-        await _StorageContainer.getInstance()
-          .deleteOne({
-            _id: id,
-          });
-        await File.getInstance()
-          .deleteMany({
-            container: container.name,
-          });
-        await _StorageFolder.getInstance()
-          .deleteMany({
-            container: container.name,
-          });
+        await _StorageContainer.getInstance().deleteOne({
+          _id: id,
+        });
+        await File.getInstance().deleteMany({
+          container: container.name,
+        });
+        await _StorageFolder.getInstance().deleteMany({
+          container: container.name,
+        });
       }
       return container;
     } catch (e) {
-      throw new GrpcError(e.status ?? status.INTERNAL, e.message ?? 'Something went wrong');
+      throw new GrpcError(
+        e.status ?? status.INTERNAL,
+        e.message ?? 'Something went wrong'
+      );
     }
   }
 
   private async _createContainer(name: string, isPublic: boolean | undefined) {
     try {
-      let container = await _StorageContainer.getInstance()
-        .findOne({
-          name,
-        });
+      let container = await _StorageContainer.getInstance().findOne({
+        name,
+      });
       if (isNil(container)) {
         let exists = await this.fileHandlers.storage.containerExists(name);
+
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
         }
-        container = await _StorageContainer.getInstance()
-          .create({
-            name,
-            isPublic,
-          });
+        container = await _StorageContainer.getInstance().create({
+          name,
+          isPublic,
+        });
       } else {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
       return container;
     } catch (e) {
-      throw new GrpcError(e.status ?? status.INTERNAL, e.message ?? 'Something went wrong');
+      throw new GrpcError(
+        e.status ?? status.INTERNAL,
+        e.message ?? 'Something went wrong'
+      );
     }
-
   }
 }
