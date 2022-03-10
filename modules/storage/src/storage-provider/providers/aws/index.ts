@@ -3,23 +3,8 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 import { Readable } from 'stream';
 import fs from 'fs';
 
-async function streamToString(stream: Readable): Promise<string> {
-  return await new Promise((resolve, reject) => {
-    const chunks: Uint8Array[] = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-  });
-}
-
-// interface ConfigParams {
-//   accessKeyId: string;
-//   secretKey: string;
-// }
-
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
-  // private _configParams: ConfigParams;
   private _activeContainer: string = '';
 
   constructor(options: StorageConfig) {
@@ -30,10 +15,6 @@ export class AWSS3Storage implements IStorageProvider {
         secretAccessKey: options.aws.secretAccessKey,
       },
     });
-    // this._configParams = {
-    //   accessKeyId: options.aws.accessKeyId,
-    //   secretKey: options.aws.secretAccessKey,
-    // };
   }
 
   container(name: string): IStorageProvider {
@@ -46,20 +27,20 @@ export class AWSS3Storage implements IStorageProvider {
       new PutObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
-        Body: data.toString(),
+        Body: data,
       })
     );
     return true;
   }
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
-    let stream = await this._storage.send(
+    const stream = await this._storage.send(
       new GetObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
       })
     );
 
-    const data = await streamToString(stream.Body as Readable);
+    const data = this.streamToBuffer(stream.Body);
     if (downloadPath) {
       fs.writeFileSync(downloadPath, data);
     }
@@ -121,5 +102,9 @@ export class AWSS3Storage implements IStorageProvider {
     newContainer: string
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
+  }
+
+  private streamToBuffer(stream: Readable | ReadableStream<any> | Blob | undefined): Buffer {
+    // TODO
   }
 }

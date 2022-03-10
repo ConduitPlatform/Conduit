@@ -278,7 +278,6 @@ export class FileHandlers {
       } else {
         data = await this.storageProvider.container(file.container).get(file.name);
       }
-      data.toString('base64');
 
       return { data: data.toString('base64') };
     } catch (e) {
