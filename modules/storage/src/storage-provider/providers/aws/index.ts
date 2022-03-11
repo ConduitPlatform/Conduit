@@ -1,6 +1,7 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
   BucketAlreadyExists,
+  CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
   DeleteObjectCommand,
@@ -182,7 +183,14 @@ export class AWSS3Storage implements IStorageProvider {
     throw new Error('Method not implemented.');
   }
   async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    await this._storage.send(
+      new CopyObjectCommand({
+        Bucket: this._activeContainer,
+        CopySource: `${this._activeContainer}/${currentFilename}`,
+        Key: newFilename,
+      })
+    );
+    return true;
   }
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');

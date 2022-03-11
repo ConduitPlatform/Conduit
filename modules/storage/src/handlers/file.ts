@@ -16,7 +16,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider,
+    storageProvider: IStorageProvider
   ) {
     this.database = this.grpcSdk.databaseProvider!;
     _StorageContainer.getInstance(this.database);
@@ -60,7 +60,10 @@ export class FileHandlers {
       });
       if (!container) {
         if (!config.allowContainerCreation) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Container creation is not allowed!'
+          );
         }
         let exists = await this.storageProvider.containerExists(usedContainer);
         if (!exists) {
@@ -164,7 +167,10 @@ export class FileHandlers {
         });
         if (!container) {
           if (!config.allowContainerCreation) {
-            throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+            throw new GrpcError(
+              status.PERMISSION_DENIED,
+              'Container creation is not allowed!'
+            );
           }
           const exists = await this.storageProvider.containerExists(newContainer);
           if (!exists) {
