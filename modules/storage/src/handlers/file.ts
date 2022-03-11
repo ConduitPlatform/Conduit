@@ -212,6 +212,10 @@ export class FileHandlers {
           .delete((found.folder ?? '') + found.name);
       }
 
+        await this.storageProvider
+          .container(newContainer)
+          .store((newFolder ?? '') + name, fileData);
+
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;

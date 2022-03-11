@@ -1,6 +1,5 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
-  BucketAlreadyExists,
   CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
@@ -11,12 +10,10 @@ import {
   ListObjectsCommand,
   PutObjectCommand,
   S3Client,
-  _Error,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
-import { callErrorFromStatus } from '@grpc/grpc-js/build/src/call';
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
