@@ -6,6 +6,7 @@ import {
   SASProtocol,
 } from '@azure/storage-blob';
 import fs from 'fs';
+import { streamToBuffer } from '../../utils/utils';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -103,26 +104,12 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
-  // A helper method used to read a Node.js readable stream into a Buffer
-  async streamToBuffer(readableStream: any): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: any = [];
-      readableStream.on('data', (data: any) => {
-        chunks.push(data instanceof Buffer ? data : Buffer.from(data));
-      });
-      readableStream.on('end', () => {
-        resolve(Buffer.concat(chunks));
-      });
-      readableStream.on('error', reject);
-    });
-  }
-
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
     let promise = await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .download(0);
-    let data: Buffer = await this.streamToBuffer(promise.readableStreamBody);
+    let data: Buffer = await streamToBuffer(promise.readableStreamBody);
     if (downloadPath) {
       fs.writeFileSync(downloadPath, data);
     }

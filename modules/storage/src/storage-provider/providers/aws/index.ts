@@ -2,14 +2,20 @@ import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
   BucketAlreadyExists,
   CreateBucketCommand,
+  DeleteBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
+  ListObjectsCommand,
   PutObjectCommand,
   S3Client,
+  _Error,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { streamToBuffer } from '../../../utils/utils';
+import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
+import { callErrorFromStatus } from '@grpc/grpc-js/build/src/call';
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
@@ -56,11 +62,38 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async createFolder(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    //check if keep.txt file exists
+    const exists = await this.folderExists(name);
+    if (exists) return true;
+
+    await this._storage.send(
+      new PutObjectCommand({
+        Bucket: this._activeContainer,
+        Key: name + '.keep.txt',
+        Body: 'DO NOT DELETE',
+      })
+    );
+    return true;
   }
 
   async folderExists(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    try {
+      await this._storage.send(
+        new HeadObjectCommand({
+          Bucket: this._activeContainer,
+          Key: name + '.keep.txt',
+        })
+      );
+      return true;
+    } catch (error: any) {
+      if (
+        error.$metadata.httpStatusCode === 403 ||
+        error.$metadata.httpStatusCode === 404
+      ) {
+        return false;
+      }
+      throw Error(error);
+    }
   }
 
   async createContainer(name: string): Promise<boolean | Error> {
@@ -78,20 +111,69 @@ export class AWSS3Storage implements IStorageProvider {
       await this._storage.send(new HeadBucketCommand({ Bucket: name }));
       return true;
     } catch (error: any) {
-      return false;
+      console.log('error', error, error.statusCode);
+      if (
+        error.$metadata.httpStatusCode === 403 ||
+        error.$metadata.httpStatusCode === 404
+      ) {
+        return false;
+      }
+      throw Error(error);
     }
   }
   async deleteContainer(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    await this._storage.send(
+      new DeleteBucketCommand({
+        Bucket: name,
+      })
+    );
+    return true;
   }
+
   async deleteFolder(name: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    let exists = await this.folderExists(name);
+    if (!exists) return false;
+
+    console.log('Getting files list...');
+    let files = await this.listFiles(name);
+
+    let i = 0;
+    console.log('Deleting files...');
+    for (const file of files) {
+      i++;
+      await this.delete(file.Key!);
+      console.log(file.Key!);
+    }
+    console.log(`${i} files deleted.`);
+    return true;
   }
   async delete(fileName: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    await this._storage.send(
+      new DeleteObjectCommand({
+        Bucket: this._activeContainer,
+        Key: fileName,
+      })
+    );
+    return true;
   }
   async exists(fileName: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    try {
+      await this._storage.send(
+        new HeadObjectCommand({
+          Bucket: this._activeContainer,
+          Key: fileName,
+        })
+      );
+      return true;
+    } catch (error: any) {
+      if (
+        error.$metadata.httpStatusCode === 403 ||
+        error.$metadata.httpStatusCode === 404
+      ) {
+        return false;
+      }
+      throw Error(error);
+    }
   }
   async getSignedUrl(fileName: string): Promise<any> {
     throw new Error('Method not implemented.');
@@ -124,5 +206,16 @@ export class AWSS3Storage implements IStorageProvider {
     newContainer: string
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
+  }
+
+  private async listFiles(name: string) {
+    const files = await this._storage.send(
+      new ListObjectsCommand({
+        Bucket: this._activeContainer,
+        Prefix: name,
+      })
+    );
+    if (!files.Contents) return [];
+    return files.Contents;
   }
 }
