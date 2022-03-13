@@ -11,7 +11,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit)
 # Conduit Platform
 
-Conduit is a NodeJS-based Backend as a Service, that aims to cut down development times
+Conduit is a NodeJS-based Self-Hosted backend, that aims to cut down development times
 by providing ready-made modules that offer common functionality out of the box, and allowing
 maximum flexibility to add custom functionality.
 
