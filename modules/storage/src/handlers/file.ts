@@ -214,7 +214,7 @@ export class FileHandlers {
 
         await this.storageProvider
           .container(newContainer)
-          .store((newFolder ?? '') + name, fileData);
+          .store((newFolder ?? '') + newName, fileData);
 
       found.name = newName;
       found.folder = newFolder;
