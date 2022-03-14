@@ -212,9 +212,9 @@ export class FileHandlers {
           .delete((found.folder ?? '') + found.name);
       }
 
-        await this.storageProvider
-          .container(newContainer)
-          .store((newFolder ?? '') + newName, fileData);
+      await this.storageProvider
+        .container(newContainer)
+        .store((newFolder ?? '') + newName, fileData);
 
       found.name = newName;
       found.folder = newFolder;

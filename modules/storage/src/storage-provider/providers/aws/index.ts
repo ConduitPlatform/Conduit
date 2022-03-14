@@ -14,6 +14,7 @@ import {
 import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
+import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
@@ -119,6 +120,7 @@ export class AWSS3Storage implements IStorageProvider {
       throw Error(error);
     }
   }
+
   async deleteContainer(name: string): Promise<boolean | Error> {
     await this._storage.send(
       new DeleteBucketCommand({
@@ -145,6 +147,7 @@ export class AWSS3Storage implements IStorageProvider {
     console.log(`${i} files deleted.`);
     return true;
   }
+
   async delete(fileName: string): Promise<boolean | Error> {
     await this._storage.send(
       new DeleteObjectCommand({
@@ -154,6 +157,7 @@ export class AWSS3Storage implements IStorageProvider {
     );
     return true;
   }
+
   async exists(fileName: string): Promise<boolean | Error> {
     try {
       await this._storage.send(
@@ -173,25 +177,28 @@ export class AWSS3Storage implements IStorageProvider {
       throw Error(error);
     }
   }
+
   async getSignedUrl(fileName: string): Promise<any> {
-    throw new Error('Method not implemented.');
+    const command = new GetObjectCommand({
+      Bucket: this._activeContainer,
+      Key: fileName,
+    });
+    const url = await awsGetSignedUrl(this._storage, command);
+    return url;
   }
+
   async getPublicUrl(fileName: string): Promise<any> {
-    throw new Error('Method not implemented.');
+    return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
   }
+
   async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._storage.send(
-      new CopyObjectCommand({
-        Bucket: this._activeContainer,
-        CopySource: `${this._activeContainer}/${currentFilename}`,
-        Key: newFilename,
-      })
-    );
-    return true;
+    throw new Error('Not implemented');
   }
+
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   async moveToFolderAndRename(
     currentFilename: string,
     newFilename: string,
@@ -199,12 +206,14 @@ export class AWSS3Storage implements IStorageProvider {
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   async moveToContainer(
     filename: string,
     newContainer: string
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   async moveToContainerAndRename(
     currentFilename: string,
     newFilename: string,
