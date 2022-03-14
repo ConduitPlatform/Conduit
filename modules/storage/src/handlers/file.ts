@@ -144,7 +144,11 @@ export class FileHandlers {
       }
 
       const newName = name ?? found.name;
-      const newFolder = folder ?? found.folder;
+      let newFolder = folder ?? found.folder;
+      if (!newFolder.endsWith('/')) {
+        // existing folder names are currently suffixed by "/" upon creation
+        newFolder += '/';
+      }
       const newContainer = container ?? found.container;
 
       const shouldRemove =
@@ -183,24 +187,14 @@ export class FileHandlers {
         }
       }
 
-      let exists = await File.getInstance().findOne({
-        name: name,
-        container: newContainer,
-        folder: newFolder,
-      });
-      if (exists) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-      }
-
-      await this.storageProvider
-        .container(newContainer)
-        .store((newFolder ?? '') + name, fileData)
-
       if (shouldRemove) {
         await this.storageProvider
           .container(found.container)
           .delete((found.folder ?? '') + found.name);
       }
+      await this.storageProvider
+        .container(newContainer)
+        .store((newFolder ?? '') + newName, fileData);
 
       found.name = newName;
       found.folder = newFolder;
