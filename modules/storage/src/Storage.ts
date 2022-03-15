@@ -2,6 +2,7 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { AdminRoutes } from './admin/admin';
@@ -12,6 +13,9 @@ import * as models from './models';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
+import { getAwsAccountId } from './storage-provider/utils/utils';
+import { isEmpty } from 'lodash';
 
 export default class Storage extends ManagedModule {
   config = AppConfigSchema;
@@ -41,6 +45,16 @@ export default class Storage extends ManagedModule {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     this.storageProvider = createStorageProvider('local', {} as any);
+  }
+
+  async preConfig(config: any) {
+    if (config.provider === 'aws') {
+      if (isEmpty(config.aws)) throw new Error('Missing AWS config');
+      if (isNil(config.aws.accountId)) {
+        config.aws.awsAccountId = await getAwsAccountId(config);
+      }
+    }
+    return config;
   }
 
   async onConfig() {

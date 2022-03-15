@@ -15,23 +15,30 @@ import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { ConfigController } from '@conduitplatform/grpc-sdk';
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
   private _activeContainer: string = '';
 
   constructor(options: StorageConfig) {
-    this._storage = new S3Client({
+    const config = {
       region: options.aws.region,
       credentials: {
         accessKeyId: options.aws.accessKeyId,
         secretAccessKey: options.aws.secretAccessKey,
       },
-    });
+    };
+    this._storage = new S3Client(config);
+  }
+
+  private getFormattedContainerName(bucketName: string): string {
+    const accountId = ConfigController.getInstance().config.accountId;
+    return `conduit-${accountId}-${bucketName}`;
   }
 
   container(name: string): IStorageProvider {
-    this._activeContainer = name;
+    this._activeContainer = this.getFormattedContainerName(name);
     return this;
   }
 
@@ -96,6 +103,7 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async createContainer(name: string): Promise<boolean | Error> {
+    name = this.getFormattedContainerName(name);
     await this._storage.send(
       new CreateBucketCommand({
         Bucket: name,
@@ -106,6 +114,7 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async containerExists(name: string): Promise<boolean> {
+    name = this.getFormattedContainerName(name);
     try {
       await this._storage.send(new HeadBucketCommand({ Bucket: name }));
       return true;
@@ -122,6 +131,7 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async deleteContainer(name: string): Promise<boolean | Error> {
+    name = this.getFormattedContainerName(name);
     await this._storage.send(
       new DeleteBucketCommand({
         Bucket: name,

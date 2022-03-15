@@ -37,6 +37,10 @@ export default {
       type: String,
       default: '',
     },
+    accountId: {
+      type: String,
+      default: '',
+    },
   },
   local: {
     storagePath: {

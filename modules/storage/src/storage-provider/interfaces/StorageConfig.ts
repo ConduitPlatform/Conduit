@@ -10,6 +10,7 @@ export interface StorageConfig {
     accessKeyId: string;
     secretAccessKey: string;
     region: string;
+    accountId: string;
   };
   azure: {
     connectionString: string;

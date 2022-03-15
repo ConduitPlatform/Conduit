@@ -219,7 +219,7 @@ export class FileHandlers {
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
-      return await File.getInstance().findByIdAndUpdate(found._id, found) as File;
+      return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
