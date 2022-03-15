@@ -33,7 +33,7 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   private getFormattedContainerName(bucketName: string): string {
-    const accountId = ConfigController.getInstance().config.accountId;
+    const accountId = ConfigController.getInstance().config.aws.accountId;
     return `conduit-${accountId}-${bucketName}`;
   }
 

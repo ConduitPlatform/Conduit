@@ -51,7 +51,7 @@ export default class Storage extends ManagedModule {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.awsAccountId = await getAwsAccountId(config);
+        config.aws.accountId = await getAwsAccountId(config);
       }
     }
     return config;
