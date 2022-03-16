@@ -50,7 +50,7 @@ setup:
 
 create-network:
 	@${DOCKER} network inspect ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || \
-	@${DOCKER} network create conduit > /dev/null 2>&1
+	${DOCKER} network create conduit > /dev/null 2>&1
 
 start-conduit:
 	@$(MAKE) --no-print-directory start-core
