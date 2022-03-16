@@ -8,6 +8,7 @@ import {
   HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsCommand,
+  PutObjectAclCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -48,6 +49,9 @@ export class AWSS3Storage implements IStorageProvider {
         Bucket: this._activeContainer,
         Key: fileName,
         Body: data,
+        GrantRead: isPublic
+          ? 'uri="http://acs.amazonaws.com/groups/global/AllUsers"'
+          : undefined,
       })
     );
     return true;

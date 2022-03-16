@@ -107,7 +107,7 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(usedContainer)
-        .store((newFolder ?? '') + name, buffer);
+        .store((newFolder ?? '') + name, buffer, isPublic);
       let publicUrl = null;
       if (isPublic) {
         publicUrl = await this.storageProvider
