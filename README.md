@@ -15,7 +15,7 @@ Conduit is a NodeJS-based Self-Hosted backend, that aims to cut down development
 by providing ready-made modules that offer common functionality out of the box, and allowing
 maximum flexibility to add custom functionality.
 
-Check out our docs here: [Documentation](https://getconduit.dev/docs)
+Check out our docs here: [Documentation](https://getconduit.dev/docs/overview/intro)
 
 # Features ✔️
 
