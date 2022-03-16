@@ -1,4 +1,4 @@
-.PHONY: zero-to-hero setup start-conduit start-all stop-all clean mrproper \
+.PHONY: zero-to-hero setup create-network start-conduit start-all stop-all clean mrproper \
 				start-core stop-core rm-core rmi-core \
 				start-authentication stop-authentication rm-authentication rmi-authentication \
 				start-chat stop-chat rm-chat rmi-chat \
@@ -41,12 +41,16 @@ setup:
 	@printf "\nInitializing Conduit Container Environment 🔨\n"
 	@echo     "This may take a while. Better bring up Reddit 😅"
 	@echo     "------------------------------------------------"
-	@${DOCKER} network create ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || true
+	@$(MAKE) --no-print-directory create-network
 	@${DOCKER} pull ghcr.io/conduitplatform/conduit:${TAG};
 	@${DOCKER} pull ghcr.io/conduitplatform/database:${TAG};
 	@${DOCKER} pull ghcr.io/conduitplatform/authentication:${TAG};
 	@${DOCKER} pull ghcr.io/conduitplatform/conduit-ui:${UI_TAG};
 	@printf "\n\nInstallation was successful ✔️\n\n"
+
+create-network:
+	@${DOCKER} network inspect ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || \
+	${DOCKER} network create conduit > /dev/null 2>&1
 
 start-conduit:
 	@$(MAKE) --no-print-directory start-core
@@ -113,9 +117,12 @@ mrproper:
 	@$(MAKE) --no-print-directory clean
 	@printf "\n\nRemoving Container Images 💽\n"
 	@echo       "----------------------------"
-	@$(MAKE) --no-print-directory rmi-redis
-	@$(MAKE) --no-print-directory rmi-mongo
-	@$(MAKE) --no-print-directory rmi-postgres
+# 	@$(MAKE) --no-print-directory rmi-redis
+# 	@$(MAKE) --no-print-directory rmi-mongo
+# 	@$(MAKE) --no-print-directory rmi-postgres
+	@$(MAKE) --no-print-directory rm-redis
+	@$(MAKE) --no-print-directory rm-mongo
+	@$(MAKE) --no-print-directory rm-postgres
 	@$(MAKE) --no-print-directory rmi-ui
 	@$(MAKE) --no-print-directory rmi-core
 	@$(MAKE) --no-print-directory rmi-authentication
@@ -184,6 +191,7 @@ endef
 
 start-core:
 	@$(MAKE) --no-print-directory start-redis
+	@$(MAKE) --no-print-directory create-network
 	$(call start,Core,conduit-core,ghcr.io/conduitplatform/conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME}, \
          -d -p 55152:55152 -p 3000:3000 -p 3001:3001 -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379")
 
@@ -350,10 +358,10 @@ rmi-ui:
 	$(call rmi,Conduit Admin Panel,ghcr.io/conduitplatform/conduit-ui,${UI_TAG})
 
 rmi-redis:
-	$(call rmi,Redis,conduit-redis,${TAG})
+	$(call rmi,Redis,redis,latest)
 
 rmi-mongo:
-	$(call rmi,MongoDB,conduit-mongo,${TAG})
+	$(call rmi,MongoDB,mongo,latest)
 
 rmi-postgres:
-	$(call rmi,PostgreSQL,conduit-postgres,${TAG})
+	$(call rmi,PostgreSQL,postgres,latest)
