@@ -117,9 +117,12 @@ mrproper:
 	@$(MAKE) --no-print-directory clean
 	@printf "\n\nRemoving Container Images 💽\n"
 	@echo       "----------------------------"
-	@$(MAKE) --no-print-directory rmi-redis
-	@$(MAKE) --no-print-directory rmi-mongo
-	@$(MAKE) --no-print-directory rmi-postgres
+# 	@$(MAKE) --no-print-directory rmi-redis
+# 	@$(MAKE) --no-print-directory rmi-mongo
+# 	@$(MAKE) --no-print-directory rmi-postgres
+	@$(MAKE) --no-print-directory rm-redis
+	@$(MAKE) --no-print-directory rm-mongo
+	@$(MAKE) --no-print-directory rm-postgres
 	@$(MAKE) --no-print-directory rmi-ui
 	@$(MAKE) --no-print-directory rmi-core
 	@$(MAKE) --no-print-directory rmi-authentication
@@ -355,10 +358,10 @@ rmi-ui:
 	$(call rmi,Conduit Admin Panel,ghcr.io/conduitplatform/conduit-ui,${UI_TAG})
 
 rmi-redis:
-	$(call rmi,Redis,conduit-redis,${TAG})
+	$(call rmi,Redis,redis,latest)
 
 rmi-mongo:
-	$(call rmi,MongoDB,conduit-mongo,${TAG})
+	$(call rmi,MongoDB,mongo,latest)
 
 rmi-postgres:
-	$(call rmi,PostgreSQL,conduit-postgres,${TAG})
+	$(call rmi,PostgreSQL,postgres,latest)
