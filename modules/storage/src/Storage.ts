@@ -2,16 +2,24 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
-import { createStorageProvider, IStorageProvider } from './storage-provider';
+import {
+  createStorageProvider,
+  IStorageProvider,
+  StorageConfig,
+} from './storage-provider';
 import * as models from './models';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
+import { getAwsAccountId } from './storage-provider/utils/utils';
+import { isEmpty } from 'lodash';
 
 export default class Storage extends ManagedModule {
   config = AppConfigSchema;
@@ -43,10 +51,20 @@ export default class Storage extends ManagedModule {
     this.storageProvider = createStorageProvider('local', {} as any);
   }
 
+  async preConfig(config: any) {
+    if (config.provider === 'aws') {
+      if (isEmpty(config.aws)) throw new Error('Missing AWS config');
+      if (isNil(config.aws.accountId)) {
+        config.aws.accountId = await getAwsAccountId(config);
+      }
+    }
+    return config;
+  }
+
   async onConfig() {
     await this.updateConfig();
     const storageConfig = ConfigController.getInstance().config;
-    const { provider, local, google, azure } = storageConfig;
+    const { provider, local, google, azure, aws } = storageConfig;
 
     if (!this.isRunning) {
       await this.registerSchemas();
@@ -57,9 +75,14 @@ export default class Storage extends ManagedModule {
       local,
       google,
       azure,
+      aws,
     });
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    this.userRouter = new StorageRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+    this.userRouter = new StorageRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this._fileHandlers
+    );
     this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
     this._fileHandlers.updateProvider(this.storageProvider);
     await this.userRouter.registerRoutes();
@@ -68,7 +91,8 @@ export default class Storage extends ManagedModule {
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
         return this.database.createSchemaFromAdapter(modelInstance);
       }
     });

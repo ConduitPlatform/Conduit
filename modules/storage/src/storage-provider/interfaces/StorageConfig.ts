@@ -6,6 +6,12 @@ export interface StorageConfig {
   google: {
     serviceAccountKeyPath: string;
   };
+  aws: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    region: string;
+    accountId: string;
+  };
   azure: {
     connectionString: string;
   };

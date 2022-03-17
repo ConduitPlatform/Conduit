@@ -16,7 +16,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider,
+    storageProvider: IStorageProvider
   ) {
     this.database = this.grpcSdk.databaseProvider!;
     _StorageContainer.getInstance(this.database);
@@ -60,7 +60,10 @@ export class FileHandlers {
       });
       if (!container) {
         if (!config.allowContainerCreation) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Container creation is not allowed!'
+          );
         }
         let exists = await this.storageProvider.containerExists(usedContainer);
         if (!exists) {
@@ -104,7 +107,7 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(usedContainer)
-        .store((newFolder ?? '') + name, buffer);
+        .store((newFolder ?? '') + name, buffer, isPublic);
       let publicUrl = null;
       if (isPublic) {
         publicUrl = await this.storageProvider
@@ -164,7 +167,10 @@ export class FileHandlers {
         });
         if (!container) {
           if (!config.allowContainerCreation) {
-            throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+            throw new GrpcError(
+              status.PERMISSION_DENIED,
+              'Container creation is not allowed!'
+            );
           }
           const exists = await this.storageProvider.containerExists(newContainer);
           if (!exists) {
@@ -206,10 +212,14 @@ export class FileHandlers {
           .delete((found.folder ?? '') + found.name);
       }
 
+      await this.storageProvider
+        .container(newContainer)
+        .store((newFolder ?? '') + newName, fileData);
+
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
-      return await File.getInstance().findByIdAndUpdate(found._id, found) as File;
+      return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
@@ -278,7 +288,6 @@ export class FileHandlers {
       } else {
         data = await this.storageProvider.container(file.container).get(file.name);
       }
-      data.toString('base64');
 
       return { data: data.toString('base64') };
     } catch (e) {
