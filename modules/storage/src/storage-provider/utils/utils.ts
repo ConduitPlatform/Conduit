@@ -4,7 +4,7 @@ import { ConfigController } from '@conduitplatform/grpc-sdk';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const chunks: any = [];
+    const chunks: Buffer[] = [];
     readableStream.on('data', (data: any) => {
       chunks.push(data instanceof Buffer ? data : Buffer.from(data));
     });

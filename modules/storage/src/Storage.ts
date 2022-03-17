@@ -8,7 +8,11 @@ import AppConfigSchema from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
-import { createStorageProvider, IStorageProvider } from './storage-provider';
+import {
+  createStorageProvider,
+  IStorageProvider,
+  StorageConfig,
+} from './storage-provider';
 import * as models from './models';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import path from 'path';

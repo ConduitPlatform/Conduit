@@ -95,7 +95,7 @@ export class AWSS3Storage implements IStorageProvider {
         })
       );
       return true;
-    } catch (error: any) {
+    } catch (error) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404
@@ -122,8 +122,7 @@ export class AWSS3Storage implements IStorageProvider {
     try {
       await this._storage.send(new HeadBucketCommand({ Bucket: name }));
       return true;
-    } catch (error: any) {
-      console.log('error', error, error.statusCode);
+    } catch (error) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404
@@ -181,7 +180,7 @@ export class AWSS3Storage implements IStorageProvider {
         })
       );
       return true;
-    } catch (error: any) {
+    } catch (error) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404
@@ -192,7 +191,7 @@ export class AWSS3Storage implements IStorageProvider {
     }
   }
 
-  async getSignedUrl(fileName: string): Promise<any> {
+  async getSignedUrl(fileName: string) {
     const command = new GetObjectCommand({
       Bucket: this._activeContainer,
       Key: fileName,
@@ -201,7 +200,7 @@ export class AWSS3Storage implements IStorageProvider {
     return url;
   }
 
-  async getPublicUrl(fileName: string): Promise<any> {
+  async getPublicUrl(fileName: string) {
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
   }
 
