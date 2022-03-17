@@ -15,15 +15,19 @@
 
 # ------ Default Values ------ #
 
-TAG        ?= v0.12.2
-UI_TAG     ?= v0.12.0
-DOCKER     ?= docker
+TAG         ?= v0.12.2
+UI_TAG      ?= v0.12.0
+DOCKER      ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
-DB_TYPE    ?= "mongodb"
-DB_URL     ?= "mongodb://conduit-mongo:27017"
 CONDUIT_CORE_NETWORK_NAME = conduit
-CONDUIT_URL = "http://localhost:3000"
-MASTER_KEY  = "M4ST3RK3Y"
+CONDUIT_URL  = "http://localhost:3000"
+MASTER_KEY   = "M4ST3RK3Y"
+DB_TYPE     ?= "mongodb"
+DB_USER     ?= "conduit"
+DB_PASS     ?= "pass"
+DB_HOST     ?= "localhost"
+DB_DATABASE ?= "conduit"
+DB_CONN_URI  = "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
 
 # ------ Common Targets ------ #
 
@@ -206,14 +210,15 @@ start-chat:
 start-database:
 	@if [ ${DB_TYPE} == "mongodb" ]; then \
 		make start-mongo; \
-	elif [ ${DB_TYPE} == "sql" ]; then \
+	elif [ ${DB_TYPE} == "postgres" ]; then \
 		make start-postgres; \
 	else \
-		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'sql' (default: mongodb)\n"; \
+		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'postgres' (default: mongodb)\n"; \
 		exit 1; \
 	fi
 	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
+	       -e DB_TYPE=${DB_TYPE} -e DB_CONN_URI=${DB_CONN_URI} \
 	       -e databaseType=${DB_TYPE} -e databaseURL=${DB_URL})
 
 start-email:
@@ -244,10 +249,16 @@ start-redis:
 	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,-d -p 6379:6379)
 
 start-mongo:
-	$(call start,MongoDB,conduit-mongo,docker.io/library/mongo,latest,mongo,-d -p 27017:27017)
+	$(call start,MongoDB,conduit-mongo,docker.io/library/mongo,latest,mongo, \
+	       -d -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=${DB_USER} \
+	                         -e MONGO_INITDB_ROOT_PASSWORD=${DB_PASS} \
+	                         -e MONGO_INITDB_DATABASE=${DB_DATABASE})
 
 start-postgres:
-	$(call start,PostgreSQL,conduit-postgres,docker.io/library/postgres,latest,postgres,-d -p 5432:5432)
+	$(call start,PostgreSQL,conduit-postgres,docker.io/library/postgres,latest,postgres, \
+	       -d -p 5432:5432 -e POSTGRES_USER=${DB_USER} \
+                           -e POSTGRES_PASSWORD=${DB_PASS} \
+                           -e POSTGRES_DB=${DB_DATABASE})
 
 stop-core:
 	$(call stop,Conduit Core,conduit-core)
