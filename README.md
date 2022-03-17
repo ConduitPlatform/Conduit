@@ -31,7 +31,7 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - Basic security built-in with Client Id/secret for all requests, rate limiting and Helmet.
 - Emails with template support
 - SMS for 2FA or plain SMS send
-- Storage using either GCS or Azure Blob Storage (S3 coming soon)
+- Storage using GCS, Azure Blob Storage or S3
 - Chat
 - Forms for basic form submission and email forwarding
 - Conduit SDK can be used to add new modules or custom services
