@@ -1,6 +1,7 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
 import { isNil } from 'lodash';
 import { ConfigController } from '@conduitplatform/grpc-sdk';
+import { StorageConfig } from '../interfaces';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -15,7 +16,7 @@ export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   });
 }
 
-export async function getAwsAccountId(config: any) {
+export async function getAwsAccountId(config: StorageConfig) {
   const iamClient = new IAMClient({
     region: config.aws.region,
     credentials: {
