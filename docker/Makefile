@@ -21,7 +21,7 @@ DOCKER      ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
 CONDUIT_CORE_NETWORK_NAME = conduit
 CONDUIT_URL  = "http://localhost:3000"
-MASTER_KEY   = "M4ST3RK3Y"
+MASTER_KEY  ?= "M4ST3RK3Y"
 DB_TYPE     ?= "mongodb"
 DB_USER     ?= "conduit"
 DB_PASS     ?= "pass"
@@ -197,7 +197,9 @@ start-core:
 	@$(MAKE) --no-print-directory start-redis
 	@$(MAKE) --no-print-directory create-network
 	$(call start,Core,conduit-core,ghcr.io/conduitplatform/conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME}, \
-         -d -p 55152:55152 -p 3000:3000 -p 3001:3001 -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379")
+         -d -p 55152:55152 -p 3000:3000 -p 3001:3001 \
+         -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379" \
+         -e MASTER_KEY=${MASTER_KEY})
 
 start-authentication:
 	$(call start,Authentication,conduit-authentication,ghcr.io/conduitplatform/authentication,${TAG},authentication, \
