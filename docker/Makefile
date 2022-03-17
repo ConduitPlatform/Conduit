@@ -22,10 +22,11 @@ CONTAINER_NETWORK_NAME ?= "conduit"
 CONDUIT_CORE_NETWORK_NAME = conduit
 CONDUIT_URL  = "http://localhost:3000"
 MASTER_KEY  ?= "M4ST3RK3Y"
-DB_TYPE     ?= "mongodb"
+DB_TYPE     ?= "mongodb" # mongodb/postgres
 DB_USER     ?= "conduit"
 DB_PASS     ?= "pass"
 DB_HOST     ?= "localhost"
+DB_PORT     ?= "27017"
 DB_DATABASE ?= "conduit"
 DB_CONN_URI  = "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
 
@@ -148,7 +149,7 @@ mrproper:
 
 # ----- Docker Functions ----- #
 
-# Params: module name, container-name, image-name, tag, network-alias, docker args (optional)
+# Params: module name, container-name, image-name, tag, network-alias, cmd, docker args (optional)
 define start
 	@if ${DOCKER} container ls | grep ${2} > /dev/null 2>&1; then \
 		printf "\n${1} container already running\n"; \
@@ -157,7 +158,7 @@ define start
 		${DOCKER} start ${2}; \
 	else \
 		printf "\nStarting ${1} container\n"; \
-		${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
+		${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${7} ${3}:${4} ${6}; \
 	fi
 endef
 
@@ -196,17 +197,17 @@ endef
 start-core:
 	@$(MAKE) --no-print-directory start-redis
 	@$(MAKE) --no-print-directory create-network
-	$(call start,Core,conduit-core,ghcr.io/conduitplatform/conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME}, \
+	$(call start,Core,conduit-core,ghcr.io/conduitplatform/conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME},yarn start, \
          -d -p 55152:55152 -p 3000:3000 -p 3001:3001 \
          -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379" \
          -e MASTER_KEY=${MASTER_KEY})
 
 start-authentication:
-	$(call start,Authentication,conduit-authentication,ghcr.io/conduitplatform/authentication,${TAG},authentication, \
+	$(call start,Authentication,conduit-authentication,ghcr.io/conduitplatform/authentication,${TAG},authentication,yarn start, \
          -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-chat:
-	$(call start,Chat,conduit-chat,ghcr.io/conduitplatform/chat,${TAG},chat, \
+	$(call start,Chat,conduit-chat,ghcr.io/conduitplatform/chat,${TAG},chat,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-database:
@@ -218,49 +219,51 @@ start-database:
 		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'postgres' (default: mongodb)\n"; \
 		exit 1; \
 	fi
-	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider, \
+	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
 	       -e DB_TYPE=${DB_TYPE} -e DB_CONN_URI=${DB_CONN_URI} \
 	       -e databaseType=${DB_TYPE} -e databaseURL=${DB_URL})
 
 start-email:
-	$(call start,Email,conduit-email,ghcr.io/conduitplatform/email,${TAG},email, \
+	$(call start,Email,conduit-email,ghcr.io/conduitplatform/email,${TAG},email,yarn start, \
          -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-forms:
-	$(call start,Forms,conduit-forms,ghcr.io/conduitplatform/forms,${TAG},forms, \
+	$(call start,Forms,conduit-forms,ghcr.io/conduitplatform/forms,${TAG},forms,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-push-notifications:
-	$(call start,PushNotifications,conduit-push-notifications,ghcr.io/conduitplatform/push-notifications,${TAG},push-notifications, \
+	$(call start,PushNotifications,conduit-push-notifications,ghcr.io/conduitplatform/push-notifications,${TAG},push-notifications,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-sms:
-	$(call start,SMS,conduit-sms,ghcr.io/conduitplatform/sms,${TAG},sms, \
+	$(call start,SMS,conduit-sms,ghcr.io/conduitplatform/sms,${TAG},sms,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-storage:
-	$(call start,Storage,conduit-storage,ghcr.io/conduitplatform/storage,${TAG},storage, \
+	$(call start,Storage,conduit-storage,ghcr.io/conduitplatform/storage,${TAG},storage,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-ui:
-	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,${UI_TAG},conduit-ui, \
+	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,${UI_TAG},conduit-ui,yarn start, \
 	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL})
 
 start-redis:
-	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,-d -p 6379:6379)
+	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,redis-server,-d -p 6379:6379)
 
 start-mongo:
-	$(call start,MongoDB,conduit-mongo,docker.io/library/mongo,latest,mongo, \
-	       -d -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=${DB_USER} \
-	                         -e MONGO_INITDB_ROOT_PASSWORD=${DB_PASS} \
-	                         -e MONGO_INITDB_DATABASE=${DB_DATABASE})
+	$(call start,MongoDB,conduit-mongo,docker.io/library/mongo,latest,mongo,mongod --port ${DB_PORT}, \
+	       -d -p ${DB_PORT}:${DB_PORT} \
+	       -e MONGO_INITDB_ROOT_USERNAME=${DB_USER} \
+	       -e MONGO_INITDB_ROOT_PASSWORD=${DB_PASS} \
+	       -e MONGO_INITDB_DATABASE=${DB_DATABASE})
 
 start-postgres:
-	$(call start,PostgreSQL,conduit-postgres,docker.io/library/postgres,latest,postgres, \
-	       -d -p 5432:5432 -e POSTGRES_USER=${DB_USER} \
-                           -e POSTGRES_PASSWORD=${DB_PASS} \
-                           -e POSTGRES_DB=${DB_DATABASE})
+	$(call start,PostgreSQL,conduit-postgres,docker.io/library/postgres,latest,postgres,postgres -p ${DB_PORT}, \
+	       -d -p ${DB_PORT}:${DB_PORT} \
+	       -e POSTGRES_USER=${DB_USER} \
+           -e POSTGRES_PASSWORD=${DB_PASS} \
+           -e POSTGRES_DB=${DB_DATABASE})
 
 stop-core:
 	$(call stop,Conduit Core,conduit-core)
