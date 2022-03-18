@@ -3,9 +3,11 @@ import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 
 export class SwaggerGenerator {
+  private readonly _swaggerDoc: any;
+  private readonly _globalSecurityHeaders: any;
   private _parser: SwaggerParser;
 
-  constructor() {
+  constructor(securitySchemes: any, globalSecurityHeaders: any) {
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
@@ -20,42 +22,25 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes: {
-          clientid: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'clientid',
-          },
-          clientSecret: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'clientSecret',
-          },
-          tokenAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-          },
-        },
+        securitySchemes
       },
     };
     this._parser = new SwaggerParser();
+    this._globalSecurityHeaders = globalSecurityHeaders;
   }
-
-  private _swaggerDoc: any;
 
   get swaggerDoc() {
     return this._swaggerDoc;
   }
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
-    let method = this._extractMethod(route.input.action);
+    const method = this._extractMethod(route.input.action);
     let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
     serviceName = serviceName.substr(0, serviceName.indexOf('/'));
     if (serviceName.trim() === '') {
       serviceName = 'core';
     }
-    let routeDoc: any = {
+    const routeDoc: any = {
       summary: route.input.name,
       description: route.input.description,
       tags: [serviceName],
@@ -70,10 +55,7 @@ export class SwaggerGenerator {
         },
       },
       security: [
-        {
-          clientid: [],
-          clientSecret: [],
-        },
+        this._globalSecurityHeaders,
       ],
     };
 
@@ -154,8 +136,14 @@ export class SwaggerGenerator {
       };
     }
 
+    // User: AuthMiddleware
     if (route.input.middlewares?.includes('authMiddleware')) {
-      routeDoc.security[0].tokenAuth = [];
+      routeDoc.security[0].userToken = [];
+    }
+
+    // Admin: AdminMiddleware
+    if ('masterKey' in routeDoc.security[0] && route.returnTypeName !== 'Login' && route.returnTypeName !== 'GetModules') {
+      routeDoc.security[0].adminToken = [];
     }
 
     const returnDefinition = this._parser.extractTypes(

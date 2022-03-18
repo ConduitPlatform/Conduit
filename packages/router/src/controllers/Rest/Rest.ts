@@ -31,10 +31,10 @@ export class RestController extends ConduitRouter {
     return this._registeredRoutes;
   }
 
-  constructor(readonly app: Application) {
+  constructor(readonly app: Application, swaggerSecuritySchemes: any, globalSecurityHeaders: any) {
     super(app);
     this._registeredLocalRoutes = new Map();
-    this._swagger = new SwaggerGenerator();
+    this._swagger = new SwaggerGenerator(swaggerSecuritySchemes, globalSecurityHeaders);
     this.initializeRouter();
   }
 

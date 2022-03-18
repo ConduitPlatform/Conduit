@@ -18,6 +18,25 @@ import { hashPassword } from './utils/auth';
 import AdminConfigSchema from './config';
 import * as models from './models';
 
+const swaggerSecuritySchemes = {
+  masterKey: {
+    name: 'masterkey',
+    type: 'apiKey',
+    in: 'header',
+    description: 'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
+  },
+  adminToken: {
+    name: 'Authorization',
+    type: 'apiKey',
+    in: 'header',
+    description: 'An admin authentication token, retrievable through [POST] /admin/login (format: JWT token)',
+  },
+}
+
+const globalSecurityHeaders = {
+  masterKey: [],
+}
+
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
@@ -38,7 +57,7 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk = grpcSdk;
 
     this._app = app;
-    this._restRouter = new RestController(this._app);
+    this._restRouter = new RestController(this._app, swaggerSecuritySchemes, globalSecurityHeaders);
 
     this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
     this._restRouter.registerRoute(
