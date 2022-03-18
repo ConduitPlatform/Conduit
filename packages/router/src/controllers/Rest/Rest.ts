@@ -15,7 +15,7 @@ import {
   ConduitRouteActions,
   TYPE,
 } from '@conduitplatform/commons';
-import { SwaggerGenerator } from './Swagger';
+import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
@@ -31,10 +31,10 @@ export class RestController extends ConduitRouter {
     return this._registeredRoutes;
   }
 
-  constructor(readonly app: Application, swaggerSecuritySchemes: any, globalSecurityHeaders: any) {
+  constructor(readonly app: Application, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(app);
     this._registeredLocalRoutes = new Map();
-    this._swagger = new SwaggerGenerator(swaggerSecuritySchemes, globalSecurityHeaders);
+    this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
   }
 

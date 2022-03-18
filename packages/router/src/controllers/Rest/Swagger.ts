@@ -2,12 +2,24 @@ import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 
+export type SwaggerRouterMetadata = {
+  urlPrefix: string,
+  securitySchemes: {
+    [field: string]: {
+      [field: string]:  string
+    }
+  },
+  globalSecurityHeaders: {
+    [field: string]: [],
+  }[],
+}
+
 export class SwaggerGenerator {
   private readonly _swaggerDoc: any;
-  private readonly _globalSecurityHeaders: any;
+  private readonly _routerMetadata: SwaggerRouterMetadata;
   private _parser: SwaggerParser;
 
-  constructor(securitySchemes: any, globalSecurityHeaders: any) {
+  constructor(routerMetadata: SwaggerRouterMetadata) {
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
@@ -22,11 +34,11 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes
+        securitySchemes: routerMetadata.securitySchemes,
       },
     };
     this._parser = new SwaggerParser();
-    this._globalSecurityHeaders = globalSecurityHeaders;
+    this._routerMetadata = routerMetadata;
   }
 
   get swaggerDoc() {
@@ -54,9 +66,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: [
-        this._globalSecurityHeaders,
-      ],
+      security: this._routerMetadata.globalSecurityHeaders,
     };
 
     if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
@@ -157,7 +167,7 @@ export class SwaggerGenerator {
     if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
       this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
     }
-    let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
+    const path = this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
     } else {

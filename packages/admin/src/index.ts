@@ -2,7 +2,7 @@ import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { RestController } from '@conduitplatform/router';
+import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -18,24 +18,26 @@ import { hashPassword } from './utils/auth';
 import AdminConfigSchema from './config';
 import * as models from './models';
 
-const swaggerSecuritySchemes = {
-  masterKey: {
-    name: 'masterkey',
-    type: 'apiKey',
-    in: 'header',
-    description: 'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
+const swaggerRouterMetadata: SwaggerRouterMetadata = {
+  urlPrefix: '/admin',
+  securitySchemes: {
+    masterKey: {
+      name: 'masterkey',
+      type: 'apiKey',
+      in: 'header',
+      description: 'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
+    },
+    adminToken: {
+      name: 'Authorization',
+      type: 'apiKey',
+      in: 'header',
+      description: 'An admin authentication token, retrievable through [POST] /admin/login (format: JWT token)',
+    },
   },
-  adminToken: {
-    name: 'Authorization',
-    type: 'apiKey',
-    in: 'header',
-    description: 'An admin authentication token, retrievable through [POST] /admin/login (format: JWT token)',
-  },
-}
-
-const globalSecurityHeaders = {
-  masterKey: [],
-}
+  globalSecurityHeaders: [{
+    masterKey: [],
+  }],
+};
 
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
@@ -57,7 +59,7 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk = grpcSdk;
 
     this._app = app;
-    this._restRouter = new RestController(this._app, swaggerSecuritySchemes, globalSecurityHeaders);
+    this._restRouter = new RestController(this._app, swaggerRouterMetadata);
 
     this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
     this._restRouter.registerRoute(
