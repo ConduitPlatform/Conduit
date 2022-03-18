@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.11.4](https://github.com/ConduitPlatform/Conduit/compare/v0.11.3...v0.11.4) (2022-03-18)
+
+
+### Bug Fixes
+
+* **storage:** store() call missing isPublic arg in createFile handler ([#78](https://github.com/ConduitPlatform/Conduit/issues/78)) ([4cdf631](https://github.com/ConduitPlatform/Conduit/commit/4cdf631ca70bd32fb44593319998e1762c80e0dd))
+* **storage:** updateFile handler backports [#73](https://github.com/ConduitPlatform/Conduit/issues/73) ([#74](https://github.com/ConduitPlatform/Conduit/issues/74)) ([a857fa3](https://github.com/ConduitPlatform/Conduit/commit/a857fa341238a2489c233204b79e277a55793123))
+
 ### [0.11.3](https://github.com/ConduitPlatform/Conduit/compare/v0.11.2...v0.11.3) (2022-03-04)
 
 ### [0.11.2](https://github.com/ConduitPlatform/Conduit/compare/v0.11.1...v0.11.2) (2022-03-03)
