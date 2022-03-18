@@ -28,10 +28,10 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
       description: 'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
     },
     adminToken: {
-      name: 'Authorization',
-      type: 'apiKey',
-      in: 'header',
-      description: 'An admin authentication token, retrievable through [POST] /admin/login (format: JWT token)',
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'Bearer',
+      description: 'An admin authentication token, retrievable through [POST] /admin/login',
     },
   },
   globalSecurityHeaders: [{
