@@ -22,7 +22,7 @@ CONTAINER_NETWORK_NAME ?= "conduit"
 CONDUIT_CORE_NETWORK_NAME = conduit
 CONDUIT_URL  = "http://localhost:3000"
 MASTER_KEY  ?= "M4ST3RK3Y"
-DB_TYPE     ?= "mongodb" # mongodb/postgres
+DB_TYPE     ?= "mongodb"# mongodb/postgres
 DB_USER     ?= "conduit"
 DB_PASS     ?= "pass"
 DB_HOST     ?= "localhost"
@@ -221,8 +221,10 @@ start-database:
 	fi
 	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
-	       -e DB_TYPE=${DB_TYPE} -e DB_CONN_URI=${DB_CONN_URI} \
-	       -e databaseType=${DB_TYPE} -e databaseURL=${DB_URL})
+	       -e databaseType=${DB_TYPE} \
+	       -e databaseUrl=`if [ ${DB_TYPE} = "mongodb" ]; then echo ${DB_CONN_URI}?authSource=admin; else echo ${DB_CONN_URI}; fi` \
+	       -e DB_TYPE=${DB_TYPE} \
+	       -e DB_CONN_URI=`if [ ${DB_TYPE} = "mongodb" ]; then echo ${DB_CONN_URI}?authSource=admin; else echo ${DB_CONN_URI}; fi`)
 
 start-email:
 	$(call start,Email,conduit-email,ghcr.io/conduitplatform/email,${TAG},email,yarn start, \
