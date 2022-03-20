@@ -3,15 +3,16 @@ import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 
 export type SwaggerRouterMetadata = {
-  urlPrefix: string,
-  securitySchemes: {
+  readonly urlPrefix: string,
+  readonly securitySchemes: {
     [field: string]: {
       [field: string]:  string
     }
   },
-  globalSecurityHeaders: {
+  readonly globalSecurityHeaders: {
     [field: string]: [],
   }[],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void,
 }
 
 export class SwaggerGenerator {
@@ -66,7 +67,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: this._routerMetadata.globalSecurityHeaders,
+      security: JSON.parse(JSON.stringify(this._routerMetadata.globalSecurityHeaders)),
     };
 
     if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
@@ -146,15 +147,7 @@ export class SwaggerGenerator {
       };
     }
 
-    // User: AuthMiddleware
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      routeDoc.security[0].userToken = [];
-    }
-
-    // Admin: AdminMiddleware
-    if ('masterKey' in routeDoc.security[0] && route.returnTypeName !== 'Login' && route.returnTypeName !== 'GetModules') {
-      routeDoc.security[0].adminToken = [];
-    }
+    this._routerMetadata.setExtraRouteHeaders(route, routeDoc);
 
     const returnDefinition = this._parser.extractTypes(
       route.returnTypeName,

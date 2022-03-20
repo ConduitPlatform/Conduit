@@ -37,6 +37,11 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
   globalSecurityHeaders: [{
     masterKey: [],
   }],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+    if (route.input.path !== '/login' && route.input.path !== '/modules') {
+      swaggerRouteDoc.security[0].adminToken = [];
+    }
+  },
 };
 
 export default class AdminModule extends IConduitAdmin {

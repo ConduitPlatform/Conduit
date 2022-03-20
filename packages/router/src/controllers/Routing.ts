@@ -37,6 +37,11 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
     clientId: [],
     clientSecret: [],
   }],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+    if (route.input.middlewares?.includes('authMiddleware')) {
+      swaggerRouteDoc.security[0].userToken = [];
+    }
+  },
 };
 
 export class ConduitRoutingController {
