@@ -10,12 +10,12 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
     ) {
       return next();
     }
-    const masterkey = req.headers.masterkey;
+    const masterKey = req.headers.masterkey;
     if (!process.env.masterkey || process.env.masterkey.length === 0) {
       console.warn('!Security issue!: Master key not set, defaulting to insecure string');
     }
-    let master = process.env.masterkey ?? 'M4ST3RK3Y';
-    if (isNil(masterkey) || masterkey !== master)
+    const master = process.env.MASTER_KEY ?? process.env.masterkey ?? 'M4ST3RK3Y'; // Compat (<=0.12.2): masterkey
+    if (isNil(masterKey) || masterKey !== master)
       return res.status(401).json({ error: 'Unauthorized' });
     next();
   }

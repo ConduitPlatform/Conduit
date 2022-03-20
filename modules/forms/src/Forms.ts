@@ -7,7 +7,7 @@ import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
 
-export default class Authentication extends ManagedModule {
+export default class Forms extends ManagedModule {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'forms.proto'),

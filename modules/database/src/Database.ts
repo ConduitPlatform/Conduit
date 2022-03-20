@@ -55,12 +55,12 @@ export default class DatabaseModule extends ManagedModule {
   private userRouter: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
 
-  constructor(dbType: string, dbUrl: string) {
+  constructor(dbType: string, dbUri: string) {
     super('database');
     if (dbType === 'mongodb') {
-      this._activeAdapter = new MongooseAdapter(dbUrl);
-    } else if (dbType === 'sql') {
-      this._activeAdapter = new SequelizeAdapter(dbUrl);
+      this._activeAdapter = new MongooseAdapter(dbUri);
+    } else if (dbType === 'postgres' || dbType === 'sql') { // Compat (<=0.12.2): sql
+      this._activeAdapter = new SequelizeAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
     }

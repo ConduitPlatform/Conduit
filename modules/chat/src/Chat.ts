@@ -1,7 +1,7 @@
 import {
   ManagedModule,
   DatabaseProvider,
-} from "@conduitplatform/grpc-sdk";
+} from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
@@ -13,7 +13,7 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
-export default class Authentication extends ManagedModule {
+export default class Chat extends ManagedModule {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),

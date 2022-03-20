@@ -1,6 +1,6 @@
 <!--
 Please make sure to read the Pull Request Guidelines:
-https://github.com/ConduitPlatform/Conduit/blob/master/.github/CONTRIBUTING.md#pull-request-guidelines
+https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md#pull-request-guidelines
 -->
 
 <!-- PULL REQUEST TEMPLATE -->
@@ -24,7 +24,7 @@ If yes, please describe the impact and migration path for existing applications:
 
 **The PR fulfills these requirements:**
 
-- [ ] It's submitted to the `master` branch
+- [ ] It's submitted to the `main` branch
 - [ ] When resolving a specific issue, it's referenced in the PR's title (e.g. `fix #xxx`, where "xxx" is the issue number)
 
 If adding a **new feature**, the PR's description includes:

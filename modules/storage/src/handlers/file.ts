@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConfigController,
   DatabaseProvider,
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -6,7 +7,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
-import { ConfigController } from '../config/Config.controller';
 import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 
@@ -16,7 +16,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider,
+    storageProvider: IStorageProvider
   ) {
     this.database = this.grpcSdk.databaseProvider!;
     _StorageContainer.getInstance(this.database);
@@ -60,7 +60,10 @@ export class FileHandlers {
       });
       if (!container) {
         if (!config.allowContainerCreation) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Container creation is not allowed!'
+          );
         }
         let exists = await this.storageProvider.containerExists(usedContainer);
         if (!exists) {
@@ -104,7 +107,7 @@ export class FileHandlers {
 
       await this.storageProvider
         .container(usedContainer)
-        .store((newFolder ?? '') + name, buffer);
+        .store((newFolder ?? '') + name, buffer, isPublic);
       let publicUrl = null;
       if (isPublic) {
         publicUrl = await this.storageProvider
@@ -144,25 +147,32 @@ export class FileHandlers {
       }
 
       const newName = name ?? found.name;
-      const newFolder = folder ?? found.folder;
+      let newFolder = folder ?? found.folder;
+      if (!newFolder.endsWith('/')) {
+        // existing folder names are currently suffixed by "/" upon creation
+        newFolder += '/';
+      }
       const newContainer = container ?? found.container;
 
-      const shouldRemove =
-        newName !== found.name ||
-        newContainer !== found.container ||
-        newFolder !== found.folder;
+      const isDataUpdate =
+        newName === found.name &&
+        newContainer === found.container &&
+        newFolder === found.folder;
 
       found.mimeType = mimeType ?? found.mimeType;
 
       if (newContainer !== found.container) {
-        let container = await _StorageContainer.getInstance().findOne({
+        const container = await _StorageContainer.getInstance().findOne({
           name: newContainer,
         });
         if (!container) {
           if (!config.allowContainerCreation) {
-            throw new GrpcError(status.PERMISSION_DENIED, 'Container creation is not allowed!');
+            throw new GrpcError(
+              status.PERMISSION_DENIED,
+              'Container creation is not allowed!'
+            );
           }
-          let exists = await this.storageProvider.containerExists(newContainer);
+          const exists = await this.storageProvider.containerExists(newContainer);
           if (!exists) {
             await this.storageProvider.createContainer(newContainer);
           }
@@ -171,7 +181,7 @@ export class FileHandlers {
       }
 
       if (newFolder !== found.folder) {
-        let exists = await this.storageProvider
+        const exists = await this.storageProvider
           .container(newContainer)
           .folderExists(newFolder);
         if (!exists) {
@@ -183,31 +193,33 @@ export class FileHandlers {
         }
       }
 
-      let exists = await File.getInstance().findOne({
-        name: name,
+      const exists = await File.getInstance().findOne({
+        name: newName,
         container: newContainer,
         folder: newFolder,
       });
-      if (exists) {
+      if (!isDataUpdate && exists) {
         throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
       }
 
       await this.storageProvider
         .container(newContainer)
-        .store((newFolder ?? '') + name, fileData)
-
-      if (shouldRemove) {
+        .store((newFolder ?? '') + newName, fileData);
+      // calling delete after store call succeeds
+      if (!isDataUpdate) {
         await this.storageProvider
           .container(found.container)
           .delete((found.folder ?? '') + found.name);
       }
 
+      await this.storageProvider
+        .container(newContainer)
+        .store((newFolder ?? '') + newName, fileData);
+
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
-      const updatedFile = await File.getInstance().findByIdAndUpdate(found._id, found) as File;
-
-      return updatedFile;
+      return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
@@ -249,7 +261,7 @@ export class FileHandlers {
         .container(found.container)
         .getSignedUrl((found.folder ?? '') + found.name);
 
-      if (!isNil(call.request.params.redirect) && (call.request.params.redirect === 'false' || !call.request.params.redirect)) {
+      if (!call.request.params.redirect) {
         return { result: url };
       }
       return { redirect: url };
@@ -276,7 +288,6 @@ export class FileHandlers {
       } else {
         data = await this.storageProvider.container(file.container).get(file.name);
       }
-      data.toString('base64');
 
       return { data: data.toString('base64') };
     } catch (e) {

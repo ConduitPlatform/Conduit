@@ -1,10 +1,21 @@
-[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
+<p align="center">
+<br>
+<a href="https://getconduit.dev" target="_blank"><img src="https://getconduit.dev/conduitLogo.svg" alt="logo"/></a>
+<br/>
+<strong>The only Backend you'll ever need. Written in NodeJS, works with any stack</strong>
+</p>
 
+[![lerna](https://img.shields.io/badge/maintained%20with-lerna-cc00ff.svg)](https://lerna.js.org/)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/ConduitPlatform/Conduit)
+![GitHub](https://img.shields.io/github/license/ConduitPlatform/Conduit)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit)
 # Conduit Platform
 
-Conduit is a NodeJS-based Backend as a Service, that aims to cut down development times
+Conduit is a NodeJS-based Self-Hosted backend, that aims to cut down development times
 by providing ready-made modules that offer common functionality out of the box, and allowing
 maximum flexibility to add custom functionality.
+
+Check out our docs here: [Documentation](https://getconduit.dev/docs/overview/intro)
 
 # Features ✔️
 
@@ -20,7 +31,7 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - Basic security built-in with Client Id/secret for all requests, rate limiting and Helmet.
 - Emails with template support
 - SMS for 2FA or plain SMS send
-- Storage using either GCS or Azure Blob Storage (S3 coming soon)
+- Storage using GCS, Azure Blob Storage or S3
 - Chat
 - Forms for basic form submission and email forwarding
 - Conduit SDK can be used to add new modules or custom services
@@ -31,8 +42,20 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - NodeJS > 14
 - MongoDB or PostgreSQL
 - Desire to create something awesome
+# Quickstart
+This script uses docker compose to spin up some basic modules for you to test.
+```sh
+source <(curl -s https://getconduit.dev/bootstrap)
+```
+Open http://localhost:8080 to check the admin panel username:admin password: admin
 
-# Running 🔨
+Your API will be on http://localhost:3000
+
+Checkout swagger on: /swagger
+
+Checkout GraphQL on /graphql (you'll need to generate clientid/secret throught the admin panel to access)
+
+# Running from source 🔨
 
 ```sh
 yarn
@@ -47,16 +70,16 @@ Then repeat the last step for every additional module you need to bring online.
 CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
 ```
 
-# Environment Variables 📃 <a name="env-vars"></a>
+## Environment Variables 📃 <a name="env-vars"></a>
 
-## Core:
+### Core:
 
 |  Variable        |  Description   | Required |  Example        |
 | :--------------: | :------------- | :------: | :-------------: |
 | `REDIS_HOST`     | Redis address  |   True   | `localhost`     |
 | `REDIS_PORT`     | Redis port     |   True   | `6379`          |
 
-## Database
+### Database
 
 |  Variable        |  Description   | Required |  Example        |  Default                    |
 | :--------------: | :------------- | :------: | :-------------: | :-------------------------: |
@@ -65,7 +88,7 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 
 Generic module env variables are also supported, with required ones being obligatory.
 
-## General Module
+### Generic Module
 
 |  Variable        |  Description                                  | Required |  Example        |
 | :--------------: | :-------------------------------------------- | :------: | :-------------: |
@@ -74,11 +97,12 @@ Generic module env variables are also supported, with required ones being obliga
 | `SERVICE_URL`    | **Deprecated** in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
 | `REGISTER_NAME`  | Set to `true` if running in Kubernetes        |   False  | `true`          |
 
-# Information ℹ️
+## Information ℹ️
 
 - Core HTTP Server runs at: `http://localhost:3000`
 - Core Grpc Server runs at: `localhost:55152`
 - Core Socket Server runs at: `localhost:3001`
+- Admin Server runs at: `localhost:8080`
 
 # Roadmap 🏁
 

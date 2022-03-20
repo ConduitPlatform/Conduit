@@ -1,7 +1,6 @@
-.PHONY: zero-to-hero setup start-conduit start-all stop-all clean mrproper \
+.PHONY: zero-to-hero setup create-network start-conduit start-all stop-all clean mrproper \
 				start-core stop-core rm-core rmi-core \
 				start-authentication stop-authentication rm-authentication rmi-authentication \
-				start-cms stop-cms rm-cms rmi-cms \
 				start-chat stop-chat rm-chat rmi-chat \
 				start-database stop-database rm-database rmi-database \
 				start-email stop-email rm-email rmi-email \
@@ -16,7 +15,8 @@
 
 # ------ Default Values ------ #
 
-TAG        ?= v0.10.6
+TAG        ?= v0.12.2
+UI_TAG     ?= v0.12.0
 DOCKER     ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
 DB_TYPE    ?= "mongodb"
@@ -29,13 +29,11 @@ MASTER_KEY  = "M4ST3RK3Y"
 
 zero-to-hero:
 	@$(MAKE) --no-print-directory setup
-	@$(call pre-v0.11-workaround)
 	@$(MAKE) --no-print-directory start-conduit
 	@printf "\nModules Being Brought Up ⚙️\n"
 	@echo     "--------------------------"
 	@echo "- database"
 	@echo "- authentication"
-	@echo "- cms"
 	@printf "\n\nLog into your admin panel in http://localhost:8080\n"
 	@echo "Credentials: admin:admin"
 
@@ -43,13 +41,16 @@ setup:
 	@printf "\nInitializing Conduit Container Environment 🔨\n"
 	@echo     "This may take a while. Better bring up Reddit 😅"
 	@echo     "------------------------------------------------"
-	@${DOCKER} network create ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || true
+	@$(MAKE) --no-print-directory create-network
 	@${DOCKER} pull ghcr.io/conduitplatform/conduit:${TAG};
-	@${DOCKER} pull ghcr.io/conduitplatform/conduit-database:${TAG};
-	@${DOCKER} pull ghcr.io/conduitplatform/conduit-authentication:${TAG};
-	@${DOCKER} pull ghcr.io/conduitplatform/conduit-cms:${TAG};
-	@${DOCKER} pull ghcr.io/conduitplatform/conduit-ui:v0.10.7;
+	@${DOCKER} pull ghcr.io/conduitplatform/database:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/authentication:${TAG};
+	@${DOCKER} pull ghcr.io/conduitplatform/conduit-ui:${UI_TAG};
 	@printf "\n\nInstallation was successful ✔️\n\n"
+
+create-network:
+	@${DOCKER} network inspect ${CONTAINER_NETWORK_NAME} > /dev/null 2>&1 || \
+	${DOCKER} network create conduit > /dev/null 2>&1
 
 start-conduit:
 	@$(MAKE) --no-print-directory start-core
@@ -57,8 +58,6 @@ start-conduit:
 	@$(MAKE) --no-print-directory start-database
 	@sleep 0.5
 	@$(MAKE) --no-print-directory start-authentication
-	@sleep 0.2
-	@$(MAKE) --no-print-directory start-cms
 	@$(MAKE) --no-print-directory start-ui
 
 start-all:
@@ -69,8 +68,6 @@ start-all:
 	@$(MAKE) --no-print-directory start-authentication
 	@sleep 0.2
 	@$(MAKE) --no-print-directory start-chat
-	@sleep 0.2
-	@$(MAKE) --no-print-directory start-cms
 	@sleep 0.2
 	@$(MAKE) --no-print-directory start-email
 	@sleep 0.2
@@ -87,7 +84,6 @@ stop-all:
 	-@$(MAKE) --no-print-directory stop-ui
 	-@$(MAKE) --no-print-directory stop-authentication
 	-@$(MAKE) --no-print-directory stop-chat
-	-@$(MAKE) --no-print-directory stop-cms
 	-@$(MAKE) --no-print-directory stop-email
 	-@$(MAKE) --no-print-directory stop-forms
 	-@$(MAKE) --no-print-directory stop-push-notifications
@@ -110,7 +106,6 @@ clean:
 	@$(MAKE) --no-print-directory rm-core
 	@$(MAKE) --no-print-directory rm-authentication
 	@$(MAKE) --no-print-directory rm-chat
-	@$(MAKE) --no-print-directory rm-cms
 	@$(MAKE) --no-print-directory rm-database
 	@$(MAKE) --no-print-directory rm-email
 	@$(MAKE) --no-print-directory rm-forms
@@ -122,14 +117,16 @@ mrproper:
 	@$(MAKE) --no-print-directory clean
 	@printf "\n\nRemoving Container Images 💽\n"
 	@echo       "----------------------------"
-	@$(MAKE) --no-print-directory rmi-redis
-	@$(MAKE) --no-print-directory rmi-mongo
-	@$(MAKE) --no-print-directory rmi-postgres
+# 	@$(MAKE) --no-print-directory rmi-redis
+# 	@$(MAKE) --no-print-directory rmi-mongo
+# 	@$(MAKE) --no-print-directory rmi-postgres
+	@$(MAKE) --no-print-directory rm-redis
+	@$(MAKE) --no-print-directory rm-mongo
+	@$(MAKE) --no-print-directory rm-postgres
 	@$(MAKE) --no-print-directory rmi-ui
 	@$(MAKE) --no-print-directory rmi-core
 	@$(MAKE) --no-print-directory rmi-authentication
 	@$(MAKE) --no-print-directory rmi-chat
-	@$(MAKE) --no-print-directory rmi-cms
 	@$(MAKE) --no-print-directory rmi-database
 	@$(MAKE) --no-print-directory rmi-email
 	@$(MAKE) --no-print-directory rmi-forms
@@ -156,7 +153,6 @@ define start
 		${DOCKER} start ${2}; \
 	else \
 		printf "\nStarting ${1} container\n"; \
-		echo ${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
 		${DOCKER} run --name ${2} --network-alias ${5} --network ${CONTAINER_NETWORK_NAME} -h ${2} ${6} ${3}:${4}; \
 	fi
 endef
@@ -191,37 +187,20 @@ define rmi
 	fi
 endef
 
-define pre-v0.11-workaround
-	@if [[ `echo ${TAG} | sed 's/^v\(.*\)/\1/; s/\..*//'` -eq 0 ]]; then \
-		if [[ `echo ${TAG} | sed 's/v0.//g; s/\..*//'` -lt 11 ]]; then \
-			echo 'Running pre-0.11 workaround...'; \
-			$(MAKE) --no-print-directory start-core; \
-			sleep 3; \
-			$(MAKE) --no-print-directory start-database; \
-			sleep 5; \
-			$(MAKE) --no-print-directory stop-core; \
-			$(MAKE) --no-print-directory stop-database; \
-		fi \
-	fi
-endef
-
 # ------- Base Targets ------- #
 
 start-core:
 	@$(MAKE) --no-print-directory start-redis
+	@$(MAKE) --no-print-directory create-network
 	$(call start,Core,conduit-core,ghcr.io/conduitplatform/conduit,${TAG},${CONDUIT_CORE_NETWORK_NAME}, \
          -d -p 55152:55152 -p 3000:3000 -p 3001:3001 -e REDIS_HOST="conduit-redis" -e REDIS_PORT="6379")
 
 start-authentication:
-	$(call start,Authentication,conduit-authentication,ghcr.io/conduitplatform/conduit-authentication,${TAG},authentication, \
+	$(call start,Authentication,conduit-authentication,ghcr.io/conduitplatform/authentication,${TAG},authentication, \
          -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-chat:
-	$(call start,Chat,conduit-chat,ghcr.io/conduitplatform/conduit-chat,${TAG},chat, \
-	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
-
-start-cms:
-	$(call start,CMS,conduit-cms,ghcr.io/conduitplatform/conduit-cms,${TAG},cms, \
+	$(call start,Chat,conduit-chat,ghcr.io/conduitplatform/chat,${TAG},chat, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-database:
@@ -233,35 +212,33 @@ start-database:
 		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'sql' (default: mongodb)\n"; \
 		exit 1; \
 	fi
-	$(call start,Database,conduit-database,ghcr.io/conduitplatform/conduit-database,${TAG},database --network-alias database-provider, \
+	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
 	       -e databaseType=${DB_TYPE} -e databaseURL=${DB_URL})
 
 start-email:
-	$(call start,Email,conduit-email,ghcr.io/conduitplatform/conduit-email,${TAG},email, \
+	$(call start,Email,conduit-email,ghcr.io/conduitplatform/email,${TAG},email, \
          -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-forms:
-	$(call start,Forms,conduit-forms,ghcr.io/conduitplatform/conduit-forms,${TAG},forms, \
+	$(call start,Forms,conduit-forms,ghcr.io/conduitplatform/forms,${TAG},forms, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-push-notifications:
-	$(call start,PushNotifications,conduit-push-notifications,ghcr.io/conduitplatform/conduit-push-notifications,${TAG},push-notifications, \
+	$(call start,PushNotifications,conduit-push-notifications,ghcr.io/conduitplatform/push-notifications,${TAG},push-notifications, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-sms:
-	$(call start,SMS,conduit-sms,ghcr.io/conduitplatform/conduit-sms,${TAG},sms, \
+	$(call start,SMS,conduit-sms,ghcr.io/conduitplatform/sms,${TAG},sms, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-storage:
-	$(call start,Storage,conduit-storage,ghcr.io/conduitplatform/conduit-storage,${TAG},storage, \
+	$(call start,Storage,conduit-storage,ghcr.io/conduitplatform/storage,${TAG},storage, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-ui:
-#	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,${TAG},conduit-ui, \
+	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,${UI_TAG},conduit-ui, \
 	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL})
-	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,v0.10.7,conduit-ui, \
-	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL} -e MASTER_KEY=${MASTER_KEY})
 
 start-redis:
 	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,-d -p 6379:6379)
@@ -280,9 +257,6 @@ stop-authentication:
 
 stop-chat:
 	$(call stop,Chat,conduit-chat)
-
-stop-cms:
-	$(call stop,CMS,conduit-cms)
 
 stop-database:
 	$(call stop,Database,conduit-database)
@@ -323,9 +297,6 @@ rm-authentication:
 rm-chat:
 	$(call rm,Chat,conduit-chat)
 
-rm-cms:
-	$(call rm,CMS,conduit-cms)
-
 rm-database:
 	$(call rm,Database,conduit-database)
 
@@ -360,41 +331,37 @@ rmi-core:
 	$(call rmi,Conduit Core,ghcr.io/conduitplatform/conduit,${TAG})
 
 rmi-authentication:
-	$(call rmi,Authentication,ghcr.io/conduitplatform/conduit-authentication,${TAG})
+	$(call rmi,Authentication,ghcr.io/conduitplatform/authentication,${TAG})
 
 rmi-chat:
-	$(call rmi,Chat,ghcr.io/conduitplatform/conduit-chat,${TAG})
-
-rmi-cms:
-	$(call rmi,CMS,ghcr.io/conduitplatform/conduit-cms,${TAG})
+	$(call rmi,Chat,ghcr.io/conduitplatform/chat,${TAG})
 
 rmi-database:
-	$(call rmi,Database,ghcr.io/conduitplatform/conduit-database,${TAG})
+	$(call rmi,Database,ghcr.io/conduitplatform/database,${TAG})
 
 rmi-email:
-	$(call rmi,Email,ghcr.io/conduitplatform/conduit-email,${TAG})
+	$(call rmi,Email,ghcr.io/conduitplatform/email,${TAG})
 
 rmi-forms:
-	$(call rmi,Forms,ghcr.io/conduitplatform/conduit-forms,${TAG})
+	$(call rmi,Forms,ghcr.io/conduitplatform/forms,${TAG})
 
 rmi-push-notifications:
-	$(call rmi,PushNotifications,ghcr.io/conduitplatform/conduit-push-notifications,${TAG})
+	$(call rmi,PushNotifications,ghcr.io/conduitplatform/push-notifications,${TAG})
 
 rmi-sms:
-	$(call rmi,SMS,ghcr.io/conduitplatform/conduit-sms,${TAG})
+	$(call rmi,SMS,ghcr.io/conduitplatform/sms,${TAG})
 
 rmi-storage:
-	$(call rmi,Storage,ghcr.io/conduitplatform/conduit-storage,${TAG})
+	$(call rmi,Storage,ghcr.io/conduitplatform/storage,${TAG})
 
 rmi-ui:
-#	$(call rmi,Conduit Admin Panel,ghcr.io/conduitplatform/conduit-ui,${TAG})
-	$(call rmi,Conduit Admin Panel,ghcr.io/conduitplatform/conduit-ui,v0.10.7)
+	$(call rmi,Conduit Admin Panel,ghcr.io/conduitplatform/conduit-ui,${UI_TAG})
 
 rmi-redis:
-	$(call rmi,Redis,conduit-redis,${TAG})
+	$(call rmi,Redis,redis,latest)
 
 rmi-mongo:
-	$(call rmi,MongoDB,conduit-mongo,${TAG})
+	$(call rmi,MongoDB,mongo,latest)
 
 rmi-postgres:
-	$(call rmi,PostgreSQL,conduit-postgres,${TAG})
+	$(call rmi,PostgreSQL,postgres,latest)
