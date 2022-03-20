@@ -1,107 +1,18 @@
 import {
   ConduitMiddlewareOptions,
-  ConduitModel,
   ConduitRouteActions,
-  ConduitRouteOption,
   ConduitRouteOptions,
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
-} from '../interfaces';
-import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
-import { ConduitRouteReturnDefinition, GrpcServer } from '../classes';
-import { Router } from '../modules';
-import { RequestHandlers } from '../helpers';
-import { constructProtoFile, wrapFunctionsAsync } from '../helpers/RoutingUtilities';
+} from '../../interfaces';
+import { ParsedRouterRequest, UnparsedRouterResponse } from '../../types';
+import { ConduitRouteReturnDefinition, GrpcServer } from '../index';
+import { Router } from '../../modules';
+import { RequestHandlers } from '../../helpers';
+import { constructProtoFile, wrapFunctionsAsync } from '../../helpers/RoutingUtilities';
+import { RouteBuilder } from './RouteBuilder';
 
-class RouteBuilder {
-  private readonly _options!: ConduitRouteOptions;
-  private _returns!: ConduitRouteReturnDefinition;
-  private _handler!: RequestHandlers;
-
-  constructor(private readonly manager: RoutingManager) {
-    this._options = {} as any;
-  }
-
-  method(action: ConduitRouteActions): RouteBuilder {
-    this._options.action = action;
-    return this;
-  }
-
-  name(name: string): RouteBuilder {
-    this._options.name = name;
-    return this;
-  }
-
-  description(description: string): RouteBuilder {
-    this._options.description = description;
-    return this;
-  }
-
-  cacheControl(cache: string): RouteBuilder {
-    this._options.cacheControl = cache;
-    return this;
-  }
-
-  middleware(middleware: string | string[], allowDuplicates = false): RouteBuilder {
-    if (!Array.isArray(middleware)) {
-      middleware = [middleware];
-    }
-    if (this._options.middlewares?.length !== 0) {
-      if (allowDuplicates) {
-        this._options.middlewares?.concat(middleware);
-      } else {
-        // add to existing middlewares and filter out potential duplicates
-        this._options.middlewares?.concat(middleware.filter(mid => this._options.middlewares?.indexOf(mid) === -1));
-      }
-    } else {
-      this._options.middlewares = middleware;
-    }
-    return this;
-  }
-
-  path(path: string): RouteBuilder {
-    this._options.path = path;
-    return this;
-  }
-
-  queryParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
-    this._options.queryParams = params;
-    return this;
-  }
-
-  urlParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
-    this._options.urlParams = params;
-    return this;
-  }
-
-  bodyParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
-    this._options.bodyParams = params;
-    return this;
-  }
-
-  return(name: string, fields: ConduitModel | string): RouteBuilder {
-    this._returns = new ConduitRouteReturnDefinition(name, fields);
-    return this;
-  }
-
-  handler(fn: RequestHandlers): RouteBuilder {
-    this._handler = fn;
-    return this;
-  }
-
-
-  build() {
-    if (!this._options) throw new Error('Cannot build route without options');
-    if (!this._options.action) throw new Error('Cannot build route without action');
-    if (!this._options.path) throw new Error('Cannot build route without action');
-    if (!this._returns) throw new Error('Cannot build route without return');
-    if (!this._handler) throw new Error('Cannot build route without handler');
-    this.manager.route(this._options, this._returns, this._handler);
-  }
-
-
-}
 
 export class RoutingManager {
 
@@ -120,24 +31,24 @@ export class RoutingManager {
   constructor(private readonly _router: Router, private readonly _server: GrpcServer) {
   }
 
-  get get(): RouteBuilder {
-    return new RouteBuilder(this).method(ConduitRouteActions.GET);
+  get(path: string): RouteBuilder {
+    return new RouteBuilder(this).method(ConduitRouteActions.GET).path(path);
   }
 
-  get post(): RouteBuilder {
-    return new RouteBuilder(this).method(ConduitRouteActions.POST);
+  post(path: string): RouteBuilder {
+    return new RouteBuilder(this).method(ConduitRouteActions.POST).path(path);
   }
 
-  get delete(): RouteBuilder {
-    return new RouteBuilder(this).method(ConduitRouteActions.DELETE);
+  delete(path: string): RouteBuilder {
+    return new RouteBuilder(this).method(ConduitRouteActions.DELETE).path(path);
   }
 
-  get update(): RouteBuilder {
-    return new RouteBuilder(this).method(ConduitRouteActions.UPDATE);
+  update(path: string): RouteBuilder {
+    return new RouteBuilder(this).method(ConduitRouteActions.UPDATE).path(path);
   }
 
-  get patch(): RouteBuilder {
-    return new RouteBuilder(this).method(ConduitRouteActions.PATCH);
+  patch(path: string): RouteBuilder {
+    return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
   clear() {

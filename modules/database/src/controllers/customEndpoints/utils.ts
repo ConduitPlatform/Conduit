@@ -3,7 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  constructRoute,
+  constructRoute, RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint } from '../../interfaces';
@@ -34,7 +34,7 @@ function extractParams(
     location: number;
     optional?: boolean;
     array?: boolean;
-  }[]
+  }[],
 ) {
   let resultingObject: any = {};
   inputs.forEach(
@@ -65,24 +65,24 @@ function extractParams(
         type: r.array ? [r.type] : r.type,
         required: r.optional ? !r.optional : true,
       };
-    }
+    },
   );
   return resultingObject;
 }
 
 export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
-  let input: ConduitRouteOptions = {
-    path: `/function/${endpoint.name}`,
-    action: getOperation(endpoint.operation),
-    middlewares: endpoint.authentication ? ['authMiddleware'] : undefined,
-    cacheControl: undefined,
-  };
+  let route = new RouteBuilder()
+    .path(`/function/${endpoint.name}`)
+    .method(getOperation(endpoint.operation));
+  if (endpoint.authentication) {
+    route.middleware('authMiddleware');
+  }
   let inputs = endpoint.inputs;
   let returns: any = { result: [endpoint.returns] };
-  if (input.action === ConduitRouteActions.GET) {
-    input.cacheControl = endpoint.authentication
+  if (getOperation(endpoint.operation) === ConduitRouteActions.GET) {
+    route.cacheControl(endpoint.authentication
       ? 'private, max-age=10'
-      : 'public, max-age=10';
+      : 'public, max-age=10');
   }
   if (endpoint.paginated) {
     inputs.push({
@@ -110,13 +110,22 @@ export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
     });
   }
   if (!isNil(endpoint.inputs) && endpoint.inputs.length > 0) {
-    Object.assign(input, extractParams(endpoint.inputs));
+    let params = extractParams(endpoint.inputs);
+    if (params['bodyParams']) {
+      route.bodyParams(params['bodyParams']);
+    }
+    if (params['urlParams']) {
+      route.urlParams(params['urlParams']);
+      let pathPostFix = '';
+      Object.keys(params.urlParams).forEach(key => {
+        pathPostFix += `/:${key}`;
+      });
+      route.path(`/function/${endpoint.name}` + pathPostFix);
+    }
+    if (params['queryParams']) {
+      route.queryParams(params['queryParams']);
+    }
   }
-  return constructRoute(
-    new ConduitRoute(
-      input,
-      new ConduitRouteReturnDefinition(input.action + endpoint.name, returns),
-      'customOperation'
-    )
-  );
+  route.return(getOperation(endpoint.operation) + endpoint.name, returns);
+  return route.build();
 }
