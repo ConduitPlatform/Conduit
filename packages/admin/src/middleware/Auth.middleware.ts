@@ -28,10 +28,10 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     }
 
     const [prefix, token] = args;
-    if (prefix !== 'JWT') {
+    if (prefix !== 'Bearer' && prefix !== 'JWT') { // Compat (<=0.12.2): JWT
       return res
         .status(401)
-        .json({ error: 'The authorization header must begin with JWT' });
+        .json({ error: "The Authorization header must be prefixed by 'Bearer '" });
     }
     let decoded;
     try {

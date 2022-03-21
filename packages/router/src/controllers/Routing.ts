@@ -9,6 +9,40 @@ import {
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import { SocketPush } from '../models/SocketPush.model';
+import { SwaggerRouterMetadata } from './Rest';
+
+const swaggerRouterMetadata: SwaggerRouterMetadata = {
+  urlPrefix: '',
+  securitySchemes: {
+    clientId: {
+      name: 'clientid',
+      type: 'apiKey',
+      in: 'header',
+      description: 'A security client id, retrievable through [POST] /security/client',
+    },
+    clientSecret: {
+      name: 'clientSecret',
+      type: 'apiKey',
+      in: 'header',
+      description: 'A security client secret, retrievable through [POST] /security/client',
+    },
+    userToken: {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'Bearer',
+      description: 'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
+    },
+  },
+  globalSecurityHeaders: [{
+    clientId: [],
+    clientSecret: [],
+  }],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+    if (route.input.middlewares?.includes('authMiddleware')) {
+      swaggerRouteDoc.security[0].userToken = [];
+    }
+  },
+};
 
 export class ConduitRoutingController {
   private _restRouter: RestController;
@@ -19,7 +53,7 @@ export class ConduitRoutingController {
 
   constructor(app: Application) {
     this._app = app;
-    this._restRouter = new RestController(this._app);
+    this._restRouter = new RestController(this._app, swaggerRouterMetadata);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();
