@@ -69,16 +69,28 @@ export default class DatabaseModule extends ManagedModule {
   async preServerStart() {
     await this._activeAdapter.ensureConnected();
   }
-
+  
   async onServerStart() {
+    const isConduitDB = await this._activeAdapter.isConduitDB();
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    
+    if (!isConduitDB) {
+      console.log(`Database is not a Conduit DB. Starting introspection...`);
+      await this._activeAdapter.introspectDatabase();
+    }    
+    
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
     });
+
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
-    await this._activeAdapter.recoverSchemasFromDatabase();
+    
+    if (isConduitDB) {
+      await this._activeAdapter.recoverSchemasFromDatabase();
+    }
+
     this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
   }
 
@@ -519,4 +531,5 @@ export default class DatabaseModule extends ManagedModule {
       });
     }
   }
+
 }

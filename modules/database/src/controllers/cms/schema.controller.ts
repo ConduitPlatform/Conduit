@@ -93,7 +93,7 @@ export class SchemaController {
               }
               if (
                 schema.name !== 'SchemaDefinitions' &&
-                (schema.modelOptions.conduit.cms.crudOperations ||
+                (schema.modelOptions.conduit.cms &&
                   isNil(schema.modelOptions.conduit.cms.crudOperations))
               ) {
                 routeSchemas[schema.name] = schema;

@@ -9,6 +9,17 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   models?: { [name: string]: T };
 
   /**
+   * Checks if the database adapter includes the declaredSchema model
+   */
+  abstract isConduitDB(): Promise<boolean>;
+
+  /**
+   * 
+   * Introspects all schemas of current db connection, registers them to conduit
+   */
+  abstract introspectDatabase(): Promise<DatabaseAdapter<any>>;
+
+  /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param schema
    */

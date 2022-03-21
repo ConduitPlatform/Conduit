@@ -1,11 +1,15 @@
-import { Sequelize } from 'sequelize';
+import { QueryTypes, Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
+import { SequelizeAuto } from 'sequelize-auto';
+import { MultiDocQuery } from '../../interfaces';
+import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
+import { isNil } from 'lodash';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
@@ -18,6 +22,65 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  }
+
+  async isConduitDB() {
+    return this.sequelize
+      .query('SELECT * FROM "_DeclaredSchema" LIMIT 1')
+      .then(() => {
+        return true;
+      })
+      .catch((e) => {
+        return false;
+      });
+  }
+
+  async introspectDatabase(): Promise<DatabaseAdapter<any>> {
+    
+    const options =  {
+      directory : '',
+      additional: {
+        timestamps: true,
+      },
+      singularize: true,
+      useDefine : true,
+      closeConnectionAutomatically : false
+    }
+
+    const auto = new SequelizeAuto(this.sequelize,'','',options);
+    const data = await auto.run();
+  
+    //convert each table to ConduitSchema and add to schemas array
+    for (const tableName of Object.keys(data.tables)) {
+        const table = data.tables[tableName];
+        const originalName = tableName.split('.')[1];
+        if(originalName === '_DeclaredSchema') continue;
+        //temporary solution to avoid breaking existing schemas
+        // const name = existingSchemaNames.includes(originalName) ? `_${originalName}` : originalName;
+        //convert table fields to ConduitSchema fields
+        sqlSchemaConverter(table);
+        const schema = new ConduitSchema(originalName, table as ConduitModel, {
+          timestamps: true,
+          conduit: {
+            noSync: true,
+            permissions: {
+              extendable: false,
+              canCreate: false,
+              canModify: 'Nothing',
+              canDelete: false,
+            },
+            cms: {
+              authentication: false,
+              crudOperations: false,
+              enabled: false,
+            },
+          },
+        });
+        schema.ownerModule = 'database';
+        await this.createSchemaFromAdapter(schema);
+    }
+
+    return this;
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
@@ -51,7 +114,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       schema,
       this,
     );
-    await this.models[schema.name].sync();
+
+    const noSync = this.models[schema.name].originalSchema.schemaOptions.conduit.noSync;
+    if (isNil(noSync) || !noSync) {
+      await this.models[schema.name].sync();
+    }
+
     if (schema.name !== '_DeclaredSchema') {
       await this.saveSchemaToDatabase(original);
     }

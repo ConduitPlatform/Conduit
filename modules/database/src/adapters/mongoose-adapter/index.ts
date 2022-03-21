@@ -10,6 +10,7 @@ import { status } from '@grpc/grpc-js';
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
+
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
@@ -73,6 +74,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         console.log(err);
         throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
       });
+  }
+
+  async isConduitDB(): Promise<boolean> {
+    const collectionNames = (await this.mongoose.connection.db.listCollections().toArray()).map(c => c.name);
+    return  collectionNames.includes('_declaredschemas');
+  }
+
+  async introspectDatabase(): Promise<DatabaseAdapter<any>> {
+    throw new Error('Method not implemented.');
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
