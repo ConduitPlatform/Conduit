@@ -62,7 +62,7 @@ export type ParsedSocketRequest = GrpcRequest<{
 export type UnparsedSocketResponse =
   | {
   event: string;
-  data: string;
+  data: { [key: string]: any };
   receivers?: string[];
 }
   | {

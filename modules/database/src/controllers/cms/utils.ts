@@ -1,10 +1,9 @@
 import {
-  ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  constructRoute,
+  RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { CmsHandlers } from '../../handlers/cms.handler';
 
 export function compareFunction(schemaA: any, schemaB: any): number {
   let hasA = [];
@@ -63,196 +62,157 @@ function removeRequiredFields(fields: any) {
   return fields;
 }
 
-export function getOps(schemaName: string, actualSchema: any) {
+export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandlers) {
   let routesArray: any = [];
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/:id`,
-          action: ConduitRouteActions.GET,
-          urlParams: {
-            id: { type: TYPE.String, required: true },
-          },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-          cacheControl: actualSchema.authentication
-            ? 'private, max-age=10'
-            : 'public, max-age=10',
-        },
-        new ConduitRouteReturnDefinition(`${schemaName}`, actualSchema.fields),
-        'getDocumentById'
-      )
-    )
-  );
+  let route = new RouteBuilder()
+    .path(`/${schemaName}/:id`)
+    .method(ConduitRouteActions.GET)
+    .urlParams({
+      id: { type: TYPE.String, required: true },
+    }).cacheControl(actualSchema.authentication
+      ? 'private, max-age=10'
+      : 'public, max-age=10')
+    .return(`${schemaName}`, actualSchema.fields)
+    .handler(handlers.getDocumentById.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}`,
-          action: ConduitRouteActions.GET,
-          queryParams: {
-            skip: TYPE.Number,
-            limit: TYPE.Number,
-            sort: [TYPE.String],
-          },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-          cacheControl: actualSchema.authentication
-            ? 'private, max-age=10'
-            : 'public, max-age=10',
-        },
-        new ConduitRouteReturnDefinition(`get${schemaName}`, {
-          documents: [actualSchema.fields],
-          count: TYPE.Number,
-        }),
-        'getDocuments'
-      )
-    )
-  );
+  route = new RouteBuilder()
+    .path(`/${schemaName}`)
+    .method(ConduitRouteActions.GET)
+    .queryParams({
+      skip: TYPE.Number,
+      limit: TYPE.Number,
+      sort: [TYPE.String],
+    })
+    .cacheControl(actualSchema.authentication
+      ? 'private, max-age=10'
+      : 'public, max-age=10')
+    .return(`get${schemaName}`, {
+      documents: [actualSchema.fields],
+      count: TYPE.Number,
+    })
+    .handler(handlers.getDocuments.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
   let assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
   delete assignableFields.createdAt;
   delete assignableFields.updatedAt;
+  route = new RouteBuilder()
+    .path(`/${schemaName}`)
+    .method(ConduitRouteActions.POST)
+    .bodyParams(assignableFields)
+    .return(`create${schemaName}`, actualSchema.fields)
+    .handler(handlers.createDocument.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}`,
-          action: ConduitRouteActions.POST,
-          bodyParams: assignableFields,
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`create${schemaName}`, actualSchema.fields),
-        'createDocument'
-      )
-    )
-  );
+  route = new RouteBuilder()
+    .path(`/${schemaName}/many`)
+    .method(ConduitRouteActions.POST)
+    .bodyParams({ docs: { type: [assignableFields], required: true } })
+    .return(`createMany${schemaName}`, {
+      docs: [actualSchema.fields],
+    })
+    .handler(handlers.createManyDocuments.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/many`,
-          action: ConduitRouteActions.POST,
-          bodyParams: { docs: { type: [assignableFields], required: true } },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`createMany${schemaName}`, {
-          docs: [actualSchema.fields],
-        }),
-        'createManyDocuments'
-      )
-    )
-  );
+  route = new RouteBuilder()
+    .path(`/${schemaName}/many`)
+    .method(ConduitRouteActions.UPDATE)
+    .bodyParams({
+      docs: {
+        type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
+        required: true,
+      },
+    })
+    .return(`updateMany${schemaName}`, {
+      docs: [actualSchema.fields],
+    })
+    .handler(handlers.updateManyDocuments.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/many`,
-          action: ConduitRouteActions.UPDATE,
-          bodyParams: {
-            docs: {
-              type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
-              required: true,
-            },
+  route = new RouteBuilder()
+    .path(`/${schemaName}/many`)
+    .method(ConduitRouteActions.PATCH)
+    .bodyParams({
+      docs: {
+        type: [
+          {
+            ...removeRequiredFields(Object.assign({}, assignableFields)),
+            _id: { type: 'String', unique: true },
           },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`updateMany${schemaName}`, {
-          docs: [actualSchema.fields],
-        }),
-        'updateManyDocuments'
-      )
-    )
-  );
+        ],
+        required: true,
+      },
+    })
+    .return(`patchMany${schemaName}`, {
+      docs: [actualSchema.fields],
+    })
+    .handler(handlers.patchManyDocuments.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/many`,
-          action: ConduitRouteActions.PATCH,
-          bodyParams: {
-            docs: {
-              type: [
-                {
-                  ...removeRequiredFields(Object.assign({}, assignableFields)),
-                  _id: { type: 'String', unique: true },
-                },
-              ],
-              required: true,
-            },
-          },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`patchMany${schemaName}`, {
-          docs: [actualSchema.fields],
-        }),
-        'patchManyDocuments'
-      )
-    )
-  );
+  route = new RouteBuilder()
+    .path(`/${schemaName}/:id`)
+    .method(ConduitRouteActions.UPDATE)
+    .urlParams({
+      id: { type: TYPE.String, required: true },
+    })
+    .bodyParams(assignableFields)
+    .return(`update${schemaName}`, actualSchema.fields)
+    .handler(handlers.updateDocument.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/:id`,
-          action: ConduitRouteActions.UPDATE,
-          urlParams: {
-            id: { type: TYPE.String, required: true },
-          },
-          bodyParams: assignableFields,
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`update${schemaName}`, actualSchema.fields),
-        'updateDocument'
-      )
-    )
-  );
-
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/:id`,
-          action: ConduitRouteActions.PATCH,
-          urlParams: {
-            id: { type: TYPE.String, required: true },
-          },
-          bodyParams: removeRequiredFields(Object.assign({}, assignableFields)),
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`patch${schemaName}`, actualSchema.fields),
-        'patchDocument'
-      )
-    )
-  );
-
-  routesArray.push(
-    constructRoute(
-      new ConduitRoute(
-        {
-          path: `/${schemaName}/:id`,
-          action: ConduitRouteActions.DELETE,
-          urlParams: {
-            id: { type: TYPE.String, required: true },
-          },
-          middlewares: actualSchema.authentication ? ['authMiddleware'] : undefined,
-        },
-        new ConduitRouteReturnDefinition(`delete${schemaName}`, TYPE.String),
-        'deleteDocument'
-      )
-    )
-  );
+  route = new RouteBuilder()
+    .path(`/${schemaName}/:id`)
+    .method(ConduitRouteActions.PATCH)
+    .urlParams({
+      id: { type: TYPE.String, required: true },
+    })
+    .bodyParams(removeRequiredFields(Object.assign({}, assignableFields)))
+    .return(`patch${schemaName}`, actualSchema.fields)
+    .handler(handlers.patchDocument.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
+  route = new RouteBuilder()
+    .path(`/${schemaName}/:id`)
+    .method(ConduitRouteActions.DELETE)
+    .urlParams({
+      id: { type: TYPE.String, required: true },
+    })
+    .return(`delete${schemaName}`, TYPE.String)
+    .handler(handlers.deleteDocument.bind(handlers));
+  if (actualSchema.authentication) {
+    route.middleware('authMiddleware');
+  }
+  routesArray.push(route.build());
 
   return routesArray;
 }
 
-export function sortAndConstructRoutes(schemas: { [name: string]: any }): any[] {
+export function sortAndConstructRoutes(schemas: { [name: string]: any }, handlers: CmsHandlers): any[] {
   let routesArray: any[] = [];
   let schemaSort = [];
   for (const k in schemas) {
@@ -262,7 +222,7 @@ export function sortAndConstructRoutes(schemas: { [name: string]: any }): any[] 
     return compareFunction(schemas[a], schemas[b]);
   });
   schemaSort.forEach((r) => {
-    routesArray = routesArray.concat(getOps(r, schemas[r]));
+    routesArray = routesArray.concat(getOps(r, schemas[r], handlers));
   });
   return routesArray;
 }
