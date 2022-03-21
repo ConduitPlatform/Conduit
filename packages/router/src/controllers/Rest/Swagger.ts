@@ -2,10 +2,26 @@ import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 
+export type SwaggerRouterMetadata = {
+  readonly urlPrefix: string,
+  readonly securitySchemes: {
+    [field: string]: {
+      [field: string]:  string
+    }
+  },
+  readonly globalSecurityHeaders: {
+    [field: string]: [],
+  }[],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void,
+}
+
 export class SwaggerGenerator {
+  private readonly _swaggerDoc: any;
+  private readonly _routerMetadata: SwaggerRouterMetadata;
+  private readonly _stringifiedGlobalSecurityHeaders: string;
   private _parser: SwaggerParser;
 
-  constructor() {
+  constructor(routerMetadata: SwaggerRouterMetadata) {
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
@@ -20,42 +36,26 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes: {
-          clientid: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'clientid',
-          },
-          clientSecret: {
-            type: 'apiKey',
-            in: 'header',
-            name: 'clientSecret',
-          },
-          tokenAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-          },
-        },
+        securitySchemes: routerMetadata.securitySchemes,
       },
     };
     this._parser = new SwaggerParser();
+    this._routerMetadata = routerMetadata;
+    this._stringifiedGlobalSecurityHeaders = JSON.stringify(this._routerMetadata.globalSecurityHeaders);
   }
-
-  private _swaggerDoc: any;
 
   get swaggerDoc() {
     return this._swaggerDoc;
   }
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
-    let method = this._extractMethod(route.input.action);
+    const method = this._extractMethod(route.input.action);
     let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
     serviceName = serviceName.substr(0, serviceName.indexOf('/'));
     if (serviceName.trim() === '') {
       serviceName = 'core';
     }
-    let routeDoc: any = {
+    const routeDoc: any = {
       summary: route.input.name,
       description: route.input.description,
       tags: [serviceName],
@@ -69,12 +69,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: [
-        {
-          clientid: [],
-          clientSecret: [],
-        },
-      ],
+      security: JSON.parse(this._stringifiedGlobalSecurityHeaders),
     };
 
     if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
@@ -154,9 +149,7 @@ export class SwaggerGenerator {
       };
     }
 
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      routeDoc.security[0].tokenAuth = [];
-    }
+    this._routerMetadata.setExtraRouteHeaders(route, routeDoc);
 
     const returnDefinition = this._parser.extractTypes(
       route.returnTypeName,
@@ -169,7 +162,7 @@ export class SwaggerGenerator {
     if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
       this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
     }
-    let path = route.input.path.replace(/(:)(\w+)/g, '{$2}');
+    const path = this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
     } else {

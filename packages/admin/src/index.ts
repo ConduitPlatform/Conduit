@@ -2,7 +2,7 @@ import { Application } from 'express';
 import { isNil } from 'lodash';
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { RestController } from '@conduitplatform/router';
+import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -17,6 +17,32 @@ import * as adminRoutes from './routes';
 import { hashPassword } from './utils/auth';
 import AdminConfigSchema from './config';
 import * as models from './models';
+
+const swaggerRouterMetadata: SwaggerRouterMetadata = {
+  urlPrefix: '/admin',
+  securitySchemes: {
+    masterKey: {
+      name: 'masterkey',
+      type: 'apiKey',
+      in: 'header',
+      description: 'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
+    },
+    adminToken: {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'Bearer',
+      description: 'An admin authentication token, retrievable through [POST] /admin/login',
+    },
+  },
+  globalSecurityHeaders: [{
+    masterKey: [],
+  }],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+    if (route.input.path !== '/login' && route.input.path !== '/modules') {
+      swaggerRouteDoc.security[0].adminToken = [];
+    }
+  },
+};
 
 export default class AdminModule extends IConduitAdmin {
   conduit: ConduitCommons;
@@ -38,7 +64,7 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk = grpcSdk;
 
     this._app = app;
-    this._restRouter = new RestController(this._app);
+    this._restRouter = new RestController(this._app, swaggerRouterMetadata);
 
     this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
     this._restRouter.registerRoute(
