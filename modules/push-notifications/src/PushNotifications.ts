@@ -37,10 +37,6 @@ export default class PushNotifications extends ManagedModule {
   private database!: DatabaseProvider;
   private _provider: IPushNotificationsProvider | undefined;
 
-  get routes() { // is this really used anywhere tho?
-    return this.userRouter.registeredRoutes;
-  }
-
   constructor() {
     super('pushNotifications');
   }

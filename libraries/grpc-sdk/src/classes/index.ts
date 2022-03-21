@@ -10,6 +10,7 @@ export * from './ConduitSocket';
 export * from './ConduitServiceModule';
 export * from './ManagedModule';
 export * from './ModuleManager';
-export * from './RoutingManager';
+export * from './Routing/RoutingManager';
+export * from './Routing/RouteBuilder';
 export * from './ConfigController'
 export * from './ConduitParser'

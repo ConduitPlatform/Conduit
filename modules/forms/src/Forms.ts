@@ -1,7 +1,4 @@
-import {
-  ManagedModule,
-  DatabaseProvider
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, ManagedModule } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin/admin';
@@ -49,22 +46,22 @@ export default class Forms extends ManagedModule {
     });
   }
 
+  async onConfig() {
+    if (!this.isRunning) {
+      await this.registerSchemas();
+      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
+      this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+      this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
+      this.isRunning = true;
+    }
+  }
+
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
-  }
-
-  async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
-      this.formController = new FormsController(this.grpcSdk, this.userRouter);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
-      this.isRunning = true;
-    }
   }
 }

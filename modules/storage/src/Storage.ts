@@ -2,7 +2,6 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { AdminRoutes } from './admin/admin';
@@ -11,7 +10,6 @@ import { StorageRoutes } from './routes/routes';
 import {
   createStorageProvider,
   IStorageProvider,
-  StorageConfig,
 } from './storage-provider';
 import * as models from './models';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
