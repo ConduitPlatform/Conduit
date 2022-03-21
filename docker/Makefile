@@ -15,7 +15,7 @@
 
 # ------ Default Values ------ #
 
-TAG         ?= v0.12.2
+TAG         ?= v0.12.3
 UI_TAG      ?= v0.12.0
 DOCKER      ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
@@ -25,10 +25,11 @@ MASTER_KEY  ?= "M4ST3RK3Y"
 DB_TYPE     ?= "mongodb"# mongodb/postgres
 DB_USER     ?= "conduit"
 DB_PASS     ?= "pass"
-DB_HOST     ?= "localhost"
 DB_PORT     ?= "27017"
+# DB_DATABASE is currently ignored for MongoDB due to Mongoose being incapable of
+# connecting to a db URI containing an uninitialized database (check start-database)
 DB_DATABASE ?= "conduit"
-DB_CONN_URI  = "${DB_TYPE}://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+DB_CONN_URI  = "${DB_TYPE}://${DB_USER}:${DB_PASS}@_HOST_:${DB_PORT}/${DB_DATABASE}"
 
 # ------ Common Targets ------ #
 
@@ -219,12 +220,15 @@ start-database:
 		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'postgres' (default: mongodb)\n"; \
 		exit 1; \
 	fi
-	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database --network-alias database-provider,yarn start, \
+	$(call start,Database,conduit-database,ghcr.io/conduitplatform/database,${TAG},database,yarn start, \
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152" \
-	       -e databaseType=${DB_TYPE} \
-	       -e databaseUrl=`if [ ${DB_TYPE} = "mongodb" ]; then echo ${DB_CONN_URI}?authSource=admin; else echo ${DB_CONN_URI}; fi` \
 	       -e DB_TYPE=${DB_TYPE} \
-	       -e DB_CONN_URI=`if [ ${DB_TYPE} = "mongodb" ]; then echo ${DB_CONN_URI}?authSource=admin; else echo ${DB_CONN_URI}; fi`)
+	       -e DB_CONN_URI=`if [ ${DB_TYPE} = "mongodb" ]; \
+	          then echo ${DB_CONN_URI} | sed 's/@.*:/@conduit-mongo:/g' | sed 's|\(.*\)/.*|\1|'; \
+	          else echo ${DB_CONN_URI} | sed 's/@.*:/@conduit-postgres:/g'; fi`)
+#   Upon re-enabling support for specifying a MongoDB database name:
+#   Make sure you specify authSource: (replace last sed in Mongo case block)
+#   sed 's|\(.*\)/.*|\1?authSource=admin|';
 
 start-email:
 	$(call start,Email,conduit-email,ghcr.io/conduitplatform/email,${TAG},email,yarn start, \
