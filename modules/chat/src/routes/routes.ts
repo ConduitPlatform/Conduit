@@ -17,10 +17,10 @@ import { validateUsersInput } from '../utils';
 
 export class ChatRoutes {
 
-  private _routingController: RoutingManager;
+  private _routingManager: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    this._routingController = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
 
   }
 
@@ -345,9 +345,9 @@ export class ChatRoutes {
   }
 
   async registerRoutes() {
-    this._routingController.clear();
+    this._routingManager.clear();
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         path: '/new',
         action: ConduitRouteActions.POST,
@@ -363,7 +363,7 @@ export class ChatRoutes {
       this.createRoom.bind(this),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         path: '/add/:roomId',
         action: ConduitRouteActions.UPDATE,
@@ -379,7 +379,7 @@ export class ChatRoutes {
       this.addUserToRoom.bind(this),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
@@ -392,7 +392,7 @@ export class ChatRoutes {
       this.leaveRoom.bind(this),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         urlParams: {
           id: ConduitString.Required,
@@ -404,7 +404,7 @@ export class ChatRoutes {
       new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
       this.getRoom.bind(this),
     );
-    this._routingController.route(
+    this._routingManager.route(
       {
         path: '/rooms',
         queryParams: {
@@ -421,7 +421,7 @@ export class ChatRoutes {
       this.getRooms.bind(this),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         urlParams: {
           id: ConduitString.Required,
@@ -434,7 +434,7 @@ export class ChatRoutes {
       this.getMessage.bind(this),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
       {
         path: '/messages',
         action: ConduitRouteActions.GET,
@@ -454,7 +454,7 @@ export class ChatRoutes {
 
     const config = await this.grpcSdk.config.get('chat');
     if (config.allowMessageDelete) {
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.DELETE,
@@ -469,7 +469,7 @@ export class ChatRoutes {
     }
 
     if (config.allowMessageEdit) {
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.UPDATE,
@@ -487,7 +487,7 @@ export class ChatRoutes {
     }
 
     // TODO refactor socket registration process.
-    this._routingController.socket(
+    this._routingManager.socket(
       {
         path: '/',
         middlewares: ['authMiddleware'],
@@ -515,6 +515,6 @@ export class ChatRoutes {
         },
       },
     );
-    return this._routingController.registerRoutes();
+    return this._routingManager.registerRoutes();
   }
 }

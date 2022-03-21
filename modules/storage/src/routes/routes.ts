@@ -11,20 +11,20 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 
 export class StorageRoutes {
-  private _routingController: RoutingManager;
+  private _routingManager: RoutingManager;
 
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly fileHandlers: FileHandlers,
   ) {
-    this._routingController = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
 
   }
 
   async registerRoutes() {
-    this._routingController.clear();
-    this._routingController.route(
+    this._routingManager.clear();
+    this._routingManager.route(
           {
             bodyParams: {
               name: { type: TYPE.String, required: true },
@@ -42,7 +42,7 @@ export class StorageRoutes {
       this.fileHandlers.createFile.bind(this.fileHandlers),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -54,7 +54,7 @@ export class StorageRoutes {
       this.fileHandlers.getFile.bind(this.fileHandlers),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -69,7 +69,7 @@ export class StorageRoutes {
       this.fileHandlers.getFileData.bind(this.fileHandlers),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -84,7 +84,7 @@ export class StorageRoutes {
       this.fileHandlers.getFileUrl.bind(this.fileHandlers),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -99,7 +99,7 @@ export class StorageRoutes {
       this.fileHandlers.deleteFile.bind(this.fileHandlers),
     );
 
-    this._routingController.route(
+    this._routingManager.route(
           {
             urlParams: {
               id: { type: TYPE.String, required: true },
@@ -118,7 +118,7 @@ export class StorageRoutes {
           new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
       this.fileHandlers.updateFile.bind(this.fileHandlers),
     );
-   await this._routingController.registerRoutes();
+   await this._routingManager.registerRoutes();
   }
 
 }

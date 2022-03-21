@@ -10,7 +10,7 @@ import { FormsRoutes } from '../routes/routes';
 export class FormsController {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly router: FormsRoutes, private readonly routingManager: RoutingManager) {
-    this.loadExistingForms();
+    this.refreshRoutes();
     this.initializeState();
   }
 
@@ -26,19 +26,6 @@ export class FormsController {
     Forms.getInstance()
       .findMany({ enabled: true })
       .then((r: Forms[]) => {
-        this._registerRoutes(r);
-        this.router.requestRefresh();
-      })
-      .catch((err: Error) => {
-        console.error('Something went wrong when loading forms for forms module');
-        console.error(err);
-      });
-  }
-
-  private async loadExistingForms() {
-    Forms.getInstance()
-      .findMany({ enabled: true })
-      .then((r: any) => {
         this._registerRoutes(r);
         this.router.requestRefresh();
       })

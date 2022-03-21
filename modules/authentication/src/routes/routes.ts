@@ -44,20 +44,20 @@ export class AuthenticationRoutes {
   private slackHandlers: SlackHandlers;
   private figmaHandlers: FigmaHandlers;
   private microsoftHandlers: MicrosoftHandlers;
-  private _routingController: RoutingManager;
+  private _routingManager: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    this._routingController = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
-    this.phoneHandlers = new PhoneHandlers(grpcSdk,this._routingController);
+    this.phoneHandlers = new PhoneHandlers(grpcSdk,this._routingManager);
   }
 
   async registerRoutes() {
     let config = null;
     let serverConfig = null;
-    this._routingController.clear();
+    this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
     let phoneActive = await this.phoneHandlers
@@ -75,7 +75,7 @@ export class AuthenticationRoutes {
       const authConfig = await this.grpcSdk.config
         .get('authentication')
         .catch(console.error);
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/local/new',
           action: ConduitRouteActions.POST,
@@ -95,7 +95,7 @@ export class AuthenticationRoutes {
         }),
         this.localHandlers.register.bind(this.localHandlers));
 
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/local',
           action: ConduitRouteActions.POST,
@@ -116,7 +116,7 @@ export class AuthenticationRoutes {
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
       if (authConfig.local.identifier !== 'username') {
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/forgot-password',
             action: ConduitRouteActions.POST,
@@ -128,7 +128,7 @@ export class AuthenticationRoutes {
           this.localHandlers.forgotPassword.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/reset-password',
             action: ConduitRouteActions.POST,
@@ -143,7 +143,7 @@ export class AuthenticationRoutes {
           this.localHandlers.resetPassword.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/change-password',
             action: ConduitRouteActions.POST,
@@ -159,7 +159,7 @@ export class AuthenticationRoutes {
           this.localHandlers.changePassword.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/change-password/verify',
             action: ConduitRouteActions.POST,
@@ -173,7 +173,7 @@ export class AuthenticationRoutes {
           this.localHandlers.verifyChangePassword.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/hook/verify-email/:verificationToken',
             action: ConduitRouteActions.GET,
@@ -188,7 +188,7 @@ export class AuthenticationRoutes {
 
       }
       if (authConfig?.twofa.enabled) {
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/twofa',
             action: ConduitRouteActions.POST,
@@ -207,7 +207,7 @@ export class AuthenticationRoutes {
           this.localHandlers.verify2FA.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/enable-twofa',
             action: ConduitRouteActions.UPDATE,
@@ -222,7 +222,7 @@ export class AuthenticationRoutes {
           this.localHandlers.enableTwoFa.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/verifyPhoneNumber',
             action: ConduitRouteActions.POST,
@@ -236,7 +236,7 @@ export class AuthenticationRoutes {
           this.localHandlers.verifyPhoneNumber.bind(this.localHandlers),
         );
 
-        this._routingController.route(
+        this._routingManager.route(
           {
             path: '/local/disable-twofa',
             action: ConduitRouteActions.UPDATE,
@@ -253,7 +253,7 @@ export class AuthenticationRoutes {
 
     config = ConfigController.getInstance().config;
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingController, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingManager, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
     authActive = await this.facebookHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
@@ -262,7 +262,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingController, new GoogleSettings(this.grpcSdk, config, serverConfig.url));
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingManager, new GoogleSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -272,7 +272,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingController, new GithubSettings(this.grpcSdk, config, serverConfig.url));
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingManager, new GithubSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -282,7 +282,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingController, new SlackSettings(this.grpcSdk, config, serverConfig.url));
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingManager, new SlackSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.slackHandlers
       .validate()
@@ -292,7 +292,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingController, new FigmaSettings(this.grpcSdk, config, serverConfig.url));
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingManager, new FigmaSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.figmaHandlers
       .validate()
@@ -302,7 +302,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingController, new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingManager, new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.microsoftHandlers
       .validate()
@@ -317,7 +317,7 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/service',
           action: ConduitRouteActions.POST,
@@ -337,7 +337,7 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
-    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingController, new TwitchSettings(this.grpcSdk, config, serverConfig.url));
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingManager, new TwitchSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()
@@ -347,7 +347,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     if (enabled) {
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/user',
           description: `Returns the authenticated user.`,
@@ -357,7 +357,7 @@ export class AuthenticationRoutes {
         new ConduitRouteReturnDefinition('User', User.getInstance().fields),
         this.commonHandlers.getUser.bind(this.commonHandlers),
       );
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/user',
           description: `Deletes the authenticated user.`,
@@ -367,7 +367,7 @@ export class AuthenticationRoutes {
         new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
         this.commonHandlers.deleteUser.bind(this.commonHandlers),
       );
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/renew',
           action: ConduitRouteActions.POST,
@@ -384,7 +384,7 @@ export class AuthenticationRoutes {
         this.commonHandlers.renewAuth.bind(this.commonHandlers),
       );
 
-      this._routingController.route(
+      this._routingManager.route(
         {
           path: '/logout',
           action: ConduitRouteActions.POST,
@@ -394,9 +394,9 @@ export class AuthenticationRoutes {
         this.commonHandlers.logOut.bind(this.commonHandlers),
       );
 
-      this._routingController.middleware({ path: '/', name: 'authMiddleware' }, this.middleware.bind(this));
+      this._routingManager.middleware({ path: '/', name: 'authMiddleware' }, this.middleware.bind(this));
     }
-    return this._routingController.registerRoutes()
+    return this._routingManager.registerRoutes()
       .catch((err: Error) => {
         console.log('Failed to register routes for module');
         console.log(err);

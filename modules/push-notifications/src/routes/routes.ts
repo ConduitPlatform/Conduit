@@ -10,17 +10,17 @@ import { NotificationToken } from '../models';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
-  private _routingController: RoutingManager;
+  private _routingManager: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new NotificationTokensHandler();
-    this._routingController = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
     this.registeredRoutes();
   }
 
   async registeredRoutes() {
-    this._routingController.clear();
-    this._routingController.route(
+    this._routingManager.clear();
+    this._routingManager.route(
       {
         bodyParams: {
           token: TYPE.String,
@@ -36,6 +36,6 @@ export class PushNotificationsRoutes {
       }),
       this.handlers.setNotificationToken.bind(this.handlers),
     );
-    await this._routingController.registerRoutes();
+    await this._routingManager.registerRoutes();
   }
 }
