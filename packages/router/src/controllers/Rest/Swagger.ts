@@ -18,6 +18,7 @@ export type SwaggerRouterMetadata = {
 export class SwaggerGenerator {
   private readonly _swaggerDoc: any;
   private readonly _routerMetadata: SwaggerRouterMetadata;
+  private readonly _stringifiedGlobalSecurityHeaders: string;
   private _parser: SwaggerParser;
 
   constructor(routerMetadata: SwaggerRouterMetadata) {
@@ -40,6 +41,7 @@ export class SwaggerGenerator {
     };
     this._parser = new SwaggerParser();
     this._routerMetadata = routerMetadata;
+    this._stringifiedGlobalSecurityHeaders = JSON.stringify(this._routerMetadata.globalSecurityHeaders);
   }
 
   get swaggerDoc() {
@@ -67,7 +69,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: JSON.parse(JSON.stringify(this._routerMetadata.globalSecurityHeaders)),
+      security: JSON.parse(this._stringifiedGlobalSecurityHeaders),
     };
 
     if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
