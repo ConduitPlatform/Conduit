@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.3](https://github.com/ConduitPlatform/Conduit/compare/v0.12.2...v0.12.3) (2022-03-21)
+
+
+### Bug Fixes
+
+* **router, admin:** Admin Swagger headers and route paths ([#83](https://github.com/ConduitPlatform/Conduit/issues/83)) ([594bfec](https://github.com/ConduitPlatform/Conduit/commit/594bfec1e25b907fe3bf3a40a1f4a1f9d679db40))
+* **router:** GraphQL delays due to repetitive refreshes ([#71](https://github.com/ConduitPlatform/Conduit/issues/71)) ([996e90b](https://github.com/ConduitPlatform/Conduit/commit/996e90bd358835aae0b176548d40c6a4ba7441f1))
+* **storage:** updateFile handler storing undefined filename when no name param provided and folder param workaround ([#73](https://github.com/ConduitPlatform/Conduit/issues/73)) ([b3d624f](https://github.com/ConduitPlatform/Conduit/commit/b3d624f889865c646a33de84c0f929695347ddee))
+
 ### [0.12.2](https://github.com/ConduitPlatform/Conduit/compare/v0.12.1...v0.12.2) (2022-03-04)
 
 
