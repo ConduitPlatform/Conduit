@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [0.12.3](https://github.com/ConduitPlatform/Conduit/compare/v0.12.2...v0.12.3) (2022-03-21)
 
+### Features
+* **storage:** add support for Amazon S3([#75](https://github.com/ConduitPlatform/Conduit/pull/75)) ([9886191](https://github.com/ConduitPlatform/Conduit/commit/98861914c1fd6742645663046879c58effbf259c))
 
 ### Bug Fixes
 
