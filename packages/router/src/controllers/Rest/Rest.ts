@@ -27,10 +27,6 @@ export class RestController extends ConduitRouter {
   private _swagger: SwaggerGenerator;
   private _scheduledTimeout: any = null;
 
-  get registeredRoutes() {
-    return this._registeredRoutes;
-  }
-
   constructor(readonly app: Application, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(app);
     this._registeredLocalRoutes = new Map();
@@ -46,7 +42,7 @@ export class RestController extends ConduitRouter {
     const registered = this._registeredLocalRoutes.has(key);
     this._registeredLocalRoutes.set(key, router);
     if (registered) {
-      this._scheduleTimeout();
+      this.scheduleRouterRefresh();
     } else {
       this.addRoute(path, router);
     }
@@ -58,7 +54,7 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     // If the route has been registered, then we need to reinitialize the router so the actual routes change
     if (registered) {
-      this._scheduleTimeout();
+      this.scheduleRouterRefresh();
     } else {
       this.addConduitRoute(route);
     }
@@ -234,7 +230,11 @@ export class RestController extends ConduitRouter {
     this._swagger.addRouteSwaggerDocumentation(route);
   }
 
-  private _scheduleTimeout() {
+  protected refreshRouter() {
+    this.scheduleRouterRefresh();
+  }
+
+  private scheduleRouterRefresh() {
     if (this._scheduledTimeout) {
       clearTimeout(this._scheduledTimeout);
       this._scheduledTimeout = null;
@@ -242,7 +242,7 @@ export class RestController extends ConduitRouter {
 
     this._scheduledTimeout = setTimeout(() => {
       try {
-        this.refreshRouter();
+        this._refreshRouter();
       } catch (err) {
         console.error(err);
       }
@@ -250,7 +250,7 @@ export class RestController extends ConduitRouter {
     }, 3000);
   }
 
-  protected refreshRouter() {
+  protected _refreshRouter() {
     this.initializeRouter();
     this._registeredLocalRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');
