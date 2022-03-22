@@ -66,25 +66,23 @@ export default class AdminModule extends IConduitAdmin {
     this._app = app;
     this._restRouter = new RestController(this._app, swaggerRouterMetadata);
 
-    this._restRouter.registerRoute('*', middleware.getAdminMiddleware(this.conduit));
+    // Register Middleware
     this._restRouter.registerRoute(
       '*',
-      middleware.getAuthMiddleware(this.grpcSdk, this.conduit),
+      [
+        middleware.getAdminMiddleware(this.conduit),
+        middleware.getAuthMiddleware(this.grpcSdk, this.conduit),
+      ],
     );
-    // Register Pre-Auth-Middleware routes
-    const preAuthMiddlewareRoutes: ConduitRoute[] = [];
-    preAuthMiddlewareRoutes.push(adminRoutes.getLoginRoute(this.conduit));
-    preAuthMiddlewareRoutes.push(adminRoutes.getModulesRoute(this.conduit));
-    preAuthMiddlewareRoutes.forEach((route) => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
 
     this._grpcRoutes = {};
     this._sdkRoutes = [
+      adminRoutes.getLoginRoute(this.conduit),
+      adminRoutes.getModulesRoute(this.conduit),
       adminRoutes.getCreateAdminRoute(this.conduit),
     ];
 
-    // Register Post-Auth-Middleware routes
+    // Register Routes
     this._sdkRoutes.forEach((route) => {
       this._restRouter.registerConduitRoute(route);
     }, this);
@@ -123,7 +121,6 @@ export default class AdminModule extends IConduitAdmin {
             message: 'Error when registering routes',
           });
         }
-        //(call as any).metadata.get('module-name')
         call.request.routerUrl = result;
       }
       this.internalRegisterRoute(

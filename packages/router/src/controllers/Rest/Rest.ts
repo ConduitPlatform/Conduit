@@ -23,7 +23,7 @@ import { ConduitRouter } from '../Router';
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
-  private _registeredLocalRoutes: Map<string, Handler>;
+  private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
   private _scheduledTimeout: any = null;
 
@@ -40,7 +40,7 @@ export class RestController extends ConduitRouter {
 
   registerRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[]
   ) {
     const key = `*-${path}`;
     const registered = this._registeredLocalRoutes.has(key);
@@ -75,7 +75,7 @@ export class RestController extends ConduitRouter {
 
   private addRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[]
   ) {
     this._expressRouter.use(path, router);
   }
