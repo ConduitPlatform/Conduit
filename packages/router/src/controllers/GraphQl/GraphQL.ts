@@ -28,8 +28,7 @@ export class GraphQLController extends ConduitRouter {
   resolvers: any;
   private _apollo?: any;
   private _relationTypes: string[] = [];
-  private _scheduledGraphQLTimeout: NodeJS.Timeout | null = null;
-  private _scheduledRouterTimeout: NodeJS.Timeout | null = null;
+  private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
   constructor(readonly app: Application) {
@@ -189,15 +188,14 @@ export class GraphQLController extends ConduitRouter {
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
     if (registered) {
-      // this.refreshRouter();
-      this._scheduleRouterTimeout();
+      this.refreshRouter();
     } else {
       this.addConduitRoute(route);
-      this._scheduleGraphQLTimeout();
+      this.scheduleApolloRefresh();
     }
   }
 
-  protected refreshRouter() {
+  protected _refreshRouter() {
     this.initialize();
     this._registeredRoutes.forEach((route) => {
       // we should probably implement some kind of caching for this
@@ -205,7 +203,7 @@ export class GraphQLController extends ConduitRouter {
       // but it needs to be done carefully
       this.addConduitRoute(route);
     });
-    this._scheduleGraphQLTimeout();
+    this.scheduleApolloRefresh();
   }
 
   private initialize() {
@@ -412,33 +410,18 @@ export class GraphQLController extends ConduitRouter {
     }
   }
 
-  private _scheduleRouterTimeout() {
-    if (this._scheduledRouterTimeout) {
-      clearTimeout(this._scheduledRouterTimeout);
-      this._scheduledRouterTimeout = null;
+  private scheduleApolloRefresh() {
+    if (this._apolloRefreshTimeout) {
+      clearTimeout(this._apolloRefreshTimeout);
+      this._apolloRefreshTimeout = null;
     }
-    this._scheduledRouterTimeout = setTimeout(() => {
-      try {
-        this.refreshRouter();
-      } catch (err) {
-        console.error(err);
-      }
-      this._scheduledRouterTimeout = null;
-    }, 250);
-  }
-
-  private _scheduleGraphQLTimeout() {
-    if (this._scheduledGraphQLTimeout) {
-      clearTimeout(this._scheduledGraphQLTimeout);
-      this._scheduledGraphQLTimeout = null;
-    }
-    this._scheduledGraphQLTimeout = setTimeout(() => {
+    this._apolloRefreshTimeout = setTimeout(() => {
       try {
         this.refreshGQLServer();
       } catch (err) {
         console.error(err);
       }
-      this._scheduledGraphQLTimeout = null;
+      this._apolloRefreshTimeout = null;
     }, 3000);
   }
 }
