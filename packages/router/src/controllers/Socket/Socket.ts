@@ -158,7 +158,7 @@ export class SocketController extends ConduitRouter {
     }
   }
 
-  protected refreshRouter(): void {
+  protected _refreshRouter(): void {
     throw new Error('Method not implemented.');
   }
 
