@@ -25,11 +25,6 @@ const swaggerUi = require('swagger-ui-express');
 export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
-  private _scheduledTimeout: any = null;
-
-  get registeredRoutes() {
-    return this._registeredRoutes;
-  }
 
   constructor(readonly app: Application, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(app);
@@ -46,7 +41,7 @@ export class RestController extends ConduitRouter {
     const registered = this._registeredLocalRoutes.has(key);
     this._registeredLocalRoutes.set(key, router);
     if (registered) {
-      this._scheduleTimeout();
+      this.refreshRouter();
     } else {
       this.addRoute(path, router);
     }
@@ -58,7 +53,7 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     // If the route has been registered, then we need to reinitialize the router so the actual routes change
     if (registered) {
-      this._scheduleTimeout();
+      this.refreshRouter();
     } else {
       this.addConduitRoute(route);
     }
@@ -234,23 +229,7 @@ export class RestController extends ConduitRouter {
     this._swagger.addRouteSwaggerDocumentation(route);
   }
 
-  private _scheduleTimeout() {
-    if (this._scheduledTimeout) {
-      clearTimeout(this._scheduledTimeout);
-      this._scheduledTimeout = null;
-    }
-
-    this._scheduledTimeout = setTimeout(() => {
-      try {
-        this.refreshRouter();
-      } catch (err) {
-        console.error(err);
-      }
-      this._scheduledTimeout = null;
-    }, 3000);
-  }
-
-  protected refreshRouter() {
+  protected _refreshRouter() {
     this.initializeRouter();
     this._registeredLocalRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');

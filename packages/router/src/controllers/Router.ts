@@ -10,10 +10,17 @@ export abstract class ConduitRouter {
   protected _expressRouter: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
   constructor(protected readonly app: Application) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
+  }
+
+  protected abstract _refreshRouter(): void;
+
+  refreshRouter() {
+    this.scheduleRouterRefresh();
   }
 
   cleanupRoutes(routes: any[]) {
@@ -29,8 +36,6 @@ export abstract class ConduitRouter {
     this._registeredRoutes = newRegisteredRoutes;
     this.refreshRouter();
   }
-
-  protected abstract refreshRouter(): void;
 
   handleRequest(req: Request, res: Response, next: NextFunction): void {
     this._expressRouter(req, res, next);
@@ -78,5 +83,20 @@ export abstract class ConduitRouter {
     }
 
     return primaryPromise;
+  }
+
+  private scheduleRouterRefresh() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this._refreshRouter();
+      } catch (err) {
+        console.error(err);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
   }
 }
