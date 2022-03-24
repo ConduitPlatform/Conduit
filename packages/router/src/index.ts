@@ -209,6 +209,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
         rooms: call.request.rooms,
+        namespace: `/${(call as any).metadata.get('module-name')[0]}/`
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {

@@ -149,9 +149,9 @@ export class SocketController extends ConduitRouter {
   handleSocketPush(push: SocketPush) {
     if (isInstanceOfEventResponse(push)) {
       if (isNil(push.receivers) || push.receivers!.length === 0) {
-        this.io.emit(push.event, push.data);
+        this.io.of(push.namespace).emit(push.event, push.data);
       } else {
-        this.io.sockets.adapter.fetchSockets({
+        this.io.of(push.namespace).adapter.fetchSockets({
           rooms: new Set(push.receivers)
         }).then(sockets=>{
           sockets.forEach(r=>{
