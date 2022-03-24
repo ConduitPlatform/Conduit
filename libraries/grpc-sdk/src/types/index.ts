@@ -56,7 +56,7 @@ export type SocketRequest = GrpcRequest<{
 export type ParsedSocketRequest = GrpcRequest<{
   event: string;
   socketId: string;
-  params: { [key: string]: any };
+  params: string[];
   context: { [key: string]: any };
 }>;
 export type UnparsedSocketResponse =

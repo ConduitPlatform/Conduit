@@ -184,7 +184,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socker registered: ' + r.input.path + ' handler url: ' + url);
+        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
         this.registerSocket(r);
       } else {
         console.log(
