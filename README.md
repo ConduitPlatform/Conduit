@@ -42,18 +42,19 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - NodeJS > 14
 - MongoDB or PostgreSQL
 - Desire to create something awesome
+
 # Quickstart
 This script uses docker compose to spin up some basic modules for you to test.
 ```sh
 source <(curl -s https://getconduit.dev/bootstrap)
 ```
-Open http://localhost:8080 to check the admin panel username:admin password: admin
+Open http://localhost:8080 to check the admin panel (username:admin, password: admin)
 
 Your API will be on http://localhost:3000
 
-Checkout swagger on: /swagger
+Check out Swagger on: `/swagger` and `/admin/swagger`
 
-Checkout GraphQL on /graphql (you'll need to generate clientid/secret throught the admin panel to access)
+Check out GraphQL on `/graphql` (you'll need to generate clientid/secret through the admin panel to access)
 
 # Running from source 🔨
 
@@ -74,17 +75,18 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 
 ### Core:
 
-|  Variable        |  Description   | Required |  Example        |
-| :--------------: | :------------- | :------: | :-------------: |
-| `REDIS_HOST`     | Redis address  |   True   | `localhost`     |
-| `REDIS_PORT`     | Redis port     |   True   | `6379`          |
+|   Variable   | Description   | Required |   Example   |
+|:------------:|:--------------|:--------:|:-----------:|
+| `REDIS_HOST` | Redis Address |   True   | `localhost` |
+| `REDIS_PORT` | Redis Port    |   True   |   `6379`    |
+| `MASTER_KEY` | Master Secret |  False   | `M4ST3RK3Y` |
 
 ### Database
 
-|  Variable        |  Description   | Required |  Example        |  Default                    |
-| :--------------: | :------------- | :------: | :-------------: | :-------------------------: |
-| `databaseURL`    | database URL   |  False   | `localhost`     | `mongodb://localhost:27017` |
-| `databaseType`   | db engine type |  False   | `sql`           | `mongodb`                   |
+|   Variable    | Description       | Required |                     Example                      |  Default                    |
+|:-------------:|:------------------| :------: |:------------------------------------------------:| :-------------------------: |
+| `DB_CONN_URI` | DB Connection URI |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
+|   `DB_TYPE`   | DB Engine Type    |  False   |                    `postgres`                    | `mongodb`                   |
 
 Generic module env variables are also supported, with required ones being obligatory.
 
@@ -101,7 +103,7 @@ Generic module env variables are also supported, with required ones being obliga
 
 - Core HTTP Server runs at: `http://localhost:3000`
 - Core Grpc Server runs at: `localhost:55152`
-- Core Socket Server runs at: `localhost:3001`
+- Core Socket Server runs at: `localhost:3001` (Socket.io, handshake path: `/realtime`)
 - Admin Server runs at: `localhost:8080`
 
 # Roadmap 🏁
