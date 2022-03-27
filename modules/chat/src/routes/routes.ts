@@ -299,7 +299,7 @@ export class ChatRoutes {
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const { roomId, message } = call.request.params;
+    const [ roomId, message ] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
@@ -323,7 +323,7 @@ export class ChatRoutes {
 
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const { roomId } = call.request.params;
+    const [ roomId ] = call.request.params;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId });
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
