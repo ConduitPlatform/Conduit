@@ -9,8 +9,8 @@ import {
 import { ServiceError } from '@grpc/grpc-js';
 
 export class Authentication extends ConduitModule<AuthenticationClient> {
-  constructor(url: string) {
-    super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(AuthenticationClient);
   }
 

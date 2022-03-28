@@ -3,4 +3,5 @@ export interface SocketPush {
   data: any;
   receivers: string[];
   rooms: string[];
+  namespace: string;
 }

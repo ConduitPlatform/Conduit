@@ -8,8 +8,8 @@ import {
 import { ServiceError } from '@grpc/grpc-js';
 
 export class Chat extends ConduitModule<ChatClient> {
-  constructor(url: string) {
-    super(url);
+  constructor(moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(ChatClient);
   }
 
