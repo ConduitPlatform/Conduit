@@ -184,7 +184,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socker registered: ' + r.input.path + ' handler url: ' + url);
+        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
         this.registerSocket(r);
       } else {
         console.log(
@@ -209,6 +209,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
         rooms: call.request.rooms,
+        namespace: `/${(call as any).metadata.get('module-name')[0]}/`
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
