@@ -49,9 +49,9 @@ export default class ConduitGrpcSdk {
       this.name = name;
     }
     this.serverUrl = serverUrl;
-    this._config = new Config(this.serverUrl);
-    this._admin = new Admin(this.serverUrl, this.name);
-    this._router = new Router(this.serverUrl, this.name);
+    this._config = new Config(this.name, this.serverUrl);
+    this._admin = new Admin(this.name, this.serverUrl);
+    this._router = new Router(this.name, this.serverUrl);
     this.initializeModules().then(() => {});
     this.watchModules();
   }
@@ -186,7 +186,7 @@ export default class ConduitGrpcSdk {
       });
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
         } else if (this._availableModules[m.moduleName]) {
           this._modules[m.moduleName]?.initializeClient();
         }
@@ -220,7 +220,7 @@ export default class ConduitGrpcSdk {
         this.lastSearch = Date.now();
         r.forEach((m) => {
           if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.url);
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
           }
         });
         return 'ok';

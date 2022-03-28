@@ -41,8 +41,8 @@ message SocketResponse {
 }
 `;
 export class Router extends ConduitModule<RouterClient> {
-  constructor(url: string, private readonly moduleName: string) {
-    super(url);
+  constructor(private readonly moduleName: string, url: string) {
+    super(moduleName, url);
     this.initializeClient(RouterClient);
   }
 
