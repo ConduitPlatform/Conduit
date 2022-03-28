@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.8](https://github.com/ConduitPlatform/Conduit/compare/v0.10.7...v0.10.8) (2022-03-28)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** backport module-name call metadata ([135ca3f](https://github.com/ConduitPlatform/Conduit/commit/135ca3feee82b2fa18fc746f28e2e4a2db4e5bcb))
+* **router:** backport socket fixes ([c584653](https://github.com/ConduitPlatform/Conduit/commit/c584653974b997df33fb7940e91e56548476de25))
+
 ### [0.10.6](https://github.com/Quintessential-SFT/conduit/compare/v0.10.5...v0.10.6) (2021-12-06)
 
 
