@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RoutingManager,
   TYPE,
+  ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -289,16 +290,16 @@ export class ChatRoutes {
     return 'Message updated successfully';
   }
 
-  async connect(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+  async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
       .findMany({ participants: user._id });
     return { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) };
   }
 
-  async onMessage(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+  async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const { roomId, message } = call.request.params;
+    const [ roomId, message ] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
@@ -320,9 +321,9 @@ export class ChatRoutes {
     };
   }
 
-  async onMessagesRead(call: ParsedRouterRequest): Promise<UnparsedSocketResponse> {
+  async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const { roomId } = call.request.params;
+    const [ roomId ] = call.request.params;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId });
     if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
