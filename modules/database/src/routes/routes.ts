@@ -1,5 +1,4 @@
 import { CmsHandlers } from '../handlers/cms.handler';
-import { CustomEndpointHandler } from '../handlers/CustomEndpoints/customEndpoint.handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
