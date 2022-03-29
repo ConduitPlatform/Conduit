@@ -1,5 +1,4 @@
 import { CmsHandlers } from '../handlers/cms.handler';
-import { CustomEndpointHandler } from '../handlers/CustomEndpoints/customEndpoint.handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
@@ -12,7 +11,6 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
 export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;
-  private readonly customEndpointHandler: CustomEndpointHandler;
   private crudRoutes: {
     input: ConduitRouteOptions,
     returnType: ConduitRouteReturnDefinition,
