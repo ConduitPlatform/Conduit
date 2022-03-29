@@ -70,10 +70,11 @@ function extractParams(
   return resultingObject;
 }
 
-export function createCustomEndpointRoute(endpoint: ICustomEndpoint) {
+export function createCustomEndpointRoute(endpoint: ICustomEndpoint,handler:any ) {
   let route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
-    .method(getOperation(endpoint.operation));
+    .method(getOperation(endpoint.operation))
+    .handler(handler);
   if (endpoint.authentication) {
     route.middleware('authMiddleware');
   }

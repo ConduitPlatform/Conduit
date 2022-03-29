@@ -28,7 +28,6 @@ export class DatabaseRoutes {
 
   constructor(readonly server: GrpcServer, private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new CmsHandlers(grpcSdk, database);
-    this.customEndpointHandler = new CustomEndpointHandler(grpcSdk);
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
   }
 
