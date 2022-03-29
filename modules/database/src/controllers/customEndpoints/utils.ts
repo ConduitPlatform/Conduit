@@ -3,7 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  constructRoute, RouteBuilder,
+  constructRoute, RequestHandlers, RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint } from '../../interfaces';
@@ -70,7 +70,7 @@ function extractParams(
   return resultingObject;
 }
 
-export function createCustomEndpointRoute(endpoint: ICustomEndpoint,handler:any ) {
+export function createCustomEndpointRoute(endpoint: ICustomEndpoint, handler: RequestHandlers) {
   let route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
     .method(getOperation(endpoint.operation))

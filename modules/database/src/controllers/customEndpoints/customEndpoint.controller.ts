@@ -8,7 +8,8 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 
 export class CustomEndpointController {
-  private handler: CustomEndpointHandler
+  private handler: CustomEndpointHandler;
+
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
@@ -38,7 +39,7 @@ export class CustomEndpointController {
         let routes: any[] = [];
         r.forEach((schema: ICustomEndpoint) => {
 
-          routes.push(createCustomEndpointRoute(schema,this.handler.entryPoint.bind(this.handler)));
+          routes.push(createCustomEndpointRoute(schema, this.handler.entryPoint.bind(this.handler)));
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
 
