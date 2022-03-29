@@ -2,17 +2,6 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [0.12.4](https://github.com/ConduitPlatform/Conduit/compare/v0.12.3...v0.12.4) (2022-03-29)
-
-
-### Bug Fixes
-
-* **core:** socket pushes not working ([#82](https://github.com/ConduitPlatform/Conduit/issues/82)) ([d4232ef](https://github.com/ConduitPlatform/Conduit/commit/d4232eff7b69ccbea3d081eadf74239bb341939d))
-* **database:** custom endpoint handler was not assigned properly ([4622540](https://github.com/ConduitPlatform/Conduit/commit/4622540f69b1ee32fcf9b8e647b6ebf2737fc7e7))
-* **grpc-sdk:** remove stringification of strings ([866f982](https://github.com/ConduitPlatform/Conduit/commit/866f982662cd41b16c0909da8e32be3849e2ea3a))
-* **router,admin:** admin requests not passing through master key middleware ([#88](https://github.com/ConduitPlatform/Conduit/issues/88)) ([09204bd](https://github.com/ConduitPlatform/Conduit/commit/09204bd0494cc5bbe769e6cfcc552233cb6ea181))
-* **router:** excessive REST router refreshes ([#90](https://github.com/ConduitPlatform/Conduit/issues/90)) ([8adc549](https://github.com/ConduitPlatform/Conduit/commit/8adc549a09807d353f730ed576e1f884c788cbb2))
-
 ### [0.12.3](https://github.com/ConduitPlatform/Conduit/compare/v0.12.2...v0.12.3) (2022-03-21)
 
 ### Features
