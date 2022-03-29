@@ -12,7 +12,6 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
 export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;
-  private readonly customEndpointHandler: CustomEndpointHandler;
   private crudRoutes: {
     input: ConduitRouteOptions,
     returnType: ConduitRouteReturnDefinition,
