@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.11.5](https://github.com/ConduitPlatform/Conduit/compare/v0.11.4...v0.11.5) (2022-03-30)
+
+
+### Bug Fixes
+
+* **authentication:** googleHandlers being validated in place of githubHandlers ([#102](https://github.com/ConduitPlatform/Conduit/issues/102)) ([c2414c1](https://github.com/ConduitPlatform/Conduit/commit/c2414c1b1d601078b69d77c1aa72c43dcfa4cae7))
+
 ### [0.11.4](https://github.com/ConduitPlatform/Conduit/compare/v0.11.3...v0.11.4) (2022-03-18)
 
 
