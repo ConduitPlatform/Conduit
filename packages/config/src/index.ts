@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import axios from 'axios';
+import { migrateAuthVerificationConfig } from './migrations/verification.auth.migration';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -191,6 +192,7 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.waitForExistence('database');
     models.Config.getInstance(this.grpcSdk.databaseProvider!);
     await this.getDatabaseConfigUtility().registerConfigSchemas(models.Config.getPlainSchema());
+    await migrateAuthVerificationConfig(this.grpcSdk);
   }
 
   getDatabaseConfigUtility() {
