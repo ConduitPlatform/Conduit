@@ -274,7 +274,7 @@ export class AuthenticationRoutes {
 
     this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingController, new GithubSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
-    authActive = await this.googleHandlers
+    authActive = await this.githubHandlers
       .validate()
       .catch((e: any) => (errorMessage = e));
     if (!errorMessage && authActive) {
