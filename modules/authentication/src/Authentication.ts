@@ -122,7 +122,16 @@ export default class Authentication extends ManagedModule {
   async userCreate(call: any, callback: any) {
     const email = call.request.email;
     let password = call.request.password;
-    let verify = call.request.verify;
+    const verify = call.request.verify;
+
+    const verificationConfig = ConfigController.getInstance().config.local.verification;
+    if (verify && !(verificationConfig.required && verificationConfig.sendEmail)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Email verification is disabled. Configuration required.',
+      });
+    }
+
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }

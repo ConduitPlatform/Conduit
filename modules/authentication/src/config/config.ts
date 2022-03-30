@@ -15,20 +15,21 @@ export default {
       format: 'Boolean',
       default: true,
     },
-    sendVerificationEmail: {
-      doc:
-        'Defines if the authenticator should automatically send a verification e-mail to the user',
-      format: 'Boolean',
-      default: true,
-    },
-    verificationRequired: {
-      doc: 'Defines if email verification is required for login',
-      format: 'Boolean',
-      default: true,
-    },
-    verification_redirect_uri: {
-      format: 'String',
-      default: '',
+    verification: {
+      required: {
+        doc: 'Defines if email verification is required for login',
+        format: 'Boolean',
+        default: false,
+      },
+      sendEmail: {
+        doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
+        format: 'Boolean',
+        default: true,
+      },
+      redirectUri: {
+        format: 'String',
+        default: '',
+      },
     },
     forgot_password_redirect_uri: {
       format: 'String',
