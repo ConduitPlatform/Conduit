@@ -2,20 +2,21 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider
-} from "@conduitplatform/grpc-sdk";
+} from '@conduitplatform/grpc-sdk';
 
-import path from "path";
-import { isNil } from "lodash";
-import { status } from "@grpc/grpc-js";
+import path from 'path';
+import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
 import * as models from './models';
-import { ISignTokenOptions } from "./interfaces/ISignTokenOptions";
-import { AuthUtils } from "./utils/auth";
-import { TokenType } from "./constants/TokenType";
-import { v4 as uuid } from "uuid";
-import moment from "moment";
+import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
+import { AuthUtils } from './utils/auth';
+import { TokenType } from './constants/TokenType';
+import { v4 as uuid } from 'uuid';
+import moment from 'moment';
+import { migrateVerificationConfig } from './migrations/verificationConfig.migration';
 
 export default class Authentication extends ManagedModule {
   config = AppConfigSchema;
@@ -42,6 +43,7 @@ export default class Authentication extends ManagedModule {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await migrateVerificationConfig(this.grpcSdk);
   }
 
   async onRegister() {
