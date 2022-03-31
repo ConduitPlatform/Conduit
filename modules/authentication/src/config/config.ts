@@ -4,12 +4,6 @@ export default {
     default: true,
   },
   local: {
-    identifier: {
-      doc:
-        'The field name to use for id for a user logging in with local strategy ex. email/username',
-      format: 'String',
-      default: 'email',
-    },
     enabled: {
       doc: 'Defines if this strategy is active or not',
       format: 'Boolean',
@@ -24,7 +18,7 @@ export default {
       send_email: {
         doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
         format: 'Boolean',
-        default: true,
+        default: false,
       },
       redirect_uri: {
         format: 'String',

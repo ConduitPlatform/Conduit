@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   TYPE,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -79,7 +78,7 @@ export class AdminHandlers {
            path: '/users',
            action: ConduitRouteActions.POST,
            bodyParams: {
-             identification: ConduitString.Required,
+             email: ConduitString.Required,
              password: ConduitString.Required,
            },
          },
@@ -241,14 +240,13 @@ export class AdminHandlers {
         query[provider] = { $exists: true, $ne: null };
       }
     }
-    let identifier;
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
         query = { _id : search }
       }
       else {
-        identifier = escapeStringRegexp(search);
-        query['email'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+        const emailIdentifier = escapeStringRegexp(search);
+        query['email'] = { $regex: `.*${emailIdentifier}.*`, $options: 'i' };
       }
     }
 
@@ -265,19 +263,13 @@ export class AdminHandlers {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { identification, password } = call.request.params;
-
-    const config = ConfigController.getInstance().config;
-    if (config.local.identifier === 'email') {
-      if (identification.indexOf('+') !== -1) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Email contains unsupported characters');
-      }
-
-      identification = identification.toLowerCase();
+    let { email, password } = call.request.params;
+    if (email.indexOf('+') !== -1) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Email contains unsupported characters');
     }
 
     let user: User | null = await User.getInstance().findOne({
-      email: identification,
+      email: email.toLowerCase(),
     });
     if (!isNil(user)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
@@ -285,7 +277,7 @@ export class AdminHandlers {
 
     let hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
-      email: identification,
+      email,
       hashedPassword,
       isVerified: true,
     });

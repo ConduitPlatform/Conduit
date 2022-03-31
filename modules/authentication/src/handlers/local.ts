@@ -21,7 +21,6 @@ export class LocalHandlers {
   private emailModule: Email;
   private sms: SMS;
   private initialized: boolean = false;
-  private identifier: string = 'email';
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
   }
@@ -29,8 +28,7 @@ export class LocalHandlers {
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
     let promise: Promise<void>;
-    this.identifier = config.local.identifier;
-    if (this.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
+    if (config.local.verification.send_email) {
       promise = this.grpcSdk.config.get('email')
         .then((emailConfig: any) => {
           if (!emailConfig.active) {
@@ -80,22 +78,21 @@ export class LocalHandlers {
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
 
-    let hashedPassword = await AuthUtils.hashPassword(password);
-    const isVerified = this.identifier === 'username';
+    const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
       email,
       hashedPassword,
-      isVerified,
+      isVerified: false,
     });
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
     const config = ConfigController.getInstance().config;
 
-    let serverConfig = await this.grpcSdk.config.getServerConfig();
-    let url = serverConfig.url;
+    const serverConfig = await this.grpcSdk.config.getServerConfig();
+    const url = serverConfig.url;
 
-    if (config.local.identifier === 'email' && config.local.verification.send_email) {
+    if (config.local.verification.send_email) {
       let verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -221,7 +218,7 @@ export class LocalHandlers {
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized || isNil(this.emailModule)) {
+    if (!this.initialized) {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
@@ -258,7 +255,7 @@ export class LocalHandlers {
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized || isNil(this.emailModule)) {
+    if (!this.initialized) {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
@@ -566,7 +563,7 @@ export class LocalHandlers {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
+    if (config.local.verification.send_email) {
       await this.grpcSdk.config.moduleExists('email');
       await this.grpcSdk.waitForExistence('email');
       this.emailModule = this.grpcSdk.emailProvider!;
@@ -592,7 +589,7 @@ export class LocalHandlers {
       console.log('phone authentication not active');
     }
 
-    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
+    if (config.local.verification.send_email) {
       this.registerTemplates();
     }
     this.initialized = true;

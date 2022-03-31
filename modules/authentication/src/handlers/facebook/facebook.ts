@@ -31,21 +31,16 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       user_age_range: 'age_range',
       user_likes: 'likes',
     };
-    this.defaultScopes = ["public_profile","email"];
-
+    this.defaultScopes = ['public_profile', 'email'];
   }
 
   async makeFields(scopes: string[]): Promise<string> {
-
-    let mappedScopes = scopes.map((scope: any) => {
+    return scopes.map((scope: any) => {
       return this.mapScopes[scope];
     }).join(',');
-
-    return mappedScopes;
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-
     return scopes.join(',');
   }
 

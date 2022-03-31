@@ -16,7 +16,7 @@ import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
-import { migrateVerificationConfig } from './migrations/verificationConfig.migration';
+import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
 
 export default class Authentication extends ManagedModule {
   config = AppConfigSchema;
@@ -43,7 +43,7 @@ export default class Authentication extends ManagedModule {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
-    await migrateVerificationConfig(this.grpcSdk);
+    await migrateLocalAuthConfig(this.grpcSdk);
   }
 
   async onRegister() {

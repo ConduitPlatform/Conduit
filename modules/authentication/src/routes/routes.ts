@@ -44,7 +44,7 @@ export class AuthenticationRoutes {
   private slackHandlers: SlackHandlers;
   private figmaHandlers: FigmaHandlers;
   private microsoftHandlers: MicrosoftHandlers;
-  private _routingManager: RoutingManager;
+  private readonly _routingManager: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
@@ -79,16 +79,12 @@ export class AuthenticationRoutes {
         {
           path: '/local/new',
           action: ConduitRouteActions.POST,
-          description: `Creates a new user using either email/password or username/password.
-               The combination depends on the provided configuration. 
-               In the case of email/password the email module is required and 
-               the user will receive an email before being able to login.`,
+          description: 'Creates a new user using email/password.',
           bodyParams: {
             email: ConduitString.Required,
             password: ConduitString.Required,
           },
-          middlewares:
-            authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+          middlewares: [],
         },
         new ConduitRouteReturnDefinition('RegisterResponse', {
           userId: ConduitString.Optional,
@@ -115,7 +111,9 @@ export class AuthenticationRoutes {
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
-      if (authConfig.local.identifier !== 'username') {
+
+      const emailModule = this.grpcSdk.emailProvider;
+      if (emailModule) {
         this._routingManager.route(
           {
             path: '/forgot-password',
@@ -142,6 +140,7 @@ export class AuthenticationRoutes {
           new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
           this.localHandlers.resetPassword.bind(this.localHandlers),
         );
+      }
 
         this._routingManager.route(
           {
@@ -186,7 +185,6 @@ export class AuthenticationRoutes {
           this.localHandlers.verifyEmail.bind(this.localHandlers),
         );
 
-      }
       if (authConfig?.twofa.enabled) {
         this._routingManager.route(
           {
