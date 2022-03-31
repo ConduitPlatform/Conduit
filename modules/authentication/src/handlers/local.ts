@@ -66,10 +66,10 @@ export class LocalHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
 
-    if (email.indexOf('+') !== -1) {
+    if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters',
+        'Invalid email address provided',
       );
     }
 
@@ -123,10 +123,10 @@ export class LocalHandlers {
 
     const clientId = context.clientId;
 
-    if (email.indexOf('+') !== -1) {
+    if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters',
+        'Invalid email address provided',
       );
     }
 

@@ -264,8 +264,8 @@ export class AdminHandlers {
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { email, password } = call.request.params;
-    if (email.indexOf('+') !== -1) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Email contains unsupported characters');
+    if (AuthUtils.invalidEmailAddress(email)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
     let user: User | null = await User.getInstance().findOne({

@@ -142,10 +142,10 @@ export default class Authentication extends ManagedModule {
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
-      if (email.indexOf('+') !== -1) {
+      if (AuthUtils.invalidEmailAddress(email)) {
         return callback({
           code: status.INVALID_ARGUMENT,
-          message: 'Email contains unsupported characters',
+          message: 'Invalid email address provided',
         });
       }
       const hashedPassword = await AuthUtils.hashPassword(password);
