@@ -12,17 +12,19 @@ function configIsOutdated(authConfig: any) {
 }
 
 export async function migrateLocalAuthConfig(grpcSdk: ConduitGrpcSdk) {
-  const authConfig = await grpcSdk.config.get('authentication')
+  await grpcSdk.config.get('authentication')
+    .then(async (authConfig: any) => {
+      if (configIsOutdated(authConfig)) {
+        authConfig.local.verification = {
+          required: authConfig.local.verificationRequired,
+          send_email: authConfig.local.sendVerificationEmail,
+          redirect_uri: authConfig.local.verification_redirect_uri,
+        }
+        legacyKeys.forEach(key => { delete authConfig.local[key]; });
+        await grpcSdk.config.updateConfig(authConfig, 'authentication');
+      }
+    })
     .catch(err => {
-      console.error(err.message);
+      console.log('nothing to update, no config')
     });
-  if (authConfig && configIsOutdated(authConfig)) {
-    authConfig.local.verification = {
-      required: authConfig.local.verificationRequired,
-      send_email: authConfig.local.sendVerificationEmail,
-      redirect_uri: authConfig.local.verification_redirect_uri,
-    }
-    legacyKeys.forEach(key => { delete authConfig.local[key]; });
-    await grpcSdk.config.updateConfig(authConfig, 'authentication');
-  }
 }
