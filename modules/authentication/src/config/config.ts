@@ -21,12 +21,12 @@ export default {
         format: 'Boolean',
         default: false,
       },
-      sendEmail: {
+      send_email: {
         doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
         format: 'Boolean',
         default: true,
       },
-      redirectUri: {
+      redirect_uri: {
         format: 'String',
         default: '',
       },

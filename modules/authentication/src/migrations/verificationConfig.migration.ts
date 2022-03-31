@@ -18,8 +18,8 @@ export async function migrateVerificationConfig(grpcSdk: ConduitGrpcSdk) {
   if (authConfig && configIsOutdated(authConfig)) {
     authConfig.local.verification = {
       required: authConfig.local.verificationRequired,
-      sendEmail: authConfig.local.sendVerificationEmail,
-      redirectUri: authConfig.local.verification_redirect_uri,
+      send_email: authConfig.local.sendVerificationEmail,
+      redirect_uri: authConfig.local.verification_redirect_uri,
     }
     legacyKeys.forEach(key => { delete authConfig.local[key]; });
     grpcSdk.config.updateConfig(authConfig, 'authentication');

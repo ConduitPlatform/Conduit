@@ -30,7 +30,7 @@ export class LocalHandlers {
     const config = ConfigController.getInstance().config;
     let promise: Promise<void>;
     this.identifier = config.local.identifier;
-    if (this.identifier === 'email' && config.local.verification.required && config.local.verification.sendEmail) {
+    if (this.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
       promise = this.grpcSdk.config.get('email')
         .then((emailConfig: any) => {
           if (!emailConfig.active) {
@@ -95,7 +95,7 @@ export class LocalHandlers {
     let serverConfig = await this.grpcSdk.config.getServerConfig();
     let url = serverConfig.url;
 
-    if (config.local.identifier === 'email' && config.local.verification.sendEmail) {
+    if (config.local.identifier === 'email' && config.local.verification.send_email) {
       let verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -423,8 +423,8 @@ export class LocalHandlers {
     });
 
     if (isNil(verificationTokenDoc)) {
-      if (config.local.verification.redirectUri) {
-        return { redirect: config.verification.redirectUri };
+      if (config.local.verification.redirect_uri) {
+        return { redirect: config.verification.redirect_uri };
       } else {
         return 'Email verified';
       }
@@ -446,8 +446,8 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.verification.redirectUri) {
-      return { redirect: config.verification.redirectUri };
+    if (config.verification.redirect_uri) {
+      return { redirect: config.verification.redirect_uri };
     }
     return 'Email verified';
   }
@@ -566,7 +566,7 @@ export class LocalHandlers {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.sendEmail) {
+    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
       await this.grpcSdk.config.moduleExists('email');
       await this.grpcSdk.waitForExistence('email');
       this.emailModule = this.grpcSdk.emailProvider!;
@@ -592,7 +592,7 @@ export class LocalHandlers {
       console.log('phone authentication not active');
     }
 
-    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.sendEmail) {
+    if (config.local.identifier === 'email' && config.local.verification.required && config.local.verification.send_email) {
       this.registerTemplates();
     }
     this.initialized = true;

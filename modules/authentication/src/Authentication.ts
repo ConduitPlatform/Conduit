@@ -127,7 +127,7 @@ export default class Authentication extends ManagedModule {
     const verify = call.request.verify;
 
     const verificationConfig = ConfigController.getInstance().config.local.verification;
-    if (verify && !(verificationConfig.required && verificationConfig.sendEmail)) {
+    if (verify && !(verificationConfig.required && verificationConfig.send_email)) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Email verification is disabled. Configuration required.',
