@@ -160,20 +160,6 @@ export class AuthenticationRoutes {
 
         this._routingManager.route(
           {
-            path: '/local/change-password/verify',
-            action: ConduitRouteActions.POST,
-            description: `Used to provide the 2FA token for password change.`,
-            bodyParams: {
-              code: ConduitString.Required,
-            },
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-          this.localHandlers.verifyChangePassword.bind(this.localHandlers),
-        );
-
-        this._routingManager.route(
-          {
             path: '/hook/verify-email/:verificationToken',
             action: ConduitRouteActions.GET,
             description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
@@ -243,6 +229,20 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
           this.localHandlers.disableTwoFa.bind(this.localHandlers),
+        );
+
+        this._routingManager.route(
+          {
+            path: '/local/change-password/verify',
+            action: ConduitRouteActions.POST,
+            description: `Used to provide the 2FA token for password change.`,
+            bodyParams: {
+              code: ConduitString.Required,
+            },
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+          this.localHandlers.verifyChangePassword.bind(this.localHandlers),
         );
       }
       enabled = true;
