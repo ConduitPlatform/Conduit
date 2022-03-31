@@ -1,7 +1,7 @@
 import {
   ManagedModule,
   ConfigController,
-  DatabaseProvider
+  DatabaseProvider,
 } from '@conduitplatform/grpc-sdk';
 
 import path from 'path';

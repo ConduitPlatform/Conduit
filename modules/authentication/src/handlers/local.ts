@@ -19,7 +19,7 @@ import moment = require('moment');
 
 export class LocalHandlers {
   private emailModule: Email;
-  private sms: SMS;
+  private smsModule: SMS;
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -157,7 +157,7 @@ export class LocalHandlers {
     }
 
     if (user.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -348,7 +348,7 @@ export class LocalHandlers {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,dbUser.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, dbUser.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -389,7 +389,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Change password token not found');
     }
 
-    const verified = await this.sms.verify(token.token, code);
+    const verified = await this.smsModule.verify(token.token, code);
 
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
@@ -471,7 +471,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    const verificationSid = await AuthUtils.sendVerificationCode(this.sms,phoneNumber);
+    const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, phoneNumber);
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
@@ -513,7 +513,7 @@ export class LocalHandlers {
         'No verification record for this user',
       );
 
-    const verified = await this.sms.verify(verificationRecord.token, code);
+    const verified = await this.smsModule.verify(verificationRecord.token, code);
 
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
@@ -576,7 +576,7 @@ export class LocalHandlers {
     if (config.twofa.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
-      this.sms = this.grpcSdk.sms!;
+      this.smsModule = this.grpcSdk.sms!;
     } else {
       console.log('sms 2fa not active');
     }
@@ -584,7 +584,7 @@ export class LocalHandlers {
     if ((config.phoneAuthentication.enabled) && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
-      this.sms = this.grpcSdk.sms!;
+      this.smsModule = this.grpcSdk.sms!;
     } else {
       console.log('phone authentication not active');
     }

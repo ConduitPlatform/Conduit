@@ -112,8 +112,11 @@ export class AuthenticationRoutes {
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
 
-      const emailModule = this.grpcSdk.emailProvider;
-      if (emailModule) {
+      let emailOnline = false;
+      await this.grpcSdk.config.moduleExists('email')
+        .then(_ => { emailOnline = true; })
+        .catch(_ => {});
+      if (emailOnline) {
         this._routingManager.route(
           {
             path: '/forgot-password',
