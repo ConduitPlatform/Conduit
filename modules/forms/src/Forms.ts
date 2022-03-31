@@ -33,8 +33,8 @@ export default class Forms extends ManagedModule {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email-provider:status:activated', (message: string) => {
-      if (message === 'enabled') {
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', (message: string) => {
+      if (message === 'active') {
         this.onConfig()
           .then(() => {
             console.log('Updated forms configuration');

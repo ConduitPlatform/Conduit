@@ -88,11 +88,14 @@ export default class Email extends ManagedModule {
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.adminRouter.setEmailService(this.emailService);
       this.isRunning = true;
-      this.grpcSdk.bus?.publish('email:status:activated', '');
     } else {
       await this.initEmailProvider(ConfigController.getInstance().config);
       this.emailService.updateProvider(this.emailProvider);
     }
+    this.grpcSdk.bus?.publish(
+      'email:status:onConfig',
+      this.isRunning ? 'active' : 'inactive',
+    );
   }
 
   private async initEmailProvider(newConfig?: any) {
