@@ -45,16 +45,14 @@ export default class Authentication extends ManagedModule {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:activated', (message: string) => {
-      if (message === 'enabled') {
-        this.onConfig()
-          .then(() => {
-            console.log('Updated authentication configuration');
-          })
-          .catch(() => {
-            console.log('Failed to update authentication config');
-          });
-      }
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', _ => {
+      this.onConfig()
+        .then(() => {
+          console.log('Updated authentication configuration');
+        })
+        .catch(() => {
+          console.log('Failed to update authentication config');
+        });
     });
   }
 
