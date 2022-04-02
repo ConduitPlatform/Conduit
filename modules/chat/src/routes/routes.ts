@@ -2,6 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConduitNumber,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
@@ -29,7 +30,7 @@ export class ChatRoutes {
     const { roomName, users } = call.request.params;
     const { user } = call.request.context;
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'users array is required and cannot be empty');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
     }
     try {
       await validateUsersInput(this.grpcSdk, users);
@@ -56,8 +57,8 @@ export class ChatRoutes {
   async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
-    if (isNil(roomId) || isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId and users array are required');
+    if (isNil(users) || !isArray(users) || users.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
     }
 
     const room = await ChatRoom.getInstance()
@@ -93,9 +94,6 @@ export class ChatRoutes {
   async leaveRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId } = call.request.params;
     const { user } = call.request.context;
-    if (isNil(roomId)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId is required');
-    }
 
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
@@ -353,13 +351,13 @@ export class ChatRoutes {
         path: '/new',
         action: ConduitRouteActions.POST,
         bodyParams: {
-          roomName: TYPE.String,
+          roomName: ConduitString.Required,
           users: [TYPE.String],
         },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('CreateRoom', {
-        roomId: TYPE.String,
+        roomId: ConduitString.Required,
       }),
       this.createRoom.bind(this),
     );
@@ -369,7 +367,7 @@ export class ChatRoutes {
         path: '/add/:roomId',
         action: ConduitRouteActions.UPDATE,
         urlParams: {
-          roomId: TYPE.String,
+          roomId: ConduitString.Required,
         },
         bodyParams: {
           users: [TYPE.String],
@@ -385,7 +383,7 @@ export class ChatRoutes {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
         urlParams: {
-          roomId: TYPE.String,
+          roomId: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -395,11 +393,11 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
+        path: '/rooms/:id',
+        action: ConduitRouteActions.GET,
         urlParams: {
           id: ConduitString.Required,
         },
-        path: '/rooms/:id',
-        action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
@@ -408,27 +406,27 @@ export class ChatRoutes {
     this._routingManager.route(
       {
         path: '/rooms',
-        queryParams: {
-          skip: TYPE.Number,
-          limit: TYPE.Number,
-        },
         action: ConduitRouteActions.GET,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+        },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatRoomsResponse', {
         rooms: ['ChatRoom'],
-        count: TYPE.Number,
+        count: ConduitNumber.Required,
       }),
       this.getRooms.bind(this),
     );
 
     this._routingManager.route(
       {
+        path: '/messages/:id',
+        action: ConduitRouteActions.GET,
         urlParams: {
           id: ConduitString.Required,
         },
-        path: '/messages/:id',
-        action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
@@ -440,15 +438,15 @@ export class ChatRoutes {
         path: '/messages',
         action: ConduitRouteActions.GET,
         queryParams: {
-          roomId: TYPE.String,
-          skip: TYPE.Number,
-          limit: TYPE.Number,
+          roomId: ConduitString.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
         },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatMessagesResponse', {
         messages: ['ChatMessage'],
-        count: TYPE.Number,
+        count: ConduitNumber.Required,
       }),
       this.getMessages.bind(this),
     );
@@ -460,7 +458,7 @@ export class ChatRoutes {
           path: '/messages/:messageId',
           action: ConduitRouteActions.DELETE,
           urlParams: {
-            messageId: TYPE.String,
+            messageId: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
         },
@@ -475,10 +473,10 @@ export class ChatRoutes {
           path: '/messages/:messageId',
           action: ConduitRouteActions.UPDATE,
           urlParams: {
-            messageId: TYPE.String,
+            messageId: ConduitString.Required,
           },
           bodyParams: {
-            newMessage: TYPE.String,
+            newMessage: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
         },
