@@ -48,7 +48,7 @@ export class ChatRoutes {
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: roomName, participants: (room as ChatRoom).participants }),
+      JSON.stringify({ name: roomName, participants: room.participants }),
     );
     return { roomId: room._id };
   }
@@ -66,7 +66,7 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
@@ -76,10 +76,10 @@ export class ChatRoutes {
       throw new GrpcError(status.INTERNAL, e.message);
     }
 
-    (room as ChatRoom).participants = Array.from(new Set([...(room as ChatRoom).participants, ...users]));
+    room.participants = Array.from(new Set([...room.participants, ...users]));
     await ChatRoom.getInstance()
       .findByIdAndUpdate(
-        (room as ChatRoom)._id,
+        room._id,
         { room },
       )
       .catch((e: Error) => {
@@ -103,16 +103,16 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
-    const index = (room as ChatRoom).participants.indexOf(user._id);
+    const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
-          (room as ChatRoom)._id,
+          room._id,
           room,
         )
         .catch((e: Error) => {
@@ -139,7 +139,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      const query = { room: { $in: (rooms as ChatRoom[]).map((room: any) => room._id) } };
+      const query = { room: { $in: rooms.map((room: any) => room._id) } };
       messagesPromise = ChatMessage.getInstance()
         .findMany(
           query,
@@ -155,7 +155,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+      if (isNil(room) || !room.participants.includes(user._id)) {
         throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
       }
       messagesPromise = ChatMessage.getInstance()
@@ -251,7 +251,7 @@ export class ChatRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
+    if (isNil(message) || message.senderUser !== user._id) {
       throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
     await ChatMessage.getInstance()
@@ -271,13 +271,13 @@ export class ChatRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
+    if (isNil(message) || message.senderUser !== user._id) {
       throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
     message.message = newMessage;
     await ChatMessage.getInstance()
       .findByIdAndUpdate(
-        (message as ChatMessage)._id,
+        message._id,
         { message },
       )
       .catch((e: Error) => {
@@ -294,7 +294,7 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
       .findMany({ participants: user._id });
-    return { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) };
+    return { rooms: rooms.map((room: any) => room._id) };
   }
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
@@ -302,7 +302,7 @@ export class ChatRoutes {
     const [ roomId, message ] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.INVALID_ARGUMENT,
         'Room does not exist or you don\'t have access');
     }
@@ -326,13 +326,13 @@ export class ChatRoutes {
     const [ roomId ] = call.request.params;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId });
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.INVALID_ARGUMENT,
         'Room does not exist or you don\'t have access');
     }
 
     const filterQuery = {
-      room: (room as ChatRoom)._id,
+      room: room._id,
       readBy: { $ne: user._id },
     };
 
@@ -340,8 +340,8 @@ export class ChatRoutes {
       .updateMany(filterQuery, { $push: { readBy: user._id } });
     return {
       event: 'messagesRead',
-      receivers: [(room as ChatRoom)._id],
-      data: { room: (room as ChatRoom)._id, readBy: user._id },
+      receivers: [room._id],
+      data: { room: room._id, readBy: user._id },
     };
   }
 
