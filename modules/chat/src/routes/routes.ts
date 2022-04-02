@@ -80,7 +80,7 @@ export class ChatRoutes {
     await ChatRoom.getInstance()
       .findByIdAndUpdate(
         room._id,
-        { room },
+        room,
       )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
