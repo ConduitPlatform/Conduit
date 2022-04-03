@@ -151,13 +151,7 @@ export class SocketController extends ConduitRouter {
       if (isNil(push.receivers) || push.receivers!.length === 0) {
         this.io.of(push.namespace).emit(push.event, push.data);
       } else {
-        this.io.of(push.namespace).adapter.fetchSockets({
-          rooms: new Set(push.receivers)
-        }).then(sockets=>{
-          sockets.forEach(r=>{
-            r.to(push.receivers).emit(push.event, push.data)
-          })
-        })
+        this.io.of(push.namespace).to(push.receivers).emit(push.event, push.data);
       }
     } else {
       throw new Error('Cannot join room in this context');
