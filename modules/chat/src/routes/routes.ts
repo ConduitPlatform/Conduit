@@ -2,6 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConduitNumber,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
@@ -29,7 +30,7 @@ export class ChatRoutes {
     const { roomName, users } = call.request.params;
     const { user } = call.request.context;
     if (isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'users array is required and cannot be empty');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
     }
     try {
       await validateUsersInput(this.grpcSdk, users);
@@ -48,7 +49,7 @@ export class ChatRoutes {
 
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: roomName, participants: (room as ChatRoom).participants }),
+      JSON.stringify({ name: roomName, participants: room.participants }),
     );
     return { roomId: room._id };
   }
@@ -56,8 +57,8 @@ export class ChatRoutes {
   async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
-    if (isNil(roomId) || isNil(users) || !isArray(users) || users.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId and users array are required');
+    if (isNil(users) || !isArray(users) || users.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
     }
 
     const room = await ChatRoom.getInstance()
@@ -66,7 +67,7 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
@@ -76,11 +77,11 @@ export class ChatRoutes {
       throw new GrpcError(status.INTERNAL, e.message);
     }
 
-    (room as ChatRoom).participants = Array.from(new Set([...(room as ChatRoom).participants, ...users]));
+    room.participants = Array.from(new Set([...room.participants, ...users]));
     await ChatRoom.getInstance()
       .findByIdAndUpdate(
-        (room as ChatRoom)._id,
-        { room },
+        room._id,
+        room,
       )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -93,9 +94,6 @@ export class ChatRoutes {
   async leaveRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId } = call.request.params;
     const { user } = call.request.context;
-    if (isNil(roomId)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'roomId is required');
-    }
 
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId })
@@ -103,16 +101,16 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
     }
 
-    const index = (room as ChatRoom).participants.indexOf(user._id);
+    const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
-          (room as ChatRoom)._id,
+          room._id,
           room,
         )
         .catch((e: Error) => {
@@ -139,7 +137,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      const query = { room: { $in: (rooms as ChatRoom[]).map((room: any) => room._id) } };
+      const query = { room: { $in: rooms.map((room: any) => room._id) } };
       messagesPromise = ChatMessage.getInstance()
         .findMany(
           query,
@@ -155,7 +153,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+      if (isNil(room) || !room.participants.includes(user._id)) {
         throw new GrpcError(status.NOT_FOUND, 'Room does not exist or you don\'t have access');
       }
       messagesPromise = ChatMessage.getInstance()
@@ -251,7 +249,7 @@ export class ChatRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
+    if (isNil(message) || message.senderUser !== user._id) {
       throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
     await ChatMessage.getInstance()
@@ -271,13 +269,13 @@ export class ChatRoutes {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    if (isNil(message) || (message as ChatMessage).senderUser !== user._id) {
+    if (isNil(message) || message.senderUser !== user._id) {
       throw new GrpcError(status.NOT_FOUND, 'Message does not exist or you don\'t have access');
     }
     message.message = newMessage;
     await ChatMessage.getInstance()
       .findByIdAndUpdate(
-        (message as ChatMessage)._id,
+        message._id,
         { message },
       )
       .catch((e: Error) => {
@@ -294,7 +292,7 @@ export class ChatRoutes {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
       .findMany({ participants: user._id });
-    return { rooms: (rooms as ChatRoom[]).map((room: any) => room._id) };
+    return { rooms: rooms.map((room: any) => room._id) };
   }
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
@@ -302,7 +300,7 @@ export class ChatRoutes {
     const [ roomId, message ] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.INVALID_ARGUMENT,
         'Room does not exist or you don\'t have access');
     }
@@ -326,13 +324,13 @@ export class ChatRoutes {
     const [ roomId ] = call.request.params;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId });
-    if (isNil(room) || !(room as ChatRoom).participants.includes(user._id)) {
+    if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(status.INVALID_ARGUMENT,
         'Room does not exist or you don\'t have access');
     }
 
     const filterQuery = {
-      room: (room as ChatRoom)._id,
+      room: room._id,
       readBy: { $ne: user._id },
     };
 
@@ -340,8 +338,8 @@ export class ChatRoutes {
       .updateMany(filterQuery, { $push: { readBy: user._id } });
     return {
       event: 'messagesRead',
-      receivers: [(room as ChatRoom)._id],
-      data: { room: (room as ChatRoom)._id, readBy: user._id },
+      receivers: [room._id],
+      data: { room: room._id, readBy: user._id },
     };
   }
 
@@ -353,13 +351,13 @@ export class ChatRoutes {
         path: '/new',
         action: ConduitRouteActions.POST,
         bodyParams: {
-          roomName: TYPE.String,
+          roomName: ConduitString.Required,
           users: [TYPE.String],
         },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('CreateRoom', {
-        roomId: TYPE.String,
+        roomId: ConduitString.Required,
       }),
       this.createRoom.bind(this),
     );
@@ -369,7 +367,7 @@ export class ChatRoutes {
         path: '/add/:roomId',
         action: ConduitRouteActions.UPDATE,
         urlParams: {
-          roomId: TYPE.String,
+          roomId: ConduitString.Required,
         },
         bodyParams: {
           users: [TYPE.String],
@@ -385,7 +383,7 @@ export class ChatRoutes {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
         urlParams: {
-          roomId: TYPE.String,
+          roomId: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -395,11 +393,11 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
+        path: '/rooms/:id',
+        action: ConduitRouteActions.GET,
         urlParams: {
           id: ConduitString.Required,
         },
-        path: '/rooms/:id',
-        action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
@@ -408,27 +406,27 @@ export class ChatRoutes {
     this._routingManager.route(
       {
         path: '/rooms',
-        queryParams: {
-          skip: TYPE.Number,
-          limit: TYPE.Number,
-        },
         action: ConduitRouteActions.GET,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+        },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatRoomsResponse', {
         rooms: ['ChatRoom'],
-        count: TYPE.Number,
+        count: ConduitNumber.Required,
       }),
       this.getRooms.bind(this),
     );
 
     this._routingManager.route(
       {
+        path: '/messages/:id',
+        action: ConduitRouteActions.GET,
         urlParams: {
           id: ConduitString.Required,
         },
-        path: '/messages/:id',
-        action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
@@ -440,15 +438,15 @@ export class ChatRoutes {
         path: '/messages',
         action: ConduitRouteActions.GET,
         queryParams: {
-          roomId: TYPE.String,
-          skip: TYPE.Number,
-          limit: TYPE.Number,
+          roomId: ConduitString.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
         },
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatMessagesResponse', {
         messages: ['ChatMessage'],
-        count: TYPE.Number,
+        count: ConduitNumber.Required,
       }),
       this.getMessages.bind(this),
     );
@@ -460,7 +458,7 @@ export class ChatRoutes {
           path: '/messages/:messageId',
           action: ConduitRouteActions.DELETE,
           urlParams: {
-            messageId: TYPE.String,
+            messageId: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
         },
@@ -475,10 +473,10 @@ export class ChatRoutes {
           path: '/messages/:messageId',
           action: ConduitRouteActions.UPDATE,
           urlParams: {
-            messageId: TYPE.String,
+            messageId: ConduitString.Required,
           },
           bodyParams: {
-            newMessage: TYPE.String,
+            newMessage: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
         },
