@@ -19,9 +19,8 @@ import moment = require('moment');
 
 export class LocalHandlers {
   private emailModule: Email;
-  private sms: SMS;
+  private smsModule: SMS;
   private initialized: boolean = false;
-  private identifier: string = 'email';
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
   }
@@ -29,15 +28,16 @@ export class LocalHandlers {
   async validate(): Promise<Boolean> {
     const config = ConfigController.getInstance().config;
     let promise: Promise<void>;
-    this.identifier = config.local.identifier;
-    if (this.identifier !== 'username') {
-      promise = this.grpcSdk.config.get('email').then((emailConfig: any) => {
-        if (!emailConfig.active) {
-          throw ConduitError.forbidden(
-            'Cannot use local authentication without email module being enabled',
-          );
-        }
-      });
+    if (config.local.verification.send_email) {
+      promise = this.grpcSdk.config.get('email')
+        .then((emailConfig: any) => {
+          if (!emailConfig.active) {
+            throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+          }
+        })
+        .catch(_ => {
+          throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+        });
     } else {
       promise = Promise.resolve();
     }
@@ -53,6 +53,7 @@ export class LocalHandlers {
         return true;
       })
       .catch((err: Error) => {
+        console.error(err.message);
         console.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
@@ -65,10 +66,10 @@ export class LocalHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
 
-    if (email.indexOf('+') !== -1) {
+    if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters',
+        'Invalid email address provided',
       );
     }
 
@@ -77,22 +78,21 @@ export class LocalHandlers {
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
 
-    let hashedPassword = await AuthUtils.hashPassword(password);
-    const isVerified = this.identifier === 'username';
+    const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
       email,
       hashedPassword,
-      isVerified,
+      isVerified: false,
     });
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
     const config = ConfigController.getInstance().config;
 
-    let serverConfig = await this.grpcSdk.config.getServerConfig();
-    let url = serverConfig.url;
+    const serverConfig = await this.grpcSdk.config.getServerConfig();
+    const url = serverConfig.url;
 
-    if (config.local.identifier === 'email' && config.local.sendVerificationEmail) {
+    if (config.local.verification.send_email) {
       let verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -123,10 +123,10 @@ export class LocalHandlers {
 
     const clientId = context.clientId;
 
-    if (email.indexOf('+') !== -1) {
+    if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Email contains unsupported characters',
+        'Invalid email address provided',
       );
     }
 
@@ -149,7 +149,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
     const config = ConfigController.getInstance().config;
-    if (config.local.verificationRequired && !user.isVerified) {
+    if (config.local.verification.required && !user.isVerified) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'You must verify your account to login',
@@ -157,7 +157,7 @@ export class LocalHandlers {
     }
 
     if (user.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, user.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -218,7 +218,7 @@ export class LocalHandlers {
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized || isNil(this.emailModule)) {
+    if (!this.initialized) {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
@@ -227,7 +227,7 @@ export class LocalHandlers {
 
     const user: User | null = await User.getInstance().findOne({ email });
 
-    if (isNil(user) || (config.local.verificationRequired && !user.isVerified))
+    if (isNil(user) || (config.local.verification.required && !user.isVerified))
       return 'Ok';
 
     let oldToken: Token | null = await Token.getInstance().findOne({
@@ -255,7 +255,7 @@ export class LocalHandlers {
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized || isNil(this.emailModule)) {
+    if (!this.initialized) {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     }
 
@@ -348,7 +348,7 @@ export class LocalHandlers {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.sms,dbUser.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, dbUser.phoneNumber!);
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -389,7 +389,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Change password token not found');
     }
 
-    const verified = await this.sms.verify(token.token, code);
+    const verified = await this.smsModule.verify(token.token, code);
 
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
@@ -420,8 +420,8 @@ export class LocalHandlers {
     });
 
     if (isNil(verificationTokenDoc)) {
-      if (config.local.verification_redirect_uri) {
-        return { redirect: config.local.verification_redirect_uri };
+      if (config.local.verification.redirect_uri) {
+        return { redirect: config.verification.redirect_uri };
       } else {
         return 'Email verified';
       }
@@ -443,8 +443,8 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.local.verification_redirect_uri) {
-      return { redirect: config.local.verification_redirect_uri };
+    if (config.verification.redirect_uri) {
+      return { redirect: config.verification.redirect_uri };
     }
     return 'Email verified';
   }
@@ -471,7 +471,7 @@ export class LocalHandlers {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    const verificationSid = await AuthUtils.sendVerificationCode(this.sms,phoneNumber);
+    const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, phoneNumber);
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
@@ -513,7 +513,7 @@ export class LocalHandlers {
         'No verification record for this user',
       );
 
-    const verified = await this.sms.verify(verificationRecord.token, code);
+    const verified = await this.smsModule.verify(verificationRecord.token, code);
 
     if (!verified.verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
@@ -563,11 +563,9 @@ export class LocalHandlers {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (config.local.identifier !== 'username') {
+    if (config.local.verification.send_email) {
       await this.grpcSdk.config.moduleExists('email');
-
       await this.grpcSdk.waitForExistence('email');
-
       this.emailModule = this.grpcSdk.emailProvider!;
     }
 
@@ -578,7 +576,7 @@ export class LocalHandlers {
     if (config.twofa.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
-      this.sms = this.grpcSdk.sms!;
+      this.smsModule = this.grpcSdk.sms!;
     } else {
       console.log('sms 2fa not active');
     }
@@ -586,12 +584,12 @@ export class LocalHandlers {
     if ((config.phoneAuthentication.enabled) && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
-      this.sms = this.grpcSdk.sms!;
+      this.smsModule = this.grpcSdk.sms!;
     } else {
       console.log('phone authentication not active');
     }
 
-    if (config.local.identifier === 'email') {
+    if (config.local.verification.send_email) {
       this.registerTemplates();
     }
     this.initialized = true;
@@ -613,5 +611,4 @@ export class LocalHandlers {
         console.error('Internal error while registering email templates');
       });
   }
-
 }

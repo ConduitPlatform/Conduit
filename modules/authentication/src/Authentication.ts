@@ -1,21 +1,22 @@
 import {
   ManagedModule,
   ConfigController,
-  DatabaseProvider
-} from "@conduitplatform/grpc-sdk";
+  DatabaseProvider,
+} from '@conduitplatform/grpc-sdk';
 
-import path from "path";
-import { isNil } from "lodash";
-import { status } from "@grpc/grpc-js";
+import path from 'path';
+import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
 import * as models from './models';
-import { ISignTokenOptions } from "./interfaces/ISignTokenOptions";
-import { AuthUtils } from "./utils/auth";
-import { TokenType } from "./constants/TokenType";
-import { v4 as uuid } from "uuid";
-import moment from "moment";
+import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
+import { AuthUtils } from './utils/auth';
+import { TokenType } from './constants/TokenType';
+import { v4 as uuid } from 'uuid';
+import moment from 'moment';
+import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
 
 export default class Authentication extends ManagedModule {
   config = AppConfigSchema;
@@ -42,6 +43,7 @@ export default class Authentication extends ManagedModule {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await migrateLocalAuthConfig(this.grpcSdk);
   }
 
   async onRegister() {
@@ -120,7 +122,16 @@ export default class Authentication extends ManagedModule {
   async userCreate(call: any, callback: any) {
     const email = call.request.email;
     let password = call.request.password;
-    let verify = call.request.verify;
+    const verify = call.request.verify;
+
+    const verificationConfig = ConfigController.getInstance().config.local.verification;
+    if (verify && !(verificationConfig.required && verificationConfig.send_email)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Email verification is disabled. Configuration required.',
+      });
+    }
+
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
     }
@@ -129,10 +140,10 @@ export default class Authentication extends ManagedModule {
       if (user) {
         return callback({ code: status.ALREADY_EXISTS, message: 'User already exists' });
       }
-      if (email.indexOf('+') !== -1) {
+      if (AuthUtils.invalidEmailAddress(email)) {
         return callback({
           code: status.INVALID_ARGUMENT,
-          message: 'Email contains unsupported characters',
+          message: 'Invalid email address provided',
         });
       }
       const hashedPassword = await AuthUtils.hashPassword(password);

@@ -44,7 +44,7 @@ export class AuthenticationRoutes {
   private slackHandlers: SlackHandlers;
   private figmaHandlers: FigmaHandlers;
   private microsoftHandlers: MicrosoftHandlers;
-  private _routingManager: RoutingManager;
+  private readonly _routingManager: RoutingManager;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
@@ -79,16 +79,12 @@ export class AuthenticationRoutes {
         {
           path: '/local/new',
           action: ConduitRouteActions.POST,
-          description: `Creates a new user using either email/password or username/password.
-               The combination depends on the provided configuration. 
-               In the case of email/password the email module is required and 
-               the user will receive an email before being able to login.`,
+          description: 'Creates a new user using email/password.',
           bodyParams: {
             email: ConduitString.Required,
             password: ConduitString.Required,
           },
-          middlewares:
-            authConfig.local.identifier === 'username' ? ['authMiddleware'] : [],
+          middlewares: [],
         },
         new ConduitRouteReturnDefinition('RegisterResponse', {
           userId: ConduitString.Optional,
@@ -115,7 +111,12 @@ export class AuthenticationRoutes {
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
-      if (authConfig.local.identifier !== 'username') {
+
+      let emailOnline = false;
+      await this.grpcSdk.config.moduleExists('email')
+        .then(_ => { emailOnline = true; })
+        .catch(_ => {});
+      if (emailOnline) {
         this._routingManager.route(
           {
             path: '/forgot-password',
@@ -142,6 +143,7 @@ export class AuthenticationRoutes {
           new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
           this.localHandlers.resetPassword.bind(this.localHandlers),
         );
+      }
 
         this._routingManager.route(
           {
@@ -161,20 +163,6 @@ export class AuthenticationRoutes {
 
         this._routingManager.route(
           {
-            path: '/local/change-password/verify',
-            action: ConduitRouteActions.POST,
-            description: `Used to provide the 2FA token for password change.`,
-            bodyParams: {
-              code: ConduitString.Required,
-            },
-            middlewares: ['authMiddleware'],
-          },
-          new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-          this.localHandlers.verifyChangePassword.bind(this.localHandlers),
-        );
-
-        this._routingManager.route(
-          {
             path: '/hook/verify-email/:verificationToken',
             action: ConduitRouteActions.GET,
             description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
@@ -186,7 +174,6 @@ export class AuthenticationRoutes {
           this.localHandlers.verifyEmail.bind(this.localHandlers),
         );
 
-      }
       if (authConfig?.twofa.enabled) {
         this._routingManager.route(
           {
@@ -245,6 +232,20 @@ export class AuthenticationRoutes {
           },
           new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
           this.localHandlers.disableTwoFa.bind(this.localHandlers),
+        );
+
+        this._routingManager.route(
+          {
+            path: '/local/change-password/verify',
+            action: ConduitRouteActions.POST,
+            description: `Used to provide the 2FA token for password change.`,
+            bodyParams: {
+              code: ConduitString.Required,
+            },
+            middlewares: ['authMiddleware'],
+          },
+          new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+          this.localHandlers.verifyChangePassword.bind(this.localHandlers),
         );
       }
       enabled = true;

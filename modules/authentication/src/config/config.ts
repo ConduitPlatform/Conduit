@@ -4,31 +4,26 @@ export default {
     default: true,
   },
   local: {
-    identifier: {
-      doc:
-        'The field name to use for id for a user logging in with local strategy ex. email/username',
-      format: 'String',
-      default: 'email',
-    },
     enabled: {
       doc: 'Defines if this strategy is active or not',
       format: 'Boolean',
       default: true,
     },
-    sendVerificationEmail: {
-      doc:
-        'Defines if the authenticator should automatically send a verification e-mail to the user',
-      format: 'Boolean',
-      default: true,
-    },
-    verificationRequired: {
-      doc: 'Defines if email verification is required for login',
-      format: 'Boolean',
-      default: true,
-    },
-    verification_redirect_uri: {
-      format: 'String',
-      default: '',
+    verification: {
+      required: {
+        doc: 'Defines if email verification is required for login',
+        format: 'Boolean',
+        default: false,
+      },
+      send_email: {
+        doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
+        format: 'Boolean',
+        default: false,
+      },
+      redirect_uri: {
+        format: 'String',
+        default: '',
+      },
     },
     forgot_password_redirect_uri: {
       format: 'String',
