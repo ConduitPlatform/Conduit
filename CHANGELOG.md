@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.9](https://github.com/ConduitPlatform/Conduit/compare/v0.10.8...v0.10.9) (2022-04-04)
+
+
+### Bug Fixes
+
+* **router:** socket emits ([#110](https://github.com/ConduitPlatform/Conduit/issues/110)) ([91ebfb3](https://github.com/ConduitPlatform/Conduit/commit/91ebfb380552a763acd7d73ce59f0a9f1cc4eda4))
+
 ### [0.10.8](https://github.com/ConduitPlatform/Conduit/compare/v0.10.7...v0.10.8) (2022-03-28)
 
 
