@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.5](https://github.com/ConduitPlatform/Conduit/compare/v0.12.4...v0.12.5) (2022-04-04)
+
+
+### Features
+
+* **authentication,config:** remove Authentication's dependency on Email for unverified local email auth strategies ([#103](https://github.com/ConduitPlatform/Conduit/issues/103)) ([9574848](https://github.com/ConduitPlatform/Conduit/commit/9574848c2a987eecdd6cd3a14c221866f0c2831b))
+
+
+### Bug Fixes
+
+* **authentication:** googleHandlers being validated in place of githubHandlers ([#101](https://github.com/ConduitPlatform/Conduit/issues/101)) ([f9693ec](https://github.com/ConduitPlatform/Conduit/commit/f9693ec4aa4f322dead6af380f872876c7ae19aa))
+* **chat:** createRoom, addUserToRoom app routes ([#108](https://github.com/ConduitPlatform/Conduit/issues/108)) ([bb53227](https://github.com/ConduitPlatform/Conduit/commit/bb53227ec6da501493a6e6913413f679775085eb))
+* **database:** createCustomEndpointRoute argument type changed ([#97](https://github.com/ConduitPlatform/Conduit/issues/97)) ([51b5d34](https://github.com/ConduitPlatform/Conduit/commit/51b5d3412f2a1e994ba7088ddb2dc7bf7ad88fe5))
+* **email,authentication,forms:** email activation bus event pub/sub ([#105](https://github.com/ConduitPlatform/Conduit/issues/105)) ([7ea82f8](https://github.com/ConduitPlatform/Conduit/commit/7ea82f836c5900804c65284bc4825b2e73718554))
+* **router:** socket emits ([#109](https://github.com/ConduitPlatform/Conduit/issues/109)) ([9b88a52](https://github.com/ConduitPlatform/Conduit/commit/9b88a52104de947eeb0da53b1378eff2d60cde9b))
+
 ### [0.12.4](https://github.com/ConduitPlatform/Conduit/compare/v0.12.3...v0.12.4) (2022-03-29)
 
 
