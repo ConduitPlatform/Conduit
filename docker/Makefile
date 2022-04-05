@@ -1,4 +1,4 @@
-.PHONY: zero-to-hero setup create-network start-conduit start-all stop-all clean mrproper \
+.PHONY: zero-to-hero setup create-network start-conduit start-all stop-all clean mrproper update \
 				start-core stop-core rm-core rmi-core \
 				start-authentication stop-authentication rm-authentication rmi-authentication \
 				start-chat stop-chat rm-chat rmi-chat \
@@ -144,6 +144,11 @@ mrproper:
 	else \
 		echo "Network already removed"; \
 	fi
+
+update:
+	@rm $(abspath $(lastword $(MAKEFILE_LIST)))
+	curl -L https://raw.githubusercontent.com/ConduitPlatform/Conduit/main/docker/Makefile > \
+		$(abspath $(lastword $(MAKEFILE_LIST)))
 
 # ----- Docker Functions ----- #
 
