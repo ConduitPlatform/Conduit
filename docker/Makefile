@@ -62,7 +62,7 @@ start-conduit:
 	@$(MAKE) --no-print-directory start-core
 	@sleep 3
 	@$(MAKE) --no-print-directory start-database
-	@sleep 0.5
+	@sleep 2
 	@$(MAKE) --no-print-directory start-authentication
 	@$(MAKE) --no-print-directory start-ui
 
@@ -70,7 +70,7 @@ start-all:
 	@$(MAKE) --no-print-directory start-conduit
 	@sleep 1
 	@$(MAKE) --no-print-directory start-database
-	@sleep 0.5
+	@sleep 2
 	@$(MAKE) --no-print-directory start-authentication
 	@sleep 0.2
 	@$(MAKE) --no-print-directory start-chat
