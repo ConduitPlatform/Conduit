@@ -6,7 +6,8 @@ import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
-
+import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+let parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -82,7 +83,44 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async introspectDatabase(): Promise<DatabaseAdapter<any>> {
-    throw new Error('Method not implemented.');
+    const db = this.mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    console.log('collections', collections);
+
+    (await db.listCollections().toArray()).forEach(async (c) => {
+      parseSchema(
+        db.collection(c.name).find(),
+        async (err: Error, originalSchema: any) => {
+          if (err) {
+            throw new GrpcError(status.INTERNAL, err.message);
+          }
+          originalSchema = mongoSchemaConverter(originalSchema);
+
+          const schema = new ConduitSchema(c.name, originalSchema, {
+            timestamps: true,
+            conduit: {
+              noSync: true,
+              permissions: {
+                extendable: false,
+                canCreate: false,
+                canModify: 'Nothing',
+                canDelete: false,
+              },
+              cms: {
+                authentication: false,
+                crudOperations: false,
+                enabled: false,
+              },
+            },
+          });
+          schema.ownerModule = 'database';
+          console.log(schema);
+
+          await this.createSchemaFromAdapter(schema);
+        }
+      );
+    });
+    return this;
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {

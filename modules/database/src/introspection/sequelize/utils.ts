@@ -14,22 +14,22 @@ export function sqlSchemaConverter(sqlSchema: any) {
 }
 
 function extractType(type: string) {
-  switch(type)  {
+  switch (type) {
     case 'TEXT':
     case type.match(/^CHARACTER VARYING/)?.input:
     case 'ENUM':
-      return TYPE.String
+      return TYPE.String;
     case 'INTEGER':
-    case 'SMALLINT':      
+    case 'SMALLINT':
     case 'BIGINT':
     case 'FLOAT':
     case 'DOUBLE':
     case 'DECIMAL':
     case 'NUMERIC':
-      return TYPE.Number
+      return TYPE.Number;
     case 'BIT':
     case 'BOOLEAN':
-      return TYPE.Boolean
+      return TYPE.Boolean;
     case 'DATE':
     case 'TIME':
     case 'TIME WITH TIME ZONE':
@@ -37,30 +37,33 @@ function extractType(type: string) {
     case 'TIMESTAMP':
     case 'TIMESTAMP WITHOUT TIME ZONE':
     case 'TIMESTAMP WITH TIME ZONE':
-      return TYPE.Date
+      return TYPE.Date;
     case 'JSON':
-      return TYPE.JSON
+      return TYPE.JSON;
     case 'UUID':
-      return TYPE.ObjectId
+      return TYPE.ObjectId;
     default:
-      return TYPE.String
+      return TYPE.String;
   }
 }
 
-function extractProperties(field : any,fieldName: string) {
-  if(field.type)
-  if(field.hasOwnProperty('enum')) {
+function extractProperties(field: any, fieldName: string) {
+  if (field.hasOwnProperty('enum')) {
     field.enum = field.special;
     delete field.special;
   }
-  if(field.hasOwnProperty('foreignKey') && !field.foreignKey.isPrimaryKey) {
+  if (field.hasOwnProperty('foreignKey') && !field.foreignKey.isPrimaryKey) {
     field.type = TYPE.Relation;
     field.model = field.foreignKey.target_table;
   }
-  if(field.type === TYPE.Date && field.defaultValue === 'CURRENT_TIMESTAMP' || field.defaultValue === 'CURRENT_DATE' || field.defaultValue === 'now()' ) {
-    field.defaultValue  = Sequelize.fn('now');
+  if (
+    (field.type === TYPE.Date && field.defaultValue === 'CURRENT_TIMESTAMP') ||
+    field.defaultValue === 'CURRENT_DATE' ||
+    field.defaultValue === 'now()'
+  ) {
+    field.defaultValue = Sequelize.fn('now');
   }
-  if(field.hasOwnProperty('defaultValue') && !isNil(field.defaultValue)) {
+  if (field.hasOwnProperty('defaultValue') && !isNil(field.defaultValue)) {
     field.default = field.defaultValue;
   }
 
