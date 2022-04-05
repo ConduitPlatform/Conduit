@@ -15,8 +15,8 @@
 
 # ------ Default Values ------ #
 
-TAG         ?= v0.12.4
-UI_TAG      ?= v0.12.0
+TAG         ?= v0.12.5
+UI_TAG      ?= v0.12.1
 DOCKER      ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
 CONDUIT_CORE_NETWORK_NAME = conduit
@@ -126,9 +126,6 @@ mrproper:
 # 	@$(MAKE) --no-print-directory rmi-redis
 # 	@$(MAKE) --no-print-directory rmi-mongo
 # 	@$(MAKE) --no-print-directory rmi-postgres
-	@$(MAKE) --no-print-directory rm-redis
-	@$(MAKE) --no-print-directory rm-mongo
-	@$(MAKE) --no-print-directory rm-postgres
 	@$(MAKE) --no-print-directory rmi-ui
 	@$(MAKE) --no-print-directory rmi-core
 	@$(MAKE) --no-print-directory rmi-authentication
@@ -212,9 +209,9 @@ start-chat:
 	       -d -e REGISTER_NAME="true" -e CONDUIT_SERVER="conduit-core:55152")
 
 start-database:
-	@if [ ${DB_TYPE} == "mongodb" ]; then \
+	@if [ ${DB_TYPE} = "mongodb" ]; then \
 		make start-mongo; \
-	elif [ ${DB_TYPE} == "postgres" ]; then \
+	elif [ ${DB_TYPE} = "postgres" ]; then \
 		make start-postgres; \
 	else \
 		printf "\nInvalid DB_TYPE override. Choose between 'mongodb' and 'postgres' (default: mongodb)\n"; \
@@ -252,7 +249,7 @@ start-storage:
 
 start-ui:
 	$(call start,Conduit Admin Panel,conduit-ui,ghcr.io/conduitplatform/conduit-ui,${UI_TAG},conduit-ui,yarn start, \
-	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL})
+	       -d -p 8080:8080 -e CONDUIT_URL=${CONDUIT_URL} -e MASTER_KEY=${MASTER_KEY})
 
 start-redis:
 	$(call start,Redis,conduit-redis,docker.io/library/redis,latest,redis,redis-server,-d -p 6379:6379)
