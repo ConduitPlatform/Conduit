@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Admin Panel Issue Tracker 💻
+    url: https://github.com/ConduitPlatform/Conduit-UI/issues
+    about: Report issues related to the Conduit Admin Panel
+  - name: Documentation 📄
+    url: https://getconduit.dev/docs/overview/intro
+    about: Check out our Documentation
+  - name: Need Assistance? 🆘
+    url: https://discord.gg/8xjzG75c
+    about: Reach us on Discord
