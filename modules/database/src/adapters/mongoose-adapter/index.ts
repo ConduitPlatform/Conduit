@@ -116,6 +116,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           schema.ownerModule = 'database';
 
           schemas.set(c.name, schema);
+          console.log(`Introspected schema ${c.name}`, schema);
         }
       );
     });

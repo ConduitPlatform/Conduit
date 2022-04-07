@@ -4,14 +4,14 @@
 
 import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 
-export function mongoSchemaConverter(mongoSchema: any) {
+export function mongoSchemaConverter(mongoSchema: any) : ConduitModel {
 console.log(mongoSchema);
   const conduitSchema: Partial<ConduitModel> = {};
 
   for (const field of mongoSchema.fields) {    
     conduitSchema[field.name] = extractType(field);
   }
-  return conduitSchema;
+  return conduitSchema as ConduitModel;
 }
 
 function extractType(field: any) : ConduitModelField {
@@ -23,5 +23,8 @@ function extractType(field: any) : ConduitModelField {
   } else {
     conduitField.type = field.type;
   }
+
+  conduitField.unique = !field.has_duplicates;
+
   return conduitField;
 }

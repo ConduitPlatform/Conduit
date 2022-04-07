@@ -474,6 +474,11 @@ export class SchemaAdmin {
     return { modules };
   }
 
+  async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    await this.database.introspectDatabase();
+    return { introspect: 'success'};
+  }
+
   private patchSchemaPerms(
     schema: any,
     // @ts-ignore
