@@ -85,7 +85,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async introspectDatabase(): Promise<DatabaseAdapter<any>> {
     const db = this.mongoose.connection.db;
     const collections = await db.listCollections().toArray();
-    console.log('collections', collections);
+    const schemas = new Map<string,ConduitSchema>();
 
     (await db.listCollections().toArray()).forEach(async (c) => {
       parseSchema(
@@ -114,12 +114,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             },
           });
           schema.ownerModule = 'database';
-          console.log(schema);
 
-          await this.createSchemaFromAdapter(schema);
+          schemas.set(c.name, schema);
         }
       );
     });
+    
     return this;
   }
 
