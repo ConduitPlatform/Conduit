@@ -47,16 +47,16 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export class ConduitRoutingController {
   private readonly _expressApp: Application;
-  private readonly _conduitSdk: ConduitCommons;
+  private readonly _commons: ConduitCommons;
   private _restRouter: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
 
-  constructor(conduitSdk: ConduitCommons, expressApp: Application) {
+  constructor(commons: ConduitCommons, expressApp: Application) {
     this._expressApp = expressApp;
-    this._conduitSdk = conduitSdk;
-    this._restRouter = new RestController(this._conduitSdk, swaggerRouterMetadata);
+    this._commons = commons;
+    this._restRouter = new RestController(this._commons, swaggerRouterMetadata);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();
@@ -82,11 +82,11 @@ export class ConduitRoutingController {
   }
 
   initGraphQL() {
-    this._graphQLRouter = new GraphQLController(this._conduitSdk);
+    this._graphQLRouter = new GraphQLController(this._commons);
   }
 
   initSockets() {
-    this._socketRouter = new SocketController(this._conduitSdk, this._expressApp);
+    this._socketRouter = new SocketController(this._commons, this._expressApp);
   }
 
   registerMiddleware(

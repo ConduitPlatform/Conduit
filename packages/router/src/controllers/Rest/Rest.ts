@@ -26,8 +26,8 @@ export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
 
-  constructor(conduitSdk: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
-    super(conduitSdk);
+  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
+    super(commons);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
@@ -105,7 +105,7 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, (req, res, _) => {
+    routerMethod(route.input.path, (req, res) => {
       let context = extractRequestData(req);
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
@@ -235,7 +235,7 @@ export class RestController extends ConduitRouter {
       const [method, path] = key.split('-');
       this.addRoute(path, route);
     });
-    this._registeredRoutes.forEach((route, _) => {
+    this._registeredRoutes.forEach((route) => {
       this.addConduitRoute(route);
     });
   }

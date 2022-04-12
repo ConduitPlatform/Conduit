@@ -22,11 +22,11 @@ export class HttpServer {
 
   constructor(
     private readonly port: number | string,
-    private readonly conduitSdk: ConduitCommons,
+    private readonly commons: ConduitCommons,
   ) {}
 
   initialize() {
-    this.router = this.conduitSdk.getRouter();
+    this.router = this.commons.getRouter();
     this.registerGlobalMiddleware();
     this.registerRoutes();
     this._initialized = true;
@@ -73,7 +73,7 @@ export class HttpServer {
           action: Actions.GET,
         },
         new ReturnDefinition('HelloResult', 'String'),
-        async (_) => {
+        async () => {
           return 'Hello there!';
         }
       )
@@ -89,8 +89,8 @@ export class HttpServer {
           },
         },
         new ReturnDefinition('HealthResult', 'String'),
-        (_) => {
-          return new Promise((resolve, _) => {
+        () => {
+          return new Promise((resolve) => {
             if (Core.getInstance().initialized) {
               resolve('Conduit is online!');
             } else {

@@ -16,7 +16,7 @@ import * as adminRoutes from './admin/routes';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
-  private readonly _conduitSdk: ConduitCommons;
+  private readonly _commons: ConduitCommons;
   private readonly _expressApp: Application;
   private _internalRouter: ConduitRoutingController;
   private readonly _globalMiddlewares: string[];
@@ -25,17 +25,17 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
-    conduitSdk: ConduitCommons,
+    commons: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
     packageDefinition: any,
     server: Server,
     expressApp: Application
   ) {
-    this._conduitSdk = conduitSdk;
+    this._commons = commons;
     this._expressApp = expressApp;
     this._routes = [];
     this._globalMiddlewares = [];
-    this._internalRouter = new ConduitRoutingController(this._conduitSdk, this._expressApp);
+    this._internalRouter = new ConduitRoutingController(this._commons, this._expressApp);
     this.initGraphQL();
     this.initSockets();
     const protoDescriptor = loadPackageDefinition(packageDefinition);
@@ -53,7 +53,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   async highAvailability() {
-    let sdk: ConduitCommons = this._conduitSdk
+    let sdk: ConduitCommons = this._commons
     let r = await sdk.getState().getKey('router');
     if (!r || r.length === 0) return;
     let state = JSON.parse(r);
@@ -83,7 +83,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   updateState(protofile: string, routes: any, url: string) {
-    let sdk: ConduitCommons = this._conduitSdk
+    let sdk: ConduitCommons = this._commons
     sdk
       .getState()
       .getKey('router')
@@ -117,7 +117,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   publishAdminRouteData(protofile: string, routes: any, url: string) {
-    let sdk: ConduitCommons = this._conduitSdk
+    let sdk: ConduitCommons = this._commons
     sdk.getBus().publish(
       'router',
       JSON.stringify({
@@ -132,7 +132,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        let result = this._conduitSdk
+        let result = this._commons
           .getConfigManager()!
           .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
@@ -318,8 +318,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   private registerAdminRoutes() {
-    this._conduitSdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
-    this._conduitSdk.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
+    this._commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+    this._commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
 }
 

@@ -13,7 +13,7 @@ export abstract class ConduitRouter {
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(
-    protected readonly conduitSdk: ConduitCommons,
+    protected readonly commons: ConduitCommons,
   ) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
@@ -44,13 +44,13 @@ export abstract class ConduitRouter {
   }
 
   protected findInCache(hashKey: string) {
-    return this.conduitSdk
+    return this.commons
       .getState()
       .getKey('hash-' + hashKey);
   }
   // age is in seconds
   protected storeInCache(hashKey: string, data: any, age: number) {
-    this.conduitSdk
+    this.commons
       .getState()
       .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
@@ -63,7 +63,7 @@ export abstract class ConduitRouter {
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
-    let primaryPromise = new Promise((resolve, _) => {
+    let primaryPromise = new Promise((resolve) => {
       resolve({});
     });
     const self = this;

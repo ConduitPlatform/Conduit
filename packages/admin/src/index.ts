@@ -44,37 +44,37 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export default class AdminModule extends IConduitAdmin {
-  conduitSdk: ConduitCommons;
+  commons: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _sdkRoutes: ConduitRoute[];
   private readonly _grpcRoutes: any = {};
 
   constructor(
-    conduitSdk: ConduitCommons,
+    commons: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
     packageDefinition: any,
     server: Server,
   ) {
     super();
-    this.conduitSdk = conduitSdk;
+    this.commons = commons;
     this.grpcSdk = grpcSdk;
-    this._restRouter = new RestController(this.conduitSdk, swaggerRouterMetadata);
+    this._restRouter = new RestController(this.commons, swaggerRouterMetadata);
 
     // Register Middleware
     this._restRouter.registerRoute(
       '*',
       [
-        middleware.getAdminMiddleware(this.conduitSdk),
-        middleware.getAuthMiddleware(this.grpcSdk, this.conduitSdk),
+        middleware.getAdminMiddleware(this.commons),
+        middleware.getAuthMiddleware(this.grpcSdk, this.commons),
       ],
     );
 
     this._grpcRoutes = {};
     this._sdkRoutes = [
-      adminRoutes.getLoginRoute(this.conduitSdk),
-      adminRoutes.getModulesRoute(this.conduitSdk),
-      adminRoutes.getCreateAdminRoute(this.conduitSdk),
+      adminRoutes.getLoginRoute(this.commons),
+      adminRoutes.getModulesRoute(this.commons),
+      adminRoutes.getCreateAdminRoute(this.commons),
     ];
 
     // Register Routes
@@ -92,7 +92,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize() {
-    await this.conduitSdk
+    await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     await this.handleDatabase().catch(console.log);
@@ -107,7 +107,7 @@ export default class AdminModule extends IConduitAdmin {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        const result = this.conduitSdk
+        const result = this.commons
           .getConfigManager()!
           .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
@@ -146,13 +146,13 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private attachRouter() {
-    this.conduitSdk.getRouter().registerExpressRouter('/admin', (req, res, next) => {
+    this.commons.getRouter().registerExpressRouter('/admin', (req, res, next) => {
       this._restRouter.handleRequest(req, res, next);
     });
   }
 
   private async highAvailability() {
-    const r = await this.conduitSdk.getState().getKey('admin');
+    const r = await this.commons.getState().getKey('admin');
     if (!r || r.length === 0) {
       this.cleanupRoutes();
       return;
@@ -170,7 +170,7 @@ export default class AdminModule extends IConduitAdmin {
     }
     this.cleanupRoutes();
 
-    this.conduitSdk.getBus().subscribe('admin', (message: string) => {
+    this.commons.getBus().subscribe('admin', (message: string) => {
       const messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
@@ -186,7 +186,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private updateState(protofile: string, routes: any, url: string) {
-    this.conduitSdk
+    this.commons
       .getState()
       .getKey('admin')
       .then((r: any) => {
@@ -207,7 +207,7 @@ export default class AdminModule extends IConduitAdmin {
             url,
           });
         }
-        return this.conduitSdk.getState().setKey('admin', JSON.stringify(state));
+        return this.commons.getState().setKey('admin', JSON.stringify(state));
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
@@ -219,7 +219,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private publishAdminRouteData(protofile: string, routes: any, url: string) {
-    this.conduitSdk.getBus().publish(
+    this.commons.getBus().publish(
       'admin',
       JSON.stringify({
         protofile,
@@ -230,7 +230,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private async handleDatabase() {
-    if (!this.grpcSdk.databaseProvider) {
+    if (!this.grpcSdk.database) {
       await this.grpcSdk.waitForExistence('database');
     }
     await this.registerSchemas();
@@ -238,7 +238,7 @@ export default class AdminModule extends IConduitAdmin {
       .findOne({ username: 'admin' })
       .then(async (existing: any) => {
         if (isNil(existing)) {
-          const adminConfig = await this.conduitSdk.getConfigManager().get('admin');
+          const adminConfig = await this.commons.getConfigManager().get('admin');
           const hashRounds = adminConfig.auth.hashRounds;
           return hashPassword('admin', hashRounds);
         }
@@ -314,8 +314,8 @@ export default class AdminModule extends IConduitAdmin {
 
   private registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
-      const modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
-      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

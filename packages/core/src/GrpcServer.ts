@@ -16,7 +16,7 @@ export class GrpcServer {
   get initialized() { return this._initialized; }
 
   constructor(
-    private readonly conduitSdk: ConduitCommons,
+    private readonly commons: ConduitCommons,
     private readonly port: number
   ) {
     const server: Server = new Server({
@@ -46,7 +46,7 @@ export class GrpcServer {
       console.log('gRPC server listening on:', _url);
       const manager = new ConfigManager(
         grpcSdk,
-        this.conduitSdk,
+        this.commons,
         server,
         packageDefinition,
         () => {
@@ -56,18 +56,18 @@ export class GrpcServer {
         }
       );
 
-      this.conduitSdk.registerConfigManager(manager);
-      this.conduitSdk.registerAdmin(
+      this.commons.registerConfigManager(manager);
+      this.commons.registerAdmin(
         new AdminModule(
-          this.conduitSdk,
+          this.commons,
           grpcSdk,
           packageDefinition,
           server
         )
       );
-      this.conduitSdk.registerRouter(
+      this.commons.registerRouter(
         new ConduitDefaultRouter(
-          this.conduitSdk,
+          this.commons,
           grpcSdk,
           packageDefinition,
           server,
@@ -78,25 +78,25 @@ export class GrpcServer {
   }
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
-    await this.conduitSdk.getConfigManager().registerAppConfig();
+    await this.commons.getConfigManager().registerAppConfig();
     let error;
-    this.conduitSdk
+    this.commons
       .getConfigManager()
       .get('core')
       .catch((err: any) => (error = err));
     if (error) {
-      await this.conduitSdk
+      await this.commons
         .getConfigManager()
         .registerModulesConfig('core', convict.getProperties());
     } else {
-      await this.conduitSdk
+      await this.commons
         .getConfigManager()
         .addFieldsToModule('core', convict.getProperties());
     }
 
-    this.conduitSdk.getAdmin().initialize();
-    this.conduitSdk.getConfigManager().initConfigAdminRoutes();
-    this.conduitSdk.registerSecurity(new SecurityModule(this.conduitSdk, grpcSdk));
+    this.commons.getAdmin().initialize();
+    this.commons.getConfigManager().initConfigAdminRoutes();
+    this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
 
     this._initialized = true;
   }

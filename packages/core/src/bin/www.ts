@@ -8,8 +8,7 @@ bootstrap();
 function bootstrap() {
   const httpPort = getHttpPort();
   const grpcPort = getGrpcPort();
-  Core.getInstance();
-  Core.getInstance().initialize(httpPort, grpcPort);
+  Core.getInstance(httpPort, grpcPort);
 }
 
 function getHttpPort() {

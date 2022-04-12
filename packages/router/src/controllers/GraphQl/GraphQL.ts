@@ -32,8 +32,8 @@ export class GraphQLController extends ConduitRouter {
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
-  constructor(conduitSdk: ConduitCommons) {
-    super(conduitSdk);
+  constructor(commons: ConduitCommons) {
+    super(commons);
     this.initialize();
     this._parser = new GraphQlParser();
   }

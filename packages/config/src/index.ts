@@ -105,7 +105,7 @@ export default class ConfigManager implements IConfigManager {
           }
         });
       })
-      .catch((_) => {
+      .catch(() => {
         console.error('Failed to recover state');
       });
   }
@@ -114,10 +114,10 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getState()
       .setKey('config', JSON.stringify(state))
-      .then((_) => {
+      .then(() => {
         console.log('Updated state');
       })
-      .catch((_) => {
+      .catch(() => {
         console.error('Failed to recover state');
       });
   }
@@ -136,10 +136,10 @@ export default class ConfigManager implements IConfigManager {
         });
         return this.sdk.getState().setKey('config', JSON.stringify(state));
       })
-      .then((_) => {
+      .then(() => {
         console.log('Updated state');
       })
-      .catch((_) => {
+      .catch(() => {
         console.error('Failed to recover state');
       });
   }
@@ -245,7 +245,7 @@ export default class ConfigManager implements IConfigManager {
       await this.set(moduleName, moduleConfig);
       return callback(null, { result: JSON.stringify(moduleConfig) });
     } catch {
-      throw new GrpcError(status.INTERNAL, 'Could not update module configuration');
+      throw new GrpcError(status.INTERNAL, `Could not update "${moduleName}" configuration`);
     }
   }
 

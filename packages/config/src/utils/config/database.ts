@@ -5,7 +5,7 @@ export class DatabaseConfigUtility {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async registerConfigSchemas(newConfig: any): Promise<any> {
-    const database = this.grpcSdk.databaseProvider;
+    const database = this.grpcSdk.database;
     return database!
       .createSchemaFromAdapter(newConfig)
       .then(() => {

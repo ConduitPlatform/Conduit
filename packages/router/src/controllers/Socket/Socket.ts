@@ -28,8 +28,8 @@ export class SocketController extends ConduitRouter {
     next: NextFunction
   ) => void)[];
 
-  constructor(conduitSdk: ConduitCommons, expressApp: Application) {
-    super(conduitSdk);
+  constructor(commons: ConduitCommons, expressApp: Application) {
+    super(commons);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
       console.error('Redis IP not defined');
       process.exit(-1);
