@@ -8,7 +8,7 @@ import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { MultiDocQuery } from '../../interfaces';
-import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
+import { sqlSchemaConverter, SYSTEM_DB_SCHEMAS } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
@@ -44,9 +44,22 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       },
       singularize: true,
       useDefine : true,
-      closeConnectionAutomatically : false
+      closeConnectionAutomatically : false,
     }
+    
+    let tableNames: string[] = [];
+    let systemSchemas: string[] = [];
 
+    if(await this.isConduitDB()) {
+      //Get all system-db schema names
+       const schemas = await this.models!['_DeclaredSchema'].findMany({
+        $or: [
+          {name: {$in : SYSTEM_DB_SCHEMAS}},
+          {ownerModule: {$ne : 'database'}}
+        ]
+      })
+      systemSchemas = schemas.map((schema : ConduitSchema) => schema.name);
+    }
     const auto = new SequelizeAuto(this.sequelize,'','',options);
     const data = await auto.run();
   
@@ -54,10 +67,15 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     for (const tableName of Object.keys(data.tables)) {
         const table = data.tables[tableName];
         const originalName = tableName.split('.')[1];
-        if(originalName === '_DeclaredSchema') continue;
+        if(originalName === '_DeclaredSchema' || systemSchemas.includes(originalName)) continue;
+
         //temporary solution to avoid breaking existing schemas
         // const name = existingSchemaNames.includes(originalName) ? `_${originalName}` : originalName;
+    
         //convert table fields to ConduitSchema fields
+        if(originalName === 'document') {
+          console.log('ok');
+        }
         sqlSchemaConverter(table);
         const schema = new ConduitSchema(originalName, table as ConduitModel, {
           timestamps: true,
@@ -77,6 +95,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           },
         });
         schema.ownerModule = 'database';
+        console.log(`Introspected schema ${originalName}`, schema);
         await this.createSchemaFromAdapter(schema);
     }
 
@@ -119,7 +138,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
-
+  
     if (schema.name !== '_DeclaredSchema') {
       await this.saveSchemaToDatabase(original);
     }

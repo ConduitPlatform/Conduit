@@ -6,12 +6,14 @@ import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
-import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+import {
+  mongoSchemaConverter,
+  SYSTEM_DB_SCHEMAS,
+} from '../../introspection/mongoose/utils';
 let parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
-
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
@@ -78,49 +80,64 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async isConduitDB(): Promise<boolean> {
-    const collectionNames = (await this.mongoose.connection.db.listCollections().toArray()).map(c => c.name);
-    return  collectionNames.includes('_declaredschemas');
+    const collectionNames = (
+      await this.mongoose.connection.db.listCollections().toArray()
+    ).map((c) => c.name);
+    return collectionNames.includes('_declaredschemas');
   }
 
   async introspectDatabase(): Promise<DatabaseAdapter<any>> {
     const db = this.mongoose.connection.db;
-    const collections = await db.listCollections().toArray();
-    const schemas = new Map<string,ConduitSchema>();
+    const schemas = new Map<string, ConduitSchema>();
 
-    (await db.listCollections().toArray()).forEach(async (c) => {
-      parseSchema(
-        db.collection(c.name).find(),
-        async (err: Error, originalSchema: any) => {
-          if (err) {
-            throw new GrpcError(status.INTERNAL, err.message);
-          }
-          originalSchema = mongoSchemaConverter(originalSchema);
-
-          const schema = new ConduitSchema(c.name, originalSchema, {
-            timestamps: true,
-            conduit: {
-              noSync: true,
-              permissions: {
-                extendable: false,
-                canCreate: false,
-                canModify: 'Nothing',
-                canDelete: false,
-              },
-              cms: {
-                authentication: false,
-                crudOperations: false,
-                enabled: false,
-              },
-            },
-          });
-          schema.ownerModule = 'database';
-
-          schemas.set(c.name, schema);
-          console.log(`Introspected schema ${c.name}`, schema);
+    let schemaNames: string[] = [];
+    if (await this.isConduitDB()) {
+      //Get all non system-db schemas
+      schemaNames = (
+        await db
+          .collection('_declaredschemas')
+          .find({
+            $and: [
+              { name: { $nin: SYSTEM_DB_SCHEMAS } }, // replace with cms metadata check
+              { ownerModule: { $eq: 'database' } },
+            ],
+          })
+          .toArray()
+      ).map((s) => s.name);
+    } else {
+      schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
+    }
+    await Promise.all(schemaNames.map(async (c) => {      
+      const res = await parseSchema(db.collection(c).find(), async (err: Error, originalSchema: any) => {
+        if (err) {
+          throw new GrpcError(status.INTERNAL, err.message);
         }
-      );
-    });
-    
+        originalSchema = mongoSchemaConverter(originalSchema);
+        const schema = new ConduitSchema(c, originalSchema, {
+          timestamps: true,
+          conduit: {
+            noSync: true,
+            permissions: {
+              extendable: false,
+              canCreate: false,
+              canModify: 'Nothing',
+              canDelete: false,
+            },
+            cms: {
+              authentication: false,
+              crudOperations: false,
+              enabled: false,
+            },
+          },
+        });
+        schema.ownerModule = 'database';
+
+        schemas.set(c, schema);
+        console.log(`Introspected schema ${c}`, schema);
+        //TODO: get schema options from admin and create schema
+        // await this.createSchemaFromAdapter(schema); 
+      });
+    }));
     return this;
   }
 
@@ -171,29 +188,35 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  async deleteSchema(schemaName: string, deleteData: boolean, callerModule: string = 'database'): Promise<string> {
+  async deleteSchema(
+    schemaName: string,
+    deleteData: boolean,
+    callerModule: string = 'database'
+  ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (
-      (this.models[schemaName].originalSchema.ownerModule !== callerModule) &&
-      (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
+      this.models[schemaName].originalSchema.ownerModule !== callerModule &&
+      this.models[schemaName].originalSchema.name !== 'SchemaDefinitions' // SchemaDefinitions migration
     ) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
-      await this.models![schemaName].model.collection
-        .drop()
-        .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
-    }
-    this.models!['_DeclaredSchema']
-      .findOne(JSON.stringify({ name: schemaName }))
-      .then( model => {
-        if (model) {
-          this.models!['_DeclaredSchema']
-            .deleteOne(JSON.stringify({name: schemaName}))
-            .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); })
-        }
+      await this.models![schemaName].model.collection.drop().catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
       });
+    }
+    this.models!['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
+      (model) => {
+        if (model) {
+          this.models!['_DeclaredSchema'].deleteOne(
+            JSON.stringify({ name: schemaName })
+          ).catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+        }
+      }
+    );
 
     delete this.models![schemaName];
     delete this.mongoose.connection.models[schemaName];

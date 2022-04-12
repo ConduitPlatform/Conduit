@@ -1,15 +1,17 @@
 import { TYPE } from "@conduitplatform/grpc-sdk";
 import { isNil } from "lodash";
 import { Sequelize } from "sequelize";
+
+export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints']; // Check schema entries for cms metadata
+
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
  */
-
 export function sqlSchemaConverter(sqlSchema: any) {    
   for(const fieldName of Object.keys(sqlSchema)) {    
     let field = sqlSchema[fieldName];
     field.type = extractType(field.type)
-    extractProperties(field,fieldName)
+    extractProperties(field)
   }
 }
 
@@ -47,13 +49,14 @@ function extractType(type: string) {
   }
 }
 
-function extractProperties(field: any, fieldName: string) {
+function extractProperties(field: any) {
   if (field.hasOwnProperty('enum')) {
     field.enum = field.special;
     delete field.special;
   }
   if (field.hasOwnProperty('foreignKey') && !field.foreignKey.isPrimaryKey) {
     field.type = TYPE.Relation;
+    if(field)
     field.model = field.foreignKey.target_table;
   }
   if (
@@ -65,6 +68,9 @@ function extractProperties(field: any, fieldName: string) {
   }
   if (field.hasOwnProperty('defaultValue') && !isNil(field.defaultValue)) {
     field.default = field.defaultValue;
+    if(typeof field.default === 'string' && field.default.startsWith('uuid_generate')) {
+      field.default = Sequelize.fn(field.default);
+    }
   }
 
   delete field.defaultValue;

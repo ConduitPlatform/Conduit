@@ -87,12 +87,12 @@ export default class DatabaseModule extends ManagedModule {
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
     
-    if (isConduitDB) {
-      await this._activeAdapter.recoverSchemasFromDatabase();
-    }
+    await this._activeAdapter.recoverSchemasFromDatabase();
 
     this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
   }
+
+  async preRegister() {}
 
   async onRegister() {
     const self = this;
