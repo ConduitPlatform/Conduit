@@ -13,6 +13,10 @@ export class DatabaseConfigUtility {
       })
       .then((r) => {
         if (!r) return database!.create('Config', {});
+        else return Promise.resolve(r);
+      })
+      .then((r) => {
+        return (r as any)._id;
       });
   }
 }

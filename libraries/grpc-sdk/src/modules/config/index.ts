@@ -50,12 +50,12 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  addFieldstoConfig(config: any, name: string): Promise<any> {
+  addFieldsToConfig(config: any, name: string): Promise<any> {
     let request = {
       config: JSON.stringify(config),
       moduleName: name,
     };
-    return this.client!.addFieldstoConfig(request)
+    return this.client!.addFieldsToConfig(request)
       .then(res => {
         return JSON.parse(res.result);
       });
@@ -137,7 +137,5 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     } catch (error) {
       console.error('Connection to grpc server closed');
     }
-
-
   }
 }

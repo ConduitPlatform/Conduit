@@ -4,19 +4,11 @@ export abstract class IConfigManager {
   abstract getDatabaseConfigUtility(): IDatabaseConfigUtility;
   abstract initConfigAdminRoutes(): void;
   abstract registerAppConfig(): Promise<any>;
-  abstract registerModulesConfig(
-    name: string,
-    newModulesConfigSchemaFields: any
-  ): Promise<any>;
-  abstract get(name: string): Promise<any>;
-  abstract addFieldsToModule(
-    name: string,
-    newModulesConfigSchemaFields: any
-  ): Promise<any>;
-  abstract set(name: string, newModulesConfigSchemaFields: any): Promise<any>;
-  abstract getModuleUrlByName(
-    moduleName: string
-  ): string | undefined;
+  abstract registerModulesConfig(moduleName: string, moduleConfig: any): Promise<any>;
+  abstract get(moduleName: string): Promise<any>;
+  abstract set(moduleName: string, moduleConfig: any): Promise<any>;
+  abstract addFieldsToModule(moduleName: string, moduleConfig: any): Promise<any>;
+  abstract getModuleUrlByName(moduleName: string): string | undefined;
 }
 
 export abstract class IDatabaseConfigUtility {

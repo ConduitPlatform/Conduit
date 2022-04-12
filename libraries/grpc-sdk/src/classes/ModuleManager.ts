@@ -65,7 +65,7 @@ export class ModuleManager {
           this.module.name,
         );
       }
-      config = await this.grpcSdk.config.addFieldstoConfig(
+      config = await this.grpcSdk.config.addFieldsToConfig(
         this.module.config.getProperties(),
         this.module.name,
       );
