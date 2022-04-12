@@ -1,6 +1,5 @@
 // todo Create the controller that creates REST-specific endpoints
 import {
-  Application,
   Handler,
   IRouterMatcher,
   NextFunction,
@@ -10,6 +9,7 @@ import {
 } from 'express';
 
 import {
+  ConduitCommons,
   ConduitError,
   ConduitRoute,
   ConduitRouteActions,
@@ -26,8 +26,8 @@ export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
 
-  constructor(readonly app: Application, swaggerRouterMetadata: SwaggerRouterMetadata) {
-    super(app);
+  constructor(conduitSdk: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
+    super(conduitSdk);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
@@ -105,7 +105,7 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, (req, res, next) => {
+    routerMethod(route.input.path, (req, res, _) => {
       let context = extractRequestData(req);
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
@@ -235,7 +235,7 @@ export class RestController extends ConduitRouter {
       const [method, path] = key.split('-');
       this.addRoute(path, route);
     });
-    this._registeredRoutes.forEach((route, key) => {
+    this._registeredRoutes.forEach((route, _) => {
       this.addConduitRoute(route);
     });
   }

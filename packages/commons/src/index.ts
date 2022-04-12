@@ -1,4 +1,3 @@
-import { Application } from 'express';
 import { IConduitRouter } from './modules';
 import { IConduitAdmin } from './modules';
 import { IConduitSecurity } from './modules';
@@ -13,17 +12,15 @@ import Crypto from 'crypto';
 
 export class ConduitCommons {
   private static _instance: ConduitCommons;
-  private _app: Application;
   private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
   private _security?: IConduitSecurity;
   private _configManager?: IConfigManager;
-  private _eventBus: EventBus;
-  private _stateManager: StateManager;
+  private readonly _eventBus: EventBus;
+  private readonly _stateManager: StateManager;
   private readonly name: string;
 
-  private constructor(app: Application, name?: string) {
-    this._app = app;
+  private constructor(name?: string) {
     if (!name) {
       this.name = 'corepackage_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -87,10 +84,9 @@ export class ConduitCommons {
     throw new Error('Config manager not assigned yet');
   }
 
-  static getInstance(app: Application, name: string) {
-    if (!this._instance && !app) throw new Error('No settings provided to initialize');
+  static getInstance(name: string) {
     if (!this._instance) {
-      this._instance = new ConduitCommons(app, name);
+      this._instance = new ConduitCommons(name);
     }
     return this._instance;
   }

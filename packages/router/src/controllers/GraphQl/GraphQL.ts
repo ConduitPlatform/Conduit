@@ -1,5 +1,6 @@
-import { Application, NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import {
+  ConduitCommons,
   ConduitModel,
   ConduitRoute,
   ConduitRouteActions,
@@ -31,8 +32,8 @@ export class GraphQLController extends ConduitRouter {
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
-  constructor(readonly app: Application) {
-    super(app);
+  constructor(conduitSdk: ConduitCommons) {
+    super(conduitSdk);
     this.initialize();
     this._parser = new GraphQlParser();
   }

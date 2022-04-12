@@ -1,6 +1,7 @@
 import { Application, NextFunction, Request, Response, Router } from 'express';
-import { RestController } from './Rest/Rest';
+import { RestController } from './Rest';
 import {
+  ConduitCommons,
   ConduitRoute,
   ConduitMiddleware,
   ConduitSocket,
@@ -45,30 +46,32 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export class ConduitRoutingController {
+  private readonly _expressApp: Application;
+  private readonly _conduitSdk: ConduitCommons;
   private _restRouter: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
-  private _app: Application;
   private _middlewareRouter: Router;
 
-  constructor(app: Application) {
-    this._app = app;
-    this._restRouter = new RestController(this._app, swaggerRouterMetadata);
+  constructor(conduitSdk: ConduitCommons, expressApp: Application) {
+    this._expressApp = expressApp;
+    this._conduitSdk = conduitSdk;
+    this._restRouter = new RestController(this._conduitSdk, swaggerRouterMetadata);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });
 
     const self = this;
-    app.use((req, res, next) => {
+    this._expressApp.use((req, res, next) => {
       self._middlewareRouter(req, res, next);
     });
 
-    app.use((err: ConduitError, req: Request, res: Response, next: NextFunction) => {
+    this._expressApp.use((err: ConduitError, req: Request, res: Response, _: NextFunction) => {
       res.status(err?.status || 500).send(err.message);
     });
 
-    app.use((req, res, next) => {
+    this._expressApp.use((req, res, next) => {
       if (req.url.startsWith('/graphql') && this._graphQLRouter) {
         this._graphQLRouter.handleRequest(req, res, next);
       } else if (!req.url.startsWith('/graphql')) {
@@ -79,11 +82,11 @@ export class ConduitRoutingController {
   }
 
   initGraphQL() {
-    this._graphQLRouter = new GraphQLController(this._app);
+    this._graphQLRouter = new GraphQLController(this._conduitSdk);
   }
 
   initSockets() {
-    this._socketRouter = new SocketController(this._app);
+    this._socketRouter = new SocketController(this._conduitSdk, this._expressApp);
   }
 
   registerMiddleware(
