@@ -48,7 +48,7 @@ export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _sdkRoutes: ConduitRoute[];
-  private readonly _grpcRoutes: any = {};
+  private readonly _grpcRoutes: { [field: string]: ConduitRoute[] } = {};
 
   constructor(
     commons: ConduitCommons,
@@ -185,7 +185,7 @@ export default class AdminModule extends IConduitAdmin {
     });
   }
 
-  private updateState(protofile: string, routes: any, url: string) {
+  private updateState(protofile: string, routes: ConduitRoute[], url: string) {
     this.commons
       .getState()
       .getKey('admin')
@@ -218,7 +218,7 @@ export default class AdminModule extends IConduitAdmin {
       });
   }
 
-  private publishAdminRouteData(protofile: string, routes: any, url: string) {
+  private publishAdminRouteData(protofile: string, routes: ConduitRoute[], url: string) {
     this.commons.getBus().publish(
       'admin',
       JSON.stringify({
@@ -254,8 +254,8 @@ export default class AdminModule extends IConduitAdmin {
 
   private internalRegisterRoute(
     protofile: any,
-    routes: any[],
-    url: any,
+    routes: ConduitRoute[],
+    url: string,
     moduleName?: string,
   ) {
     const processedRoutes: (

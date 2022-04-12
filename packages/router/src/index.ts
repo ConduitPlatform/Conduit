@@ -21,7 +21,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _internalRouter: ConduitRoutingController;
   private readonly _globalMiddlewares: string[];
   private readonly _routes: any[];
-  private _grpcRoutes: any = {};
+  private _grpcRoutes: { [field: string]: ConduitRoute[] } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
@@ -82,7 +82,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     });
   }
 
-  updateState(protofile: string, routes: any, url: string) {
+  updateState(protofile: string, routes: ConduitRoute[], url: string) {
     let sdk: ConduitCommons = this._commons
     sdk
       .getState()
@@ -116,7 +116,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       });
   }
 
-  publishAdminRouteData(protofile: string, routes: any, url: string) {
+  publishAdminRouteData(protofile: string, routes: ConduitRoute[], url: string) {
     let sdk: ConduitCommons = this._commons
     sdk.getBus().publish(
       'router',
@@ -165,7 +165,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     callback(null, null);
   }
 
-  internalRegisterRoute(protofile: any, routes: any[], url: any, moduleName?: string) {
+  internalRegisterRoute(protofile: any, routes: ConduitRoute[], url: string, moduleName?: string) {
     let processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware
@@ -226,7 +226,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   cleanupRoutes() {
-    let routes: { action: string; path: string }[] = [];
+    const routes: { action: string; path: string }[] = [];
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       let routesArray = this._grpcRoutes[grpcRoute];
       routes.push(
