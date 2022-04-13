@@ -30,7 +30,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
-    this.connect();
   }
 
   async ensureConnected(): Promise<any> {
@@ -64,6 +63,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   connect() {
+    this.mongoose = new Mongoose();
     this.mongoose
       .connect(this.connectionString, this.options)
       .then(() => {

@@ -1,12 +1,10 @@
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { DatabaseConfigUtility } from './utils/config';
 import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
-import axios from 'axios';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -55,39 +53,28 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getState()
       .getKey('config')
-      .then((r) => {
+      .then(async (r) => {
         if (!r || r.length === 0) return;
         let state = JSON.parse(r);
         let success: any[] = [];
         if (state.modules) {
-          let promise = Promise.resolve();
-          state.modules.forEach((r: any) => {
-            promise = promise
-              .then(() => {
-                return self._registerModule(r.name, r.url, r.instance);
-              })
-              .then(() => {
-                success.push({
-                  name: r.name,
-                  url: r.url,
-                  instance: r.instance,
-                });
-              })
-              .catch(() => {
-                return Promise.resolve();
+          for (const module of state.modules) {
+            try {
+              await self._registerModule(module.name, module.url, module.instance);
+            } catch {}
+              success.push({
+                name: module.name,
+                url: module.url,
+                instance: module.instance,
               });
-          });
-          promise
-            .then(() => {
-              if (state.modules.length > success.length) {
-                state.modules = success;
-                self.setState(state);
-              }
-              return;
-            })
-            .then(() => {
-              return this.grpcSdk.initializeModules();
-            });
+          }
+          if (state.modules.length > success.length) {
+            state.modules = success;
+            self.setState(state);
+          }
+          return this.grpcSdk.initializeModules();
+        } else {
+          return Promise.resolve();
         }
       })
       // DO NOT INITIALIZE THE BUS BEFORE RECOVERY
@@ -99,7 +86,7 @@ export default class ConfigManager implements IConfigManager {
               messageParsed.name,
               messageParsed.url,
               messageParsed.instance,
-            );
+            ).then();
           } else if (messageParsed.type === 'module-health') {
             self.updateModuleHealth(messageParsed.name, messageParsed.instance);
           }
@@ -189,13 +176,12 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerAppConfig() {
-    await this.grpcSdk.waitForExistence('database');
-    models.Config.getInstance(this.grpcSdk.database!);
-    this.configDocId = await this.getDatabaseConfigUtility().registerConfigSchemas(models.Config.getPlainSchema());
-  }
-
-  getDatabaseConfigUtility() {
-    return new DatabaseConfigUtility(this.grpcSdk);
+    await this.grpcSdk.database!.createSchemaFromAdapter(models.Config.getInstance(this.grpcSdk.database!));
+    let configDoc = await this.grpcSdk.database!.findOne('Config', {});
+    if (!configDoc) {
+      configDoc = await models.Config.getInstance().create({});
+    }
+    this.configDocId = (configDoc as any)._id;
   }
 
   getGrpc(call: any, callback: any) {
@@ -427,18 +413,24 @@ export default class ConfigManager implements IConfigManager {
   ) {
     let dbInit = false;
     if (!fromGrpc) {
-      let failed: any;
-      await axios.get('http://' + moduleUrl).catch((err: any) => {
-        failed = err;
-      });
-      if (failed && failed.message.indexOf('Parse Error') === -1) {
-        throw new Error('Failed to register dead module');
+      if (!this.grpcSdk.getModule(moduleName)) {
+        await this.grpcSdk.createModuleClient(moduleName, moduleUrl);
       }
+      const healthClient = await this.grpcSdk.getHealthClient(moduleName)!;
+      healthClient.check({ service: '' })
+        .then((healthResponse) => {
+          const healthStatus = (healthResponse.status as unknown as HealthCheckStatus);
+          if (healthStatus  !== HealthCheckStatus.SERVING) {
+            if (moduleName !== 'database' || healthStatus !== HealthCheckStatus.UNKNOWN) {
+              throw new Error('Failed to register unhealthy module');
+            }
+          }
+        })
+        .catch(() => {
+          throw new Error('Failed to register unhealthy module');
+        });
     }
-    if (
-      moduleName === 'database' &&
-      this.registeredModules.has('database')
-    ) {
+    if (moduleName === 'database' && this.registeredModules.has('database')) {
       dbInit = true;
     }
     this.registeredModules.set(moduleName, moduleUrl);

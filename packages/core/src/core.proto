@@ -1,6 +1,8 @@
 syntax = "proto3";
 package conduit.core;
 
+service Core {}
+
 service Config {
     rpc Get (GetConfigRequest) returns (GetConfigResponse);
     rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
@@ -32,7 +34,6 @@ message SocketData {
 }
 
 message RegisterAdminRouteRequest {
-
     repeated PathDefinition routes = 1;
     string protoFile = 2;
     optional string routerUrl = 3;
@@ -62,8 +63,8 @@ message RegisterAdminRouteRequest {
         string fields = 2;
     }
 }
-message RegisterConduitRouteRequest {
 
+message RegisterConduitRouteRequest {
     repeated PathDefinition routes = 1;
     string protoFile = 2;
     optional string routerUrl = 3;
@@ -128,7 +129,6 @@ message ModuleListResponse {
     }
 }
 
-
 message ModuleExistsRequest {
     string moduleName = 1;
 }
@@ -161,4 +161,3 @@ message RegisterModulesConfigRequest {
     string moduleName = 1;
     string newModulesConfigSchema = 2;
 }
-

@@ -1,33 +1,41 @@
 import {
-  ManagedModule,
   ConduitSchema,
   GrpcError,
-} from "@conduitplatform/grpc-sdk";
-
+  HealthCheckStatus,
+  ManagedModule,
+} from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/admin';
 import { DatabaseRoutes } from './routes/routes';
 import * as models from './models';
 import {
   CreateSchemaExtensionRequest,
   CreateSchemaRequest,
-  DropCollectionRequest, DropCollectionResponse, FindOneRequest, FindRequest,
+  DropCollectionRequest,
+  DropCollectionResponse,
+  FindOneRequest,
+  FindRequest,
   GetSchemaRequest,
-  GetSchemasRequest, QueryRequest, QueryResponse,
+  GetSchemasRequest,
+  QueryRequest,
+  QueryResponse,
   SchemaResponse,
-  SchemasResponse, UpdateManyRequest, UpdateRequest
-} from "./types";
+  SchemasResponse,
+  UpdateManyRequest,
+  UpdateRequest,
+} from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from "./interfaces";
-import { canCreate, canDelete, canModify } from "./permissions";
-import { runMigrations } from "./migrations";
-import { SchemaController } from "./controllers/cms/schema.controller";
-import { CustomEndpointController } from "./controllers/customEndpoints/customEndpoint.controller";
-import path from 'path';
+import { SchemaAdapter } from './interfaces';
+import { canCreate, canDelete, canModify } from './permissions';
+import { runMigrations } from './migrations';
+import { SchemaController } from './controllers/cms/schema.controller';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
+import { EventEmitter } from 'events';
+import path from 'path';
 
 export default class DatabaseModule extends ManagedModule {
   config = undefined;
@@ -54,6 +62,16 @@ export default class DatabaseModule extends ManagedModule {
   private adminRouter: AdminHandlers;
   private userRouter: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
+  private readonly events: EventEmitter = new EventEmitter();
+  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
+
+  private set serviceHealthState(state: HealthCheckStatus) {
+    if (state === HealthCheckStatus.UNKNOWN || state === HealthCheckStatus.SERVICE_UNKNOWN) {
+      throw new Error(`Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`);
+    }
+    this._serviceHealthState = state;
+    this.events.emit('grpc-health-change:database', state);
+  }
 
   constructor(dbType: string, dbUri: string) {
     super('database');
@@ -67,11 +85,14 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async preServerStart() {
+    this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
   }
 
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    // Introspection takes place
+    this._serviceHealthState = HealthCheckStatus.SERVING;
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
@@ -79,7 +100,6 @@ export default class DatabaseModule extends ManagedModule {
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
     await this._activeAdapter.recoverSchemasFromDatabase();
-    this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
   }
 
   async onRegister() {
@@ -113,23 +133,35 @@ export default class DatabaseModule extends ManagedModule {
         console.error('Something was wrong with the message');
       }
     });
-    const schemaController = new SchemaController(
-      this.grpcSdk,
-      this._activeAdapter,
-      this.userRouter,
-    );
-    const customEndpointController = new CustomEndpointController(
-      this.grpcSdk,
-      this._activeAdapter,
-      this.userRouter,
-    );
-    this.adminRouter = new AdminHandlers(
-      this.grpcServer,
-      this.grpcSdk,
-      this._activeAdapter,
-      schemaController,
-      customEndpointController
-    );
+    const coreHealth = (await this.grpcSdk.core.check() as unknown as HealthCheckStatus);
+    this.onCoreHealthChange(coreHealth);
+    await this.grpcSdk.core.watch('');
+  }
+
+  private onCoreHealthChange(state: HealthCheckStatus) {
+    const boundFunctionRef = this.onCoreHealthChange.bind(this);
+    if (state === HealthCheckStatus.SERVING) {
+      this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
+      const schemaController = new SchemaController(
+        this.grpcSdk,
+        this._activeAdapter,
+        this.userRouter,
+      );
+      const customEndpointController = new CustomEndpointController(
+        this.grpcSdk,
+        this._activeAdapter,
+        this.userRouter,
+      );
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        this._activeAdapter,
+        schemaController,
+        customEndpointController
+      );
+    } else {
+      this.grpcSdk.core.healthCheckWatcher.once('grpc-health-change:core', boundFunctionRef);
+    }
   }
 
   publishSchema(schema: any) {
@@ -139,6 +171,26 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   // gRPC Service
+  healthCheck(call: any, callback: any) {
+    const service = call.request.service.replace('database.', '');
+    if (service && service !== 'DatabaseProvider') {
+      callback(null, { status: HealthCheckStatus.SERVICE_UNKNOWN });
+    } else {
+      callback(null, { status: this._serviceHealthState });
+    }
+  }
+
+  healthWatch(call: any) {
+    const service = call.request.service.replace('database.', '');
+    if (service && service !== 'DatabaseProvider') {
+      call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });
+    } else {
+      this.events.on('grpc-health-change:database', (status: HealthCheckStatus) => {
+        call.write({ status });
+      });
+    }
+  }
+
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param call

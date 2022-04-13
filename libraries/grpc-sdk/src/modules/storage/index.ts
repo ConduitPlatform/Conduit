@@ -3,7 +3,7 @@ import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageDefinition
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'storage', url);
     this.initializeClient(StorageDefinition);
   }
 

@@ -40,5 +40,3 @@ export class AppConfig implements IAppConfig {
     this.convictConfig.validate({ allowed: 'warn' });
   }
 }
-
-export * from './database';

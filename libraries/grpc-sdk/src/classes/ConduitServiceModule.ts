@@ -1,9 +1,11 @@
 import ConduitGrpcSdk, {
   GrpcServer,
+  HealthCheckStatus,
 } from '..';
+import path from 'path';
 
 export abstract class ConduitServiceModule {
-  constructor() {}
+  protected constructor() {}
 
   protected _port!: string;
   protected grpcServer!: GrpcServer;
@@ -21,5 +23,26 @@ export abstract class ConduitServiceModule {
 
   get port(): string {
     return this._port;
+  }
+
+  protected async addHealthCheckService() {
+    await this.grpcServer.addService(
+      path.resolve(__dirname, '../../src/grpc_health_check.proto'),
+      'grpc.health.v1.Health',
+      {
+        Check: this.healthCheck.bind(this),
+        Watch: this.healthWatch.bind(this),
+      }
+    );
+  }
+
+  healthCheck(call: any, callback: any) {
+    // Override this in modules implementing the gRPC health checking protocol
+    callback(null, { status: HealthCheckStatus.SERVING });
+  }
+
+  healthWatch(call: any) {
+    // Override this in modules implementing the gRPC health checking protocol
+    call.write({status: HealthCheckStatus.SERVING});
   }
 }

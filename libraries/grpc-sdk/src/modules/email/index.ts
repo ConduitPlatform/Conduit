@@ -3,7 +3,7 @@ import { EmailDefinition } from '../../protoUtils/email';
 
 export class Email extends ConduitModule<typeof EmailDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'email', url);
     this.initializeClient(EmailDefinition);
   }
 

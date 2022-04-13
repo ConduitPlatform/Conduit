@@ -52,3 +52,10 @@ type JoinRoomResponse = {
   rooms: string[];
 };
 export type UnparsedSocketResponse = EventResponse | JoinRoomResponse;
+
+export enum HealthCheckStatus {
+  UNKNOWN,
+  SERVING,
+  NOT_SERVING,
+  SERVICE_UNKNOWN,
+}

@@ -3,7 +3,7 @@ import { ChatDefinition, GetRoomResponse, SendMessageRequest, SetConfigResponse 
 
 export class Chat extends ConduitModule<typeof ChatDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'chat', url);
     this.initializeClient(ChatDefinition);
   }
 

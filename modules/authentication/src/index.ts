@@ -1,4 +1,4 @@
-import { ModuleManager } from "@conduitplatform/grpc-sdk";
+import { ModuleManager } from '@conduitplatform/grpc-sdk';
 import AuthenticationModule from './Authentication';
 
 const authentication = new AuthenticationModule();

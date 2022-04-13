@@ -22,38 +22,41 @@ export class ModuleManager {
   }
 
   start() {
-    this.module.initialize(this.grpcSdk);
-    const self = this;
-    this.preRegisterLifecycle()
-      .then(() => {
-        const url = (process.env.REGISTER_NAME === 'true'
-          ? `${self.module.name}:`
-          : `${self.serviceAddress}:`) + self.module.port;
-        return self.grpcSdk.config.registerModule(self.module.name, url);
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      })
-      .then(() => {
-        return this.postRegisterLifecycle();
-      })
-      .catch((err: Error) => {
-        console.log('Failed to activate module');
-        console.error(err);
-      });
+    this.grpcSdk.initialize().then(() => {
+      this.module.initialize(this.grpcSdk);
+      const self = this;
+      this.preRegisterLifecycle()
+        .then(() => {
+          const url = (process.env.REGISTER_NAME === 'true'
+            ? `${self.module.name}:`
+            : `${self.serviceAddress}:`) + self.module.port;
+          return self.grpcSdk.config.registerModule(self.module.name, url);
+        })
+        .catch((err: Error) => {
+          console.log('Failed to initialize server');
+          console.error(err);
+          process.exit(-1);
+        })
+        .then(() => {
+          return this.postRegisterLifecycle();
+        })
+        .catch((err: Error) => {
+          console.log('Failed to activate module');
+          console.error(err);
+        });
+    });
   }
 
   private async preRegisterLifecycle(): Promise<void> {
+    await this.module.createGrpcServer(this.servicePort);
     await this.module.preServerStart();
-    await this.module.startGrpcServer(this.servicePort);
-    await this.module.onServerStart()
+    await this.module.startGrpcServer();
+    await this.module.onServerStart();
+    await this.grpcSdk.initializeEventBus();
     await this.module.preRegister();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
-    await this.grpcSdk.initializeEventBus();
     await this.module.onRegister();
     if (this.module.config) {
       let config;

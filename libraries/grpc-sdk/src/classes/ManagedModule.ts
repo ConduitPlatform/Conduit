@@ -2,12 +2,12 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ConduitService,
   SetConfigRequest,
-  SetConfigResponse
+  SetConfigResponse,
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
 import { camelCase, kebabCase } from 'lodash';
-import { status } from "@grpc/grpc-js";
+import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule extends ConduitServiceModule {
@@ -37,13 +37,17 @@ export abstract class ManagedModule extends ConduitServiceModule {
 
   async onConfig() {}
 
-  async startGrpcServer(servicePort?: string) {
+  async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
+  }
+
+  async startGrpcServer() {
     if (this.service) {
       await this.grpcServer.addService(this.service.protoPath, this.service.protoDescription, this.service.functions);
+      await this.addHealthCheckService();
       await this.grpcServer.start();
-      console.log('Grpc server is online');
+      console.log('gRPC server is online');
     }
   }
 
