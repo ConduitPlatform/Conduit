@@ -10,8 +10,8 @@ export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints']; // Check schema entries fo
 export function sqlSchemaConverter(sqlSchema: any) {    
   for(const fieldName of Object.keys(sqlSchema)) {    
     let field = sqlSchema[fieldName];
-    field.type = extractType(field.type)
-    extractProperties(field)
+    field.type = extractType(field.type);
+    extractProperties(field);
   }
 }
 
@@ -56,8 +56,14 @@ function extractProperties(field: any) {
   }
   if (field.hasOwnProperty('foreignKey') && !field.foreignKey.isPrimaryKey) {
     field.type = TYPE.Relation;
-    if(field)
-    field.model = field.foreignKey.target_table;
+    switch(field.foreignKey.constraint_type){
+      case 'UNIQUE':
+        field.unique = true;
+        break;
+      case 'FOREIGN KEY':
+        field.model = field.foreignKey.target_table;
+        break;
+    }
   }
   if (
     (field.type === TYPE.Date && field.defaultValue === 'CURRENT_TIMESTAMP') ||
@@ -71,6 +77,9 @@ function extractProperties(field: any) {
     if(typeof field.default === 'string' && field.default.startsWith('uuid_generate')) {
       field.default = Sequelize.fn(field.default);
     }
+  }
+  if(field.hasOwnProperty('allowNull')) {
+    field.required = !field.allowNull;
   }
 
   delete field.defaultValue;

@@ -32,6 +32,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           return true;
         }
 
+
         if (parentValue[key].hasOwnProperty('select')) {
           if (!parentValue[key].select) {
             self.excludedFields.push(key);

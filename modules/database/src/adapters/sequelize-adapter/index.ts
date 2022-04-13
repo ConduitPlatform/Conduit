@@ -45,6 +45,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       singularize: true,
       useDefine : true,
       closeConnectionAutomatically : false,
+      schema: 'public', //make this configurable
     }
     
     let tableNames: string[] = [];
@@ -73,9 +74,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         // const name = existingSchemaNames.includes(originalName) ? `_${originalName}` : originalName;
     
         //convert table fields to ConduitSchema fields
-        if(originalName === 'document') {
-          console.log('ok');
-        }
         sqlSchemaConverter(table);
         const schema = new ConduitSchema(originalName, table as ConduitModel, {
           timestamps: true,

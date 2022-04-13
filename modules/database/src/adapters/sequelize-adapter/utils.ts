@@ -3,6 +3,7 @@ import _, { isArray, isObject, isString } from 'lodash';
 import { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
+import { isBoolean } from 'lodash';
 
 function arrayHandler(value: any) {
   let newArray = [];
@@ -56,7 +57,7 @@ function matchOperation(operator: string, value: any) {
 
 export function parseQuery(query: any) {
   let parsed: any = {};
-  if (isString(query)) return query;
+  if (isString(query) || isBoolean(query)) return query;
   for (let key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
