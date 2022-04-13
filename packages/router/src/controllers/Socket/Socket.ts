@@ -4,6 +4,7 @@ import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
+  ConduitCommons,
   ConduitError,
   ConduitSocket,
   EventResponse,
@@ -19,22 +20,22 @@ export class SocketController extends ConduitRouter {
   private io: IOServer;
   private readonly options: Partial<ServerOptions>;
   private _registeredNamespaces: Map<string, ConduitSocket>;
-  private pubClient: RedisClient;
-  private subClient: RedisClient;
+  private readonly pubClient: RedisClient;
+  private readonly subClient: RedisClient;
   private globalMiddlewares: ((
     req: Request,
     res: Response,
     next: NextFunction
   ) => void)[];
 
-  constructor(readonly app: Application) {
-    super(app);
+  constructor(commons: ConduitCommons, expressApp: Application) {
+    super(commons);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
       console.error('Redis IP not defined');
       process.exit(-1);
     }
 
-    this.httpServer = createServer(app);
+    this.httpServer = createServer(expressApp);
     this.options = {
       path: '/realtime',
       cors: {

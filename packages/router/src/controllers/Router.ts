@@ -4,7 +4,7 @@ import {
   ConduitRoute,
   ConduitRouteParameters,
 } from '@conduitplatform/commons';
-import { Application, NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 
 export abstract class ConduitRouter {
   protected _expressRouter: Router;
@@ -12,7 +12,9 @@ export abstract class ConduitRouter {
   protected _registeredRoutes: Map<string, ConduitRoute>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
-  constructor(protected readonly app: Application) {
+  protected constructor(
+    protected readonly commons: ConduitCommons,
+  ) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
   }
@@ -42,13 +44,13 @@ export abstract class ConduitRouter {
   }
 
   protected findInCache(hashKey: string) {
-    return ((this.app as any).conduit as ConduitCommons)
+    return this.commons
       .getState()
       .getKey('hash-' + hashKey);
   }
   // age is in seconds
   protected storeInCache(hashKey: string, data: any, age: number) {
-    ((this.app as any).conduit as ConduitCommons)
+    this.commons
       .getState()
       .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
@@ -61,7 +63,7 @@ export abstract class ConduitRouter {
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
-    let primaryPromise = new Promise((resolve, reject) => {
+    let primaryPromise = new Promise((resolve) => {
       resolve({});
     });
     const self = this;

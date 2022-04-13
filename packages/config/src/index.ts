@@ -1,5 +1,5 @@
 import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { DatabaseConfigUtility } from './utils/config';
 import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
@@ -14,6 +14,7 @@ export default class ConfigManager implements IConfigManager {
   moduleHealth: any = {};
   grpcSdk: ConduitGrpcSdk;
   moduleRegister: EventEmitter;
+  private configDocId: string | null = null;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
@@ -31,7 +32,7 @@ export default class ConfigManager implements IConfigManager {
       getServerConfig: this.getServerConfig.bind(this),
       getRedisDetails: this.getRedisDetails.bind(this),
       updateConfig: this.updateConfig.bind(this),
-      addFieldstoConfig: this.addFieldstoConfig.bind(this),
+      addFieldsToConfig: this.addFieldsToConfig.bind(this),
       moduleExists: this.moduleExists.bind(this),
       registerModule: this.registerModule.bind(this),
       moduleList: this.moduleList.bind(this),
@@ -104,8 +105,8 @@ export default class ConfigManager implements IConfigManager {
           }
         });
       })
-      .catch((err) => {
-        console.log('Failed to recover state');
+      .catch(() => {
+        console.error('Failed to recover state');
       });
   }
 
@@ -113,11 +114,11 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getState()
       .setKey('config', JSON.stringify(state))
-      .then((r) => {
+      .then(() => {
         console.log('Updated state');
       })
-      .catch((err) => {
-        console.log('Failed to recover state');
+      .catch(() => {
+        console.error('Failed to recover state');
       });
   }
 
@@ -135,11 +136,11 @@ export default class ConfigManager implements IConfigManager {
         });
         return this.sdk.getState().setKey('config', JSON.stringify(state));
       })
-      .then((r) => {
+      .then(() => {
         console.log('Updated state');
       })
-      .catch((err) => {
-        console.log('Failed to recover state');
+      .catch(() => {
+        console.error('Failed to recover state');
       });
   }
 
@@ -156,7 +157,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getServerConfig(call: any, callback: any) {
-    if (!isNil(this.grpcSdk.databaseProvider)) {
+    if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
         .then(async (dbConfig: any) => {
@@ -189,8 +190,8 @@ export default class ConfigManager implements IConfigManager {
 
   async registerAppConfig() {
     await this.grpcSdk.waitForExistence('database');
-    models.Config.getInstance(this.grpcSdk.databaseProvider!);
-    await this.getDatabaseConfigUtility().registerConfigSchemas(models.Config.getPlainSchema());
+    models.Config.getInstance(this.grpcSdk.database!);
+    this.configDocId = await this.getDatabaseConfigUtility().registerConfigSchemas(models.Config.getPlainSchema());
   }
 
   getDatabaseConfigUtility() {
@@ -210,66 +211,49 @@ export default class ConfigManager implements IConfigManager {
       });
   }
 
-  async get(name: string) {
-    if (!isNil(this.grpcSdk.databaseProvider)) {
+  async get(moduleName: string) {
+    if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
         .then(async (dbConfig: any) => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
-          if (isNil(dbConfig['moduleConfigs'][name]))
-            throw new Error(`Config for module "${name} not set`);
-          return dbConfig['moduleConfigs'][name];
+          if (isNil(dbConfig['moduleConfigs'][moduleName]))
+            throw new Error(`Config for module "${moduleName}" not set`);
+          return dbConfig['moduleConfigs'][moduleName];
         });
     } else {
       throw new Error('Database provider not set');
     }
   }
 
-  async set(name: string, newModulesConfigSchemaFields: any) {
-    return this.registerModulesConfig(name, newModulesConfigSchemaFields);
-  }
-
-  updateConfig(call: any, callback: any) {
-    const newConfig = JSON.parse(call.request.config);
-    if (!isNil(this.grpcSdk.databaseProvider)) {
-      models.Config.getInstance()
-        .findOne({})
-        .then((dbConfig) => {
-          if (isNil(dbConfig)) throw new Error('Config not found in the database');
-          if (!dbConfig['moduleConfigs']) {
-            dbConfig['moduleConfigs'] = {};
-          }
-          let modName = 'moduleConfigs.' + call.request.moduleName;
-          return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
-            $set: { [modName]: newConfig },
-          })
-            .then((updatedConfig: any) => {
-              delete updatedConfig._id;
-              delete updatedConfig.createdAt;
-              delete updatedConfig.updatedAt;
-              delete updatedConfig.__v;
-              return callback(null, {
-                result: JSON.stringify(
-                  updatedConfig['moduleConfigs'][call.request.moduleName],
-                ),
-              });
-            });
-        })
-        .catch((err) => {
-          callback({
-            code: status.INTERNAL,
-            message: err.message ? err.message : err,
-          });
-        });
-    } else {
-      callback({
-        code: status.FAILED_PRECONDITION,
-        message: 'Database provider not set',
-      });
+  async set(moduleName: string, moduleConfig: any) {
+    try {
+      await models.Config.getInstance().findByIdAndUpdate(
+        this.configDocId!,
+        { $set: { [`moduleConfigs.${moduleName}`]: moduleConfig } },
+      );
+      return moduleConfig;
+    } catch {
+      console.error(`Could not update "${moduleName}" configuration`);
     }
   }
 
-  async addFieldsToModule(name: string, config: any) {
+  async updateConfig(call: any, callback: any) {
+    const moduleName = call.request.moduleName;
+    const moduleConfig = JSON.parse(call.request.config);
+    try {
+      await this.set(moduleName, moduleConfig);
+      return callback(null, { result: JSON.stringify(moduleConfig) });
+    } catch {
+      throw new GrpcError(status.INTERNAL, `Could not update "${moduleName}" configuration`);
+    }
+  }
+
+  async registerModulesConfig(moduleName: string, moduleConfig: any) {
+    return this.set(moduleName, moduleConfig);
+  }
+
+  async addFieldsToModule(moduleName: string, moduleConfig: any) {
     return models.Config.getInstance()
       .findOne({})
       .then((dbConfig) => {
@@ -277,26 +261,24 @@ export default class ConfigManager implements IConfigManager {
         if (!dbConfig['moduleConfigs']) {
           dbConfig['moduleConfigs'] = {};
         }
-        let modName = 'moduleConfigs.' + name;
-        // keep only new fields
-        let existing = dbConfig.moduleConfigs[name];
-        config = { ...config, ...existing };
+        const existing = dbConfig.moduleConfigs[moduleName];
+        moduleConfig = { ...moduleConfig, ...existing };
+
         return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
-          $set: { [modName]: config },
+          $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
+        })
+        .catch(() => {
+          console.error(`Could not add fields to "${moduleName}" configuration`);
         });
       })
-      .then((updatedConfig: any) => {
-        delete updatedConfig._id;
-        delete updatedConfig.createdAt;
-        delete updatedConfig.updatedAt;
-        delete updatedConfig.__v;
-        return updatedConfig['moduleConfigs'][name];
+      .then(() => {
+        return moduleConfig;
       });
   }
 
-  addFieldstoConfig(call: any, callback: any) {
-    let newFields = JSON.parse(call.request.config);
-    if (!isNil(this.grpcSdk.databaseProvider)) {
+  addFieldsToConfig(call: any, callback: any) {
+    const newFields = JSON.parse(call.request.config);
+    if (!isNil(this.grpcSdk.database)) {
       this.addFieldsToModule(call.request.moduleName, newFields)
         .then((r) => {
           return callback(null, { result: JSON.stringify(r) });
@@ -313,27 +295,6 @@ export default class ConfigManager implements IConfigManager {
         message: 'Database provider not set',
       });
     }
-  }
-
-  async registerModulesConfig(name: string, newModulesConfigSchemaFields: any) {
-    await this.grpcSdk.waitForExistence('database');
-    models.Config.getInstance().findOne({}).then((dbConfig) => {
-      if (isNil(dbConfig)) throw new Error('Config not found in the database');
-      if (!dbConfig['moduleConfigs']) {
-        dbConfig['moduleConfigs'] = {};
-      }
-      let modName = 'moduleConfigs.' + name;
-      return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
-        $set: { [modName]: newModulesConfigSchemaFields },
-      })
-        .then((updatedConfig: any) => {
-          delete updatedConfig._id;
-          delete updatedConfig.createdAt;
-          delete updatedConfig.updatedAt;
-          delete updatedConfig.__v;
-          return updatedConfig['moduleConfigs'][name];
-        });
-    });
   }
 
   moduleExists(call: any, callback: any) {
@@ -407,7 +368,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  watchModules(call: any, callback: any) {
+  watchModules(call: any, _: any) {
     const self = this;
     this.moduleRegister.on('module-registered', () => {
       let modules: any[] = [];

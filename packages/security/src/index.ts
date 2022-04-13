@@ -9,10 +9,10 @@ import * as models from './models';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly conduit: ConduitCommons,
+    private readonly commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
-    super(conduit);
+    super(commons);
     this.registerSchemas().then(() => {
       return secretMigrate();
     })
@@ -20,10 +20,10 @@ class SecurityModule extends IConduitSecurity {
         console.error(err);
       });
     this.registerAdminRoutes();
-    const router = conduit.getRouter();
+    const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
-      grpcSdk.databaseProvider!,
-      conduit
+      grpcSdk.database!,
+      commons,
     );
 
     router.registerGlobalMiddleware(
@@ -54,15 +54,15 @@ class SecurityModule extends IConduitSecurity {
   }
 
   private registerAdminRoutes() {
-    this.conduit.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
-    this.conduit.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
-    this.conduit.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+    this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
+    this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
+    this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
   }
 
   private registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
-      let modelInstance = model.getInstance(this.grpcSdk.databaseProvider!);
-      return this.grpcSdk.databaseProvider!.createSchemaFromAdapter(modelInstance);
+      let modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
   }

@@ -16,29 +16,32 @@ import * as adminRoutes from './admin/routes';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
-  private _app: Application;
+  private readonly _commons: ConduitCommons;
+  private readonly _expressApp: Application;
   private _internalRouter: ConduitRoutingController;
-  private _globalMiddlewares: string[];
-  private _routes: any[];
-  private _grpcRoutes: any = {};
+  private readonly _globalMiddlewares: string[];
+  private readonly _routes: any[];
+  private _grpcRoutes: { [field: string]: ConduitRoute[] } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
-    app: Application,
+    commons: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
     packageDefinition: any,
     server: Server,
+    expressApp: Application
   ) {
-    this._app = app;
+    this._commons = commons;
+    this._expressApp = expressApp;
     this._routes = [];
     this._globalMiddlewares = [];
-    this._internalRouter = new ConduitRoutingController(this._app);
+    this._internalRouter = new ConduitRoutingController(this._commons, this._expressApp);
     this.initGraphQL();
     this.initSockets();
-    var protoDescriptor = loadPackageDefinition(packageDefinition);
+    const protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
     // @ts-ignore
-    var router = protoDescriptor.conduit.core.Router;
+    const router = protoDescriptor.conduit.core.Router;
     server.addService(router.service, {
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
@@ -50,7 +53,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   async highAvailability() {
-    let sdk: ConduitCommons = (this._app as any).conduit;
+    let sdk: ConduitCommons = this._commons
     let r = await sdk.getState().getKey('router');
     if (!r || r.length === 0) return;
     let state = JSON.parse(r);
@@ -79,8 +82,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
     });
   }
 
-  updateState(protofile: string, routes: any, url: string) {
-    let sdk: ConduitCommons = (this._app as any).conduit;
+  updateState(protofile: string, routes: ConduitRoute[], url: string) {
+    let sdk: ConduitCommons = this._commons
     sdk
       .getState()
       .getKey('router')
@@ -113,8 +116,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
       });
   }
 
-  publishAdminRouteData(protofile: string, routes: any, url: string) {
-    let sdk: ConduitCommons = (this._app as any).conduit;
+  publishAdminRouteData(protofile: string, routes: ConduitRoute[], url: string) {
+    let sdk: ConduitCommons = this._commons
     sdk.getBus().publish(
       'router',
       JSON.stringify({
@@ -129,7 +132,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        let result = ((this._app as any).conduit! as ConduitCommons)
+        let result = this._commons
           .getConfigManager()!
           .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
         if (!result) {
@@ -162,7 +165,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     callback(null, null);
   }
 
-  internalRegisterRoute(protofile: any, routes: any[], url: any, moduleName?: string) {
+  internalRegisterRoute(protofile: any, routes: ConduitRoute[], url: string, moduleName?: string) {
     let processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware
@@ -223,7 +226,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   cleanupRoutes() {
-    let routes: { action: string; path: string }[] = [];
+    const routes: { action: string; path: string }[] = [];
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       let routesArray = this._grpcRoutes[grpcRoute];
       routes.push(
@@ -315,9 +318,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   private registerAdminRoutes() {
-    let sdk: ConduitCommons = (this._app as any).conduit;
-    sdk.getAdmin().registerRoute(adminRoutes.getRoutes(this));
-    sdk.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
+    this._commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+    this._commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
 }
 
