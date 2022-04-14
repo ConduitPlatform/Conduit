@@ -10,20 +10,39 @@ import ConduitGrpcSdk, {
   TYPE,
   ParsedSocketRequest,
   UnparsedRouterResponse,
-  UnparsedSocketResponse,
+  UnparsedSocketResponse, Email,
 } from '@conduitplatform/grpc-sdk';
-import { ChatMessage, ChatRoom } from '../models';
+import { ChatMessage, ChatRoom, InvitationToken, User } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateUsersInput } from '../utils';
+import { v4 as uuid } from 'uuid';
+import * as templates from '../templates';
 
 export class ChatRoutes {
 
   private _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly emailModule: Email) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
 
+  }
+
+  private registerTemplates() {
+    this.grpcSdk.config
+      .get('email')
+      .then((emailConfig: any) => {
+        const promises = Object.values(templates).map((template) => {
+          return this.emailModule.registerTemplate(template);
+        });
+        return Promise.all(promises);
+      })
+      .then(() => {
+        console.log('Email templates registered');
+      })
+      .catch((e: Error) => {
+        console.error('Internal error while registering email templates');
+      });
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -57,6 +76,8 @@ export class ChatRoutes {
   async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
+    const actualUser = User.getInstance().findOne({ _id: user._id });
+    let usersToBeAdded;
     if (isNil(users) || !isArray(users) || users.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
     }
@@ -72,23 +93,55 @@ export class ChatRoutes {
     }
 
     try {
-      await validateUsersInput(this.grpcSdk, users);
+      usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message);
     }
 
-    room.participants = Array.from(new Set([...room.participants, ...users]));
-    await ChatRoom.getInstance()
-      .findByIdAndUpdate(
-        room._id,
-        room,
-      )
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    const config = await this.grpcSdk.config.get('chat');
+    if (config.sendInvitations.enabled) {
+      const serverConfig = await this.grpcSdk.config.getServerConfig();
+      const url = serverConfig.url;
+      if (config.sendInvitations.send_email) {
+        for (const invitedUser of usersToBeAdded) {
+          let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
+            type: 'INVITATION_TOKEN',
+            invited: invitedUser._id,
+            token: uuid(),
+            room: roomId,
+          });
+          let result = { invitationToken, hostUrl: url };
+          const acceptLink = `${result.hostUrl}/hook/chat/accept/${result.invitationToken.token}`;
+          const declineLink = `${result.hostUrl}/hook/chat/decline/${result.invitationToken.token}`;
+          const roomName = room.name;
+          const userName = user.email;
+          await this.emailModule.sendEmail('ChatRoomInvitation', {
+            email: invitedUser.email,
+            sender: 'no-reply',
+            variables: {
+              acceptLink,
+              declineLink,
+              userName,
+              roomName,
+            },
+          });
+        }
+      }
+      return 'Invitations were sent successfully';
+    } else {
+      room.participants = Array.from(new Set([...room.participants, ...users]));
+      await ChatRoom.getInstance()
+        .findByIdAndUpdate(
+          room._id,
+          room,
+        )
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
 
-    this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
-    return 'User added successfully';
+      this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
+      return 'User added successfully';
+    }
   }
 
   async leaveRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -297,7 +350,7 @@ export class ChatRoutes {
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const [ roomId, message ] = call.request.params;
+    const [roomId, message] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
     if (isNil(room) || !room.participants.includes(user._id)) {
@@ -321,7 +374,7 @@ export class ChatRoutes {
 
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
-    const [ roomId ] = call.request.params;
+    const [roomId] = call.request.params;
     const room = await ChatRoom.getInstance()
       .findOne({ _id: roomId });
     if (isNil(room) || !room.participants.includes(user._id)) {
@@ -341,6 +394,45 @@ export class ChatRoutes {
       receivers: [room._id],
       data: { room: room._id, readBy: user._id },
     };
+  }
+
+  async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { invitationToken, answer } = call.request.params;
+    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne({
+      type: 'INVITATION_TOKEN',
+      token: invitationToken,
+    });
+    if (isNil(invitationTokenDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+    }
+    const roomId: string  = invitationTokenDoc?.room as string;
+    const chatRoom = await ChatRoom.getInstance().findOne({ _id: roomId })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (isNil(chatRoom)) {
+      throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
+    }
+    const invited = invitationTokenDoc.invited as any;
+    if (chatRoom.participants.indexOf(invited) !== -1) {
+      throw new GrpcError(status.NOT_FOUND, `You already member of this chat room`);
+    }
+    const accepted = (answer === 'accept');
+    let message;
+    if (!isNil(invitationTokenDoc) && accepted) {
+      chatRoom.participants.push(invited);
+      await ChatRoom.getInstance().findByIdAndUpdate(
+        roomId,
+        chatRoom,
+      );
+      message = 'Invitation accepted';
+    } else {
+      message = 'Invitation declined';
+    }
+    const query = { $and: [{ data: { roomId: roomId } }, { userId: invited }] };
+    await InvitationToken.getInstance().deleteOne({ _id: invitationTokenDoc?._id });
+    await InvitationToken.getInstance().deleteMany(query);
+    return message;
   }
 
   async registerRoutes() {
@@ -466,7 +558,21 @@ export class ChatRoutes {
         this.deleteMessage.bind(this),
       );
     }
-
+    if (config.sendInvitations.enabled) {
+      this.registerTemplates();
+      this._routingManager.route(
+        {
+          path: '/hook/:answer/:invitationToken',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            answer: ConduitString.Required,
+            invitationToken: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
+        this.answerInvitation.bind(this),
+      );
+    }
     if (config.allowMessageEdit) {
       this._routingManager.route(
         {

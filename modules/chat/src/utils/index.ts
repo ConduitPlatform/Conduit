@@ -23,6 +23,7 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
       });
     }
   }
+  return usersToBeAdded;
 }
 
 export function populateArray(pop: any) {
