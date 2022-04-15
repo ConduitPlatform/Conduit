@@ -483,7 +483,7 @@ export class ChatRoutes {
     return 'Invitation canceled successfully';
   }
 
-  async getMyInvitations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getInvitations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
@@ -494,12 +494,31 @@ export class ChatRoutes {
       skip,
       limit,
       undefined,
-      'sender'
+      'sender',
     )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
 
+    const count = invitations.length;
+    return { invitations, count };
+  }
+
+  async sentInvitations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const invitations = await InvitationToken.getInstance().findMany(
+      { sender: user._id },
+      'room createdAt updatedAt receiver',
+      skip,
+      limit,
+      undefined,
+      'receiver',
+    )
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     const count = invitations.length;
     return { invitations, count };
   }
@@ -649,19 +668,6 @@ export class ChatRoutes {
       );
       this._routingManager.route(
         {
-          path: '/invitation/cancel',
-          action: ConduitRouteActions.DELETE,
-          urlParams: {
-            room: ConduitString.Required,
-            receiver: ConduitString.Required,
-          },
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('InvitationCancelResponse', 'String'),
-        this.cancelInvitation.bind(this),
-      );
-      this._routingManager.route(
-        {
           path: '/invitations',
           action: ConduitRouteActions.GET,
           queryParams: {
@@ -670,11 +676,40 @@ export class ChatRoutes {
           },
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('GetMyInvitations', {
-          invitations: InvitationToken.getInstance().fields,
+        new ConduitRouteReturnDefinition('GetInvitationsResponse', {
+          invitations: [InvitationToken.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        this.getMyInvitations.bind(this),
+        this.getInvitations.bind(this),
+      );
+      this._routingManager.route(
+        {
+          path: '/invitations/sent',
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+          action: ConduitRouteActions.GET,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('SentInvitationsResponse', {
+          invitations: [InvitationToken.getInstance().fields],
+          count: ConduitNumber.Required
+
+        }),
+        this.sentInvitations.bind(this),
+      );
+      this._routingManager.route(
+        {
+          path: '/invitation/cancel/:id',
+          action: ConduitRouteActions.DELETE,
+          urlParams: {
+            id: ConduitString.Required,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('InvitationCancelResponse', 'String'),
+        this.cancelInvitation.bind(this),
       );
     }
     if (config.allowMessageEdit) {
