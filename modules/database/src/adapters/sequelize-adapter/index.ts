@@ -108,7 +108,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           extensions: (schema as any).extensions,
         })
       );
-      await this.createSchemaFromAdapter(schema);
       console.log(`Introspected schema ${originalName}`, schema);
     }
     return this;

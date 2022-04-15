@@ -88,7 +88,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async introspectDatabase(): Promise<DatabaseAdapter<any>> {
     const db = this.mongoose.connection.db;
-    const schemas = new Map<string, ConduitSchema>();
 
     let schemaNames: string[] = [];
     if (await this.isConduitDB()) {
@@ -104,11 +103,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           })
           .toArray()
       ).map((s) => s.name);
+      console.log(await db.listCollections().toArray());
     } else {
       schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
     }
     await Promise.all(schemaNames.map(async (c) => {      
-      const res = await parseSchema(db.collection(c).find(), async (err: Error, originalSchema: any) => {
+      await parseSchema(db.collection(c).find(), async (err: Error, originalSchema: any) => {
         if (err) {
           throw new GrpcError(status.INTERNAL, err.message);
         }
@@ -131,11 +131,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           },
         });
         schema.ownerModule = 'database';
-
-        schemas.set(c, schema);
+        
+        await this.models!['_PendingSchemas'].create(JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: schema.schemaOptions,
+          ownerModule: schema.ownerModule,
+          extensions: (schema as any).extensions,
+        }))
         console.log(`Introspected schema ${c}`, schema);
         //TODO: get schema options from admin and create schema
-        // await this.createSchemaFromAdapter(schema); 
+        
       });
     }));
     return this;
