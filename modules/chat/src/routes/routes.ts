@@ -105,8 +105,8 @@ export class ChatRoutes {
       if (config.sendInvitations.send_email) {
         for (const invitedUser of usersToBeAdded) {
           let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
-            type: 'INVITATION_TOKEN',
             invited: invitedUser._id,
+            invitor: user._id,
             token: uuid(),
             room: roomId,
           });
@@ -399,13 +399,12 @@ export class ChatRoutes {
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { invitationToken, answer } = call.request.params;
     const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne({
-      type: 'INVITATION_TOKEN',
       token: invitationToken,
     });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
-    const roomId: string  = invitationTokenDoc?.room as string;
+    const roomId: string = invitationTokenDoc?.room as string;
     const chatRoom = await ChatRoom.getInstance().findOne({ _id: roomId })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -429,10 +428,31 @@ export class ChatRoutes {
     } else {
       message = 'Invitation declined';
     }
-    const query = { $and: [{ data: { roomId: roomId } }, { userId: invited }] };
-    await InvitationToken.getInstance().deleteOne({ _id: invitationTokenDoc?._id });
+    const query = { $and: [{ room: roomId }, { invited: invited }] };
     await InvitationToken.getInstance().deleteMany(query);
     return message;
+  }
+
+  async cancelInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { room, invited } = call.request.params;
+    const chatRoom = await ChatRoom.getInstance().findOne({ _id: room })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (isNil(chatRoom)) {
+      throw new GrpcError(status.NOT_FOUND, 'Room not found');
+    }
+
+    const query = { $and: [{ invitor: user._id }, { room: room }, { invited: invited }] };
+    const deleted = await InvitationToken.getInstance().deleteMany(query)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (!deleted.deletedCount) {
+      throw new GrpcError(status.NOT_FOUND, `You don't own invitations`);
+    }
+    return 'Invitation canceled successfully';
   }
 
   async registerRoutes() {
@@ -559,6 +579,7 @@ export class ChatRoutes {
       );
     }
     if (config.sendInvitations.enabled) {
+      // TODO Check if email is active
       this.registerTemplates();
       this._routingManager.route(
         {
@@ -571,6 +592,19 @@ export class ChatRoutes {
         },
         new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
         this.answerInvitation.bind(this),
+      );
+      this._routingManager.route(
+        {
+          path: '/invitation/cancel',
+          action: ConduitRouteActions.DELETE,
+          urlParams: {
+            room: ConduitString.Required,
+            invited: ConduitString.Required,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('InvitationCancelResponse', 'String'),
+        this.cancelInvitation.bind(this),
       );
     }
     if (config.allowMessageEdit) {
