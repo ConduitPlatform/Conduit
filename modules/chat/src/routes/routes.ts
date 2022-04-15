@@ -102,37 +102,33 @@ export class ChatRoutes {
     if (config.sendInvitations.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
       const url = serverConfig.url;
-      if (config.sendInvitations.send_email) {
-        for (const invitedUser of usersToBeAdded) {
-          const invitationsCount = await InvitationToken.getInstance().countDocuments({
-            room: roomId,
-            receiver: invitedUser._id,
-            sender: user._id,
-          });
-          if (room.participants.includes(invitedUser._id)) {
-            retMessage.push({
-              receiver: invitedUser._id,
-              message: 'Already member',
-            });
-            continue;
-          }
-          if (invitationsCount > 0) {
-            retMessage.push({
-              receiver: invitedUser._id,
-              message: 'Already invited',
-            });
-            continue;
-          }
-          let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
-            receiver: invitedUser._id,
-            sender: user._id,
-            token: uuid(),
-            room: roomId,
-          });
+      for (const invitedUser of usersToBeAdded) {
+        const invitationsCount = await InvitationToken.getInstance().countDocuments({
+          room: roomId,
+          receiver: invitedUser._id,
+          sender: user._id,
+        });
+        if (room.participants.includes(invitedUser._id)) {
           retMessage.push({
             receiver: invitedUser._id,
-            message: 'Invitation sent',
+            message: 'Already member',
           });
+          continue;
+        }
+        if (invitationsCount > 0) {
+          retMessage.push({
+            receiver: invitedUser._id,
+            message: 'Already invited',
+          });
+          continue;
+        }
+        let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
+          receiver: invitedUser._id,
+          sender: user._id,
+          token: uuid(),
+          room: roomId,
+        });
+        if (config.sendInvitations.send_email) {
           let result = { invitationToken, hostUrl: url };
           const acceptLink = `${result.hostUrl}/hook/chat/accept/${result.invitationToken.token}`;
           const declineLink = `${result.hostUrl}/hook/chat/decline/${result.invitationToken.token}`;
@@ -149,6 +145,10 @@ export class ChatRoutes {
             },
           });
         }
+        retMessage.push({
+          receiver: invitedUser._id,
+          message: 'Invitation sent',
+        });
       }
       return retMessage;
     } else {
@@ -425,9 +425,44 @@ export class ChatRoutes {
   }
 
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, answer } = call.request.params;
+    const { user } = call.request.context;
+    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne({
+      _id: id,
+      receiver: user._id,
+    });
+    if (isNil(invitationTokenDoc)) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
+    }
+    let message;
+    let receiver = user._id;
+    const accepted = (answer === 'accept');
+    const chatRoom = await ChatRoom.getInstance().findOne({ _id: invitationTokenDoc.room });
+    if (isNil(chatRoom)) {
+      throw new GrpcError(status.NOT_FOUND, 'Room not exists');
+    }
+    if (!isNil(invitationTokenDoc) && accepted) {
+      chatRoom.participants.push(user);
+      await ChatRoom.getInstance().findByIdAndUpdate(
+        chatRoom._id,
+        chatRoom,
+      );
+      message = 'Invitation accepted';
+    } else {
+      message = 'Invitation declined';
+    }
+
+    const query = { $and: [{ room: chatRoom._id }, { receiver: receiver }] };
+    await InvitationToken.getInstance().deleteMany(query);
+    return message;
+  }
+
+  async answerInvitationFromHook(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { invitationToken, answer } = call.request.params;
+    const { user } = call.request.context;
     const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne({
       token: invitationToken,
+      receiver: user._id,
     });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
@@ -664,6 +699,19 @@ export class ChatRoutes {
           },
         },
         new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
+        this.answerInvitationFromHook.bind(this),
+      );
+      this._routingManager.route(
+        {
+          path: '/:answer/:id',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            id: ConduitString.Required,
+            answer: ConduitString.Required,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('InvitationResponse', 'String'),
         this.answerInvitation.bind(this),
       );
       this._routingManager.route(
@@ -694,7 +742,7 @@ export class ChatRoutes {
         },
         new ConduitRouteReturnDefinition('SentInvitationsResponse', {
           invitations: [InvitationToken.getInstance().fields],
-          count: ConduitNumber.Required
+          count: ConduitNumber.Required,
 
         }),
         this.sentInvitations.bind(this),
