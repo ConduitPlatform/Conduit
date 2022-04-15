@@ -1,8 +1,4 @@
-import {
-  ManagedModule,
-  ConduitSchema,
-  GrpcError,
-} from "@conduitplatform/grpc-sdk";
+import { ManagedModule, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 
 import { AdminHandlers } from './admin/admin';
 import { DatabaseRoutes } from './routes/routes';
@@ -10,22 +6,29 @@ import * as models from './models';
 import {
   CreateSchemaExtensionRequest,
   CreateSchemaRequest,
-  DropCollectionRequest, DropCollectionResponse, FindOneRequest, FindRequest,
+  DropCollectionRequest,
+  DropCollectionResponse,
+  FindOneRequest,
+  FindRequest,
   GetSchemaRequest,
-  GetSchemasRequest, QueryRequest, QueryResponse,
+  GetSchemasRequest,
+  QueryRequest,
+  QueryResponse,
   SchemaResponse,
-  SchemasResponse, UpdateManyRequest, UpdateRequest
-} from "./types";
+  SchemasResponse,
+  UpdateManyRequest,
+  UpdateRequest,
+} from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from "./interfaces";
-import { canCreate, canDelete, canModify } from "./permissions";
-import { runMigrations } from "./migrations";
-import { SchemaController } from "./controllers/cms/schema.controller";
-import { CustomEndpointController } from "./controllers/customEndpoints/customEndpoint.controller";
+import { SchemaAdapter } from './interfaces';
+import { canCreate, canDelete, canModify } from './permissions';
+import { runMigrations } from './migrations';
+import { SchemaController } from './controllers/cms/schema.controller';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 
@@ -59,7 +62,8 @@ export default class DatabaseModule extends ManagedModule {
     super('database');
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
-    } else if (dbType === 'postgres' || dbType === 'sql') { // Compat (<=0.12.2): sql
+    } else if (dbType === 'postgres' || dbType === 'sql') {
+      // Compat (<=0.12.2): sql
       this._activeAdapter = new SequelizeAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
@@ -69,16 +73,17 @@ export default class DatabaseModule extends ManagedModule {
   async preServerStart() {
     await this._activeAdapter.ensureConnected();
   }
-  
+
   async onServerStart() {
     const isConduitDB = await this._activeAdapter.isConduitDB();
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    
+
     if (!isConduitDB) {
       console.log(`Database is not a Conduit DB. Starting introspection...`);
+      await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
       await this._activeAdapter.introspectDatabase();
-    }    
-    
+    }
+
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
@@ -86,10 +91,14 @@ export default class DatabaseModule extends ManagedModule {
 
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
-    
+
     await this._activeAdapter.recoverSchemasFromDatabase();
 
-    this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
+    this.userRouter = new DatabaseRoutes(
+      this.grpcServer,
+      this._activeAdapter,
+      this.grpcSdk
+    );
   }
 
   async preRegister() {}
@@ -110,13 +119,12 @@ export default class DatabaseModule extends ManagedModule {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName,
+            receivedSchema.collectionName
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
-            .then(() => {
-            })
+            .then(() => {})
             .catch(() => {
               console.log('Failed to create/update schema');
             });
@@ -128,12 +136,12 @@ export default class DatabaseModule extends ManagedModule {
     const schemaController = new SchemaController(
       this.grpcSdk,
       this._activeAdapter,
-      this.userRouter,
+      this.userRouter
     );
     const customEndpointController = new CustomEndpointController(
       this.grpcSdk,
       this._activeAdapter,
-      this.userRouter,
+      this.userRouter
     );
     this.adminRouter = new AdminHandlers(
       this.grpcServer,
@@ -161,7 +169,7 @@ export default class DatabaseModule extends ManagedModule {
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
       JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName,
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -248,7 +256,7 @@ export default class DatabaseModule extends ManagedModule {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as any).metadata.get('module-name')[0],
+        (call as any).metadata.get('module-name')[0]
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -314,7 +322,7 @@ export default class DatabaseModule extends ManagedModule {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -342,7 +350,7 @@ export default class DatabaseModule extends ManagedModule {
         select,
         sort,
         populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -422,7 +430,7 @@ export default class DatabaseModule extends ManagedModule {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       const resultString = JSON.stringify(result);
 
@@ -452,7 +460,7 @@ export default class DatabaseModule extends ManagedModule {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.updateProvidedOnly
       );
       const resultString = JSON.stringify(result);
 
@@ -531,5 +539,4 @@ export default class DatabaseModule extends ManagedModule {
       });
     }
   }
-
 }

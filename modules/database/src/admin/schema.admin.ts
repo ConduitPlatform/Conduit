@@ -19,7 +19,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-const SYSTEM_SCHEMAS = ['CustomEndpoints']; // DeclaredSchemas is not a DeclaredSchema
+const SYSTEM_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
 

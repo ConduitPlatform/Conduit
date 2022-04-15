@@ -74,7 +74,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   ): { model: SchemaAdapter<any>; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints'];
+    const dbSchemas = ['CustomEndpoints','_PendingSchemas'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }

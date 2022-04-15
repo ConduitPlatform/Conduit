@@ -72,7 +72,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     this.model = sequelize.define(schema.name, schema.modelSchema as any, {
       ...schema.modelOptions,
       freezeTableName: true,
-      timestamps: true,
     });
   }
 

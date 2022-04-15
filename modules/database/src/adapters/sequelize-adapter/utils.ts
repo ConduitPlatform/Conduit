@@ -56,7 +56,7 @@ function matchOperation(operator: string, value: any) {
 }
 
 export function parseQuery(query: any) {
-  let parsed: any = {};
+  let parsed: any = isArray(query) ? [] : {};
   if (isString(query) || isBoolean(query)) return query;
   for (let key in query) {
     if (key === '$or') {
