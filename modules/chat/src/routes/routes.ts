@@ -76,7 +76,6 @@ export class ChatRoutes {
   async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
-    const actualUser = User.getInstance().findOne({ _id: user._id });
     let usersToBeAdded;
     if (isNil(users) || !isArray(users) || users.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'users is required and must be a non-empty array');
@@ -99,16 +98,40 @@ export class ChatRoutes {
     }
 
     const config = await this.grpcSdk.config.get('chat');
+    let retMessage: any [] = [];
     if (config.sendInvitations.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
       const url = serverConfig.url;
       if (config.sendInvitations.send_email) {
         for (const invitedUser of usersToBeAdded) {
+          const invitationsCount = await InvitationToken.getInstance().countDocuments({
+            room: roomId,
+            receiver: invitedUser._id,
+            sender: user._id,
+          });
+          if (room.participants.includes(invitedUser._id)) {
+            retMessage.push({
+              receiver: invitedUser._id,
+              message: 'Already member',
+            });
+            continue;
+          }
+          if (invitationsCount > 0) {
+            retMessage.push({
+              receiver: invitedUser._id,
+              message: 'Already invited',
+            });
+            continue;
+          }
           let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
-            invited: invitedUser._id,
-            invitor: user._id,
+            receiver: invitedUser._id,
+            sender: user._id,
             token: uuid(),
             room: roomId,
+          });
+          retMessage.push({
+            receiver: invitedUser._id,
+            message: 'Invitation sent',
           });
           let result = { invitationToken, hostUrl: url };
           const acceptLink = `${result.hostUrl}/hook/chat/accept/${result.invitationToken.token}`;
@@ -127,7 +150,7 @@ export class ChatRoutes {
           });
         }
       }
-      return 'Invitations were sent successfully';
+      return retMessage;
     } else {
       room.participants = Array.from(new Set([...room.participants, ...users]));
       await ChatRoom.getInstance()
@@ -138,9 +161,14 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-
+      users.forEach((user) => {
+        retMessage.push({
+          receiver: user._id,
+          message: 'User added',
+        });
+      });
       this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
-      return 'User added successfully';
+      return retMessage;
     }
   }
 
@@ -412,14 +440,14 @@ export class ChatRoutes {
     if (isNil(chatRoom)) {
       throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
     }
-    const invited = invitationTokenDoc.invited as any;
-    if (chatRoom.participants.indexOf(invited) !== -1) {
+    const receiver = invitationTokenDoc.receiver as any;
+    if (chatRoom.participants.indexOf(receiver) !== -1) {
       throw new GrpcError(status.NOT_FOUND, `You already member of this chat room`);
     }
     const accepted = (answer === 'accept');
     let message;
     if (!isNil(invitationTokenDoc) && accepted) {
-      chatRoom.participants.push(invited);
+      chatRoom.participants.push(receiver);
       await ChatRoom.getInstance().findByIdAndUpdate(
         roomId,
         chatRoom,
@@ -428,14 +456,14 @@ export class ChatRoutes {
     } else {
       message = 'Invitation declined';
     }
-    const query = { $and: [{ room: roomId }, { invited: invited }] };
+    const query = { $and: [{ room: roomId }, { receiver: receiver }] };
     await InvitationToken.getInstance().deleteMany(query);
     return message;
   }
 
   async cancelInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { room, invited } = call.request.params;
+    const { room, receiver } = call.request.params;
     const chatRoom = await ChatRoom.getInstance().findOne({ _id: room })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -444,7 +472,7 @@ export class ChatRoutes {
       throw new GrpcError(status.NOT_FOUND, 'Room not found');
     }
 
-    const query = { $and: [{ invitor: user._id }, { room: room }, { invited: invited }] };
+    const query = { $and: [{ sender: user._id }, { room: room }, { receiver: receiver }] };
     const deleted = await InvitationToken.getInstance().deleteMany(query)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -453,6 +481,27 @@ export class ChatRoutes {
       throw new GrpcError(status.NOT_FOUND, `You don't own invitations`);
     }
     return 'Invitation canceled successfully';
+  }
+
+  async getMyInvitations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+
+    const invitations = await InvitationToken.getInstance().findMany(
+      { receiver: user._id },
+      'room createdAt updatedAt sender',
+      skip,
+      limit,
+      undefined,
+      'sender'
+    )
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+
+    const count = invitations.length;
+    return { invitations, count };
   }
 
   async registerRoutes() {
@@ -486,7 +535,12 @@ export class ChatRoutes {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('AddUserToRoomResponse', 'String'),
+      new ConduitRouteReturnDefinition('AddUserToRoomResponse', {
+        retMessage: [{
+          receiver: ConduitString.Required,
+          message: ConduitString.Required,
+        }],
+      }),
       this.addUserToRoom.bind(this),
     );
 
@@ -599,12 +653,28 @@ export class ChatRoutes {
           action: ConduitRouteActions.DELETE,
           urlParams: {
             room: ConduitString.Required,
-            invited: ConduitString.Required,
+            receiver: ConduitString.Required,
           },
           middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('InvitationCancelResponse', 'String'),
         this.cancelInvitation.bind(this),
+      );
+      this._routingManager.route(
+        {
+          path: '/invitations',
+          action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('GetMyInvitations', {
+          invitations: InvitationToken.getInstance().fields,
+          count: ConduitNumber.Required,
+        }),
+        this.getMyInvitations.bind(this),
       );
     }
     if (config.allowMessageEdit) {

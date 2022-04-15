@@ -8,12 +8,12 @@ import { ChatRoom } from './ChatRoom.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  invitor: {
+  sender: {
     type: TYPE.Relation,
     model: 'User',
     required: true,
   },
-  invited: {
+  receiver: {
     type: TYPE.Relation,
     model: 'User',
     required: true,
@@ -46,8 +46,8 @@ const collectionName = undefined;
 export class InvitationToken extends ConduitActiveSchema<InvitationToken> {
   private static _instance: InvitationToken;
   _id: string;
-  invitor!: string | User;
-  invited!: string | User;
+  sender!: string | User;
+  receiver!: string | User;
   token!: string;
   room!: string | ChatRoom;
   createdAt: Date;
