@@ -26,11 +26,7 @@ export default {
       doc: 'Defines if the sender should automatically send a push notification',
       format: 'Boolean',
       default: false,
-    },
-    redirect_uri: {
-      format: 'String',
-      default: '',
-    },
+    }
   }
 
 };
