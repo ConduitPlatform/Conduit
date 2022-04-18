@@ -15,8 +15,8 @@
 
 # ------ Default Values ------ #
 
-TAG         ?= v0.12.5
-UI_TAG      ?= v0.12.1
+TAG         ?= v0.12.6
+UI_TAG      ?= v0.12.2
 DOCKER      ?= docker
 CONTAINER_NETWORK_NAME ?= "conduit"
 CONDUIT_CORE_NETWORK_NAME = conduit
