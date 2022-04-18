@@ -23,7 +23,7 @@ export class ChatRoutes {
 
   private _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly emailModule: Email) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk, private readonly emailModule?: Email) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
 
   }
@@ -33,7 +33,7 @@ export class ChatRoutes {
       .get('email')
       .then((emailConfig: any) => {
         const promises = Object.values(templates).map((template) => {
-          return this.emailModule.registerTemplate(template);
+          return this.emailModule!.registerTemplate(template);
         });
         return Promise.all(promises);
       })
@@ -134,7 +134,7 @@ export class ChatRoutes {
           const declineLink = `${result.hostUrl}/hook/chat/decline/${result.invitationToken.token}`;
           const roomName = room.name;
           const userName = user.email;
-          await this.emailModule.sendEmail('ChatRoomInvitation', {
+          await this.emailModule!.sendEmail('ChatRoomInvitation', {
             email: invitedUser.email,
             sender: 'no-reply',
             variables: {
@@ -686,7 +686,7 @@ export class ChatRoutes {
         this.deleteMessage.bind(this),
       );
     }
-    if (config.sendInvitations.enabled) {
+    if (config.explicit_room_joins.enabled) {
       // TODO Check if email is active
       this.registerTemplates();
       this._routingManager.route(

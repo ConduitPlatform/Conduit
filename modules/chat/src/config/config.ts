@@ -11,7 +11,7 @@ export default {
     format: 'Boolean',
     default: true
   },
-  sendInvitations: {
+  explicit_room_joins: {
     enabled: {
       doc: 'Defines if this strategy is active or not',
       format: 'Boolean',
@@ -22,11 +22,6 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    send_notification: {
-      doc: 'Defines if the sender should automatically send a push notification',
-      format: 'Boolean',
-      default: false,
-    }
   }
 
 };
