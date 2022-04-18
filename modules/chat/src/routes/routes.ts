@@ -12,11 +12,10 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
-import { ChatMessage, ChatRoom, InvitationToken } from '../models';
+import { ChatMessage, ChatRoom } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateUsersInput, sendInvitations } from '../utils';
-import * as templates from '../templates';
 import { InvitationRoutes } from './InvitationRoutes';
 
 export class ChatRoutes {

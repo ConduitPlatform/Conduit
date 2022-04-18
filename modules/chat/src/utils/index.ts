@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { Email } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ChatRoom, InvitationToken, User } from '../models';
 import { v4 as uuid } from 'uuid';
 
