@@ -1,6 +1,8 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Email } from '@conduitplatform/grpc-sdk';
+import { ChatRoom, InvitationToken, User } from '../models';
+import { v4 as uuid } from 'uuid';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) {
   const uniqueUsers = Array.from(new Set(users));
@@ -24,6 +26,63 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
     }
   }
   return usersToBeAdded;
+}
+
+export async function sendInvitations(users: any, sender: User, room: ChatRoom, url: string, config: any, grpcSdk: ConduitGrpcSdk) {
+
+  const roomId = room._id;
+  let retMessage: any [] = [];
+  for (const invitedUser of users) {
+    const invitationsCount = await InvitationToken.getInstance().countDocuments({
+      room: roomId,
+      receiver: invitedUser._id,
+      sender: sender._id,
+    });
+    if (room.participants.includes(invitedUser._id)) {
+      retMessage.push({
+        receiver: invitedUser._id,
+        message: 'Already member',
+      });
+      continue;
+    }
+    if (invitationsCount > 0) {
+      retMessage.push({
+        receiver: invitedUser._id,
+        message: 'Already invited',
+      });
+      continue;
+    }
+    let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
+      receiver: invitedUser._id,
+      sender: sender._id,
+      token: uuid(),
+      room: roomId,
+    });
+    if (config.explicit_room_joins.send_email) {
+      let result = { invitationToken, hostUrl: url };
+      const acceptLink = `${result.hostUrl}/hook/chat/accept/${result.invitationToken.token}`;
+      const declineLink = `${result.hostUrl}/hook/chat/decline/${result.invitationToken.token}`;
+      const roomName = room.name;
+      const userName = sender.email;
+      await grpcSdk.emailProvider!.sendEmail('ChatRoomInvitation', {
+        email: invitedUser.email,
+        sender: 'no-reply',
+        variables: {
+          acceptLink,
+          declineLink,
+          userName,
+          roomName,
+        },
+      }).catch((e: Error) => {
+        throw  new Error(e.message);
+      });
+      retMessage.push({
+        receiver: invitedUser._id,
+        message: 'Invitation sent',
+      });
+    }
+  }
+  return retMessage;
 }
 
 export function populateArray(pop: any) {

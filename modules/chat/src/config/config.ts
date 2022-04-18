@@ -13,7 +13,7 @@ export default {
   },
   explicit_room_joins: {
     enabled: {
-      doc: 'Defines if this strategy is active or not',
+      doc: 'Defines whether users should explicitly accept an invitation before being introduced into a chat room',
       format: 'Boolean',
       default: false,
     },

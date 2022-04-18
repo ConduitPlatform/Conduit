@@ -45,7 +45,7 @@ export default class Chat extends ManagedModule {
     if (!this.isRunning) {
       await this.registerSchemas();
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk,this.emailModule!);
+      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
       this.isRunning = true;
     }
     if (config.explicit_room_joins.send_email)
