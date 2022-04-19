@@ -19,6 +19,7 @@ import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvi
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { ISendNotification } from './interfaces/ISendNotification';
 
 export default class PushNotifications extends ManagedModule {
   config = AppConfigSchema;
@@ -146,7 +147,7 @@ export default class PushNotifications extends ManagedModule {
 
   async sendNotification(call: SendNotificationRequest, callback: SendNotificationResponse) {
     let data = call.request.data;
-    const params: any = {
+    const params: ISendNotification = {
       sendTo: call.request.sendTo,
       title: call.request.title,
       body: call.request.body,
