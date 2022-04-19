@@ -36,4 +36,17 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
         return res.tokenDocuments;
       });
   }
+
+  sendNotification(sendTo: string, title: string, body?: string, data?: string) {
+    return this.client!.sendNotification(
+      {
+        sendTo,
+        title,
+        body,
+        data,
+      })
+      .then(res => {
+        return JSON.parse(res.message);
+      });
+  }
 }
