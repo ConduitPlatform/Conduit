@@ -57,7 +57,8 @@ export class ChatRoutes {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config.explicit_room_joins.enabled, this.grpcSdk)
+      const sendEmail = config.explicit_room_joins.send_email;
+      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, this.grpcSdk)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
