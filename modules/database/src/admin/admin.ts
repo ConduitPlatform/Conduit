@@ -296,7 +296,7 @@ export class AdminHandlers {
         path: '/introspection/schemas/finalize',
         action: ConduitRouteActions.POST,
       },
-      new ConduitRouteReturnDefinition('FinalizeSchemas',TYPE.JSON),
+      new ConduitRouteReturnDefinition('FinalizeSchemas',TYPE.String),
       'finalizeSchemas'
       ),
       // Documents
