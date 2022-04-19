@@ -491,7 +491,7 @@ export class SchemaAdmin {
     await Promise.all(schemas.map(async (schema: ConduitSchema) => {
         // (schema.schemaOptions as any) = (schema as any).modelOptions;
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
-        schema.ownerModule = 'database';
+        recreatedSchema.ownerModule = 'database';
         await this.database.createSchemaFromAdapter(recreatedSchema);
     }));
     //remove finalized schemas from pending schemas
