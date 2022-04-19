@@ -1,7 +1,7 @@
 import {
   ManagedModule,
   DatabaseProvider,
-  ConfigController,
+  ConfigController, GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
@@ -9,9 +9,9 @@ import { PushNotificationsRoutes } from './routes/routes';
 import * as models from './models';
 import {
   GetNotificationTokensRequest,
-  GetNotificationTokensResponse,
+  GetNotificationTokensResponse, SendNotificationRequest, SendNotificationResponse,
   SetNotificationTokenRequest,
-  SetNotificationTokenResponse
+  SetNotificationTokenResponse,
 } from './types';
 import { FirebaseProvider } from './providers/Firebase.provider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
@@ -29,6 +29,7 @@ export default class PushNotifications extends ManagedModule {
       setConfig: this.setConfig.bind(this),
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this),
+      sendNotification: this.sendNotification.bind(this),
     },
   };
   private isRunning: boolean = false;
@@ -60,7 +61,7 @@ export default class PushNotifications extends ManagedModule {
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,
-        this._provider!
+        this._provider!,
       );
       this.isRunning = true;
     } else {
@@ -95,7 +96,7 @@ export default class PushNotifications extends ManagedModule {
   // gRPC Service
   async setNotificationToken(
     call: SetNotificationTokenRequest,
-    callback: SetNotificationTokenResponse
+    callback: SetNotificationTokenResponse,
   ) {
     const { token, platform, userId } = call.request;
     let errorMessage: string | null = null;
@@ -105,7 +106,9 @@ export default class PushNotifications extends ManagedModule {
         if (!isNil(oldToken))
           return models.NotificationToken.getInstance().deleteOne(oldToken);
       })
-      .catch((e: Error) => { errorMessage = e.message });
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -115,7 +118,9 @@ export default class PushNotifications extends ManagedModule {
         token,
         platform,
       })
-      .catch((e: Error) => { errorMessage = e.message });
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -124,16 +129,41 @@ export default class PushNotifications extends ManagedModule {
 
   async getNotificationTokens(
     call: GetNotificationTokensRequest,
-    callback: GetNotificationTokensResponse
+    callback: GetNotificationTokensResponse,
   ) {
     const userId = call.request.userId;
     let errorMessage: string | null = null;
     const tokenDocuments: any = await models.NotificationToken.getInstance()
       .findMany({ userId })
-      .catch((e: Error) => { errorMessage = e.message });
+      .catch((e: Error) => {
+        errorMessage = e.message;
+      });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
     return callback(null, { tokenDocuments });
+  }
+
+  async sendNotification(call: SendNotificationRequest, callback: SendNotificationResponse) {
+    let data = call.request.data;
+    const params: any = {
+      sendTo: call.request.sendTo,
+      title: call.request.title,
+      body: call.request.body,
+      data: data ? JSON.parse(data) : {},
+      type: call.request.type,
+    };
+
+    let errorMessage: string | null = null;
+    await this._provider!
+      .sendToDevice(params)
+      .catch((e) => {
+        errorMessage = e;
+      });
+    if (errorMessage) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+
+    return callback(null, { message: 'Ok' });
   }
 }

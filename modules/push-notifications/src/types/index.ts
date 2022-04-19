@@ -17,3 +17,16 @@ export type GetNotificationTokensRequest = GrpcRequest<{
 export type GetNotificationTokensResponse = GrpcResponse<{
   tokenDocuments: string[];
 }>;
+
+export type SendNotificationRequest = GrpcRequest<{
+  sendTo: string;
+  title: string;
+  body?: string;
+  data?: string;
+  type?: string;
+}>;
+
+export type SendNotificationResponse = GrpcResponse<{
+  message: string;
+}>;
+

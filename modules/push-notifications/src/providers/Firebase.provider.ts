@@ -7,6 +7,7 @@ import {
 } from '../interfaces/ISendNotification';
 import { isNil, keyBy } from 'lodash';
 import { NotificationToken } from '../models';
+import { SendNotificationRequest } from '../types';
 
 export class FirebaseProvider implements IPushNotificationsProvider {
   private readonly fcm: firebase.messaging.Messaging;
