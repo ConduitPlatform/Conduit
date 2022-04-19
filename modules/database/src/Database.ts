@@ -81,7 +81,7 @@ export default class DatabaseModule extends ManagedModule {
     if (!isConduitDB) {
       console.log(`Database is not a Conduit DB. Starting introspection...`);
       await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
-      await this._activeAdapter.introspectDatabase();
+      await this._activeAdapter.introspectDatabase(isConduitDB);
     }
 
     const modelPromises = Object.values(models).flatMap((model: any) => {

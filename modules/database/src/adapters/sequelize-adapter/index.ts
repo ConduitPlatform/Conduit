@@ -38,7 +38,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
-  async introspectDatabase(): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB : boolean = true): Promise<DatabaseAdapter<any>> {
     const options = {
       directory: '',
       additional: {
@@ -52,7 +52,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
     let systemSchemas: string[] = [];
 
-    if (await this.isConduitDB()) {
+    if (isConduitDB) {
       //Get all system-db schema names
       const schemas = await this.models!['_DeclaredSchema'].findMany({
         $or: [{ name: { $in: SYSTEM_DB_SCHEMAS } }, { ownerModule: { $ne: 'database' } }],

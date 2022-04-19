@@ -7,6 +7,7 @@ import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
 import {
+  INITIAL_DB_SCHEMAS,
   mongoSchemaConverter,
   SYSTEM_DB_SCHEMAS,
 } from '../../introspection/mongoose/utils';
@@ -34,6 +35,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
+    this.mongoose.pluralize(null);
     this.connect();
   }
 
@@ -83,18 +85,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const collectionNames = (
       await this.mongoose.connection.db.listCollections().toArray()
     ).map((c) => c.name);
-    return collectionNames.includes('_declaredschemas');
+    return collectionNames.includes('_DeclaredSchema');
   }
 
-  async introspectDatabase(): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB : boolean = true): Promise<DatabaseAdapter<any>> {
     const db = this.mongoose.connection.db;
 
     let schemaNames: string[] = [];
-    if (await this.isConduitDB()) {
+    if (isConduitDB) {
       //Get all non system-db schemas
       schemaNames = (
         await db
-          .collection('_declaredschemas')
+          .collection('_DeclaredSchema')
           .find({
             $and: [
               { name: { $nin: SYSTEM_DB_SCHEMAS } }, // replace with cms metadata check
@@ -103,17 +105,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           })
           .toArray()
       ).map((s) => s.name);
-      console.log(await db.listCollections().toArray());
     } else {
       schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
+      schemaNames = schemaNames.filter(s => !INITIAL_DB_SCHEMAS.includes(s));  
     }
-    await Promise.all(schemaNames.map(async (c) => {      
-      await parseSchema(db.collection(c).find(), async (err: Error, originalSchema: any) => {
+    await Promise.all(schemaNames.map(async (collectionName) => {  
+      await parseSchema(db.collection(collectionName).find(), async (err: Error, originalSchema: any) => {
         if (err) {
           throw new GrpcError(status.INTERNAL, err.message);
         }
         originalSchema = mongoSchemaConverter(originalSchema);
-        const schema = new ConduitSchema(c, originalSchema, {
+        const schema = new ConduitSchema(collectionName, originalSchema, {
           timestamps: true,
           conduit: {
             noSync: true,
@@ -129,9 +131,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
               enabled: false,
             },
           },
-        });
+        },
+        collectionName);
         schema.ownerModule = 'database';
-        
+
         await this.models!['_PendingSchemas'].create(JSON.stringify({
           name: schema.name,
           fields: schema.fields,
@@ -139,9 +142,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           ownerModule: schema.ownerModule,
           extensions: (schema as any).extensions,
         }))
-        console.log(`Introspected schema ${c}`, schema);
+        console.log(`Introspected schema ${collectionName}`, schema);
         //TODO: get schema options from admin and create schema
-        
       });
     }));
     return this;

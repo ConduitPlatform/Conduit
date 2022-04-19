@@ -17,7 +17,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
    * 
    * Introspects all schemas of current db connection, registers them to conduit
    */
-  abstract introspectDatabase(): Promise<DatabaseAdapter<any>>;
+  abstract introspectDatabase(isConduitDB : boolean): Promise<DatabaseAdapter<any>>;
 
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter

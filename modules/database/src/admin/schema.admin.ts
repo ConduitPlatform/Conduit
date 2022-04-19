@@ -16,7 +16,6 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-
 const escapeStringRegexp = require('escape-string-regexp');
 
 const SYSTEM_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
@@ -475,8 +474,16 @@ export class SchemaAdmin {
   }
 
   async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    await this.database.introspectDatabase();
+    await this.database.introspectDatabase(true);
     return { introspect: 'success'};
+  }
+
+  async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany({});
+    return { schemas };
+  }
+
+  async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
   }
 
   private patchSchemaPerms(

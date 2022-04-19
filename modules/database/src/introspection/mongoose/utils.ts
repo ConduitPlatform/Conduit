@@ -1,12 +1,12 @@
 import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 
 export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // Check schema entries for cms metadata
+export const INITIAL_DB_SCHEMAS = ['_DeclaredSchema', '_PendingSchemas'];
 
 /**
  * This function should take as an input a mongo-schema object and convert it to a conduit schema
  */
 export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
-  console.log(mongoSchema);
   const conduitSchema: Partial<ConduitModel> = {};
 
   for (const field of mongoSchema.fields) {

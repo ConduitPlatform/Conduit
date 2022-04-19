@@ -65,6 +65,8 @@ export class AdminHandlers {
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
         getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
         introspectDatabase: this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
+        getPendingSchemas: this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
+        finalizeSchemas: this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
@@ -277,11 +279,25 @@ export class AdminHandlers {
         'setSchemaPerms',
       ),
       constructConduitRoute({
-        path: '/schemas/introspect',
+        path: '/introspection',
         action: ConduitRouteActions.POST,
       },
       new ConduitRouteReturnDefinition('IntrospectDatabase', TYPE.JSON),
       'introspectDatabase'
+      ),
+      constructConduitRoute({
+        path: '/introspection/schemas',
+        action: ConduitRouteActions.GET,
+      },
+      new ConduitRouteReturnDefinition('GetPendingSchemas',TYPE.JSON),
+      'getPendingSchemas'
+      ),
+      constructConduitRoute({
+        path: '/introspection/schemas/finalize',
+        action: ConduitRouteActions.POST,
+      },
+      new ConduitRouteReturnDefinition('FinalizeSchemas',TYPE.JSON),
+      'finalizeSchemas'
       ),
       // Documents
       constructConduitRoute(
