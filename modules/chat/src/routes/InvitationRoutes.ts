@@ -205,7 +205,6 @@ export class InvitationRoutes {
     const { user } = call.request.context;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-
     const invitations = await InvitationToken.getInstance().findMany(
       { receiver: user._id },
       'room createdAt updatedAt sender',
