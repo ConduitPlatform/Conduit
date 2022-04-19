@@ -1,6 +1,8 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ChatRoom, InvitationToken, User } from '../models';
+import { v4 as uuid } from 'uuid';
 
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) {
   const uniqueUsers = Array.from(new Set(users));
@@ -23,6 +25,56 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
       });
     }
   }
+  return usersToBeAdded;
+}
+
+export async function sendInvitations(users: User[], sender: User, room: ChatRoom, url: string, sendEmail: boolean, sendNotification: boolean, grpcSdk: ConduitGrpcSdk) {
+
+  const roomId = room._id;
+  for (const invitedUser of users) {
+    const invitationsCount = await InvitationToken.getInstance().countDocuments({
+      room: roomId,
+      receiver: invitedUser._id,
+      sender: sender._id,
+    });
+    if (invitationsCount > 0) {
+      throw new GrpcError(status.ALREADY_EXISTS, `users array contains invited member ids`);
+    }
+    let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
+      receiver: invitedUser._id,
+      sender: sender._id,
+      token: uuid(),
+      room: roomId,
+    });
+    if (sendEmail) {
+      let result = { invitationToken, hostUrl: url };
+      const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
+      const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
+      const roomName = room.name;
+      const userName = sender.email;
+      await grpcSdk.emailProvider!.sendEmail('ChatRoomInvitation', {
+        email: invitedUser.email,
+        sender: 'no-reply',
+        variables: {
+          acceptLink,
+          declineLink,
+          userName,
+          roomName,
+        },
+      }).catch((e: Error) => {
+        throw new Error(e.message);
+      });
+    }
+    if (sendNotification) {
+      const body = `User ${sender._id} has invited you to join in room ${room.name}`;
+      const title = 'You have an invitation request!';
+      await grpcSdk.pushNotifications!.sendNotification(invitedUser._id, title, body)
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
+    }
+  }
+  return 'Invitations sent';
 }
 
 export function populateArray(pop: any) {
