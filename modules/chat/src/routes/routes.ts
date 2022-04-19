@@ -57,7 +57,9 @@ export class ChatRoutes {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config.explicit_room_joins.enabled, this.grpcSdk)
+      const sendEmail = config.explicit_room_joins.send_email;
+      const sendNotification = config.explicit_room_joins.send_notification;
+      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -102,13 +104,15 @@ export class ChatRoutes {
 
     for (const user of usersToBeAdded) {
       if (room.participants.includes(user._id))
-        throw new GrpcError(status.ALREADY_EXISTS,'users array contains existing member ids')
+        throw new GrpcError(status.ALREADY_EXISTS, 'users array contains existing member ids');
     }
 
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      const ret = await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config, this.grpcSdk)
+      const sendEmail: boolean = config.explicit_room_joins.send_email;
+      const sendNotification: boolean = config.explicit_room_joins.send_notification;
+      const ret = await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -412,7 +416,7 @@ export class ChatRoutes {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('AddUsersToRoomResponse','String'),
+      new ConduitRouteReturnDefinition('AddUsersToRoomResponse', 'String'),
       this.addUsersToRoom.bind(this),
     );
 
