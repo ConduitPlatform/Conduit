@@ -62,7 +62,7 @@ export async function sendInvitations(users: User[], sender: User, room: ChatRoo
           roomName,
         },
       }).catch((e: Error) => {
-        throw  new Error(e.message);
+        throw new Error(e.message);
       });
     }
     if (sendNotification) {

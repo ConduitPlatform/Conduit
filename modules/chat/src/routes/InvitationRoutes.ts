@@ -92,7 +92,7 @@ export class InvitationRoutes {
     );
     this.routingManager.route(
       {
-        path: '/invitation/cancel/:id',
+        path: '/invitations/cancel/:id',
         action: ConduitRouteActions.DELETE,
         urlParams: {
           id: ConduitString.Required,
