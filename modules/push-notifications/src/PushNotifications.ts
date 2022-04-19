@@ -147,13 +147,18 @@ export default class PushNotifications extends ManagedModule {
 
   async sendNotification(call: SendNotificationRequest, callback: SendNotificationResponse) {
     let data = call.request.data;
-    const params: ISendNotification = {
-      sendTo: call.request.sendTo,
-      title: call.request.title,
-      body: call.request.body,
-      data: data ? JSON.parse(data) : {},
-      type: call.request.type,
-    };
+    let params: ISendNotification;
+    try {
+      params = {
+        sendTo: call.request.sendTo,
+        title: call.request.title,
+        body: call.request.body,
+        data: data ? JSON.parse(data) : {},
+        type: call.request.type,
+      };
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: e.message });
+    }
 
     let errorMessage: string | null = null;
     await this._provider!
