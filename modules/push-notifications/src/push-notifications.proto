@@ -38,7 +38,6 @@ message SendNotificationResponse {
   string message = 1;
 }
 
-
 service PushNotifications {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);

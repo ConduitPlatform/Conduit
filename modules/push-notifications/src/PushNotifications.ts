@@ -1,7 +1,7 @@
 import {
   ManagedModule,
   DatabaseProvider,
-  ConfigController, GrpcError,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
