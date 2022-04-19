@@ -5,11 +5,11 @@ export default {
   },
   allowMessageDelete: {
     format: 'Boolean',
-    default: true
+    default: true,
   },
   allowMessageEdit: {
     format: 'Boolean',
-    default: true
+    default: true,
   },
   explicit_room_joins: {
     enabled: {
@@ -22,6 +22,10 @@ export default {
       format: 'Boolean',
       default: false,
     },
-  }
-
+    send_notification: {
+      doc: 'Defines if the sender should automatically send a notification to the user',
+      format: 'Boolean',
+      default: false,
+    },
+  },
 };
