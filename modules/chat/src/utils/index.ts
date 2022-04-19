@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { ChatRoom, InvitationToken, User } from '../models';
 import { v4 as uuid } from 'uuid';
 
@@ -28,29 +28,17 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
   return usersToBeAdded;
 }
 
-export async function sendInvitations(users: any, sender: User, room: ChatRoom, url: string, config: any, grpcSdk: ConduitGrpcSdk) {
+export async function sendInvitations(users: User[], sender: User, room: ChatRoom, url: string, sendEmail: boolean, grpcSdk: ConduitGrpcSdk) {
 
   const roomId = room._id;
-  let retMessage: any [] = [];
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
       room: roomId,
       receiver: invitedUser._id,
       sender: sender._id,
     });
-    if (room.participants.includes(invitedUser._id)) {
-      retMessage.push({
-        receiver: invitedUser._id,
-        message: 'Already member',
-      });
-      continue;
-    }
     if (invitationsCount > 0) {
-      retMessage.push({
-        receiver: invitedUser._id,
-        message: 'Already invited',
-      });
-      continue;
+      throw new GrpcError(status.ALREADY_EXISTS, `users array contains invited member ids`);
     }
     let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
       receiver: invitedUser._id,
@@ -58,10 +46,10 @@ export async function sendInvitations(users: any, sender: User, room: ChatRoom, 
       token: uuid(),
       room: roomId,
     });
-    if (config.explicit_room_joins.send_email) {
+    if (sendEmail) {
       let result = { invitationToken, hostUrl: url };
-      const acceptLink = `${result.hostUrl}/hook/chat/accept/${result.invitationToken.token}`;
-      const declineLink = `${result.hostUrl}/hook/chat/decline/${result.invitationToken.token}`;
+      const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
+      const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
       const roomName = room.name;
       const userName = sender.email;
       await grpcSdk.emailProvider!.sendEmail('ChatRoomInvitation', {
@@ -76,13 +64,9 @@ export async function sendInvitations(users: any, sender: User, room: ChatRoom, 
       }).catch((e: Error) => {
         throw  new Error(e.message);
       });
-      retMessage.push({
-        receiver: invitedUser._id,
-        message: 'Invitation sent',
-      });
     }
   }
-  return retMessage;
+  return 'Invitations sent';
 }
 
 export function populateArray(pop: any) {

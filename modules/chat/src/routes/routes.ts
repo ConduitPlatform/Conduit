@@ -50,7 +50,6 @@ export class ChatRoutes {
     let room;
     let query: any = { name: roomName, participants: [user._id] };
     const config = await this.grpcSdk.config.get('chat');
-    console.log(config.explicit_room_joins.enabled);
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()
         .create(query)
@@ -58,7 +57,7 @@ export class ChatRoutes {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config, this.grpcSdk)
+      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config.explicit_room_joins.enabled, this.grpcSdk)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -77,7 +76,7 @@ export class ChatRoutes {
     return { roomId: room._id };
   }
 
-  async addUserToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async addUsersToRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { roomId, users } = call.request.params;
     const { user } = call.request.context;
     let usersToBeAdded;
@@ -101,8 +100,12 @@ export class ChatRoutes {
       throw new GrpcError(status.INTERNAL, e.message);
     }
 
+    for (const user of usersToBeAdded) {
+      if (room.participants.includes(user._id))
+        throw new GrpcError(status.ALREADY_EXISTS,'users array contains existing member ids')
+    }
+
     const config = await this.grpcSdk.config.get('chat');
-    let retMessage: any [] = [];
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
       const ret = await sendInvitations(usersToBeAdded, user, room, serverConfig.url, config, this.grpcSdk)
@@ -111,6 +114,7 @@ export class ChatRoutes {
         });
       return ret!;
     } else {
+
       room.participants = Array.from(new Set([...room.participants, ...users]));
       await ChatRoom.getInstance()
         .findByIdAndUpdate(
@@ -120,14 +124,8 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      users.forEach((user) => {
-        retMessage.push({
-          receiver: user._id,
-          message: 'User added',
-        });
-      });
       this.grpcSdk.bus?.publish('chat:addParticipant:ChatRoom', JSON.stringify(room));
-      return retMessage;
+      return 'Users added';
     }
   }
 
@@ -414,13 +412,8 @@ export class ChatRoutes {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('AddUserToRoomResponse', {
-        retMessage: [{
-          receiver: ConduitString.Required,
-          message: ConduitString.Required,
-        }],
-      }),
-      this.addUserToRoom.bind(this),
+      new ConduitRouteReturnDefinition('AddUsersToRoomResponse','String'),
+      this.addUsersToRoom.bind(this),
     );
 
     this._routingManager.route(

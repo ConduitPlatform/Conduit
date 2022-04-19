@@ -34,7 +34,7 @@ export class InvitationRoutes {
   declareRoutes() {
     this.routingManager.route(
       {
-        path: '/hook/:answer/:invitationToken',
+        path: '/hook/invitations/:answer/:invitationToken',
         action: ConduitRouteActions.GET,
         urlParams: {
           answer: ConduitString.Required,
@@ -46,7 +46,7 @@ export class InvitationRoutes {
     );
     this.routingManager.route(
       {
-        path: '/invitation/:answer/:id',
+        path: '/invitations/:answer/:id',
         action: ConduitRouteActions.GET,
         urlParams: {
           id: ConduitString.Required,
@@ -120,7 +120,7 @@ export class InvitationRoutes {
     const accepted = (answer === 'accept');
     const chatRoom = await ChatRoom.getInstance().findOne({ _id: invitationTokenDoc.room });
     if (isNil(chatRoom)) {
-      throw new GrpcError(status.NOT_FOUND, 'Room not exist');
+      throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
     }
     if (!isNil(invitationTokenDoc) && accepted) {
       chatRoom.participants.push(user);

@@ -29,7 +29,6 @@ export default class Chat extends ManagedModule {
   private adminRouter: AdminHandlers;
   private userRouter: ChatRoutes;
   private database: DatabaseProvider;
-  private emailModule?: Email;
 
   constructor() {
     super('chat');
@@ -48,10 +47,8 @@ export default class Chat extends ManagedModule {
       this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
       this.isRunning = true;
     }
-    if (config.explicit_room_joins.send_email)
+    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
       await this.grpcSdk.waitForExistence('email');
-    this.emailModule = this.grpcSdk.emailProvider!;
-
     await this.userRouter.registerRoutes();
   }
 
