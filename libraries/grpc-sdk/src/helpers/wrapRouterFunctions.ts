@@ -49,9 +49,6 @@ export function wrapRouterGrpcFunction(
       call.request.params = parseRequestData(call.request.params);
 
       routerRequest = !call.request.hasOwnProperty('event');
-      if (routerRequest) {
-        call.request.headers = parseRequestData(call.request.headers);
-      }
     } catch (e) {
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
       console.log(e.message ?? 'Something went wrong');
