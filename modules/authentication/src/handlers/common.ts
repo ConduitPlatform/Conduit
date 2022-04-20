@@ -65,7 +65,7 @@ export class CommonHandlers {
     });
 
     if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies(newAccessToken.token, newRefreshToken.token);
+      return AuthUtils.returnCookies(newAccessToken.token, newRefreshToken.token,'setCookies');
     }
     return {
       accessToken: newAccessToken.token,
@@ -75,7 +75,6 @@ export class CommonHandlers {
 
   async logOut(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
-
     const clientId = context.clientId;
     const user = context.user;
 

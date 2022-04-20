@@ -168,21 +168,23 @@ export class RestController extends ConduitRouter {
                 result: this.extractResult(route.returnTypeFields as string, result),
               };
             }
-            if (result.cookies) {
-              const cookies = result.cookies;
-              Object.keys(cookies).forEach((key: string) => {
+            if (r.setCookies) {
+              const cookies = JSON.parse(r.setCookies);
+              Object.keys(cookies).forEach((key) => {
                 res.cookie(key, cookies[key]);
               });
             }
-
+            if (r.removeCookies) {
+              const cookies = JSON.parse(r.setCookies);
+              Object.keys(cookies).forEach((key) => {
+                res.clearCookie(key);
+              });
+            }
             if (route.input.action === ConduitRouteActions.GET && caching) {
               this.storeInCache(hashKey, result, cacheAge!);
               res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
             } else {
               res.setHeader('Cache-Control', 'no-store');
-            }
-            if (result.cookies) {
-              delete result.cookies;
             }
             res.status(200).json(result);
           }

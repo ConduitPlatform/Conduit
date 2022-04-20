@@ -22,6 +22,8 @@ message RouterRequest {
 message RouterResponse {
   string result = 1;
   string redirect = 2;
+  optional string setCookies = 3;
+  optional string removeCookies = 4;
 }
 
 message SocketRequest {

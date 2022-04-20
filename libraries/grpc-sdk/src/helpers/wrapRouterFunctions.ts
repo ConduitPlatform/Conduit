@@ -49,6 +49,9 @@ export function wrapRouterGrpcFunction(
       call.request.params = parseRequestData(call.request.params);
 
       routerRequest = !call.request.hasOwnProperty('event');
+      if (routerRequest) {
+        call.request.headers = parseRequestData(call.request.headers);
+      }
     } catch (e) {
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
       console.log(e.message ?? 'Something went wrong');
@@ -65,14 +68,26 @@ export function wrapRouterGrpcFunction(
           if (typeof r === 'string') {
             callback(null, { result: r });
           } else {
-            if (r.result || r.redirect) {
+            const result = r.result ? JSON.stringify(r.result) : undefined;
+            if (r.removeCookies) {
+              callback(null, {
+                result: result,
+                removeCookies: JSON.stringify(r.removeCookies),
+              });
+            } else if (r.setCookies) {
+              callback(null, {
+                result: result,
+                setCookies: JSON.stringify(r.setCookies),
+              });
+            } else if (r.result || r.redirect) {
               callback(null, {
                 redirect: r.redirect ?? undefined,
-                result: r.result ? JSON.stringify(r.result) : undefined,
+                result: result,
               });
             } else {
               callback(null, { result: JSON.stringify(r) });
             }
+
           }
         } else {
           if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);

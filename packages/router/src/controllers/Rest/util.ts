@@ -6,17 +6,6 @@ export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
   let params: any = {};
   let headers: any = req.headers;
-  if (req.headers.hasOwnProperty('cookie')) {
-    let actualCookies: any = {};
-    let cookies = (req.headers.cookie!).split(';');
-    cookies.forEach((cookie: string) => {
-      const temp = cookie.split('=');
-      const key = temp[0];
-      const value = temp[1];
-      actualCookies[key] = value;
-    });
-    context['cookies'] = actualCookies;
-  }
   if (req.query) {
     let newObj = {};
     Object.keys(req.query).forEach((k: string) => {
