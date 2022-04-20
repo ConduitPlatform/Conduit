@@ -165,16 +165,26 @@ export namespace AuthUtils {
       );
   }
 
-  export function returnCookies(accessToken: string, refreshToken: string, option: string) {
-
-    return {
-      [option]: {
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      },
-      result: {
-        message: 'Authenticate successfully',
-      },
-    };
+  export function returnCookies(option: string, message: string, accessToken?: string, refreshToken?: string) {
+    let ret;
+    if (option === 'removeCookies') {
+      ret = {
+        removeCookies: 'accessToken,refreshToken',
+        result: {
+          message: message,
+        },
+      };
+    } else {
+      ret = {
+        [option]: {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        },
+        result: {
+          message: message,
+        },
+      };
+    }
+    return ret;
   }
 }

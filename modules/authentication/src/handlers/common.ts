@@ -10,6 +10,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, User } from '../models';
+import config from '../config';
 
 export class CommonHandlers {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -77,14 +78,16 @@ export class CommonHandlers {
     const context = call.request.context;
     const clientId = context.clientId;
     const user = context.user;
-
+    const config = ConfigController.getInstance().config;
     await Promise.all(
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
       })
     );
-
+    if (config.set_cookies.enabled) {
+      return AuthUtils.returnCookies('removeCookie','Logged out')
+    }
     return 'Logged out';
   }
 

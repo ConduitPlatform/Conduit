@@ -69,7 +69,7 @@ export class ServiceHandler {
       },
     );
     if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies((accessToken as any).token, (refreshToken as any).token,'setCookies');
+      return AuthUtils.returnCookies('setCookies','Successfully authenticated',(accessToken as any).token,(refreshToken as any).token)
     }
     return {
       serviceId: serviceUser._id.toString(),

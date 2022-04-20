@@ -212,7 +212,7 @@ export class LocalHandlers {
 
 
     if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies(accessToken.token,refreshToken.token,'setCookies')
+      return AuthUtils.returnCookies('setCookies','Successfully authenticated',accessToken.token,refreshToken.token)
     }
 
     return {

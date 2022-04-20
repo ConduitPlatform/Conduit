@@ -72,14 +72,16 @@ export function wrapRouterGrpcFunction(
             if (r.removeCookies) {
               callback(null, {
                 result: result,
-                removeCookies: JSON.stringify(r.removeCookies),
+                removeCookies: r.removeCookies,
               });
-            } else if (r.setCookies) {
+            }
+            if (r.setCookies) {
               callback(null, {
                 result: result,
                 setCookies: JSON.stringify(r.setCookies),
               });
-            } else if (r.result || r.redirect) {
+            }
+            if (r.result || r.redirect) {
               callback(null, {
                 redirect: r.redirect ?? undefined,
                 result: result,
