@@ -165,13 +165,16 @@ export namespace AuthUtils {
       );
   }
 
-  export function returnCookies(accessToken: string, refreshToken: string) {
+  export function returnCookies(accessToken: string, refreshToken: string, option: string) {
+
     return {
-      cookies: {
+      [option]: {
         accessToken: accessToken,
         refreshToken: refreshToken,
       },
-      message: 'Authenticate successfully',
+      result: {
+        message: 'Authenticate successfully',
+      },
     };
   }
 }
