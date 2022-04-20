@@ -1,6 +1,6 @@
 import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 
-export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // Check schema entries for cms metadata
+export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints','_PendingSchemas','_DeclaredSchema','Config','Client','Admin']; // Check schema entries for cms metadata
 export const INITIAL_DB_SCHEMAS = ['_DeclaredSchema', '_PendingSchemas'];
 
 /**

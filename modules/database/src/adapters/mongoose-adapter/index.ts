@@ -11,6 +11,8 @@ import {
   mongoSchemaConverter,
   SYSTEM_DB_SCHEMAS,
 } from '../../introspection/mongoose/utils';
+import { isNil } from 'lodash';
+import { isEqual } from 'lodash';
 let parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -88,64 +90,113 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return collectionNames.includes('_DeclaredSchema');
   }
 
-  async introspectDatabase(isConduitDB : boolean = true): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB: boolean = true): Promise<DatabaseAdapter<any>> {
     const db = this.mongoose.connection.db;
-
+    const schemaOptions = {
+      timestamps: true,
+      conduit: {
+        noSync: true,
+        permissions: {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing' as 'Everything' | 'Nothing' | 'ExtensionOnly',
+          canDelete: false,
+        },
+        cms: {
+          authentication: false,
+          crudOperations: false,
+          enabled: false,
+        },
+      },
+    };
     let schemaNames: string[] = [];
+
     if (isConduitDB) {
-      //Get all non system-db schemas
-      schemaNames = (
-        await db
-          .collection('_DeclaredSchema')
-          .find({
-            $and: [
-              { name: { $nin: SYSTEM_DB_SCHEMAS } }, // replace with cms metadata check
-              { ownerModule: { $eq: 'database' } },
-            ],
+      //Reintrospect schemas
+      let schemas = await db.listCollections().toArray();
+      let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
+        {}
+      );
+
+      //Remove declared schemas with imported:true
+      schemas = schemas.filter((schema: ConduitSchema) => {
+        //Filter out non-imported declared schemas
+        return (
+          !INITIAL_DB_SCHEMAS.includes(schema.name) &&
+          !declaredSchemas.find((declaredSchema: ConduitSchema) => {
+            return (
+              declaredSchema.name === schema.name &&
+              isNil((declaredSchema as any).modelOptions.conduit!.imported)
+            );
           })
-          .toArray()
-      ).map((s) => s.name);
+        );
+      });
+      schemas = await Promise.all(
+        schemas.map(async (schema: ConduitSchema) => {
+          let declaredSchema = declaredSchemas.find(
+            (declaredSchema: ConduitSchema) => declaredSchema.name === schema.name
+          );
+          if (!isNil(declaredSchema)) {
+            // check for diffs in existing schemas
+            await parseSchema(
+              db.collection(schema.name).find(),
+              async (err: Error, originalSchema: any) => {
+                if (err) {
+                  throw new GrpcError(status.INTERNAL, err.message);
+                }
+                originalSchema = mongoSchemaConverter(originalSchema);
+                schema = new ConduitSchema(
+                  schema.name,
+                  originalSchema,
+                  schemaOptions,
+                  schema.name
+                );
+                schema.ownerModule = 'database';
+                if (!isEqual(schema.fields, declaredSchema.fields)) {
+                  schemaNames.push(schema.name);
+                }
+              }
+            );
+          } else {
+            schemaNames.push(schema.name);
+          }
+        })
+      );
     } else {
       schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
-      schemaNames = schemaNames.filter(s => !INITIAL_DB_SCHEMAS.includes(s));  
+      schemaNames = schemaNames.filter((s) => !INITIAL_DB_SCHEMAS.includes(s));
     }
-    await Promise.all(schemaNames.map(async (collectionName) => {  
-      await parseSchema(db.collection(collectionName).find(), async (err: Error, originalSchema: any) => {
-        if (err) {
-          throw new GrpcError(status.INTERNAL, err.message);
-        }
-        originalSchema = mongoSchemaConverter(originalSchema);
-        const schema = new ConduitSchema(collectionName, originalSchema, {
-          timestamps: true,
-          conduit: {
-            noSync: true,
-            permissions: {
-              extendable: false,
-              canCreate: false,
-              canModify: 'Nothing',
-              canDelete: false,
-            },
-            cms: {
-              authentication: false,
-              crudOperations: false,
-              enabled: false,
-            },
-          },
-        },
-        collectionName);
-        schema.ownerModule = 'database';
+    await Promise.all(
+      schemaNames.map(async (collectionName) => {
+        await parseSchema(
+          db.collection(collectionName).find(),
+          async (err: Error, originalSchema: any) => {
+            if (err) {
+              throw new GrpcError(status.INTERNAL, err.message);
+            }
+            originalSchema = mongoSchemaConverter(originalSchema);
+            const schema = new ConduitSchema(
+              collectionName,
+              originalSchema,
+              schemaOptions,
+              collectionName
+            );
+            schema.ownerModule = 'database';
 
-        await this.models!['_PendingSchemas'].create(JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          modelOptions: schema.schemaOptions,
-          ownerModule: schema.ownerModule,
-          extensions: (schema as any).extensions,
-        }))
-        console.log(`Introspected schema ${collectionName}`, schema);
-        //TODO: get schema options from admin and create schema
-      });
-    }));
+            await this.models!['_PendingSchemas'].create(
+              JSON.stringify({
+                name: schema.name,
+                fields: schema.fields,
+                modelOptions: schema.schemaOptions,
+                ownerModule: schema.ownerModule,
+                extensions: (schema as any).extensions,
+              })
+            );
+            console.log(`Introspected schema ${collectionName}`, schema);
+          }
+        );
+      })
+    );
     return this;
   }
 

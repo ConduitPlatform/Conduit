@@ -485,13 +485,13 @@ export class SchemaAdmin {
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const schemas = Object.values(call.request.params);
-    
     const schemaNames = schemas.map((schema: ConduitSchema) => schema.name);
     //add schemas to _DeclaredSchema
     await Promise.all(schemas.map(async (schema: ConduitSchema) => {
         // (schema.schemaOptions as any) = (schema as any).modelOptions;
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
         recreatedSchema.ownerModule = 'database';
+        recreatedSchema.schemaOptions.conduit!.imported = true;
         await this.database.createSchemaFromAdapter(recreatedSchema);
     }));
     //remove finalized schemas from pending schemas
