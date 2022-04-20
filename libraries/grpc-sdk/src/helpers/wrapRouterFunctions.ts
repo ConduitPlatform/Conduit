@@ -69,16 +69,11 @@ export function wrapRouterGrpcFunction(
             callback(null, { result: r });
           } else {
             const result = r.result ? JSON.stringify(r.result) : undefined;
-            if (r.removeCookies) {
-              callback(null, {
+            if (r.removeCookies || r.setCookies) {
+              return callback(null, {
                 result: result,
-                removeCookies: r.removeCookies,
-              });
-            }
-            if (r.setCookies) {
-              callback(null, {
-                result: result,
-                setCookies: JSON.stringify(r.setCookies),
+                removeCookies: r.removeCookies ?? undefined,
+                setCookies: JSON.stringify(r.setCookies) ?? undefined,
               });
             }
             if (r.result || r.redirect) {

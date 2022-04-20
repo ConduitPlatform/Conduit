@@ -86,7 +86,7 @@ export class CommonHandlers {
       })
     );
     if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('removeCookie','Logged out')
+      return AuthUtils.returnCookies('removeCookies','Logged out')
     }
     return 'Logged out';
   }

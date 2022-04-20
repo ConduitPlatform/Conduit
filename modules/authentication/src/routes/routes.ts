@@ -396,7 +396,11 @@ export class AuthenticationRoutes {
           action: ConduitRouteActions.POST,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+        new ConduitRouteReturnDefinition('LogoutResponse', {
+          message: ConduitString.Optional,
+          removeCookies: ConduitString.Optional,
+          setCookies: { type: TYPE.JSON, required: false },
+        }),
         this.commonHandlers.logOut.bind(this.commonHandlers),
       );
 
