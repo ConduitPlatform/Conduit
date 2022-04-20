@@ -13,7 +13,8 @@ import { status } from '@grpc/grpc-js';
 export class ServiceHandler {
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -39,7 +40,7 @@ export class ServiceHandler {
 
     const serviceUser: Service | null = await Service.getInstance().findOne(
       { name: serviceName },
-      '+hashedToken'
+      '+hashedToken',
     );
     if (isNil(serviceUser))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -56,7 +57,7 @@ export class ServiceHandler {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: serviceUser._id,
         clientId,
-      })
+      }),
     );
 
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
@@ -65,9 +66,11 @@ export class ServiceHandler {
         userId: serviceUser._id,
         clientId: context.clientId,
         config,
-      }
+      },
     );
-
+    if (config.set_cookies.enabled) {
+      return AuthUtils.returnCookies((accessToken as any).token, (refreshToken as any).token);
+    }
     return {
       serviceId: serviceUser._id.toString(),
       accessToken: (accessToken as any).token,

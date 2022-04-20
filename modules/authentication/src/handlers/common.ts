@@ -64,6 +64,9 @@ export class CommonHandlers {
         .toDate(),
     });
 
+    if (config.set_cookies.enabled) {
+      return AuthUtils.returnCookies(newAccessToken.token, newRefreshToken.token);
+    }
     return {
       accessToken: newAccessToken.token,
       refreshToken: newRefreshToken.token,

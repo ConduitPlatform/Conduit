@@ -141,13 +141,7 @@ export class PhoneHandlers {
           .toDate(),
       });
       if (config.set_cookies.enabled) {
-        return {
-          cookies: {
-            accessToken: accessToken.token,
-            refreshToken: refreshToken.token,
-          },
-          message: 'Authenticate successfully'
-        }
+        return AuthUtils.returnCookies((accessToken as any).token, (refreshToken as any).token);
       }
 
       return {
