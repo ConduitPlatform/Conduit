@@ -140,6 +140,15 @@ export class PhoneHandlers {
           .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       });
+      if (config.set_cookies.enabled) {
+        return {
+          cookies: {
+            accessToken: accessToken.token,
+            refreshToken: refreshToken.token,
+          },
+          message: 'Authenticate successfully'
+        }
+      }
 
       return {
         userId: user._id.toString(),

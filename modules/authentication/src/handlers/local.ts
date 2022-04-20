@@ -210,6 +210,17 @@ export class LocalHandlers {
         .toDate(),
     });
 
+
+    if (config.set_cookies.enabled) {
+      return {
+        cookies: {
+          accessToken: accessToken.token,
+          refreshToken: refreshToken.token,
+        },
+        message: 'Authenticate successfully'
+      };
+    }
+
     return {
       userId: user._id.toString(),
       accessToken: accessToken.token,
@@ -460,7 +471,7 @@ export class LocalHandlers {
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    return await AuthUtils.verifyCode(this.grpcSdk,clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
+    return await AuthUtils.verifyCode(this.grpcSdk, clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

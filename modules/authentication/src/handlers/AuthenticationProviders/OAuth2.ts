@@ -112,6 +112,15 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     let tokens = await this.createTokens(user._id, call.request.params['clientId'], config);
+    if (config.set_cookies.enabled) {
+      return {
+        cookies: {
+          accessToken: (tokens.accessToken as any),
+          refreshToken: (tokens.refreshToken as any),
+        },
+        message: 'Authenticate successfully'
+      };
+    }
     return {
       userId: user!._id.toString(),
       accessToken: (tokens.accessToken as any),

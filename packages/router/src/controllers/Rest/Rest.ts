@@ -35,7 +35,7 @@ export class RestController extends ConduitRouter {
 
   registerRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[]
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
     const key = `*-${path}`;
     const registered = this._registeredLocalRoutes.has(key);
@@ -70,7 +70,7 @@ export class RestController extends ConduitRouter {
 
   private addRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[]
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
     this._expressRouter.use(path, router);
   }
@@ -110,7 +110,7 @@ export class RestController extends ConduitRouter {
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
         route,
-        req.headers['cache-control']
+        req.headers['cache-control'],
       );
       self
         .checkMiddlewares(context, route.input.middlewares)
@@ -168,13 +168,22 @@ export class RestController extends ConduitRouter {
                 result: this.extractResult(route.returnTypeFields as string, result),
               };
             }
+            if (result.cookies) {
+              const cookies = result.cookies;
+              Object.keys(cookies).forEach((key: string) => {
+                res.cookie(key, cookies[key]);
+              });
+            }
+
             if (route.input.action === ConduitRouteActions.GET && caching) {
               this.storeInCache(hashKey, result, cacheAge!);
               res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
             } else {
               res.setHeader('Cache-Control', 'no-store');
             }
-
+            if (result.cookies) {
+              delete result.cookies;
+            }
             res.status(200).json(result);
           }
         })
@@ -245,7 +254,7 @@ export class RestController extends ConduitRouter {
     const self = this;
     this._expressRouter.use('/swagger', swaggerUi.serve);
     this._expressRouter.get('/swagger', (req, res, next) =>
-      swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next)
+      swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next),
     );
     this._expressRouter.get('/swagger.json', (req, res) => {
       res.send(JSON.stringify(this._swagger.swaggerDoc));
