@@ -1,18 +1,18 @@
 import { QueryTypes, Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitModel, ConduitSchema, GrpcError, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';
 import { status } from '@grpc/grpc-js';
-import { SequelizeAuto } from 'sequelize-auto';
-import { MultiDocQuery } from '../../interfaces';
+import { SequelizeAuto, TableData } from 'sequelize-auto';
 import {
   sqlSchemaConverter,
-  SYSTEM_DB_SCHEMAS,
+  INITIAL_DB_SCHEMAS,
 } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
+import { isMatch } from 'lodash';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
@@ -38,7 +38,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
-  async introspectDatabase(isConduitDB : boolean = true): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB: boolean = true): Promise<DatabaseAdapter<any>> {
     const options = {
       directory: '',
       additional: {
@@ -50,55 +50,69 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       schema: 'public', //make this configurable
     };
 
-    let systemSchemas: string[] = [];
+    let data: TableData;
+    let tables: any;
+    let tableNames = await this.sequelize.getQueryInterface().showAllTables();
 
     if (isConduitDB) {
-      //Get all system-db schema names
-      const schemas = await this.models!['_DeclaredSchema'].findMany({
-        $or: [{ name: { $in: SYSTEM_DB_SCHEMAS } }, { ownerModule: { $ne: 'database' } }],
+      let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
+        {}
+      );
+
+      tableNames = tableNames.filter((table: string) => {
+        //Filter out non-imported declared schemas
+        return (
+          !INITIAL_DB_SCHEMAS.includes(table) &&
+          !declaredSchemas.find((declaredSchema: ConduitSchema) => {
+            return (
+              declaredSchema.name === table &&
+              isNil((declaredSchema as any).modelOptions.conduit!.imported)
+            );
+          })
+        );
       });
-      systemSchemas = schemas.map((schema: ConduitSchema) => schema.name);
-    }
-    const auto = new SequelizeAuto(this.sequelize, '', '', options);
-    const data = await auto.run();
 
-    //convert each table to ConduitSchema and add to schemas array
-    for (const tableName of Object.keys(data.tables)) {
-      let table = data.tables[tableName];
-      const originalName = tableName.split('.')[1];
-      if (originalName === '_DeclaredSchema' || systemSchemas.includes(originalName))
-        continue;
+      const auto = new SequelizeAuto(this.sequelize, '', '', {
+        ...options,
+        tables: tableNames,
+      });
+      data = await auto.run();
 
-      //temporary solution to avoid breaking existing schemas
-      // const name = existingSchemaNames.includes(originalName) ? `_${originalName}` : originalName;
-      if (originalName === 'actor' || originalName === 'category') {
-        console.log(originalName);
+      for (let tableName of Object.keys(data.tables)) {
+        let table = data.tables[tableName];
+        tableName = tableName.split('.')[1];
+        let declaredSchema = declaredSchemas.find(
+          (declaredSchema: ConduitSchema) => declaredSchema.name === tableName
+        );
+        if (!isNil(declaredSchema)) {
+          //check for diffs in existing schemas
+          const schema = await this.introspectSchema(table, tableName);
+          if (isMatch(schema.fields, declaredSchema.fields)) {
+            tableNames.splice(tableNames.indexOf(tableName), 1);
+          }
+        }
       }
-      //convert table fields to ConduitSchema fields
-      sqlSchemaConverter(table);
-      
-      await this.sequelize.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`);
-      await this.sequelize.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`);
-      
-      const schema = new ConduitSchema(originalName, table as ConduitModel, {
-        timestamps: true,
-        conduit: {
-          noSync: true,
-          permissions: {
-            extendable: false,
-            canCreate: false,
-            canModify: 'Nothing',
-            canDelete: false,
-          },
-          cms: {
-            authentication: false,
-            crudOperations: false,
-            enabled: false,
-          },
-        },
-      });
-      schema.ownerModule = 'database';
-      
+    } else {
+      tableNames = tableNames.filter(
+        (table: string) => !INITIAL_DB_SCHEMAS.includes(table)
+      );
+      const auto = new SequelizeAuto(this.sequelize, '', '', options);
+      data = await auto.run();
+    }
+
+    tables = Object.fromEntries(
+      Object.entries(data.tables).filter(
+        ([key]) => tableNames.includes(key.replace('public.', ''))
+      )
+    );
+    //convert each table to ConduitSchema and add to schemas array
+
+    for (const tableName of Object.keys(tables)) {
+      let table = tables[tableName];
+      const originalName = tableName.split('.')[1];
+
+      const schema = await this.introspectSchema(table, originalName);
+
       await this.models!['_PendingSchemas'].create(
         JSON.stringify({
           name: schema.name,
@@ -108,9 +122,41 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           extensions: (schema as any).extensions,
         })
       );
-      console.log(`Introspected schema ${originalName}`, schema);
+      console.log(`Introspected schema ${originalName}`);
     }
     return this;
+  }
+
+  async introspectSchema(table: any, originalName: string): Promise<ConduitSchema> {
+    sqlSchemaConverter(table);
+
+    await this.sequelize.query(
+      `ALTER TABLE ${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`
+    );
+    await this.sequelize.query(
+      `ALTER TABLE ${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`
+    );
+
+    const schema = new ConduitSchema(originalName, table as ConduitModel, {
+      timestamps: true,
+      conduit: {
+        noSync: true,
+        permissions: {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing',
+          canDelete: false,
+        },
+        cms: {
+          authentication: false,
+          crudOperations: false,
+          enabled: false,
+        },
+      },
+    });
+    schema.ownerModule = 'database';
+
+    return schema;
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
@@ -147,7 +193,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
     const noSync = this.models[schema.name].originalSchema.schemaOptions.conduit.noSync;
     if (isNil(noSync) || !noSync) {
-    await this.models[schema.name].sync();
+      await this.models[schema.name].sync();
     }
 
     if (schema.name !== '_DeclaredSchema') {

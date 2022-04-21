@@ -9,7 +9,6 @@ import { status } from '@grpc/grpc-js';
 import {
   INITIAL_DB_SCHEMAS,
   mongoSchemaConverter,
-  SYSTEM_DB_SCHEMAS,
 } from '../../introspection/mongoose/utils';
 import { isNil } from 'lodash';
 import { isEqual } from 'lodash';

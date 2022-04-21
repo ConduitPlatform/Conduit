@@ -2,7 +2,7 @@ import { TYPE } from "@conduitplatform/grpc-sdk";
 import { isNil } from "lodash";
 import { Sequelize } from "sequelize";
 
-export const SYSTEM_DB_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // Check schema entries for cms metadata
+export const INITIAL_DB_SCHEMAS = ['_DeclaredSchema','CustomEndpoints','_PendingSchemas']; // Check schema entries for cms metadata
 
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
