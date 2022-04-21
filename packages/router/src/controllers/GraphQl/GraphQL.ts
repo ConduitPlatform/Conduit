@@ -20,6 +20,7 @@ import { errorHandler } from './utils/Request.utils';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
+const cookiePlugin = require('./utils/cookie.plugin');
 
 export class GraphQLController extends ConduitRouter {
   typeDefs!: string;
@@ -42,10 +43,11 @@ export class GraphQLController extends ConduitRouter {
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
-      context: ({ req }: any) => {
+      plugins: [cookiePlugin],
+      context: ({ event, req }: any) => {
         const context = (req as any).conduit || {};
         let headers: any = req.headers;
-        return { context, headers };
+        return { context, headers, setCookieString: '', removeCookieString: '', set: false };
       },
     });
 
@@ -119,7 +121,7 @@ export class GraphQLController extends ConduitRouter {
         let parseResult: ParseResult = this._parser.extractTypes(
           name + 'Request',
           input.bodyParams,
-          true
+          true,
         );
         this.types += parseResult.typeString;
         params += (params.length > 1 ? ',' : '') + 'params' + ':';
@@ -300,11 +302,11 @@ export class GraphQLController extends ConduitRouter {
       parent: any,
       args: any,
       context: any,
-      info: any
+      info: any,
     ) => {
       let { caching, cacheAge, scope } = extractCachingGql(
         route,
-        context.headers['Cache-Control']
+        context.headers['Cache-Control'],
       );
       if (caching) {
         info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });
@@ -372,7 +374,7 @@ export class GraphQLController extends ConduitRouter {
       parent: any,
       args: any,
       context: any,
-      info: any
+      info: any,
     ) => {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
@@ -386,6 +388,17 @@ export class GraphQLController extends ConduitRouter {
         })
         .then((r) => {
           let result = r.result ? r.result : r;
+          if (r.setCookies) {
+            const cookies = JSON.parse(r.setCookies);
+            let cookieString = Object.keys(cookies).map((key) => {
+              return `${key}=${cookies[key]}`;
+            }).join(';');
+            context.setCookieString = cookieString;
+          }
+          if (r.removeCookies) {
+            context.removeCookieString = r.removeCookies;
+          }
+
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
             result = JSON.parse(result);
           } else {
@@ -397,6 +410,10 @@ export class GraphQLController extends ConduitRouter {
         })
         .catch(errorHandler);
     };
+  }
+
+  willSendResponse(context: any) {
+
   }
 
   private addConduitRoute(route: ConduitRoute) {
