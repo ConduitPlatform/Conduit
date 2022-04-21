@@ -191,7 +191,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
                 extensions: (schema as any).extensions,
               })
             );
-            console.log(`Introspected schema ${collectionName}`, schema);
+            console.log(`Introspected schema ${collectionName}`);
           }
         );
       })
