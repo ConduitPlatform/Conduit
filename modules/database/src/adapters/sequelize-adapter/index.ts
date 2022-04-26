@@ -14,6 +14,8 @@ import {
 import { isNil } from 'lodash';
 import { isMatch } from 'lodash';
 
+const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
+
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connected: boolean = false;
   connectionUri: string;
@@ -47,12 +49,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       singularize: true,
       useDefine: true,
       closeConnectionAutomatically: false,
-      schema: 'public', //make this configurable
+      schema: sqlSchemaName, //make this configurable
     };
 
     let data: TableData;
-    let tables: any;
-    let tableNames = await this.sequelize.getQueryInterface().showAllTables();
+    let tables: any;    
+    let tableNames = (
+      await this.sequelize.query(
+        `select * from pg_tables where schemaname='${sqlSchemaName}';`
+      )
+    )[0].map((t: any) => t.tablename);
 
     if (isConduitDB) {
       //Clear all schemas from _PendingSchemas
@@ -105,7 +111,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
     tables = Object.fromEntries(
       Object.entries(data.tables).filter(
-        ([key]) => tableNames.includes(key.replace('public.', ''))
+        ([key]) => tableNames.includes(key.replace(`${sqlSchemaName}.`, ''))
       )
     );
     //convert each table to ConduitSchema and add to schemas array
@@ -134,10 +140,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     sqlSchemaConverter(table);
 
     await this.sequelize.query(
-      `ALTER TABLE ${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`
+      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`
     );
     await this.sequelize.query(
-      `ALTER TABLE ${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`
+      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`
     );
 
     const schema = new ConduitSchema(originalName, table as ConduitModel, {
