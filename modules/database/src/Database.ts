@@ -124,7 +124,6 @@ export default class DatabaseModule extends ManagedModule {
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter
             .createSchemaFromAdapter(schema)
-            .then(() => {})
             .catch(() => {
               console.log('Failed to create/update schema');
             });

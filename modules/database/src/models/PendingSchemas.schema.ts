@@ -20,26 +20,8 @@ export const PendingSchemas = new ConduitSchema(
       type: TYPE.JSON,
       required: true,
     },
-    extensions: [
-      {
-        fields: {
-          type: TYPE.JSON,
-          required: true,
-        },
-        ownerModule: {
-          type: TYPE.String,
-          required: true,
-        },
-        createdAt: TYPE.Date,
-        updatedAt: TYPE.Date,
-      },
-    ],
     modelOptions: {
       type: TYPE.JSON,
-      required: true,
-    },
-    ownerModule: {
-      type: TYPE.String,
       required: true,
     },
     createdAt: TYPE.Date,
