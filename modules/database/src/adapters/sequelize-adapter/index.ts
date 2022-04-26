@@ -55,6 +55,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     let tableNames = await this.sequelize.getQueryInterface().showAllTables();
 
     if (isConduitDB) {
+      //Clear all schemas from _PendingSchemas
+      await this.getSchemaModel('_PendingSchemas').model.deleteMany({});
+      //Reintrospect schemas
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
       );

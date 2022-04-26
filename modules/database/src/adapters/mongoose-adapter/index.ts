@@ -12,6 +12,8 @@ import {
 } from '../../introspection/mongoose/utils';
 import { isNil } from 'lodash';
 import { isEqual } from 'lodash';
+import { isMatch } from 'lodash';
+import { DropCollectionRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/database';
 let parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -111,6 +113,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     let schemaNames: string[] = [];
 
     if (isConduitDB) {
+      //Clear all schemas from _PendingSchemas
+      await db.collection('_PendingSchemas').deleteMany({});
       //Reintrospect schemas
       let schemas = await db.listCollections().toArray();
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
@@ -150,8 +154,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
                   schemaOptions,
                   schema.name
                 );
-                schema.ownerModule = 'database';
-                if (!isEqual(schema.fields, declaredSchema.fields)) {
+                if (!isMatch(schema.fields, declaredSchema.fields)) {
                   schemaNames.push(schema.name);
                 }
               }

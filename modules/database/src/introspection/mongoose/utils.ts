@@ -26,8 +26,5 @@ function extractType(field: any): ConduitModelField {
   if(conduitField.type === 'Document') {
     conduitField.type = 'Object' as any; //workaround for Document types
   }
-
-  conduitField.unique = !field.has_duplicates;
-
   return conduitField;
 }
