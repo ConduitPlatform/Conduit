@@ -114,7 +114,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let tokens = await this.createTokens(user._id, call.request.params['clientId'], config);
 
     if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('setCookies','Successfully authenticated',(tokens.accessToken as any),(tokens.refreshToken as any))
+      return AuthUtils.returnCookies('setCookies','Successfully authenticated',(tokens.accessToken as string),(tokens.refreshToken as string))
     }
     return {
       userId: user!._id.toString(),
