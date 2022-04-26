@@ -4,16 +4,19 @@ module.exports = {
   requestDidStart() {
     return {
       willSendResponse(requestContext: any) {
-        const { setCookieString } = requestContext.context;
-        let cookieArray = setCookieString.split(';');
-        let cookiesObject: any = [];
-        cookieArray.forEach((cookie: string) => {
-          cookiesObject.push({
-            'Set-Cookie': cookie,
-          });
+
+        const { setCookie, removeCookie } = requestContext.context;
+        const { res } = requestContext.context;
+
+        Object.keys(setCookie).forEach((cookie) => {
+          res.cookie(cookie, setCookie[cookie]);
         });
-        const map = new Map(cookiesObject);
-        requestContext.http.headers = map;
+
+        if (removeCookie) {
+          removeCookie.split(',').forEach((cookie: string) => {
+            res.clearCookie(cookie);
+          });
+        }
         return requestContext;
       },
 
