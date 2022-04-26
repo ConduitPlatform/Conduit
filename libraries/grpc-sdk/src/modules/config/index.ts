@@ -108,14 +108,14 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     };
     const self = this;
     this.client!.moduleHealthProbe(request)
-      .then(async res => {
+      .then(res => {
         if (!res && self.coreLive) {
           console.log('Core unhealthy');
           self.coreLive = false;
         } else if (res && !self.coreLive) {
           console.log('Core is live');
           self.coreLive = true;
-          await self.watchModules();
+          self.watchModules();
         }
       })
       .catch(e => {

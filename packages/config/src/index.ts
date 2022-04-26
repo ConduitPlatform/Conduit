@@ -48,53 +48,47 @@ export default class ConfigManager implements IConfigManager {
     }, 5000);
   }
 
-  highAvailability() {
+  async highAvailability() {
     const self = this;
-    this.sdk
-      .getState()
-      .getKey('config')
-      .then(async (r) => {
-        if (!r || r.length === 0) return;
-        let state = JSON.parse(r);
-        let success: any[] = [];
-        if (state.modules) {
-          for (const module of state.modules) {
-            try {
-              await self._registerModule(module.name, module.url, module.instance);
-            } catch {}
-              success.push({
-                name: module.name,
-                url: module.url,
-                instance: module.instance,
-              });
+    const loadedState = await this.sdk.getState().getKey('config');
+    if (!loadedState || loadedState.length === 0) return;
+    try {
+      let state = JSON.parse(loadedState);
+      let success: any[] = [];
+      if (state.modules) {
+        for (const module of state.modules) {
+          try {
+            await self._registerModule(module.name, module.url, module.instance)
+          } catch {
+            continue;
           }
-          if (state.modules.length > success.length) {
-            state.modules = success;
-            self.setState(state);
-          }
-          return this.grpcSdk.initializeModules();
-        } else {
-          return Promise.resolve();
+          success.push({
+            name: module.name,
+            url: module.url,
+            instance: module.instance,
+          });
         }
-      })
-      // DO NOT INITIALIZE THE BUS BEFORE RECOVERY
-      .then(() => {
-        this.sdk.getBus().subscribe('config', (message: string) => {
-          let messageParsed = JSON.parse(message);
-          if (messageParsed.type === 'module-registered') {
-            self._registerModule(
-              messageParsed.name,
-              messageParsed.url,
-              messageParsed.instance,
-            ).then();
-          } else if (messageParsed.type === 'module-health') {
-            self.updateModuleHealth(messageParsed.name, messageParsed.instance);
-          }
-        });
-      })
-      .catch(() => {
-        console.error('Failed to recover state');
+        if (state.modules.length > success.length) {
+          state.modules = success;
+          self.setState(state);
+        }
+        await this.grpcSdk.initializeModules();
+      }
+      this.sdk.getBus().subscribe('config', (message: string) => {
+        let messageParsed = JSON.parse(message);
+        if (messageParsed.type === 'module-registered') {
+          self._registerModule(
+            messageParsed.name,
+            messageParsed.url,
+            messageParsed.instance,
+          );
+        } else if (messageParsed.type === 'module-health') {
+          self.updateModuleHealth(messageParsed.name, messageParsed.instance);
+        }
       });
+    } catch {
+      console.error('Failed to recover state');
+    }
   }
 
   setState(state: any) {
@@ -354,7 +348,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  watchModules(call: any, _: any) {
+  watchModules(call: any) {
     const self = this;
     this.moduleRegister.on('module-registered', () => {
       let modules: any[] = [];
@@ -417,18 +411,17 @@ export default class ConfigManager implements IConfigManager {
         await this.grpcSdk.createModuleClient(moduleName, moduleUrl);
       }
       const healthClient = await this.grpcSdk.getHealthClient(moduleName)!;
-      healthClient.check({ service: '' })
-        .then((healthResponse) => {
-          const healthStatus = (healthResponse.status as unknown as HealthCheckStatus);
-          if (healthStatus  !== HealthCheckStatus.SERVING) {
-            if (moduleName !== 'database' || healthStatus !== HealthCheckStatus.UNKNOWN) {
-              throw new Error('Failed to register unhealthy module');
-            }
-          }
-        })
-        .catch(() => {
+      await new Promise(f => setTimeout(f, 1)); // client health check throws without this
+      const healthResponse = await healthClient.check({ service: '' })
+        .catch((err) => {
           throw new Error('Failed to register unhealthy module');
         });
+      const healthStatus = (healthResponse.status as unknown as HealthCheckStatus);
+      if (healthStatus  !== HealthCheckStatus.SERVING) {
+        if (moduleName !== 'database' || healthStatus !== HealthCheckStatus.UNKNOWN) {
+          throw new Error('Failed to register unhealthy module');
+        }
+      }
     }
     if (moduleName === 'database' && this.registeredModules.has('database')) {
       dbInit = true;

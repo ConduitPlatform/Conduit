@@ -21,38 +21,34 @@ export class ModuleManager {
     }
   }
 
-  start() {
-    this.grpcSdk.initialize().then(() => {
-      this.module.initialize(this.grpcSdk);
-      const self = this;
-      this.preRegisterLifecycle()
-        .then(() => {
-          const url = (process.env.REGISTER_NAME === 'true'
-            ? `${self.module.name}:`
-            : `${self.serviceAddress}:`) + self.module.port;
-          return self.grpcSdk.config.registerModule(self.module.name, url);
-        })
-        .catch((err: Error) => {
-          console.log('Failed to initialize server');
-          console.error(err);
-          process.exit(-1);
-        })
-        .then(() => {
-          return this.postRegisterLifecycle();
-        })
-        .catch((err: Error) => {
-          console.log('Failed to activate module');
-          console.error(err);
-        });
-    });
+  async start() {
+    await this.grpcSdk.initialize();
+    this.module.initialize(this.grpcSdk);
+    const self = this;
+    try {
+      await this.preRegisterLifecycle();
+      const url = (process.env.REGISTER_NAME === 'true'
+        ? `${self.module.name}:`
+        : `${self.serviceAddress}:`) + self.module.port;
+      await self.grpcSdk.config.registerModule(self.module.name, url);
+    } catch (err) {
+      console.log('Failed to initialize server');
+      console.error(err);
+      process.exit(-1);
+    }
+    await this.postRegisterLifecycle()
+      .catch((err: Error) => {
+        console.log('Failed to activate module');
+        console.error(err);
+      });
   }
 
   private async preRegisterLifecycle(): Promise<void> {
     await this.module.createGrpcServer(this.servicePort);
     await this.module.preServerStart();
+    await this.grpcSdk.initializeEventBus();
     await this.module.startGrpcServer();
     await this.module.onServerStart();
-    await this.grpcSdk.initializeEventBus();
     await this.module.preRegister();
   }
 

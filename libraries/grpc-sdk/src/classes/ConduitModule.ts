@@ -12,13 +12,11 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   protected protoPath?: string;
   protected type?: T;
   protected readonly _clientName: string;
-  protected readonly _serviceName: string;
   protected readonly _serviceUrl: string;
   protected readonly healthCheckEmitter = new EventEmitter();
 
   constructor(clientName: string, serviceName: string, serviceUrl: string) {
     this._clientName = clientName;
-    this._serviceName = serviceName;
     this._serviceUrl = serviceUrl;
   }
 
@@ -77,11 +75,12 @@ export class ConduitModule<T extends CompatServiceDefinition> {
 
   async watch(service: string = '') {
     const self = this;
+    const serviceName = this.type?.name;
     this.healthCheckEmitter.setMaxListeners(150);
     try {
       const call = this.healthClient!.watch({ service });
       for await (const data of call) {
-        self.healthCheckEmitter.emit(`grpc-health-change:${this._serviceName}`, data.status);
+        self.healthCheckEmitter.emit(`grpc-health-change:${serviceName}`, data.status);
       }
     } catch (error) {
       console.error('Connection to gRPC server closed');

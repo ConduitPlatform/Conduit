@@ -137,7 +137,7 @@ export class GrpcServer {
     state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>
   ) {
     if (this._serviceHealthState !== state) {
-      this.events.emit('grpc-health-change:core', state);
+      this.events.emit('grpc-health-change:Core', state);
     }
     this._serviceHealthState = state;
   }
@@ -170,7 +170,7 @@ export class GrpcServer {
     if (healthState === HealthCheckStatus.SERVICE_UNKNOWN) {
       call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });
     } else {
-      this.events.on('grpc-health-change:core', (status: HealthCheckStatus) => {
+      this.events.on('grpc-health-change:Core', (status: HealthCheckStatus) => {
         call.write({ status });
       });
     }

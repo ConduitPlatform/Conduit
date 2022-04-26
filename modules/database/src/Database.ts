@@ -34,7 +34,6 @@ import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
-import { EventEmitter } from 'events';
 import path from 'path';
 
 export default class DatabaseModule extends ManagedModule {
@@ -62,19 +61,10 @@ export default class DatabaseModule extends ManagedModule {
   private adminRouter: AdminHandlers;
   private userRouter: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
-  private readonly events: EventEmitter = new EventEmitter();
-  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
-
-  private set serviceHealthState(state: HealthCheckStatus) {
-    if (state === HealthCheckStatus.UNKNOWN || state === HealthCheckStatus.SERVICE_UNKNOWN) {
-      throw new Error(`Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`);
-    }
-    this._serviceHealthState = state;
-    this.events.emit('grpc-health-change:database', state);
-  }
 
   constructor(dbType: string, dbUri: string) {
     super('database');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
     } else if (dbType === 'postgres' || dbType === 'sql') { // Compat (<=0.12.2): sql
@@ -92,7 +82,7 @@ export default class DatabaseModule extends ManagedModule {
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
     // Introspection takes place
-    this._serviceHealthState = HealthCheckStatus.SERVING;
+    this.updateHealth(HealthCheckStatus.SERVING);
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
@@ -160,7 +150,7 @@ export default class DatabaseModule extends ManagedModule {
         customEndpointController
       );
     } else {
-      this.grpcSdk.core.healthCheckWatcher.once('grpc-health-change:core', boundFunctionRef);
+      this.grpcSdk.core.healthCheckWatcher.once('grpc-health-change:Core', boundFunctionRef);
     }
   }
 
@@ -171,26 +161,6 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   // gRPC Service
-  healthCheck(call: any, callback: any) {
-    const service = call.request.service.replace('database.', '');
-    if (service && service !== 'DatabaseProvider') {
-      callback(null, { status: HealthCheckStatus.SERVICE_UNKNOWN });
-    } else {
-      callback(null, { status: this._serviceHealthState });
-    }
-  }
-
-  healthWatch(call: any) {
-    const service = call.request.service.replace('database.', '');
-    if (service && service !== 'DatabaseProvider') {
-      call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });
-    } else {
-      this.events.on('grpc-health-change:database', (status: HealthCheckStatus) => {
-        call.write({ status });
-      });
-    }
-  }
-
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param call

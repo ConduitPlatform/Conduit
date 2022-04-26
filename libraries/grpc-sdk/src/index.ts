@@ -62,6 +62,7 @@ export default class ConduitGrpcSdk {
     } else {
       (this._core as any) = new Core(this.name, this.serverUrl);
       console.log('Waiting for Core...');
+      const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
         try {
           const state = await this.core.check();
@@ -71,7 +72,7 @@ export default class ConduitGrpcSdk {
             break;
           }
         } catch {
-          await sleep(500);
+          await sleep(delay);
         }
       }
     }

@@ -3,13 +3,21 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '..';
 import path from 'path';
+import { EventEmitter } from 'events';
+import { camelCase } from 'lodash';
 
 export abstract class ConduitServiceModule {
-  protected constructor() {}
-
+  protected readonly _moduleName: string;
+  protected _serviceName?: string;
   protected _port!: string;
   protected grpcServer!: GrpcServer;
   private _grpcSdk: ConduitGrpcSdk | undefined;
+  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.SERVING; // default for health-agnostic modules
+  protected readonly events: EventEmitter = new EventEmitter();
+
+  protected constructor(moduleName: string) {
+    this._moduleName = camelCase(moduleName);
+  }
 
   public set grpcSdk(grpcSdk: ConduitGrpcSdk) {
     if (this._grpcSdk) throw new Error('grpcSdk already defined');
@@ -36,13 +44,31 @@ export abstract class ConduitServiceModule {
     );
   }
 
+  updateHealth(state: HealthCheckStatus, init = false) {
+    if ((state === HealthCheckStatus.UNKNOWN && !init) || state === HealthCheckStatus.SERVICE_UNKNOWN) {
+      throw new Error(`Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`);
+    }
+    this._serviceHealthState = state;
+    this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+  }
+
   healthCheck(call: any, callback: any) {
-    // Override this in modules implementing the gRPC health checking protocol
-    callback(null, { status: HealthCheckStatus.SERVING });
+    const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
+    if (service && service !== this._serviceName) {
+      callback(null, { status: HealthCheckStatus.SERVICE_UNKNOWN });
+    } else {
+      callback(null, { status: this._serviceHealthState });
+    }
   }
 
   healthWatch(call: any) {
-    // Override this in modules implementing the gRPC health checking protocol
-    call.write({status: HealthCheckStatus.SERVING});
+    const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
+    if (service && service !== this._serviceName) {
+      call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });
+    } else {
+      this.events.on(`grpc-health-change:${this._serviceName}`, (status: HealthCheckStatus) => {
+        call.write({ status });
+      });
+    }
   }
 }
