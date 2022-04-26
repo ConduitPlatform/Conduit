@@ -85,10 +85,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async isConduitDB(): Promise<boolean> {
-    const collectionNames = (
+    return (
       await this.mongoose.connection.db.listCollections().toArray()
-    ).map((c) => c.name);
-    return collectionNames.includes('_DeclaredSchema');
+    ).find((c) => !!(c.name === '_DeclaredSchema'));
   }
 
   async introspectDatabase(isConduitDB: boolean = true): Promise<DatabaseAdapter<any>> {
@@ -114,14 +113,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     if (isConduitDB) {
       await db.collection('_PendingSchemas').deleteMany({});
-      let schemas = await db.listCollections().toArray();
+      //Reintrospect schemas
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
       );
-
-      // Remove declared schemas with imported:true
-      schemas = schemas.filter((schema: ConduitSchema) => {
-        // Filter out non-imported declared schemas
+      //Remove declared schemas with imported:true
+      let schemas = (await db.listCollections().toArray()).filter((schema: ConduitSchema) => {
+        //Filter out non-imported declared schemas
         return (
           !INITIAL_DB_SCHEMAS.includes(schema.name) &&
           !declaredSchemas.find((declaredSchema: ConduitSchema) => {
