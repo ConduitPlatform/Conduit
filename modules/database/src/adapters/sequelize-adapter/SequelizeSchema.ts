@@ -55,7 +55,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     );
     if (!primaryKeyExists) {
       schema.modelSchema._id = {
-        type: DataTypes.UUID, 
+        type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       };
