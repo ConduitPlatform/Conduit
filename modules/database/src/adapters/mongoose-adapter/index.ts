@@ -113,17 +113,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     let schemaNames: string[] = [];
 
     if (isConduitDB) {
-      //Clear all schemas from _PendingSchemas
       await db.collection('_PendingSchemas').deleteMany({});
-      //Reintrospect schemas
       let schemas = await db.listCollections().toArray();
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
       );
 
-      //Remove declared schemas with imported:true
+      // Remove declared schemas with imported:true
       schemas = schemas.filter((schema: ConduitSchema) => {
-        //Filter out non-imported declared schemas
+        // Filter out non-imported declared schemas
         return (
           !INITIAL_DB_SCHEMAS.includes(schema.name) &&
           !declaredSchemas.find((declaredSchema: ConduitSchema) => {

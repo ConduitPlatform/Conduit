@@ -49,7 +49,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       singularize: true,
       useDefine: true,
       closeConnectionAutomatically: false,
-      schema: sqlSchemaName, //make this configurable
+      schema: sqlSchemaName,
     };
 
     let data: TableData;
@@ -61,15 +61,13 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     )[0].map((t: any) => t.tablename);
 
     if (isConduitDB) {
-      //Clear all schemas from _PendingSchemas
       await this.getSchemaModel('_PendingSchemas').model.deleteMany({});
-      //Reintrospect schemas
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
       );
 
       tableNames = tableNames.filter((table: string) => {
-        //Filter out non-imported declared schemas
+        // Filter out non-imported declared schemas
         return (
           !INITIAL_DB_SCHEMAS.includes(table) &&
           !declaredSchemas.find((declaredSchema: ConduitSchema) => {
@@ -94,7 +92,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           (declaredSchema: ConduitSchema) => declaredSchema.name === tableName
         );
         if (!isNil(declaredSchema)) {
-          //check for diffs in existing schemas
+          // check for diffs in existing schemas
           const schema = await this.introspectSchema(table, tableName);
           if (isMatch(schema.fields, declaredSchema.fields)) {
             tableNames.splice(tableNames.indexOf(tableName), 1);
@@ -114,7 +112,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         ([key]) => tableNames.includes(key.replace(`${sqlSchemaName}.`, ''))
       )
     );
-    //convert each table to ConduitSchema and add to schemas array
 
     for (const tableName of Object.keys(tables)) {
       let table = tables[tableName];
