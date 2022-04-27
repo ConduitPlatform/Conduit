@@ -1,13 +1,9 @@
-import { remove } from 'lodash';
-
-const cookie = require('cookie');
-
 module.exports = {
   requestDidStart() {
     return {
       willSendResponse(requestContext: any) {
 
-        const { setCookie, removeCookie, cookieOptions } = requestContext.context;
+        const { setCookie, removeCookie } = requestContext.context;
         const { res } = requestContext.context;
 
         setCookie.forEach((cookie: any) => {
@@ -15,8 +11,8 @@ module.exports = {
         });
 
         if (removeCookie) {
-          removeCookie.forEach((cookie: string) => {
-            res.clearCookie(cookie, { domain: cookieOptions.domain, path: cookieOptions.path });
+          removeCookie.forEach((cookie: any) => {
+            res.clearCookie(cookie.name, { domain: cookie.options.domain, path: cookie.options.path });
           });
         }
         return requestContext;

@@ -107,8 +107,13 @@ export class CommonHandlers {
     if (config.setCookies.enabled) {
       return {
         result: 'LoggedOut',
-        removeCookies: ['refreshToken','accessToken'],
-        cookieOptions: options,
+        removeCookies: [{
+          name: 'accessToken',
+          options: options,
+        }, {
+          name: 'refreshToken',
+          options: options,
+        }],
       };
     }
     return 'Logged out';

@@ -23,8 +23,7 @@ message RouterResponse {
   string result = 1;
   string redirect = 2;
   repeated Cookie setCookies = 3;
-  repeated string removeCookies = 4;
-  Options cookieOptions = 5;
+  repeated Cookie removeCookies = 4;
 }
 
 message SocketRequest {
@@ -36,7 +35,7 @@ message SocketRequest {
 
 message Cookie {
   string name = 1;
-  string value = 2;
+  optional string value = 2;
   Options options = 3;
 }
 

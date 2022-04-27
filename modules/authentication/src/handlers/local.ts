@@ -215,13 +215,15 @@ export class LocalHandlers {
 
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
+      if (cookieOptions.path === '') {
+        delete cookieOptions.path;
+      }
       const cookies: Cookie[] = [{
         name: 'accessToken',
         value: (accessToken as AccessToken).token,
         options: cookieOptions,
-
       }];
-      if (!isNil(refreshToken!)) {
+      if (!isNil(refreshToken)) {
         cookies.push({
           name: 'refreshToken',
           value: refreshToken.token,

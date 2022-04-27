@@ -255,7 +255,7 @@ export default {
       },
       path: {
         format: 'String',
-        default: null,
+        default: '',
       },
       sameSite: {
         format: 'String',
