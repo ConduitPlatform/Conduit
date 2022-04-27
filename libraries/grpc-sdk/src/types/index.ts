@@ -28,7 +28,7 @@ export type ParsedRouterRequest = GrpcRequest<{
 }>;
 
 export type UnparsedRouterResponse =
-  | { result?: { [key: string]: any }; redirect?: string, setCookies: { [key: string]: any }, removeCookies: string[] }
+  | { result?: { [key: string]: any }; redirect?: string, setCookies: { [key: string]: any }, removeCookies: string[], cookieOptions: { [key: string]: any } }
   | { [key: string]: any }
   | string;
 

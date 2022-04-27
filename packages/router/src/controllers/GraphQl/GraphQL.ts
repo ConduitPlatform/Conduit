@@ -47,7 +47,7 @@ export class GraphQLController extends ConduitRouter {
       context: ({ req, res }: any) => {
         const context = (req as any).conduit || {};
         let headers: any = req.headers;
-        return { context, headers, setCookie: [], removeCookie: [], res };
+        return { context, headers, setCookie: [], removeCookie: [], res, cookieOptions: {} };
       },
     });
 
@@ -393,6 +393,7 @@ export class GraphQLController extends ConduitRouter {
           }
           if (r.removeCookies) {
             context.removeCookie = r.removeCookies;
+            context.cookieoptions = r.cookieOptions;
           }
 
           if (r.result && !(typeof route.returnTypeFields === 'string')) {

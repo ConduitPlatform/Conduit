@@ -175,7 +175,7 @@ export class RestController extends ConduitRouter {
             }
             if (r.removeCookies && r.removeCookies.length) {
               (r.removeCookies).forEach((key: string) => {
-                res.clearCookie(key);
+                res.clearCookie(key, { domain: r.cookieOptions.domain, path: r.cookieOptions.path });
               });
             }
             if (route.input.action === ConduitRouteActions.GET && caching) {
@@ -185,6 +185,7 @@ export class RestController extends ConduitRouter {
               res.setHeader('Cache-Control', 'no-store');
             }
             res.status(200).json(result);
+            res.end()
           }
         })
         .catch((err: Error | ConduitError | any) => {

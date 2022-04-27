@@ -103,10 +103,12 @@ export class CommonHandlers {
         clientId,
       }),
     );
+    const options = config.setCookies.options;
     if (config.setCookies.enabled) {
       return {
         result: 'LoggedOut',
-        removeCookies: ['accessToken', 'refreshToken'],
+        removeCookies: ['refreshToken','accessToken'],
+        cookieOptions: options,
       };
     }
     return 'Logged out';

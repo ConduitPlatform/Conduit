@@ -251,11 +251,11 @@ export default {
       },
       domain: {
         format: 'String',
-        default: ''
+        default: '',
       },
       path: {
         format: 'String',
-        default: '',
+        default: null,
       },
       sameSite: {
         format: 'String',

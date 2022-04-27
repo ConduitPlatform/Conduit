@@ -72,6 +72,7 @@ export function wrapRouterGrpcFunction(
             if (r.removeCookies || r.setCookies) {
               respObject = {
                 removeCookies: r.removeCookies,
+                cookieOptions: r.cookieOptions,
                 setCookies: r.setCookies,
               };
             }

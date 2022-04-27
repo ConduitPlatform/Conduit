@@ -7,7 +7,7 @@ module.exports = {
     return {
       willSendResponse(requestContext: any) {
 
-        const { setCookie, removeCookie } = requestContext.context;
+        const { setCookie, removeCookie, cookieOptions } = requestContext.context;
         const { res } = requestContext.context;
 
         setCookie.forEach((cookie: any) => {
@@ -16,7 +16,7 @@ module.exports = {
 
         if (removeCookie) {
           removeCookie.forEach((cookie: string) => {
-            res.clearCookie(cookie);
+            res.clearCookie(cookie, { domain: cookieOptions.domain, path: cookieOptions.path });
           });
         }
         return requestContext;
