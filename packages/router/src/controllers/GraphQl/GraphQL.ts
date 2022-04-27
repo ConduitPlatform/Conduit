@@ -393,7 +393,7 @@ export class GraphQLController extends ConduitRouter {
           }
           if (r.removeCookies) {
             context.removeCookie = r.removeCookies;
-            context.cookieoptions = r.cookieOptions;
+            context.cookieOptions = r.cookieOptions;
           }
 
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
