@@ -15,7 +15,11 @@ export class ModuleManager {
     this.serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
     this.servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
     try {
-      this.grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, module.name);
+      this.grpcSdk = new ConduitGrpcSdk(
+        process.env.CONDUIT_SERVER,
+        () => { return this.module.healthState; },
+        module.name,
+      );
     } catch {
       throw new Error('Failed to initialize grpcSdk');
     }

@@ -19,6 +19,10 @@ export abstract class ConduitServiceModule {
     this._moduleName = camelCase(moduleName);
   }
 
+  get healthState() {
+    return this._serviceHealthState;
+  }
+
   public set grpcSdk(grpcSdk: ConduitGrpcSdk) {
     if (this._grpcSdk) throw new Error('grpcSdk already defined');
     this._grpcSdk = grpcSdk;

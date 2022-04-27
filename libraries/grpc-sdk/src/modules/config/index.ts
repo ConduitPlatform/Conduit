@@ -1,14 +1,16 @@
 import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ConfigDefinition, RegisterModuleRequest } from '../../protoUtils/core';
+import { ConfigDefinition, RegisterModuleRequest, ModuleHealthRequest } from '../../protoUtils/core';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
-  private emitter = new EventEmitter();
+  private readonly emitter = new EventEmitter();
   private coreLive = false;
+  private readonly _serviceHealthStatusGetter: Function;
 
-  constructor(moduleName: string, url: string) {
+  constructor(moduleName: string, url: string, serviceHealthStatusGetter: Function) {
     super(moduleName, 'config', url);
     this.initializeClient(ConfigDefinition);
+    this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }
 
   getServerConfig(): Promise<any> {
@@ -85,7 +87,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
 
   registerModule(name: string, url: string): Promise<any> {
     // TODO make newConfigSchema required when all modules provide their config schema
-    let request: RegisterModuleRequest = {
+    const request: RegisterModuleRequest = {
       moduleName: name.toString(),
       url: url.toString(),
     };
@@ -96,15 +98,15 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         return res.result;
       })
       .then((r) => {
-        setInterval(() => self.moduleHealthProbe.bind(self)(name, url), 2000);
+        setInterval(() => self.moduleHealthProbe.bind(self)(name), 2000);
         return r;
       });
   }
 
-  moduleHealthProbe(name: string, url: string) {
-    let request: { [key: string]: any } = {
+  moduleHealthProbe(name: string) {
+    const request: ModuleHealthRequest = {
       moduleName: name.toString(),
-      url: url.toString(),
+      status: this._serviceHealthStatusGetter(),
     };
     const self = this;
     this.client!.moduleHealthProbe(request)
@@ -136,7 +138,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     try {
       const call = this.client!.watchModules({});
       for await (let data of call) {
-        self.emitter.emit('module-registered', data.modules);
+        self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
       console.error('Connection to gRPC server closed');

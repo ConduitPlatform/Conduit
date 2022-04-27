@@ -46,7 +46,11 @@ export class GrpcServer {
     let _url = '0.0.0.0:' + this.port;
     this.server.bindAsync(_url, ServerCredentials.createInsecure(), (err, port) => {
       _url = '0.0.0.0:' + port.toString();
-      const grpcSdk = new ConduitGrpcSdk(_url, 'core');
+      const grpcSdk = new ConduitGrpcSdk(
+        _url,
+        () => { return this._serviceHealthState; },
+        'core',
+      );
       grpcSdk.initialize().then(() => {
         if (err) {
           console.error(err);

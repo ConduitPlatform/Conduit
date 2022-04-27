@@ -45,15 +45,17 @@ export default class ConduitGrpcSdk {
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly name: string;
+  private readonly _serviceHealthStatusGetter: Function;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, name?: string) {
+  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.serverUrl = serverUrl;
+    this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }
 
   async initialize() {
@@ -80,7 +82,7 @@ export default class ConduitGrpcSdk {
 
   private _initialize() {
     if (this._initialized) throw new Error('Module\'s grpc-sdk has already been initialized');
-    (this._config as any)  = new Config(this.name, this.serverUrl);
+    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter);
     (this._admin as any) = new Admin(this.name, this.serverUrl);
     (this._router as any)  = new Router(this.name, this.serverUrl);
     this.initializeModules().then();
@@ -201,7 +203,7 @@ export default class ConduitGrpcSdk {
   watchModules() {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
-    emitter.on('module-registered', (modules: any) => {
+    emitter.on('serving-modules-update', (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
         let found = modules.filter((m: any) => m.moduleName === r);
         if ((!found || found.length === 0) && this._availableModules[r]) {
