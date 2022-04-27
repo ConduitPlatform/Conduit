@@ -91,7 +91,7 @@ export class ServiceHandler {
     return {
       serviceId: serviceUser._id.toString(),
       accessToken: (accessToken as any).token,
-      refreshToken: !isNil(refreshToken!) ? (refreshToken as RefreshToken).token : undefined,
+      refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
     };
   }
 }

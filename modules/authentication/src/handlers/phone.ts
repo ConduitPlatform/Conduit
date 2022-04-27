@@ -132,7 +132,7 @@ export class PhoneHandlers {
           .add(config.tokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       });
-      let refreshToken: RefreshToken;
+      let refreshToken = null;
       if (config.generateRefreshToken) {
         refreshToken = await RefreshToken.getInstance().create({
           userId: user._id,
@@ -150,7 +150,7 @@ export class PhoneHandlers {
           value: (accessToken as AccessToken).token,
           options: cookieOptions,
         }];
-        if (!isNil((refreshToken! as RefreshToken).token)) {
+        if (!isNil((refreshToken as RefreshToken).token)) {
           cookies.push({
             name: 'refreshToken',
             value: (refreshToken! as RefreshToken).token,
@@ -165,7 +165,7 @@ export class PhoneHandlers {
       return {
         userId: user._id.toString(),
         accessToken: accessToken.token,
-        refreshToken: !isNil(refreshToken!) ? (refreshToken as RefreshToken).token : undefined,
+        refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
       };
 
     } else {
