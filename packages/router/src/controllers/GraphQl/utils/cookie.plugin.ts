@@ -7,6 +7,8 @@ module.exports = {
         const { res } = requestContext.context;
 
         setCookie.forEach((cookie: any) => {
+          if (cookie.options.path === '')
+            delete cookie.options.path
           res.cookie(cookie.name, cookie.value, cookie.options);
         });
 
