@@ -24,7 +24,7 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from './interfaces';
+import { MultiDocQuery, SchemaAdapter } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -76,12 +76,26 @@ export default class DatabaseModule extends ManagedModule {
 
   async onServerStart() {
     const isConduitDB = await this._activeAdapter.isConduitDB();
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-
-    if (!isConduitDB) {
+    
+    if (isConduitDB) {
+      await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    }
+    else {
       console.log(`Database is not a Conduit DB. Starting introspection...`);
+      let introspectedSchemas = await this._activeAdapter.introspectDatabase(isConduitDB);
+      await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
       await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
-      await this._activeAdapter.introspectDatabase(isConduitDB);
+      
+      await Promise.all(introspectedSchemas.map(async (schema: ConduitSchema) => {
+        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
+          JSON.stringify({
+          name: schema.name,
+          fields: schema.fields,
+          modelOptions: schema.schemaOptions,
+          ownerModule: schema.ownerModule,
+          extensions: (schema as any).extensions,
+        }));
+      }));
     }
 
     const modelPromises = Object.values(models).flatMap((model: any) => {

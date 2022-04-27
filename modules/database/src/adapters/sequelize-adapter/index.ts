@@ -13,6 +13,7 @@ import {
 } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { isMatch } from 'lodash';
+import { MultiDocQuery } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -40,7 +41,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
-  async introspectDatabase(isConduitDB: boolean = true): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB: boolean = true): Promise<ConduitSchema[]> {
     const options = {
       directory: '',
       additional: {
@@ -51,7 +52,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       closeConnectionAutomatically: false,
       schema: sqlSchemaName,
     };
-
+    let introspectedSchemas : ConduitSchema[] = [];
     let data: TableData;
     let tables: any;
     let tableNames = (
@@ -119,18 +120,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
       const schema = await this.introspectSchema(table, originalName);
 
-      await this.models!['_PendingSchemas'].create(
-        JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          modelOptions: schema.schemaOptions,
-          ownerModule: schema.ownerModule,
-          extensions: (schema as any).extensions,
-        })
-      );
+      introspectedSchemas.push(schema);
       console.log(`Introspected schema ${originalName}`);
     }
-    return this;
+    return introspectedSchemas;
   }
 
   async introspectSchema(table: any, originalName: string): Promise<ConduitSchema> {

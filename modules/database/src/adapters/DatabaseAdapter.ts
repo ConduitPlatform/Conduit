@@ -1,5 +1,5 @@
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { SchemaAdapter } from '../interfaces';
+import { MultiDocQuery, SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -17,7 +17,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
    * 
    * Introspects all schemas of current db connection, registers them to conduit
    */
-  abstract introspectDatabase(isConduitDB : boolean): Promise<DatabaseAdapter<any>>;
+  abstract introspectDatabase(isConduitDB : boolean): Promise<ConduitSchema[]>;
 
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter

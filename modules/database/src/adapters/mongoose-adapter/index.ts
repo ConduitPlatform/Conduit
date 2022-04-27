@@ -85,12 +85,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async isConduitDB(): Promise<boolean> {
-    return (
+    return !!(
       await this.mongoose.connection.db.listCollections().toArray()
-    ).find((c) => !!(c.name === '_DeclaredSchema'));
+    ).find((c) => (c.name === '_DeclaredSchema'));
   }
 
-  async introspectDatabase(isConduitDB: boolean = true): Promise<DatabaseAdapter<any>> {
+  async introspectDatabase(isConduitDB: boolean = true): Promise<ConduitSchema[]> {
+    let introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
     const schemaOptions = {
       timestamps: true,
@@ -181,21 +182,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             );
             schema.ownerModule = 'database';
 
-            await this.models!['_PendingSchemas'].create(
-              JSON.stringify({
-                name: schema.name,
-                fields: schema.fields,
-                modelOptions: schema.schemaOptions,
-                ownerModule: schema.ownerModule,
-                extensions: (schema as any).extensions,
-              })
-            );
+            introspectedSchemas.push(schema);
             console.log(`Introspected schema ${collectionName}`);
           }
         );
       })
     );
-    return this;
+    return introspectedSchemas;
   }
 
   async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
@@ -253,8 +246,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (
-      this.models[schemaName].originalSchema.ownerModule !== callerModule &&
-      this.models[schemaName].originalSchema.name !== 'SchemaDefinitions' // SchemaDefinitions migration
+      (this.models[schemaName].originalSchema.ownerModule !== callerModule) &&
+      (this.models[schemaName].originalSchema.name !== 'SchemaDefinitions') // SchemaDefinitions migration
     ) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
