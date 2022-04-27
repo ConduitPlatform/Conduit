@@ -108,9 +108,6 @@ export class AuthenticationRoutes {
           userId: ConduitString.Optional,
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
-          message: ConduitString.Optional,
-          removeCookies: { type: [TYPE.String], required: false },
-          setCookies: { type: [TYPE.JSON], required: false },
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
@@ -338,9 +335,6 @@ export class AuthenticationRoutes {
           serviceId: ConduitString.Required,
           accessToken: ConduitString.Required,
           refreshToken: ConduitString.Required,
-          message: ConduitString.Optional,
-          removeCookies: { type: [TYPE.String], required: false },
-          setCookies: { type: [TYPE.JSON], required: false },
         }),
         this.serviceHandler.authenticate.bind(this.serviceHandler),
       );
@@ -400,11 +394,7 @@ export class AuthenticationRoutes {
           action: ConduitRouteActions.POST,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('LogoutResponse', {
-          message: ConduitString.Optional,
-          removeCookies: ConduitString.Optional,
-          setCookies: { type: TYPE.JSON, required: false },
-        }),
+        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
         this.commonHandlers.logOut.bind(this.commonHandlers),
       );
 

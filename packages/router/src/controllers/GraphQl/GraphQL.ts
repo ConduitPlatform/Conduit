@@ -47,7 +47,7 @@ export class GraphQLController extends ConduitRouter {
       context: ({ req, res }: any) => {
         const context = (req as any).conduit || {};
         let headers: any = req.headers;
-        return { context, headers, setCookie: {}, removeCookie: '', res };
+        return { context, headers, setCookie: [], removeCookie: [], res };
       },
     });
 
@@ -389,11 +389,9 @@ export class GraphQLController extends ConduitRouter {
         .then((r) => {
           let result = r.result ? r.result : r;
           if (r.setCookies) {
-            const cookies = JSON.parse(r.setCookies);
-            context.setCookie = cookies;
+            context.setCookie = r.setCookies;
           }
           if (r.removeCookies) {
-
             context.removeCookie = r.removeCookies;
           }
 

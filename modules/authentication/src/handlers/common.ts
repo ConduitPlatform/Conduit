@@ -79,7 +79,7 @@ export class CommonHandlers {
           name: 'refreshToken',
           value: newAccessToken.token,
           options: cookieOptions,
-        })
+        });
       }
       return {
         result: { message: 'Successfully authenticated' },
@@ -105,7 +105,7 @@ export class CommonHandlers {
     );
     if (config.setCookies.enabled) {
       return {
-        result: { message: 'Logged Out' },
+        result: 'LoggedOut',
         removeCookies: ['accessToken', 'refreshToken'],
       };
     }

@@ -44,6 +44,10 @@ message Options {
   bool secure = 2;
   bool signed = 3;
   int32 maxAge = 4;
+  string path = 5;
+  string domain = 6;
+  string sameSite = 7;
+  
 }
 message SocketResponse {
   string event = 1;

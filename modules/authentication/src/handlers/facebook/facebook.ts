@@ -95,9 +95,6 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
         userId: ConduitString.Required,
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
-        message: ConduitString.Optional,
-        removeCookies: { type: [TYPE.String], required: false },
-        setCookies: { type: [TYPE.JSON], required: false },
       }),
       this.authenticate.bind(this),
     );

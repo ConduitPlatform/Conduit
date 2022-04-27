@@ -68,23 +68,22 @@ export function wrapRouterGrpcFunction(
           if (typeof r === 'string') {
             callback(null, { result: r });
           } else {
-            const result = r.result ? JSON.stringify(r.result) : undefined;
+            let respObject;
             if (r.removeCookies || r.setCookies) {
-              return callback(null, {
-                result: result,
+              respObject = {
                 removeCookies: r.removeCookies,
                 setCookies: r.setCookies,
-              });
+              };
             }
             if (r.result || r.redirect) {
               callback(null, {
+                ...respObject,
                 redirect: r.redirect ?? undefined,
-                result: result,
+                result: r.result ? JSON.stringify(r.result) : undefined,
               });
             } else {
-              callback(null, { result: JSON.stringify(r) });
+              callback(null, { ...respObject, result: JSON.stringify(r) });
             }
-
           }
         } else {
           if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);

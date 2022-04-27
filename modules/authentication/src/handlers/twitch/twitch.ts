@@ -68,9 +68,6 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
         userId: ConduitString.Required,
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
-        message: ConduitString.Optional,
-        removeCookies: { type: [TYPE.String], required: false },
-        setCookies: { type: [TYPE.JSON], required: false },
       }),
       this.authorize.bind(this),
     );

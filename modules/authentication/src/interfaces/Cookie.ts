@@ -6,5 +6,8 @@ export interface Cookie {
     secure?: boolean;
     maxAge?: number;
     signed?: boolean;
-  }
+    sameSite?: string;
+    domain?: string;
+    path: string;
+  };
 }

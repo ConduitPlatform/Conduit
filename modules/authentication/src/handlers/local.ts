@@ -201,7 +201,7 @@ export class LocalHandlers {
         .add(config.tokenInvalidationPeriod as number, 'milliseconds')
         .toDate(),
     });
-    let refreshToken: RefreshToken | null;
+    let refreshToken: RefreshToken | null = null;
     if (config.generateRefreshToken) {
       refreshToken = await RefreshToken.getInstance().create({
         userId: user._id,
@@ -218,18 +218,18 @@ export class LocalHandlers {
       const cookies: Cookie[] = [{
         name: 'accessToken',
         value: (accessToken as AccessToken).token,
-        options: cookieOptions
+        options: cookieOptions,
 
       }];
       if (!isNil(refreshToken!)) {
         cookies.push({
           name: 'refreshToken',
           value: refreshToken.token,
-          options: cookieOptions
+          options: cookieOptions,
         });
       }
       return {
-        result: { message: 'Successfully authenticated' },
+        userId: user._id.toString(),
         setCookies: cookies,
       };
     }
@@ -237,7 +237,7 @@ export class LocalHandlers {
     return {
       userId: user._id.toString(),
       accessToken: accessToken.token,
-      refreshToken: !isNil(refreshToken!) ? refreshToken!.token : undefined,
+      refreshToken: !isNil(refreshToken) ? refreshToken.token : undefined,
     };
   }
 

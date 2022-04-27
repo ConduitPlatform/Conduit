@@ -249,6 +249,18 @@ export default {
         format: 'Number',
         default: 900000,
       },
+      domain: {
+        format: 'String',
+        default: ''
+      },
+      path: {
+        format: 'String',
+        default: '',
+      },
+      sameSite: {
+        format: 'String',
+        default: 'Lax',
+      },
     },
   },
   generateRefreshToken: {
