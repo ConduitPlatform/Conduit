@@ -475,17 +475,22 @@ export class SchemaAdmin {
 
   async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     await this.database.introspectDatabase(true);
-    return { introspect: 'success'};
+    return 'Schemas successfully introspected';
   }
 
   async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany({});
+    const { sort } = call.request.params;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
+    const schemas = await this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.findMany({}, skip, limit, undefined, sort);
     return { schemas };
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas = Object.values(call.request.params);
-    const schemaNames = schemas.map((schema: ConduitSchema) => schema.name);
+    const schemas : ConduitSchema[] = Object.values(call.request.params.inputDocuments);
+    const schemaIds = schemas.map((schema: any) => schema._id);
     //add schemas to _DeclaredSchema
     await Promise.all(schemas.map(async (schema: ConduitSchema) => {
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
@@ -494,7 +499,7 @@ export class SchemaAdmin {
         await this.database.createSchemaFromAdapter(recreatedSchema);
     }));
     //remove finalized schemas from pending schemas
-    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany({ name: { $in: schemaNames } });
+    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany({ _id: { $in: schemaIds } });
     
     return `${schemas.length} schemas finalized successfully`;
   }

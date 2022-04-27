@@ -282,21 +282,24 @@ export class AdminHandlers {
         path: '/introspection',
         action: ConduitRouteActions.POST,
       },
-      new ConduitRouteReturnDefinition('IntrospectDatabase', TYPE.JSON),
+      new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
       'introspectDatabase'
       ),
       constructConduitRoute({
         path: '/introspection/schemas',
         action: ConduitRouteActions.GET,
       },
-      new ConduitRouteReturnDefinition('GetPendingSchemas',TYPE.JSON),
+      new ConduitRouteReturnDefinition('GetPendingSchemas', { introspectedSchemas: [DeclaredSchema.fields] }),
       'getPendingSchemas'
       ),
       constructConduitRoute({
         path: '/introspection/schemas/finalize',
         action: ConduitRouteActions.POST,
+        bodyParams: {
+          inputDocuments: { type: [TYPE.JSON], required: true },
+        },
       },
-      new ConduitRouteReturnDefinition('FinalizeSchemas',TYPE.String),
+      new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
       'finalizeSchemas'
       ),
       // Documents
