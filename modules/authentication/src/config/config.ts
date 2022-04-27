@@ -227,10 +227,28 @@ export default {
       default: false,
     },
   },
-  set_cookies: {
+  setCookies: {
     enabled: {
       format: 'Boolean',
       default: false,
+    },
+    options: {
+      httpOnly: {
+        format: 'Boolean',
+        default: false,
+      },
+      secure: {
+        format: 'Boolean',
+        default: false,
+      },
+      signed: {
+        format: 'Boolean',
+        default: false,
+      },
+      maxAge: {
+        format: 'Number',
+        default: 900000,
+      },
     },
   },
   generateRefreshToken: {

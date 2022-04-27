@@ -11,9 +11,11 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, User } from '../models';
 import config from '../config';
+import { Cookie } from '../interfaces/Cookie';
 
 export class CommonHandlers {
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
@@ -28,7 +30,7 @@ export class CommonHandlers {
       {
         token: refreshToken,
         clientId,
-      }
+      },
     );
     if (isNil(oldRefreshToken)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
@@ -41,7 +43,7 @@ export class CommonHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: oldRefreshToken.userId,
         clientId,
-      })
+      }),
     );
 
     const signTokenOptions: ISignTokenOptions = {
@@ -65,8 +67,24 @@ export class CommonHandlers {
         .toDate(),
     });
 
-    if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies(newAccessToken.token, newRefreshToken.token,'setCookies');
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: newAccessToken.token,
+        options: cookieOptions,
+      }];
+      if (!isNil(refreshToken!)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: newAccessToken.token,
+          options: cookieOptions,
+        })
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
     }
     return {
       accessToken: newAccessToken.token,
@@ -83,10 +101,13 @@ export class CommonHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
         clientId,
-      })
+      }),
     );
-    if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('removeCookies','Logged out')
+    if (config.setCookies.enabled) {
+      return {
+        result: { message: 'Logged Out' },
+        removeCookies: ['accessToken', 'refreshToken'],
+      };
     }
     return 'Logged out';
   }
@@ -104,7 +125,7 @@ export class CommonHandlers {
     Promise.all(
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
-      })
+      }),
     ).catch((e: any) => console.log('Failed to delete all access tokens'));
     return 'Done';
   }

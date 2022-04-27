@@ -109,7 +109,8 @@ export class AuthenticationRoutes {
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
           message: ConduitString.Optional,
-          cookies: { type: TYPE.JSON, required: false },
+          removeCookies: { type: [TYPE.String], required: false },
+          setCookies: { type: [TYPE.JSON], required: false },
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
@@ -337,6 +338,9 @@ export class AuthenticationRoutes {
           serviceId: ConduitString.Required,
           accessToken: ConduitString.Required,
           refreshToken: ConduitString.Required,
+          message: ConduitString.Optional,
+          removeCookies: { type: [TYPE.String], required: false },
+          setCookies: { type: [TYPE.JSON], required: false },
         }),
         this.serviceHandler.authenticate.bind(this.serviceHandler),
       );

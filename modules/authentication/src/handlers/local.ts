@@ -16,6 +16,7 @@ import * as templates from '../templates';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
+import { Cookie } from '../interfaces/Cookie';
 
 export class LocalHandlers {
   private emailModule: Email;
@@ -200,25 +201,43 @@ export class LocalHandlers {
         .add(config.tokenInvalidationPeriod as number, 'milliseconds')
         .toDate(),
     });
+    let refreshToken: RefreshToken | null;
+    if (config.generateRefreshToken) {
+      refreshToken = await RefreshToken.getInstance().create({
+        userId: user._id,
+        clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      });
+    }
 
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: (accessToken as AccessToken).token,
+        options: cookieOptions
 
-
-    if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('setCookies','Successfully authenticated',accessToken.token,refreshToken.token)
+      }];
+      if (!isNil(refreshToken!)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: refreshToken.token,
+          options: cookieOptions
+        });
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
     }
 
     return {
       userId: user._id.toString(),
       accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
+      refreshToken: !isNil(refreshToken!) ? refreshToken!.token : undefined,
     };
   }
 

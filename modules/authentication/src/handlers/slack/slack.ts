@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager,
+  RoutingManager, TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -82,8 +82,11 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
       },
       new ConduitRouteReturnDefinition('SlackResponse', {
         userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
+        message: ConduitString.Optional,
+        removeCookies: { type: [TYPE.String], required: false },
+        setCookies: { type: [TYPE.JSON], required: false },
       }),
       this.authorize.bind(this),
     );

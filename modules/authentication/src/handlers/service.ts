@@ -7,8 +7,9 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
-import { Service } from '../models';
+import { AccessToken, RefreshToken, Service } from '../models';
 import { status } from '@grpc/grpc-js';
+import { Cookie } from '../interfaces/Cookie';
 
 export class ServiceHandler {
   private initialized: boolean = false;
@@ -68,13 +69,29 @@ export class ServiceHandler {
         config,
       },
     );
-    if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('setCookies','Successfully authenticated',(accessToken as any).token,(refreshToken as any).token)
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: (accessToken as AccessToken).token,
+        options: cookieOptions,
+      }];
+      if (!isNil((refreshToken as RefreshToken).token)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: (refreshToken as RefreshToken).token,
+          options: cookieOptions,
+        });
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
     }
     return {
       serviceId: serviceUser._id.toString(),
       accessToken: (accessToken as any).token,
-      refreshToken: (refreshToken as any).token,
+      refreshToken: !isNil(refreshToken!) ? (refreshToken as RefreshToken).token : undefined,
     };
   }
 }

@@ -132,15 +132,17 @@ export namespace AuthUtils {
         .add(tokenOptions.config.tokenInvalidationPeriod as number, 'milliseconds')
         .toDate(),
     });
-
-    const refreshToken = sdk.databaseProvider!.create('RefreshToken', {
-      userId: tokenOptions.userId,
-      clientId: tokenOptions.clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(tokenOptions.config.refreshTokenInvalidationPeriod, 'milliseconds')
-        .toDate(),
-    });
+    let refreshToken;
+    if (tokenOptions.config.generateRefreshToken) {
+      refreshToken = sdk.databaseProvider!.create('RefreshToken', {
+        userId: tokenOptions.userId,
+        clientId: tokenOptions.clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(tokenOptions.config.refreshTokenInvalidationPeriod, 'milliseconds')
+          .toDate(),
+      });
+    }
 
     return [accessToken, refreshToken];
   }
@@ -163,28 +165,5 @@ export namespace AuthUtils {
       .match(
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
-  }
-
-  export function returnCookies(option: string, message: string, accessToken?: string, refreshToken?: string) {
-    let ret;
-    if (option === 'removeCookies') {
-      ret = {
-        removeCookies: 'accessToken,refreshToken',
-        result: {
-          message: message,
-        },
-      };
-    } else {
-      ret = {
-        [option]: {
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-        },
-        result: {
-          message: message,
-        },
-      };
-    }
-    return ret;
   }
 }

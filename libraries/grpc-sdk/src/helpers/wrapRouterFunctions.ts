@@ -72,8 +72,8 @@ export function wrapRouterGrpcFunction(
             if (r.removeCookies || r.setCookies) {
               return callback(null, {
                 result: result,
-                removeCookies: r.removeCookies ?? undefined,
-                setCookies: JSON.stringify(r.setCookies) ?? undefined,
+                removeCookies: r.removeCookies,
+                setCookies: r.setCookies,
               });
             }
             if (r.result || r.redirect) {

@@ -168,14 +168,13 @@ export class RestController extends ConduitRouter {
                 result: this.extractResult(route.returnTypeFields as string, result),
               };
             }
-            if (r.setCookies) {
-              const cookies = JSON.parse(r.setCookies);
-              Object.keys(cookies).forEach((key) => {
-                res.cookie(key, cookies[key]);
+            if (r.setCookies && r.setCookies.length) {
+              r.setCookies.forEach((cookie: any) => {
+                res.cookie(cookie.name, cookie.value,cookie.options);
               });
             }
-            if (r.removeCookies && r.removeCookies !== '') {
-              (r.removeCookies.split(',')).forEach((key: string) => {
+            if (r.removeCookies && r.removeCookies.length) {
+              (r.removeCookies).forEach((key: string) => {
                 res.clearCookie(key);
               });
             }

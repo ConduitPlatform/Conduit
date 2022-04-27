@@ -22,8 +22,8 @@ message RouterRequest {
 message RouterResponse {
   string result = 1;
   string redirect = 2;
-  optional string setCookies = 3;
-  optional string removeCookies = 4;
+  repeated Cookie setCookies = 3;
+  repeated string removeCookies = 4;
 }
 
 message SocketRequest {
@@ -33,6 +33,18 @@ message SocketRequest {
   string context = 4;
 }
 
+message Cookie {
+  string name = 1;
+  string value = 2;
+  Options options = 3;
+}
+
+message Options {
+  bool httpOnly = 1;
+  bool secure = 2;
+  bool signed = 3;
+  int32 maxAge = 4;
+}
 message SocketResponse {
   string event = 1;
   string data = 2;

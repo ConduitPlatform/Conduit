@@ -7,11 +7,12 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { User } from '../../models';
+import { RefreshToken, User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
+import { Cookie } from '../../interfaces/Cookie';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
@@ -112,14 +113,30 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     let tokens = await this.createTokens(user._id, call.request.params['clientId'], config);
-
-    if (config.set_cookies.enabled) {
-      return AuthUtils.returnCookies('setCookies','Successfully authenticated',(tokens.accessToken as string),(tokens.refreshToken as string))
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: tokens.accessToken,
+        options: cookieOptions,
+      }];
+      if (!isNil(tokens.refreshToken)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: tokens.refreshToken,
+          options: cookieOptions,
+        });
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
     }
     return {
       userId: user!._id.toString(),
-      accessToken: (tokens.accessToken as any),
-      refreshToken: (tokens.refreshToken as any),
+      accessToken: (tokens.accessToken as string),
+      refreshToken: !isNil(tokens.refreshToken) ? (tokens.refreshToken as RefreshToken).token : undefined,
+
     };
   }
 
