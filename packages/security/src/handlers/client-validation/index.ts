@@ -40,8 +40,11 @@ export class ClientValidator {
       if (this.prod) return next(ConduitError.unauthorized());
       return next();
     }
-
+    const securityConfig = await this.sdk.getConfigManager().get('security');
+    const active = securityConfig.active;
     const { clientid, clientsecret } = req.headers;
+
+    if (!active) return next();
     if (isNil(clientid) || isNil(clientsecret)) {
       return next(ConduitError.unauthorized());
     }

@@ -17,6 +17,10 @@ const schema = {
     required: true,
     select: false,
   },
+  domain: {
+    type: TYPE.String,
+    required: true,
+  },
   platform: {
     type: TYPE.String,
     enum: Object.values(PlatformTypesEnum),

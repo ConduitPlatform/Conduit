@@ -6,19 +6,42 @@ import { ClientValidator } from './handlers/client-validation';
 import { secretMigrate } from './migrations/Secret.migrate';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
+import convict from './config';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
     private readonly commons: ConduitCommons,
-    private readonly grpcSdk: ConduitGrpcSdk
+    private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     super(commons);
     this.registerSchemas().then(() => {
       return secretMigrate();
     })
-      .catch(err=>{
+      .catch(err => {
         console.error(err);
       });
+    let error;
+    commons
+      .getConfigManager()
+      .get('security')
+      .catch((err: any) => (error = err));
+    if (error) {
+      this.commons
+        .getConfigManager()
+        .registerModulesConfig('security', convict.getProperties())
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
+    } else {
+      this.commons
+        .getConfigManager()
+        .addFieldsToModule('security', convict.getProperties())
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
+      ;
+    }
+
     this.registerAdminRoutes();
     const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
@@ -30,9 +53,9 @@ class SecurityModule extends IConduitSecurity {
       'rateLimiter',
       new RateLimiter(
         process.env.REDIS_HOST as string,
-        parseInt(process.env.REDIS_PORT as string)
+        parseInt(process.env.REDIS_PORT as string),
       ).limiter,
-      true
+      true,
     );
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
     router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
@@ -49,7 +72,7 @@ class SecurityModule extends IConduitSecurity {
     router.registerGlobalMiddleware(
       'clientMiddleware',
       clientValidator.middleware.bind(clientValidator),
-      true
+      true,
     );
   }
 
