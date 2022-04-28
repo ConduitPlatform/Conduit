@@ -1,4 +1,3 @@
-import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
 import { SocketProtoDescription } from '../interfaces';
 import path from 'path';

@@ -3,7 +3,7 @@ import { PushNotificationsDefinition } from '../../protoUtils/push-notifications
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'push-notifications', url);
     this.initializeClient(PushNotificationsDefinition);
   }
 

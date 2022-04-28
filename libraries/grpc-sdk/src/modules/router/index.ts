@@ -3,7 +3,7 @@ import { RouterDefinition, SocketData } from '../../protoUtils/core';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(public readonly moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'router', url);
     this.initializeClient(RouterDefinition);
   }
 

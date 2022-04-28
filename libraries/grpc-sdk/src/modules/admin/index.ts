@@ -29,7 +29,7 @@ message AdminResponse {
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(private readonly moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'admin', url);
     this.initializeClient(AdminDefinition);
   }
 

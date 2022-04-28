@@ -2,24 +2,23 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ConduitService,
   SetConfigRequest,
-  SetConfigResponse
+  SetConfigResponse,
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
-import { camelCase, kebabCase } from 'lodash';
-import { status } from "@grpc/grpc-js";
+import { kebabCase } from 'lodash';
+import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule extends ConduitServiceModule {
-  readonly name: string;
   abstract readonly config?: convict.Config<any>;
   service?: ConduitService;
 
   protected constructor(moduleName: string) {
-    moduleName = camelCase(moduleName);
-    super();
-    this.name = moduleName;
+    super(moduleName);
   }
+
+  get name() { return this._moduleName; }
 
   initialize(grpcSdk: ConduitGrpcSdk) {
     this.grpcSdk = grpcSdk;
@@ -37,13 +36,18 @@ export abstract class ManagedModule extends ConduitServiceModule {
 
   async onConfig() {}
 
-  async startGrpcServer(servicePort?: string) {
+  async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
+  }
+
+  async startGrpcServer() {
     if (this.service) {
+      this._serviceName = this.service.protoDescription.substring(this.service.protoDescription.indexOf('.') + 1);
       await this.grpcServer.addService(this.service.protoPath, this.service.protoDescription, this.service.functions);
+      await this.addHealthCheckService();
       await this.grpcServer.start();
-      console.log('Grpc server is online');
+      console.log('gRPC server is online');
     }
   }
 

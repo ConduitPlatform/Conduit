@@ -3,7 +3,7 @@ import { SendSmsResponse, SendVerificationCodeResponse, SmsDefinition, VerifyRes
 
 export class SMS extends ConduitModule<typeof SmsDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'sms', url);
     this.initializeClient(SmsDefinition);
   }
 

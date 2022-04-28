@@ -9,7 +9,7 @@ import {
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'authentication', url);
     this.initializeClient(AuthenticationDefinition);
   }
 

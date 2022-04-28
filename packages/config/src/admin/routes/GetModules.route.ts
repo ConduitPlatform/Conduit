@@ -6,7 +6,7 @@ import {
   ConduitString,
 } from '@conduitplatform/commons';
 
-export function getModulesRoute(registeredModules: Map<string, string>) {
+export function getModulesRoute(servingModules: Map<string, string>) {
   return new ConduitRoute(
     {
       path: '/config/modules',
@@ -21,9 +21,9 @@ export function getModulesRoute(registeredModules: Map<string, string>) {
       ],
     }),
     async () => {
-      if (registeredModules.size !== 0) {
+      if (servingModules.size !== 0) {
         let modules: any[] = [];
-        registeredModules.forEach((value: string, key: string) => {
+        servingModules.forEach((value: string, key: string) => {
           modules.push({
             moduleName: key,
             url: value,

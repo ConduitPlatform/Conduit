@@ -131,6 +131,8 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     await Promise.all(models);
   }
 
+  abstract connect(): void;
+
   abstract ensureConnected(): Promise<any>;
 
   setSchemaExtension(

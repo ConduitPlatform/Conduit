@@ -1,4 +1,4 @@
-import { ModuleManager } from "@conduitplatform/grpc-sdk";
+import { ModuleManager } from '@conduitplatform/grpc-sdk';
 import DatabaseModule from './Database';
 
 const dbType = process.env.DB_TYPE ??

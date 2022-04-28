@@ -1,7 +1,8 @@
 rm -rf ./src/proto
 mkdir ./src/proto
 echo "Copying proto files from module folders"
-copyfiles ../../**/src/*.proto -e ../../**/node_modules/**/*.proto -e ../../**/protos/src/**/*.proto -f ./src/proto
+copyfiles ../../**/src/*.proto -e ../../**/node_modules/**/*.proto -e ../../**/protos/src/**/*.proto -e ../../**/grpc_health_check.proto -f ./src/proto
+copyfiles ./src/grpc_health_check.proto -f ./src/proto
 rm -rf ./src/protoUtils
 mkdir ./src/protoUtils
 
