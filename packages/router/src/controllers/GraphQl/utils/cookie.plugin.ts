@@ -14,7 +14,7 @@ module.exports = {
 
         if (removeCookie) {
           removeCookie.forEach((cookie: any) => {
-            res.clearCookie(cookie.name, { domain: cookie.options.domain, path: cookie.options.path });
+            res.clearCookie(cookie.name, cookie.options);
           });
         }
         return requestContext;
