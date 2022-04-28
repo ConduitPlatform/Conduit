@@ -76,26 +76,10 @@ export default class DatabaseModule extends ManagedModule {
 
   async onServerStart() {
     const isConduitDB = await this._activeAdapter.isConduitDB();
-    
     if (isConduitDB) {
       await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    }
-    else {
-      console.log(`Database is not a Conduit DB. Starting introspection...`);
-      let introspectedSchemas = await this._activeAdapter.introspectDatabase(isConduitDB);
-      await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-      await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
-      
-      await Promise.all(introspectedSchemas.map(async (schema: ConduitSchema) => {
-        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
-          JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          modelOptions: schema.schemaOptions,
-          ownerModule: schema.ownerModule,
-          extensions: (schema as any).extensions,
-        }));
-      }));
+    } else {
+      await this.introspectDB();
     }
 
     const modelPromises = Object.values(models).flatMap((model: any) => {
@@ -136,11 +120,9 @@ export default class DatabaseModule extends ManagedModule {
             receivedSchema.collectionName
           );
           schema.ownerModule = receivedSchema.ownerModule;
-          self._activeAdapter
-            .createSchemaFromAdapter(schema)
-            .catch(() => {
-              console.log('Failed to create/update schema');
-            });
+          self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
+            console.log('Failed to create/update schema');
+          });
         }
       } catch (err) {
         console.error('Something was wrong with the message');
@@ -551,5 +533,26 @@ export default class DatabaseModule extends ManagedModule {
         message: err.message,
       });
     }
+  }
+
+  private async introspectDB() {
+    console.log(`Database is not a Conduit DB. Starting introspection...`);
+    let introspectedSchemas = await this._activeAdapter.introspectDatabase(false);
+    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
+
+    await Promise.all(
+      introspectedSchemas.map(async (schema: ConduitSchema) => {
+        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
+          JSON.stringify({
+            name: schema.name,
+            fields: schema.fields,
+            modelOptions: schema.schemaOptions,
+            ownerModule: schema.ownerModule,
+            extensions: (schema as any).extensions,
+          })
+        );
+      })
+    );
   }
 }

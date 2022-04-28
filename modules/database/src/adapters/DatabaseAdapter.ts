@@ -9,12 +9,11 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   models?: { [name: string]: T };
 
   /**
-   * Checks if the database adapter includes the declaredSchema model
+   * Checks if the database has already been connected with Conduit
    */
   abstract isConduitDB(): Promise<boolean>;
 
   /**
-   * 
    * Introspects all schemas of current db connection, registers them to conduit
    */
   abstract introspectDatabase(isConduitDB : boolean): Promise<ConduitSchema[]>;

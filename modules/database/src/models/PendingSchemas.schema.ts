@@ -1,10 +1,3 @@
-// import { DeclaredSchema } from './DeclaredSchema.schema';
-
-// const PendingSchemas = JSON.parse(JSON.stringify(DeclaredSchema));
-// (PendingSchemas as any).name = '_PendingSchemas';
-
-// export { PendingSchemas };
-
 import { ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
 
 export const PendingSchemas = new ConduitSchema(
