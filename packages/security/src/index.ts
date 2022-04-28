@@ -76,10 +76,11 @@ class SecurityModule extends IConduitSecurity {
     );
   }
 
-  private registerAdminRoutes() {
+  private async registerAdminRoutes() {
     this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
     this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
     this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+
   }
 
   private registerSchemas() {

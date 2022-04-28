@@ -10,7 +10,7 @@ export class ClientValidator {
 
   constructor(
     private readonly database: DatabaseProvider,
-    private readonly sdk: ConduitCommons
+    private readonly sdk: ConduitCommons,
   ) {
     const self = this;
     sdk
@@ -42,9 +42,11 @@ export class ClientValidator {
     }
     const securityConfig = await this.sdk.getConfigManager().get('security');
     const active = securityConfig.active;
-    const { clientid, clientsecret } = req.headers;
+    if (!active) {
+      return next();
+    }
 
-    if (!active) return next();
+    const { clientid, clientsecret } = req.headers;
     if (isNil(clientid) || isNil(clientsecret)) {
       return next(ConduitError.unauthorized());
     }
@@ -61,8 +63,17 @@ export class ClientValidator {
     }
     let _client: { clientId: string; clientSecret: string };
     Client.getInstance()
-      .findOne({ clientId: clientid }, 'clientSecret')
+      .findOne({ clientId: clientid })
       .then((client: any) => {
+        if (client.platform === 'WEB' && client.domain) {
+          const isRegex = (client.domain).includes('*');
+          let match: boolean;
+          if (isRegex) {
+            match = (client.domain).test(req.hostname);  // check if the regex matches with the hostname
+          }
+          match = (client.domain === req.hostname);
+          return match;
+        }
         if (isNil(client)) {
           throw ConduitError.unauthorized();
         }

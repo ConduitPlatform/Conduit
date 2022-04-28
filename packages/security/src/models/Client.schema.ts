@@ -19,7 +19,7 @@ const schema = {
   },
   domain: {
     type: TYPE.String,
-    required: true,
+    required: false,
   },
   platform: {
     type: TYPE.String,
