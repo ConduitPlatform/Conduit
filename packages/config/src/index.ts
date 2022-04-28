@@ -418,7 +418,6 @@ export default class ConfigManager implements IConfigManager {
         await this.grpcSdk.createModuleClient(moduleName, moduleUrl);
       }
       const healthClient = await this.grpcSdk.getHealthClient(moduleName)!;
-      await new Promise(f => setTimeout(f, 1)); // client health check throws without this
       const healthResponse = await healthClient.check({ service: '' })
         .catch(() => {
           throw new Error('Failed to register unhealthy module');
