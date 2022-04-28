@@ -1,4 +1,4 @@
-import { getModuleNameInterceptor } from '../interceptors';
+import { getModuleNameInterceptor, getGrpcSignedTokenInterceptor } from '../interceptors';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
@@ -14,10 +14,12 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   protected readonly _clientName: string;
   protected readonly _serviceUrl: string;
   protected readonly healthCheckEmitter = new EventEmitter();
+  protected readonly _grpcToken?: string;
 
-  constructor(clientName: string, serviceName: string, serviceUrl: string) {
+  constructor(clientName: string, serviceName: string, serviceUrl: string, grpcToken?: string) {
     this._clientName = clientName;
     this._serviceUrl = serviceUrl;
+    this._grpcToken = grpcToken;
   }
 
   initializeClient(type: T): Client<T> {
@@ -32,18 +34,19 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
-    this._client = createClientFactory()
-      .use(getModuleNameInterceptor(this._clientName))
-      .create(
-        this.type!,
-        this.channel,
-      );
-    this._healthClient = createClientFactory()
-      .use(getModuleNameInterceptor(this._clientName))
-      .create(
-        HealthDefinition,
-        this.channel,
-      );
+    const clientFactory = createClientFactory().use(
+      this._grpcToken ?
+      getGrpcSignedTokenInterceptor(this._grpcToken) :
+      getModuleNameInterceptor(this._clientName)
+    );
+    this._client = clientFactory.create(
+      this.type!,
+      this.channel,
+    );
+    this._healthClient = clientFactory.create(
+      HealthDefinition,
+      this.channel,
+    );
     this.active = true;
   }
 

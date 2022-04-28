@@ -8,8 +8,8 @@ import {
 } from '../../protoUtils/authentication';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
-  constructor(moduleName: string, url: string) {
-    super(moduleName, 'authentication', url);
+  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+    super(moduleName, 'authentication', url, grpcToken);
     this.initializeClient(AuthenticationDefinition);
   }
 

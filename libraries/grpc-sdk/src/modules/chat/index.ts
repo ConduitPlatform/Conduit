@@ -2,8 +2,8 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { ChatDefinition, GetRoomResponse, SendMessageRequest, SetConfigResponse } from '../../protoUtils/chat';
 
 export class Chat extends ConduitModule<typeof ChatDefinition> {
-  constructor(moduleName: string, url: string) {
-    super(moduleName, 'chat', url);
+  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+    super(moduleName, 'chat', url, grpcToken);
     this.initializeClient(ChatDefinition);
   }
 

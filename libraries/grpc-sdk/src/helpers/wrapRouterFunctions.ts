@@ -42,7 +42,7 @@ export function wrapRouterGrpcFunction(
   fun: RequestHandlers,
 ): (call: any, callback: any) => void {
   return (call: any, callback: any) => {
-    let requestReceive = Date.now();
+    const requestReceive = Date.now();
     let routerRequest = true;
     try {
       call.request.context = parseRequestData(call.request.context);

@@ -12,19 +12,19 @@ export class Core extends IConduitCore {
   get grpcServer() { return this._grpcServer; }
   get initialized() { return this._httpServer.initialized && this._grpcServer.initialized; }
 
-  private constructor(httpPort: number | string, grpcPort: number) {
+  private constructor(httpPort: number | string, grpcPort: number, grpcKey?: string) {
     super(ConduitCommons.getInstance('core'));
     this.commons.registerCore(this);
-    this._grpcServer = new GrpcServer(this.commons, grpcPort);
+    this._grpcServer = new GrpcServer(this.commons, grpcPort, grpcKey);
     this._httpServer = new HttpServer(httpPort, this.commons);
   }
 
-  static getInstance(httpPort?: number | string, grpcPort?: number): Core {
+  static getInstance(httpPort?: number | string, grpcPort?: number, grpcKey?: string): Core {
     if (!Core._instance) {
       if (isNil(httpPort) || isNil(grpcPort)) {
         throw new Error('Cannot initialize Core without httpPort and grpcPort');
       }
-      Core._instance = new Core(httpPort, grpcPort);
+      Core._instance = new Core(httpPort, grpcPort, grpcKey);
     }
     return Core._instance;
   }

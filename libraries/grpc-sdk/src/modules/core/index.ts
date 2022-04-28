@@ -2,8 +2,8 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { CoreDefinition } from '../../protoUtils/core';
 
 export class Core extends ConduitModule<typeof CoreDefinition> {
-  constructor(moduleName: string, url: string) {
-    super(moduleName, 'core', url);
+  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+    super(moduleName, 'core', url, grpcToken);
     this.initializeClient(CoreDefinition);
   }
 }

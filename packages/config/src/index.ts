@@ -1,10 +1,11 @@
-import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import ConduitGrpcSdk, { HealthCheckStatus, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
+import path from 'path';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -17,30 +18,32 @@ export default class ConfigManager implements IConfigManager {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     private readonly sdk: ConduitCommons,
-    server: Server,
-    packageDefinition: any,
     databaseCallback: any,
   ) {
-    const protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
-    // @ts-ignore
-    const config = protoDescriptor.conduit.core.Config;
-    server.addService(config.service, {
-      get: this.getGrpc.bind(this),
-      getServerConfig: this.getServerConfig.bind(this),
-      getRedisDetails: this.getRedisDetails.bind(this),
-      updateConfig: this.updateConfig.bind(this),
-      addFieldsToConfig: this.addFieldsToConfig.bind(this),
-      moduleExists: this.moduleExists.bind(this),
-      registerModule: this.registerModule.bind(this),
-      moduleList: this.moduleList.bind(this),
-      watchModules: this.watchModules.bind(this),
-      moduleHealthProbe: this.moduleHealthProbe.bind(this),
-      getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this),
-    });
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
     this.moduleRegister.setMaxListeners(150);
+  }
+
+  async initialize(server: GrpcServer) {
+    await server.addService(
+      path.resolve(__dirname, '../../core/src/core.proto'),
+      'conduit.core.Config',
+      {
+        get: this.getGrpc.bind(this),
+        getServerConfig: this.getServerConfig.bind(this),
+        getRedisDetails: this.getRedisDetails.bind(this),
+        updateConfig: this.updateConfig.bind(this),
+        addFieldsToConfig: this.addFieldsToConfig.bind(this),
+        moduleExists: this.moduleExists.bind(this),
+        registerModule: this.registerModule.bind(this),
+        moduleList: this.moduleList.bind(this),
+        watchModules: this.watchModules.bind(this),
+        moduleHealthProbe: this.moduleHealthProbe.bind(this),
+        getModuleUrlByName: this.getModuleUrlByNameGrpc.bind(this),
+      },
+    );
     this.highAvailability();
     const self = this;
     setInterval(() => {
@@ -450,6 +453,7 @@ export default class ConfigManager implements IConfigManager {
     }
     this.servingModules.set(moduleName, moduleUrl);
     if (moduleName === 'database' && !dbInit) {
+      await this.grpcSdk.refreshModules(true);
       this.databaseCallback();
     }
     this.updateModuleHealth(moduleName, instancePeer, HealthCheckStatus.SERVING);
