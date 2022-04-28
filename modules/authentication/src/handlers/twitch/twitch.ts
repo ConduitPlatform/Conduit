@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  RoutingManager,
+  RoutingManager, TYPE,
 } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { TwitchUser } from './twitch.user';
@@ -66,8 +66,8 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
       },
       new ConduitRouteReturnDefinition('TwitchResponse', {
         userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
       }),
       this.authorize.bind(this),
     );

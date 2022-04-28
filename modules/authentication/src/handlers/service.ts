@@ -7,13 +7,15 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
-import { Service } from '../models';
+import { AccessToken, RefreshToken, Service } from '../models';
 import { status } from '@grpc/grpc-js';
+import { Cookie } from '../interfaces/Cookie';
 
 export class ServiceHandler {
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  }
 
   async validate(): Promise<Boolean> {
     const authConfig = ConfigController.getInstance().config;
@@ -39,7 +41,7 @@ export class ServiceHandler {
 
     const serviceUser: Service | null = await Service.getInstance().findOne(
       { name: serviceName },
-      '+hashedToken'
+      '+hashedToken',
     );
     if (isNil(serviceUser))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
@@ -56,7 +58,7 @@ export class ServiceHandler {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: serviceUser._id,
         clientId,
-      })
+      }),
     );
 
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
@@ -65,13 +67,31 @@ export class ServiceHandler {
         userId: serviceUser._id,
         clientId: context.clientId,
         config,
-      }
+      },
     );
-
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: (accessToken as AccessToken).token,
+        options: cookieOptions,
+      }];
+      if (!isNil((refreshToken as RefreshToken).token)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: (refreshToken as RefreshToken).token,
+          options: cookieOptions,
+        });
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
+    }
     return {
       serviceId: serviceUser._id.toString(),
       accessToken: (accessToken as any).token,
-      refreshToken: (refreshToken as any).token,
+      refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
     };
   }
 }

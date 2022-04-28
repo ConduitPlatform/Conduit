@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  RoutingManager,
+  RoutingManager, TYPE,
 } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
@@ -73,8 +73,8 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
       },
       new ConduitRouteReturnDefinition('MicrosoftResponse', {
         userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
       }),
       this.authorize.bind(this),
     );

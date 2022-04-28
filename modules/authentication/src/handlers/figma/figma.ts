@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager,
+  RoutingManager, TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -81,8 +81,8 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       },
       new ConduitRouteReturnDefinition('FigmaResponse', {
         userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
       }),
       this.authorize.bind(this),
     );
