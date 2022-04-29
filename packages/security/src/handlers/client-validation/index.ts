@@ -3,8 +3,8 @@ import { isNil } from 'lodash';
 import { ConduitCommons, ConduitError } from '@conduitplatform/commons';
 import { DatabaseProvider } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
-import * as bcrypt from 'bcrypt';
-import { validatePlatform } from '../../utils/security';
+import { validateClient } from '../../utils/security';
+import { ValidationInterface } from '../../interfaces/ValidationInterface';
 
 export class ClientValidator {
   prod = false;
@@ -54,37 +54,43 @@ export class ClientValidator {
     let key = await this.sdk.getState().getKey(`${clientid}`);
     if (key) {
       let [_clientsecret, _platform, _domain] = key.split(',');
-      let validPlatform = validatePlatform(req,_platform,_domain)
-      if (!validPlatform) {
-        throw ConduitError.unauthorized();
-      }
-      let valid = clientsecret === _clientsecret;
-      if (valid && validPlatform) {
+      let validPlatform = await validateClient(req,
+        clientsecret as string,
+        {
+          clientSecret: _clientsecret,
+          platform: _platform,
+          domain: _domain,
+        },
+        true);
+
+      if (validPlatform) {
         (req as any).conduit.clientId = clientid;
         return next();
       }
       // if not valid allow the execution to continue,
       // for the possibility of a secret refresh
     }
-    let _client: { clientId: string; clientSecret: string, platform: string, domain: string };
     Client.getInstance()
-      .findOne({ clientId: clientid },'clientSecret platform domain')
-      .then((client: any) => {
-        if (isNil(client)) { throw ConduitError.unauthorized(); }
-        const validated = validatePlatform(req,client.platform,client.domain);
-        if (!validated) { throw ConduitError.unauthorized(); }
-
-        _client = client;
-        return bcrypt.compare(clientsecret, client.clientSecret);
+      .findOne({ clientId: clientid }, 'clientSecret platform domain')
+      .then(async (client: any) => {
+        if (isNil(client)) {
+          return {
+            validated: false,
+          };
+        }
+        return {
+          validated: await validateClient(req, clientsecret as string, client, false),
+          client: client,
+        };
       })
-      .then((valid: boolean) => {
-        if (!valid) {
+      .then((valid: ValidationInterface) => {
+        if (!valid.validated) {
           throw ConduitError.unauthorized();
         }
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}`, `${clientsecret},${_client.platform},${_client.domain}`, 100000);
+        this.sdk.getState().setKey(`${clientid}`, `${valid.client!.clientSecret},${valid.client!.platform},${valid.client!.domain}`, 100000);
         next();
       })
       .catch(() => {

@@ -1,16 +1,30 @@
 import { Request } from 'express';
 import { PlatformTypesEnum } from '@conduitplatform/commons';
+import * as bcrypt from 'bcrypt';
 
-export function validatePlatform(req: Request, platform: string, domain: string) {
-  let match = true;
-  if (platform === PlatformTypesEnum.WEB && domain) {
-    const isRegex = domain.includes('*');
+export async function validateClient(
+  req: Request,
+  clientsecret: string,
+  client: {
+    platform: string;
+    domain: string;
+    clientSecret: string;
+  },
+  fromRedis: boolean,
+) {
+  let match;
+  if (fromRedis) {
+    return clientsecret === client.clientSecret;
+  }
+  if (client.platform === PlatformTypesEnum.WEB && client.domain) {
+    const isRegex = client.domain.includes('*');
     const sendDomain = req.get('origin') ?? req.hostname;
     if (isRegex) {
-      match = (domain as any).test(sendDomain);  // check if the regex matches with the hostname
+      match = (client.domain as any).test(sendDomain);  // check if the regex matches with the hostname
     } else {
-      match = (domain === sendDomain);
+      match = (client.domain === sendDomain);
     }
+    return match;
   }
-  return match;
+  return await bcrypt.compare(clientsecret, client.clientSecret);
 }

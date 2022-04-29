@@ -316,7 +316,7 @@ export default class ConfigManager implements IConfigManager {
       );
       if (unhealthyModules && unhealthyModules.length > 0) {
         unhealthyModules.forEach((moduleName) => {
-          delete this.moduleHealth[moduleName];
+          //delete this.moduleHealth[moduleName];
           this.servingModules.delete(moduleName);
         });
         this.moduleRegister.emit('serving-modules-update');
