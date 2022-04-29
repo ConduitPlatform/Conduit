@@ -68,10 +68,11 @@ export class ClientValidator {
         if (client.platform === 'WEB' && client.domain) {
           const isRegex = (client.domain).includes('*');
           let match: boolean;
+          const sendDomain = req.get('origin') ?? req.hostname;
           if (isRegex) {
-            match = (client.domain).test(req.hostname);  // check if the regex matches with the hostname
+            match = (client.domain).test(sendDomain);  // check if the regex matches with the hostname
           }
-          match = (client.domain === req.hostname);
+          match = (client.domain === sendDomain);
           return match;
         }
         if (isNil(client)) {

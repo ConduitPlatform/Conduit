@@ -41,8 +41,13 @@ class SecurityModule extends IConduitSecurity {
         });
       ;
     }
-
-    this.registerAdminRoutes();
+    this.grpcSdk.config.get('security')
+      .then((securityConfig) => {
+        if (securityConfig.active) {
+          this.registerAdminRoutes();
+        }
+        else { console.warn('Client validation disabled')}
+      });
     const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
       grpcSdk.database!,
