@@ -55,6 +55,9 @@ export class ClientValidator {
     if (key) {
       let [_clientsecret, _platform, _domain] = key.split(',');
       let validPlatform = validatePlatform(req,_platform,_domain)
+      if (!validPlatform) {
+        throw ConduitError.unauthorized();
+      }
       let valid = clientsecret === _clientsecret;
       if (valid && validPlatform) {
         (req as any).conduit.clientId = clientid;
