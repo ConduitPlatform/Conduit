@@ -4,6 +4,7 @@ import { ConduitCommons, ConduitError } from '@conduitplatform/commons';
 import { DatabaseProvider } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import * as bcrypt from 'bcrypt';
+import { validatePlatform } from '../../utils/security';
 
 export class ClientValidator {
   prod = false;
@@ -25,7 +26,7 @@ export class ClientValidator {
 
   async middleware(req: Request, res: Response, next: NextFunction) {
     if (isNil((req as any).conduit)) (req as any).conduit = {};
-
+    const { clientid, clientsecret } = req.headers;
     // if incoming call is a webhook or an admin call
     if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
       return next();
@@ -46,38 +47,30 @@ export class ClientValidator {
       return next();
     }
 
-    const { clientid, clientsecret } = req.headers;
-    if (isNil(clientid) || isNil(clientsecret)) {
+    if (isNil(clientid)) {
       return next(ConduitError.unauthorized());
     }
 
     let key = await this.sdk.getState().getKey(`${clientid}`);
     if (key) {
-      let valid = clientsecret === key;
-      if (valid) {
+      let [_clientsecret, _platform, _domain] = key.split(',');
+      let validPlatform = validatePlatform(req,_platform,_domain)
+      let valid = clientsecret === _clientsecret;
+      if (valid && validPlatform) {
         (req as any).conduit.clientId = clientid;
         return next();
       }
       // if not valid allow the execution to continue,
       // for the possibility of a secret refresh
     }
-    let _client: { clientId: string; clientSecret: string };
+    let _client: { clientId: string; clientSecret: string, platform: string, domain: string };
     Client.getInstance()
-      .findOne({ clientId: clientid })
+      .findOne({ clientId: clientid },'clientSecret platform domain')
       .then((client: any) => {
-        if (client.platform === 'WEB' && client.domain) {
-          const isRegex = (client.domain).includes('*');
-          let match: boolean;
-          const sendDomain = req.get('origin') ?? req.hostname;
-          if (isRegex) {
-            match = (client.domain).test(sendDomain);  // check if the regex matches with the hostname
-          }
-          match = (client.domain === sendDomain);
-          return match;
-        }
-        if (isNil(client)) {
-          throw ConduitError.unauthorized();
-        }
+        if (isNil(client)) { throw ConduitError.unauthorized(); }
+        const validated = validatePlatform(req,client.platform,client.domain);
+        if (!validated) { throw ConduitError.unauthorized(); }
+
         _client = client;
         return bcrypt.compare(clientsecret, client.clientSecret);
       })
@@ -88,7 +81,7 @@ export class ClientValidator {
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}`, clientsecret, 100000);
+        this.sdk.getState().setKey(`${clientid}`, `${clientsecret},${_client.platform},${_client.domain}`, 100000);
         next();
       })
       .catch(() => {

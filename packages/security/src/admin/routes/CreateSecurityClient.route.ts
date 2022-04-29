@@ -36,7 +36,7 @@ export function getCreateSecurityClientRoute() {
       let clientId = randomBytes(15).toString('hex');
       let clientSecret = randomBytes(64).toString('hex');
       let hash = await bcrypt.hash(clientSecret, 10);
-      if (platform === 'WEB' && !domain) {
+      if (platform === PlatformTypesEnum.WEB && !domain) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform WEB requires domain name');
       }
       let client = await Client.getInstance().create({
