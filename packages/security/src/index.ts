@@ -43,7 +43,7 @@ class SecurityModule extends IConduitSecurity {
     }
     this.grpcSdk.config.get('security')
       .then((securityConfig) => {
-        if (securityConfig.active) {
+        if (securityConfig.clientValidation.enabled) {
           this.registerAdminRoutes();
         }
         else { console.warn('Client validation disabled')}

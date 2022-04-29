@@ -1,6 +1,8 @@
 export default {
-  active: {
-    format: 'Boolean',
-    default: true,
+  clientValidation: {
+    enabled: {
+      format: 'Boolean',
+      default: true,
+    }
   },
 };

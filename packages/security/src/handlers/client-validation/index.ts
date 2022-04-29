@@ -42,7 +42,7 @@ export class ClientValidator {
       return next();
     }
     const securityConfig = await this.sdk.getConfigManager().get('security');
-    const active = securityConfig.active;
+    const active = securityConfig.clientValidation.enabled;
     if (!active) {
       return next();
     }
