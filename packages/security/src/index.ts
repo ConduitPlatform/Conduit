@@ -61,9 +61,9 @@ class SecurityModule extends IConduitSecurity {
     );
   }
 
-  async registerRoutes() {
+  async registerAdminRoutes() {
     let error;
-    const securityConfig = await this.commons.getConfigManager().get('security')
+    let config = await this.commons.getConfigManager().get('security')
       .catch((e: Error) => {
         error = e;
       });
@@ -74,8 +74,8 @@ class SecurityModule extends IConduitSecurity {
         .catch((e: Error) => {
           throw new Error(e.message);
         });
+      config = await this.commons.getConfigManager().get('security'); // fetch it again cause config is now declared
     }
-    const config = await this.commons.getConfigManager().get('security'); // fetch it again
     if (config.clientValidation.enabled) {
       this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
