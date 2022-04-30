@@ -20,7 +20,7 @@ class SecurityModule extends IConduitSecurity {
       .catch(err => {
         console.error(err);
       });
-    this.registerRoutes()
+    this.registerAdminRoutes()
       .then((res) => {
         if (res) {
           console.log('Client validation enabled');
