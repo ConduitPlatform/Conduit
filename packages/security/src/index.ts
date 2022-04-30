@@ -75,7 +75,8 @@ class SecurityModule extends IConduitSecurity {
           throw new Error(e.message);
         });
     }
-    if (securityConfig.clientValidation.enabled) {
+    const config = await this.commons.getConfigManager().get('security'); // fetch it again
+    if (config.clientValidation.enabled) {
       this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
