@@ -20,33 +20,13 @@ class SecurityModule extends IConduitSecurity {
       .catch(err => {
         console.error(err);
       });
-    let error;
-    commons
-      .getConfigManager()
-      .get('security')
-      .catch((err: any) => (error = err));
-    if (error) {
-      this.commons
-        .getConfigManager()
-        .registerModulesConfig('security', convict.getProperties())
-        .catch((e: Error) => {
-          throw new Error(e.message);
-        });
-    } else {
-      this.commons
-        .getConfigManager()
-        .addFieldsToModule('security', convict.getProperties())
-        .catch((e: Error) => {
-          throw new Error(e.message);
-        });
-      ;
-    }
-    this.grpcSdk.config.get('security')
-      .then((securityConfig) => {
-        if (securityConfig.clientValidation.enabled) {
-          this.registerAdminRoutes();
+    this.registerRoutes()
+      .then((res) => {
+        if (res) {
+          console.log('Client validation enabled');
+        } else {
+          console.warn('Client validation disabled');
         }
-        else { console.warn('Client validation disabled')}
       });
     const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
@@ -81,11 +61,28 @@ class SecurityModule extends IConduitSecurity {
     );
   }
 
-  private async registerAdminRoutes() {
-    this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
-    this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
-    this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
-
+  async registerRoutes() {
+    let error;
+    const securityConfig = await this.commons.getConfigManager().get('security')
+      .catch((e: Error) => {
+        error = e;
+      });
+    if (error) {
+      await this.commons
+        .getConfigManager()
+        .registerModulesConfig('security', convict.getProperties())
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
+    }
+    if (securityConfig.clientValidation.enabled) {
+      this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
+      this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
+      this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+      return true;
+    } else {
+      return false;
+    }
   }
 
   private registerSchemas() {
