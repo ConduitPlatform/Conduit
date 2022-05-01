@@ -20,13 +20,19 @@ class SecurityModule extends IConduitSecurity {
       .catch(err => {
         console.error(err);
       });
-    this.registerAdminRoutes()
+    this.registerConfig()
+      .then((config) => {
+        return this.registerAdminRoutes(config.clientValidation.enabled);
+      })
       .then((res) => {
         if (res) {
           console.log('Client validation enabled');
         } else {
           console.warn('Client validation disabled');
         }
+      })
+      .catch((err) => {
+        console.error(err);
       });
     const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
@@ -59,9 +65,17 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true,
     );
+    this.commons.getBus().subscribe(`security:update:config`, (message) => {
+      const config = JSON.parse(message);
+      if (config.clientValidation.enabled) {
+        this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
+        this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
+        this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+      }
+    });
   }
 
-  async registerAdminRoutes() {
+  async registerConfig() {
     let error;
     let config = await this.commons.getConfigManager().get('security')
       .catch((e: Error) => {
@@ -76,7 +90,11 @@ class SecurityModule extends IConduitSecurity {
         });
       config = await this.commons.getConfigManager().get('security'); // fetch it again cause config is now declared
     }
-    if (config.clientValidation.enabled) {
+    return config;
+  }
+
+  async registerAdminRoutes(clientValidation: boolean) {
+    if (clientValidation) {
       this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
