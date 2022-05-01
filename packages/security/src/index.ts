@@ -59,9 +59,13 @@ class SecurityModule extends IConduitSecurity {
       true,
     );
     this.commons.getBus().subscribe(`security:update:config`, (message) => {
-      const config = JSON.parse(message);
-      if (config.clientValidation.enabled) {
-        this.registerAdminRoutes(config.validationEnabled);
+      try {
+        const config = JSON.parse(message);
+        if (config.clientValidation.enabled) {
+          this.registerAdminRoutes(config.validationEnabled);
+        }
+      } catch (e) {
+        console.error(e);
       }
     });
   }
@@ -89,9 +93,9 @@ class SecurityModule extends IConduitSecurity {
       this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
-      console.log('Client validation enabled')
+      console.log('Client validation enabled');
     } else {
-      console.warn('Client validation disabled')
+      console.warn('Client validation disabled');
     }
   }
 
