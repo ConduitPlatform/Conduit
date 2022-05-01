@@ -22,14 +22,7 @@ class SecurityModule extends IConduitSecurity {
       });
     this.registerConfig()
       .then((config) => {
-        return this.registerAdminRoutes(config.clientValidation.enabled);
-      })
-      .then((res) => {
-        if (res) {
-          console.log('Client validation enabled');
-        } else {
-          console.warn('Client validation disabled');
-        }
+        this.registerAdminRoutes(config.clientValidation.enabled);
       })
       .catch((err) => {
         console.error(err);
@@ -68,9 +61,7 @@ class SecurityModule extends IConduitSecurity {
     this.commons.getBus().subscribe(`security:update:config`, (message) => {
       const config = JSON.parse(message);
       if (config.clientValidation.enabled) {
-        this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
-        this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
-        this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+        this.registerAdminRoutes(config.validationEnabled);
       }
     });
   }
@@ -93,14 +84,14 @@ class SecurityModule extends IConduitSecurity {
     return config;
   }
 
-  async registerAdminRoutes(clientValidation: boolean) {
+  registerAdminRoutes(clientValidation: boolean) {
     if (clientValidation) {
       this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
-      return true;
+      console.log('Client validation enabled')
     } else {
-      return false;
+      console.warn('Client validation disabled')
     }
   }
 
