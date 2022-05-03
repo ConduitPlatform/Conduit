@@ -10,10 +10,8 @@ import convict from './config';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk,
     commons: ConduitCommons,
-    private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(commons);
     this.registerSchemas().then(() => {
@@ -60,14 +58,12 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true,
     );
-    this.commons.getBus().subscribe(`security:update:config`, (message) => {
+    commons.getBus()?.subscribe('config:update:security', (message) => {
       try {
         const config = JSON.parse(message);
-        if (config.clientValidation.enabled) {
-          this.registerAdminRoutes(config.validationEnabled);
-        }
+        this.registerAdminRoutes(config.clientValidation.enabled);
       } catch (e) {
-        console.error(e);
+        throw new Error(e);
       }
     });
   }
@@ -97,6 +93,7 @@ class SecurityModule extends IConduitSecurity {
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
       console.log('Client validation enabled');
     } else {
+
       console.warn('Client validation disabled');
     }
   }

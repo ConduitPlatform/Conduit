@@ -20,11 +20,13 @@ export class GrpcServer {
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
   private _initialized = false;
 
-  get initialized() { return this._initialized; }
+  get initialized() {
+    return this._initialized;
+  }
 
   constructor(
     private readonly commons: ConduitCommons,
-    private readonly port: number
+    private readonly port: number,
   ) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
@@ -40,7 +42,7 @@ export class GrpcServer {
         enums: String,
         defaults: true,
         oneofs: true,
-      }
+      },
     );
     this.addHealthService();
     let _url = '0.0.0.0:' + this.port;
@@ -48,7 +50,9 @@ export class GrpcServer {
       _url = '0.0.0.0:' + port.toString();
       const grpcSdk = new ConduitGrpcSdk(
         _url,
-        () => { return this._serviceHealthState; },
+        () => {
+          return this._serviceHealthState;
+        },
         'core',
       );
       grpcSdk.initialize().then(() => {
@@ -69,8 +73,8 @@ export class GrpcServer {
                 await grpcSdk.waitForExistence('database');
                 await this.bootstrapSdkComponents(grpcSdk);
               }
-            }
-          )
+            },
+          ),
         );
       });
     });
@@ -85,15 +89,15 @@ export class GrpcServer {
         enums: String,
         defaults: true,
         oneofs: true,
-      }
+      },
     );
     this.commons.registerAdmin(
       new AdminModule(
         this.commons,
         grpcSdk,
         packageDefinition,
-        this.server
-      )
+        this.server,
+      ),
     );
     this.commons.registerRouter(
       new ConduitDefaultRouter(
@@ -102,7 +106,7 @@ export class GrpcServer {
         packageDefinition,
         this.server,
         Core.getInstance().httpServer.expressApp,
-      )
+      ),
     );
     Core.getInstance().httpServer.initialize();
     Core.getInstance().httpServer.start();
@@ -123,7 +127,7 @@ export class GrpcServer {
 
     this.commons.getAdmin().initialize();
     this.commons.getConfigManager().initConfigAdminRoutes();
-    this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
+    this.commons.registerSecurity(new SecurityModule(grpcSdk, this.commons));
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;
@@ -132,13 +136,13 @@ export class GrpcServer {
   private getServiceHealthState(service: string) {
     service = service.replace('conduit.core.', '');
     if (service && !CORE_SERVICES.includes(service)) {
-     return HealthCheckStatus.SERVICE_UNKNOWN;
+      return HealthCheckStatus.SERVICE_UNKNOWN;
     }
     return this._serviceHealthState;
   }
 
   private set serviceHealthState(
-    state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>
+    state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>,
   ) {
     if (this._serviceHealthState !== state) {
       this.events.emit('grpc-health-change:Core', state);
@@ -155,7 +159,7 @@ export class GrpcServer {
         enums: String,
         defaults: true,
         oneofs: true,
-      }
+      },
     );
     const protoDescriptor = loadPackageDefinition(packageDefinition);
     const healthService = (protoDescriptor.grpc as any).health.v1.Health.service;
