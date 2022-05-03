@@ -38,7 +38,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
-    this.mongoose.pluralize(null);
     this.connect();
   }
 
@@ -180,6 +179,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
               schemaOptions,
               collectionName
             );
+
             schema.ownerModule = 'database';
 
             introspectedSchemas.push(schema);
@@ -217,6 +217,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
+
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,

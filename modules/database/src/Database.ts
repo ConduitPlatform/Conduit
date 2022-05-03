@@ -545,7 +545,7 @@ export default class DatabaseModule extends ManagedModule {
       introspectedSchemas.map(async (schema: ConduitSchema) => {
         await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
-            name: schema.name,
+            name: schema.specifiedCollectionName ?? schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
