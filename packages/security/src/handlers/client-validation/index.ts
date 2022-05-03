@@ -44,7 +44,7 @@ export class ClientValidator {
     const securityConfig = await this.sdk.getConfigManager().get('security');
     const active = securityConfig.clientValidation.enabled;
     if (!active) {
-      (req as any).conduit.clientId = '';
+      (req as any).conduit.clientId = 'anonymous-client';
       return next();
     }
 
