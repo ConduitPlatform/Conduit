@@ -1,6 +1,10 @@
 import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
 
-export const INITIAL_DB_SCHEMAS = ['_DeclaredSchema','CustomEndpoints','_PendingSchemas'];
+export const INITIAL_DB_SCHEMAS = [
+  '_declaredschemas',
+  'customendpoints',
+  '_pendingschemas',
+];
 
 /**
  * This function should take as an input a mongo-schema object and convert it to a conduit schema
