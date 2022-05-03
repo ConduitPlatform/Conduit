@@ -199,6 +199,22 @@ export default class ConfigManager implements IConfigManager {
         this.configDocId!,
         { $set: { [`moduleConfigs.${moduleName}`]: moduleConfig } },
       );
+      switch (moduleName) {
+        case 'core':
+          this.sdk.getCore().setConfig(moduleConfig);
+          break;
+        case 'admin':
+          this.sdk.getAdmin().setConfig(moduleConfig);
+          break;
+        case 'router':
+          this.sdk.getRouter().setConfig(moduleConfig);
+          break;
+        case 'security':
+          this.sdk.getSecurity().setConfig(moduleConfig);
+          break;
+        default:
+          break;
+      }
       return moduleConfig;
     } catch {
       console.error(`Could not update "${moduleName}" configuration`);

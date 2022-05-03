@@ -9,7 +9,7 @@ import * as models from './models';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly commons: ConduitCommons,
+    commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(commons);

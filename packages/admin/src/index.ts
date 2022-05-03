@@ -44,7 +44,6 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export default class AdminModule extends IConduitAdmin {
-  commons: ConduitCommons;
   grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _sdkRoutes: ConduitRoute[];
@@ -56,8 +55,7 @@ export default class AdminModule extends IConduitAdmin {
     packageDefinition: any,
     server: Server,
   ) {
-    super();
-    this.commons = commons;
+    super(commons);
     this.grpcSdk = grpcSdk;
     this._restRouter = new RestController(this.commons, swaggerRouterMetadata);
 
