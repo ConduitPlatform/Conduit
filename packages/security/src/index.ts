@@ -68,6 +68,7 @@ class SecurityModule extends IConduitSecurity {
         console.error(e);
       }
     });
+    this.commons.getBus().publish('security:update:config',JSON.stringify({clientValidation:{enabled:true}}))
   }
 
   async registerConfig() {
