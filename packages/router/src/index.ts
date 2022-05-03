@@ -321,6 +321,10 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
     this._commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
   }
+
+  setConfig(moduleConfig: any) {
+    this._commons.getBus().publish('config:update:router', JSON.stringify(moduleConfig));
+  }
 }
 
 export * from './builders';

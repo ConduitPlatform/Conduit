@@ -12,6 +12,8 @@ class SecurityModule extends IConduitSecurity {
   constructor(
     private readonly commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk,
+    commons: ConduitCommons,
+    private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(commons);
     this.registerSchemas().then(() => {

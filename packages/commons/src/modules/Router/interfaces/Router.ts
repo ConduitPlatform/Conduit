@@ -3,7 +3,6 @@ import { ConduitRouterBuilder } from '../classes';
 import {
   ConduitMiddleware,
   ConduitRoute,
-  ConduitRouteParameters,
 } from '../../../interfaces';
 
 export interface IConduitRouter {
@@ -27,4 +26,6 @@ export interface IConduitRouter {
   ): void;
 
   getRegisteredRoutes(): any;
+
+  setConfig(moduleConfig: any): void;
 }
