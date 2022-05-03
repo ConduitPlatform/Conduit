@@ -1,6 +1,7 @@
 import { ConduitCommons } from '../..';
 
 export abstract class IConduitSecurity {
+
   protected constructor(protected readonly commons: ConduitCommons) {
   }
 
