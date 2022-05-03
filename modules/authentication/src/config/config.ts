@@ -3,6 +3,16 @@ export default {
     format: 'Boolean',
     default: true,
   },
+  clients: {
+    off: {
+      multipleUserSessions: {
+        doc: 'Defines if a user can login multiple times from an anonymous client',
+        format: 'Boolean',
+        default: false,
+      }
+    },
+
+  },
   local: {
     enabled: {
       doc: 'Defines if this strategy is active or not',

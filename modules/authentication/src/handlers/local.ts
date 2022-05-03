@@ -17,13 +17,16 @@ import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
-
 export class LocalHandlers {
   private emailModule: Email;
   private smsModule: SMS;
   private initialized: boolean = false;
+  private clientValidation: boolean;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    grpcSdk.config.get('security').then((config) => {
+      this.clientValidation = config.clientValidation.enabled;
+    });
   }
 
   async validate(): Promise<Boolean> {
@@ -118,7 +121,6 @@ export class LocalHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
     const context = call.request.context;
-
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
@@ -180,13 +182,17 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-        clientId,
-      }),
-    );
+    const isAnonymous = ('anonymous-client' === clientId)
+    const multipleUserSessions = config.clients.off.multipleUserSessions;
+    //await AuthUtils.checkClients()
+    if (!multipleUserSessions && isAnonymous) {
+      await Promise.all(
+        AuthUtils.deleteUserTokens(this.grpcSdk, {
+          userId: user._id,
+          clientId,
+        }),
+      );
+    }
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
