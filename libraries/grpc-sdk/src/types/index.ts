@@ -28,7 +28,7 @@ export type ParsedRouterRequest = GrpcRequest<{
 }>;
 
 export type UnparsedRouterResponse =
-  | { result?: { [key: string]: any }; redirect?: string }
+  | { result?: { [key: string]: any }; redirect?: string, setCookies: { [key: string]: any }, removeCookies: { [key: string]: any } }
   | { [key: string]: any }
   | string;
 
@@ -52,3 +52,10 @@ type JoinRoomResponse = {
   rooms: string[];
 };
 export type UnparsedSocketResponse = EventResponse | JoinRoomResponse;
+
+export enum HealthCheckStatus {
+  UNKNOWN,
+  SERVING,
+  NOT_SERVING,
+  SERVICE_UNKNOWN,
+}

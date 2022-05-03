@@ -27,8 +27,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     super();
     this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
-    this.sequelize = new Sequelize(this.connectionUri, { logging: false, });
   }
+
+  connect() {
+    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  }
+
 
   async isConduitDB() {
     return this.sequelize

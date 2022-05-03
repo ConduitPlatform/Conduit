@@ -1,4 +1,3 @@
-import { ParsedRouterRequest, UnparsedRouterResponse } from '../types';
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
 import { SocketProtoDescription } from '../interfaces';
 import path from 'path';
@@ -22,6 +21,8 @@ message RouterRequest {
 message RouterResponse {
   string result = 1;
   string redirect = 2;
+  repeated Cookie setCookies = 3;
+  repeated Cookie removeCookies = 4;
 }
 
 message SocketRequest {
@@ -31,6 +32,22 @@ message SocketRequest {
   string context = 4;
 }
 
+message Cookie {
+  string name = 1;
+  optional string value = 2;
+  Options options = 3;
+}
+
+message Options {
+  bool httpOnly = 1;
+  bool secure = 2;
+  bool signed = 3;
+  int32 maxAge = 4;
+  string path = 5;
+  string domain = 6;
+  string sameSite = 7;
+  
+}
 message SocketResponse {
   string event = 1;
   string data = 2;

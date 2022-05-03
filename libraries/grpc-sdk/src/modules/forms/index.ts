@@ -3,7 +3,7 @@ import { FormsDefinition } from '../../protoUtils/forms';
 
 export class Forms extends ConduitModule<typeof FormsDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'forms', url);
     this.initializeClient(FormsDefinition);
   }
 

@@ -3,7 +3,7 @@ import {
   ConfigController,
   DatabaseProvider,
   GrpcRequest,
-  GrpcResponse
+  GrpcResponse,
 } from '@conduitplatform/grpc-sdk';
 import path from "path";
 import AppConfigSchema from './config';

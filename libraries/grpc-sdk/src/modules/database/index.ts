@@ -4,7 +4,7 @@ import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoU
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+    super(moduleName, 'database', url);
     this.initializeClient(DatabaseProviderDefinition);
   }
 

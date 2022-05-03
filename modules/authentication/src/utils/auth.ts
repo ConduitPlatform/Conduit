@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import ConduitGrpcSdk, {
   GrpcError,
   SMS,
-  ConfigController
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
 import { AccessToken, RefreshToken, Token, User } from '../models';
@@ -132,15 +132,17 @@ export namespace AuthUtils {
         .add(tokenOptions.config.tokenInvalidationPeriod as number, 'milliseconds')
         .toDate(),
     });
-
-    const refreshToken = sdk.databaseProvider!.create('RefreshToken', {
-      userId: tokenOptions.userId,
-      clientId: tokenOptions.clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(tokenOptions.config.refreshTokenInvalidationPeriod, 'milliseconds')
-        .toDate(),
-    });
+    let refreshToken;
+    if (tokenOptions.config.generateRefreshToken) {
+      refreshToken = sdk.databaseProvider!.create('RefreshToken', {
+        userId: tokenOptions.userId,
+        clientId: tokenOptions.clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(tokenOptions.config.refreshTokenInvalidationPeriod, 'milliseconds')
+          .toDate(),
+      });
+    }
 
     return [accessToken, refreshToken];
   }
@@ -152,7 +154,7 @@ export namespace AuthUtils {
     return Promise.all(createUserTokens(sdk, tokenOptions));
   }
 
-  export async function sendVerificationCode(sms: SMS,to: string) {
+  export async function sendVerificationCode(sms: SMS, to: string) {
     const verificationSid = await sms.sendVerificationCode(to);
     return verificationSid.verificationSid || '';
   }
@@ -161,7 +163,7 @@ export namespace AuthUtils {
     return !email
       .toLowerCase()
       .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
   }
 }
