@@ -122,7 +122,7 @@ export class LocalHandlers {
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
-    const clientId = context.clientId;
+    const clientId = context.clientId ?? '';
 
     if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(
@@ -479,7 +479,7 @@ export class LocalHandlers {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    const clientId = context.clientId;
+    const clientId = context.clientId ?? '';
     const { email, code } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
