@@ -10,8 +10,8 @@ import convict from './config';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
     commons: ConduitCommons,
+    private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(commons);
     this.registerSchemas().then(() => {
