@@ -127,7 +127,7 @@ export class GrpcServer {
 
     this.commons.getAdmin().initialize();
     this.commons.getConfigManager().initConfigAdminRoutes();
-    this.commons.registerSecurity(new SecurityModule(grpcSdk, this.commons));
+    this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;
