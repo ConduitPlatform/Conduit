@@ -97,7 +97,7 @@ export class CommonHandlers {
     const user = context.user;
     const config = ConfigController.getInstance().config;
     const authToken = call.request.headers.authorization;
-    const multipleUserSessions = config.clients.off.multipleUserSessions;
+    const multipleUserSessions = config.clients.multipleUserSessions;
 
     await AuthUtils.logOutClientOperations(this.grpcSdk,multipleUserSessions,authToken,clientId,user._id)
     const options = config.setCookies.options;

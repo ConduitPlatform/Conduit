@@ -4,13 +4,11 @@ export default {
     default: true,
   },
   clients: {
-    off: {
-      multipleUserSessions: {
-        doc: 'Defines if a user can login multiple times from an anonymous client',
-        format: 'Boolean',
-        default: false,
-      }
-    },
+    multipleUserSessions: {
+      doc: 'Defines if a user can login multiple times from an anonymous client',
+      format: 'Boolean',
+      default: false,
+    }
   },
   local: {
     enabled: {

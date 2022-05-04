@@ -183,7 +183,7 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-    const multipleUserSessions = config.clients.off.multipleUserSessions;
+    const multipleUserSessions = config.clients.multipleUserSessions;
     await AuthUtils.signInClientOperations(this.grpcSdk, multipleUserSessions, user._id, clientId);
 
     const signTokenOptions: ISignTokenOptions = {
