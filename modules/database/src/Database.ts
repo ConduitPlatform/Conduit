@@ -81,7 +81,6 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async onServerStart() {
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
     const isConduitDB = await this._activeAdapter.isConduitDB();
     if (isConduitDB) {
       await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);

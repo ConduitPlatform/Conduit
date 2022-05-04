@@ -474,7 +474,20 @@ export class SchemaAdmin {
   }
 
   async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    await this.database.introspectDatabase(true);
+    const introspectedSchemas = await this.database.introspectDatabase(true);
+    await Promise.all(
+      introspectedSchemas.map(async (schema: ConduitSchema) => {
+        await this.database.getSchemaModel('_PendingSchemas').model.create(
+          JSON.stringify({
+            name: schema.specifiedCollectionName ?? schema.name,
+            fields: schema.fields,
+            modelOptions: schema.schemaOptions,
+            ownerModule: schema.ownerModule,
+            extensions: (schema as any).extensions,
+          })
+        );
+      })
+    );
     return 'Schemas successfully introspected';
   }
 

@@ -6,6 +6,7 @@ import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
+import pluralize from '../../utils/pluralize';
 import {
   INITIAL_DB_SCHEMAS,
   mongoSchemaConverter,
@@ -112,14 +113,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     let schemaNames: string[] = [];
 
     if (isConduitDB) {
-      await db.collection('_PendingSchemas').deleteMany({});
-      //Reintrospect schemas
+      await db.collection('_pendingschemas').deleteMany({});
+      // Reintrospect schemas
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
       );
-      //Remove declared schemas with imported:true
+      // Remove declared schemas with imported:true
       let schemas = (await db.listCollections().toArray()).filter((schema: ConduitSchema) => {
-        //Filter out non-imported declared schemas
+        // Filter out non-imported declared schemas
         return (
           !INITIAL_DB_SCHEMAS.includes(schema.name) &&
           !declaredSchemas.find((declaredSchema: ConduitSchema) => {
@@ -132,34 +133,37 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
       schemas = await Promise.all(
         schemas.map(async (schema: ConduitSchema) => {
-          let declaredSchema = declaredSchemas.find(
-            (declaredSchema: ConduitSchema) => declaredSchema.name === schema.name
+          const declaredSchema = declaredSchemas.find(
+            (declaredSchema: ConduitSchema) =>
+              pluralize(declaredSchema.name) === pluralize(schema.name)
           );
           if (!isNil(declaredSchema)) {
-            // check for diffs in existing schemas
-            await parseSchema(
-              db.collection(schema.name).find(),
-              async (err: Error, originalSchema: any) => {
-                if (err) {
-                  throw new GrpcError(status.INTERNAL, err.message);
+            if (declaredSchema.ownerModule === 'database') {
+              // check for diffs in existing schemas
+              await parseSchema(
+                db.collection(schema.name).find(),
+                async (err: Error, originalSchema: any) => {
+                  if (err) {
+                    throw new GrpcError(status.INTERNAL, err.message);
+                  }
+                  originalSchema = mongoSchemaConverter(originalSchema);
+                  schema = new ConduitSchema(
+                    schema.name,
+                    originalSchema,
+                    schemaOptions,
+                    schema.name
+                  );
+                  if (!isMatch(schema.fields, declaredSchema.fields)) {
+                    schemaNames.push(schema.name);
+                  }
                 }
-                originalSchema = mongoSchemaConverter(originalSchema);
-                schema = new ConduitSchema(
-                  schema.name,
-                  originalSchema,
-                  schemaOptions,
-                  schema.name
-                );
-                if (!isMatch(schema.fields, declaredSchema.fields)) {
-                  schemaNames.push(schema.name);
-                }
-              }
-            );
+              );
+            }
           } else {
             schemaNames.push(schema.name);
           }
         })
-      );
+        );
     } else {
       schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
       schemaNames = schemaNames.filter((s) => !INITIAL_DB_SCHEMAS.includes(s));
