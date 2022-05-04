@@ -96,20 +96,10 @@ export class CommonHandlers {
     const clientId = context.clientId;
     const user = context.user;
     const config = ConfigController.getInstance().config;
-    const isAnonymous = ('anonymous-client' === clientId);
+    const authToken = call.request.headers.authorization;
     const multipleUserSessions = config.clients.off.multipleUserSessions;
-    let query = {
-      userId: user._id,
-    }
-    if (isAnonymous && multipleUserSessions) {
 
-    }
-      await Promise.all(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-          clientId,
-        }),
-      );
+    await AuthUtils.logOutClientOperations(this.grpcSdk,multipleUserSessions,authToken,clientId,user._id)
     const options = config.setCookies.options;
     if (config.setCookies.enabled) {
       return {
@@ -123,7 +113,7 @@ export class CommonHandlers {
         }],
       };
     }
-    return 'Logged out';
+    return 'LoggedOut';
   }
 
   async getUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

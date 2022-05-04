@@ -11,7 +11,6 @@ export default {
         default: false,
       }
     },
-
   },
   local: {
     enabled: {

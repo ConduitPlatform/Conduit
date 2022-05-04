@@ -166,4 +166,53 @@ export namespace AuthUtils {
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
   }
+
+  export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, multipleUserSessions: boolean, userId: string, clientId: string) {
+    const isAnonymous = ('anonymous-client' === clientId);
+    if (isAnonymous) {
+      if (!multipleUserSessions) {
+        await Promise.all(
+          AuthUtils.deleteUserTokens(grpcSdk, {
+            userId: userId,
+            clientId,
+          }),
+        );
+      }
+    } else {
+      await Promise.all(
+        AuthUtils.deleteUserTokens(grpcSdk, {
+          userId: userId,
+          clientId,
+        }),
+      );
+    }
+  }
+
+  export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, multipleUserSessions: boolean, authToken: string, clientId: string, userId: string) {
+    const isAnonymous = ('anonymous-client' === clientId);
+    const token = authToken.split(' ')[1]
+    if (isAnonymous) {
+      if (multipleUserSessions) {
+        await Promise.all(
+          AuthUtils.deleteUserTokens(grpcSdk, {
+            token: token,
+          }),
+        );
+      } else {
+        await Promise.all(
+          AuthUtils.deleteUserTokens(grpcSdk, {
+            userId: userId,
+            clientId: clientId,
+          }),
+        );
+      }
+    } else {
+      await Promise.all(
+        AuthUtils.deleteUserTokens(grpcSdk, {
+          userId: userId,
+          clientId,
+        }),
+      );
+    }
+  }
 }

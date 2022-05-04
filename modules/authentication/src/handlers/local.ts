@@ -17,6 +17,7 @@ import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
+
 export class LocalHandlers {
   private emailModule: Email;
   private smsModule: SMS;
@@ -182,17 +183,8 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-    const isAnonymous = ('anonymous-client' === clientId)
     const multipleUserSessions = config.clients.off.multipleUserSessions;
-    //await AuthUtils.checkClients()
-    if (!multipleUserSessions && isAnonymous) {
-      await Promise.all(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-          clientId,
-        }),
-      );
-    }
+    await AuthUtils.signInClientOperations(this.grpcSdk, multipleUserSessions, user._id, clientId);
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
