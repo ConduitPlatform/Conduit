@@ -36,8 +36,8 @@ export abstract class ManagedModule extends ConduitServiceModule {
 
   async onConfig() {}
 
-  async createGrpcServer(servicePort?: string, grpcKey?: string) {
-    this.grpcServer = new GrpcServer(servicePort, grpcKey);
+  async createGrpcServer(servicePort?: string) {
+    this.grpcServer = new GrpcServer(servicePort);
     this._port = (await this.grpcServer.createNewServer()).toString();
   }
 

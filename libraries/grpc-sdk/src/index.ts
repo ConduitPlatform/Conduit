@@ -51,7 +51,7 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string, grpcKey?: string) {
+  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -59,6 +59,7 @@ export default class ConduitGrpcSdk {
     }
     this.serverUrl = serverUrl;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    const grpcKey = process.env.GRPC_KEY;
     if (grpcKey) {
       const sign = createSigner({ key: grpcKey });
       this._grpcToken = sign({

@@ -25,11 +25,10 @@ export class GrpcServer {
   constructor(
     private readonly commons: ConduitCommons,
     private readonly port: number,
-    grpcKey?: string,
   ) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
-    this.server = new ConduitGrpcServer(this.port.toString(), grpcKey);
+    this.server = new ConduitGrpcServer(this.port.toString());
     this.server.createNewServer()
       .then((port) => {
         const _url = '0.0.0.0:' + port.toString();
@@ -37,7 +36,6 @@ export class GrpcServer {
           _url,
           () => { return this._serviceHealthState; },
           'core',
-          grpcKey,
         );
         grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(

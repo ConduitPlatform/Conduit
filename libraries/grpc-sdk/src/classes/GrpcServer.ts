@@ -12,11 +12,9 @@ export class GrpcServer {
     protoDescription: string;
     functions: { [name: string]: Function };
   }[] = [];
-  private readonly grpcKey?: string;
 
-  constructor(port?: string, grpcKey?: string) {
+  constructor(port?: string) {
     this._url = `0.0.0.0:${ port ?? '5000' }`;
-    this.grpcKey = grpcKey;
   }
 
   private _url: string;
@@ -37,8 +35,8 @@ export class GrpcServer {
     protoDescription: string,
     functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
-    if (this.grpcKey) {
-      functions = wrapGrpcFunctions(functions, this.grpcKey);
+    if (process.env.GRPC_KEY) {
+      functions = wrapGrpcFunctions(functions);
     }
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       console.log('Service already exists, performing replace');

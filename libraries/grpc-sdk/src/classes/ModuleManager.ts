@@ -7,7 +7,6 @@ export class ModuleManager {
   private readonly serviceAddress: string;
   private readonly servicePort: string | undefined;
   private readonly grpcSdk: ConduitGrpcSdk;
-  private readonly grpcKey?: string;
 
   constructor(private readonly module: ManagedModule) {
     if (!process.env.CONDUIT_SERVER) {
@@ -15,13 +14,11 @@ export class ModuleManager {
     }
     this.serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
     this.servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
-    this.grpcKey =  process.env.GRPC_KEY;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
         process.env.CONDUIT_SERVER,
         () => { return this.module.healthState; },
         module.name,
-        this.grpcKey,
       );
     } catch {
       throw new Error('Failed to initialize grpcSdk');
@@ -51,7 +48,7 @@ export class ModuleManager {
   }
 
   private async preRegisterLifecycle(): Promise<void> {
-    await this.module.createGrpcServer(this.servicePort, this.grpcKey);
+    await this.module.createGrpcServer(this.servicePort);
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.module.startGrpcServer();

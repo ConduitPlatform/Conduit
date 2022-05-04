@@ -8,8 +8,7 @@ bootstrap();
 function bootstrap() {
   const httpPort = getHttpPort();
   const grpcPort = getGrpcPort();
-  const grpcKey = getGrpcKey();
-  Core.getInstance(httpPort, grpcPort, grpcKey);
+  Core.getInstance(httpPort, grpcPort);
 }
 
 function getHttpPort() {
@@ -31,8 +30,4 @@ function getGrpcPort() {
     throw new Error(`Invalid gRPC port value: ${port}`);
   }
   return port;
-}
-
-function getGrpcKey() {
-  return process.env.GRPC_KEY;
 }
