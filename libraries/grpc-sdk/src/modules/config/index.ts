@@ -7,8 +7,8 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   private coreLive = false;
   private readonly _serviceHealthStatusGetter: Function;
 
-  constructor(moduleName: string, url: string, serviceHealthStatusGetter: Function) {
-    super(moduleName, 'config', url);
+  constructor(moduleName: string, url: string, serviceHealthStatusGetter: Function, grpcToken?: string) {
+    super(moduleName, 'config', url, grpcToken);
     this.initializeClient(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }

@@ -1,3 +1,4 @@
+import { GrpcServer } from '@conduitplatform/grpc-sdk';
 import { NextFunction, Router, Request, Response } from 'express';
 import { ConduitRouterBuilder } from '../classes';
 import {
@@ -6,6 +7,8 @@ import {
 } from '../../../interfaces';
 
 export interface IConduitRouter {
+  initialize(server: GrpcServer): Promise<void>;
+
   registerGlobalMiddleware(name: string, middleware: any, socketMiddleware?: boolean): void;
 
   registerRouteMiddleware(middleware: ConduitMiddleware): void;

@@ -19,9 +19,11 @@ import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
+import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
 import { HealthDefinition } from './protoUtils/grpc_health_check';
 import { HealthCheckStatus } from './types';
+import { createSigner } from 'fast-jwt';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -46,6 +48,7 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
+  private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
   constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
@@ -56,13 +59,20 @@ export default class ConduitGrpcSdk {
     }
     this.serverUrl = serverUrl;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    const grpcKey = process.env.GRPC_KEY;
+    if (grpcKey) {
+      const sign = createSigner({ key: grpcKey });
+      this._grpcToken = sign({
+        moduleName: this.name,
+      });
+    }
   }
 
   async initialize() {
     if (this.name === 'core') {
       this._initialize();
     } else {
-      (this._core as any) = new Core(this.name, this.serverUrl);
+      (this._core as any) = new Core(this.name, this.serverUrl, this._grpcToken);
       console.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
@@ -73,7 +83,11 @@ export default class ConduitGrpcSdk {
             this._initialize();
             break;
           }
-        } catch {
+        } catch (err) {
+          if (err.code === status.PERMISSION_DENIED) {
+            console.error(err);
+            process.exit(-1);
+          }
           await sleep(delay);
         }
       }
@@ -82,9 +96,9 @@ export default class ConduitGrpcSdk {
 
   private _initialize() {
     if (this._initialized) throw new Error('Module\'s grpc-sdk has already been initialized');
-    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter);
-    (this._admin as any) = new Admin(this.name, this.serverUrl);
-    (this._router as any)  = new Router(this.name, this.serverUrl);
+    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter, this._grpcToken);
+    (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
+    (this._router as any)  = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
     this.watchModules();
     this._initialized = true;
@@ -261,9 +275,10 @@ export default class ConduitGrpcSdk {
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
+        this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      this._modules[moduleName] = new ConduitModule(this.name, moduleName, moduleUrl);
+      this._modules[moduleName] = new ConduitModule(this.name, moduleName, moduleUrl, this._grpcToken);
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
     }
   }
@@ -300,6 +315,10 @@ export default class ConduitGrpcSdk {
       return this.initializeModules();
     }
     return 'ok';
+  }
+
+  get grpcToken() {
+    return this._grpcToken;
   }
 }
 
