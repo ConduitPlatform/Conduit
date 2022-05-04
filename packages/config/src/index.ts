@@ -226,7 +226,6 @@ export default class ConfigManager implements IConfigManager {
     const moduleConfig = JSON.parse(call.request.config);
     try {
       await this.set(moduleName, moduleConfig);
-      this.sdk.getBus()?.publish(`${moduleName}:update:config`,JSON.stringify(moduleConfig));
       return callback(null, { result: JSON.stringify(moduleConfig) });
     } catch {
       callback({
@@ -333,7 +332,7 @@ export default class ConfigManager implements IConfigManager {
       );
       if (unhealthyModules && unhealthyModules.length > 0) {
         unhealthyModules.forEach((moduleName) => {
-          //delete this.moduleHealth[moduleName];
+          delete this.moduleHealth[moduleName];
           this.servingModules.delete(moduleName);
         });
         this.moduleRegister.emit('serving-modules-update');
