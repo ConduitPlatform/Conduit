@@ -1,4 +1,4 @@
-import { addServiceToServer, createServer } from '../helpers';
+import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
 
 export class GrpcServer {
@@ -33,8 +33,11 @@ export class GrpcServer {
   async addService(
     protoFilePath: string,
     protoDescription: string,
-    functions: { [name: string]: Function }
+    functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
+    if (process.env.GRPC_KEY) {
+      functions = wrapGrpcFunctions(functions);
+    }
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       console.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {

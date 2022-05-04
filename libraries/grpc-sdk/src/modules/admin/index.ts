@@ -28,8 +28,8 @@ message AdminResponse {
 `;
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
-  constructor(private readonly moduleName: string, url: string) {
-    super(moduleName, 'admin', url);
+  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+    super(moduleName, 'admin', url, grpcToken);
     this.initializeClient(AdminDefinition);
   }
 

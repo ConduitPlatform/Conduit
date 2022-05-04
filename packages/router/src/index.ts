@@ -9,10 +9,11 @@ import {
   grpcToConduitRoute,
   IConduitRouter,
 } from '@conduitplatform/commons';
-import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/grpc-sdk';
 import { SocketPush } from './models/SocketPush.model';
 import * as adminRoutes from './admin/routes';
+import path from 'path';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -27,8 +28,6 @@ export class ConduitDefaultRouter implements IConduitRouter {
   constructor(
     commons: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
-    packageDefinition: any,
-    server: Server,
     expressApp: Application
   ) {
     this._commons = commons;
@@ -38,14 +37,18 @@ export class ConduitDefaultRouter implements IConduitRouter {
     this._internalRouter = new ConduitRoutingController(this._commons, this._expressApp);
     this.initGraphQL();
     this.initSockets();
-    const protoDescriptor = loadPackageDefinition(packageDefinition);
     this.grpcSdk = grpcSdk;
-    // @ts-ignore
-    const router = protoDescriptor.conduit.core.Router;
-    server.addService(router.service, {
-      registerConduitRoute: this.registerGrpcRoute.bind(this),
-      socketPush: this.socketPush.bind(this),
-    });
+  }
+
+  async initialize(server: GrpcServer) {
+    await server.addService(
+      path.resolve(__dirname, '../../core/src/core.proto'),
+      'conduit.core.Router',
+      {
+        registerConduitRoute: this.registerGrpcRoute.bind(this),
+        socketPush: this.socketPush.bind(this),
+      },
+    );
     this.registerAdminRoutes();
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');
@@ -178,6 +181,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         routerUrl: url,
       },
       moduleName,
+      this.grpcSdk.grpcToken,
     );
 
     processedRoutes.forEach((r) => {

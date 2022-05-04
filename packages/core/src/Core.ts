@@ -16,7 +16,7 @@ export class Core extends IConduitCore {
     super(ConduitCommons.getInstance('core'));
     this.commons.registerCore(this);
     this._grpcServer = new GrpcServer(this.commons, grpcPort);
-    this._httpServer = new HttpServer(httpPort, this.commons);
+    this._httpServer = new HttpServer(this.commons, httpPort);
   }
 
   static getInstance(httpPort?: number | string, grpcPort?: number): Core {
