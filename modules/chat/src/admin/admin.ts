@@ -59,7 +59,7 @@ export class AdminHandlers{
        ),
        constructConduitRoute(
          {
-           path: '/room',
+           path: '/rooms',
            action: ConduitRouteActions.POST,
            bodyParams: {
              name: ConduitString.Required,
