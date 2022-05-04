@@ -132,7 +132,6 @@ export class RoutingManager {
     routeObject.events = JSON.stringify(eventsObj);
 
     this._moduleRoutes[primary!] = routeObject;
-
   }
 
   async registerRoutes() {

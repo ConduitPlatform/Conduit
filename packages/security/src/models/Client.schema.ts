@@ -17,6 +17,10 @@ const schema = {
     required: true,
     select: false,
   },
+  domain: {
+    type: TYPE.String,
+    required: false,
+  },
   platform: {
     type: TYPE.String,
     enum: Object.values(PlatformTypesEnum),
@@ -43,6 +47,7 @@ export class Client extends ConduitActiveSchema<Client> {
   _id!: string;
   clientId!: string;
   clientSecret!: string;
+  domain!: string;
   platform!: string;
   createdAt!: Date;
   updatedAt!: Date;
