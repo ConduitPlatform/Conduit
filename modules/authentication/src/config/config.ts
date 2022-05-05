@@ -4,11 +4,30 @@ export default {
     default: true,
   },
   clients: {
-    multipleUserSessions: {
-      doc: 'Defines if a user can login multiple times from an anonymous client',
-      format: 'Boolean',
-      default: false,
-    }
+    named: {
+      multipleUserSessions: {
+        doc: 'Defines if a user can login multiple times from a single unnamed client',
+        format: 'Boolean',
+        default: false,
+      },
+      multipleClientLogins: {
+        doc: 'Defines if a user can be logged in from multiple unnamed clients',
+        format: 'Boolean',
+        default: true,
+      },
+    },
+    unnamed: {
+      multipleUserSessions: {
+        doc: 'Defines if a user can login multiple times from a single named client',
+        format: 'Boolean',
+        default: false,
+      },
+      multipleClientLogins: {
+        doc: 'Defines if a user can be logged in from multiple named clients',
+        format: 'Boolean',
+        default: true,
+      },
+    },
   },
   local: {
     enabled: {
