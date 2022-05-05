@@ -12,19 +12,24 @@ export async function validateClient(
   },
   fromRedis: boolean,
 ) {
-  let match;
+  let matchDomain,matchSecret;
   if (fromRedis) {
-    return clientsecret === client.clientSecret;
+    matchSecret = (clientsecret === client.clientSecret)
   }
-  if (client.platform === PlatformTypesEnum.WEB && client.domain) {
-    const isRegex = client.domain.includes('*');
-    const sendDomain = req.get('origin') ?? req.hostname;
-    if (isRegex) {
-      match = (client.domain as any).test(sendDomain);  // check if the regex matches with the hostname
-    } else {
-      match = (client.domain === sendDomain);
+  else {
+    matchSecret  = await bcrypt.compare(clientsecret, client.clientSecret);
+  }
+  if (client.platform === PlatformTypesEnum.WEB) {
+    if (client.domain) {
+      const isRegex = client.domain.includes('*');
+      const sendDomain = req.get('origin') ?? req.hostname;
+      if (isRegex) {
+        matchDomain = (client.domain as any).test(sendDomain);  // check if the regex matches with the hostname
+      } else {
+        matchDomain = (client.domain === sendDomain);
+      }
+      return matchDomain;
     }
-    return match;
   }
-  return await bcrypt.compare(clientsecret, client.clientSecret);
+  return matchSecret;
 }
