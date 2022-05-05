@@ -65,7 +65,6 @@ export class ClientValidator {
           domain: _domain,
         },
         true);
-
       if (validPlatform) {
         (req as any).conduit.clientId = clientid;
         return next();
@@ -93,7 +92,7 @@ export class ClientValidator {
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}`, `${valid.client!.clientSecret},${valid.client!.platform},${valid.client!.domain}`, 100000);
+        this.sdk.getState().setKey(`${clientid}`, `${clientsecret},${valid.client!.platform},${valid.client!.domain}`, 100000);
         next();
       })
       .catch(() => {

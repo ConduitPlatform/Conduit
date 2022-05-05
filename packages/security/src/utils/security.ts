@@ -13,9 +13,6 @@ export async function validateClient(
   fromRedis: boolean,
 ) {
   let match;
-  if (fromRedis) {
-    return clientsecret === client.clientSecret;
-  }
   if (client.platform === PlatformTypesEnum.WEB && client.domain) {
     const isRegex = client.domain.includes('*');
     const sendDomain = req.get('origin') ?? req.hostname;
@@ -25,6 +22,9 @@ export async function validateClient(
       match = (client.domain === sendDomain);
     }
     return match;
+  }
+  if (fromRedis) {
+    return clientsecret === client.clientSecret;
   }
   return await bcrypt.compare(clientsecret, client.clientSecret);
 }
