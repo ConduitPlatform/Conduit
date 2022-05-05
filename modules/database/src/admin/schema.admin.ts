@@ -502,7 +502,7 @@ export class SchemaAdmin {
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas : ConduitSchema[] = Object.values(call.request.params.inputDocuments);
+    const schemas : ConduitSchema[] = Object.values(call.request.params.schemas);
     const schemaIds = schemas.map((schema: any) => schema._id);
     //add schemas to _DeclaredSchema
     await Promise.all(schemas.map(async (schema: ConduitSchema) => {

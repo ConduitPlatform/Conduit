@@ -18,7 +18,7 @@ import { DocumentsAdmin } from './documents.admin';
 import { SchemaAdmin } from './schema.admin';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { DeclaredSchema, CustomEndpoints } from '../models';
+import { DeclaredSchema, CustomEndpoints, PendingSchemas } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -289,14 +289,14 @@ export class AdminHandlers {
         path: '/introspection/schemas',
         action: ConduitRouteActions.GET,
       },
-      new ConduitRouteReturnDefinition('GetPendingSchemas', { introspectedSchemas: [DeclaredSchema.fields] }),
+      new ConduitRouteReturnDefinition('GetPendingSchemas', { schemas: [PendingSchemas.fields] }),
       'getPendingSchemas'
       ),
       constructConduitRoute({
         path: '/introspection/schemas/finalize',
         action: ConduitRouteActions.POST,
         bodyParams: {
-          inputDocuments: { type: [TYPE.JSON], required: true },
+          schemas: { type: [PendingSchemas.fields], required: true },
         },
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
