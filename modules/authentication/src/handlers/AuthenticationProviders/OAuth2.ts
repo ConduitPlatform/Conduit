@@ -69,11 +69,12 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
+    const conduitUrl = (await this.grpcSdk.config.getServerConfig()).url;
     const myParams: any = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
-      redirect_uri: 'http://localhost:3000/hook/authentication/' + this.settings.providerName,
+      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
     };
 
     if ((this.settings).hasOwnProperty('grantType')) {
