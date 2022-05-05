@@ -1,4 +1,5 @@
 import {
+  ConduitBoolean,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteParameters,
@@ -14,35 +15,34 @@ const exec = util.promisify(require('child_process').exec);
 import path from 'path';
 import url from 'url';
 
-export function generateAPIClient(router: ConduitDefaultRouter) {
+export function generateRestClient(router: ConduitDefaultRouter) {
   return new ConduitRoute(
     {
-      path: '/router/generate-client',
+      path: '/router/generate-rest-client',
       action: ConduitRouteActions.POST,
       bodyParams: {
         outputLanguage: ConduitString.Required,
+        isAdmin: ConduitBoolean.Optional,
       },
     },
-    new ConduitRouteReturnDefinition('GenerateAPIClient', {
+    new ConduitRouteReturnDefinition('generateRestClient', {
       response: TYPE.JSON,
     }),
     async (request: ConduitRouteParameters) => {
       let response: any[] = [];
-      console.log(request);
       const outputLanguage = request.params!.outputLanguage;
       const outputPath = path.resolve(__dirname, 'dist/generated_openapi_client');
-      console.log(outputPath);
-
+      const inputSpec = request.params!.isAdmin ? 'admin/swagger.json' : 'swagger.json';
       let { error, stdout } = await exec(
         `openapi-generator generate -i http://localhost:${
           process.env['PORT'] ?? '3000'
-        }/swagger.json -g ${outputLanguage} -o ${outputPath}`
+        }/${inputSpec} -g ${outputLanguage} -o ${outputPath} --skip-validate-spec`
       );
       if (error) {
         throw new GrpcError(status.INTERNAL, error.message);
       }
       console.log(stdout);
-      const tarPath = path.resolve(__dirname, 'dist/openapi-generator-cli.tar.gz');
+      const tarPath = path.resolve(__dirname, 'dist/generated_openapi_client.tar.gz');
       ({ error, stdout } = await exec(`tar -czf ${tarPath} -C ${outputPath} .`));
       if (error) {
         throw new GrpcError(status.INTERNAL, error.message);
