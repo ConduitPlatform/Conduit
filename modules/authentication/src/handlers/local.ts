@@ -93,7 +93,6 @@ export class LocalHandlers {
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
     const config = ConfigController.getInstance().config;
-
     const serverConfig = await this.grpcSdk.config.getServerConfig();
     const url = serverConfig.url;
 
