@@ -182,8 +182,8 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-    const multipleUserSessions = config.clients.multipleUserSessions;
-    await AuthUtils.signInClientOperations(this.grpcSdk, multipleUserSessions, user._id, clientId);
+    const clientConfig = config.clients;
+    await AuthUtils.signInClientOperations(this.grpcSdk, clientConfig, user._id, clientId);
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,

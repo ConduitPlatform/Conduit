@@ -5,10 +5,15 @@ export default {
   },
   clients: {
     multipleUserSessions: {
-      doc: 'Defines if a user can login multiple times from an anonymous client',
+      doc: 'Defines if a user can login multiple times from a single client',
       format: 'Boolean',
       default: false,
-    }
+    },
+    multipleClientLogins: {
+      doc: 'Defines if a user can be logged in from multiple clients',
+      format: 'Boolean',
+      default: true,
+    },
   },
   local: {
     enabled: {
