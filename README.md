@@ -16,6 +16,9 @@ by providing ready-made modules that offer common functionality out of the box, 
 maximum flexibility to add custom functionality.
 
 Check out our docs here: [Documentation](https://getconduit.dev/docs/overview/intro)
+Wanna see what come next: [Roadmap](https://sharing.clickup.com/1554325/b/h/1fdwn-7561/8b09d2e9aedec0b)
+Help us make Conduit great: [Contribute](https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md)
+Learn more: [Website](https://getconduit.dev)
 
 # Features ✔️
 
@@ -31,7 +34,7 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 - Basic security built-in with Client Id/secret for all requests, rate limiting and Helmet.
 - Emails with template support
 - SMS for 2FA or plain SMS send
-- Storage using GCS, Azure Blob Storage or S3
+- Storage using S3, GCS and  Azure Blob Storage 
 - Chat
 - Forms for basic form submission and email forwarding
 - Conduit SDK can be used to add new modules or custom services
@@ -39,8 +42,8 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 
 # Requirements ⚡
 
-- NodeJS > 14
-- MongoDB or PostgreSQL
+- NodeJS > 14 or Docker
+- MongoDB or SQL (PostgreSQL, MySQL, MariaDB, MSSQL)
 - Desire to create something awesome
 
 # Quickstart
@@ -105,9 +108,3 @@ Generic module env variables are also supported, with required ones being obliga
 - Core Grpc Server runs at: `localhost:55152`
 - Core Socket Server runs at: `localhost:3001` (Socket.io, handshake path: `/realtime`)
 - Admin Server runs at: `localhost:8080`
-
-# Roadmap 🏁
-
-- Payments module to facilitate payments with Stripe, BrainTree etc
-- Custom workflows with "Actor"
-- Optimization
