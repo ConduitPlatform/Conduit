@@ -4,7 +4,6 @@ import * as bcrypt from 'bcrypt';
 
 export async function validateClient(
   req: Request,
-  clientsecret: string,
   client: {
     platform: string;
     domain: string;
@@ -23,6 +22,7 @@ export async function validateClient(
     }
     return match;
   }
+  let clientsecret = req.headers.clientsecret
   if (fromRedis) {
     return clientsecret === client.clientSecret;
   }

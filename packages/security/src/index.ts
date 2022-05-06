@@ -1,5 +1,5 @@
 import { ConduitCommons, IConduitSecurity } from '@conduitplatform/commons';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
@@ -11,26 +11,43 @@ import convict from './config';
 class SecurityModule extends IConduitSecurity {
   constructor(
     commons: ConduitCommons,
-    private readonly grpcSdk: ConduitGrpcSdk
+    private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     super(commons);
-    this.registerSchemas().then(() => {
-      return secretMigrate();
-    })
-      .catch(err => {
-        console.error(err);
-      });
-    this.registerConfig()
-      .then((config) => {
-        this.registerAdminRoutes(config.clientValidation.enabled);
+    this.initialize()
+      .then(() => {
+        console.log('Security: Initialized');
       })
-      .catch((err) => {
+      .catch(err => {
+        console.error('Security: Failed to initialize');
         console.error(err);
       });
-    const router = commons.getRouter();
+
+  }
+
+  async initialize() {
+    await this.registerSchemas();
+    await secretMigrate();
+    await this.registerConfig();
+
+    await this.registerAdminRoutes(ConfigController.getInstance().config.clientValidation.enabled);
+    this.setupMiddlewares();
+
+    this.commons.getBus()?.subscribe('config:update:security', (message) => {
+      try {
+        ConfigController.getInstance().config = JSON.parse(message);
+        this.registerAdminRoutes(ConfigController.getInstance().config.clientValidation.enabled);
+      } catch (e) {
+        throw new Error(e);
+      }
+    });
+  }
+
+  setupMiddlewares() {
+    const router = this.commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
-      grpcSdk.database!,
-      commons,
+      this.grpcSdk.database!,
+      this.commons,
     );
 
     router.registerGlobalMiddleware(
@@ -58,15 +75,16 @@ class SecurityModule extends IConduitSecurity {
       clientValidator.middleware.bind(clientValidator),
       true,
     );
-    commons.getBus()?.subscribe('config:update:security', (message) => {
-      try {
-        const config = JSON.parse(message);
-        this.registerAdminRoutes(config.clientValidation.enabled);
-      } catch (e) {
-        throw new Error(e);
-      }
-    });
-    this.commons.getBus().publish('security:update:config',JSON.stringify({clientValidation:{enabled:true}}))
+  }
+
+  setConfig(moduleConfig: any) {
+    try {
+      ConfigController.getInstance().config = moduleConfig;
+      this.registerAdminRoutes(moduleConfig.clientValidation.enabled);
+    } catch (e) {
+      throw new Error(e);
+    }
+    super.setConfig(moduleConfig);
   }
 
   async registerConfig() {
@@ -78,13 +96,10 @@ class SecurityModule extends IConduitSecurity {
     if (error) {
       await this.commons
         .getConfigManager()
-        .registerModulesConfig('security', convict.getProperties())
-        .catch((e: Error) => {
-          throw new Error(e.message);
-        });
+        .registerModulesConfig('security', convict.getProperties());
       config = await this.commons.getConfigManager().get('security'); // fetch it again cause config is now declared
     }
-    return config;
+    ConfigController.getInstance().config = config;
   }
 
   registerAdminRoutes(clientValidation: boolean) {
