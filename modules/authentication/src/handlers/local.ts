@@ -182,9 +182,8 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-    const namedConfig = config.clients.named;
-    const unnamedConfig = config.clients.unnamed;
-    await AuthUtils.signInClientOperations(this.grpcSdk, namedConfig,unnamedConfig, user._id, clientId);
+    const clientConfig = config.clients;
+    await AuthUtils.signInClientOperations(this.grpcSdk, clientConfig, user._id, clientId);
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,

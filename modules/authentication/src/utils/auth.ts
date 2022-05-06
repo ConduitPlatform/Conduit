@@ -167,18 +167,10 @@ export namespace AuthUtils {
       );
   }
 
-  export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, namedConfig: any, unnamedConfig: any, userId: string, clientId: string) {
+  export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, userId: string, clientId: string) {
     const isAnonymous = ('anonymous-client' === clientId);
     if (isAnonymous) {
-      if (!unnamedConfig.multipleUserSessions) {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-            clientId: 'anonymous-client',
-          }),
-        );
-      }
-      if (!unnamedConfig.multipleClientLogins) {
+      if (!clientConfig.multipleUserSessions) {
         await Promise.all(
           AuthUtils.deleteUserTokens(grpcSdk, {
             userId: userId,
@@ -186,8 +178,8 @@ export namespace AuthUtils {
         );
       }
     } else {
-      if (namedConfig.multipleClientLogins) {  //if can login from multiple devices
-        if (!namedConfig.multipleUserSessions) {  // if can not log in from single device multiple times
+      if (clientConfig.multipleClientLogins) {  //if can login from multiple devices
+        if (!clientConfig.multipleUserSessions) {  // if can not log in from single device multiple times
           await Promise.all(
             AuthUtils.deleteUserTokens(grpcSdk, {
               userId: userId,
@@ -196,20 +188,22 @@ export namespace AuthUtils {
           );
         }
       } else {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-          }),
-        );
+        if (!clientConfig.multipleUserSessions) {
+          await Promise.all(
+            AuthUtils.deleteUserTokens(grpcSdk, {
+              userId: userId,
+            }),
+          );
+        }
       }
     }
   }
 
-  export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, namedConfig: any, unnamedConfig: any, authToken: string, clientId: string, userId: string) {
+  export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, authToken: string, clientId: string, userId: string) {
     const isAnonymous = ('anonymous-client' === clientId);
     const token = authToken.split(' ')[1];
     if (isAnonymous) {
-      if (!unnamedConfig.multipleUserSessions) {
+      if (!clientConfig.multipleUserSessions) {
         await Promise.all(
           AuthUtils.deleteUserTokens(grpcSdk, {
             userId: userId,
@@ -224,8 +218,8 @@ export namespace AuthUtils {
         );
       }
     } else {
-      if (namedConfig.multipleClientLogins) {
-        if (namedConfig.multipleUserSessions) {
+      if (clientConfig.multipleClientLogins) {
+        if (clientConfig.multipleUserSessions) {
           await Promise.all(
             AuthUtils.deleteUserTokens(grpcSdk, {
               token: token,
