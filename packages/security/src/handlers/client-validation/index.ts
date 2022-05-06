@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons, ConduitError } from '@conduitplatform/commons';
-import { DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConfigController, DatabaseProvider } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { validateClient } from '../../utils/security';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';
@@ -26,6 +26,14 @@ export class ClientValidator {
 
   async middleware(req: Request, res: Response, next: NextFunction) {
     if (isNil((req as any).conduit)) (req as any).conduit = {};
+    const securityConfig = ConfigController.getInstance().config;
+    if (!securityConfig.clientValidation.enabled) {
+      (req as any).conduit.clientId = 'anonymous-client';
+      delete req.headers.clientsecret;
+      delete req.headers.clientid;
+      return next();
+    }
+
     const { clientid, clientsecret } = req.headers;
     // if incoming call is a webhook or an admin call
     if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
@@ -41,24 +49,15 @@ export class ClientValidator {
       if (this.prod) return next(ConduitError.unauthorized());
       return next();
     }
-    const securityConfig = await this.sdk.getConfigManager().get('security');
-    const active = securityConfig.clientValidation.enabled;
-    if (!active) {
-      (req as any).conduit.clientId = 'anonymous-client';
-      delete req.headers.clientsecret;
-      delete req.headers.clientid;
-      return next();
-    }
 
     if (isNil(clientid)) {
       return next(ConduitError.unauthorized());
     }
 
-    let key = await this.sdk.getState().getKey(`${clientid}`);
+    let key = await this.sdk.getState().getKey(clientid as string);
     if (key) {
       let [_clientsecret, _platform, _domain] = key.split(',');
       let validPlatform = await validateClient(req,
-        clientsecret as string,
         {
           clientSecret: _clientsecret,
           platform: _platform,
@@ -81,7 +80,7 @@ export class ClientValidator {
           };
         }
         return {
-          validated: await validateClient(req, clientsecret as string, client, false),
+          validated: await validateClient(req, client, false),
           client: client,
         };
       })
