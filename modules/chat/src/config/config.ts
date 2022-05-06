@@ -28,5 +28,4 @@ export default {
       default: false,
     },
   },
-
 };

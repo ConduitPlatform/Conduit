@@ -14,13 +14,14 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@grpc/grpc-js": "^1.5.3",
     "@grpc/proto-loader": "^0.6.9",
     "@types/google-protobuf": "^3.15.5",
     "@types/ioredis": "^4.28.7",
     "@types/lodash": "^4.14.178",
-    "@grpc/grpc-js": "^1.5.3",
-    "ioredis": "^4.28.3",
     "convict": "^6.2.1",
+    "fast-jwt": "^1.5.4",
+    "ioredis": "^4.28.3",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.0.6",
     "protobufjs": "^6.11.2"
@@ -42,8 +43,8 @@
   },
   "devDependencies": {
     "@grpc/proto-loader": "^0.6.9",
-    "@types/google-protobuf": "^3.15.5",
     "@types/convict": "^4.2.1",
+    "@types/google-protobuf": "^3.15.5",
     "@types/ioredis": "^4.28.7",
     "@types/lodash": "^4.14.178",
     "@types/node": "^13.9.8",

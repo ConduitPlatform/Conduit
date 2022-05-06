@@ -82,6 +82,15 @@ export function getGetConfigRoute(
         case 'core':
           finalConfig = dbConfig.moduleConfigs.core;
           break;
+        case 'router':
+          finalConfig = dbConfig.moduleConfigs.router;
+          break;
+        case 'admin':
+          finalConfig = dbConfig.moduleConfigs.admin;
+          break;
+        case 'security':
+          finalConfig = dbConfig.moduleConfigs.security;
+          break;
         default:
           throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }

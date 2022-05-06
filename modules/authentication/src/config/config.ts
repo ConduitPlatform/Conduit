@@ -3,6 +3,18 @@ export default {
     format: 'Boolean',
     default: true,
   },
+  clients: {
+    multipleUserSessions: {
+      doc: 'Defines if a user can login multiple times from a single client',
+      format: 'Boolean',
+      default: false,
+    },
+    multipleClientLogins: {
+      doc: 'Defines if a user can be logged in from multiple clients',
+      format: 'Boolean',
+      default: true,
+    },
+  },
   local: {
     enabled: {
       doc: 'Defines if this strategy is active or not',
@@ -204,7 +216,7 @@ export default {
     },
     accountLinking: {
       doc:
-          'When enabled, if a new twitch user matches with an existing email on the database, they will be enriched with twitch details',
+        'When enabled, if a new twitch user matches with an existing email on the database, they will be enriched with twitch details',
       format: 'Boolean',
       default: true,
     },
@@ -225,6 +237,42 @@ export default {
     enabled: {
       format: 'Boolean',
       default: false,
+    },
+  },
+  setCookies: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    options: {
+      httpOnly: {
+        format: 'Boolean',
+        default: false,
+      },
+      secure: {
+        format: 'Boolean',
+        default: false,
+      },
+      signed: {
+        format: 'Boolean',
+        default: false,
+      },
+      maxAge: {
+        format: 'Number',
+        default: 900000,
+      },
+      domain: {
+        format: 'String',
+        default: '',
+      },
+      path: {
+        format: 'String',
+        default: '',
+      },
+      sameSite: {
+        format: 'String',
+        default: 'Lax',
+      },
     },
   },
   generateRefreshToken: {

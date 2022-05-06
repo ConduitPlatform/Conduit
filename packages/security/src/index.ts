@@ -6,20 +6,27 @@ import { ClientValidator } from './handlers/client-validation';
 import { secretMigrate } from './migrations/Secret.migrate';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
+import convict from './config';
 
 class SecurityModule extends IConduitSecurity {
   constructor(
-    private readonly commons: ConduitCommons,
+    commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk
   ) {
     super(commons);
     this.registerSchemas().then(() => {
       return secretMigrate();
     })
-      .catch(err=>{
+      .catch(err => {
         console.error(err);
       });
-    this.registerAdminRoutes();
+    this.registerConfig()
+      .then((config) => {
+        this.registerAdminRoutes(config.clientValidation.enabled);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
     const router = commons.getRouter();
     let clientValidator: ClientValidator = new ClientValidator(
       grpcSdk.database!,
@@ -30,9 +37,9 @@ class SecurityModule extends IConduitSecurity {
       'rateLimiter',
       new RateLimiter(
         process.env.REDIS_HOST as string,
-        parseInt(process.env.REDIS_PORT as string)
+        parseInt(process.env.REDIS_PORT as string),
       ).limiter,
-      true
+      true,
     );
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
     router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
@@ -49,14 +56,46 @@ class SecurityModule extends IConduitSecurity {
     router.registerGlobalMiddleware(
       'clientMiddleware',
       clientValidator.middleware.bind(clientValidator),
-      true
+      true,
     );
+    commons.getBus()?.subscribe('config:update:security', (message) => {
+      try {
+        const config = JSON.parse(message);
+        this.registerAdminRoutes(config.clientValidation.enabled);
+      } catch (e) {
+        throw new Error(e);
+      }
+    });
+    this.commons.getBus().publish('security:update:config',JSON.stringify({clientValidation:{enabled:true}}))
   }
 
-  private registerAdminRoutes() {
-    this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
-    this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
-    this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+  async registerConfig() {
+    let error;
+    let config = await this.commons.getConfigManager().get('security')
+      .catch((e: Error) => {
+        error = e;
+      });
+    if (error) {
+      await this.commons
+        .getConfigManager()
+        .registerModulesConfig('security', convict.getProperties())
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
+      config = await this.commons.getConfigManager().get('security'); // fetch it again cause config is now declared
+    }
+    return config;
+  }
+
+  registerAdminRoutes(clientValidation: boolean) {
+    if (clientValidation) {
+      this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
+      this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
+      this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
+      console.log('Client validation enabled');
+    } else {
+      console.warn('Client validation disabled');
+    }
   }
 
   private registerSchemas() {

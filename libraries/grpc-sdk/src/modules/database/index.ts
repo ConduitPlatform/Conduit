@@ -3,8 +3,8 @@ import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
-  constructor(moduleName: string, url: string) {
-    super(moduleName, url);
+  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+    super(moduleName, 'database', url, grpcToken);
     this.initializeClient(DatabaseProviderDefinition);
   }
 

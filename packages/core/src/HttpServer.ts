@@ -21,8 +21,8 @@ export class HttpServer {
   get initialized() { return this._initialized; }
 
   constructor(
-    private readonly port: number | string,
     private readonly commons: ConduitCommons,
+    private readonly port: number | string,
   ) {}
 
   initialize() {

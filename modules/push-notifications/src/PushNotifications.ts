@@ -159,7 +159,6 @@ export default class PushNotifications extends ManagedModule {
     } catch (e) {
       return callback({ code: status.INTERNAL, message: e.message });
     }
-
     let errorMessage: string | null = null;
     await this._provider!
       .sendToDevice(params)
@@ -169,7 +168,6 @@ export default class PushNotifications extends ManagedModule {
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-
     return callback(null, { message: 'Ok' });
   }
 }

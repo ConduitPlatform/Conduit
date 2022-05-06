@@ -16,13 +16,18 @@ import * as templates from '../templates';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
+import { Cookie } from '../interfaces/Cookie';
 
 export class LocalHandlers {
   private emailModule: Email;
   private smsModule: SMS;
   private initialized: boolean = false;
+  private clientValidation: boolean;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    grpcSdk.config.get('security').then((config) => {
+      this.clientValidation = config.clientValidation.enabled;
+    });
   }
 
   async validate(): Promise<Boolean> {
@@ -88,7 +93,6 @@ export class LocalHandlers {
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
     const config = ConfigController.getInstance().config;
-
     const serverConfig = await this.grpcSdk.config.getServerConfig();
     const url = serverConfig.url;
 
@@ -117,7 +121,6 @@ export class LocalHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
     const context = call.request.context;
-
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
@@ -179,13 +182,8 @@ export class LocalHandlers {
         message: 'Verification code sent',
       };
     }
-
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-        clientId,
-      }),
-    );
+    const clientConfig = config.clients;
+    await AuthUtils.signInClientOperations(this.grpcSdk, clientConfig, user._id, clientId);
 
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
@@ -200,20 +198,45 @@ export class LocalHandlers {
         .add(config.tokenInvalidationPeriod as number, 'milliseconds')
         .toDate(),
     });
+    let refreshToken: RefreshToken | null = null;
+    if (config.generateRefreshToken) {
+      refreshToken = await RefreshToken.getInstance().create({
+        userId: user._id,
+        clientId,
+        token: AuthUtils.randomToken(),
+        expiresOn: moment()
+          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+          .toDate(),
+      });
+    }
 
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      if (cookieOptions.path === '') {
+        delete cookieOptions.path;
+      }
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: (accessToken as AccessToken).token,
+        options: cookieOptions,
+      }];
+      if (!isNil(refreshToken)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: refreshToken.token,
+          options: cookieOptions,
+        });
+      }
+      return {
+        userId: user._id.toString(),
+        setCookies: cookies,
+      };
+    }
 
     return {
       userId: user._id.toString(),
       accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
+      refreshToken: !isNil(refreshToken) ? refreshToken.token : undefined,
     };
   }
 
@@ -460,7 +483,7 @@ export class LocalHandlers {
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    return await AuthUtils.verifyCode(this.grpcSdk,clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
+    return await AuthUtils.verifyCode(this.grpcSdk, clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

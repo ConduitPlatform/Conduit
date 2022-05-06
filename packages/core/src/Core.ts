@@ -1,11 +1,10 @@
-import { ConduitCommons } from '@conduitplatform/commons';
+import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
 import { HttpServer} from './HttpServer';
 import { GrpcServer } from './GrpcServer';
 import { isNil } from 'lodash';
 
-export class Core {
+export class Core extends IConduitCore {
   private static _instance: Core;
-  private readonly commons: ConduitCommons;
   private readonly _httpServer: HttpServer;
   private readonly _grpcServer: GrpcServer;
 
@@ -14,9 +13,10 @@ export class Core {
   get initialized() { return this._httpServer.initialized && this._grpcServer.initialized; }
 
   private constructor(httpPort: number | string, grpcPort: number) {
-    this.commons = ConduitCommons.getInstance('core');
+    super(ConduitCommons.getInstance('core'));
+    this.commons.registerCore(this);
     this._grpcServer = new GrpcServer(this.commons, grpcPort);
-    this._httpServer = new HttpServer(httpPort, this.commons);
+    this._httpServer = new HttpServer(this.commons, httpPort);
   }
 
   static getInstance(httpPort?: number | string, grpcPort?: number): Core {

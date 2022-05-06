@@ -1,6 +1,9 @@
-import { IConduitRouter } from './modules';
-import { IConduitAdmin } from './modules';
-import { IConduitSecurity } from './modules';
+import {
+  IConduitCore,
+  IConduitAdmin,
+  IConduitRouter,
+  IConduitSecurity,
+} from './modules';
 import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
@@ -8,10 +11,10 @@ import { IConfigManager } from './modules';
 import { StateManager } from './utilities/StateManager';
 import { RedisManager } from './utilities/RedisManager';
 import { EventBus } from './utilities/EventBus';
-import Crypto from 'crypto';
 
 export class ConduitCommons {
   private static _instance: ConduitCommons;
+  private _core?: IConduitCore;
   private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
   private _security?: IConduitSecurity;
@@ -20,12 +23,8 @@ export class ConduitCommons {
   private readonly _stateManager: StateManager;
   private readonly name: string;
 
-  private constructor(name?: string) {
-    if (!name) {
-      this.name = 'corepackage_' + Crypto.randomBytes(16).toString('hex');
-    } else {
-      this.name = name;
-    }
+  private constructor(name: string) {
+    this.name = name;
     if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
       let redisManager = new RedisManager(process.env.REDIS_HOST, process.env.REDIS_PORT);
       this._eventBus = new EventBus(redisManager);
@@ -34,6 +33,16 @@ export class ConduitCommons {
       console.error('Redis IP not defined');
       process.exit(-1);
     }
+  }
+
+  registerCore(core: IConduitCore) {
+    if (this._core) throw new Error('Cannot register a second core!');
+    this._core = core;
+  }
+
+  getCore() {
+    if (this._core) return this._core;
+    throw new Error('Core not assigned yet!');
   }
 
   registerRouter(router: IConduitRouter) {

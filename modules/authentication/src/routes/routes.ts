@@ -4,12 +4,13 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConfigController,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
   RoutingManager,
+  TYPE,
   UnparsedRouterResponse,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
 import { GoogleHandlers } from '../handlers/google/google';
@@ -51,7 +52,7 @@ export class AuthenticationRoutes {
     this.localHandlers = new LocalHandlers(grpcSdk);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
-    this.phoneHandlers = new PhoneHandlers(grpcSdk,this._routingManager);
+    this.phoneHandlers = new PhoneHandlers(grpcSdk, this._routingManager);
   }
 
   async registerRoutes() {
@@ -62,7 +63,7 @@ export class AuthenticationRoutes {
     let errorMessage = null;
     let phoneActive = await this.phoneHandlers
       .validate()
-      .catch((e:any ) => (errorMessage = e))
+      .catch((e: any) => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes();
@@ -107,15 +108,17 @@ export class AuthenticationRoutes {
           userId: ConduitString.Optional,
           accessToken: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
-          message: ConduitString.Optional,
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
       );
 
       let emailOnline = false;
       await this.grpcSdk.config.moduleExists('email')
-        .then(_ => { emailOnline = true; })
-        .catch(_ => {});
+        .then(_ => {
+          emailOnline = true;
+        })
+        .catch(_ => {
+        });
       if (emailOnline) {
         this._routingManager.route(
           {
@@ -145,34 +148,34 @@ export class AuthenticationRoutes {
         );
       }
 
-        this._routingManager.route(
-          {
-            path: '/local/change-password',
-            action: ConduitRouteActions.POST,
-            description: `Changes the user's password but requires the old password first.
+      this._routingManager.route(
+        {
+          path: '/local/change-password',
+          action: ConduitRouteActions.POST,
+          description: `Changes the user's password but requires the old password first.
                  If 2FA is enabled then a message will be returned asking for token input.`,
-            bodyParams: {
-              oldPassword: ConduitString.Required,
-              newPassword: ConduitString.Required,
-            },
-            middlewares: ['authMiddleware'],
+          bodyParams: {
+            oldPassword: ConduitString.Required,
+            newPassword: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
-          this.localHandlers.changePassword.bind(this.localHandlers),
-        );
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
+        this.localHandlers.changePassword.bind(this.localHandlers),
+      );
 
-        this._routingManager.route(
-          {
-            path: '/hook/verify-email/:verificationToken',
-            action: ConduitRouteActions.GET,
-            description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
-            urlParams: {
-              verificationToken: ConduitString.Required,
-            },
+      this._routingManager.route(
+        {
+          path: '/hook/verify-email/:verificationToken',
+          action: ConduitRouteActions.GET,
+          description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+          urlParams: {
+            verificationToken: ConduitString.Required,
           },
-          new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
-          this.localHandlers.verifyEmail.bind(this.localHandlers),
-        );
+        },
+        new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
+        this.localHandlers.verifyEmail.bind(this.localHandlers),
+      );
 
       if (authConfig?.twofa.enabled) {
         this._routingManager.route(

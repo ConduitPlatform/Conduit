@@ -29,7 +29,6 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
 }
 
 export async function sendInvitations(users: User[], sender: User, room: ChatRoom, url: string, sendEmail: boolean, sendNotification: boolean, grpcSdk: ConduitGrpcSdk) {
-
   const roomId = room._id;
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({
@@ -62,14 +61,15 @@ export async function sendInvitations(users: User[], sender: User, room: ChatRoo
           roomName,
         },
       }).catch((e: Error) => {
-        throw  new Error(e.message);
+        throw new Error(e.message);
       });
     }
     if (sendNotification) {
-      const body = `User ${sender.email} has invited you to join in room ${room.name}!`;
-      await grpcSdk.pushNotifications!.sendNotification(invitedUser._id, 'You have an invitation request!', body)
-        .catch((e:Error) => {
-          throw new Error(e.message)
+      const body = `User ${sender._id} has invited you to join in room ${room.name}`;
+      const title = 'You have an invitation request!';
+      await grpcSdk.pushNotifications!.sendNotification(invitedUser._id, title, body)
+        .catch((e: Error) => {
+          throw new Error(e.message);
         });
     }
   }

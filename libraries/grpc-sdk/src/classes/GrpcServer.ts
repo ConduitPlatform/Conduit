@@ -1,4 +1,4 @@
-import { addServiceToServer, createServer } from '../helpers';
+import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
 
 export class GrpcServer {
@@ -33,8 +33,11 @@ export class GrpcServer {
   async addService(
     protoFilePath: string,
     protoDescription: string,
-    functions: { [name: string]: Function }
+    functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
+    if (process.env.GRPC_KEY) {
+      functions = wrapGrpcFunctions(functions);
+    }
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       console.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
@@ -105,10 +108,10 @@ export class GrpcServer {
 
   start(): void {
     if (this.started) {
-      console.error('Grpc server is already running!');
+      console.error('gRPC server is already running!');
       return;
     } else if (!this.started && this.startedOnce) {
-      console.error('Grpc server is down for refresh!');
+      console.error('gRPC server is down for refresh!');
     }
     this.started = true;
     this.startedOnce = true;

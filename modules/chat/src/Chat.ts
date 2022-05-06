@@ -1,6 +1,7 @@
 import {
   ManagedModule,
-  DatabaseProvider, ConfigController, Email,
+  DatabaseProvider,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema from './config';
@@ -49,6 +50,8 @@ export default class Chat extends ManagedModule {
     }
     if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
       await this.grpcSdk.waitForExistence('email');
+    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
+      await this.grpcSdk.waitForExistence('pushNotifications');
     await this.userRouter.registerRoutes();
   }
 

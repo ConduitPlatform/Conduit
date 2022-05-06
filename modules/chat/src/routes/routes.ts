@@ -42,10 +42,10 @@ export class ChatRoutes {
     }
     const roomExists = await ChatRoom.getInstance().findOne({ name: roomName })
       .catch((e: Error) => {
-        throw  new GrpcError(status.INTERNAL, e.message);
+        throw new GrpcError(status.INTERNAL, e.message);
       });
     if (!isNil(roomExists)) {
-      throw  new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
+      throw new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
     }
     let room;
     let query: any = { name: roomName, participants: [user._id] };
@@ -508,6 +508,7 @@ export class ChatRoutes {
         this.deleteMessage.bind(this),
       );
     }
+
     if (config.allowMessageEdit) {
       this._routingManager.route(
         {

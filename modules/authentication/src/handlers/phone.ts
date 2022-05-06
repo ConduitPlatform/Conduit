@@ -16,6 +16,7 @@ import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import moment = require('moment');
+import { Cookie } from '../interfaces/Cookie';
 
 export class PhoneHandlers {
   private sms: SMS;
@@ -131,20 +132,40 @@ export class PhoneHandlers {
           .add(config.tokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       });
-
-      const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-        userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      });
-
+      let refreshToken = null;
+      if (config.generateRefreshToken) {
+        refreshToken = await RefreshToken.getInstance().create({
+          userId: user._id,
+          clientId,
+          token: AuthUtils.randomToken(),
+          expiresOn: moment()
+            .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
+            .toDate(),
+        });
+      }
+      if (config.setCookies.enabled) {
+        const cookieOptions = config.setCookies.options;
+        const cookies: Cookie[] = [{
+          name: 'accessToken',
+          value: (accessToken as AccessToken).token,
+          options: cookieOptions,
+        }];
+        if (!isNil((refreshToken as RefreshToken).token)) {
+          cookies.push({
+            name: 'refreshToken',
+            value: (refreshToken! as RefreshToken).token,
+            options: cookieOptions,
+          });
+        }
+        return {
+          result: { message: 'Successfully authenticated' },
+          setCookies: cookies,
+        };
+      }
       return {
         userId: user._id.toString(),
         accessToken: accessToken.token,
-        refreshToken: refreshToken.token,
+        refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
       };
 
     } else {

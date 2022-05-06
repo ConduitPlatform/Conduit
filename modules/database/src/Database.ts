@@ -1,33 +1,40 @@
 import {
-  ManagedModule,
   ConduitSchema,
   GrpcError,
-} from "@conduitplatform/grpc-sdk";
-
+  HealthCheckStatus,
+  ManagedModule,
+} from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin/admin';
 import { DatabaseRoutes } from './routes/routes';
 import * as models from './models';
 import {
   CreateSchemaExtensionRequest,
   CreateSchemaRequest,
-  DropCollectionRequest, DropCollectionResponse, FindOneRequest, FindRequest,
+  DropCollectionRequest,
+  DropCollectionResponse,
+  FindOneRequest,
+  FindRequest,
   GetSchemaRequest,
-  GetSchemasRequest, QueryRequest, QueryResponse,
+  GetSchemasRequest,
+  QueryRequest,
+  QueryResponse,
   SchemaResponse,
-  SchemasResponse, UpdateManyRequest, UpdateRequest
-} from "./types";
+  SchemasResponse,
+  UpdateManyRequest,
+  UpdateRequest,
+} from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from "./interfaces";
-import { canCreate, canDelete, canModify } from "./permissions";
-import { runMigrations } from "./migrations";
-import { SchemaController } from "./controllers/cms/schema.controller";
-import { CustomEndpointController } from "./controllers/customEndpoints/customEndpoint.controller";
-import path from 'path';
+import { SchemaAdapter } from './interfaces';
+import { canCreate, canDelete, canModify } from './permissions';
+import { runMigrations } from './migrations';
+import { SchemaController } from './controllers/cms/schema.controller';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
+import path from 'path';
 
 export default class DatabaseModule extends ManagedModule {
   config = undefined;
@@ -57,6 +64,7 @@ export default class DatabaseModule extends ManagedModule {
 
   constructor(dbType: string, dbUri: string) {
     super('database');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
     } else if (dbType === 'postgres' || dbType === 'sql') { // Compat (<=0.12.2): sql
@@ -67,11 +75,14 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async preServerStart() {
+    this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
   }
 
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    // Introspection takes place
+    this.updateHealth(HealthCheckStatus.SERVING);
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
@@ -79,7 +90,6 @@ export default class DatabaseModule extends ManagedModule {
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
     await this._activeAdapter.recoverSchemasFromDatabase();
-    this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
   }
 
   async onRegister() {
@@ -113,23 +123,35 @@ export default class DatabaseModule extends ManagedModule {
         console.error('Something was wrong with the message');
       }
     });
-    const schemaController = new SchemaController(
-      this.grpcSdk,
-      this._activeAdapter,
-      this.userRouter,
-    );
-    const customEndpointController = new CustomEndpointController(
-      this.grpcSdk,
-      this._activeAdapter,
-      this.userRouter,
-    );
-    this.adminRouter = new AdminHandlers(
-      this.grpcServer,
-      this.grpcSdk,
-      this._activeAdapter,
-      schemaController,
-      customEndpointController
-    );
+    const coreHealth = (await this.grpcSdk.core.check() as unknown as HealthCheckStatus);
+    this.onCoreHealthChange(coreHealth);
+    await this.grpcSdk.core.watch('');
+  }
+
+  private onCoreHealthChange(state: HealthCheckStatus) {
+    const boundFunctionRef = this.onCoreHealthChange.bind(this);
+    if (state === HealthCheckStatus.SERVING) {
+      this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
+      const schemaController = new SchemaController(
+        this.grpcSdk,
+        this._activeAdapter,
+        this.userRouter,
+      );
+      const customEndpointController = new CustomEndpointController(
+        this.grpcSdk,
+        this._activeAdapter,
+        this.userRouter,
+      );
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        this._activeAdapter,
+        schemaController,
+        customEndpointController
+      );
+    } else {
+      this.grpcSdk.core.healthCheckWatcher.once('grpc-health-change:Core', boundFunctionRef);
+    }
   }
 
   publishSchema(schema: any) {

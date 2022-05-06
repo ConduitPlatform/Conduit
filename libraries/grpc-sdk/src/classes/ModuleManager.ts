@@ -15,30 +15,32 @@ export class ModuleManager {
     this.serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
     this.servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
     try {
-      this.grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, module.name);
+      this.grpcSdk = new ConduitGrpcSdk(
+        process.env.CONDUIT_SERVER,
+        () => { return this.module.healthState; },
+        module.name,
+      );
     } catch {
       throw new Error('Failed to initialize grpcSdk');
     }
   }
 
-  start() {
+  async start() {
+    await this.grpcSdk.initialize();
     this.module.initialize(this.grpcSdk);
     const self = this;
-    this.preRegisterLifecycle()
-      .then(() => {
-        const url = (process.env.REGISTER_NAME === 'true'
-          ? `${self.module.name}:`
-          : `${self.serviceAddress}:`) + self.module.port;
-        return self.grpcSdk.config.registerModule(self.module.name, url);
-      })
-      .catch((err: Error) => {
-        console.log('Failed to initialize server');
-        console.error(err);
-        process.exit(-1);
-      })
-      .then(() => {
-        return this.postRegisterLifecycle();
-      })
+    try {
+      await this.preRegisterLifecycle();
+      const url = (process.env.REGISTER_NAME === 'true'
+        ? `${self.module.name}:`
+        : `${self.serviceAddress}:`) + self.module.port;
+      await self.grpcSdk.config.registerModule(self.module.name, url);
+    } catch (err) {
+      console.log('Failed to initialize server');
+      console.error(err);
+      process.exit(-1);
+    }
+    await this.postRegisterLifecycle()
       .catch((err: Error) => {
         console.log('Failed to activate module');
         console.error(err);
@@ -46,14 +48,15 @@ export class ModuleManager {
   }
 
   private async preRegisterLifecycle(): Promise<void> {
+    await this.module.createGrpcServer(this.servicePort);
     await this.module.preServerStart();
-    await this.module.startGrpcServer(this.servicePort);
-    await this.module.onServerStart()
+    await this.grpcSdk.initializeEventBus();
+    await this.module.startGrpcServer();
+    await this.module.onServerStart();
     await this.module.preRegister();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
-    await this.grpcSdk.initializeEventBus();
     await this.module.onRegister();
     if (this.module.config) {
       let config;

@@ -42,7 +42,7 @@ export function wrapRouterGrpcFunction(
   fun: RequestHandlers,
 ): (call: any, callback: any) => void {
   return (call: any, callback: any) => {
-    let requestReceive = Date.now();
+    const requestReceive = Date.now();
     let routerRequest = true;
     try {
       call.request.context = parseRequestData(call.request.context);
@@ -68,13 +68,21 @@ export function wrapRouterGrpcFunction(
           if (typeof r === 'string') {
             callback(null, { result: r });
           } else {
+            let respObject;
+            if (r.removeCookies || r.setCookies) {
+              respObject = {
+                removeCookies: r.removeCookies,
+                setCookies: r.setCookies,
+              };
+            }
             if (r.result || r.redirect) {
               callback(null, {
+                ...respObject,
                 redirect: r.redirect ?? undefined,
                 result: r.result ? JSON.stringify(r.result) : undefined,
               });
             } else {
-              callback(null, { result: JSON.stringify(r) });
+              callback(null, { ...respObject, result: JSON.stringify(r) });
             }
           }
         } else {
