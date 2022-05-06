@@ -3,8 +3,7 @@ import { ConduitModel, ConduitModelOptions } from '../interfaces';
 export class ConduitSchema {
   readonly name: string;
   readonly fields: ConduitModel;
-  readonly collectionName: string;
-  readonly specifiedCollectionName?: string;
+  readonly collectionName?: string;
   readonly schemaOptions: ConduitModelOptions;
   ownerModule: string = 'unknown';
 
@@ -19,9 +18,6 @@ export class ConduitSchema {
     this.schemaOptions = schemaOptions ?? {};
     if (collectionName && collectionName !== '') {
       this.collectionName = collectionName;
-      this.specifiedCollectionName = collectionName;
-    } else {
-      this.collectionName = this.name;
     }
   }
 

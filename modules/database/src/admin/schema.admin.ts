@@ -9,7 +9,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil, merge } from 'lodash';
+import { isNil, merge, isEmpty } from 'lodash';
 import { validateSchemaInput } from '../utils/utilities';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
@@ -477,9 +477,11 @@ export class SchemaAdmin {
     const introspectedSchemas = await this.database.introspectDatabase(true);
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
+        if(isEmpty(schema.fields)) 
+          return null;
         await this.database.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
-            name: schema.specifiedCollectionName ?? schema.name,
+            name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
@@ -507,6 +509,8 @@ export class SchemaAdmin {
     //add schemas to _DeclaredSchema
     await Promise.all(schemas.map(async (schema: ConduitSchema) => {
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
+        if (isNil(recreatedSchema.fields))
+          return null;
         recreatedSchema.ownerModule = 'database';
         recreatedSchema.schemaOptions.conduit!.imported = true;
         await this.database.createSchemaFromAdapter(recreatedSchema);

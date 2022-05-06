@@ -20,8 +20,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   ) {
     this.originalSchema = originalSchema;
 
-    if (!isNil(schema.specifiedCollectionName) && schema.ownerModule === 'database') {
-      (schema as any).schemaOptions.collection = schema.specifiedCollectionName;
+    if (!isNil(schema.collectionName)) {
+      (schema as any).schemaOptions.collection = schema.collectionName;
+    }
+    else {
+      (schema as any).collectionName = schema.name //restore collectionName
     }
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});

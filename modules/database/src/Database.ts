@@ -35,6 +35,7 @@ import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
+import { isEmpty } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule {
   config = undefined;
@@ -555,9 +556,11 @@ export default class DatabaseModule extends ManagedModule {
 
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
+        if(isEmpty(schema.fields))
+          return null;
         await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
-            name: schema.specifiedCollectionName ?? schema.name,
+            name: schema.name,
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
