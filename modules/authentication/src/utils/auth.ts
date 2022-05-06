@@ -169,31 +169,16 @@ export namespace AuthUtils {
 
   export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, userId: string, clientId: string) {
     const isAnonymous = ('anonymous-client' === clientId);
-    if (isAnonymous) {
-      if (!clientConfig.multipleUserSessions) {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-          }),
-        );
-      }
-    } else {
-      if (clientConfig.multipleClientLogins) {  //if can login from multiple devices
-        if (!clientConfig.multipleUserSessions) {  // if can not log in from single device multiple times
-          await Promise.all(
-            AuthUtils.deleteUserTokens(grpcSdk, {
-              userId: userId,
-              clientId,
-            }),
-          );
-        }
-      } else {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-          }),
-        );
-      }
+    if (!clientConfig.multipleUserSessions) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        userId: userId,
+        clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
+      });
+    }else if(!clientConfig.multipleClientLogins){
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        userId: userId,
+        clientId: { $ne: clientId},
+      });
     }
   }
 
