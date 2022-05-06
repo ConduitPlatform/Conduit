@@ -188,13 +188,11 @@ export namespace AuthUtils {
           );
         }
       } else {
-        if (!clientConfig.multipleUserSessions) {
-          await Promise.all(
-            AuthUtils.deleteUserTokens(grpcSdk, {
-              userId: userId,
-            }),
-          );
-        }
+        await Promise.all(
+          AuthUtils.deleteUserTokens(grpcSdk, {
+            userId: userId,
+          }),
+        );
       }
     }
   }
@@ -207,7 +205,6 @@ export namespace AuthUtils {
         await Promise.all(
           AuthUtils.deleteUserTokens(grpcSdk, {
             userId: userId,
-            clientId: 'anonymous-client',
           }),
         );
       } else {

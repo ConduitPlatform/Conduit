@@ -13,7 +13,7 @@ export default {
       doc: 'Defines if a user can be logged in from multiple clients',
       format: 'Boolean',
       default: true,
-    }
+    },
   },
   local: {
     enabled: {
