@@ -174,10 +174,10 @@ export namespace AuthUtils {
         userId: userId,
         clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
       });
-    }else if(!clientConfig.multipleClientLogins){
+    } else if (!clientConfig.multipleClientLogins) {
       await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
         userId: userId,
-        clientId: { $ne: clientId},
+        clientId: { $ne: clientId },
       });
     }
   }
@@ -185,43 +185,15 @@ export namespace AuthUtils {
   export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, authToken: string, clientId: string, userId: string) {
     const isAnonymous = ('anonymous-client' === clientId);
     const token = authToken.split(' ')[1];
-    if (isAnonymous) {
-      if (!clientConfig.multipleUserSessions) {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-          }),
-        );
-      } else {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            token: token,
-          }),
-        );
-      }
-    } else {
-      if (clientConfig.multipleClientLogins) {
-        if (clientConfig.multipleUserSessions) {
-          await Promise.all(
-            AuthUtils.deleteUserTokens(grpcSdk, {
-              token: token,
-            }),
-          );
-        } else {
-          await Promise.all(
-            AuthUtils.deleteUserTokens(grpcSdk, {
-              clientId,
-              userId: userId,
-            }),
-          );
-        }
-      } else {
-        await Promise.all(
-          AuthUtils.deleteUserTokens(grpcSdk, {
-            userId: userId,
-          }),
-        );
-      }
+    if (!clientConfig.multipleUserSessions) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        clientId: (!isAnonymous && clientConfig.multipleClientLogins) ? clientId : null,
+        userId: userId,
+      });
+    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        token: token,
+      });
     }
   }
 }
