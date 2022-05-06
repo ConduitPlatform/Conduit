@@ -16,8 +16,11 @@ by providing ready-made modules that offer common functionality out of the box, 
 maximum flexibility to add custom functionality.
 
 Check out our docs here: [Documentation](https://getconduit.dev/docs/overview/intro)
+
 Wanna see what come next: [Roadmap](https://sharing.clickup.com/1554325/b/h/1fdwn-7561/8b09d2e9aedec0b)
+
 Help us make Conduit great: [Contribute](https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md)
+
 Learn more: [Website](https://getconduit.dev)
 
 # Features ✔️
