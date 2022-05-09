@@ -46,9 +46,6 @@ export const CustomEndpoints = new ConduitSchema(
       type: TYPE.Boolean,
       default: false,
     },
-    queries: { // succeeded by 'query'
-      type: [TYPE.JSON],
-    },
     query: TYPE.JSON,
     assignments: [TYPE.JSON],
     createdAt: TYPE.Date,
