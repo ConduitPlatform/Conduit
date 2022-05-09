@@ -1,5 +1,6 @@
 import {
   ConduitBoolean,
+  ConduitError,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteParameters,
@@ -27,29 +28,30 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
     async (request: ConduitRouteParameters) => {
       let response: any[] = [];
       const outputPath = path.resolve(__dirname, 'dist/generated_graphql_client.d.ts');
-      console.log(request);
-
-      const generated = await generate({
-        schema: {
-          'http://localhost:3000/graphql': {
-            headers: {
-              clientid: request.headers.clientid as string,
-              clientsecret: request.headers.clientsecret as string,
+      try {
+        await generate({
+          schema: {
+            'http://localhost:3000/graphql': {
+              headers: {
+                clientid: request.headers.clientid as string,
+                clientsecret: request.headers.clientsecret as string,
+              },
             },
           },
-        },
-        generates: {
-          [outputPath]: {
-            plugins: selectPlugin(request.params!.plugin),
+          generates: {
+            [outputPath]: {
+              plugins: selectPlugin(request.params!.plugin),
+            },
           },
-        },
-      });
-      console.log(generated);
-      response.push({
-        generated: 'ok',
-        file: url.pathToFileURL(outputPath).href,
-      });
-      return { result: response };
+        });
+        response.push({
+          generated: 'ok',
+          file: url.pathToFileURL(outputPath).href,
+        });
+        return { result: response };
+      } catch (error) {
+        throw new ConduitError((error as Error).name, 500, (error as Error).message);
+      }
     }
   );
 }
@@ -65,6 +67,6 @@ function selectPlugin(pluginName: string): string[] {
     case 'svelte':
       return ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'];
     default:
-      return ['typescript', 'typescript-operations'];
+      throw new ConduitError('Invalid Plugin', 400, 'Invalid Plugin');
   }
 }
