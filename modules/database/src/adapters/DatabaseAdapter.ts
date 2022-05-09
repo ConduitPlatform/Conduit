@@ -11,12 +11,12 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   /**
    * Checks if the database has already been connected with Conduit
    */
-  abstract isConduitDB(): Promise<boolean>;
+  abstract isConduitDb(): Promise<boolean>;
 
   /**
    * Introspects all schemas of current db connection, registers them to conduit
    */
-  abstract introspectDatabase(isConduitDB : boolean): Promise<ConduitSchema[]>;
+  abstract introspectDatabase(isConduitDb : boolean): Promise<ConduitSchema[]>;
 
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter

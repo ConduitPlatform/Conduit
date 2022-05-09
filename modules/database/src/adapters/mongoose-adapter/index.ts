@@ -84,13 +84,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
   }
 
-  async isConduitDB(): Promise<boolean> {
+  async isConduitDb(): Promise<boolean> {
     return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
       (c) => c.name === '_declaredschemas'
     );
   }
 
-  async introspectDatabase(isConduitDB: boolean = true): Promise<ConduitSchema[]> {
+  async introspectDatabase(isConduitDb: boolean = true): Promise<ConduitSchema[]> {
     let introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
     const schemaOptions = {
@@ -112,7 +112,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     };
     let schemaNames: string[] = [];
 
-    if (isConduitDB) {
+    if (isConduitDb) {
       await db.collection('_pendingschemas').deleteMany({});
       // Reintrospect schemas
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(

@@ -34,7 +34,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
 
-  async isConduitDB() {
+  async isConduitDb() {
     return this.sequelize
       .query('SELECT * FROM "_DeclaredSchema" LIMIT 1')
       .then(() => {
@@ -45,7 +45,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
-  async introspectDatabase(isConduitDB: boolean = true): Promise<ConduitSchema[]> {
+  async introspectDatabase(isConduitDb: boolean = true): Promise<ConduitSchema[]> {
     const options = {
       directory: '',
       additional: {
@@ -65,7 +65,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       )
     )[0].map((t: any) => t.tablename);
 
-    if (isConduitDB) {
+    if (isConduitDb) {
       await this.getSchemaModel('_PendingSchemas').model.deleteMany({});
       let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
         {}
