@@ -60,10 +60,10 @@ export default class Chat extends ManagedModule {
       this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
       this.isRunning = true;
     }
-    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
+    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email) {
       await this.grpcSdk.waitForExistence('email');
-    if (config.explicit_room_joins.send_email)
       await this.userRouter.registerTemplates();
+    }
     if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
       await this.grpcSdk.waitForExistence('pushNotifications');
     await this.userRouter.registerRoutes();
