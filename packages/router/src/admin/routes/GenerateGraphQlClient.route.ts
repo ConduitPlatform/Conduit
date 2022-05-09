@@ -62,6 +62,8 @@ function selectPlugin(pluginName: string): string[] {
       return ['typescript', 'typescript-operations', 'typescript-react-query'];
     case 'vue':
       return ['typescript', 'typescript-operations', 'typescript-vue-urql'];
+    case 'svelte':
+      return ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'];
     default:
       return ['typescript', 'typescript-operations'];
   }
