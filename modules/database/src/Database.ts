@@ -35,6 +35,7 @@ import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
+import { isEmpty } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule {
   config = undefined;
@@ -67,7 +68,8 @@ export default class DatabaseModule extends ManagedModule {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
-    } else if (dbType === 'postgres' || dbType === 'sql') { // Compat (<=0.12.2): sql
+    } else if (dbType === 'postgres' || dbType === 'sql') {
+      // Compat (<=0.12.2): sql
       this._activeAdapter = new SequelizeAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
@@ -81,14 +83,19 @@ export default class DatabaseModule extends ManagedModule {
 
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    // Introspection takes place
+    const isConduitDb = await this._activeAdapter.isConduitDb();
+    if (!isConduitDb) {
+      await this.introspectDb();
+    }
     this.updateHealth(HealthCheckStatus.SERVING);
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
     });
+
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
+
     await this._activeAdapter.recoverSchemasFromDatabase();
   }
 
@@ -108,16 +115,12 @@ export default class DatabaseModule extends ManagedModule {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName,
+            receivedSchema.collectionName
           );
           schema.ownerModule = receivedSchema.ownerModule;
-          self._activeAdapter
-            .createSchemaFromAdapter(schema)
-            .then(() => {
-            })
-            .catch(() => {
-              console.log('Failed to create/update schema');
-            });
+          self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
+            console.log('Failed to create/update schema');
+          });
         }
       } catch (err) {
         console.error('Something was wrong with the message');
@@ -171,7 +174,7 @@ export default class DatabaseModule extends ManagedModule {
       call.request.schema.name,
       JSON.parse(call.request.schema.modelSchema),
       JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName,
+      call.request.schema.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -258,7 +261,7 @@ export default class DatabaseModule extends ManagedModule {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as any).metadata.get('module-name')[0],
+        (call as any).metadata.get('module-name')[0]
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -324,7 +327,7 @@ export default class DatabaseModule extends ManagedModule {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -352,7 +355,7 @@ export default class DatabaseModule extends ManagedModule {
         select,
         sort,
         populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -432,7 +435,7 @@ export default class DatabaseModule extends ManagedModule {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations,
+        schemaAdapter.relations
       );
       const resultString = JSON.stringify(result);
 
@@ -462,7 +465,7 @@ export default class DatabaseModule extends ManagedModule {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.updateProvidedOnly
       );
       const resultString = JSON.stringify(result);
 
@@ -540,5 +543,27 @@ export default class DatabaseModule extends ManagedModule {
         message: err.message,
       });
     }
+  }
+
+  private async introspectDb() {
+    console.log(`Database is not a Conduit DB. Starting introspection...`);
+    let introspectedSchemas = await this._activeAdapter.introspectDatabase(false);
+    await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
+
+    await Promise.all(
+      introspectedSchemas.map(async (schema: ConduitSchema) => {
+        if(isEmpty(schema.fields))
+          return null;
+        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
+          JSON.stringify({
+            name: schema.name,
+            fields: schema.fields,
+            modelOptions: schema.schemaOptions,
+            ownerModule: schema.ownerModule,
+            extensions: (schema as any).extensions,
+          })
+        );
+      })
+    );
   }
 }

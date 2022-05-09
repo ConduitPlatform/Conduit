@@ -3,6 +3,7 @@ import { MultiDocQuery, Query, SchemaAdapter, SingleDocQuery } from '../../inter
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
+import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 
@@ -18,6 +19,13 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     private readonly adapter: MongooseAdapter,
   ) {
     this.originalSchema = originalSchema;
+
+    if (!isNil(schema.collectionName)) {
+      (schema as any).schemaOptions.collection = schema.collectionName;
+    }
+    else {
+      (schema as any).collectionName = schema.name //restore collectionName
+    }
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);

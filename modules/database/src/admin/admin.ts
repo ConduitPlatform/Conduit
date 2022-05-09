@@ -18,7 +18,7 @@ import { DocumentsAdmin } from './documents.admin';
 import { SchemaAdmin } from './schema.admin';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { DeclaredSchema, CustomEndpoints } from '../models';
+import { DeclaredSchema, CustomEndpoints, PendingSchemas } from '../models';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -64,6 +64,9 @@ export class AdminHandlers {
         setSchemaExtension: this.schemaAdmin.setSchemaExtension.bind(this.schemaAdmin),
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
         getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
+        introspectDatabase: this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
+        getPendingSchemas: this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
+        finalizeSchemas: this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
         // Documents
         getDocument: this.documentsAdmin.getDocument.bind(this.documentsAdmin),
         getDocuments: this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
@@ -274,6 +277,30 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('SetSchemaPermissions', 'String'),
         'setSchemaPerms',
+      ),
+      constructConduitRoute({
+        path: '/introspection',
+        action: ConduitRouteActions.POST,
+      },
+      new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
+      'introspectDatabase'
+      ),
+      constructConduitRoute({
+        path: '/introspection/schemas',
+        action: ConduitRouteActions.GET,
+      },
+      new ConduitRouteReturnDefinition('GetPendingSchemas', { schemas: [PendingSchemas.fields] }),
+      'getPendingSchemas'
+      ),
+      constructConduitRoute({
+        path: '/introspection/schemas/finalize',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
+          schemas: { type: [PendingSchemas.fields], required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
+      'finalizeSchemas'
       ),
       // Documents
       constructConduitRoute(

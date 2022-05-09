@@ -22,6 +22,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     this.excludedFields = [];
     this.relations = {};
     const self = this;
+    let primaryKeyExists = false;
+    let idField : string = '';
 
     deepdash.eachDeep(
       this.originalSchema.modelSchema,
@@ -29,6 +31,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         if (!parentValue?.hasOwnProperty(key)) {
           return true;
         }
+
 
         if (parentValue[key].hasOwnProperty('select')) {
           if (!parentValue[key].select) {
@@ -42,14 +45,29 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         ) {
           this.relations[key] = parentValue[key].model;
         }
+
+        if(parentValue[key].hasOwnProperty('primaryKey') && parentValue[key].primaryKey) {
+          primaryKeyExists = true;
+          idField = key;
+        }
+
       },
     );
-
-    schema.modelSchema._id = {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-    };
+    if (!primaryKeyExists) {
+      schema.modelSchema._id = {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      };
+    }
+    else {
+      schema.modelSchema._id = {
+        type: DataTypes.VIRTUAL,
+        get() {
+          return `${this[idField]}`;
+        }
+      }
+    }
 
     this.model = sequelize.define(schema.name, schema.modelSchema as any, {
       ...schema.modelOptions,

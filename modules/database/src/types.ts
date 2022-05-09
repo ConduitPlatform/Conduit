@@ -4,7 +4,7 @@ type Schema = {
   name: string;
   modelSchema: string;
   modelOptions: string;
-  collectionName: string;
+  collectionName?: string;
 };
 
 type SchemaExtension = {
