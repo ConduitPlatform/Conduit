@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/email /app/modules/email
 
-RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
+RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
 
 WORKDIR /app/modules/email
 
