@@ -66,7 +66,7 @@ export class EmailProvider {
   
       };
       this._transport = new SendgridProvider(sgSettings);
-    } 
+    }
     else {
       this._transportName = undefined;
       this._transport = undefined;

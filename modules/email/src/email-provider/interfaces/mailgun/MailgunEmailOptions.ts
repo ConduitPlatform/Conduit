@@ -1,6 +1,6 @@
 import Mail from "nodemailer/lib/mailer";
 
 export interface MailgunEmailOptions extends Mail.Options{
-    template?:string; 
+    template?:string;
     [key:string] : any;
 }

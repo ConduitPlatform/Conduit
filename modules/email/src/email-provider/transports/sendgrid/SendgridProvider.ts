@@ -90,7 +90,7 @@ export class SendgridProvider extends EmailProviderClass {
         return info;
     }
     
-    async listTemplates():Promise<Template[]>{ 
+    async listTemplates():Promise<Template[]>{
         const request = {
             method:'GET',
             url: '/v3/templates',

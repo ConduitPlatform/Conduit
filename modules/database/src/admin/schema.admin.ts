@@ -477,7 +477,7 @@ export class SchemaAdmin {
     const introspectedSchemas = await this.database.introspectDatabase(true);
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if(isEmpty(schema.fields)) 
+        if(isEmpty(schema.fields))
           return null;
         await this.database.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({

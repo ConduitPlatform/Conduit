@@ -52,7 +52,7 @@ export class MandrillProvider extends EmailProviderClass{
             key: this.apiKey,
             subject: data.subject,
             code: data.body,
-            publish:true,          
+            publish:true,
             name: data.name,
 
         },resolve));
