@@ -18,18 +18,17 @@ export class HttpServer {
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
 
-  get initialized() {
-    return this._initialized;
-  }
+  get initialized() { return this._initialized; }
 
   constructor(
     private readonly port: number | string,
-    private readonly commons: ConduitCommons
+    private readonly commons: ConduitCommons,
   ) {}
 
   initialize() {
     this.router = this.commons.getRouter();
     this.registerGlobalMiddleware();
+    this.registerRoutes();
     this._initialized = true;
   }
 
@@ -42,7 +41,10 @@ export class HttpServer {
   private registerGlobalMiddleware() {
     this.router.registerGlobalMiddleware('cors', cors());
 
-    this.router.registerGlobalMiddleware('jsonParser', express.json({ limit: '50mb' }));
+    this.router.registerGlobalMiddleware(
+      'jsonParser',
+      express.json({ limit: '50mb' })
+    );
     this.router.registerGlobalMiddleware(
       'urlParser',
       express.urlencoded({ limit: '50mb', extended: false })
@@ -63,12 +65,48 @@ export class HttpServer {
     );
   }
 
+  private registerRoutes() {
+    this.router.registerRoute(
+      new ConduitRoute(
+        {
+          path: '/',
+          action: Actions.GET,
+        },
+        new ReturnDefinition('HelloResult', 'String'),
+        async () => {
+          return 'Hello there!';
+        }
+      )
+    );
+
+    this.router.registerRoute(
+      new ConduitRoute(
+        {
+          path: '/health',
+          action: Actions.GET,
+          queryParams: {
+            shouldCheck: 'String',
+          },
+        },
+        new ReturnDefinition('HealthResult', 'String'),
+        () => {
+          return new Promise((resolve) => {
+            if (Core.getInstance().initialized) {
+              resolve('Conduit is online!');
+            } else {
+              throw new Error('Conduit is not active yet!');
+            }
+          });
+        }
+      )
+    );
+  }
+
   onError(error: any) {
     if (error.syscall !== 'listen') {
       throw error;
     }
-    const bind =
-      typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
+    const bind = typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
@@ -86,8 +124,7 @@ export class HttpServer {
 
   onListening() {
     const address = this.server.address();
-    const bind =
-      typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
+    const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
     console.log('Listening on ' + bind);
   }
 }
