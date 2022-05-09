@@ -40,6 +40,18 @@ export default class Chat extends ManagedModule {
     this.database = this.grpcSdk.databaseProvider!;
   }
 
+  async onRegister() {
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', _ => {
+      this.onConfig()
+        .then(() => {
+          console.log('Updated chat configuration');
+        })
+        .catch(() => {
+          console.log('Failed to update chat config');
+        });
+    });
+  }
+
   async onConfig() {
     const config = await ConfigController.getInstance().config;
     if (!this.isRunning) {
