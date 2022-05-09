@@ -14,23 +14,6 @@ export class InvitationRoutes {
   constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {
   }
 
-  async registerTemplates() {
-    this.grpcSdk.config
-      .get('email')
-      .then((emailConfig: any) => {
-        const promises = Object.values(templates).map((template) => {
-          return this.grpcSdk.emailProvider!.registerTemplate(template);
-        });
-        return Promise.all(promises);
-      })
-      .then(() => {
-        console.log('Email templates registered');
-      })
-      .catch((e: Error) => {
-        console.error('Internal error while registering email templates');
-      });
-  }
-
   declareRoutes() {
     this.routingManager.route(
       {

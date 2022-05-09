@@ -62,6 +62,8 @@ export default class Chat extends ManagedModule {
     }
     if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
       await this.grpcSdk.waitForExistence('email');
+    if (config.explicit_room_joins.send_email)
+      await this.userRouter.registerTemplates();
     if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
       await this.grpcSdk.waitForExistence('pushNotifications');
     await this.userRouter.registerRoutes();
@@ -112,7 +114,7 @@ export default class Chat extends ManagedModule {
       JSON.stringify({
         name: (room as models.ChatRoom).name,
         participants: (room as models.ChatRoom).participants,
-      })
+      }),
     );
     callback(null, {
       result: JSON.stringify({
@@ -199,7 +201,7 @@ export default class Chat extends ManagedModule {
         _id: room._id,
         name: room.name,
         participants: room.participants,
-      })
+      }),
     );
     callback(null, {
       result: JSON.stringify({
