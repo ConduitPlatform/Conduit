@@ -82,10 +82,9 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async onServerStart() {
+    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
     const isConduitDb = await this._activeAdapter.isConduitDb();
-    if (isConduitDb) {
-      await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    } else {
+    if (!isConduitDb) {
       await this.introspectDb();
     }
     this.updateHealth(HealthCheckStatus.SERVING);
@@ -549,7 +548,6 @@ export default class DatabaseModule extends ManagedModule {
   private async introspectDb() {
     console.log(`Database is not a Conduit DB. Starting introspection...`);
     let introspectedSchemas = await this._activeAdapter.introspectDatabase(false);
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
     await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
 
     await Promise.all(

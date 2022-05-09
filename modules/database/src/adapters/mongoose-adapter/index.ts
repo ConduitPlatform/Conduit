@@ -85,9 +85,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async isConduitDb(): Promise<boolean> {
-    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
-      (c) => c.name === '_declaredschemas'
-    );
+    return !!(await this.mongoose.connection.db.collection('_declaredschemas').findOne({
+      ownerModule : 'core',
+    }));
   }
 
   async introspectDatabase(isConduitDb: boolean = true): Promise<ConduitSchema[]> {

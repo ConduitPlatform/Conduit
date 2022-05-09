@@ -36,11 +36,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
   async isConduitDb() {
     return this.sequelize
-      .query('SELECT * FROM "_DeclaredSchema" LIMIT 1')
-      .then(() => {
-        return true;
-      })
+      .query(`SELECT COUNT(*) FROM "_DeclaredSchema" WHERE "ownerModule"='core'`)
+      .then((res) => parseInt((res as any)[0][0].count) > 0)
       .catch((e) => {
+        console.log(e);
         return false;
       });
   }
