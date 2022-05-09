@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/push-notifications /app/modules/push-notifications
 
-RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
+RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
 
 WORKDIR /app/modules/push-notifications
 

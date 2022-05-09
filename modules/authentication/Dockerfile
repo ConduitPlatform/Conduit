@@ -4,13 +4,11 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authentication
 
-RUN apk update
-
-RUN apk add --no-cache --virtual .gyp python2 make g++
-
-RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
-
-RUN apk del .gyp
+RUN apk update && \
+    apk add --no-cache --virtual .gyp python2 make g++ && \
+    yarn install --production --pure-lockfile --non-interactive && \
+    yarn cache clean && \
+    apk del .gyp
 
 WORKDIR /app/modules/authentication
 
