@@ -408,10 +408,6 @@ export class GraphQLController extends ConduitRouter {
     };
   }
 
-  willSendResponse(context: any) {
-
-  }
-
   private addConduitRoute(route: ConduitRoute) {
     this.generateType(route.returnTypeName, route.returnTypeFields);
     let actionName = this.generateAction(route.input, route.returnTypeName);

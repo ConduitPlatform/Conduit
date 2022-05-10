@@ -1,5 +1,5 @@
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { MultiDocQuery, SchemaAdapter } from '../interfaces';
+import { SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
