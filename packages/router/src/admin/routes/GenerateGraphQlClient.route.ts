@@ -13,6 +13,7 @@ import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import url from 'url';
 import { status } from '@grpc/grpc-js';
+import fs from 'fs';
 
 export function generateGraphQlClient(router: ConduitDefaultRouter) {
   return new ConduitRoute(
@@ -27,7 +28,6 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
       response: TYPE.JSON,
     }),
     async (request: ConduitRouteParameters) => {
-      let response: any[] = [];
       const outputPath = path.resolve(__dirname, 'dist/generate/graphql.d.ts');
       try {
         await generate({
@@ -45,11 +45,13 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
             },
           },
         });
-        response.push({
-          generated: 'ok',
-          file: url.pathToFileURL(outputPath).href,
-        });
-        return { result: response };
+        const file = fs.readFileSync(outputPath).toString('base64');
+        return {
+          result: {
+            generated: 'ok',
+            file,
+          }
+        };
       } catch (error) {
         throw new ConduitError((error as Error).name, status.INTERNAL, (error as Error).message);
       }
