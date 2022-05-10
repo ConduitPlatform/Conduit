@@ -7,6 +7,17 @@ export type RouterRequestHandler = (call: ParsedRouterRequest) => Promise<Unpars
 export type SocketRequestHandler = (call: ParsedSocketRequest) => Promise<UnparsedSocketResponse>;
 export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
 
+export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
+  return {
+    request: {
+      params: call.request,
+      path: '',
+      headers: {},
+      context: {},
+    },
+  };
+}
+
 function generateLog(routerRequest: boolean, requestReceive: number, call: any, status?: Status) {
   console.log(
     routerRequest ? 'Request: ' : 'Socket: ' +

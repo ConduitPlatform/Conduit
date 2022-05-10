@@ -29,6 +29,12 @@ export class AppConfig implements IAppConfig {
     this.validateConfig();
   }
 
+  addModulesConfigSchema(moduleConfigSchema: any) {
+    this.completeConfigSchema = { ...this.completeConfigSchema, ...moduleConfigSchema };
+    this.convictConfig = convict(this.completeConfigSchema);
+    this.validateConfig();
+  }
+
   private validateConfig() {
     // todo maybe change  back to strict but i think strict might not be possible
     this.convictConfig.validate({ allowed: 'warn' });

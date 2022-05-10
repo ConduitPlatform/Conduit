@@ -1,6 +1,9 @@
 import {
+  ConduitRoute,
   ConduitRouteActions,
-  RequestHandlers, RouteBuilder,
+  ConduitRouteOptions,
+  ConduitRouteReturnDefinition,
+  constructRoute, RequestHandlers, RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint } from '../../interfaces';

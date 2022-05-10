@@ -1,8 +1,10 @@
 import { FileHandlers } from '../handlers/file';
 import { File } from '../models';
 import ConduitGrpcSdk, {
+  ConduitRoute,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  constructRoute,
   GrpcServer,
   RoutingManager,
   TYPE,
