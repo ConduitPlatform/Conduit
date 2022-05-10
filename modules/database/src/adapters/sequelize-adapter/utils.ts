@@ -1,4 +1,4 @@
-import { Op, Sequelize } from 'sequelize';
+import { Op } from 'sequelize';
 import _, { isArray, isObject, isString } from 'lodash';
 import { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';

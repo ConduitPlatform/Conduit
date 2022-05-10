@@ -21,15 +21,5 @@ export abstract class EmailProviderClass {
     sendEmail(mailOptions: Mail.Options){
         return this._transport?.sendMail(mailOptions);
     }
-    
-    sendEmailDirect(mailOptions: Mail.Options){
-        
-        const transport = this._transport;
-        if (!transport) {
-            throw new Error('Email  transport not initialized!');
-        }
-        return this._transport?.sendMail(mailOptions);
-        
-    }
 
 }
