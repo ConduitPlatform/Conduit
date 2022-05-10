@@ -1,7 +1,7 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { HealthCheckStatus, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
+import { ConduitCommons, IConfigManager, RegisteredModule } from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
@@ -10,6 +10,7 @@ import path from 'path';
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
   servingModules: Map<string, string> = new Map<string, string>();
+  registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
   moduleHealth: { [field: string]: { [field: string]: { timestamp: number, status: HealthCheckStatus } } } = {};
   grpcSdk: ConduitGrpcSdk;
   moduleRegister: EventEmitter;
@@ -291,8 +292,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   moduleExists(call: any, callback: any) {
-    if (this.servingModules.has(call.request.moduleName)) {
-      callback(null, this.servingModules.get(call.request.moduleName));
+    if (this.registeredModules.has(call.request.moduleName)) {
+      callback(null, this.registeredModules.get(call.request.moduleName)!.address);
     } else {
       callback({
         code: status.NOT_FOUND,
@@ -325,7 +326,7 @@ export default class ConfigManager implements IConfigManager {
       const unhealthyInstances = Object.keys(module).filter(
         (url) => (module[url].timestamp + 5000 < Date.now()) || module[url].status !== HealthCheckStatus.SERVING
       );
-      if (unhealthyInstances && unhealthyInstances.length > 0) {
+      if (unhealthyInstances?.length > 0) {
         removedCount += unhealthyInstances.length;
         unhealthyInstances.forEach((url) => {
           delete module[url];
@@ -336,10 +337,11 @@ export default class ConfigManager implements IConfigManager {
       const unhealthyModules = Object.keys(this.moduleHealth).filter(
         (moduleName) => Object.keys(this.moduleHealth[moduleName]).length === 0,
       );
-      if (unhealthyModules && unhealthyModules.length > 0) {
+      if (unhealthyModules?.length > 0) {
         unhealthyModules.forEach((moduleName) => {
           delete this.moduleHealth[moduleName];
           this.servingModules.delete(moduleName);
+          this.registeredModules.delete(moduleName);
         });
         this.moduleRegister.emit('serving-modules-update');
       }
@@ -350,9 +352,9 @@ export default class ConfigManager implements IConfigManager {
     if (!this.moduleHealth[moduleName]) {
       this.moduleHealth[moduleName] = {};
     }
-    if (moduleStatus === HealthCheckStatus.SERVING && !this.servingModules.has(moduleName)) {
-      this.servingModules.set(moduleName, moduleAddress);
-    }
+    const module = this.registeredModules.get(moduleName)!;
+    module.serving = moduleStatus === HealthCheckStatus.SERVING;
+    this.registeredModules.set(moduleName, module);
     this.moduleHealth[moduleName][moduleAddress] = {
       timestamp: Date.now(),
       status: moduleStatus,
@@ -360,12 +362,12 @@ export default class ConfigManager implements IConfigManager {
   }
 
   moduleList(call: any, callback: any) {
-    if (this.servingModules.size !== 0) {
+    if (this.registeredModules.size !== 0) {
       let modules: any[] = [];
-      this.servingModules.forEach((value: string, key: string) => {
+      this.registeredModules.forEach((value: RegisteredModule, key: string) => {
         modules.push({
           moduleName: key,
-          url: value,
+          url: value.address,
         });
       });
       callback(null, { modules });
@@ -381,10 +383,10 @@ export default class ConfigManager implements IConfigManager {
     const self = this;
     this.moduleRegister.on('serving-modules-update', () => {
       let modules: any[] = [];
-      self.servingModules.forEach((value: string, key: string) => {
+      self.registeredModules.forEach((value: RegisteredModule, key: string) => {
         modules.push({
           moduleName: key,
-          url: value,
+          url: value.address,
         });
       });
       call.write({ modules });
@@ -393,10 +395,18 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerModule(call: any, callback: any) {
+    if (call.request.status < HealthCheckStatus.UNKNOWN || call.request.status > HealthCheckStatus.NOT_SERVING) {
+      callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'Invalid module health status code value',
+      });
+      return;
+    }
     await this._registerModule(
       call.request.moduleName,
       call.request.url,
       call.getPeer(),
+      (call.request.healthStatus as HealthCheckStatus),
       true,
     );
     this.updateState(call.request.moduleName, call.request.url, call.getPeer());
@@ -425,15 +435,19 @@ export default class ConfigManager implements IConfigManager {
   getModuleUrlByName(
     name: string,
   ): string | undefined {
-    return this.servingModules.get(name);
+    return this.registeredModules.get(name)?.address;
   }
 
   private async _registerModule(
     moduleName: string,
     moduleUrl: string,
     instancePeer: string,
+    healthStatus?: HealthCheckStatus,
     fromGrpc = false,
   ) {
+    if (fromGrpc && healthStatus === undefined) {
+      throw new Error('No module health status provided');
+    }
     let dbInit = false;
     if (!fromGrpc) {
       if (!this.grpcSdk.getModule(moduleName)) {
@@ -442,19 +456,17 @@ export default class ConfigManager implements IConfigManager {
       const healthClient = await this.grpcSdk.getHealthClient(moduleName)!;
       const healthResponse = await healthClient.check({ service: '' })
         .catch(() => {
-          throw new Error('Failed to register unhealthy module');
+          throw new Error('Failed to register unresponsive module');
         });
-      const healthStatus = (healthResponse.status as unknown as HealthCheckStatus);
-      if (healthStatus  !== HealthCheckStatus.SERVING) {
-        if (moduleName !== 'database' || healthStatus !== HealthCheckStatus.UNKNOWN) {
-          throw new Error('Failed to register unhealthy module');
-        }
-      }
+      healthStatus = (healthResponse.status as unknown as HealthCheckStatus);
     }
-    if (moduleName === 'database' && this.servingModules.has('database')) {
+    if (moduleName === 'database' && this.registeredModules.has('database')) {
       dbInit = true;
     }
-    this.servingModules.set(moduleName, moduleUrl);
+    this.registeredModules.set(moduleName, {
+      address: moduleUrl,
+      serving: healthStatus === HealthCheckStatus.SERVING,
+    });
     if (moduleName === 'database' && !dbInit) {
       await this.grpcSdk.refreshModules(true);
       this.databaseCallback();
@@ -464,8 +476,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   private registerAdminRoutes() {
-    this.sdk.getAdmin().registerRoute(adminRoutes.getModulesRoute(this.servingModules));
-    this.sdk.getAdmin().registerRoute(adminRoutes.getGetConfigRoute(this.grpcSdk, this.servingModules));
-    this.sdk.getAdmin().registerRoute(adminRoutes.getUpdateConfigRoute(this.grpcSdk, this.sdk, this.servingModules));
+    this.sdk.getAdmin().registerRoute(adminRoutes.getModulesRoute(this.registeredModules));
+    this.sdk.getAdmin().registerRoute(adminRoutes.getGetConfigRoute(this.grpcSdk, this.registeredModules));
+    this.sdk.getAdmin().registerRoute(adminRoutes.getUpdateConfigRoute(this.grpcSdk, this.sdk, this.registeredModules));
   }
 }

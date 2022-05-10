@@ -27,6 +27,7 @@ import { createSigner } from 'fast-jwt';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
+  private readonly _watchModules: boolean;
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
@@ -51,13 +52,14 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
+  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string, watchModules = true) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.serverUrl = serverUrl;
+    this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
     const grpcKey = process.env.GRPC_KEY;
     if (grpcKey) {
@@ -100,7 +102,9 @@ export default class ConduitGrpcSdk {
     (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
     (this._router as any)  = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
-    this.watchModules();
+    if (this._watchModules) {
+      this.watchModules();
+    }
     this._initialized = true;
   }
 

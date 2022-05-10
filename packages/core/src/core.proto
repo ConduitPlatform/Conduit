@@ -114,7 +114,7 @@ message ModuleByNameResponse {
 message RegisterModuleRequest {
     string moduleName = 1;
     string url = 2;
-    optional string newConfigSchema = 3;
+    int32 healthStatus = 3; // [0, 1, 2]
 }
 
 message RegisterModuleResponse {

@@ -34,7 +34,7 @@ export class ModuleManager {
       const url = (process.env.REGISTER_NAME === 'true'
         ? `${self.module.name}:`
         : `${self.serviceAddress}:`) + self.module.port;
-      await self.grpcSdk.config.registerModule(self.module.name, url);
+      await self.grpcSdk.config.registerModule(self.module.name, url, this.module.healthState);
     } catch (err) {
       console.log('Failed to initialize server');
       console.error(err);
