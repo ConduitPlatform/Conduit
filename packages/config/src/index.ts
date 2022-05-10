@@ -61,12 +61,12 @@ export default class ConfigManager implements IConfigManager {
           for (const module of state.modules) {
             try {
               await this._registerModule(module.name, module.url, module.instance);
+              success.push({
+                name: module.name,
+                url: module.url,
+                instance: module.instance,
+              });
             } catch {}
-            success.push({
-              name: module.name,
-              url: module.url,
-              instance: module.instance,
-            });
           }
           if (state.modules.length > success.length) {
             state.modules = success;
@@ -100,6 +100,9 @@ export default class ConfigManager implements IConfigManager {
       .then((r) => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
+        state.modules = state.modules.filter((module: { name: string, instance: string, url: string }) => {
+          return module.url !== url;
+        });
         state.modules.push({
           name,
           instance,
