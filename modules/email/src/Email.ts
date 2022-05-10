@@ -5,7 +5,7 @@ import {
   GrpcRequest,
   GrpcResponse,
 } from '@conduitplatform/grpc-sdk';
-import path from "path";
+import path from 'path';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { EmailService } from './services/email.service';
@@ -13,6 +13,7 @@ import { EmailProvider } from './email-provider';
 import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { Config } from './interfaces/Config';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;
@@ -69,7 +70,7 @@ export default class Email extends ManagedModule {
     return Promise.all(promises);
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     if (
       isNil(config.active) ||
       isNil(config.transport) ||
@@ -98,7 +99,7 @@ export default class Email extends ManagedModule {
     );
   }
 
-  private async initEmailProvider(newConfig?: any) {
+  private async initEmailProvider(newConfig?: Config) {
     let emailConfig = !isNil(newConfig)
       ? newConfig
       : await this.grpcSdk.config.get('email');
@@ -135,7 +136,7 @@ export default class Email extends ManagedModule {
       replyTo: call.request.params.replyTo,
       attachments: call.request.params.attachments,
     };
-    let emailConfig: any = await this.grpcSdk.config
+    let emailConfig: Config = await this.grpcSdk.config
       .get('email')
       .catch(() => console.log('failed to get sending domain'));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;

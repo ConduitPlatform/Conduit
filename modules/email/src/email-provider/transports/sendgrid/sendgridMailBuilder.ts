@@ -11,7 +11,7 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions> 
 
   setTemplate(template: TemplateOptions): SendgridMailBuilder {
     if (!this._mailOptions.hasOwnProperty('dynamicTemplateData')) {
-      this._mailOptions.dynamicTemplateData = {} as any;
+      this._mailOptions.dynamicTemplateData = {};
     }
     template.variables.forEach((element: Var) => {
       this._mailOptions.dynamicTemplateData[element.name] = element.content;

@@ -19,6 +19,7 @@ import { isNil } from 'lodash';
 import { getHBValues } from '../parse-test/getHBValues';
 import { EmailService } from '../services/email.service';
 import { EmailTemplate } from '../models';
+import { Config } from '../interfaces/Config';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -34,7 +35,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getTemplates: this.getTemplates.bind(this),
@@ -53,23 +54,23 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private static getRegisteredRoutes(): any[] {
     return [
       constructConduitRoute(
         {
           path: '/templates',
           action: ConduitRouteActions.GET,
           queryParams: {
-             skip: ConduitNumber.Optional,
-             limit: ConduitNumber.Optional,
-             search: ConduitString.Optional,
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            search: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getTemplates'
+        'getTemplates',
       ),
       constructConduitRoute(
         {
@@ -87,7 +88,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('CreateTemplate', {
           template: EmailTemplate.getInstance().fields,
         }),
-        'createTemplate'
+        'createTemplate',
       ),
       constructConduitRoute(
         {
@@ -105,7 +106,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('PatchTemplate', {
           template: EmailTemplate.getInstance().fields,
         }),
-        'patchTemplate'
+        'patchTemplate',
       ),
       constructConduitRoute(
         {
@@ -118,7 +119,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('DeleteTemplates', {
           template: [EmailTemplate.getInstance().fields],
         }),
-        'deleteTemplates'
+        'deleteTemplates',
       ),
       constructConduitRoute(
         {
@@ -131,7 +132,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('DeleteTemplate', {
           deleted: ConduitJson.Required, // DeleteEmailTemplate
         }),
-        'deleteTemplate'
+        'deleteTemplate',
       ),
       constructConduitRoute(
         {
@@ -144,7 +145,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('UploadTemplate', {
           created: ConduitJson.Required, // Template
         }),
-        'uploadTemplate'
+        'uploadTemplate',
       ),
       constructConduitRoute(
         {
@@ -155,7 +156,7 @@ export class AdminHandlers {
           templateDocuments: [EmailTemplate.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getExternalTemplates'
+        'getExternalTemplates',
       ),
       constructConduitRoute(
         {
@@ -166,7 +167,7 @@ export class AdminHandlers {
           updated: [EmailTemplate.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'syncExternalTemplates'
+        'syncExternalTemplates',
       ),
       constructConduitRoute(
         {
@@ -184,7 +185,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('SendEmail', {
           message: ConduitString.Required,
         }),
-        'sendEmail'
+        'sendEmail',
       ),
     ];
   }
@@ -192,13 +193,12 @@ export class AdminHandlers {
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query:any = {};
+    let query: any = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
-      if (call.request.params.search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id : call.request.params.search }
-      }
-      else {
+      if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: call.request.params.search };
+      } else {
         identifier = escapeStringRegexp(call.request.params.search);
         query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
       }
@@ -214,7 +214,9 @@ export class AdminHandlers {
     const [templateDocuments, totalCount] = await Promise.all([
       templateDocumentsPromise,
       totalCountPromise,
-    ]).catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+    ]).catch((e: Error) => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
 
     return { result: { templateDocuments, totalCount } };
   }
@@ -228,7 +230,7 @@ export class AdminHandlers {
 
     let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
     variables = variables.filter(
-      (value: any, index: any) => variables.indexOf(value) === index
+      (value, index) => variables.indexOf(value) === index,
     );
 
     if (externalManaged) {
@@ -239,7 +241,7 @@ export class AdminHandlers {
             name,
             body,
             subject,
-          }) as any
+          }) as any,
         );
         if (err) {
           throw new GrpcError(status.INTERNAL, err.message);
@@ -259,14 +261,16 @@ export class AdminHandlers {
         sender,
         externalId,
       })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return { template: newTemplate };
   }
 
   async patchTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params.id })
+      .findOne({ _id: call.request.params.id });
     if (isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
@@ -279,21 +283,23 @@ export class AdminHandlers {
     });
 
     templateDocument.variables = Object.keys(getHBValues(call.request.params.body)).concat(
-      Object.keys(getHBValues(call.request.params.subject))
+      Object.keys(getHBValues(call.request.params.subject)),
     );
     if (templateDocument.variables) {
       templateDocument.variables = templateDocument.variables.filter(
-        (value: any, index: any) => templateDocument.variables!.indexOf(value) === index
+        (value, index) => templateDocument.variables!.indexOf(value) === index,
       );
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
       .findByIdAndUpdate(call.request.params.id, templateDocument)
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     if (templateDocument.externalManaged) {
       const template = await this.emailService.getExternalTemplate(
-        updatedTemplate!.externalId!
+        updatedTemplate!.externalId!,
       );
       let versionId = undefined;
       if (!isNil(template?.versions[0].id)) {
@@ -305,7 +311,7 @@ export class AdminHandlers {
         body: updatedTemplate!.body,
         versionId: versionId,
       };
-      await this.emailService.updateTemplate(data)?.catch((e: any) => {
+      await this.emailService.updateTemplate(data)?.catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
@@ -315,18 +321,22 @@ export class AdminHandlers {
 
   async deleteTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params.id })
+      .findOne({ _id: call.request.params.id });
     if (!isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
 
     await EmailTemplate.getInstance()
       .deleteOne({ _id: call.request.params.id })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     let deleted;
-    if (templateDocument!.externalManaged){
+    if (templateDocument!.externalManaged) {
       deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId!)
-        ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
+        ?.catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
     }
 
     return { deleted };
@@ -338,28 +348,32 @@ export class AdminHandlers {
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
     }
     let totalCount = ids.length;
-    const templateDocuments = await EmailTemplate.getInstance().findMany({ _id: { $in: ids } })
+    const templateDocuments = await EmailTemplate.getInstance().findMany({ _id: { $in: ids } });
     const foundDocuments = templateDocuments.length;
     if (foundDocuments !== totalCount) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids array contains invalid ids');
     }
 
     for (let template of templateDocuments) {
-      if( template.externalManaged){
+      if (template.externalManaged) {
         await this.emailService.deleteExternalTemplate(template.externalId!)
-          ?.catch((e:any) => { throw new GrpcError(status.INTERNAL, e.message); });
+          ?.catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
       }
     }
     const deletedDocuments = await EmailTemplate.getInstance()
       .deleteMany({ _id: { $in: ids } })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     return { deletedDocuments };
   }
 
   async uploadTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params._id })
+      .findOne({ _id: call.request.params._id });
     if (isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
@@ -367,24 +381,28 @@ export class AdminHandlers {
     const template = {
       name: templateDocument.name,
       body: templateDocument.body,
-    }
+    };
     const created = await (this.emailService.createExternalTemplate(template) as any)
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     if (templateDocument) {
       templateDocument['externalManaged'] = true;
-      templateDocument['externalId'] =  created.id;
+      templateDocument['externalId'] = created.id;
       await EmailTemplate.getInstance()
-        .findByIdAndUpdate(call.request.params._id,templateDocument)
-        .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+        .findByIdAndUpdate(call.request.params._id, templateDocument)
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
     }
 
     return { created };
   }
 
-  async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse>  {
+  async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const [err, externalTemplates] = await to(
-      this.emailService.getExternalTemplates() as any
+      this.emailService.getExternalTemplates() as any,
     );
     if (!isNil(err)) {
       throw new GrpcError(status.INTERNAL, err.message);
@@ -409,13 +427,13 @@ export class AdminHandlers {
 
   async syncExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let errorMessage: string | null = null;
-    const externalTemplates:any = await this.emailService.getExternalTemplates();
+    const externalTemplates: any = await this.emailService.getExternalTemplates();
 
     let updated = [];
     let totalCount = 0;
     for (let element of externalTemplates) {
       const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ externalId: element.id })
+        .findOne({ externalId: element.id });
 
       if (isNil(templateDocument)) {
         throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
@@ -427,10 +445,10 @@ export class AdminHandlers {
         externalId: element.id,
         variables: element.versions[0].variables,
         body: element.versions[0].body,
-      }
+      };
       const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(templateDocument._id,synchronized)
-      .catch((e: any) => (errorMessage = e.message));
+        .findByIdAndUpdate(templateDocument._id, synchronized)
+        .catch((e: Error) => (errorMessage = e.message));
       if (!isNil(errorMessage)) {
         throw new GrpcError(status.INTERNAL, errorMessage);
       }
@@ -440,7 +458,7 @@ export class AdminHandlers {
     totalCount = updated.length;
     return { updated, totalCount };
   }
-  
+
   async sendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { templateName, body, subject, email, variables, sender } = call.request.params;
     if (!templateName && (!body || !subject)) {
@@ -451,7 +469,7 @@ export class AdminHandlers {
     }
 
     if (sender.indexOf('@') === -1) {
-      let emailConfig: any = await this.grpcSdk.config
+      let emailConfig: Config = await this.grpcSdk.config
         .get('email')
         .catch(() => console.log('failed to get sending domain'));
       sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
@@ -465,7 +483,7 @@ export class AdminHandlers {
         variables,
         sender: sender ? sender : 'conduit',
       })
-      .catch((e: any) => {
+      .catch((e: Error) => {
         console.log(e);
         throw new GrpcError(status.INTERNAL, e.message);
       });

@@ -5,6 +5,7 @@ import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
 import { EmailProviderClass } from '../../models/EmailProviderClass';
 import { NodemailerBuilder } from '../nodemailer/nodemailerBuilder';
+import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
 
 export class SmtpProvider extends EmailProviderClass {
 
@@ -28,11 +29,11 @@ export class SmtpProvider extends EmailProviderClass {
     return new NodemailerBuilder();
   }
 
-  updateTemplate(data: UpdateEmailTemplate) {
-    return 5 as any;
+  updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
+    throw new Error('Method not implemented.');
   }
 
-  async deleteTemplate(id: string) {
-    return 5 as any;
+  async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
+    throw new Error('Method not implemented.');
   }
 }
