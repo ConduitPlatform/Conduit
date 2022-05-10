@@ -44,24 +44,18 @@ export class EmailProvider {
         },
       });
 
-
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
       const mandrillSettings: MandrillConfig = {
         auth: {
           apiKey: transportSettings.mandrill.apiKey,
         },
-
       };
-
       this._transport = new MandrillProvider(mandrillSettings);
     } else if (transport === 'sendgrid') {
-
       this._transportName = 'sendgrid';
-
       const sgSettings: SendGridConfig = {
         apiKey: transportSettings['sendgrid'].apiKey,
-
       };
       this._transport = new SendgridProvider(sgSettings);
     } else {
@@ -75,7 +69,6 @@ export class EmailProvider {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
-
     return this._transport.getBuilder();
   }
 
@@ -85,5 +78,4 @@ export class EmailProvider {
     }
     return this._transport.sendEmail(email.getMailObject());
   }
-
 }

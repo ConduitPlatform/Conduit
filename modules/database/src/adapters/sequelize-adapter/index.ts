@@ -239,9 +239,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       const self = this;
       let relations: any = {};
       for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] = self.models![
-          this.models[schemaName].relations[key]
-          ];
+        relations[this.models[schemaName].relations[key]] = self.models![this.models[schemaName].relations[key]];
       }
       return { model: this.models[schemaName], relations };
     }

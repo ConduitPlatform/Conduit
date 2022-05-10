@@ -6,7 +6,6 @@ export class MailgunMailBuilder extends EmailBuilderClass<MailgunEmailOptions> {
 
   constructor() {
     super();
-
   }
 
   setTemplate(template: TemplateOptions): MailgunMailBuilder {
