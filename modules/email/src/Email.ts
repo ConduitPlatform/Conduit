@@ -2,6 +2,7 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  HealthCheckStatus,
   GrpcRequest,
   GrpcResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -54,10 +55,10 @@ export default class Email extends ManagedModule {
 
   constructor() {
     super('email');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
   }
 
@@ -81,17 +82,23 @@ export default class Email extends ManagedModule {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await this.initEmailProvider();
-      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.adminRouter.setEmailService(this.emailService);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.initEmailProvider(ConfigController.getInstance().config);
-      this.emailService.updateProvider(this.emailProvider);
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        await this.initEmailProvider();
+        this.emailService = new EmailService(this.emailProvider);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.adminRouter.setEmailService(this.emailService);
+        this.isRunning = true;
+      } else {
+        await this.initEmailProvider(ConfigController.getInstance().config);
+        this.emailService.updateProvider(this.emailProvider);
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
+    // TODO: Replace this:
     this.grpcSdk.bus?.publish(
       'email:status:onConfig',
       this.isRunning ? 'active' : 'inactive',

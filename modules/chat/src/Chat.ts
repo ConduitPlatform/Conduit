@@ -2,6 +2,7 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema from './config';
@@ -33,6 +34,7 @@ export default class Chat extends ManagedModule {
 
   constructor() {
     super('chat');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
@@ -42,17 +44,22 @@ export default class Chat extends ManagedModule {
 
   async onConfig() {
     const config = await ConfigController.getInstance().config;
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
+    if (!config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
+        this.isRunning = true;
+      }
+      if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
+        await this.grpcSdk.waitForExistence('email');
+      if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
+        await this.grpcSdk.waitForExistence('pushNotifications');
+      await this.userRouter.registerRoutes();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
-    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
-      await this.grpcSdk.waitForExistence('email');
-    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
-      await this.grpcSdk.waitForExistence('pushNotifications');
-    await this.userRouter.registerRoutes();
   }
 
   protected registerSchemas() {

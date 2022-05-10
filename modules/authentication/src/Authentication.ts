@@ -2,6 +2,7 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
 import path from 'path';
@@ -38,6 +39,7 @@ export default class Authentication extends ManagedModule {
 
   constructor() {
     super('authentication');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
@@ -68,13 +70,18 @@ export default class Authentication extends ManagedModule {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
+        this.isRunning = true;
+      }
+      await this.userRouter.registerRoutes();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
-    await this.userRouter.registerRoutes();
   }
 
   // gRPC Service

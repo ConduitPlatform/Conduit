@@ -9,12 +9,7 @@ import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTem
 export class EmailService {
   private database: any;
 
-  constructor(private emailer: EmailProvider, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    this.grpcSdk.waitForExistence('database').then((r) => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
-  }
+  constructor(private emailer: EmailProvider) {}
 
   updateProvider(emailer: EmailProvider) {
     this.emailer = emailer;

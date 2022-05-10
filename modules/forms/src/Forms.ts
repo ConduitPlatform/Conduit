@@ -1,4 +1,4 @@
-import { DatabaseProvider, ManagedModule } from '@conduitplatform/grpc-sdk';
+import {DatabaseProvider, ManagedModule, HealthCheckStatus, ConfigController} from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin/admin';
@@ -24,6 +24,7 @@ export default class Forms extends ManagedModule {
 
   constructor() {
     super('forms');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
@@ -47,13 +48,18 @@ export default class Forms extends ManagedModule {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
-      this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
+        this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+        this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
+        this.isRunning = true;
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
