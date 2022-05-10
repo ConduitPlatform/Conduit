@@ -283,20 +283,12 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  moduleClient(name: string, type: CompatServiceDefinition): void {
-    this._dynamicModules[name] = type;
-  }
-
   getModule<T extends CompatServiceDefinition>(name: string): Client<T> | undefined {
     if (this._modules[name]) return this._modules[name].client!;
   }
 
   getHealthClient<T extends CompatServiceDefinition>(name: string): Client<typeof HealthDefinition> | undefined {
     if (this._modules[name]) return this._modules[name].healthClient!;
-  }
-
-  isAvailable(moduleName: string) {
-    return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
   async waitForExistence(moduleName: string) {

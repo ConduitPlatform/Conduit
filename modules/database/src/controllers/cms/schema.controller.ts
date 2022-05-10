@@ -5,7 +5,7 @@ import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import {CmsHandlers} from "../../handlers/cms.handler";
+import { CmsHandlers } from '../../handlers/cms.handler';
 
 export class SchemaController {
 
@@ -20,7 +20,7 @@ export class SchemaController {
 
   initializeState() {
     this.grpcSdk.bus?.subscribe('database:customSchema:create', (message: string) => {
-        this.refreshRoutes();
+      this.refreshRoutes();
     });
   }
 
@@ -111,8 +111,8 @@ export class SchemaController {
   }
 
   private _registerRoutes(schemas: { [name: string]: any }) {
-    let handlers = new CmsHandlers(this.grpcSdk,this.database);
+    let handlers = new CmsHandlers(this.grpcSdk, this.database);
 
-    this.router.addRoutes(sortAndConstructRoutes(schemas,handlers));
+    this.router.addRoutes(sortAndConstructRoutes(schemas, handlers));
   }
 }

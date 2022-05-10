@@ -12,9 +12,7 @@ import {
   mongoSchemaConverter,
 } from '../../introspection/mongoose/utils';
 import { isNil } from 'lodash';
-import { isEqual } from 'lodash';
 import { isMatch } from 'lodash';
-import { DropCollectionRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/database';
 let parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -131,7 +129,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           })
         );
       });
-      schemas = await Promise.all(
+      await Promise.all(
         schemas.map(async (schema: ConduitSchema) => {
           const declaredSchema = declaredSchemas.find(
             (declaredSchema: ConduitSchema) =>

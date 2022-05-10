@@ -40,7 +40,7 @@ export function constructQuery(
     array?: boolean;
   }[],
   params: any,
-  context: any
+  context: any,
 ) {
   let res: any = {};
   let resTopLevel: string;
@@ -93,7 +93,7 @@ function _constructQuery(
     array?: boolean;
   }[],
   params: any,
-  context: any
+  context: any,
 ) {
   if (query.comparisonField.type === 'Input') {
     if (isNil(params[query.comparisonField.value])) {
@@ -111,7 +111,7 @@ function _constructQuery(
       query.schemaField,
       query.operation,
       params[query.comparisonField.value],
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
@@ -128,14 +128,14 @@ function _constructQuery(
       query.schemaField,
       query.operation,
       context,
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   } else {
     return _translateQuery(
       query.schemaField,
       query.operation,
       query.comparisonField.value,
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   }
 }
@@ -144,7 +144,7 @@ function _translateQuery(
   schemaField: string,
   operation: number,
   comparisonField: any,
-  like?: boolean
+  like?: boolean,
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -188,36 +188,10 @@ function _translateQuery(
   }
 }
 
-export function mergeQueries(queries: string[]): any {
-  let mergedQuery: any = {};
-  let insertedFields: Record<string, boolean> = {};
-
-  queries.forEach((query: string) => {
-    const parsedQuery = JSON.parse(`{${query}}`);
-    const field = Object.keys(parsedQuery)[0];
-    if (mergedQuery.hasOwnProperty(field)) {
-      if (!mergedQuery.hasOwnProperty('$and')) {
-        mergedQuery['$and'] = [];
-      }
-
-      mergedQuery['$and'].push(parsedQuery);
-      mergedQuery['$and'].push({ [field]: mergedQuery[field] });
-      delete mergedQuery[field];
-      insertedFields[field] = true;
-    } else if (insertedFields[field]) {
-      mergedQuery['$and'].push(parsedQuery);
-    } else {
-      mergedQuery[field] = parsedQuery[field];
-    }
-  });
-
-  return mergedQuery;
-}
-
 export function constructAssignment(
   schemaField: string,
   action: number,
-  assignmentValue: any
+  assignmentValue: any,
 ) {
   //   SET: 0,
   //   INCREMENT: 1,
