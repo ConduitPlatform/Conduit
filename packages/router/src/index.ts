@@ -14,6 +14,7 @@ import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/grpc-sdk';
 import { SocketPush } from './models/SocketPush.model';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
+import { CallContext } from 'nice-grpc-common';
 
 export class ConduitDefaultRouter implements IConduitRouter {
   grpcSdk: ConduitGrpcSdk;
@@ -137,7 +138,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       if (!call.request.routerUrl) {
         let result = this._commons
           .getConfigManager()!
-          .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
+          .getModuleUrlByName((call as unknown as CallContext).metadata.get('module-name')![0]);
         if (!result) {
           return callback({
             code: status.INTERNAL,
@@ -216,7 +217,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
         rooms: call.request.rooms,
-        namespace: `/${(call as any).metadata.get('module-name')[0]}/`
+        namespace: `/${(call as unknown as CallContext).metadata.get('module-name')![0]}/`
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {

@@ -36,6 +36,7 @@ import { CustomEndpointController } from './controllers/customEndpoints/customEn
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isEmpty } from 'lodash';
+import { CallContext } from 'nice-grpc-common';
 
 export default class DatabaseModule extends ManagedModule {
   config = undefined;
@@ -182,7 +183,7 @@ export default class DatabaseModule extends ManagedModule {
         message: 'Names cannot include spaces and - characters',
       });
     }
-    schema.ownerModule = (call as any).metadata.get('module-name')[0];
+    schema.ownerModule = (call as unknown as CallContext).metadata.get('module-name')![0];
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
       .then((schemaAdapter: SchemaAdapter<any>) => {
@@ -261,7 +262,7 @@ export default class DatabaseModule extends ManagedModule {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as any).metadata.get('module-name')[0]
+        (call as unknown as CallContext).metadata.get('module-name')![0]
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -280,7 +281,7 @@ export default class DatabaseModule extends ManagedModule {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = (call as any).metadata.get('module-name')[0];
+      const extOwner = (call as unknown as CallContext).metadata.get('module-name')![0];
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
@@ -367,7 +368,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async create(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -393,7 +394,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async createMany(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -419,7 +420,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -451,7 +452,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async updateMany(call: UpdateManyRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -481,7 +482,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async deleteOne(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -507,7 +508,7 @@ export default class DatabaseModule extends ManagedModule {
   }
 
   async deleteMany(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as any).metadata.get('module-name')[0];
+    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);

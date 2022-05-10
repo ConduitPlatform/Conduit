@@ -10,6 +10,16 @@ export enum TYPE {
 
 export type Array = any[];
 
+export type ConduitSpecificOptions = {
+  [field: string]: any,
+  permissions?: {
+    extendable: boolean,
+    canCreate: boolean,
+    canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
+    canDelete: boolean,
+  },
+};
+
 export interface ConduitModelField {
   type?: TYPE | Array | ConduitModel | ConduitModelField;
   enum?: any;

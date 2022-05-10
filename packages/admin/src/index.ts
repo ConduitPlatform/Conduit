@@ -17,6 +17,7 @@ import { hashPassword } from './utils/auth';
 import AdminConfigSchema from './config';
 import * as models from './models';
 import path from 'path';
+import { CallContext } from 'nice-grpc-common';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -105,7 +106,7 @@ export default class AdminModule extends IConduitAdmin {
       if (!call.request.routerUrl) {
         const result = this.commons
           .getConfigManager()!
-          .getModuleUrlByName((call as any).metadata.get('module-name')[0]);
+          .getModuleUrlByName((call as unknown as CallContext).metadata.get('module-name')![0]);
         if (!result) {
           return callback({
             code: status.INTERNAL,

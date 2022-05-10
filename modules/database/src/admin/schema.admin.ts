@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitModelOptions,
+  ConduitSpecificOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
   ConduitSchemaExtension,
@@ -467,7 +468,7 @@ export class SchemaAdmin {
       undefined,
       'ownerModule'
     );
-    schemas.forEach((schema: any) => {
+    schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
     return { modules };
@@ -477,7 +478,7 @@ export class SchemaAdmin {
     const introspectedSchemas = await this.database.introspectDatabase(true);
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if(isEmpty(schema.fields)) 
+        if(isEmpty(schema.fields))
           return null;
         await this.database.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
@@ -531,13 +532,13 @@ export class SchemaAdmin {
         status.INVALID_ARGUMENT,
         `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
     }
-    (schema.modelOptions.conduit as any).permissions.extendable =
-      perms!.extendable ?? (schema.modelOptions.conduit as any).permissions.extendable;
-    (schema.modelOptions.conduit as any).permissions.canCreate =
-      perms!.canCreate ?? (schema.modelOptions.conduit as any).permissions.canCreate;
-    (schema.modelOptions.conduit as any).permissions.canModify =
-      perms!.canModify ?? (schema.modelOptions.conduit as any).permissions.canModify;
-    (schema.modelOptions.conduit as any).permissions.canDelete =
-      perms!.canDelete ?? (schema.modelOptions.conduit as any).permissions.canDelete;
+    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.extendable =
+      perms!.extendable ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.extendable;
+    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canCreate =
+      perms!.canCreate ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canCreate;
+    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canModify =
+      perms!.canModify ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canModify;
+    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canDelete =
+      perms!.canDelete ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canDelete;
   }
 }
