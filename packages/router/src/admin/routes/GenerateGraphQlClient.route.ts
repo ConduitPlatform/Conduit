@@ -12,14 +12,15 @@ import { ConduitDefaultRouter } from '../..';
 import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import url from 'url';
+import { status } from '@grpc/grpc-js';
 
 export function generateGraphQlClient(router: ConduitDefaultRouter) {
   return new ConduitRoute(
     {
-      path: '/router/generate-graphql-client',
+      path: '/router/generate/graphql',
       action: ConduitRouteActions.POST,
       bodyParams: {
-        plugin: ConduitString.Required,
+        clientType: ConduitString.Required,
       },
     },
     new ConduitRouteReturnDefinition('generateGraphQlClient', {
@@ -27,7 +28,7 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
     }),
     async (request: ConduitRouteParameters) => {
       let response: any[] = [];
-      const outputPath = path.resolve(__dirname, 'dist/generated_graphql_client.d.ts');
+      const outputPath = path.resolve(__dirname, 'dist/generate/graphql.d.ts');
       try {
         await generate({
           schema: {
@@ -40,7 +41,7 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
           },
           generates: {
             [outputPath]: {
-              plugins: selectPlugin(request.params!.plugin),
+              plugins: selectPlugin(request.params!.clientType),
             },
           },
         });
@@ -50,7 +51,7 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
         });
         return { result: response };
       } catch (error) {
-        throw new ConduitError((error as Error).name, 500, (error as Error).message);
+        throw new ConduitError((error as Error).name, status.INTERNAL, (error as Error).message);
       }
     }
   );
@@ -69,6 +70,6 @@ function selectPlugin(pluginName: string): string[] {
     case 'svelte':
       return ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'];
     default:
-      throw new ConduitError('Invalid Plugin', 400, 'Invalid Plugin');
+      throw new ConduitError('Invalid Plugin',status.INVALID_ARGUMENT, 'Invalid Plugin');
   }
 }
