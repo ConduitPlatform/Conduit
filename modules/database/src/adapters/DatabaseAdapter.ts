@@ -106,7 +106,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
-            extensions: (schema as any).extensions,
+            extensions: (schema as ConduitDatabaseSchema).extensions,
           }),
             true
         );
@@ -117,7 +117,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
-          extensions: (schema as any).extensions,
+          extensions: (schema as ConduitDatabaseSchema).extensions,
         }));
     }
   }
@@ -158,16 +158,16 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
     }
     validateExtensionFields(schema, extFields, extOwner);
-    if (!(schema as any).extensions) {
-      (schema as any).extensions = [];
+    if (!(schema as ConduitDatabaseSchema).extensions) {
+      (schema as ConduitDatabaseSchema).extensions = [];
     }
-    const extIndex = (schema as any).extensions.findIndex((ext: any) => ext.ownerModule === extOwner);
+    const extIndex = (schema as ConduitDatabaseSchema).extensions.findIndex((ext: any) => ext.ownerModule === extOwner);
     if (extIndex === -1) {
       // Create Extension
       if (Object.keys(extFields).length === 0) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Could not create schema extension with no custom fields');
       }
-      (schema as any).extensions.push({
+      (schema as ConduitDatabaseSchema).extensions.push({
         fields: extFields,
         ownerModule: extOwner,
         createdAt: new Date(), // TODO FORMAT
@@ -176,11 +176,11 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     } else {
       if (Object.keys(extFields).length === 0) {
         // Remove Extension
-        (schema as any).extensions.splice(extIndex, 1);
+        (schema as ConduitDatabaseSchema).extensions.splice(extIndex, 1);
       } else {
         // Update Extension
-        (schema as any).extensions[extIndex].fields = extFields;
-        (schema as any).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
+        (schema as ConduitDatabaseSchema).extensions[extIndex].fields = extFields;
+        (schema as ConduitDatabaseSchema).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
       }
     }
     return this.createSchemaFromAdapter(schema);

@@ -6,23 +6,23 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from './SchemaAdapter';
 
-export class ConduitDatabaseSchema<T> extends ConduitSchema {
+export class ConduitDatabaseSchema extends ConduitSchema {
   private readonly model: SchemaAdapter<any>;
-  readonly extensions: ConduitSchemaExtension[];
+  extensions: any[];
 
   constructor(
     model: SchemaAdapter<any>,
     name: string,
     ownerModule: string,
+    extensions: any[] = [],
     fields?: ConduitModel,
     modelOptions?: ConduitModelOptions,
     collectionName?: string,
-    extensions?: any[]
   ) {
     super(name, fields ?? {}, modelOptions, collectionName);
     this.model = model;
     this.ownerModule = ownerModule;
-    this.extensions = extensions ?? [];
+    this.extensions = extensions;
   }
 
   findOne(
