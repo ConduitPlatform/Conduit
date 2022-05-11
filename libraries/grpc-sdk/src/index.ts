@@ -21,7 +21,8 @@ import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
-import { HealthDefinition } from './protoUtils/grpc_health_check';
+import { HealthDefinition, HealthCheckResponse_ServingStatus } from './protoUtils/grpc_health_check';
+import { ModuleListResponse_ModuleResponse } from './protoUtils/core'
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 
@@ -223,18 +224,34 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
-        let found = modules.filter((m: any) => m.moduleName === r);
+        const found = modules.filter((m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving);
         if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r]?.closeConnection();
+          emitter.emit(`module-connection-update:${r}`, { serving: false });
         }
       });
-      modules.forEach((m: any) => {
-        if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName]?.openConnection();
+      modules.forEach((m: ModuleListResponse_ModuleResponse) => {
+        if (m.serving) {
+          if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+            this._modules[m.moduleName]?.openConnection();
+          }
+          this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, { serving: true });
         }
-        this.createModuleClient(m.moduleName, m.url);
       });
     });
+  }
+
+  async monitorModule(moduleName: string, callback: (args: { serving: boolean }) => void) {
+    const res = await this._modules[moduleName]?.healthClient?.check({});
+    callback({ serving: res?.status === HealthCheckResponse_ServingStatus.SERVING });
+    const emitter = this.config.getModuleWatcher();
+    emitter.on(`module-connection-update:${moduleName}`, callback);
+  }
+
+  unmonitorModule(moduleName: string) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.removeAllListeners(`module-connection-update:${moduleName}`);
   }
 
   initializeEventBus(): Promise<any> {
