@@ -63,7 +63,7 @@ export class AuthenticationRoutes {
     let errorMessage = null;
     let phoneActive = await this.phoneHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes();
@@ -71,7 +71,7 @@ export class AuthenticationRoutes {
 
     let authActive = await this.localHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       const authConfig = await this.grpcSdk.config
         .get('authentication')
@@ -260,7 +260,7 @@ export class AuthenticationRoutes {
     this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingManager, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
     authActive = await this.facebookHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.facebookHandlers.declareRoutes();
       enabled = true;
@@ -270,7 +270,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.googleHandlers.declareRoutes();
       enabled = true;
@@ -280,7 +280,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.githubHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.githubHandlers.declareRoutes();
       enabled = true;
@@ -290,7 +290,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.slackHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.slackHandlers.declareRoutes();
       enabled = true;
@@ -300,7 +300,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.figmaHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.figmaHandlers.declareRoutes();
       enabled = true;
@@ -310,7 +310,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.microsoftHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.microsoftHandlers.declareRoutes();
       enabled = true;
@@ -319,7 +319,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.serviceHandler
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this._routingManager.route(
         {
@@ -345,7 +345,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()
-      .catch((e: any) => (errorMessage = e));
+      .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
       this.twitchHandlers.declareRoutes();
       enabled = true;

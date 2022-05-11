@@ -96,7 +96,7 @@ export default class Authentication extends ManagedModule {
           .add(config.tokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       })
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
@@ -109,7 +109,7 @@ export default class Authentication extends ManagedModule {
           .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       })
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
