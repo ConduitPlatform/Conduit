@@ -14,6 +14,7 @@ export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
   moduleRegister: EventEmitter;
   private configDocId: string | null = null;
+  private servingStatusUpdate: boolean = false;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
@@ -344,17 +345,30 @@ export default class ConfigManager implements IConfigManager {
           delete this.moduleHealth[moduleName];
           this.registeredModules.delete(moduleName);
         });
-        this.moduleRegister.emit('serving-modules-update');
+        this.servingStatusUpdate = true;
       }
+    }
+    if (this.servingStatusUpdate) {
+      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = false;
     }
   }
 
-  updateModuleHealth(moduleName: string, moduleAddress: string, moduleStatus: HealthCheckStatus) {
+  updateModuleHealth(
+    moduleName: string,
+    moduleAddress: string,
+    moduleStatus: HealthCheckStatus,
+    broadcast = true
+  ) {
     if (!this.moduleHealth[moduleName]) {
       this.moduleHealth[moduleName] = {};
     }
     const module = this.registeredModules.get(moduleName)!;
+    const prevStatus = module.serving;
     module.serving = moduleStatus === HealthCheckStatus.SERVING;
+    if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
+      this.servingStatusUpdate = true;
+    }
     this.registeredModules.set(moduleName, module);
     this.moduleHealth[moduleName][moduleAddress] = {
       timestamp: Date.now(),
@@ -369,6 +383,7 @@ export default class ConfigManager implements IConfigManager {
         modules.push({
           moduleName: key,
           url: value.address,
+          serving: value.serving,
         });
       });
       callback(null, { modules });
@@ -388,6 +403,7 @@ export default class ConfigManager implements IConfigManager {
         modules.push({
           moduleName: key,
           url: value.address,
+          serving: value.serving,
         });
       });
       call.write({ modules });
@@ -472,7 +488,7 @@ export default class ConfigManager implements IConfigManager {
       await this.grpcSdk.refreshModules(true);
       this.databaseCallback();
     }
-    this.updateModuleHealth(moduleName, instancePeer, HealthCheckStatus.SERVING);
+    this.updateModuleHealth(moduleName, instancePeer, HealthCheckStatus.SERVING, false);
     this.moduleRegister.emit('serving-modules-update');
   }
 

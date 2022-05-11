@@ -126,6 +126,7 @@ message ModuleListResponse {
     message ModuleResponse {
         string moduleName = 1;
         string url = 2;
+        bool serving = 3;
     }
 }
 
