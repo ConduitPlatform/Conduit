@@ -9,7 +9,6 @@ import path from 'path';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
-  servingModules: Map<string, string> = new Map<string, string>();
   registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
   moduleHealth: { [field: string]: { [field: string]: { timestamp: number, status: HealthCheckStatus } } } = {};
   grpcSdk: ConduitGrpcSdk;
@@ -323,12 +322,15 @@ export default class ConfigManager implements IConfigManager {
     let removedCount = 0;
     Object.keys(this.moduleHealth).forEach((moduleName) => {
       const module = this.moduleHealth[moduleName];
-      const unhealthyInstances = Object.keys(module).filter(
-        (url) => (module[url].timestamp + 5000 < Date.now()) || module[url].status !== HealthCheckStatus.SERVING
+      const offlineInstances = Object.keys(module).filter(
+        (url) => (module[url].timestamp + 5000 < Date.now())
       );
-      if (unhealthyInstances?.length > 0) {
-        removedCount += unhealthyInstances.length;
-        unhealthyInstances.forEach((url) => {
+      const nonServingInstances = Object.keys(module).filter(
+         (url) => module[url].status !== HealthCheckStatus.SERVING
+      );
+      if (offlineInstances?.length > 0 || nonServingInstances.length > 0) {
+        removedCount += offlineInstances.length + nonServingInstances.length;
+        offlineInstances.forEach((url) => {
           delete module[url];
         });
       }
@@ -340,7 +342,6 @@ export default class ConfigManager implements IConfigManager {
       if (unhealthyModules?.length > 0) {
         unhealthyModules.forEach((moduleName) => {
           delete this.moduleHealth[moduleName];
-          this.servingModules.delete(moduleName);
           this.registeredModules.delete(moduleName);
         });
         this.moduleRegister.emit('serving-modules-update');
