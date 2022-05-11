@@ -3,6 +3,7 @@ import { MultiDocQuery, SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
+import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
@@ -131,7 +132,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
           model.modelOptions
         );
         schema.ownerModule = model.ownerModule;
-        (schema as any).extensions = model.extensions;
+        (schema as ConduitDatabaseSchema).extensions = model.extensions;
         return schema;
       })
       .map((model: ConduitSchema) => {
