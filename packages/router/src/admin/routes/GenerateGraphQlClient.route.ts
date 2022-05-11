@@ -11,9 +11,8 @@ import {
 import { ConduitDefaultRouter } from '../..';
 import { generate } from '@graphql-codegen/cli';
 import path from 'path';
-import url from 'url';
 import { status } from '@grpc/grpc-js';
-import fs from 'fs';
+import fs, { unlink } from 'fs';
 
 export function generateGraphQlClient(router: ConduitDefaultRouter) {
   return new ConduitRoute(
@@ -25,10 +24,13 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
       },
     },
     new ConduitRouteReturnDefinition('generateGraphQlClient', {
-      response: TYPE.JSON,
+      fileName: ConduitString.Required,
+      fileType: ConduitString.Required,
+      file: ConduitString.Required,
     }),
     async (request: ConduitRouteParameters) => {
-      const outputPath = path.resolve(__dirname, 'dist/generate/graphql.d.ts');
+      const { plugins, fileName } = selectPlugin(request.params!.clientType);
+      const outputPath = path.resolve(__dirname, `generate/${fileName}`);
       try {
         await generate({
           schema: {
@@ -41,37 +43,65 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
           },
           generates: {
             [outputPath]: {
-              plugins: selectPlugin(request.params!.clientType),
+              plugins,
             },
           },
         });
         const file = fs.readFileSync(outputPath).toString('base64');
+        unlink(outputPath, (err) => {
+          if (err) throw new ConduitError(err.name, status.INTERNAL, err.message);
+        });
         return {
           result: {
-            generated: 'ok',
+            fileName,
+            fileType: 'text',
             file,
-          }
+          },
         };
       } catch (error) {
-        throw new ConduitError((error as Error).name, status.INTERNAL, (error as Error).message);
+        throw new ConduitError(
+          (error as Error).name,
+          status.INTERNAL,
+          (error as Error).message
+        );
       }
     }
   );
 }
 
-function selectPlugin(pluginName: string): string[] {
+function selectPlugin(pluginName: string) {
   switch (pluginName) {
     case 'typescript':
-      return ['typescript', 'typescript-operations'];
+      return {
+        plugins: ['typescript', 'typescript-operations'],
+        fileName: 'types.ts',
+      };
     case 'react':
-      return ['typescript', 'typescript-operations', 'typescript-react-query'];
+      return {
+        plugins: ['typescript', 'typescript-operations', 'typescript-react-query'],
+        fileName: 'types.react-query.ts',
+      };
+    case 'react-apollo':
+      return {
+        plugins: ['typescript', 'typescript-operations', 'typescript-react-apollo'],
+        fileName: 'types.reactApollo.tsx',
+      };
     case 'angular':
-      return ['typescript', 'typescript-operations', 'typescript-apollo-angular'];
+      return {
+        plugins: ['typescript', 'typescript-operations', 'typescript-apollo-angular'],
+        fileName: 'types.apolloAngular.ts',
+      };
     case 'vue':
-      return ['typescript', 'typescript-operations', 'typescript-vue-urql'];
+      return {
+        plugins: ['typescript', 'typescript-operations', 'typescript-vue-urql'],
+        fileName: 'types.vue-urql.ts',
+      };
     case 'svelte':
-      return ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'];
+      return {
+        plugins: ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'],
+        fileName: 'types.svelte-apollo.ts',
+      };
     default:
-      throw new ConduitError('Invalid Plugin',status.INVALID_ARGUMENT, 'Invalid Plugin');
+      throw new ConduitError('Invalid Plugin', status.INVALID_ARGUMENT, 'Invalid Plugin');
   }
 }
