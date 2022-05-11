@@ -17,6 +17,7 @@ import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
+import { EmailConfig } from '../interfaces/EmailConfig';
 
 export class LocalHandlers {
   private emailModule: Email;
@@ -621,7 +622,7 @@ export class LocalHandlers {
   private registerTemplates() {
     this.grpcSdk.config
       .get('email')
-      .then((emailConfig: any) => {
+      .then((emailConfig: EmailConfig) => {
         const promises = Object.values(templates).map((template) => {
           return this.emailModule.registerTemplate(template);
         });

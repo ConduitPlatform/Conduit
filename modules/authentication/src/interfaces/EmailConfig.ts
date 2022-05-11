@@ -1,4 +1,4 @@
-export interface Config {
+export interface EmailConfig {
   active: boolean;
   transport: string;
   sendingDomain: string;

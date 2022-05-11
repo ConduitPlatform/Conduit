@@ -19,7 +19,7 @@ import { isNil } from 'lodash';
 import { getHBValues } from '../parse-test/getHBValues';
 import { EmailService } from '../services/email.service';
 import { EmailTemplate } from '../models';
-import { Config } from '../interfaces/Config';
+import { Config } from '../config';
 
 const escapeStringRegexp = require('escape-string-regexp');
 

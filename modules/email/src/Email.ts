@@ -13,7 +13,7 @@ import { EmailProvider } from './email-provider';
 import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { Config } from './interfaces/Config';
+import { Config } from './config';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;
@@ -36,7 +36,7 @@ type SendEmailRequest = GrpcRequest<{
 }>;
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
-export default class Email extends ManagedModule {
+export default class Email extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
