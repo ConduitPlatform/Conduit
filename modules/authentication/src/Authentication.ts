@@ -7,7 +7,7 @@ import {
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
 import * as models from './models';
@@ -18,7 +18,7 @@ import { v4 as uuid } from 'uuid';
 import moment from 'moment';
 import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
 
-export default class Authentication extends ManagedModule {
+export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),

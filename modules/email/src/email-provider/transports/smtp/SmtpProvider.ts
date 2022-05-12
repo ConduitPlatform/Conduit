@@ -1,6 +1,7 @@
 import { createTransport } from 'nodemailer';
 import { Options } from 'nodemailer/lib/mailer';
 import { Template } from '../../interfaces/Template';
+import { DeleteEmailTemplate } from '../../interfaces/DeleteEmailTemplate';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
 import { EmailProviderClass } from '../../models/EmailProviderClass';
@@ -28,11 +29,10 @@ export class SmtpProvider extends EmailProviderClass {
     return new NodemailerBuilder();
   }
 
-  updateTemplate(data: UpdateEmailTemplate) {
-    return 5 as any;
+  updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
+    throw new Error('Method not implemented.');
   }
-
-  async deleteTemplate(id: string) {
-    return 5 as any;
+  async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
+    throw new Error('Method not implemented.');
   }
 }

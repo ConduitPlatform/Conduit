@@ -37,7 +37,7 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isEmpty } from 'lodash';
 
-export default class DatabaseModule extends ManagedModule {
+export default class DatabaseModule extends ManagedModule<void> {
   config = undefined;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),

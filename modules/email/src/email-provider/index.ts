@@ -78,4 +78,5 @@ export class EmailProvider {
     }
     return this._transport.sendEmail(email.getMailObject());
   }
+
 }

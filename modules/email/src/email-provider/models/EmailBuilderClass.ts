@@ -1,7 +1,5 @@
-import Mail, { Address, Attachment, AttachmentLike } from 'nodemailer/lib/mailer';
-import { isNil } from 'lodash';
+import Mail, { Address, Attachment } from 'nodemailer/lib/mailer';
 import { TemplateOptions } from '../interfaces/TemplateOptions';
-import { Readable } from 'stream';
 import { checkIfHTML } from '../utils';
 
 export abstract class EmailBuilderClass<T extends Mail.Options> {

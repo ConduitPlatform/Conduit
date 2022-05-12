@@ -21,5 +21,4 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions> 
     return this;
   }
 
-
 }
