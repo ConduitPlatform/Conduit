@@ -32,10 +32,10 @@ export default class Authentication extends ManagedModule {
       userDelete: this.userDelete.bind(this),
     },
   };
-  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
+  private sendEmail: boolean = false;
 
   constructor() {
     super('authentication');
@@ -43,7 +43,6 @@ export default class Authentication extends ManagedModule {
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     await migrateLocalAuthConfig(this.grpcSdk);
   }
@@ -70,18 +69,33 @@ export default class Authentication extends ManagedModule {
   }
 
   async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
+    const config = ConfigController.getInstance().config;
+    if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      if (!this.isRunning) {
-        await this.registerSchemas();
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-        this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
-        this.isRunning = true;
+      let refreshedOnce = false;
+      await this.registerSchemas();
+      if (config.local.verification.send_email) {
+        await this.grpcSdk.waitForExistence('email');
+        await this.grpcSdk.monitorModule('email', (args: { serving: boolean }) => {
+          this.sendEmail = args.serving;
+          this.refreshAppRoutes();
+          refreshedOnce = true;
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('email');
       }
-      await this.userRouter.registerRoutes();
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      if (!refreshedOnce) {
+        await this.refreshAppRoutes();
+      }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
+  }
+
+  private async refreshAppRoutes() {
+    this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.sendEmail);
+    await this.userRouter.registerRoutes();
   }
 
   // gRPC Service
@@ -160,8 +174,7 @@ export default class Authentication extends ManagedModule {
         isVerified: !verify,
       });
 
-      // if verification is required
-      if (verify) {
+      if (verify && this.sendEmail) {
         const serverConfig = await this.grpcSdk.config.getServerConfig();
         const url = serverConfig.url;
         const verificationToken: models.Token = await models.Token.getInstance()

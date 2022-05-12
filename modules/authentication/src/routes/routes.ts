@@ -47,9 +47,13 @@ export class AuthenticationRoutes {
   private microsoftHandlers: MicrosoftHandlers;
   private readonly _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly emailServing: boolean,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
-    this.localHandlers = new LocalHandlers(grpcSdk);
+    this.localHandlers = new LocalHandlers(grpcSdk, emailServing);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
     this.phoneHandlers = new PhoneHandlers(grpcSdk, this._routingManager);

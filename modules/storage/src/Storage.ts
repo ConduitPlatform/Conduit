@@ -33,12 +33,13 @@ export default class Storage extends ManagedModule {
       getFileData: this.getFileData.bind(this),
     },
   };
-  private isRunning: boolean = false;
+  private isMigrated: boolean = false;
   private adminRouter: AdminRoutes;
   private userRouter: StorageRoutes;
   private database: DatabaseProvider;
   private storageProvider: IStorageProvider;
   private _fileHandlers: FileHandlers;
+  private enableAuthRoutes: boolean = false;
 
   constructor() {
     super('storage');
@@ -46,9 +47,14 @@ export default class Storage extends ManagedModule {
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     this.storageProvider = createStorageProvider('local', {} as any);
+    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+    await this.registerSchemas();
+    await this.grpcSdk.monitorModule('authentication', (args: { serving: boolean }) => {
+      this.enableAuthRoutes = args.serving;
+      this.refreshAppRoutes();
+    });
   }
 
   async preConfig(config: any) {
@@ -68,10 +74,9 @@ export default class Storage extends ManagedModule {
       await this.updateConfig();
       const storageConfig = ConfigController.getInstance().config;
       const { provider, local, google, azure, aws } = storageConfig;
-      if (!this.isRunning) {
-        await this.registerSchemas();
+      if (!this.isMigrated) {
         await migrateFoldersToContainers(this.grpcSdk);
-        this.isRunning = true;
+        this.isMigrated= true;
       }
       this.storageProvider = createStorageProvider(provider, {
         local,
@@ -79,17 +84,21 @@ export default class Storage extends ManagedModule {
         azure,
         aws,
       });
-      this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-      this.userRouter = new StorageRoutes(
-        this.grpcServer,
-        this.grpcSdk,
-        this._fileHandlers
-      );
-      this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
       this._fileHandlers.updateProvider(this.storageProvider);
-      await this.userRouter.registerRoutes();
+      this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+      await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
+  }
+
+  private async refreshAppRoutes() {
+    this.userRouter = new StorageRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this._fileHandlers,
+      this.enableAuthRoutes,
+    );
+    await this.userRouter.registerRoutes();
   }
 
   protected registerSchemas() {

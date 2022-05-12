@@ -1,4 +1,9 @@
-import {DatabaseProvider, ManagedModule, HealthCheckStatus, ConfigController} from '@conduitplatform/grpc-sdk';
+import {
+  ConfigController,
+  DatabaseProvider,
+  HealthCheckStatus,
+  ManagedModule,
+} from '@conduitplatform/grpc-sdk';
 import AppConfigSchema from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin/admin';
@@ -28,9 +33,15 @@ export default class Forms extends ManagedModule {
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
-    await this.grpcSdk.waitForExistence('email');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('email');
+    await this.grpcSdk.monitorModule('email', (args: { serving: boolean }) => {
+      if (args.serving && ConfigController.getInstance().config.active) {
+        this.updateHealth(HealthCheckStatus.SERVING);
+      } else {
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      }
+    });
   }
 
   async onRegister() {

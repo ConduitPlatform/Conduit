@@ -27,10 +27,21 @@ export default class Chat extends ManagedModule {
       sendMessage: this.sendMessage.bind(this),
     },
   };
-  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private userRouter: ChatRoutes;
   private database: DatabaseProvider;
+  private _sendEmail: boolean;
+  private _sendPushNotification: boolean;
+  private _emailServing: boolean;
+  private _pushNotificationsServing: boolean;
+
+  private get sendEmail() {
+    return this._sendEmail && this._emailServing;
+  }
+
+  private get sendPushNotification() {
+    return this._sendPushNotification && this._pushNotificationsServing;
+  }
 
   constructor() {
     super('chat');
@@ -38,8 +49,11 @@ export default class Chat extends ManagedModule {
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('authentication');
+    await this.grpcSdk.monitorModule('authentication', (args) => {
+      this.updateHealth(args.serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
+    });
   }
 
   async onConfig() {
@@ -47,19 +61,41 @@ export default class Chat extends ManagedModule {
     if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      if (!this.isRunning) {
-        await this.registerSchemas();
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-        this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
-        this.isRunning = true;
+      await this.registerSchemas();
+      this._sendEmail = config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
+      if (this._sendEmail) {
+        await this.grpcSdk.monitorModule('email', (args) => {
+          this._emailServing = args.serving;
+          this.refreshAppRoutes(); // redundant while called directly by onConfig() with sendPushNotification === true
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('email');
       }
-      if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email)
-        await this.grpcSdk.waitForExistence('email');
-      if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
-        await this.grpcSdk.waitForExistence('pushNotifications');
-      await this.userRouter.registerRoutes();
+      this._sendPushNotification = config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification;
+      if (this._sendPushNotification) {
+        await this.grpcSdk.monitorModule('pushNotifications', (args) => {
+          this._pushNotificationsServing = args.serving;
+          this.refreshAppRoutes();
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('pushNotifications');
+      }
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      if (!this._sendEmail && !this._sendPushNotification) { // avoid redundant refreshes
+        await this.refreshAppRoutes();
+      }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
+  }
+
+  private async refreshAppRoutes() {
+    this.userRouter = new ChatRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this.sendEmail,
+      this.sendPushNotification,
+    );
+    await this.userRouter.registerRoutes();
   }
 
   protected registerSchemas() {
