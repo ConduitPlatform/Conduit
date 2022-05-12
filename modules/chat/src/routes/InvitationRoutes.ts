@@ -9,7 +9,6 @@ import { ChatRoom, InvitationToken } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import * as templates from '../templates';
-import { Config } from '../config';
 
 export class InvitationRoutes {
   constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {
@@ -18,7 +17,7 @@ export class InvitationRoutes {
   async registerTemplates() {
     this.grpcSdk.config
       .get('email')
-      .then((emailConfig: Config) => {
+      .then(() => {
         const promises = Object.values(templates).map((template) => {
           return this.grpcSdk.emailProvider!.registerTemplate(template);
         });
