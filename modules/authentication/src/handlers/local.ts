@@ -622,7 +622,7 @@ export class LocalHandlers {
   private registerTemplates() {
     this.grpcSdk.config
       .get('email')
-      .then((emailConfig: EmailConfig) => {
+      .then(() => {
         const promises = Object.values(templates).map((template) => {
           return this.emailModule.registerTemplate(template);
         });
