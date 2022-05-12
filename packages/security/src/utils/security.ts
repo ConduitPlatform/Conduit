@@ -17,7 +17,7 @@ export async function validateClient(
     const isRegex = client.domain.includes('*');
     const sendDomain = req.get('origin') ?? req.hostname;
     if (isRegex) {
-      const [_, regex] = client.domain.split('*');
+      const [_, regex] = client.domain.split('*.');
       match = sendDomain.endsWith(regex); // check if the regex matches with the hostname
     } else {
       match = (client.domain === sendDomain);
