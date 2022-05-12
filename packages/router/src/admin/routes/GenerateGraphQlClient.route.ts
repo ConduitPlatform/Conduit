@@ -13,6 +13,8 @@ import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import fs, { unlink } from 'fs';
+import { isEmpty } from 'lodash';
+import { GrpcError } from '@conduitplatform/grpc-sdk';
 
 export function generateGraphQlClient(router: ConduitDefaultRouter) {
   return new ConduitRoute(
@@ -21,6 +23,16 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
       action: ConduitRouteActions.POST,
       bodyParams: {
         clientType: ConduitString.Required,
+        config: {
+          avoidOptionals: ConduitBoolean.Optional,
+          immutableTypes: ConduitBoolean.Optional,
+          preResolveTypes: ConduitBoolean.Optional,
+          flattenGeneratedTypes: ConduitBoolean.Optional,
+          enumsAsTypes: ConduitBoolean.Optional,
+          fragmentMasking: ConduitBoolean.Optional,
+          reactApolloVersion: ConduitString.Optional,
+          operationResultSuffix: ConduitString.Optional,
+        },
       },
     },
     new ConduitRouteReturnDefinition('generateGraphQlClient', {
@@ -29,7 +41,11 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
       file: ConduitString.Required,
     }),
     async (request: ConduitRouteParameters) => {
-      const { plugins, fileName } = selectPlugin(request.params!.clientType);
+      const config = JSON.parse(JSON.stringify(request.params?.config ?? {}));
+      const { plugins, fileName } = selectPlugin(
+        request.params!.clientType,
+        Object.keys(config),
+      );
       const outputPath = path.resolve(__dirname, `generate/${fileName}`);
       try {
         await generate({
@@ -44,6 +60,7 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
           generates: {
             [outputPath]: {
               plugins,
+              config,
             },
           },
         });
@@ -69,39 +86,81 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
   );
 }
 
-function selectPlugin(pluginName: string) {
+function selectPlugin(pluginName: string, configOptions: string[]) {
+  const baseOptions = [
+    'avoidOptionals',
+    'immutableTypes',
+    'preResolveTypes',
+    'flattenGeneratedTypes',
+    'enumsAsTypes',
+    'fragmentMasking',
+  ];
+
   switch (pluginName) {
     case 'typescript':
+      let fileNameExtension = checkConfig(baseOptions, configOptions);
       return {
         plugins: ['typescript', 'typescript-operations'],
-        fileName: 'types.ts',
+        fileName: ` ${fileNameExtension}.ts`,
       };
     case 'react':
+      fileNameExtension = checkConfig(baseOptions, configOptions);
       return {
         plugins: ['typescript', 'typescript-operations', 'typescript-react-query'],
-        fileName: 'types.react-query.ts',
+        fileName: `types.react-query${fileNameExtension}.ts`,
       };
     case 'react-apollo':
+      fileNameExtension = checkConfig(
+        [...baseOptions, 'reactApolloVersion', 'operationResultSuffix'],
+        configOptions
+      );
       return {
         plugins: ['typescript', 'typescript-operations', 'typescript-react-apollo'],
-        fileName: 'types.reactApollo.tsx',
+        fileName: `types.reactApollo${fileNameExtension}.tsx`,
       };
     case 'angular':
+      fileNameExtension = checkConfig([...baseOptions], configOptions);
       return {
         plugins: ['typescript', 'typescript-operations', 'typescript-apollo-angular'],
-        fileName: 'types.apolloAngular.ts',
+        fileName: `types.apolloAngular${fileNameExtension}.ts`,
       };
-    case 'vue':
+    case 'vue-urql':
+      fileNameExtension = checkConfig([...baseOptions], configOptions);
       return {
         plugins: ['typescript', 'typescript-operations', 'typescript-vue-urql'],
-        fileName: 'types.vue-urql.ts',
+        fileName: `types.vue-urql${fileNameExtension}.ts`,
+      };
+    case 'vue-apollo':
+      fileNameExtension = checkConfig([...baseOptions], configOptions);
+      return {
+        plugins: ['typescript', 'typescript-operations', 'typescript-vue-urql'],
+        fileName: `types.vueApollo${fileNameExtension}.ts`,
       };
     case 'svelte':
+      fileNameExtension = checkConfig([...baseOptions], configOptions);
       return {
         plugins: ['typescript', 'typescript-operations', 'graphql-codegen-svelte-apollo'],
-        fileName: 'types.svelte-apollo.ts',
+        fileName: `types.svelte-apollo${fileNameExtension}.ts`,
       };
     default:
-      throw new ConduitError('Invalid Plugin', status.INVALID_ARGUMENT, 'Invalid Plugin');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid Plugin');
   }
 }
+
+/*
+ * Checks if the configuration option for the generator are valid
+ */
+const checkConfig = (validOptions: string[], configOptions: string[]) => {
+  if(isEmpty(configOptions)) {
+    return '';
+  }
+
+  const invalidOptions = configOptions.filter((e) => !validOptions.includes(e));
+  if (!isEmpty(invalidOptions)) {
+    throw new GrpcError(
+      status.INVALID_ARGUMENT,
+      `Invalid config options: ${invalidOptions.join(',')}`
+    );
+  }
+  return `.${configOptions.join('.')}`;
+};
