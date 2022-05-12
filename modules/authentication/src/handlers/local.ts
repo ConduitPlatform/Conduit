@@ -17,7 +17,6 @@ import { AccessToken, RefreshToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
-import { EmailConfig } from '../interfaces/EmailConfig';
 
 export class LocalHandlers {
   private emailModule: Email;

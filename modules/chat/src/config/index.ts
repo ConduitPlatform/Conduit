@@ -1,6 +1,8 @@
 import convict from 'convict';
 import AppConfigSchema from './config';
 
-const configProperties = convict(AppConfigSchema).getProperties();
+const config = convict(AppConfigSchema)
+const configProperties = config.getProperties();
 export type Config = typeof configProperties;
-export default convict(AppConfigSchema);
+export default config;
+
