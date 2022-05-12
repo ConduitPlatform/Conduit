@@ -5,7 +5,7 @@ import {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { ChatRoutes } from './routes/routes';
 import * as models from './models';
@@ -15,7 +15,7 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
-export default class Chat extends ManagedModule {
+export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),

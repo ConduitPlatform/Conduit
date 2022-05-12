@@ -4,7 +4,7 @@ import {
   ConfigController,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
@@ -20,7 +20,7 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 
-export default class Storage extends ManagedModule {
+export default class Storage extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
@@ -48,7 +48,7 @@ export default class Storage extends ManagedModule {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
-    this.storageProvider = createStorageProvider('local', {} as any);
+    this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
     await this.grpcSdk.monitorModule('authentication', (args: { serving: boolean }) => {
@@ -57,11 +57,11 @@ export default class Storage extends ManagedModule {
     });
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.accountId = await getAwsAccountId(config);
+        config.aws.accountId = await getAwsAccountId(config) as any;
       }
     }
     return config;

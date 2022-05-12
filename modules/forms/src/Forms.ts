@@ -4,7 +4,7 @@ import {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin/admin';
 import { FormsRoutes } from './routes/routes';
@@ -12,7 +12,7 @@ import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
 
-export default class Forms extends ManagedModule {
+export default class Forms extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'forms.proto'),

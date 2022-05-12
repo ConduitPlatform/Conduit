@@ -3,12 +3,12 @@ import ConduitGrpcSdk, {
   ConfigController,
 } from '..';
 
-export class ModuleManager {
+export class ModuleManager<T> {
   private readonly serviceAddress: string;
   private readonly servicePort: string | undefined;
   private readonly grpcSdk: ConduitGrpcSdk;
 
-  constructor(private readonly module: ManagedModule) {
+  constructor(private readonly module: ManagedModule<T>) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }

@@ -4,7 +4,7 @@ import {
   ConfigController,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/routes';
 import * as models from './models';
@@ -22,7 +22,7 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { ISendNotification } from './interfaces/ISendNotification';
 
-export default class PushNotifications extends ManagedModule {
+export default class PushNotifications extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),

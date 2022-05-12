@@ -17,7 +17,7 @@ export class InvitationRoutes {
   async registerTemplates() {
     this.grpcSdk.config
       .get('email')
-      .then((emailConfig: any) => {
+      .then(() => {
         const promises = Object.values(templates).map((template) => {
           return this.grpcSdk.emailProvider!.registerTemplate(template);
         });
