@@ -43,7 +43,7 @@ export function getCreateSecurityClientRoute() {
           throw new ConduitError('INVALID_ARGUMENTS', 400, `Domain must not contain more than one '*' character` );
         }
         if (domain.includes('*')) {
-          const [_, splittedDomain] = domain.split('*');
+          const [_, splittedDomain] = domain.split('*.');
           const domainPattern = new RegExp('^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$')
           if (!domainPattern.test(splittedDomain)) throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
         }
