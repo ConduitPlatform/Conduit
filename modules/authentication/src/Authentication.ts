@@ -7,8 +7,8 @@ import {
 
 import path from 'path';
 import { isNil } from 'lodash';
-import { Server, ServerUnaryCall, ServerWritableStream, status } from '@grpc/grpc-js';
-import AppConfigSchema from './config';
+import { status } from '@grpc/grpc-js';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
 import * as models from './models';
