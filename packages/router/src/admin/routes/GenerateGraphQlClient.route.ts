@@ -6,9 +6,7 @@ import {
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
   ConduitString,
-  TYPE,
 } from '@conduitplatform/commons';
-import { ConduitDefaultRouter } from '../..';
 import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
@@ -16,7 +14,7 @@ import fs, { unlink } from 'fs';
 import { isEmpty } from 'lodash';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 
-export function generateGraphQlClient(router: ConduitDefaultRouter) {
+export function generateGraphQlClient() {
   return new ConduitRoute(
     {
       path: '/router/generate/graphql',

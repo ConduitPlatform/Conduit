@@ -6,17 +6,14 @@ import {
   ConduitRouteReturnDefinition,
   ConduitString,
   ConduitError,
-  TYPE,
 } from '@conduitplatform/commons';
-import { ConduitDefaultRouter } from '../..';
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 import path from 'path';
-import url from 'url';
 import fs, { unlink } from 'fs';
 import { status } from '@grpc/grpc-js';
 
-export function generateRestClient(router: ConduitDefaultRouter) {
+export function generateRestClient() {
   return new ConduitRoute(
     {
       path: '/router/generate/rest',
