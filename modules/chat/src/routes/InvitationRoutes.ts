@@ -8,28 +8,9 @@ import ConduitGrpcSdk, {
 import { ChatRoom, InvitationToken } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import * as templates from '../templates';
 
 export class InvitationRoutes {
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {
-  }
-
-  async registerTemplates() {
-    this.grpcSdk.config
-      .get('email')
-      .then(() => {
-        const promises = Object.values(templates).map((template) => {
-          return this.grpcSdk.emailProvider!.registerTemplate(template);
-        });
-        return Promise.all(promises);
-      })
-      .then(() => {
-        console.log('Email templates registered');
-      })
-      .catch((e: Error) => {
-        console.error('Internal error while registering email templates');
-      });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {}
 
   declareRoutes() {
     this.routingManager.route(

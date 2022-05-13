@@ -142,7 +142,7 @@ export default class Chat extends ManagedModule<Config> {
       JSON.stringify({
         name: (room as models.ChatRoom).name,
         participants: (room as models.ChatRoom).participants,
-      })
+      }),
     );
     callback(null, {
       result: JSON.stringify({
@@ -229,7 +229,7 @@ export default class Chat extends ManagedModule<Config> {
         _id: room._id,
         name: room.name,
         participants: room.participants,
-      })
+      }),
     );
     callback(null, {
       result: JSON.stringify({
