@@ -26,14 +26,6 @@ export class ClientValidator {
 
   async middleware(req: Request, res: Response, next: NextFunction) {
     if (isNil((req as any).conduit)) (req as any).conduit = {};
-    const securityConfig = ConfigController.getInstance().config;
-    if (!securityConfig.clientValidation.enabled) {
-      (req as any).conduit.clientId = 'anonymous-client';
-      delete req.headers.clientsecret;
-      delete req.headers.clientid;
-      return next();
-    }
-
     const { clientid, clientsecret } = req.headers;
     // if incoming call is a webhook or an admin call
     if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
@@ -47,6 +39,14 @@ export class ClientValidator {
     ) {
       // disabled swagger and gql explorer access on production
       if (this.prod) return next(ConduitError.unauthorized());
+      return next();
+    }
+
+    const securityConfig = ConfigController.getInstance().config;
+    if (!securityConfig.clientValidation.enabled) {
+      (req as any).conduit.clientId = 'anonymous-client';
+      delete req.headers.clientsecret;
+      delete req.headers.clientid;
       return next();
     }
 
