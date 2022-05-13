@@ -44,7 +44,7 @@ export function getCreateSecurityClientRoute() {
         }
         const domainPattern = new RegExp('^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$');
         let comparedDomain = domain;
-        if (domain.includes('*')){
+        if (domain.includes('*')) {
           comparedDomain = comparedDomain.split('*.')[1];
         }
         if (!domainPattern.test(comparedDomain) && domain !== '*') throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
