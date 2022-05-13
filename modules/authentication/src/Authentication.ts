@@ -3,6 +3,7 @@ import {
   ConfigController,
   DatabaseProvider,
   GrpcRequest,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 
 import path from 'path';
@@ -23,11 +24,9 @@ import {
   UserCreateRequest,
   UserDeleteRequest,
   UserLoginRequest,
+  UserLoginResponse,
 } from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
-
-type ResponseError = (arg1: { code: number; message: string }) => void;
-type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
-type Callback = ReponseSuccess & ResponseError;
+import { UserCreateResponse, UserDeleteResponse } from './protoTypes/src/authentication';
 
 export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -90,7 +89,7 @@ export default class Authentication extends ManagedModule<Config> {
 
   // gRPC Service
   // produces login credentials for a user without them having to login
-  async userLogin(call: GrpcRequest<UserLoginRequest>, callback: Callback) {
+  async userLogin(call: GrpcRequest<UserLoginRequest>, callback: GrpcCallback<UserLoginResponse>) {
     const { userId, clientId } = call.request;
     let config = ConfigController.getInstance().config;
     const signTokenOptions: ISignTokenOptions = {
@@ -130,7 +129,7 @@ export default class Authentication extends ManagedModule<Config> {
     });
   }
 
-  async userCreate(call: GrpcRequest<UserCreateRequest>, callback: Callback) {
+  async userCreate(call: GrpcRequest<UserCreateRequest>, callback: GrpcCallback<UserCreateResponse>) {
     const email = call.request.email;
     let password = call.request.password;
     const verify = call.request.verify;
@@ -191,7 +190,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   // produces login credentials for a user without them having to login
-  async userDelete(call: GrpcRequest<UserDeleteRequest>, callback: Callback) {
+  async userDelete(call: GrpcRequest<UserDeleteRequest>, callback: GrpcCallback<UserDeleteResponse>) {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
@@ -203,7 +202,7 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
-  async changePass(call: GrpcRequest<UserChangePass>, callback: Callback) {
+  async changePass(call: GrpcRequest<UserChangePass>, callback: GrpcCallback<UserCreateResponse>) {
     const email = call.request.email;
     let password = call.request.password;
     if (isNil(password) || password.length === 0) {

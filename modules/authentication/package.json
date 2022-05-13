@@ -25,15 +25,16 @@
   },
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
     "axios": "0.21.4",
     "bcrypt": "^5.0.1",
     "convict": "^6.2.1",
     "escape-string-regexp": "^4.0.0",
-    "@grpc/grpc-js": "^1.5.2",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
+    "ts-proto": "^1.112.1",
     "uuid": "^7.0.2"
   },
   "devDependencies": {
