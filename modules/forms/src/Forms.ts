@@ -34,9 +34,8 @@ export default class Forms extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
-    await this.grpcSdk.waitForExistence('email');
-    await this.grpcSdk.monitorModule('email', (args: { serving: boolean }) => {
-      if (args.serving && ConfigController.getInstance().config.active) {
+    await this.grpcSdk.monitorModule('email', (serving) => {
+      if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
       } else {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);

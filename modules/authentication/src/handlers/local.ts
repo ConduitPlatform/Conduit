@@ -593,7 +593,6 @@ export class LocalHandlers {
 
     if (this.sendEmail) {
       await this.grpcSdk.config.moduleExists('email');
-      await this.grpcSdk.waitForExistence('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
 

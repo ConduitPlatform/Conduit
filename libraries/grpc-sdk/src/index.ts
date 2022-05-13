@@ -227,7 +227,7 @@ export default class ConduitGrpcSdk {
         const found = modules.filter((m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving);
         if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r]?.closeConnection();
-          emitter.emit(`module-connection-update:${r}`, { serving: false });
+          emitter.emit(`module-connection-update:${r}`, false);
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
@@ -236,15 +236,25 @@ export default class ConduitGrpcSdk {
             this._modules[m.moduleName]?.openConnection();
           }
           this.createModuleClient(m.moduleName, m.url);
-          emitter.emit(`module-connection-update:${m.moduleName}`, { serving: true });
+          emitter.emit(`module-connection-update:${m.moduleName}`, true);
         }
       });
     });
   }
 
-  async monitorModule(moduleName: string, callback: (args: { serving: boolean }) => void) {
-    const res = await this._modules[moduleName]?.healthClient?.check({});
-    callback({ serving: res?.status === HealthCheckResponse_ServingStatus.SERVING });
+  async monitorModule(
+    moduleName: string,
+    callback: (serving: boolean) => void,
+    wait: boolean = true,
+  ) {
+    if (wait) await this.waitForExistence(moduleName);
+    this._modules['chat']?.healthClient?.check({})
+      .then(res => {
+        callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
+      })
+      .catch(() => {
+        callback(false);
+      });
     const emitter = this.config.getModuleWatcher();
     emitter.on(`module-connection-update:${moduleName}`, callback);
   }

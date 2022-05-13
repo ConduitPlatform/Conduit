@@ -47,9 +47,8 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
-    await this.grpcSdk.waitForExistence('authentication');
-    await this.grpcSdk.monitorModule('authentication', (args: { serving: boolean }) => {
-      if (args.serving && ConfigController.getInstance().config.active) {
+    await this.grpcSdk.monitorModule('authentication', (serving) => {
+      if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
       } else {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);

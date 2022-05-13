@@ -50,9 +50,8 @@ export default class Chat extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
-    await this.grpcSdk.waitForExistence('authentication');
-    await this.grpcSdk.monitorModule('authentication', (args) => {
-      this.updateHealth(args.serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
+    await this.grpcSdk.monitorModule('authentication', (serving) => {
+      this.updateHealth(serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
     });
   }
 
@@ -64,8 +63,8 @@ export default class Chat extends ManagedModule<Config> {
       await this.registerSchemas();
       this._sendEmail = config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
       if (this._sendEmail) {
-        await this.grpcSdk.monitorModule('email', (args) => {
-          this._emailServing = args.serving;
+        await this.grpcSdk.monitorModule('email', (serving) => {
+          this._emailServing = serving;
           this.refreshAppRoutes(); // redundant while called directly by onConfig() with sendPushNotification === true
         });
       } else {
@@ -73,8 +72,8 @@ export default class Chat extends ManagedModule<Config> {
       }
       this._sendPushNotification = config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification;
       if (this._sendPushNotification) {
-        await this.grpcSdk.monitorModule('pushNotifications', (args) => {
-          this._pushNotificationsServing = args.serving;
+        await this.grpcSdk.monitorModule('pushNotifications', (serving) => {
+          this._pushNotificationsServing = serving;
           this.refreshAppRoutes();
         });
       } else {

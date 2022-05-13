@@ -76,9 +76,8 @@ export default class Authentication extends ManagedModule<Config> {
       let refreshedOnce = false;
       await this.registerSchemas();
       if (config.local.verification.send_email) {
-        await this.grpcSdk.waitForExistence('email');
-        await this.grpcSdk.monitorModule('email', (args: { serving: boolean }) => {
-          this.sendEmail = args.serving;
+        await this.grpcSdk.monitorModule('email', (serving) => {
+          this.sendEmail = serving;
           this.refreshAppRoutes();
           refreshedOnce = true;
         });

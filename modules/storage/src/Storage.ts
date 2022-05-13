@@ -51,10 +51,14 @@ export default class Storage extends ManagedModule<Config> {
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
-    await this.grpcSdk.monitorModule('authentication', (args: { serving: boolean }) => {
-      this.enableAuthRoutes = args.serving;
-      this.refreshAppRoutes();
-    });
+    await this.grpcSdk.monitorModule(
+      'authentication',
+      (serving) => {
+        this.enableAuthRoutes = serving;
+        this.refreshAppRoutes();
+      },
+      false,
+    );
   }
 
   async preConfig(config: Config) {
