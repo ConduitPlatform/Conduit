@@ -4,9 +4,10 @@ import {
   ConduitRouteReturnDefinition,
   ConduitError,
   ConduitString,
+  RegisteredModule,
 } from '@conduitplatform/commons';
 
-export function getModulesRoute(servingModules: Map<string, string>) {
+export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(
     {
       path: '/config/modules',
@@ -21,17 +22,18 @@ export function getModulesRoute(servingModules: Map<string, string>) {
       ],
     }),
     async () => {
-      if (servingModules.size !== 0) {
-        let modules: any[] = [];
-        servingModules.forEach((value: string, key: string) => {
+      if (registeredModules.size !== 0) {
+        const modules: any[] = [];
+        registeredModules.forEach((value: RegisteredModule, key: string) => {
           modules.push({
             moduleName: key,
-            url: value,
+            url: value.address,
+            serving: value.serving,
           });
         });
         return { result: { modules } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
       } else {
-        throw new ConduitError('INVALID_ARGUMENTS', 404, 'Modules not available yet');
+        throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
       }
     }
   );

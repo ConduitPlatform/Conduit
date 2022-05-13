@@ -2,6 +2,7 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
@@ -41,16 +42,26 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   constructor() {
     super('pushNotifications');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.monitorModule('authentication', (serving) => {
+      if (serving && ConfigController.getInstance().config.active) {
+        this.updateHealth(HealthCheckStatus.SERVING);
+      } else {
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      }
+    });
   }
 
   async onConfig() {
-    if (ConfigController.getInstance().config.active) {
-      this.enableModule();
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      await this.enableModule();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 

@@ -36,6 +36,7 @@ export class GrpcServer {
           _url,
           () => { return this._serviceHealthState; },
           'core',
+          false,
         );
         grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(

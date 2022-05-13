@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
+import { HealthCheckStatus } from '../../types';
 import { ConfigDefinition, RegisterModuleRequest, ModuleHealthRequest } from '../../protoUtils/core';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
@@ -85,11 +86,15 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     return this.client!.getRedisDetails(request);
   }
 
-  registerModule(name: string, url: string): Promise<any> {
-    // TODO make newConfigSchema required when all modules provide their config schema
+  registerModule(
+    name: string,
+    url: string,
+    healthStatus: Omit<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN>,
+  ): Promise<any> {
     const request: RegisterModuleRequest = {
       moduleName: name.toString(),
       url: url.toString(),
+      healthStatus: healthStatus as number,
     };
     const self = this;
     return this.client!.registerModule(request)

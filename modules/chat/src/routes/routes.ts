@@ -20,10 +20,15 @@ import { InvitationRoutes } from './InvitationRoutes';
 
 export class ChatRoutes {
 
-  private _routingManager: RoutingManager;
+  private readonly _routingManager: RoutingManager;
   private invitationRoutes: InvitationRoutes;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly sendEmail: boolean,
+    private readonly sendPushNotification: boolean,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
     this.invitationRoutes = new InvitationRoutes(this.grpcSdk, this._routingManager);
   }
@@ -57,9 +62,15 @@ export class ChatRoutes {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      const sendEmail = config.explicit_room_joins.send_email;
-      const sendNotification = config.explicit_room_joins.send_notification;
-      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
+      await sendInvitations(
+        usersToBeAdded,
+        user,
+        room,
+        serverConfig.url,
+        this.sendEmail,
+        this.sendPushNotification,
+        this.grpcSdk,
+      )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -110,9 +121,15 @@ export class ChatRoutes {
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      const sendEmail = config.explicit_room_joins.send_email;
-      const sendNotification = config.explicit_room_joins.send_notification;
-      const ret = await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
+      const ret = await sendInvitations(
+        usersToBeAdded,
+        user,
+        room,
+        serverConfig.url,
+        this.sendEmail,
+        this.sendPushNotification,
+        this.grpcSdk,
+      )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -527,7 +544,7 @@ export class ChatRoutes {
     }
 
     if (config.explicit_room_joins.enabled) {
-      if (config.explicit_room_joins.send_email)
+      if (config.explicit_room_joins.send_email && this.sendEmail)
         await this.invitationRoutes.registerTemplates();
       this.invitationRoutes.declareRoutes();
     }
