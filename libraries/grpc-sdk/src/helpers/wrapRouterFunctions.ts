@@ -19,15 +19,15 @@ export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
 }
 
 function generateLog(routerRequest: boolean, requestReceive: number, call: any, status?: Status) {
-  console.log(
-    routerRequest ? 'Request: ' : 'Socket: ' +
-    routerRequest ? call.request.path : call.request.event +
-      (routerRequest ? 'socket: ' + call.request.socket : '') +
-      ' ' +
-      status ?? '200' +
-      ' ' +
-      (Date.now() - requestReceive),
-  );
+  let log = '';
+  if (routerRequest) {
+    log += `Request:  ${call.request.path}`;
+  } else {
+    log += `Socket:  ${call.request.event} socket: ${call.request.socket}`;
+  }
+  log += ` ${status ?? '200'} ${Date.now() - requestReceive}`;
+
+  console.log(log);
 }
 
 function parseRequestData(data: any) {
