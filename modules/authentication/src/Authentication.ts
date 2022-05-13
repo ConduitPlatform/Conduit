@@ -2,6 +2,7 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  GrpcRequest,
 } from '@conduitplatform/grpc-sdk';
 
 import path from 'path';
@@ -17,12 +18,20 @@ import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
 import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
-import { UserChangePass, UserCreateRequest, UserCreateResponse, UserDeleteRequest, UserDeleteResponse, UserLoginRequest, UserLoginResponse } from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
+import {
+  UserChangePass,
+  UserCreateRequest,
+  UserCreateResponse,
+  UserDeleteRequest,
+  UserDeleteResponse,
+  UserLoginRequest,
+  UserLoginResponse,
+} from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
 
 type ResponseError = (arg1: { code: number; message: string }) => void;
 type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
-type Callback = ReponseSuccess | ResponseError;
- 
+type Callback = ReponseSuccess & ResponseError;
+
 export default class Authentication extends ManagedModule {
   config = AppConfigSchema;
   service = {
@@ -52,7 +61,7 @@ export default class Authentication extends ManagedModule {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:onConfig', _ => {
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', (_) => {
       this.onConfig()
         .then(() => {
           console.log('Updated authentication configuration');
@@ -84,7 +93,7 @@ export default class Authentication extends ManagedModule {
 
   // gRPC Service
   // produces login credentials for a user without them having to login
-  async userLogin(call: ServerUnaryCall<UserLoginRequest,UserLoginResponse>, callback: any) {
+  async userLogin(call: GrpcRequest<UserLoginRequest>, callback: Callback) {
     const { userId, clientId } = call.request;
     let config = ConfigController.getInstance().config;
     const signTokenOptions: ISignTokenOptions = {
@@ -124,7 +133,7 @@ export default class Authentication extends ManagedModule {
     });
   }
 
-  async userCreate(call: ServerUnaryCall<UserCreateRequest,UserCreateResponse>, callback: any) {
+  async userCreate(call: GrpcRequest<UserCreateRequest>, callback: Callback) {
     const email = call.request.email;
     let password = call.request.password;
     const verify = call.request.verify;
@@ -162,12 +171,11 @@ export default class Authentication extends ManagedModule {
       if (verify) {
         const serverConfig = await this.grpcSdk.config.getServerConfig();
         const url = serverConfig.url;
-        const verificationToken: models.Token = await models.Token.getInstance()
-          .create({
-            type: TokenType.VERIFICATION_TOKEN,
-            userId: user._id,
-            token: uuid(),
-          })
+        const verificationToken: models.Token = await models.Token.getInstance().create({
+          type: TokenType.VERIFICATION_TOKEN,
+          userId: user._id,
+          token: uuid(),
+        });
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
@@ -186,7 +194,7 @@ export default class Authentication extends ManagedModule {
   }
 
   // produces login credentials for a user without them having to login
-  async userDelete(call: ServerUnaryCall<UserDeleteRequest, UserDeleteResponse>, callback: any) {
+  async userDelete(call: GrpcRequest<UserDeleteRequest>, callback: Callback) {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
@@ -198,7 +206,7 @@ export default class Authentication extends ManagedModule {
     }
   }
 
-  async changePass(call: ServerUnaryCall<UserChangePass, UserCreateResponse>, callback: Callback) {
+  async changePass(call: GrpcRequest<UserChangePass>, callback: Callback) {
     const email = call.request.email;
     let password = call.request.password;
     if (isNil(password) || password.length === 0) {
