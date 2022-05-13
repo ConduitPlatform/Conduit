@@ -21,12 +21,14 @@ import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
-import { HealthDefinition } from './protoUtils/grpc_health_check';
+import { HealthDefinition, HealthCheckResponse_ServingStatus } from './protoUtils/grpc_health_check';
+import { ModuleListResponse_ModuleResponse } from './protoUtils/core'
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
+  private readonly _watchModules: boolean;
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
@@ -51,13 +53,14 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
+  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string, watchModules = true) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.serverUrl = serverUrl;
+    this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
     const grpcKey = process.env.GRPC_KEY;
     if (grpcKey) {
@@ -100,7 +103,9 @@ export default class ConduitGrpcSdk {
     (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
     (this._router as any)  = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
-    this.watchModules();
+    if (this._watchModules) {
+      this.watchModules();
+    }
     this._initialized = true;
   }
 
@@ -219,18 +224,44 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
-        let found = modules.filter((m: any) => m.moduleName === r);
+        const found = modules.filter((m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving);
         if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r]?.closeConnection();
+          emitter.emit(`module-connection-update:${r}`, false);
         }
       });
-      modules.forEach((m: any) => {
-        if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName]?.openConnection();
+      modules.forEach((m: ModuleListResponse_ModuleResponse) => {
+        if (m.serving) {
+          if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+            this._modules[m.moduleName]?.openConnection();
+          }
+          this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, true);
         }
-        this.createModuleClient(m.moduleName, m.url);
       });
     });
+  }
+
+  async monitorModule(
+    moduleName: string,
+    callback: (serving: boolean) => void,
+    wait: boolean = true,
+  ) {
+    if (wait) await this.waitForExistence(moduleName);
+    this._modules['chat']?.healthClient?.check({})
+      .then(res => {
+        callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
+      })
+      .catch(() => {
+        callback(false);
+      });
+    const emitter = this.config.getModuleWatcher();
+    emitter.on(`module-connection-update:${moduleName}`, callback);
+  }
+
+  unmonitorModule(moduleName: string) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.removeAllListeners(`module-connection-update:${moduleName}`);
   }
 
   initializeEventBus(): Promise<any> {

@@ -9,17 +9,16 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil, merge } from 'lodash';
+import { isNil, merge, isEmpty } from 'lodash';
 import { validateSchemaInput } from '../utils/utilities';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-
 const escapeStringRegexp = require('escape-string-regexp');
 
-const SYSTEM_SCHEMAS = ['CustomEndpoints']; // DeclaredSchemas is not a DeclaredSchema
+const SYSTEM_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
 
@@ -472,6 +471,54 @@ export class SchemaAdmin {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
     return { modules };
+  }
+
+  async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const introspectedSchemas = await this.database.introspectDatabase(true);
+    await Promise.all(
+      introspectedSchemas.map(async (schema: ConduitSchema) => {
+        if(isEmpty(schema.fields)) 
+          return null;
+        await this.database.getSchemaModel('_PendingSchemas').model.create(
+          JSON.stringify({
+            name: schema.name,
+            fields: schema.fields,
+            modelOptions: schema.schemaOptions,
+            ownerModule: schema.ownerModule,
+            extensions: (schema as any).extensions,
+          })
+        );
+      })
+    );
+    return 'Schemas successfully introspected';
+  }
+
+  async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
+    const schemas = await this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.findMany({}, skip, limit, undefined, sort);
+    return { schemas };
+  }
+
+  async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const schemas : ConduitSchema[] = Object.values(call.request.params.schemas);
+    const schemaIds = schemas.map((schema: any) => schema._id);
+    //add schemas to _DeclaredSchema
+    await Promise.all(schemas.map(async (schema: ConduitSchema) => {
+        const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
+        if (isNil(recreatedSchema.fields))
+          return null;
+        recreatedSchema.ownerModule = 'database';
+        recreatedSchema.schemaOptions.conduit!.imported = true;
+        await this.database.createSchemaFromAdapter(recreatedSchema);
+    }));
+    //remove finalized schemas from pending schemas
+    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany({ _id: { $in: schemaIds } });
+    
+    return `${schemas.length} schemas finalized successfully`;
   }
 
   private patchSchemaPerms(

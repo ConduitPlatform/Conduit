@@ -12,11 +12,6 @@ export interface ICustomEndpoint {
     optional?: boolean;
     array?: boolean;
   }[];
-  queries?: {
-    schemaField: string;
-    operation: number;
-    comparisonField: { type: string; value: any; like: boolean };
-  }[];
   query?: any;
   assignments?: {
     schemaField: string;

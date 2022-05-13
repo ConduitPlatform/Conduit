@@ -4,3 +4,4 @@ export * from './Error';
 export * from './IConduitModule';
 export * from './Middleware';
 export * from './Socket';
+export * from './RegisteredModule';

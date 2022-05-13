@@ -2,8 +2,9 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
@@ -19,7 +20,7 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 
-export default class Storage extends ManagedModule {
+export default class Storage extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
@@ -32,57 +33,75 @@ export default class Storage extends ManagedModule {
       getFileData: this.getFileData.bind(this),
     },
   };
-  private isRunning: boolean = false;
+  private isMigrated: boolean = false;
   private adminRouter: AdminRoutes;
   private userRouter: StorageRoutes;
   private database: DatabaseProvider;
   private storageProvider: IStorageProvider;
   private _fileHandlers: FileHandlers;
+  private enableAuthRoutes: boolean = false;
 
   constructor() {
     super('storage');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
-    this.storageProvider = createStorageProvider('local', {} as any);
+    this.storageProvider = createStorageProvider('local', {} as Config);
+    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+    await this.registerSchemas();
+    await this.grpcSdk.monitorModule(
+      'authentication',
+      (serving) => {
+        this.enableAuthRoutes = serving;
+        this.refreshAppRoutes();
+      },
+      false,
+    );
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.accountId = await getAwsAccountId(config);
+        config.aws.accountId = await getAwsAccountId(config) as any;
       }
     }
     return config;
   }
 
   async onConfig() {
-    await this.updateConfig();
-    const storageConfig = ConfigController.getInstance().config;
-    const { provider, local, google, azure, aws } = storageConfig;
-
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await migrateFoldersToContainers(this.grpcSdk);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      await this.updateConfig();
+      const storageConfig = ConfigController.getInstance().config;
+      const { provider, local, google, azure, aws } = storageConfig;
+      if (!this.isMigrated) {
+        await migrateFoldersToContainers(this.grpcSdk);
+        this.isMigrated= true;
+      }
+      this.storageProvider = createStorageProvider(provider, {
+        local,
+        google,
+        azure,
+        aws,
+      });
+      this._fileHandlers.updateProvider(this.storageProvider);
+      this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+      await this.refreshAppRoutes();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
-    this.storageProvider = createStorageProvider(provider, {
-      local,
-      google,
-      azure,
-      aws,
-    });
-    this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+  }
+
+  private async refreshAppRoutes() {
     this.userRouter = new StorageRoutes(
       this.grpcServer,
       this.grpcSdk,
-      this._fileHandlers
+      this._fileHandlers,
+      this.enableAuthRoutes,
     );
-    this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
-    this._fileHandlers.updateProvider(this.storageProvider);
     await this.userRouter.registerRoutes();
   }
 

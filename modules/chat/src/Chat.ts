@@ -2,9 +2,10 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { ChatRoutes } from './routes/routes';
 import * as models from './models';
@@ -14,7 +15,7 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
-export default class Chat extends ManagedModule {
+export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),
@@ -26,18 +27,32 @@ export default class Chat extends ManagedModule {
       sendMessage: this.sendMessage.bind(this),
     },
   };
-  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private userRouter: ChatRoutes;
   private database: DatabaseProvider;
+  private _sendEmail: boolean;
+  private _sendPushNotification: boolean;
+  private _emailServing: boolean;
+  private _pushNotificationsServing: boolean;
+
+  private get sendEmail() {
+    return this._sendEmail && this._emailServing;
+  }
+
+  private get sendPushNotification() {
+    return this._sendPushNotification && this._pushNotificationsServing;
+  }
 
   constructor() {
     super('chat');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.monitorModule('authentication', (serving) => {
+      this.updateHealth(serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
+    });
   }
 
   async onRegister() {
@@ -54,18 +69,43 @@ export default class Chat extends ManagedModule {
 
   async onConfig() {
     const config = await ConfigController.getInstance().config;
-    if (!this.isRunning) {
+    if (!config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
       await this.registerSchemas();
+      this._sendEmail = config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
+      if (this._sendEmail) {
+        await this.grpcSdk.monitorModule('email', (serving) => {
+          this._emailServing = serving;
+          this.refreshAppRoutes(); // redundant while called directly by onConfig() with sendPushNotification === true
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('email');
+      }
+      this._sendPushNotification = config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification;
+      if (this._sendPushNotification) {
+        await this.grpcSdk.monitorModule('pushNotifications', (serving) => {
+          this._pushNotificationsServing = serving;
+          this.refreshAppRoutes();
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('pushNotifications');
+      }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.userRouter = new ChatRoutes(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
+      if (!this._sendEmail && !this._sendPushNotification) { // avoid redundant refreshes
+        await this.refreshAppRoutes();
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
-    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_email) {
-      await this.grpcSdk.waitForExistence('email');
-      await this.userRouter.registerTemplates();
-    }
-    if (config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification)
-      await this.grpcSdk.waitForExistence('pushNotifications');
+  }
+
+  private async refreshAppRoutes() {
+    this.userRouter = new ChatRoutes(
+      this.grpcServer,
+      this.grpcSdk,
+      this.sendEmail,
+      this.sendPushNotification,
+    );
     await this.userRouter.registerRoutes();
   }
 

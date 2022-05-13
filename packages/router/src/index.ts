@@ -300,10 +300,6 @@ export class ConduitDefaultRouter implements IConduitRouter {
     return this._grpcRoutes;
   }
 
-  getMiddlewares() {
-    return this._globalMiddlewares;
-  }
-
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._registerRoute(route);
@@ -324,6 +320,8 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private registerAdminRoutes() {
     this._commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
     this._commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
+    this._commons.getAdmin().registerRoute(adminRoutes.generateRestClient());
+    this._commons.getAdmin().registerRoute(adminRoutes.generateGraphQlClient());
   }
 
   setConfig(moduleConfig: any) {

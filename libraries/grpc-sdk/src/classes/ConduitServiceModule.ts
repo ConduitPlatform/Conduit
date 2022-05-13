@@ -52,8 +52,10 @@ export abstract class ConduitServiceModule {
     if ((state === HealthCheckStatus.UNKNOWN && !init) || state === HealthCheckStatus.SERVICE_UNKNOWN) {
       throw new Error(`Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`);
     }
-    this._serviceHealthState = state;
-    this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+    if (this._serviceHealthState !== state) {
+      this._serviceHealthState = state;
+      this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+    }
   }
 
   healthCheck(call: any, callback: any) {

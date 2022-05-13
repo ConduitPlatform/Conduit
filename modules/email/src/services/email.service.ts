@@ -6,15 +6,12 @@ import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate';
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate';
+import { Attachment } from 'nodemailer/lib/mailer';
+
 export class EmailService {
   private database: any;
 
-  constructor(private emailer: EmailProvider, private readonly grpcSdk: ConduitGrpcSdk) {
-    const self = this;
-    this.grpcSdk.waitForExistence('database').then((r) => {
-      self.database = self.grpcSdk.databaseProvider;
-    });
-  }
+  constructor(private emailer: EmailProvider) {}
 
   updateProvider(emailer: EmailProvider) {
     this.emailer = emailer;
@@ -80,12 +77,12 @@ export class EmailService {
     }
 
     let subjectString = subject!;
-    let bodyString = body!
+    let bodyString = body!;
     if (template) {
       if (templateFound && templateFound.externalManaged) {
         builder.setTemplate({
           id: templateFound._id,
-          variables: variables as { [key: string]: any },
+          variables: variables,
         });
       } else {
         const handled_body = handlebars.compile(templateFound!.body);
@@ -109,7 +106,7 @@ export class EmailService {
     }
 
     if (params.attachments) {
-      builder.addAttachments(params.attachments as any);
+      builder.addAttachments(params.attachments as Attachment[]);
     }
     return this.emailer.sendEmail(builder);
   }

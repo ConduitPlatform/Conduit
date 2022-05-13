@@ -16,11 +16,6 @@ export interface SwaggerDefinition {
   $ref?: string;
 }
 
-export interface SwaggerArray extends SwaggerDefinition {
-  type: 'array';
-  items: SwaggerDefinition;
-}
-
 export interface SwaggerString extends SwaggerDefinition {
   type: 'string';
   format?: 'date-time';

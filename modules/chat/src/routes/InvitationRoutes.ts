@@ -8,11 +8,9 @@ import ConduitGrpcSdk, {
 import { ChatRoom, InvitationToken } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import * as templates from '../templates';
 
 export class InvitationRoutes {
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {}
 
   declareRoutes() {
     this.routingManager.route(

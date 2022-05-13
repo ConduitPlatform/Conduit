@@ -1,4 +1,4 @@
-import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
   GrpcServer as ConduitGrpcServer,
@@ -36,6 +36,7 @@ export class GrpcServer {
           _url,
           () => { return this._serviceHealthState; },
           'core',
+          false,
         );
         grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(

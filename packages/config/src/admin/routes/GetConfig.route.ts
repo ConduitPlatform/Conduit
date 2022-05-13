@@ -6,6 +6,7 @@ import {
   ConduitRouteReturnDefinition,
   RouteOptionType,
   TYPE,
+  RegisteredModule,
 } from '@conduitplatform/commons';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
@@ -13,7 +14,7 @@ import * as models from '../../models';
 
 export function getGetConfigRoute(
   grpcSdk: ConduitGrpcSdk,
-  registeredModules: Map<string, string>,
+  registeredModules: Map<string, RegisteredModule>,
 ) {
   return new ConduitRoute(
     {

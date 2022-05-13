@@ -24,16 +24,18 @@ export class LocalHandlers {
   private initialized: boolean = false;
   private clientValidation: boolean;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly sendEmail: boolean,
+  ) {
     grpcSdk.config.get('security').then((config) => {
       this.clientValidation = config.clientValidation.enabled;
     });
   }
 
   async validate(): Promise<Boolean> {
-    const config = ConfigController.getInstance().config;
     let promise: Promise<void>;
-    if (config.local.verification.send_email) {
+    if (this.sendEmail) {
       promise = this.grpcSdk.config.get('email')
         .then((emailConfig: any) => {
           if (!emailConfig.active) {
@@ -92,11 +94,10 @@ export class LocalHandlers {
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
-    const config = ConfigController.getInstance().config;
     const serverConfig = await this.grpcSdk.config.getServerConfig();
     const url = serverConfig.url;
 
-    if (config.local.verification.send_email) {
+    if (this.sendEmail) {
       let verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -104,13 +105,15 @@ export class LocalHandlers {
       });
       let result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      await this.emailModule.sendEmail('EmailVerification', {
-        email: user.email,
-        sender: 'no-reply',
-        variables: {
-          link,
-        },
-      });
+      if (this.sendEmail) {
+        await this.emailModule.sendEmail('EmailVerification', {
+          email: user.email,
+          sender: 'no-reply',
+          variables: {
+            link,
+          },
+        });
+      }
     }
 
     return { userId: user._id };
@@ -267,13 +270,15 @@ export class LocalHandlers {
 
     let appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-    await this.emailModule.sendEmail('ForgotPassword', {
-      email: user.email,
-      sender: 'no-reply',
-      variables: {
-        link,
-      },
-    });
+    if (this.sendEmail) {
+      await this.emailModule.sendEmail('ForgotPassword', {
+        email: user.email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      });
+    }
     return 'Ok';
   }
 
@@ -586,9 +591,8 @@ export class LocalHandlers {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (config.local.verification.send_email) {
+    if (this.sendEmail) {
       await this.grpcSdk.config.moduleExists('email');
-      await this.grpcSdk.waitForExistence('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
 
@@ -612,21 +616,17 @@ export class LocalHandlers {
       console.log('phone authentication not active');
     }
 
-    if (config.local.verification.send_email) {
+    if (this.sendEmail) {
       this.registerTemplates();
     }
     this.initialized = true;
   }
 
   private registerTemplates() {
-    this.grpcSdk.config
-      .get('email')
-      .then((emailConfig: any) => {
-        const promises = Object.values(templates).map((template) => {
-          return this.emailModule.registerTemplate(template);
-        });
-        return Promise.all(promises);
-      })
+    const promises = Object.values(templates).map((template) => {
+      return this.emailModule.registerTemplate(template);
+    });
+    Promise.all(promises)
       .then(() => {
         console.log('Email templates registered');
       })

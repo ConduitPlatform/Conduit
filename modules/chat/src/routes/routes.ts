@@ -21,10 +21,15 @@ import * as templates from '../templates';
 
 export class ChatRoutes {
 
-  private _routingManager: RoutingManager;
+  private readonly _routingManager: RoutingManager;
   private invitationRoutes: InvitationRoutes;
 
-  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly sendEmail: boolean,
+    private readonly sendPushNotification: boolean,
+  ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
     this.invitationRoutes = new InvitationRoutes(this.grpcSdk, this._routingManager);
   }
@@ -32,7 +37,7 @@ export class ChatRoutes {
   async registerTemplates() {
     this.grpcSdk.config
       .get('email')
-      .then((emailConfig: any) => {
+      .then(() => {
         const promises = Object.values(templates).map((template) => {
           return this.grpcSdk.emailProvider!.registerTemplate(template);
         });
@@ -75,9 +80,15 @@ export class ChatRoutes {
           throw new GrpcError(status.INTERNAL, e.message);
         });
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      const sendEmail = config.explicit_room_joins.send_email;
-      const sendNotification = config.explicit_room_joins.send_notification;
-      await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
+      await sendInvitations(
+        usersToBeAdded,
+        user,
+        room,
+        serverConfig.url,
+        this.sendEmail,
+        this.sendPushNotification,
+        this.grpcSdk,
+      )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -128,9 +139,15 @@ export class ChatRoutes {
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       const serverConfig = await this.grpcSdk.config.getServerConfig();
-      const sendEmail: boolean = config.explicit_room_joins.send_email;
-      const sendNotification: boolean = config.explicit_room_joins.send_notification;
-      const ret = await sendInvitations(usersToBeAdded, user, room, serverConfig.url, sendEmail, sendNotification, this.grpcSdk)
+      const ret = await sendInvitations(
+        usersToBeAdded,
+        user,
+        room,
+        serverConfig.url,
+        this.sendEmail,
+        this.sendPushNotification,
+        this.grpcSdk,
+      )
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -546,6 +563,8 @@ export class ChatRoutes {
     }
 
     if (config.explicit_room_joins.enabled) {
+      if (this.sendEmail)
+        await this.registerTemplates();
       this.invitationRoutes.declareRoutes();
     }
 
