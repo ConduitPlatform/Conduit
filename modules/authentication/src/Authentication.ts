@@ -6,7 +6,7 @@ import {
 
 import path from 'path';
 import { isNil } from 'lodash';
-import { status } from '@grpc/grpc-js';
+import { Server, ServerUnaryCall, ServerWritableStream, status } from '@grpc/grpc-js';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
@@ -17,7 +17,12 @@ import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
 import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
+import { UserChangePass, UserCreateRequest, UserCreateResponse, UserDeleteRequest, UserDeleteResponse, UserLoginRequest, UserLoginResponse } from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
 
+type ResponseError = (arg1: { code: number; message: string }) => void;
+type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
+type Callback = ReponseSuccess | ResponseError;
+ 
 export default class Authentication extends ManagedModule {
   config = AppConfigSchema;
   service = {
@@ -79,7 +84,7 @@ export default class Authentication extends ManagedModule {
 
   // gRPC Service
   // produces login credentials for a user without them having to login
-  async userLogin(call: any, callback: any) {
+  async userLogin(call: ServerUnaryCall<UserLoginRequest,UserLoginResponse>, callback: any) {
     const { userId, clientId } = call.request;
     let config = ConfigController.getInstance().config;
     const signTokenOptions: ISignTokenOptions = {
@@ -119,7 +124,7 @@ export default class Authentication extends ManagedModule {
     });
   }
 
-  async userCreate(call: any, callback: any) {
+  async userCreate(call: ServerUnaryCall<UserCreateRequest,UserCreateResponse>, callback: any) {
     const email = call.request.email;
     let password = call.request.password;
     const verify = call.request.verify;
@@ -181,7 +186,7 @@ export default class Authentication extends ManagedModule {
   }
 
   // produces login credentials for a user without them having to login
-  async userDelete(call: any, callback: any) {
+  async userDelete(call: ServerUnaryCall<UserDeleteRequest, UserDeleteResponse>, callback: any) {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
@@ -193,7 +198,7 @@ export default class Authentication extends ManagedModule {
     }
   }
 
-  async changePass(call: any, callback: any) {
+  async changePass(call: ServerUnaryCall<UserChangePass, UserCreateResponse>, callback: Callback) {
     const email = call.request.email;
     let password = call.request.password;
     if (isNil(password) || password.length === 0) {
