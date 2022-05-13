@@ -1,34 +1,7 @@
-import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
 import { isNil } from 'lodash';
 
 const escapeStringRegexp = require('escape-string-regexp');
-
-export function getOpName(name: string, op: number) {
-  let operation;
-  switch (op) {
-    case 0:
-      operation = ConduitRouteActions.GET;
-      break;
-    case 1:
-      operation = ConduitRouteActions.POST;
-      break;
-    case 2:
-      operation = ConduitRouteActions.UPDATE;
-      break;
-    case 3:
-      operation = ConduitRouteActions.DELETE;
-      break;
-    case 4:
-      operation = ConduitRouteActions.PATCH;
-      break;
-    // won't ever be called by TS doesn't care about that
-    default:
-      operation = ConduitRouteActions.GET;
-      break;
-  }
-  return operation + name;
-}
 
 export function constructQuery(
   endpointQuery: any,
@@ -186,32 +159,6 @@ function _translateQuery(
     default:
       return { [schemaField]: comparisonField };
   }
-}
-
-export function mergeQueries(queries: string[]): any {
-  let mergedQuery: any = {};
-  let insertedFields: Record<string, boolean> = {};
-
-  queries.forEach((query: string) => {
-    const parsedQuery = JSON.parse(`{${query}}`);
-    const field = Object.keys(parsedQuery)[0];
-    if (mergedQuery.hasOwnProperty(field)) {
-      if (!mergedQuery.hasOwnProperty('$and')) {
-        mergedQuery['$and'] = [];
-      }
-
-      mergedQuery['$and'].push(parsedQuery);
-      mergedQuery['$and'].push({ [field]: mergedQuery[field] });
-      delete mergedQuery[field];
-      insertedFields[field] = true;
-    } else if (insertedFields[field]) {
-      mergedQuery['$and'].push(parsedQuery);
-    } else {
-      mergedQuery[field] = parsedQuery[field];
-    }
-  });
-
-  return mergedQuery;
 }
 
 export function constructAssignment(

@@ -4,14 +4,11 @@ import {
   ConfigController,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
-import {
-  createStorageProvider,
-  IStorageProvider,
-} from './storage-provider';
+import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import { migrateFoldersToContainers } from './migrations/container.migrations';
 import path from 'path';
@@ -24,7 +21,7 @@ type ResponseError = (arg1: { code: number; message: string }) => void;
 type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
 type Callback = ReponseSuccess & ResponseError;
 
-export default class Storage extends ManagedModule {
+export default class Storage extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
@@ -51,14 +48,14 @@ export default class Storage extends ManagedModule {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
-    this.storageProvider = createStorageProvider('local', {} as any);
+    this.storageProvider = createStorageProvider('local', {} as Config);
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.accountId = await getAwsAccountId(config);
+        config.aws.accountId = (await getAwsAccountId(config)) as any;
       }
     }
     return config;

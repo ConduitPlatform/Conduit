@@ -38,7 +38,7 @@ import path from 'path';
 import { isEmpty } from 'lodash';
 import { CallContext } from 'nice-grpc-common';
 
-export default class DatabaseModule extends ManagedModule {
+export default class DatabaseModule extends ManagedModule<void> {
   config = undefined;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),

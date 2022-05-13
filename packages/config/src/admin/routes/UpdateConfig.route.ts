@@ -47,7 +47,7 @@ export function getUpdateConfigRoute(
 
       await grpcSdk
         .initializeModules()
-        .catch((err) => console.log('Failed to refresh modules'));
+        .catch(() => console.log('Failed to refresh modules'));
       switch (moduleName) {
         case undefined:
           throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');

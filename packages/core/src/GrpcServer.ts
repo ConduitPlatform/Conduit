@@ -1,4 +1,4 @@
-import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
   GrpcServer as ConduitGrpcServer,

@@ -29,7 +29,7 @@ type ResponseError = (arg1: { code: number; message: string }) => void;
 type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
 type Callback = ReponseSuccess & ResponseError;
 
-export default class Authentication extends ManagedModule {
+export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),

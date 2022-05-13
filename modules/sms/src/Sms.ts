@@ -2,7 +2,7 @@ import {
   ManagedModule,
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import {
   SendSmsRequest,
@@ -17,7 +17,7 @@ import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
-export default class Sms extends ManagedModule {
+export default class Sms extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'sms.proto'),
