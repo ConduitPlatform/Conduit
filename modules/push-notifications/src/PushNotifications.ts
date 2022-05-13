@@ -179,7 +179,6 @@ export default class PushNotifications extends ManagedModule<Config> {
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-
     return callback(null, { message: 'Ok' });
   }
 }

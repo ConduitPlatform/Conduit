@@ -17,6 +17,7 @@ import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { validateUsersInput, sendInvitations } from '../utils';
 import { InvitationRoutes } from './InvitationRoutes';
+import * as templates from '../templates';
 
 export class ChatRoutes {
 
@@ -31,6 +32,23 @@ export class ChatRoutes {
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
     this.invitationRoutes = new InvitationRoutes(this.grpcSdk, this._routingManager);
+  }
+
+  async registerTemplates() {
+    this.grpcSdk.config
+      .get('email')
+      .then(() => {
+        const promises = Object.values(templates).map((template) => {
+          return this.grpcSdk.emailProvider!.registerTemplate(template);
+        });
+        return Promise.all(promises);
+      })
+      .then(() => {
+        console.log('Email templates registered');
+      })
+      .catch((e: Error) => {
+        console.error('Internal error while registering email templates');
+      });
   }
 
   async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -525,6 +543,7 @@ export class ChatRoutes {
         this.deleteMessage.bind(this),
       );
     }
+
     if (config.allowMessageEdit) {
       this._routingManager.route(
         {
@@ -544,8 +563,8 @@ export class ChatRoutes {
     }
 
     if (config.explicit_room_joins.enabled) {
-      if (config.explicit_room_joins.send_email && this.sendEmail)
-        await this.invitationRoutes.registerTemplates();
+      if (this.sendEmail)
+        await this.registerTemplates();
       this.invitationRoutes.declareRoutes();
     }
 
