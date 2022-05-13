@@ -21,11 +21,8 @@ import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
 import {
   UserChangePass,
   UserCreateRequest,
-  UserCreateResponse,
   UserDeleteRequest,
-  UserDeleteResponse,
   UserLoginRequest,
-  UserLoginResponse,
 } from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
 
 type ResponseError = (arg1: { code: number; message: string }) => void;

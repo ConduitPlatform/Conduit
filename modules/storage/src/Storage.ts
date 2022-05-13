@@ -19,7 +19,10 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
-import { CallContext } from 'nice-grpc';
+
+type ResponseError = (arg1: { code: number; message: string }) => void;
+type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
+type Callback = ReponseSuccess & ResponseError;
 
 export default class Storage extends ManagedModule {
   config = AppConfigSchema;
@@ -100,7 +103,7 @@ export default class Storage extends ManagedModule {
   }
 
   // gRPC Service
-  async getFile(call: ParsedRouterRequest, callback: any) {
+  async getFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -109,7 +112,7 @@ export default class Storage extends ManagedModule {
     await this._fileHandlers.getFile(call);
   }
 
-  async getFileData(call: ParsedRouterRequest, callback: any) {
+  async getFileData(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -118,7 +121,7 @@ export default class Storage extends ManagedModule {
     await this._fileHandlers.getFileData(call);
   }
 
-  async createFile(call: ParsedRouterRequest, callback: any) {
+  async createFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -127,7 +130,7 @@ export default class Storage extends ManagedModule {
     await this._fileHandlers.createFile(call);
   }
 
-  async updateFile(call: ParsedRouterRequest, callback: any) {
+  async updateFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
