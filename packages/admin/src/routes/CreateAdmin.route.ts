@@ -1,15 +1,17 @@
 import {
   ConduitCommons,
-  ConduitError,
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitRouteParameters,
-  ConduitString,
 } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { hashPassword } from '../utils/auth';
+import {
+  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  ConduitString,
+} from '@conduitplatform/grpc-sdk';
 
 
 export function getCreateAdminRoute(conduit: ConduitCommons) {
@@ -41,6 +43,6 @@ export function getCreateAdminRoute(conduit: ConduitCommons) {
       await Admin.getInstance().create({ username: username, password: pass });
 
       return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

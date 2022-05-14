@@ -2,10 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import { credentials, Metadata, loadPackageDefinition } from '@grpc/grpc-js';
 import {
-  ConduitRoute,
   ConduitSocket,
   ConduitMiddleware,
-  ConduitRouteParameters,
   ConduitSocketEvent,
   ConduitSocketParameters,
   EventResponse,
@@ -13,6 +11,8 @@ import {
   SocketProtoDescription,
   instanceOfSocketProtoDescription,
 } from '../interfaces';
+import { ConduitRoute } from '../classes/ConduitRoute';
+import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -26,7 +26,8 @@ function getDescriptor(protofile: string): any {
     defaults: true,
     oneofs: true,
   });
-  fs.unlink(protoPath, () => {});
+  fs.unlink(protoPath, () => {
+  });
   return loadPackageDefinition(packageDefinition);
 }
 
@@ -37,7 +38,7 @@ export function grpcToConduitRoute(
   grpcToken?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ] = request.routes;
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
@@ -57,7 +58,7 @@ export function grpcToConduitRoute(
 
 function createHandlers(
   routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ],
   client: any,
   moduleName?: string,
@@ -113,7 +114,8 @@ function createHandlerForRoute(
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   let returns: any = route.returns;
@@ -122,7 +124,8 @@ function createHandlerForRoute(
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
-      } catch (e) {}
+      } catch (e) {
+      }
     }
   }
   if (!options.path.startsWith('/')) {
@@ -177,13 +180,13 @@ function createHandlerForSocket(
           metadata,
           (
             err: { code: number; message: string },
-            result: EventResponse | JoinRoomResponse
+            result: EventResponse | JoinRoomResponse,
           ) => {
             if (err) {
               return reject(err);
             }
             resolve(result);
-          }
+          },
         );
       });
     };

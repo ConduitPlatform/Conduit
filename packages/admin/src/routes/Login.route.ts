@@ -1,16 +1,18 @@
 import {
   ConduitCommons,
   IConfigManager,
-  ConduitError,
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitRouteParameters,
-  ConduitString,
 } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
+import {
+  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  ConduitString,
+} from '@conduitplatform/grpc-sdk';
 
 
 export function getLoginRoute(conduit: ConduitCommons) {
@@ -49,10 +51,10 @@ export function getLoginRoute(conduit: ConduitCommons) {
       const token = signToken(
         { id: admin._id.toString() },
         tokenSecret,
-        tokenExpirationTime
+        tokenExpirationTime,
       );
 
       return { result: { token } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

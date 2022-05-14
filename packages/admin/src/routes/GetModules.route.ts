@@ -1,11 +1,13 @@
 import {
   ConduitCommons,
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  TYPE,
   RegisteredModule,
 } from '@conduitplatform/commons';
+import {
+  ConduitRouteActions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 export function getModulesRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
@@ -25,6 +27,6 @@ export function getModulesRoute(conduit: ConduitCommons) {
           response.push(val.address);
         });
       return { result: response }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

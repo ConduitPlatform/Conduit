@@ -1,12 +1,15 @@
 import {
-  ConduitBoolean,
   ConduitRoute,
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/commons';
+import {
+  ConduitBoolean,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitRouteReturnDefinition,
   ConduitString,
   ConduitError,
-} from '@conduitplatform/commons';
+} from '@conduitplatform/grpc-sdk';
+
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 import path from 'path';
@@ -36,7 +39,7 @@ export function generateRestClient() {
         await exec(
           `openapi-generator generate -i http://localhost:${
             process.env['PORT'] ?? '3000'
-          }/${inputSpec} -g ${clientType} -o ${outputPath} --skip-validate-spec`
+          }/${inputSpec} -g ${clientType} -o ${outputPath} --skip-validate-spec`,
         );
 
         const zipPath = path.resolve(__dirname, 'generate/rest.zip');
@@ -56,9 +59,9 @@ export function generateRestClient() {
         throw new ConduitError(
           (error as Error).name,
           status.INTERNAL,
-          (error as Error).message
+          (error as Error).message,
         );
       }
-    }
+    },
   );
 }

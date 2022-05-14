@@ -1,4 +1,4 @@
-import { ConduitRouteActions, ConduitRouteParameters } from '.';
+import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 // having all these as optional parameters is only here,
 // to allow us not to change the route creation typing drasticaly

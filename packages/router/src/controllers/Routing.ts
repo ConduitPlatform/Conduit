@@ -5,12 +5,12 @@ import {
   ConduitRoute,
   ConduitMiddleware,
   ConduitSocket,
-  ConduitError,
 } from '@conduitplatform/commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import { SocketPush } from '../models/SocketPush.model';
 import { SwaggerRouterMetadata } from './Rest';
+import { ConduitError } from '@conduitplatform/grpc-sdk';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
