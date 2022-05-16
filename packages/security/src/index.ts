@@ -3,7 +3,7 @@ import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
-import { secretMigrate } from './migrations/Secret.migrate';
+import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import convict from './config';
@@ -27,7 +27,7 @@ class SecurityModule extends IConduitSecurity {
 
   async initialize() {
     await this.registerSchemas();
-    await secretMigrate();
+    await runMigrations(this.grpcSdk);
     await this.registerConfig();
 
     await this.registerAdminRoutes(ConfigController.getInstance().config.clientValidation.enabled);

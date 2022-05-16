@@ -11,6 +11,7 @@ import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
+import { runMigrations } from './migrations';
 
 export default class Forms extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -34,6 +35,7 @@ export default class Forms extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('email', (serving) => {
       if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
