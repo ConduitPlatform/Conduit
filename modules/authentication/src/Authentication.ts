@@ -19,7 +19,6 @@ import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
-import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
 import {
   UserChangePass,
   UserCreateRequest,
