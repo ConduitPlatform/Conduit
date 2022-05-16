@@ -209,10 +209,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    if (
-      this.models[schemaName].originalSchema.ownerModule !== callerModule &&
-      this.models[schemaName].originalSchema.name !== 'SchemaDefinitions' // SchemaDefinitions migration
-    ) {
+    if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {

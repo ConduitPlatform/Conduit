@@ -11,7 +11,7 @@ import {
 } from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/grpc-sdk';
-import { SocketPush } from './models/SocketPush.model';
+import { SocketPush } from './interfaces';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
 import { CallContext } from 'nice-grpc-common';

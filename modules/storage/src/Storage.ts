@@ -11,12 +11,12 @@ import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
 import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
-import { migrateFoldersToContainers } from './migrations/container.migrations';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
+import { runMigrations } from './migrations';
 
 type ResponseError = (arg1: { code: number; message: string }) => void;
 type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
@@ -35,7 +35,6 @@ export default class Storage extends ManagedModule<Config> {
       getFileData: this.getFileData.bind(this),
     },
   };
-  private isMigrated: boolean = false;
   private adminRouter: AdminRoutes;
   private userRouter: StorageRoutes;
   private database: DatabaseProvider;
@@ -50,6 +49,7 @@ export default class Storage extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
@@ -80,10 +80,6 @@ export default class Storage extends ManagedModule<Config> {
       await this.updateConfig();
       const storageConfig = ConfigController.getInstance().config;
       const { provider, local, google, azure, aws } = storageConfig;
-      if (!this.isMigrated) {
-        await migrateFoldersToContainers(this.grpcSdk);
-        this.isMigrated= true;
-      }
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,

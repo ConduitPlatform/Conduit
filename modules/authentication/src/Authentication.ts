@@ -29,6 +29,7 @@ import {
   UserCreateResponse,
   UserDeleteResponse
 } from './protoTypes/authentication';
+import { runMigrations } from './migrations';
 
 export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -55,7 +56,7 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
-    await migrateLocalAuthConfig(this.grpcSdk);
+    await runMigrations(this.grpcSdk);
   }
 
   async onRegister() {

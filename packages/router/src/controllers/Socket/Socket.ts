@@ -10,10 +10,10 @@ import {
   isInstanceOfEventResponse,
   JoinRoomResponse,
 } from '@conduitplatform/commons';
-import { isNil } from 'lodash';
-import { ConduitRouter } from '../Router';
-import { SocketPush } from '../../models/SocketPush.model';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitRouter } from '../Router';
+import { SocketPush } from '../../interfaces';
+import { isNil } from 'lodash';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
