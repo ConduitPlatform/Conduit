@@ -1,13 +1,27 @@
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { HealthCheckStatus, GrpcServer, GrpcRequest, GrpcResponse } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  HealthCheckStatus,
+  GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  GrpcCallback,
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { ConduitCommons, IConfigManager, RegisteredModule } from '@conduitplatform/commons';
+import {
+  ConduitCommons,
+  Empty,
+  GetConfigResponse,
+  GetRedisDetailsResponse,
+  IConfigManager, ModuleListResponse,
+  RegisteredModule,
+  UpdateRequest,
+  UpdateResponse,
+} from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import path from 'path';
-import { GetRedisDetailsResponse, GetServerConfigResponse, ConfigRequest, ModuleListResponse } from './type';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
@@ -134,7 +148,7 @@ export default class ConfigManager implements IConfigManager {
     );
   }
 
-  getServerConfig(call: GrpcRequest<void>, callback: GetServerConfigResponse) {
+  getServerConfig(call: GrpcRequest<Empty>, callback: GrpcCallback<GetConfigResponse>) {
     if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
@@ -155,10 +169,10 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getRedisDetails(call: GrpcRequest<void>, callback: GetRedisDetailsResponse) {
+  getRedisDetails(call: GrpcRequest<Empty>, callback: GrpcCallback<GetRedisDetailsResponse>) {
     callback(null, {
-      redisHost: process.env.REDIS_HOST,
-      redisPort: process.env.REDIS_PORT,
+      redisHost: process.env.REDIS_HOST!,
+      redisPort: parseInt(process.env.REDIS_PORT!),
     });
   }
 
@@ -232,7 +246,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async updateConfig(call: ConfigRequest, callback: GrpcResponse<{ result: string }>) {
+  async updateConfig(call: GrpcRequest<UpdateRequest>, callback: GrpcCallback<UpdateResponse>) {
     const moduleName = call.request.moduleName;
     const moduleConfig = JSON.parse(call.request.config);
     try {
@@ -274,7 +288,7 @@ export default class ConfigManager implements IConfigManager {
       });
   }
 
-  addFieldsToConfig(call: ConfigRequest, callback: GrpcResponse<{ result: string; }>) {
+  addFieldsToConfig(call: GrpcRequest<UpdateRequest>, callback: GrpcCallback<UpdateResponse>) {
     const newFields = JSON.parse(call.request.config);
     if (!isNil(this.grpcSdk.database)) {
       this.addFieldsToModule(call.request.moduleName, newFields)
@@ -380,7 +394,7 @@ export default class ConfigManager implements IConfigManager {
     };
   }
 
-  moduleList(call: GrpcRequest<void>, callback: ModuleListResponse) {
+  moduleList(call: GrpcRequest<Empty>, callback: GrpcCallback<ModuleListResponse>) {
     if (this.registeredModules.size !== 0) {
       let modules: {
         moduleName: string;

@@ -12,10 +12,11 @@
     "lint": "./node_modules/.bin/eslint .",
     "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan src/test/**",
     "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
-    "build": "rimraf dist && tsc",
+    "build": "npm run generateTypes && rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "generateTypes": "sh build.sh"
   },
   "license": "ISC",
   "dependencies": {
@@ -34,7 +35,8 @@
     "express": "~4.16.1",
     "express-winston": "^4.0.2",
     "lodash": "^4.17.15",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "ts-proto": "^1.112.1"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",

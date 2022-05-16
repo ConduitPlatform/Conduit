@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { ConduitRouteActions, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions, GrpcCallback, GrpcRequest, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
@@ -9,6 +9,7 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
+  Empty,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -99,8 +100,8 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   // grpc
-  async registerAdminRoute(call: any, callback: any) {
-    const moduleName = call.metadata.get('module-name')[0];
+  async registerAdminRoute(call: any, callback: GrpcCallback<null>) {
+    const moduleName = call.metadata!.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
         const result = this.commons
