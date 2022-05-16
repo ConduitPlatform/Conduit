@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   ConduitModelOptions,
-  ConduitSpecificOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
   ConduitSchemaExtension,
@@ -523,7 +522,7 @@ export class SchemaAdmin {
   }
 
   private patchSchemaPerms(
-    schema: any,
+    schema: Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions },
     // @ts-ignore
     perms: ConduitModelOptions['conduit']['permissions'],
   ) {
@@ -532,13 +531,13 @@ export class SchemaAdmin {
         status.INVALID_ARGUMENT,
         `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
     }
-    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.extendable =
-      perms!.extendable ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.extendable;
-    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canCreate =
-      perms!.canCreate ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canCreate;
-    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canModify =
-      perms!.canModify ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canModify;
-    (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canDelete =
-      perms!.canDelete ?? (schema.modelOptions.conduit as ConduitSpecificOptions).permissions!.canDelete;
+    schema.modelOptions.conduit!.permissions!.extendable =
+      perms!.extendable ?? schema.modelOptions.conduit!.permissions!.extendable;
+    schema.modelOptions.conduit!.permissions!.canCreate =
+      perms!.canCreate ?? schema.modelOptions.conduit!.permissions!.canCreate;
+    schema.modelOptions.conduit!.permissions!.canModify =
+      perms!.canModify ?? schema.modelOptions.conduit!.permissions!.canModify;
+    schema.modelOptions.conduit!.permissions!.canDelete =
+      perms!.canDelete ?? schema.modelOptions.conduit!.permissions!.canDelete;
   }
 }

@@ -1,6 +1,8 @@
 import {
   ConduitSchema,
   GrpcError,
+  GrpcResponse,
+  GrpcRequest,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
@@ -8,7 +10,6 @@ import { AdminHandlers } from './admin/admin';
 import { DatabaseRoutes } from './routes/routes';
 import * as models from './models';
 import {
-  CreateSchemaExtensionRequest,
   CreateSchemaRequest,
   DropCollectionRequest,
   DropCollectionResponse,
@@ -18,10 +19,13 @@ import {
   GetSchemasRequest,
   QueryRequest,
   QueryResponse,
-  SchemaResponse,
-  SchemasResponse,
   UpdateManyRequest,
   UpdateRequest,
+} from './protoTypes/database';
+import {
+  CreateSchemaExtensionRequest,
+  SchemaResponse,
+  SchemasResponse,
 } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
@@ -36,7 +40,6 @@ import { CustomEndpointController } from './controllers/customEndpoints/customEn
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import { isEmpty } from 'lodash';
-import { CallContext } from 'nice-grpc-common';
 
 export default class DatabaseModule extends ManagedModule<void> {
   config = undefined;
@@ -170,20 +173,20 @@ export default class DatabaseModule extends ManagedModule<void> {
    * @param call
    * @param callback
    */
-  async createSchemaFromAdapter(call: CreateSchemaRequest, callback: SchemaResponse) {
+  async createSchemaFromAdapter(call: GrpcRequest<CreateSchemaRequest>, callback: SchemaResponse) {
     let schema = new ConduitSchema(
-      call.request.schema.name,
-      JSON.parse(call.request.schema.modelSchema),
-      JSON.parse(call.request.schema.modelOptions),
-      call.request.schema.collectionName
+      call.request.schema!.name,
+      JSON.parse(call.request.schema!.modelSchema),
+      JSON.parse(call.request.schema!.modelOptions),
+      call.request.schema!.collectionName
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Names cannot include spaces and - characters',
       });
-    }
-    schema.ownerModule = (call as unknown as CallContext).metadata.get('module-name')![0];
+    } 
+    schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
       .then((schemaAdapter: SchemaAdapter<any>) => {
@@ -194,10 +197,10 @@ export default class DatabaseModule extends ManagedModule<void> {
           collectionName: schemaAdapter.originalSchema.collectionName,
         };
         this.publishSchema({
-          name: call.request.schema.name,
-          modelSchema: JSON.parse(call.request.schema.modelSchema),
-          modelOptions: JSON.parse(call.request.schema.modelOptions),
-          collectionName: call.request.schema.collectionName,
+          name: call.request.schema!.name,
+          modelSchema: JSON.parse(call.request.schema!.modelSchema),
+          modelOptions: JSON.parse(call.request.schema!.modelOptions),
+          collectionName: call.request.schema!.collectionName,
           owner: schema.ownerModule,
         });
         callback(null, {
@@ -217,7 +220,7 @@ export default class DatabaseModule extends ManagedModule<void> {
    * @param call
    * @param callback
    */
-  getSchema(call: GetSchemaRequest, callback: SchemaResponse) {
+  getSchema(call: GrpcRequest<GetSchemaRequest>, callback: SchemaResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
       callback(null, {
@@ -236,7 +239,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  getSchemas(call: GetSchemasRequest, callback: SchemasResponse) {
+  getSchemas(call: GrpcRequest<GetSchemasRequest>, callback: SchemasResponse) {
     try {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
@@ -257,12 +260,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async deleteSchema(call: DropCollectionRequest, callback: DropCollectionResponse) {
+  async deleteSchema(call: GrpcRequest<DropCollectionRequest>, callback: GrpcResponse<DropCollectionResponse>) {
     try {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call as unknown as CallContext).metadata.get('module-name')![0]
+        call.metadata!.get('module-name')![0] as string as string
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -281,7 +284,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = (call as unknown as CallContext).metadata.get('module-name')![0];
+      const extOwner = call.metadata!.get('module-name')![0] as string as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
@@ -321,7 +324,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async findOne(call: FindOneRequest, callback: QueryResponse) {
+  async findOne(call: GrpcRequest<FindOneRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const doc = await schemaAdapter.model.findOne(
@@ -339,7 +342,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async findMany(call: FindRequest, callback: QueryResponse) {
+  async findMany(call: GrpcRequest<FindRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
       const skip = call.request.skip;
       const limit = call.request.limit;
@@ -367,8 +370,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async create(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async create(call: GrpcRequest<QueryRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -393,8 +396,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async createMany(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async createMany(call: GrpcRequest<QueryRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const schemaName = call.request.schemaName;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -419,8 +422,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async findByIdAndUpdate(call: UpdateRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async findByIdAndUpdate(call: GrpcRequest<UpdateRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -451,8 +454,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async updateMany(call: UpdateManyRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async updateMany(call: GrpcRequest<UpdateManyRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -481,8 +484,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async deleteOne(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async deleteOne(call: GrpcRequest<QueryRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -507,8 +510,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async deleteMany(call: QueryRequest, callback: QueryResponse) {
-    const moduleName = (call as unknown as CallContext).metadata.get('module-name')![0];
+  async deleteMany(call: GrpcRequest<QueryRequest>, callback: GrpcResponse<QueryResponse>) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const { schemaName, query } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
@@ -533,7 +536,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async countDocuments(call: QueryRequest, callback: QueryResponse) {
+  async countDocuments(call: GrpcRequest<QueryRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const result = await schemaAdapter.model.countDocuments(call.request.query);

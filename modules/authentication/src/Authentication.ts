@@ -25,8 +25,9 @@ import {
   UserDeleteRequest,
   UserLoginRequest,
   UserLoginResponse,
-} from '@conduitplatform/grpc-sdk/dist/protoUtils/authentication';
-import { UserCreateResponse, UserDeleteResponse } from './protoTypes/src/authentication';
+  UserCreateResponse,
+  UserDeleteResponse
+} from './protoTypes/authentication';
 
 export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
