@@ -8,7 +8,7 @@ import {
 } from '@conduitplatform/commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import { SocketPush } from '../models/SocketPush.model';
+import { SocketPush } from '../interfaces';
 import { SwaggerRouterMetadata } from './Rest';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 
