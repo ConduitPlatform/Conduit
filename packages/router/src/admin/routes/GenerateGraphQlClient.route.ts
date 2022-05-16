@@ -1,22 +1,21 @@
 import {
-  ConduitBoolean,
-  ConduitError,
   ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteParameters,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  TYPE,
 } from '@conduitplatform/commons';
-import { ConduitDefaultRouter } from '../..';
 import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import fs, { unlink } from 'fs';
 import { isEmpty } from 'lodash';
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import {
+  GrpcError, ConduitBoolean,
+  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  ConduitString,
+} from '@conduitplatform/grpc-sdk';
 
-export function generateGraphQlClient(router: ConduitDefaultRouter) {
+export function generateGraphQlClient() {
   return new ConduitRoute(
     {
       path: '/router/generate/graphql',
@@ -79,10 +78,10 @@ export function generateGraphQlClient(router: ConduitDefaultRouter) {
         throw new ConduitError(
           (error as Error).name,
           status.INTERNAL,
-          (error as Error).message
+          (error as Error).message,
         );
       }
-    }
+    },
   );
 }
 
@@ -112,7 +111,7 @@ function selectPlugin(pluginName: string, configOptions: string[]) {
     case 'react-apollo':
       fileNameExtension = checkConfig(
         [...baseOptions, 'reactApolloVersion', 'operationResultSuffix'],
-        configOptions
+        configOptions,
       );
       return {
         plugins: ['typescript', 'typescript-operations', 'typescript-react-apollo'],
@@ -151,7 +150,7 @@ function selectPlugin(pluginName: string, configOptions: string[]) {
  * Checks if the configuration option for the generator are valid
  */
 const checkConfig = (validOptions: string[], configOptions: string[]) => {
-  if(isEmpty(configOptions)) {
+  if (isEmpty(configOptions)) {
     return '';
   }
 
@@ -159,7 +158,7 @@ const checkConfig = (validOptions: string[], configOptions: string[]) => {
   if (!isEmpty(invalidOptions)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,
-      `Invalid config options: ${invalidOptions.join(',')}`
+      `Invalid config options: ${invalidOptions.join(',')}`,
     );
   }
   return `.${configOptions.join('.')}`;

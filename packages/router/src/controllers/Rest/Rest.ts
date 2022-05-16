@@ -1,4 +1,3 @@
-// todo Create the controller that creates REST-specific endpoints
 import {
   Handler,
   IRouterMatcher,
@@ -10,15 +9,13 @@ import {
 
 import {
   ConduitCommons,
-  ConduitError,
   ConduitRoute,
-  ConduitRouteActions,
-  TYPE,
 } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
+import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -171,8 +168,8 @@ export class RestController extends ConduitRouter {
             if (r.setCookies && r.setCookies.length) {
               r.setCookies.forEach((cookie: any) => {
                 if (cookie.options.path === '')
-                  delete cookie.options.path
-                res.cookie(cookie.name, cookie.value,cookie.options);
+                  delete cookie.options.path;
+                res.cookie(cookie.name, cookie.value, cookie.options);
               });
               delete result.setCookies;
             }
@@ -188,7 +185,7 @@ export class RestController extends ConduitRouter {
               res.setHeader('Cache-Control', 'no-store');
             }
             res.status(200).json(result);
-            res.end()
+            res.end();
           }
         })
         .catch((err: Error | ConduitError | any) => {

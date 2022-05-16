@@ -1,5 +1,4 @@
-import { ConduitModel } from '@conduitplatform/commons';
-import { ConduitParser, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitParser, TYPE, ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
 
 export interface ParseResult {
   type: string;
@@ -38,8 +37,8 @@ export interface ProcessingObject {
 export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> {
   extractTypes(
     name: string,
-    fields: ConduitModel | string,
-    isInput: boolean
+    fields: ConduitModel | ConduitRouteOption | string,
+    isInput: boolean,
   ): ParseResult {
     this.isInput = isInput;
     this.result = this.getInitializedResult();
@@ -92,7 +91,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     // @ts-ignore
     processingObject.properties[name] = this.getType(value);
@@ -105,7 +104,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     fieldName: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     // @ts-ignore
     processingObject.properties[fieldName] = {
@@ -121,7 +120,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any[],
     isRequired: boolean = false,
-    nestedType?: boolean
+    nestedType?: boolean,
   ): void {
     // @ts-ignore
     processingObject.properties[name] = {
@@ -138,7 +137,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     // @ts-ignore
     processingObject.properties[name] = {
@@ -157,7 +156,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
   private addFieldToRequired(
     processingObject: ProcessingObject,
     name: string,
-    isRequired: boolean
+    isRequired: boolean,
   ) {
     if (isRequired) {
       if (!processingObject.required) {

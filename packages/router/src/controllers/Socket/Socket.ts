@@ -5,7 +5,6 @@ import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
 import {
   ConduitCommons,
-  ConduitError,
   ConduitSocket,
   EventResponse,
   isInstanceOfEventResponse,
@@ -14,6 +13,7 @@ import {
 import { isNil } from 'lodash';
 import { ConduitRouter } from '../Router';
 import { SocketPush } from '../../models/SocketPush.model';
+import { ConduitError } from '@conduitplatform/grpc-sdk';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;

@@ -1,10 +1,12 @@
 import {
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  TYPE,
 } from '@conduitplatform/commons';
 import { ConduitDefaultRouter } from '../../index';
+import {
+  ConduitRouteActions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 export function getRoutes(router: ConduitDefaultRouter) {
   return new ConduitRoute(

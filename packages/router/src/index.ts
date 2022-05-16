@@ -16,10 +16,7 @@ import * as adminRoutes from './admin/routes';
 import path from 'path';
 import { CallContext } from 'nice-grpc-common';
 
-export class ConduitDefaultRouter implements IConduitRouter {
-  grpcSdk: ConduitGrpcSdk;
-  private readonly _commons: ConduitCommons;
-  private readonly _expressApp: Application;
+export class ConduitDefaultRouter extends IConduitRouter {
   private _internalRouter: ConduitRoutingController;
   private readonly _globalMiddlewares: string[];
   private readonly _routes: any[];
@@ -27,18 +24,16 @@ export class ConduitDefaultRouter implements IConduitRouter {
   private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
-    commons: ConduitCommons,
-    grpcSdk: ConduitGrpcSdk,
-    expressApp: Application
+    protected readonly commons: ConduitCommons,
+    protected readonly grpcSdk: ConduitGrpcSdk,
+    protected readonly expressApp: Application,
   ) {
-    this._commons = commons;
-    this._expressApp = expressApp;
+    super(commons, grpcSdk, expressApp);
     this._routes = [];
     this._globalMiddlewares = [];
-    this._internalRouter = new ConduitRoutingController(this._commons, this._expressApp);
+    this._internalRouter = new ConduitRoutingController(commons, expressApp);
     this.initGraphQL();
     this.initSockets();
-    this.grpcSdk = grpcSdk;
   }
 
   async initialize(server: GrpcServer) {
@@ -57,8 +52,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   async highAvailability() {
-    let sdk: ConduitCommons = this._commons
-    let r = await sdk.getState().getKey('router');
+    let r = await this.commons.getState().getKey('router');
     if (!r || r.length === 0) return;
     let state = JSON.parse(r);
     if (state.routes) {
@@ -72,7 +66,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
       console.log('Recovered routes');
     }
 
-    sdk.getBus().subscribe('router', (message: string) => {
+    this.commons.getBus().subscribe('router', (message: string) => {
       let messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
@@ -87,8 +81,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   updateState(protofile: string, routes: ConduitRoute[], url: string) {
-    let sdk: ConduitCommons = this._commons
-    sdk
+    this.commons
       .getState()
       .getKey('router')
       .then((r: any) => {
@@ -109,7 +102,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
             url,
           });
         }
-        return sdk.getState().setKey('router', JSON.stringify(state));
+        return this.commons.getState().setKey('router', JSON.stringify(state));
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
@@ -121,8 +114,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   publishAdminRouteData(protofile: string, routes: ConduitRoute[], url: string) {
-    let sdk: ConduitCommons = this._commons
-    sdk.getBus().publish(
+    this.commons.getBus().publish(
       'router',
       JSON.stringify({
         protofile,
@@ -136,7 +128,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        let result = this._commons
+        let result = this.commons
           .getConfigManager()!
           .getModuleUrlByName((call as unknown as CallContext).metadata.get('module-name')![0]);
         if (!result) {
@@ -217,7 +209,7 @@ export class ConduitDefaultRouter implements IConduitRouter {
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
         rooms: call.request.rooms,
-        namespace: `/${(call as unknown as CallContext).metadata.get('module-name')![0]}/`
+        namespace: `/${(call as any).metadata.get('module-name')[0]}/`,
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
@@ -319,14 +311,14 @@ export class ConduitDefaultRouter implements IConduitRouter {
   }
 
   private registerAdminRoutes() {
-    this._commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
-    this._commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
-    this._commons.getAdmin().registerRoute(adminRoutes.generateRestClient(this));
-    this._commons.getAdmin().registerRoute(adminRoutes.generateGraphQlClient(this));
+    this.commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
+    this.commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
+    this.commons.getAdmin().registerRoute(adminRoutes.generateRestClient());
+    this.commons.getAdmin().registerRoute(adminRoutes.generateGraphQlClient());
   }
 
   setConfig(moduleConfig: any) {
-    this._commons.getBus().publish('config:update:router', JSON.stringify(moduleConfig));
+    this.commons.getBus().publish('config:update:router', JSON.stringify(moduleConfig));
   }
 }
 

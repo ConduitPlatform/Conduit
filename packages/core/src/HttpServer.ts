@@ -1,10 +1,12 @@
 import {
   ConduitRoute,
-  ConduitRouteActions as Actions,
   ConduitRouteReturnDefinition as ReturnDefinition,
   ConduitCommons,
   IConduitRouter,
 } from '@conduitplatform/commons';
+import {
+  ConduitRouteActions as Actions,
+} from '@conduitplatform/grpc-sdk';
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
@@ -18,12 +20,15 @@ export class HttpServer {
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
 
-  get initialized() { return this._initialized; }
+  get initialized() {
+    return this._initialized;
+  }
 
   constructor(
     private readonly commons: ConduitCommons,
     private readonly port: number | string,
-  ) {}
+  ) {
+  }
 
   initialize() {
     this.router = this.commons.getRouter();
@@ -43,16 +48,16 @@ export class HttpServer {
 
     this.router.registerGlobalMiddleware(
       'jsonParser',
-      express.json({ limit: '50mb' })
+      express.json({ limit: '50mb' }),
     );
     this.router.registerGlobalMiddleware(
       'urlParser',
-      express.urlencoded({ limit: '50mb', extended: false })
+      express.urlencoded({ limit: '50mb', extended: false }),
     );
     this.router.registerGlobalMiddleware('cookieParser', cookieParser());
     this.router.registerGlobalMiddleware(
       'staticResources',
-      express.static(path.join(__dirname, 'public'))
+      express.static(path.join(__dirname, 'public')),
     );
 
     this.router.registerGlobalMiddleware(
@@ -61,7 +66,7 @@ export class HttpServer {
         let status = error.status;
         if (status === null || status === undefined) status = 500;
         res.status(status).json({ error: error.message });
-      }
+      },
     );
   }
 
@@ -75,8 +80,8 @@ export class HttpServer {
         new ReturnDefinition('HelloResult', 'String'),
         async () => {
           return 'Hello there!';
-        }
-      )
+        },
+      ),
     );
 
     this.router.registerRoute(
@@ -97,8 +102,8 @@ export class HttpServer {
               throw new Error('Conduit is not active yet!');
             }
           });
-        }
-      )
+        },
+      ),
     );
   }
 

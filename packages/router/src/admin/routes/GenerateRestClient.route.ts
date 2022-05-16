@@ -1,22 +1,22 @@
 import {
-  ConduitBoolean,
   ConduitRoute,
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/commons';
+import {
+  ConduitBoolean,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitRouteReturnDefinition,
   ConduitString,
   ConduitError,
-  TYPE,
-} from '@conduitplatform/commons';
-import { ConduitDefaultRouter } from '../..';
+} from '@conduitplatform/grpc-sdk';
+
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 import path from 'path';
-import url from 'url';
 import fs, { unlink } from 'fs';
 import { status } from '@grpc/grpc-js';
 
-export function generateRestClient(router: ConduitDefaultRouter) {
+export function generateRestClient() {
   return new ConduitRoute(
     {
       path: '/router/generate/rest',
@@ -39,7 +39,7 @@ export function generateRestClient(router: ConduitDefaultRouter) {
         await exec(
           `openapi-generator generate -i http://localhost:${
             process.env['PORT'] ?? '3000'
-          }/${inputSpec} -g ${clientType} -o ${outputPath} --skip-validate-spec`
+          }/${inputSpec} -g ${clientType} -o ${outputPath} --skip-validate-spec`,
         );
 
         const zipPath = path.resolve(__dirname, 'generate/rest.zip');
@@ -59,9 +59,9 @@ export function generateRestClient(router: ConduitDefaultRouter) {
         throw new ConduitError(
           (error as Error).name,
           status.INTERNAL,
-          (error as Error).message
+          (error as Error).message,
         );
       }
-    }
+    },
   );
 }

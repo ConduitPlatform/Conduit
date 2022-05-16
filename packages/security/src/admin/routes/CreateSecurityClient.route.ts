@@ -1,15 +1,18 @@
 import {
-  ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitRouteParameters,
-  ConduitError,
   PlatformTypesEnum,
-  ConduitString,
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/commons';
 import { Client } from '../../models';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import {
+
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  ConduitString,
+  ConduitError,
+} from '@conduitplatform/grpc-sdk';
 
 export function getCreateSecurityClientRoute() {
   return new ConduitRoute(
@@ -40,13 +43,14 @@ export function getCreateSecurityClientRoute() {
         if (!domain || domain === '')
           throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform WEB requires domain name');
         if (domain.replace(/[^*]/g, '').length > 1) {
-          throw new ConduitError('INVALID_ARGUMENTS', 400, `Domain must not contain more than one '*' character` );
+          throw new ConduitError('INVALID_ARGUMENTS', 400, `Domain must not contain more than one '*' character`);
         }
+        const domainPattern = new RegExp('^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$');
+        let comparedDomain = domain;
         if (domain.includes('*')) {
-          const [_, splittedDomain] = domain.split('*.');
-          const domainPattern = new RegExp('^(?!-)[A-Za-z0-9-]+([\\-\\.]{1}[a-z0-9]+)*\\.[A-Za-z]{2,6}$')
-          if (!domainPattern.test(splittedDomain)) throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
+          comparedDomain = comparedDomain.split('*.')[1];
         }
+        if (!domainPattern.test(comparedDomain) && domain !== '*') throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
       }
       let client = await Client.getInstance().create({
         clientId,

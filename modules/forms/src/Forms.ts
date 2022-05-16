@@ -1,4 +1,9 @@
-import { DatabaseProvider, ManagedModule } from '@conduitplatform/grpc-sdk';
+import {
+  ConfigController,
+  DatabaseProvider,
+  HealthCheckStatus,
+  ManagedModule,
+} from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin/admin';
@@ -24,12 +29,18 @@ export default class Forms extends ManagedModule<Config> {
 
   constructor() {
     super('forms');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
-    await this.grpcSdk.waitForExistence('email');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.monitorModule('email', (serving) => {
+      if (serving && ConfigController.getInstance().config.active) {
+        this.updateHealth(HealthCheckStatus.SERVING);
+      } else {
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      }
+    });
   }
 
   async onRegister() {
@@ -47,13 +58,18 @@ export default class Forms extends ManagedModule<Config> {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-      this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
-      this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
+        this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+        this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
+        this.isRunning = true;
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
