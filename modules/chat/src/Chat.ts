@@ -2,7 +2,7 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
-  HealthCheckStatus,
+  HealthCheckStatus, GrpcRequest, GrpcResponse,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -14,6 +14,7 @@ import { ChatMessage, ChatRoom } from './models';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { CreateRoomRequest, RoomResponse, SendMessageRequest } from './type';
 
 export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -108,7 +109,7 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async createRoom(call: any, callback: any) {
+  async createRoom(call: CreateRoomRequest, callback: RoomResponse) {
     const { name, participants } = call.request;
 
     if (isNil(participants) || !isArray(participants) || participants.length === 0) {
@@ -153,7 +154,7 @@ export default class Chat extends ManagedModule<Config> {
     });
   }
 
-  async sendMessage(call: any, callback: any) {
+  async sendMessage(call: SendMessageRequest, callback: GrpcResponse<null>) {
     const userId = call.request.userId;
     const { roomId, message } = call.request;
 
@@ -167,6 +168,7 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
+    // @ts-ignore
     if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
       return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
@@ -197,11 +199,11 @@ export default class Chat extends ManagedModule<Config> {
       });
   }
 
-  async deleteRoom(call: any, callback: any) {
+  async deleteRoom(call: GrpcRequest<{ id: string }>, callback: RoomResponse) {
     const { id } = call.request;
 
     let errorMessage: string | null = null;
-    const room: any = await models.ChatRoom.getInstance()
+    const room = await models.ChatRoom.getInstance()
       .deleteOne({
         _id: id,
       })
