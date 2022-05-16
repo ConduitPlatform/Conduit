@@ -3,8 +3,7 @@ import {
   ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
-  GrpcRequest,
-  GrpcResponse,
+  GrpcRequest, GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema from './config';
@@ -16,27 +15,12 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { Config } from './config';
 import { runMigrations } from './migrations';
-
-type RegisterTemplateRequest = GrpcRequest<{
-  name: string;
-  subject: string;
-  body: string;
-  variables: string[];
-}>;
-type RegisterTemplateResponse = GrpcResponse<{ template: string }>;
-
-type SendEmailRequest = GrpcRequest<{
-  templateName: string;
-  params: {
-    email: string;
-    variables: string;
-    sender: string;
-    cc: string[];
-    replyTo: string;
-    attachments: string[];
-  };
-}>;
-type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
+import {
+  RegisterTemplateRequest,
+  RegisterTemplateResponse,
+  SendEmailRequest,
+  SendEmailResponse,
+} from './protoTypes/email';
 
 export default class Email extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -119,7 +103,7 @@ export default class Email extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async registerTemplate(call: RegisterTemplateRequest, callback: RegisterTemplateResponse) {
+  async registerTemplate(call: GrpcRequest<RegisterTemplateRequest>, callback: GrpcCallback<RegisterTemplateResponse>) {
     const params = {
       name: call.request.name,
       subject: call.request.subject,
@@ -135,15 +119,15 @@ export default class Email extends ManagedModule<Config> {
     return callback(null, { template: JSON.stringify(template) });
   }
 
-  async sendEmail(call: SendEmailRequest, callback: SendEmailResponse) {
+  async sendEmail(call: GrpcRequest<SendEmailRequest>, callback: GrpcCallback<SendEmailResponse>) {
     const template = call.request.templateName;
     const params = {
-      email: call.request.params.email,
-      variables: JSON.parse(call.request.params.variables),
-      sender: call.request.params.sender,
-      cc: call.request.params.cc,
-      replyTo: call.request.params.replyTo,
-      attachments: call.request.params.attachments,
+      email: call.request.params!.email,
+      variables: JSON.parse(call.request.params!.variables),
+      sender: call.request.params!.sender,
+      cc: call.request.params!.cc,
+      replyTo: call.request.params!.replyTo,
+      attachments: call.request.params!.attachments,
     };
     let emailConfig: Config = await this.grpcSdk.config
       .get('email')
