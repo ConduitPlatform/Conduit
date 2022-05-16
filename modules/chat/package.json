@@ -10,9 +10,10 @@
   "scripts": {
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
-    "build": "rimraf dist && tsc",
+    "build": "npm run generateTypes && rimraf dist && tsc",
     "prepare": "npm run build",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/chat:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/chat:latest",
+    "generateTypes": "sh build.sh"
   },
   "directories": {
     "lib": "src"
@@ -29,7 +30,8 @@
     "@grpc/grpc-js": "^1.5.2",
     "lodash": "^4.17.15",
     "escape-string-regexp": "^4.0.0",
-    "uuid": "^7.0.3"
+    "uuid": "^7.0.3",
+    "ts-proto": "^1.112.1"
   },
   "devDependencies": {
     "rimraf": "^3.0.2",

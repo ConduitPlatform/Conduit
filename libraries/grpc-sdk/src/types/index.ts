@@ -1,6 +1,6 @@
-import { status } from '@grpc/grpc-js';
+import { Metadata, status } from '@grpc/grpc-js';
 
-export type GrpcRequest<T> = { request: T };
+export type GrpcRequest<T> = { request: T; metadata?: Metadata; };
 export type GrpcResponse<T> = (
   err: {
     code: number;
