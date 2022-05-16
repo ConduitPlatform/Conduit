@@ -25,7 +25,7 @@ export abstract class ConduitRouter {
     this.scheduleRouterRefresh();
   }
 
-  cleanupRoutes(routes: any[]) {
+  cleanupRoutes(routes: ConduitRoute[]) {
     let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
     routes.forEach((route: any) => {
       let key = `${route.action}-${route.path}`;
@@ -62,7 +62,7 @@ export abstract class ConduitRouter {
     this._middlewares[middleware.name] = middleware;
   }
 
-  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]): Promise<any> {
+  checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
     let primaryPromise = new Promise((resolve) => {
       resolve({});
     });
@@ -83,7 +83,6 @@ export abstract class ConduitRouter {
         });
       });
     }
-
     return primaryPromise;
   }
 

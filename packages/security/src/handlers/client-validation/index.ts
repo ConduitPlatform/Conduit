@@ -73,7 +73,7 @@ export class ClientValidator {
     }
     Client.getInstance()
       .findOne({ clientId: clientid }, 'clientSecret platform domain')
-      .then(async (client: any) => {
+      .then(async (client) => {
         if (isNil(client)) {
           return {
             validated: false,
