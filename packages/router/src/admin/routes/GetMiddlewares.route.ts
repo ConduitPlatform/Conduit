@@ -1,11 +1,13 @@
 import {
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  TYPE,
 } from '@conduitplatform/commons';
 import { ConduitDefaultRouter } from '../../index';
 import { isNil } from 'lodash';
+import {
+  ConduitRouteActions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 export function getMiddlewares(router: ConduitDefaultRouter) {
   return new ConduitRoute(

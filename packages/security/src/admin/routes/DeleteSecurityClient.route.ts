@@ -1,12 +1,14 @@
 import {
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
+} from '@conduitplatform/commons';
+import { Client } from '../../models';
+import {
+  ConduitRouteActions,
   ConduitRouteParameters,
   RouteOptionType,
   ConduitString,
-} from '@conduitplatform/commons';
-import { Client } from '../../models';
+} from '@conduitplatform/grpc-sdk';
 
 export function getDeleteSecurityClientRoute() {
   return new ConduitRoute(
@@ -25,6 +27,6 @@ export function getDeleteSecurityClientRoute() {
         _id: params.params!.id,
       });
       return { result: { message: 'Client deleted' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }

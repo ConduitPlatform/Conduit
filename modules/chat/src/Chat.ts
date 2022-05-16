@@ -14,6 +14,7 @@ import { ChatMessage, ChatRoom } from './models';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { runMigrations } from './migrations';
 import { CreateRoomRequest, RoomResponse, SendMessageRequest } from './type';
 
 export default class Chat extends ManagedModule<Config> {
@@ -51,6 +52,7 @@ export default class Chat extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', (serving) => {
       this.updateHealth(serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
     });

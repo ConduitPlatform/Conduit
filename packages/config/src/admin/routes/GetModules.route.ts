@@ -1,11 +1,13 @@
 import {
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitError,
-  ConduitString,
   RegisteredModule,
 } from '@conduitplatform/commons';
+import {
+  ConduitRouteActions,
+  ConduitError,
+  ConduitString,
+} from '@conduitplatform/grpc-sdk';
 
 export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(
@@ -35,6 +37,6 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
       } else {
         throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
       }
-    }
+    },
   );
 }

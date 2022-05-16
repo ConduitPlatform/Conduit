@@ -2,9 +2,9 @@ import {
   ConduitCommons,
   ConduitMiddleware,
   ConduitRoute,
-  ConduitRouteParameters,
 } from '@conduitplatform/commons';
 import { NextFunction, Request, Response, Router } from 'express';
+import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 export abstract class ConduitRouter {
   protected _expressRouter: Router;

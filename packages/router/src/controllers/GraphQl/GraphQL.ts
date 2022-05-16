@@ -1,11 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import {
   ConduitCommons,
-  ConduitModel,
   ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteOptions,
-  TYPE,
 } from '@conduitplatform/commons';
 import { GraphQlParser, ParseResult } from './GraphQlParser';
 import { findPopulation } from './utils/TypeUtils';
@@ -17,6 +13,13 @@ import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
+import {
+  ConduitModel,
+  ConduitRouteActions,
+  ConduitRouteOption,
+  ConduitRouteOptions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
@@ -54,7 +57,7 @@ export class GraphQLController extends ConduitRouter {
     this._apollo = server.getMiddleware();
   }
 
-  generateType(name: string, fields: ConduitModel | string) {
+  generateType(name: string, fields: ConduitModel | ConduitRouteOption | string) {
     if (this.typeDefs.includes('type ' + name + ' ')) {
       return;
     }

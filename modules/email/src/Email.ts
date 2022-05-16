@@ -15,6 +15,7 @@ import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { Config } from './config';
+import { runMigrations } from './migrations';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;
@@ -61,6 +62,7 @@ export default class Email extends ManagedModule<Config> {
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
   }
 
   protected registerSchemas() {

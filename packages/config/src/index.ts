@@ -3,6 +3,7 @@ import ConduitGrpcSdk, { HealthCheckStatus, GrpcServer } from '@conduitplatform/
 import { isNil } from 'lodash';
 import { ConduitCommons, IConfigManager, RegisteredModule } from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
+import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import path from 'path';
@@ -165,6 +166,7 @@ export default class ConfigManager implements IConfigManager {
 
   async registerAppConfig() {
     await this.grpcSdk.database!.createSchemaFromAdapter(models.Config.getInstance(this.grpcSdk.database!));
+    await runMigrations(this.grpcSdk);
     let configDoc = await this.grpcSdk.database!.findOne('Config', {});
     if (!configDoc) {
       configDoc = await models.Config.getInstance().create({});

@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
@@ -9,12 +9,12 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
-  ConduitRouteActions,
 } from '@conduitplatform/commons';
+import { hashPassword } from './utils/auth';
+import { runMigrations } from './migrations';
+import AdminConfigSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
-import { hashPassword } from './utils/auth';
-import AdminConfigSchema from './config';
 import * as models from './models';
 import path from 'path';
 
@@ -230,6 +230,7 @@ export default class AdminModule extends IConduitAdmin {
       await this.grpcSdk.waitForExistence('database');
     }
     await this.registerSchemas();
+    await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async (existing: any) => {

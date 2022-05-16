@@ -10,7 +10,7 @@ import { ConduitDefaultRouter } from '@conduitplatform/router';
 import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
-import convict from './utils/config';
+import convict from './config';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 

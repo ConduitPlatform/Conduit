@@ -1,15 +1,16 @@
 import {
   ConduitCommons,
-  ConduitError,
   ConduitRoute,
-  ConduitRouteActions,
-  ConduitRouteParameters,
   ConduitRouteReturnDefinition,
-  RouteOptionType,
-  TYPE,
   RegisteredModule,
 } from '@conduitplatform/commons';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  RouteOptionType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import * as models from '../../models';
 

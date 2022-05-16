@@ -1,10 +1,12 @@
 import {
   ConduitRoute,
-  ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitRouteParameters,
 } from '@conduitplatform/commons';
 import { Client } from '../../models';
+import {
+  ConduitRouteActions,
+  ConduitRouteParameters,
+} from '@conduitplatform/grpc-sdk';
 
 export function getGetSecurityClientsRoute() {
   return new ConduitRoute(
@@ -18,6 +20,6 @@ export function getGetSecurityClientsRoute() {
     async (params: ConduitRouteParameters) => {
       let clients = await Client.getInstance().findMany({});
       return { result: { clients } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
-    }
+    },
   );
 }
