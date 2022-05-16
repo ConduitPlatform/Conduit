@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons, ConduitError } from '@conduitplatform/commons';
-import { ConfigController, DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConduitCommons  } from '@conduitplatform/commons';
+import { ConfigController, DatabaseProvider,ConduitError } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { validateClient } from '../../utils/security';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';

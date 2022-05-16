@@ -1,6 +1,7 @@
-import { ConduitRoute, ConduitRouteActions } from '@conduitplatform/commons';
+import { ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
+import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 
 export type SwaggerRouterMetadata = {
   readonly urlPrefix: string,

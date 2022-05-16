@@ -8,9 +8,7 @@ import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
 import { IConfigManager } from './modules';
-import { StateManager } from './utilities/StateManager';
-import { RedisManager } from './utilities/RedisManager';
-import { EventBus } from './utilities/EventBus';
+import { StateManager, RedisManager, EventBus } from './utilities';
 
 export class ConduitCommons {
   private static _instance: ConduitCommons;
@@ -127,9 +125,8 @@ export class ConduitCommons {
   }
 }
 
-export * from './models';
 export * from './interfaces';
+export * from './classes';
 export * from './modules';
-export * from './helpers';
 export * from './constants';
 export * from './utilities';

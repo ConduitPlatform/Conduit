@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import {
   ConduitRouteBuilder,
-  ConduitRouteOptions,
 } from '@conduitplatform/commons';
+import { ConduitRouteOptions } from '@conduitplatform/grpc-sdk';
 
 export class RouteBuilder extends ConduitRouteBuilder {
   private _path: string;
