@@ -14,7 +14,9 @@ import {
   SendSmsRequest,
   SendSmsResponse,
   SendVerificationCodeRequest,
-  SendVerificationCodeResponse, VerifyRequest, VerifyResponse,
+  SendVerificationCodeResponse,
+  VerifyRequest,
+  VerifyResponse,
 } from './protoTypes/sms';
 
 export default class Sms extends ManagedModule<Config> {

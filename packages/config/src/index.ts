@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
 import { isNil } from 'lodash';
 import {
   ConduitCommons,
-  Empty,
   GetConfigResponse,
   GetRedisDetailsResponse,
   IConfigManager, ModuleListResponse,
@@ -148,7 +147,7 @@ export default class ConfigManager implements IConfigManager {
     );
   }
 
-  getServerConfig(call: GrpcRequest<Empty>, callback: GrpcCallback<GetConfigResponse>) {
+  getServerConfig(call: GrpcRequest<null>, callback: GrpcCallback<GetConfigResponse>) {
     if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
@@ -169,7 +168,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getRedisDetails(call: GrpcRequest<Empty>, callback: GrpcCallback<GetRedisDetailsResponse>) {
+  getRedisDetails(call: GrpcRequest<null>, callback: GrpcCallback<GetRedisDetailsResponse>) {
     callback(null, {
       redisHost: process.env.REDIS_HOST!,
       redisPort: parseInt(process.env.REDIS_PORT!),
@@ -394,7 +393,7 @@ export default class ConfigManager implements IConfigManager {
     };
   }
 
-  moduleList(call: GrpcRequest<Empty>, callback: GrpcCallback<ModuleListResponse>) {
+  moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {
     if (this.registeredModules.size !== 0) {
       let modules: {
         moduleName: string;

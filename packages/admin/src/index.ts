@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { ConduitRouteActions, GrpcCallback, GrpcRequest, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions, GrpcCallback, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
@@ -9,7 +9,6 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
-  Empty,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';

@@ -7,7 +7,8 @@ import {
   ConduitRoute,
   ConduitSocket, Empty,
   grpcToConduitRoute,
-  IConduitRouter, RegisterConduitRouteRequest, SocketData,
+  IConduitRouter,
+  SocketData,
 } from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { GrpcCallback, GrpcRequest, GrpcServer } from '@conduitplatform/grpc-sdk';
@@ -123,7 +124,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     );
   }
 
-  async registerGrpcRoute(call: any, callback: GrpcCallback<Empty>) {
+  async registerGrpcRoute(call: any, callback: GrpcCallback<null>) {
     const moduleName = call.metadata.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
@@ -201,7 +202,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this.cleanupRoutes();
   }
 
-  async socketPush(call: GrpcRequest<SocketData>, callback: GrpcCallback<Empty>) {
+  async socketPush(call: GrpcRequest<SocketData>, callback: GrpcCallback<null>) {
     try {
       let socketData: SocketPush = {
         event: call.request.event,

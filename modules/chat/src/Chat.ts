@@ -10,7 +10,7 @@ import { AdminHandlers } from './admin/admin';
 import { ChatRoutes } from './routes/routes';
 import * as models from './models';
 import { validateUsersInput } from './utils';
-import { ChatMessage, ChatRoom, User } from './models';
+import { ChatMessage, ChatRoom } from './models';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
