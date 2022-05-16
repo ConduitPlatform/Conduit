@@ -7,7 +7,7 @@ import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import path from 'path';
-import { GetRedisDetailsResponse, GetServerConfigResponse, ConfigRequest, ModuleListResponse } from '../type';
+import { GetRedisDetailsResponse, GetServerConfigResponse, ConfigRequest, ModuleListResponse } from './type';
 
 export default class ConfigManager implements IConfigManager {
   databaseCallback: any;
