@@ -84,7 +84,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     if (schema.name === '_DeclaredSchema') return true;
 
     const model = await this.models!['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
-    if (model && ((model.ownerModule === schema.ownerModule) || (model.ownerModule === 'cms'))) {
+    if (model && (model.ownerModule === schema.ownerModule)) {
       return true;
     } else if (model) {
       return false;
