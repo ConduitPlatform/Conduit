@@ -2,16 +2,14 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  ParsedRouterRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
-import {
-  createStorageProvider,
-  IStorageProvider,
-} from './storage-provider';
+import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
@@ -19,6 +17,10 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
+
+type ResponseError = (arg1: { code: number; message: string }) => void;
+type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
+type Callback = ReponseSuccess & ResponseError;
 
 export default class Storage extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -65,7 +67,7 @@ export default class Storage extends ManagedModule<Config> {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.accountId = await getAwsAccountId(config) as any;
+        config.aws.accountId = (await getAwsAccountId(config)) as any;
       }
     }
     return config;
@@ -113,7 +115,7 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async getFile(call: any, callback: any) {
+  async getFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -122,7 +124,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFile(call);
   }
 
-  async getFileData(call: any, callback: any) {
+  async getFileData(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -131,7 +133,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFileData(call);
   }
 
-  async createFile(call: any, callback: any) {
+  async createFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -140,7 +142,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.createFile(call);
   }
 
-  async updateFile(call: any, callback: any) {
+  async updateFile(call: ParsedRouterRequest, callback: Callback) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,

@@ -9,9 +9,10 @@
   "scripts": {
     "start": "node dist/index.js",
     "prepare": "npm run build",
-    "build": "rimraf dist && tsc",
+    "build": "npm run generateTypes && rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
-    "build:docker": "docker build -t ghcr.io/conduitplatform/authentication:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/authentication:latest"
+    "build:docker": "docker build -t ghcr.io/conduitplatform/authentication:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/authentication:latest",
+    "generateTypes": "sh build.sh"
   },
   "license": "ISC",
   "directories": {
@@ -25,12 +26,12 @@
   },
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
     "axios": "0.21.4",
     "bcrypt": "^5.0.1",
     "convict": "^6.2.1",
     "escape-string-regexp": "^4.0.0",
-    "@grpc/grpc-js": "^1.5.2",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
@@ -44,6 +45,7 @@
     "@types/uuid": "^7.0.2",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
+    "ts-proto": "^1.112.1",
     "typescript": "~4.2.0"
   }
 }
