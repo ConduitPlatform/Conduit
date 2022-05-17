@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "prepare": "npm run build",
-    "build": "npm run generateTypes && rimraf dist && tsc",
+    "prebuild": "npm run generateTypes",
+    "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "build:docker": "docker build -t ghcr.io/conduitplatform/authentication:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/authentication:latest",
     "generateTypes": "sh build.sh"
