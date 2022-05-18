@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ParsedRouterRequest,
   RoutingManager,
-  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
