@@ -130,4 +130,4 @@ export * from './classes';
 export * from './modules';
 export * from './constants';
 export * from './utilities';
-export * from './protoTypes/core'
+export * from './protoTypes/core';

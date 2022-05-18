@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { ConduitRouteActions, GrpcCallback, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions, GrpcCallback, GrpcRequest, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
@@ -9,6 +9,7 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
+  RegisterAdminRouteRequest,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -17,7 +18,7 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import path from 'path';
-import { CallContext } from 'nice-grpc-common';
+import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -49,7 +50,7 @@ export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _sdkRoutes: ConduitRoute[];
-  private readonly _grpcRoutes: { [field: string]: ConduitRoute[] } = {};
+  private readonly _grpcRoutes: { [field: string]:  RegisterAdminRouteRequest_PathDefinition[] } = {};
 
   constructor(
     commons: ConduitCommons,
@@ -100,13 +101,13 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   // grpc
-  async registerAdminRoute(call: any, callback: GrpcCallback<null>) {
+  async registerAdminRoute(call: GrpcRequest<RegisterAdminRouteRequest>, callback: GrpcCallback<null>) {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
         const result = this.commons
           .getConfigManager()!
-          .getModuleUrlByName((call as unknown as CallContext).metadata.get('module-name')![0]);
+          .getModuleUrlByName(call.metadata!.get('module-name')![0] as string);
         if (!result) {
           return callback({
             code: status.INTERNAL,
@@ -119,7 +120,7 @@ export default class AdminModule extends IConduitAdmin {
         call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
-        moduleName,
+        moduleName as string,
       );
       this.updateState(
         call.request.protoFile,
@@ -182,7 +183,7 @@ export default class AdminModule extends IConduitAdmin {
     });
   }
 
-  private updateState(protofile: string, routes: ConduitRoute[], url: string) {
+  private updateState(protofile: string, routes: RegisterAdminRouteRequest_PathDefinition[], url: string) {
     this.commons
       .getState()
       .getKey('admin')
@@ -215,7 +216,7 @@ export default class AdminModule extends IConduitAdmin {
       });
   }
 
-  private publishAdminRouteData(protofile: string, routes: ConduitRoute[], url: string) {
+  private publishAdminRouteData(protofile: string, routes: RegisterAdminRouteRequest_PathDefinition[], url: string) {
     this.commons.getBus().publish(
       'admin',
       JSON.stringify({
@@ -252,7 +253,7 @@ export default class AdminModule extends IConduitAdmin {
 
   private internalRegisterRoute(
     protofile: any,
-    routes: ConduitRoute[],
+    routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
     moduleName?: string,
   ) {

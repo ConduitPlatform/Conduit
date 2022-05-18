@@ -59,7 +59,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:onConfig', (_) => {
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
       this.onConfig()
         .then(() => {
           console.log('Updated authentication configuration');

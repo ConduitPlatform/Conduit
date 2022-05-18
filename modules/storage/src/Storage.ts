@@ -2,8 +2,8 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
-  ParsedRouterRequest,
   HealthCheckStatus,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
@@ -17,10 +17,9 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
+import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
 
-type ResponseError = (arg1: { code: number; message: string }) => void;
-type ReponseSuccess = (arg1: null, arg2: { [field: string]: any }) => void;
-type Callback = ReponseSuccess & ResponseError;
+type Callback = (arg1: { code: number; message: string }) => void;
 
 export default class Storage extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -115,7 +114,7 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async getFile(call: ParsedRouterRequest, callback: Callback) {
+  async getFile(call: any, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -124,7 +123,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFile(call);
   }
 
-  async getFileData(call: ParsedRouterRequest, callback: Callback) {
+  async getFileData(call: any, callback: GrpcCallback<GetFileDataResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -133,7 +132,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFileData(call);
   }
 
-  async createFile(call: ParsedRouterRequest, callback: Callback) {
+  async createFile(call: any, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -142,7 +141,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.createFile(call);
   }
 
-  async updateFile(call: ParsedRouterRequest, callback: Callback) {
+  async updateFile(call: any, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
