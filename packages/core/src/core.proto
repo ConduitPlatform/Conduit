@@ -100,7 +100,8 @@ message Empty {
 
 message ModuleHealthRequest {
     string moduleName = 1;
-    int32 status = 2; // [0, 1, 2]
+    string url = 2;
+    int32 status = 3; // [0, 1, 2]
 }
 
 message ModuleByNameRequest {
