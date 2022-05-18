@@ -43,7 +43,7 @@ export class MailgunProvider extends EmailProviderClass {
       `/${this.domain}/templates/${template_name}`,
       { active: 'yes' },
     );
-    let info: Template = {
+    return {
       name: response.template.name,
       id: response.template.name,
       createdAt: response.template.createdAt,
@@ -58,14 +58,13 @@ export class MailgunProvider extends EmailProviderClass {
         },
       ],
     };
-    return info;
   }
 
   async createTemplate(data: CreateEmailTemplate): Promise<Template> {
     const mailgun_input = {
       name: data.name,
       template: data.body,
-      descrpiton: '',
+      description: '',
       active: true,
       tag: data.versionName,
     };
@@ -76,7 +75,7 @@ export class MailgunProvider extends EmailProviderClass {
     if (err) {
       throw new Error(err.message);
     }
-    let created: Template = {
+    return {
       name: response.template.name,
       createdAt: response.template.createdAt,
       id: response.template.name,
@@ -91,8 +90,6 @@ export class MailgunProvider extends EmailProviderClass {
         },
       ],
     };
-
-    return created;
   }
 
   async updateTemplate(data: UpdateEmailTemplate): Promise<Template> {

@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/packages /app/packages
 
-RUN yarn install --production --pure-lockfile --non-interactive --cache-folder ./ycache; rm -rf ./ycache
+RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
 
 #RUN apk del .gyp
 

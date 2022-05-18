@@ -1,21 +1,21 @@
 import { ConduitCommons } from '@conduitplatform/commons';
-import ConduitGrpcSdk, { HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  HealthCheckStatus,
+  GrpcServer as ConduitGrpcServer,
+} from '@conduitplatform/grpc-sdk';
 import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
 import SecurityModule from '@conduitplatform/security';
 import { ConduitDefaultRouter } from '@conduitplatform/router';
-import { loadPackageDefinition, Server, ServerCredentials } from '@grpc/grpc-js';
 import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
-import convict from './utils/config';
-
-const protoLoader = require('@grpc/proto-loader');
+import convict from './config';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 
 export class GrpcServer {
-  private readonly server: Server;
+  private readonly server: ConduitGrpcServer;
   private readonly events: EventEmitter;
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
   private _initialized = false;
@@ -24,83 +24,56 @@ export class GrpcServer {
 
   constructor(
     private readonly commons: ConduitCommons,
-    private readonly port: number
+    private readonly port: number,
   ) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
-    this.server = new Server({
-      'grpc.max_receive_message_length': 1024 * 1024 * 100,
-      'grpc.max_send_message_length': 1024 * 1024 * 100,
-    });
-    const packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, './core.proto'),
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      }
-    );
-    this.addHealthService();
-    let _url = '0.0.0.0:' + this.port;
-    this.server.bindAsync(_url, ServerCredentials.createInsecure(), (err, port) => {
-      _url = '0.0.0.0:' + port.toString();
-      const grpcSdk = new ConduitGrpcSdk(
-        _url,
-        () => { return this._serviceHealthState; },
-        'core',
-      );
-      grpcSdk.initialize().then(() => {
-        if (err) {
-          console.error(err);
-          process.exit(-1);
-        }
-        this.server.start();
-        console.log('gRPC server listening on:', _url);
-        this.commons.registerConfigManager(
-          new ConfigManager(
-            grpcSdk,
-            this.commons,
-            this.server,
-            packageDefinition,
-            async () => {
-              if (!this._initialized) {
-                await grpcSdk.waitForExistence('database');
-                await this.bootstrapSdkComponents(grpcSdk);
-              }
-            }
-          )
+    this.server = new ConduitGrpcServer(this.port.toString());
+    this.server.createNewServer()
+      .then((port) => {
+        const _url = '0.0.0.0:' + port.toString();
+        const grpcSdk = new ConduitGrpcSdk(
+          _url,
+          () => { return this._serviceHealthState; },
+          'core',
+          false,
         );
+        grpcSdk.initialize().then(async () => {
+          this.commons.registerConfigManager(
+            new ConfigManager(
+              grpcSdk,
+              this.commons,
+              async () => {
+                if (!this._initialized) {
+                  await this.bootstrapSdkComponents(grpcSdk);
+                }
+              }
+            )
+          );
+          await this.commons.getConfigManager().initialize(this.server);
+          this.server.start();
+          console.log('gRPC server listening on:', _url);
+        });
+      })
+      .then(() => { return this.addHealthService(); })
+      .then()
+      .catch((err) => {
+        console.error(err);
+        process.exit(-1);
       });
-    });
   }
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
-    const packageDefinition = protoLoader.loadSync(
-      path.resolve(__dirname, './core.proto'),
-      {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      }
-    );
     this.commons.registerAdmin(
       new AdminModule(
         this.commons,
         grpcSdk,
-        packageDefinition,
-        this.server
       )
     );
     this.commons.registerRouter(
       new ConduitDefaultRouter(
         this.commons,
         grpcSdk,
-        packageDefinition,
-        this.server,
         Core.getInstance().httpServer.expressApp,
       )
     );
@@ -120,8 +93,9 @@ export class GrpcServer {
         .getConfigManager()
         .addFieldsToModule('core', convict.getProperties());
     }
-
-    this.commons.getAdmin().initialize();
+    await this.commons.getAdmin().initialize(this.server);
+    await this.commons.getRouter().initialize(this.server);
+    this.server.refresh().then();
     this.commons.getConfigManager().initConfigAdminRoutes();
     this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
 
@@ -132,7 +106,7 @@ export class GrpcServer {
   private getServiceHealthState(service: string) {
     service = service.replace('conduit.core.', '');
     if (service && !CORE_SERVICES.includes(service)) {
-     return HealthCheckStatus.SERVICE_UNKNOWN;
+      return HealthCheckStatus.SERVICE_UNKNOWN;
     }
     return this._serviceHealthState;
   }
@@ -147,22 +121,14 @@ export class GrpcServer {
   }
 
   private addHealthService() {
-    const packageDefinition = protoLoader.loadSync(
+    return this.server.addService(
       path.resolve(__dirname, './grpc_health_check.proto'),
+      'grpc.health.v1.Health',
       {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      }
+        Check: this.healthCheck.bind(this),
+        Watch: this.healthWatch.bind(this),
+      },
     );
-    const protoDescriptor = loadPackageDefinition(packageDefinition);
-    const healthService = (protoDescriptor.grpc as any).health.v1.Health.service;
-    this.server.addService(healthService, {
-      Check: this.healthCheck.bind(this),
-      Watch: this.healthWatch.bind(this),
-    });
   }
 
   private healthCheck(call: any, callback: any) {

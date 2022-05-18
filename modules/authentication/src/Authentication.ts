@@ -2,12 +2,13 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { AuthenticationRoutes } from './routes/routes';
 import * as models from './models';
@@ -16,9 +17,9 @@ import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
-import { migrateLocalAuthConfig } from './migrations/localAuthConfig.migration';
+import { runMigrations } from './migrations';
 
-export default class Authentication extends ManagedModule {
+export default class Authentication extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
@@ -31,19 +32,19 @@ export default class Authentication extends ManagedModule {
       userDelete: this.userDelete.bind(this),
     },
   };
-  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
+  private sendEmail: boolean = false;
 
   constructor() {
     super('authentication');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
-    await migrateLocalAuthConfig(this.grpcSdk);
+    await runMigrations(this.grpcSdk);
   }
 
   async onRegister() {
@@ -68,12 +69,31 @@ export default class Authentication extends ManagedModule {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
+    const config = ConfigController.getInstance().config;
+    if (!config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      let refreshedOnce = false;
       await this.registerSchemas();
+      if (config.local.verification.send_email) {
+        await this.grpcSdk.monitorModule('email', (serving) => {
+          this.sendEmail = serving;
+          this.refreshAppRoutes();
+          refreshedOnce = true;
+        });
+      } else {
+        this.grpcSdk.unmonitorModule('email');
+      }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk);
-      this.isRunning = true;
+      if (!refreshedOnce) {
+        await this.refreshAppRoutes();
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
+  }
+
+  private async refreshAppRoutes() {
+    this.userRouter = new AuthenticationRoutes(this.grpcServer, this.grpcSdk, this.sendEmail);
     await this.userRouter.registerRoutes();
   }
 
@@ -153,8 +173,7 @@ export default class Authentication extends ManagedModule {
         isVerified: !verify,
       });
 
-      // if verification is required
-      if (verify) {
+      if (verify && this.sendEmail) {
         const serverConfig = await this.grpcSdk.config.getServerConfig();
         const url = serverConfig.url;
         const verificationToken: models.Token = await models.Token.getInstance()

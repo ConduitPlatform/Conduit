@@ -1,19 +1,20 @@
 import path from 'path';
 import fs from 'fs';
-import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
-import { ConduitMiddleware } from '../interfaces/Middleware';
-import { ConduitRoute, ConduitRouteParameters } from '../interfaces/Route';
+import { credentials, Metadata, loadPackageDefinition } from '@grpc/grpc-js';
 import {
   ConduitSocket,
+  ConduitMiddleware,
   ConduitSocketEvent,
   ConduitSocketParameters,
   EventResponse,
-  instanceOfSocketProtoDescription,
   JoinRoomResponse,
   SocketProtoDescription,
-} from '../interfaces/Socket';
+  instanceOfSocketProtoDescription,
+} from '../interfaces';
+import { ConduitRoute } from '../classes/ConduitRoute';
+import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
-let protoLoader = require('@grpc/proto-loader');
+const protoLoader = require('@grpc/proto-loader');
 
 function getDescriptor(protofile: string): any {
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
@@ -25,17 +26,19 @@ function getDescriptor(protofile: string): any {
     defaults: true,
     oneofs: true,
   });
-  fs.unlink(protoPath, () => {});
+  fs.unlink(protoPath, () => {
+  });
   return loadPackageDefinition(packageDefinition);
 }
 
 export function grpcToConduitRoute(
   routerName: string,
   request: any,
-  moduleName?: string
+  moduleName?: string,
+  grpcToken?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ] = request.routes;
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
@@ -44,31 +47,35 @@ export function grpcToConduitRoute(
     routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
-  let serverIp = request.routerUrl;
-  let client = new routerDescriptor(serverIp, credentials.createInsecure(), {
+  const serverIp = request.routerUrl;
+  const client = new routerDescriptor(serverIp, credentials.createInsecure(), {
     'grpc.max_receive_message_length': 1024 * 1024 * 100,
     'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
 
-  return createHandlers(routes, client, moduleName);
+  return createHandlers(routes, client, moduleName, grpcToken);
 }
 
 function createHandlers(
   routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
   ],
   client: any,
-  moduleName?: string
+  moduleName?: string,
+  grpcToken?: string,
 ) {
-  let finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
+  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
   routes.forEach((r) => {
     let route;
-
+    const metadata = new Metadata();
+    if (grpcToken) {
+      metadata.add('grpc-token', grpcToken);
+    }
     if (instanceOfSocketProtoDescription(r)) {
-      route = createHandlerForSocket(r, client, moduleName);
+      route = createHandlerForSocket(r, client, metadata, moduleName);
     } else {
-      route = createHandlerForRoute(r, client, moduleName);
+      route = createHandlerForRoute(r, client, metadata, moduleName);
     }
 
     if (route != undefined) {
@@ -82,9 +89,10 @@ function createHandlers(
 function createHandlerForRoute(
   route: { options: any; returns?: any; grpcFunction: string },
   client: any,
-  moduleName?: string
+  metadata: Metadata,
+  moduleName?: string,
 ) {
-  let handler = (req: ConduitRouteParameters) => {
+  const handler = (req: ConduitRouteParameters) => {
     let request = {
       params: req.params ? JSON.stringify(req.params) : null,
       path: req.path,
@@ -92,7 +100,7 @@ function createHandlerForRoute(
       context: JSON.stringify(req.context),
     };
     return new Promise((resolve, reject) => {
-      client[route.grpcFunction](request, (err: any, result: any) => {
+      client[route.grpcFunction](request, metadata, (err: any, result: any) => {
         if (err) {
           return reject(err);
         }
@@ -106,7 +114,8 @@ function createHandlerForRoute(
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   let returns: any = route.returns;
@@ -115,7 +124,8 @@ function createHandlerForRoute(
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
-      } catch (e) {}
+      } catch (e) {
+      }
     }
   }
   if (!options.path.startsWith('/')) {
@@ -150,7 +160,8 @@ function createHandlerForRoute(
 function createHandlerForSocket(
   socket: SocketProtoDescription,
   client: any,
-  moduleName?: string
+  metadata: Metadata,
+  moduleName?: string,
 ) {
   let eventHandlers = new Map<string, ConduitSocketEvent>();
   const events = JSON.parse(socket.events);
@@ -166,15 +177,16 @@ function createHandlerForSocket(
       return new Promise<EventResponse | JoinRoomResponse>((resolve, reject) => {
         client[events[req.event].grpcFunction](
           request,
+          metadata,
           (
             err: { code: number; message: string },
-            result: EventResponse | JoinRoomResponse
+            result: EventResponse | JoinRoomResponse,
           ) => {
             if (err) {
               return reject(err);
             }
             resolve(result);
-          }
+          },
         );
       });
     };

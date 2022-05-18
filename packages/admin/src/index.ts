@@ -1,6 +1,6 @@
 import { isNil } from 'lodash';
-import { loadPackageDefinition, Server, status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import ConduitGrpcSdk, { ConduitRouteActions, GrpcServer } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
@@ -9,13 +9,14 @@ import {
   ConduitSocket,
   IConduitAdmin,
   grpcToConduitRoute,
-  ConduitRouteActions,
 } from '@conduitplatform/commons';
+import { hashPassword } from './utils/auth';
+import { runMigrations } from './migrations';
+import AdminConfigSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
-import { hashPassword } from './utils/auth';
-import AdminConfigSchema from './config';
 import * as models from './models';
+import path from 'path';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -52,8 +53,6 @@ export default class AdminModule extends IConduitAdmin {
   constructor(
     commons: ConduitCommons,
     grpcSdk: ConduitGrpcSdk,
-    packageDefinition: any,
-    server: Server,
   ) {
     super(commons);
     this.grpcSdk = grpcSdk;
@@ -79,17 +78,16 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes.forEach((route) => {
       this._restRouter.registerConduitRoute(route);
     }, this);
-
-    let protoDescriptor = loadPackageDefinition(packageDefinition);
-
-    // @ts-ignore
-    let admin = protoDescriptor.conduit.core.Admin;
-    server.addService(admin.service, {
-      registerAdminRoute: this.registerAdminRoute.bind(this),
-    });
   }
 
-  async initialize() {
+  async initialize(server: GrpcServer) {
+    await server.addService(
+      path.resolve(__dirname, '../../core/src/core.proto'),
+      'conduit.core.Admin',
+      {
+        registerAdminRoute: this.registerAdminRoute.bind(this),
+      },
+    );
     await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
@@ -232,6 +230,7 @@ export default class AdminModule extends IConduitAdmin {
       await this.grpcSdk.waitForExistence('database');
     }
     await this.registerSchemas();
+    await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async (existing: any) => {
@@ -268,6 +267,7 @@ export default class AdminModule extends IConduitAdmin {
         routerUrl: url,
       },
       moduleName,
+      this.grpcSdk.grpcToken,
     );
 
     processedRoutes.forEach((r) => {

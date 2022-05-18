@@ -1,5 +1,5 @@
-import { ConduitError } from '@conduitplatform/commons';
 import { ApolloError } from 'apollo-server-express';
+import { ConduitError } from '@conduitplatform/grpc-sdk';
 
 export const errorHandler = (err: Error | ConduitError | any) => {
   if (err.hasOwnProperty('status')) {

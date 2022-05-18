@@ -19,12 +19,16 @@ import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
+import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
-import { HealthDefinition } from './protoUtils/grpc_health_check';
+import { HealthDefinition, HealthCheckResponse_ServingStatus } from './protoUtils/grpc_health_check';
+import { ModuleListResponse_ModuleResponse } from './protoUtils/core'
 import { HealthCheckStatus } from './types';
+import { createSigner } from 'fast-jwt';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
+  private readonly _watchModules: boolean;
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
@@ -46,23 +50,32 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
+  private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string) {
+  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string, watchModules = true) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
     }
     this.serverUrl = serverUrl;
+    this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    const grpcKey = process.env.GRPC_KEY;
+    if (grpcKey) {
+      const sign = createSigner({ key: grpcKey });
+      this._grpcToken = sign({
+        moduleName: this.name,
+      });
+    }
   }
 
   async initialize() {
     if (this.name === 'core') {
       this._initialize();
     } else {
-      (this._core as any) = new Core(this.name, this.serverUrl);
+      (this._core as any) = new Core(this.name, this.serverUrl, this._grpcToken);
       console.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
@@ -73,7 +86,11 @@ export default class ConduitGrpcSdk {
             this._initialize();
             break;
           }
-        } catch {
+        } catch (err) {
+          if (err.code === status.PERMISSION_DENIED) {
+            console.error(err);
+            process.exit(-1);
+          }
           await sleep(delay);
         }
       }
@@ -82,11 +99,13 @@ export default class ConduitGrpcSdk {
 
   private _initialize() {
     if (this._initialized) throw new Error('Module\'s grpc-sdk has already been initialized');
-    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter);
-    (this._admin as any) = new Admin(this.name, this.serverUrl);
-    (this._router as any)  = new Router(this.name, this.serverUrl);
+    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter, this._grpcToken);
+    (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
+    (this._router as any)  = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
-    this.watchModules();
+    if (this._watchModules) {
+      this.watchModules();
+    }
     this._initialized = true;
   }
 
@@ -205,18 +224,44 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', (modules: any) => {
       Object.keys(this._modules).forEach((r) => {
-        let found = modules.filter((m: any) => m.moduleName === r);
+        const found = modules.filter((m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving);
         if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r]?.closeConnection();
+          emitter.emit(`module-connection-update:${r}`, false);
         }
       });
-      modules.forEach((m: any) => {
-        if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName]?.openConnection();
+      modules.forEach((m: ModuleListResponse_ModuleResponse) => {
+        if (m.serving) {
+          if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
+            this._modules[m.moduleName]?.openConnection();
+          }
+          this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, true);
         }
-        this.createModuleClient(m.moduleName, m.url);
       });
     });
+  }
+
+  async monitorModule(
+    moduleName: string,
+    callback: (serving: boolean) => void,
+    wait: boolean = true,
+  ) {
+    if (wait) await this.waitForExistence(moduleName);
+    this._modules['chat']?.healthClient?.check({})
+      .then(res => {
+        callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
+      })
+      .catch(() => {
+        callback(false);
+      });
+    const emitter = this.config.getModuleWatcher();
+    emitter.on(`module-connection-update:${moduleName}`, callback);
+  }
+
+  unmonitorModule(moduleName: string) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.removeAllListeners(`module-connection-update:${moduleName}`);
   }
 
   initializeEventBus(): Promise<any> {
@@ -261,9 +306,10 @@ export default class ConduitGrpcSdk {
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
+        this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      this._modules[moduleName] = new ConduitModule(this.name, moduleName, moduleUrl);
+      this._modules[moduleName] = new ConduitModule(this.name, moduleName, moduleUrl, this._grpcToken);
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
     }
   }
@@ -300,6 +346,10 @@ export default class ConduitGrpcSdk {
       return this.initializeModules();
     }
     return 'ok';
+  }
+
+  get grpcToken() {
+    return this._grpcToken;
   }
 }
 

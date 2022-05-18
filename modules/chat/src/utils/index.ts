@@ -28,8 +28,15 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
   return usersToBeAdded;
 }
 
-export async function sendInvitations(users: User[], sender: User, room: ChatRoom, url: string, sendEmail: boolean, sendNotification: boolean, grpcSdk: ConduitGrpcSdk) {
-
+export async function sendInvitations(
+  users: User[],
+  sender: User,
+  room: ChatRoom,
+  url: string,
+  sendEmail: boolean,
+  sendNotification: boolean,
+  grpcSdk: ConduitGrpcSdk,
+) {
   const roomId = room._id;
   for (const invitedUser of users) {
     const invitationsCount = await InvitationToken.getInstance().countDocuments({

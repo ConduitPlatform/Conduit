@@ -49,7 +49,7 @@ function extractArrayType(arrayField: any[]) {
 }
 
 function extractObjectType(objectField: any) {
-  let res: { type: any, defaultValue?: any } = { type: null };
+  let res: { type: any, defaultValue?: any, primaryKey?: boolean } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
     res.type = extractType(objectField.type);
@@ -58,6 +58,10 @@ function extractObjectType(objectField: any) {
     }
   } else {
     res.type = DataTypes.JSON;
+  }
+
+  if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
+    res.primaryKey = objectField.primaryKey ?? false;
   }
 
   return res;

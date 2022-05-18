@@ -1,5 +1,4 @@
-import { ConduitModel } from '@conduitplatform/commons';
-import { ConduitParser } from '@conduitplatform/grpc-sdk';
+import { ConduitParser, ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
 
 export interface ResolverDefinition {
   [key: string]: {
@@ -26,7 +25,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
 
   extractTypes(
     name: string,
-    fields: ConduitModel | string,
+    fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean
   ): ParseResult {
     this.isInput = isInput;

@@ -166,4 +166,34 @@ export namespace AuthUtils {
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
   }
+
+  export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, userId: string, clientId: string) {
+    const isAnonymous = ('anonymous-client' === clientId);
+    if (!clientConfig.multipleUserSessions) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        userId: userId,
+        clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
+      });
+    } else if (!clientConfig.multipleClientLogins) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        userId: userId,
+        clientId: { $ne: clientId },
+      });
+    }
+  }
+
+  export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, authToken: string, clientId: string, userId: string) {
+    const isAnonymous = ('anonymous-client' === clientId);
+    const token = authToken.split(' ')[1];
+    if (!clientConfig.multipleUserSessions) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        clientId: (!isAnonymous && clientConfig.multipleClientLogins) ? clientId : null,
+        userId: userId,
+      });
+    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
+      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
+        token: token,
+      });
+    }
+  }
 }

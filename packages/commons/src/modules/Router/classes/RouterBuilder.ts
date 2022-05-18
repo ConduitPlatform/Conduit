@@ -1,5 +1,5 @@
+import { ConduitRouteOptions } from '@conduitplatform/grpc-sdk';
 import { ConduitRouteBuilder } from './RouteBuilder';
-import { ConduitRouteOptions } from '../../../interfaces';
 
 export abstract class ConduitRouterBuilder {
   constructor(routePath: string, middleware?: any[]) {}

@@ -6,7 +6,7 @@ COPY . /app
 
 WORKDIR /app
 
-RUN apt update && \
+RUN apt-get update && \
     curl -OL https://github.com/google/protobuf/releases/download/v3.17.3/protoc-3.17.3-linux-x86_64.zip && \
     unzip -o ./protoc-3.17.3-linux-x86_64.zip -d /usr/local bin/protoc && \
     unzip -o ./protoc-3.17.3-linux-x86_64.zip -d /usr/local include/* && \
@@ -23,4 +23,4 @@ RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
     --scope=@conduitplatform/core --scope=@conduitplatform/router --scope=@conduitplatform/security ; \
     else cd /app/$BUILDING_SERVICE && yarn build && cd /app ; fi
 
-RUN npx lerna clean -y && rm -rf node_modules
+RUN yarn cache clean && npx lerna clean -y && rm -rf node_modules

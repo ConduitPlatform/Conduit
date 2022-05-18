@@ -1,9 +1,11 @@
-import { ConduitCommons, ConduitRoute } from '../..';
+import { GrpcServer } from '@conduitplatform/grpc-sdk';
+import { ConduitCommons } from '../../index';
+import { ConduitRoute } from '../../classes/ConduitRoute';
 
 export abstract class IConduitAdmin {
   protected constructor(protected readonly commons: ConduitCommons) {}
 
-  abstract initialize(): void;
+  abstract initialize(server: GrpcServer): Promise<void>;
   abstract registerRoute(route: ConduitRoute): void;
 
   setConfig(moduleConfig: any) {

@@ -1,8 +1,9 @@
 import {
   ManagedModule,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import {
   SendSmsRequest,
@@ -17,7 +18,7 @@ import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 
-export default class Sms extends ManagedModule {
+export default class Sms extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'sms.proto'),
@@ -35,10 +36,10 @@ export default class Sms extends ManagedModule {
 
   constructor() {
     super('sms');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
   }
 
@@ -54,9 +55,14 @@ export default class Sms extends ManagedModule {
   }
 
   async onConfig() {
-    await this.initProvider();
-    this.adminRouter.updateProvider(this._provider!);
-    this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      await this.initProvider();
+      this.adminRouter.updateProvider(this._provider!);
+      this.isRunning = true;
+      this.updateHealth(HealthCheckStatus.SERVING);
+    }
   }
 
   private async initProvider() {

@@ -1,21 +1,23 @@
 import {
   ConduitCommons,
-  ConduitError,
   ConduitRoute,
+  ConduitRouteReturnDefinition,
+  RegisteredModule,
+} from '@conduitplatform/commons';
+import ConduitGrpcSdk, {
+  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitRouteReturnDefinition,
   RouteOptionType,
   TYPE,
-} from '@conduitplatform/commons';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import * as models from '../../models';
 
 export function getUpdateConfigRoute(
   grpcSdk: ConduitGrpcSdk,
   conduit: ConduitCommons,
-  registeredModules: Map<string, string>,
+  registeredModules: Map<string, RegisteredModule>,
 ) {
   return new ConduitRoute(
     {
@@ -47,7 +49,7 @@ export function getUpdateConfigRoute(
 
       await grpcSdk
         .initializeModules()
-        .catch((err) => console.log('Failed to refresh modules'));
+        .catch(() => console.log('Failed to refresh modules'));
       switch (moduleName) {
         case undefined:
           throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');

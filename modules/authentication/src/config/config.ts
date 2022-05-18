@@ -3,6 +3,18 @@ export default {
     format: 'Boolean',
     default: true,
   },
+  clients: {
+    multipleUserSessions: {
+      doc: 'Defines if a user can login multiple times from a single client',
+      format: 'Boolean',
+      default: false,
+    },
+    multipleClientLogins: {
+      doc: 'Defines if a user can be logged in from multiple clients',
+      format: 'Boolean',
+      default: true,
+    },
+  },
   local: {
     enabled: {
       doc: 'Defines if this strategy is active or not',

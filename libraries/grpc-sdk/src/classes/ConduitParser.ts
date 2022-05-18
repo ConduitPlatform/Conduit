@@ -1,4 +1,4 @@
-import { ConduitModel } from '../interfaces';
+import { ConduitModel, ConduitRouteOption } from '../interfaces';
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
@@ -6,7 +6,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   abstract extractTypes(
     name: string,
-    fields: ConduitModel | string,
+    fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean
   ): ParseResult;
 
@@ -58,7 +58,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   protected extractTypesInternal(
     name: string,
-    fields: ConduitModel | string
+    fields: ConduitModel | ConduitRouteOption | string
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, false);
     if (typeof fields === 'string') {

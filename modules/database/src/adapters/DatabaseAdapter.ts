@@ -9,6 +9,16 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   models?: { [name: string]: T };
 
   /**
+   * Checks if the database has already been connected with Conduit
+   */
+  abstract isConduitDb(): Promise<boolean>;
+
+  /**
+   * Introspects all schemas of current db connection, registers them to conduit
+   */
+  abstract introspectDatabase(isConduitDb : boolean): Promise<ConduitSchema[]>;
+
+  /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param schema
    */
@@ -63,7 +73,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   ): { model: SchemaAdapter<any>; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints'];
+    const dbSchemas = ['CustomEndpoints','_PendingSchemas'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }

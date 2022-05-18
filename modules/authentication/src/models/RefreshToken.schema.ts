@@ -14,7 +14,7 @@ const schema = {
   },
   clientId: {
     type: TYPE.String,
-    required: true,
+    required: false,
   },
   token: {
     type: TYPE.String,

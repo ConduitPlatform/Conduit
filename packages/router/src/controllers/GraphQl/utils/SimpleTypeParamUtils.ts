@@ -1,4 +1,4 @@
-import { ConduitRouteOptionExtended } from '@conduitplatform/commons';
+import { ConduitRouteOptionExtended } from '@conduitplatform/grpc-sdk';
 
 const GQL_PRIMITIVES = ['Number', 'Boolean', 'Date', 'String'];
 

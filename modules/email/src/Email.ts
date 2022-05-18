@@ -2,10 +2,11 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  HealthCheckStatus,
   GrpcRequest,
   GrpcResponse,
 } from '@conduitplatform/grpc-sdk';
-import path from "path";
+import path from 'path';
 import AppConfigSchema from './config';
 import { AdminHandlers } from './admin/admin';
 import { EmailService } from './services/email.service';
@@ -13,6 +14,8 @@ import { EmailProvider } from './email-provider';
 import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { Config } from './config';
+import { runMigrations } from './migrations';
 
 type RegisterTemplateRequest = GrpcRequest<{
   name: string;
@@ -35,7 +38,7 @@ type SendEmailRequest = GrpcRequest<{
 }>;
 type SendEmailResponse = GrpcResponse<{ sentMessageInfo: string }>;
 
-export default class Email extends ManagedModule {
+export default class Email extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
@@ -54,11 +57,12 @@ export default class Email extends ManagedModule {
 
   constructor() {
     super('email');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
   }
 
   protected registerSchemas() {
@@ -69,7 +73,7 @@ export default class Email extends ManagedModule {
     return Promise.all(promises);
   }
 
-  async preConfig(config: any) {
+  async preConfig(config: Config) {
     if (
       isNil(config.active) ||
       isNil(config.transport) ||
@@ -81,24 +85,30 @@ export default class Email extends ManagedModule {
   }
 
   async onConfig() {
-    if (!this.isRunning) {
-      await this.registerSchemas();
-      await this.initEmailProvider();
-      this.emailService = new EmailService(this.emailProvider, this.grpcSdk);
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      this.adminRouter.setEmailService(this.emailService);
-      this.isRunning = true;
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.initEmailProvider(ConfigController.getInstance().config);
-      this.emailService.updateProvider(this.emailProvider);
+      if (!this.isRunning) {
+        await this.registerSchemas();
+        await this.initEmailProvider();
+        this.emailService = new EmailService(this.emailProvider);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.adminRouter.setEmailService(this.emailService);
+        this.isRunning = true;
+      } else {
+        await this.initEmailProvider(ConfigController.getInstance().config);
+        this.emailService.updateProvider(this.emailProvider);
+      }
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
+    // TODO: Replace this:
     this.grpcSdk.bus?.publish(
       'email:status:onConfig',
       this.isRunning ? 'active' : 'inactive',
     );
   }
 
-  private async initEmailProvider(newConfig?: any) {
+  private async initEmailProvider(newConfig?: Config) {
     let emailConfig = !isNil(newConfig)
       ? newConfig
       : await this.grpcSdk.config.get('email');
@@ -135,7 +145,7 @@ export default class Email extends ManagedModule {
       replyTo: call.request.params.replyTo,
       attachments: call.request.params.attachments,
     };
-    let emailConfig: any = await this.grpcSdk.config
+    let emailConfig: Config = await this.grpcSdk.config
       .get('email')
       .catch(() => console.log('failed to get sending domain'));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;

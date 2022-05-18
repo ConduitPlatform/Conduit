@@ -13,7 +13,6 @@ import { RequestHandlers } from '../../helpers';
 import { constructProtoFile, wrapFunctionsAsync } from '../../helpers/RoutingUtilities';
 import { RouteBuilder } from './RouteBuilder';
 
-
 export class RoutingManager {
 
   private _moduleRoutes: {
@@ -133,15 +132,15 @@ export class RoutingManager {
     routeObject.events = JSON.stringify(eventsObj);
 
     this._moduleRoutes[primary!] = routeObject;
-
   }
 
   async registerRoutes() {
     if (Object.keys(this._routeHandlers).length === 0) return;
     let modifiedFunctions: { [name: string]: (call: any, callback: any) => void } = wrapFunctionsAsync(this._routeHandlers);
-    let protoDescriptions = constructProtoFile(this._router.moduleName, Object.values(this._moduleRoutes));
+    const protoDescriptions = constructProtoFile(this._router.moduleName, Object.values(this._moduleRoutes));
     await this._server.addService(
-      protoDescriptions.path, protoDescriptions.name + '.router.Router',
+      protoDescriptions.path,
+      protoDescriptions.name + '.router.Router',
       modifiedFunctions,
     );
     return this._router.register(Object.values(this._moduleRoutes), protoDescriptions.file);

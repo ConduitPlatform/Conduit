@@ -10,8 +10,8 @@ import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
-export abstract class ManagedModule extends ConduitServiceModule {
-  abstract readonly config?: convict.Config<any>;
+export abstract class ManagedModule<T> extends ConduitServiceModule{
+  abstract readonly config?: convict.Config<T>;
   service?: ConduitService;
 
   protected constructor(moduleName: string) {
@@ -32,7 +32,7 @@ export abstract class ManagedModule extends ConduitServiceModule {
 
   async onRegister() {}
 
-  async preConfig(config: any) { return config }
+  async preConfig(config: T) { return config }
 
   async onConfig() {}
 
@@ -79,7 +79,7 @@ export abstract class ManagedModule extends ConduitServiceModule {
     }
   }
 
-  protected async updateConfig(config?: any) {
+  protected async updateConfig(config?: T) {
     if (!this.config) {
       throw new Error('Module is not configurable');
     }
@@ -87,7 +87,7 @@ export abstract class ManagedModule extends ConduitServiceModule {
       ConfigController.getInstance().config = config;
       return Promise.resolve();
     } else {
-      return this.grpcSdk.config.get(this.name).then((config: any) => {
+      return this.grpcSdk.config.get(this.name).then((config: T) => {
         ConfigController.getInstance().config = config;
       });
     }

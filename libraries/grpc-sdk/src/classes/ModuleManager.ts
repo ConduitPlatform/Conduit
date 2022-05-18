@@ -3,12 +3,12 @@ import ConduitGrpcSdk, {
   ConfigController,
 } from '..';
 
-export class ModuleManager {
+export class ModuleManager<T> {
   private readonly serviceAddress: string;
   private readonly servicePort: string | undefined;
   private readonly grpcSdk: ConduitGrpcSdk;
 
-  constructor(private readonly module: ManagedModule) {
+  constructor(private readonly module: ManagedModule<T>) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
@@ -34,7 +34,7 @@ export class ModuleManager {
       const url = (process.env.REGISTER_NAME === 'true'
         ? `${self.module.name}:`
         : `${self.serviceAddress}:`) + self.module.port;
-      await self.grpcSdk.config.registerModule(self.module.name, url);
+      await self.grpcSdk.config.registerModule(self.module.name, url, this.module.healthState);
     } catch (err) {
       console.log('Failed to initialize server');
       console.error(err);

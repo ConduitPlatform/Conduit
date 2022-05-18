@@ -2,8 +2,9 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
 import { PushNotificationsRoutes } from './routes/routes';
 import * as models from './models';
@@ -20,8 +21,9 @@ import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { ISendNotification } from './interfaces/ISendNotification';
+import { runMigrations } from './migrations';
 
-export default class PushNotifications extends ManagedModule {
+export default class PushNotifications extends ManagedModule<Config> {
   config = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
@@ -41,16 +43,27 @@ export default class PushNotifications extends ManagedModule {
 
   constructor() {
     super('pushNotifications');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
-    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await runMigrations(this.grpcSdk);
+    await this.grpcSdk.monitorModule('authentication', (serving) => {
+      if (serving && ConfigController.getInstance().config.active) {
+        this.updateHealth(HealthCheckStatus.SERVING);
+      } else {
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      }
+    });
   }
 
   async onConfig() {
-    if (ConfigController.getInstance().config.active) {
-      this.enableModule();
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    } else {
+      await this.enableModule();
+      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
@@ -168,7 +181,6 @@ export default class PushNotifications extends ManagedModule {
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-
     return callback(null, { message: 'Ok' });
   }
 }

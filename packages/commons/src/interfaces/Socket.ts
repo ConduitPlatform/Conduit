@@ -1,5 +1,5 @@
-import { ConduitRouteReturnDefinition } from './Route';
-import { TYPE } from './Model';
+import { ConduitRouteReturnDefinition } from '../classes/ConduitRouteReturn';
+import { TYPE } from '@conduitplatform/grpc-sdk';
 
 export interface ConduitSocketParameters {
   event: string;

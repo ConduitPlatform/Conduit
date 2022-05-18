@@ -88,14 +88,7 @@ export class SchemaController {
           promise.then((p) => {
             let routeSchemas: any = {};
             r.forEach((schema: any) => {
-              if (typeof schema.modelOptions === 'string') {
-                schema.modelOptions = JSON.parse(schema.modelOptions);
-              }
-              if (
-                schema.name !== 'SchemaDefinitions' &&
-                (schema.modelOptions.conduit.cms.crudOperations ||
-                  isNil(schema.modelOptions.conduit.cms.crudOperations))
-              ) {
+              if (schema.modelOptions.conduit?.cms?.crudOperations) {
                 routeSchemas[schema.name] = schema;
               }
             });

@@ -1,6 +1,7 @@
-import { Config } from 'convict';
+import { GrpcServer } from '@conduitplatform/grpc-sdk';
 
 export abstract class IConfigManager {
+  abstract initialize(server: GrpcServer): Promise<void>;
   abstract initConfigAdminRoutes(): void;
   abstract registerAppConfig(): Promise<any>;
   abstract registerModulesConfig(moduleName: string, moduleConfig: any): Promise<any>;
@@ -10,7 +11,3 @@ export abstract class IConfigManager {
   abstract getModuleUrlByName(moduleName: string): string | undefined;
 }
 
-export abstract class IAppConfig {
-  abstract get config(): Config<any>;
-  abstract get configSchema(): any;
-}
