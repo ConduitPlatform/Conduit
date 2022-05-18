@@ -9,6 +9,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
+let mime = require('mime-types')
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -42,8 +43,9 @@ export class FileHandlers {
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, data, folder, container, mimeType, isPublic } = call.request.params;
+    const { name, data, folder, container, isPublic } = call.request.params;
     let newFolder;
+    const mimeType = mime.lookup(name);
     if (isNil(folder)) {
       newFolder = '/';
     } else {
@@ -131,7 +133,8 @@ export class FileHandlers {
   }
 
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, data, name, container, folder, mimeType } = call.request.params;
+    const { id, data, name, container, folder } = call.request.params;
+    let mimeType = mime.lookup(name);
     try {
       const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {

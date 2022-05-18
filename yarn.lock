@@ -7668,7 +7668,7 @@ escape-regexp@0.0.1:
   resolved "https://registry.yarnpkg.com/escape-regexp/-/escape-regexp-0.0.1.tgz#f44bda12d45bbdf9cb7f862ee7e4827b3dd32254"
   integrity sha1-9EvaEtRbvfnLf4Yu5+SCez3TIlQ=
 
-escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1.0.5:
+escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2, escape-string-regexp@^1.0.3, escape-string-regexp@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
   integrity sha1-G2HAViGQqN/2rjuyzwIAyhMLhtQ=
@@ -9564,6 +9564,11 @@ inflight@^1.0.4:
     once "^1.3.0"
     wrappy "1"
 
+inherits-ex@^1.1.2:
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/inherits-ex/-/inherits-ex-1.3.5.tgz#2e25e7fc933eb3570a55d197793682e0c01cd3a6"
+  integrity sha512-AQfnshKJLLn2h0SSjJYzF/xTnSOf/hYJ2v/V7+1dAS13cN2RWwcqmCxnivi9RTDidMcmsMxelTIBHOi87ZVlsQ==
+
 inherits@2, inherits@2.0.4, inherits@^2.0.1, inherits@^2.0.3, inherits@^2.0.4, inherits@~2.0.1, inherits@~2.0.3:
   version "2.0.4"
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
@@ -11321,6 +11326,15 @@ mime-db@1.46.0:
   resolved "https://registry.yarnpkg.com/mime-db/-/mime-db-1.46.0.tgz#6267748a7f799594de3cbc8cde91def349661cee"
   integrity sha512-svXaP8UQRZ5K7or+ZmfNhg2xX3yKDMUzqadsSqi4NCH/KomcH75MAMYAGVlvXn4+b/xOPhS3I2uHKRUzvjY7BQ==
 
+mime-type@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/mime-type/-/mime-type-4.0.0.tgz#a44293aa3867a925a1c1b19e4e6fb66a7d8527aa"
+  integrity sha512-1FCc9fsTg44pd7koB486WEepve+sc4847F0USUf08j4+bAU6/9ckIq4kHVEhCxbxHCyUZy++dxx/PtSR/m4XBQ==
+  dependencies:
+    micromatch "^4.0.2"
+    path.js "^1.0.7"
+    util-ex "^0.3.15"
+
 mime-types@^2.0.8, mime-types@~2.1.19:
   version "2.1.27"
   resolved "https://registry.yarnpkg.com/mime-types/-/mime-types-2.1.27.tgz#47949f98e279ea53119f5722e0f34e529bec009f"
@@ -12897,6 +12911,15 @@ path-type@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
+
+path.js@^1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/path.js/-/path.js-1.0.7.tgz#7d136b607de19bfd98ba068874926287e6534939"
+  integrity sha1-fRNrYH3hm/2YugaIdJJih+ZTSTk=
+  dependencies:
+    escape-string-regexp "^1.0.3"
+    inherits-ex "^1.1.2"
+    util-ex "^0.3.10"
 
 pathval@^1.1.0:
   version "1.1.1"
@@ -15855,6 +15878,14 @@ util-deprecate@^1.0.1, util-deprecate@~1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8=
+
+util-ex@^0.3.10, util-ex@^0.3.15:
+  version "0.3.15"
+  resolved "https://registry.yarnpkg.com/util-ex/-/util-ex-0.3.15.tgz#f9261cda13c4327d0740cbe67be1227ded8b0058"
+  integrity sha1-+SYc2hPEMn0HQMvme+Eife2LAFg=
+  dependencies:
+    inherits-ex "^1.1.2"
+    xtend "^4.0.0"
 
 util-promisify@^2.1.0:
   version "2.1.0"

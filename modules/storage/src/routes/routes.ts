@@ -55,7 +55,6 @@ export class StorageRoutes {
         {
           bodyParams: {
             name: { type: TYPE.String, required: true },
-            mimeType: TYPE.String,
             data: { type: TYPE.String, required: true },
             folder: { type: TYPE.String, required: false },
             container: { type: TYPE.String, required: false },
@@ -106,7 +105,6 @@ export class StorageRoutes {
           },
           bodyParams: {
             name: TYPE.String,
-            mimeType: TYPE.String,
             data: TYPE.String,
             folder: TYPE.String,
             container: TYPE.String,
