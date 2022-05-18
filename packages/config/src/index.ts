@@ -329,6 +329,7 @@ export default class ConfigManager implements IConfigManager {
     }
     this.updateModuleHealth(
       call.request.moduleName,
+      call.request.url,
       call.getPeer(),
       call.request.status as HealthCheckStatus,
     );
@@ -373,6 +374,7 @@ export default class ConfigManager implements IConfigManager {
 
   updateModuleHealth(
     moduleName: string,
+    moduleUrl: string,
     moduleAddress: string,
     moduleStatus: HealthCheckStatus,
     broadcast = true,
@@ -380,7 +382,15 @@ export default class ConfigManager implements IConfigManager {
     if (!this.moduleHealth[moduleName]) {
       this.moduleHealth[moduleName] = {};
     }
-    const module = this.registeredModules.get(moduleName)!;
+    let module = this.registeredModules.get(moduleName);
+    if (!module) {
+      module = {
+        address: moduleUrl,
+        serving: moduleStatus === HealthCheckStatus.SERVING,
+      };
+      this.registeredModules.set(moduleName, module);
+      this.moduleRegister.emit('serving-modules-update');
+    }
     const prevStatus = module.serving;
     module.serving = moduleStatus === HealthCheckStatus.SERVING;
     if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
@@ -509,7 +519,7 @@ export default class ConfigManager implements IConfigManager {
       await this.grpcSdk.refreshModules(true);
       this.databaseCallback();
     }
-    this.updateModuleHealth(moduleName, instancePeer, HealthCheckStatus.SERVING, false);
+    this.updateModuleHealth(moduleName, moduleUrl, instancePeer, HealthCheckStatus.SERVING, false);
     this.moduleRegister.emit('serving-modules-update');
   }
 

@@ -103,14 +103,15 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         return res.result;
       })
       .then((r) => {
-        setInterval(() => self.moduleHealthProbe.bind(self)(name), 2000);
+        setInterval(() => self.moduleHealthProbe.bind(self)(name, url), 2000);
         return r;
       });
   }
 
-  moduleHealthProbe(name: string) {
+  moduleHealthProbe(name: string, url: string) {
     const request: ModuleHealthRequest = {
       moduleName: name.toString(),
+      url,
       status: this._serviceHealthStatusGetter(),
     };
     const self = this;
