@@ -39,6 +39,7 @@
     "uuid": "^7.0.2"
   },
   "devDependencies": {
+    "grpc-tools": "^1.11.2",
     "@types/bcrypt": "^3.0.0",
     "@types/convict": "^4.2.1",
     "@types/jsonwebtoken": "^8.3.9",

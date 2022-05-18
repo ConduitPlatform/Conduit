@@ -48,6 +48,7 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "devDependencies": {
+    "grpc-tools": "^1.11.2",
     "@types/lodash": "^4.14.149",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
