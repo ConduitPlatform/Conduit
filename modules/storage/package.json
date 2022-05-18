@@ -44,6 +44,7 @@
     "uuid": "^7.0.3"
   },
   "devDependencies": {
+    "grpc-tools": "^1.11.2",
     "@types/convict": "^4.2.1",
     "@types/lodash": "^4.14.149",
     "@types/uuid": "^7.0.2",
