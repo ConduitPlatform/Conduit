@@ -115,8 +115,8 @@ export class LocalHandlers {
         });
       }
     }
-
-    return { userId: user._id };
+    delete user.hashedPassword;
+    return { user };
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

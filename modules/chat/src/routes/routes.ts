@@ -425,7 +425,7 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
-        path: '/new',
+        path: '/rooms',
         action: ConduitRouteActions.POST,
         bodyParams: {
           roomName: ConduitString.Required,
@@ -441,7 +441,7 @@ export class ChatRoutes {
 
     this._routingManager.route(
       {
-        path: '/add/:roomId',
+        path: '/rooms/:roomId/addUsers',
         action: ConduitRouteActions.UPDATE,
         urlParams: {
           roomId: ConduitString.Required,

@@ -36,7 +36,6 @@ export class NotificationTokensHandler {
       })
       .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
     return {
-      message: 'Push notification token created',
       newTokenDocument,
     }
   }

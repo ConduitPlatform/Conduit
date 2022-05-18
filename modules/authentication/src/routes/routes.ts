@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ParsedRouterRequest,
   RoutingManager,
-  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { FacebookHandlers } from '../handlers/facebook/facebook';
@@ -80,6 +79,8 @@ export class AuthenticationRoutes {
       const authConfig = await this.grpcSdk.config
         .get('authentication')
         .catch(console.error);
+      const fields = User.getInstance().fields;
+      delete fields.hashedPassword;
       this._routingManager.route(
         {
           path: '/local/new',
@@ -91,9 +92,7 @@ export class AuthenticationRoutes {
           },
           middlewares: [],
         },
-        new ConduitRouteReturnDefinition('RegisterResponse', {
-          userId: ConduitString.Optional,
-        }),
+        new ConduitRouteReturnDefinition('RegisterResponse', fields),
         this.localHandlers.register.bind(this.localHandlers));
 
       this._routingManager.route(

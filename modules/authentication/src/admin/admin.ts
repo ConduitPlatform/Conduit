@@ -52,6 +52,8 @@ export class AdminHandlers {
   }
 
    private getRegisteredRoutes(): any[] {
+    const userFields = User.getInstance().fields;
+    delete userFields.hashedPassword;
      return [
        // User Routes
        constructConduitRoute(
@@ -68,7 +70,7 @@ export class AdminHandlers {
            },
          },
          new ConduitRouteReturnDefinition('GetUsers', {
-           users: [User.getInstance().fields],
+           users: [userFields],
            count: ConduitNumber.Required,
          }),
          'getUsers'
@@ -82,7 +84,7 @@ export class AdminHandlers {
              password: ConduitString.Required,
            },
          },
-         new ConduitRouteReturnDefinition('CreateUser', 'String'),
+         new ConduitRouteReturnDefinition('CreateUser', userFields),
          'createUser'
        ),
        constructConduitRoute(
@@ -99,7 +101,7 @@ export class AdminHandlers {
              phoneNumber: ConduitString.Optional,
            },
          },
-         new ConduitRouteReturnDefinition('PatchUser', 'String'),
+         new ConduitRouteReturnDefinition('PatchUser', userFields),
          'patchUser'
        ),
        constructConduitRoute(
@@ -282,7 +284,8 @@ export class AdminHandlers {
       isVerified: true,
     });
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
-    return 'Registration was successful';
+    delete user.hashedPassword;
+    return { user }
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -304,7 +307,7 @@ export class AdminHandlers {
 
     let res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
-    return 'User updated';
+    return { res };
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
