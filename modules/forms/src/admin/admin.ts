@@ -150,7 +150,7 @@ export class AdminHandlers {
       );
     const countPromise = Forms.getInstance().countDocuments({});
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(
-      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
+      (e) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
     return { forms, count };
   }
@@ -166,7 +166,7 @@ export class AdminHandlers {
     });
     const formExists = await Forms.getInstance()
       .findOne({ name: call.request.params.name })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
     if (formExists) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Form name already taken');
     }
@@ -178,7 +178,7 @@ export class AdminHandlers {
         emailField: call.request.params.emailField,
         enabled: call.request.params.enabled,
       })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
 
     this.formsController.refreshRoutes();
     return 'Ok';
@@ -201,7 +201,7 @@ export class AdminHandlers {
         emailField: call.request.params.emailField,
         enabled: call.request.params.enabled,
       })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
     this.formsController.refreshRoutes();
     return 'Ok';
   }
@@ -212,7 +212,7 @@ export class AdminHandlers {
     }
     const forms = await Forms.getInstance()
       .deleteMany({ _id: { $in: call.request.params.ids } })
-      .catch((e: any) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
     const totalCount = (forms as any).deletedCount;
     return { forms, totalCount };
   }
@@ -229,7 +229,7 @@ export class AdminHandlers {
       );
     const countPromise = FormReplies.getInstance().countDocuments({ form: call.request.params.formId });
     const [replies, count] = await Promise.all([repliesPromise, countPromise]).catch(
-      (e: any) => { throw new GrpcError(status.INTERNAL, e.message); }
+      (e) => { throw new GrpcError(status.INTERNAL, e.message); }
     );
     return { replies, count };
   }

@@ -1,7 +1,7 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
-  GrpcServer as ConduitGrpcServer,
+  GrpcServer as ConduitGrpcServer, GrpcRequest, GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
@@ -20,7 +20,9 @@ export class GrpcServer {
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
   private _initialized = false;
 
-  get initialized() { return this._initialized; }
+  get initialized() {
+    return this._initialized;
+  }
 
   constructor(
     private readonly commons: ConduitCommons,
@@ -34,7 +36,9 @@ export class GrpcServer {
         const _url = '0.0.0.0:' + port.toString();
         const grpcSdk = new ConduitGrpcSdk(
           _url,
-          () => { return this._serviceHealthState; },
+          () => {
+            return this._serviceHealthState;
+          },
           'core',
           false,
         );
@@ -47,15 +51,17 @@ export class GrpcServer {
                 if (!this._initialized) {
                   await this.bootstrapSdkComponents(grpcSdk);
                 }
-              }
-            )
+              },
+            ),
           );
           await this.commons.getConfigManager().initialize(this.server);
           this.server.start();
           console.log('gRPC server listening on:', _url);
         });
       })
-      .then(() => { return this.addHealthService(); })
+      .then(() => {
+        return this.addHealthService();
+      })
       .then()
       .catch((err) => {
         console.error(err);
@@ -68,14 +74,14 @@ export class GrpcServer {
       new AdminModule(
         this.commons,
         grpcSdk,
-      )
+      ),
     );
     this.commons.registerRouter(
       new ConduitDefaultRouter(
         this.commons,
         grpcSdk,
         Core.getInstance().httpServer.expressApp,
-      )
+      ),
     );
     Core.getInstance().httpServer.initialize();
     Core.getInstance().httpServer.start();
@@ -112,7 +118,7 @@ export class GrpcServer {
   }
 
   private set serviceHealthState(
-    state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>
+    state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>,
   ) {
     if (this._serviceHealthState !== state) {
       this.events.emit('grpc-health-change:Core', state);
@@ -131,7 +137,7 @@ export class GrpcServer {
     );
   }
 
-  private healthCheck(call: any, callback: any) {
+  private healthCheck(call: GrpcRequest<{ service: string }>, callback: GrpcCallback<{ status: HealthCheckStatus }>) {
     callback(null, { status: this.getServiceHealthState(call.request.service) });
   }
 

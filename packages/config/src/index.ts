@@ -1,7 +1,21 @@
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { HealthCheckStatus, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  HealthCheckStatus,
+  GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  GrpcCallback,
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { ConduitCommons, IConfigManager, RegisteredModule } from '@conduitplatform/commons';
+import {
+  ConduitCommons,
+  GetConfigResponse,
+  GetRedisDetailsResponse,
+  IConfigManager, ModuleListResponse,
+  RegisteredModule,
+  UpdateRequest,
+  UpdateResponse,
+} from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
@@ -57,27 +71,28 @@ export default class ConfigManager implements IConfigManager {
     const loadedState = await this.sdk.getState().getKey('config');
     try {
       if (!loadedState || loadedState.length === 0) return;
-        let state = JSON.parse(loadedState);
-        let success: any[] = [];
-        if (state.modules) {
-          for (const module of state.modules) {
-            try {
-              await this._registerModule(module.name, module.url, module.instance);
-              success.push({
-                name: module.name,
-                url: module.url,
-                instance: module.instance,
-              });
-            } catch {}
+      let state = JSON.parse(loadedState);
+      let success: any[] = [];
+      if (state.modules) {
+        for (const module of state.modules) {
+          try {
+            await this._registerModule(module.name, module.url, module.instance);
+            success.push({
+              name: module.name,
+              url: module.url,
+              instance: module.instance,
+            });
+          } catch {
           }
-          if (state.modules.length > success.length) {
-            state.modules = success;
-            this.setState(state);
-          }
-          return this.grpcSdk.initializeModules();
-        } else {
-          return Promise.resolve();
         }
+        if (state.modules.length > success.length) {
+          state.modules = success;
+          this.setState(state);
+        }
+        return this.grpcSdk.initializeModules();
+      } else {
+        return Promise.resolve();
+      }
     } catch {
       console.error('Failed to recover state');
     }
@@ -132,7 +147,7 @@ export default class ConfigManager implements IConfigManager {
     );
   }
 
-  getServerConfig(call: any, callback: any) {
+  getServerConfig(call: GrpcRequest<null>, callback: GrpcCallback<GetConfigResponse>) {
     if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
@@ -153,10 +168,10 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  getRedisDetails(call: any, callback: any) {
+  getRedisDetails(call: GrpcRequest<null>, callback: GrpcCallback<GetRedisDetailsResponse>) {
     callback(null, {
-      redisHost: process.env.REDIS_HOST,
-      redisPort: process.env.REDIS_PORT,
+      redisHost: process.env.REDIS_HOST!,
+      redisPort: parseInt(process.env.REDIS_PORT!),
     });
   }
 
@@ -174,7 +189,7 @@ export default class ConfigManager implements IConfigManager {
     this.configDocId = (configDoc as any)._id;
   }
 
-  getGrpc(call: any, callback: any) {
+  getGrpc(call: GrpcRequest<{ key: string; }>, callback: GrpcResponse<{ data: string; }>) {
     this.get(call.request.key)
       .then((r) => {
         callback(null, { data: JSON.stringify(r) });
@@ -191,7 +206,7 @@ export default class ConfigManager implements IConfigManager {
     if (!isNil(this.grpcSdk.database)) {
       return models.Config.getInstance()
         .findOne({})
-        .then(async (dbConfig: any) => {
+        .then(async (dbConfig) => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
           if (isNil(dbConfig['moduleConfigs'][moduleName]))
             throw new Error(`Config for module "${moduleName}" not set`);
@@ -230,7 +245,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async updateConfig(call: any, callback: any) {
+  async updateConfig(call: GrpcRequest<UpdateRequest>, callback: GrpcCallback<UpdateResponse>) {
     const moduleName = call.request.moduleName;
     const moduleConfig = JSON.parse(call.request.config);
     try {
@@ -263,16 +278,16 @@ export default class ConfigManager implements IConfigManager {
         return models.Config.getInstance().findByIdAndUpdate(dbConfig._id, {
           $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
         })
-        .catch(() => {
-          console.error(`Could not add fields to "${moduleName}" configuration`);
-        });
+          .catch(() => {
+            console.error(`Could not add fields to "${moduleName}" configuration`);
+          });
       })
       .then(() => {
         return moduleConfig;
       });
   }
 
-  addFieldsToConfig(call: any, callback: any) {
+  addFieldsToConfig(call: GrpcRequest<UpdateRequest>, callback: GrpcCallback<UpdateResponse>) {
     const newFields = JSON.parse(call.request.config);
     if (!isNil(this.grpcSdk.database)) {
       this.addFieldsToModule(call.request.moduleName, newFields)
@@ -293,7 +308,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  moduleExists(call: any, callback: any) {
+  moduleExists(call: GrpcRequest<{ moduleName: string }>, callback: GrpcResponse<string>) {
     if (this.registeredModules.has(call.request.moduleName)) {
       callback(null, this.registeredModules.get(call.request.moduleName)!.address);
     } else {
@@ -304,7 +319,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  moduleHealthProbe(call: any, callback: any) {
+  moduleHealthProbe(call: any, callback: GrpcResponse<null>) {
     if (call.request.status < HealthCheckStatus.UNKNOWN || call.request.status > HealthCheckStatus.NOT_SERVING) {
       callback({
         code: status.INVALID_ARGUMENT,
@@ -326,10 +341,10 @@ export default class ConfigManager implements IConfigManager {
     Object.keys(this.moduleHealth).forEach((moduleName) => {
       const module = this.moduleHealth[moduleName];
       const offlineInstances = Object.keys(module).filter(
-        (url) => (module[url].timestamp + 5000 < Date.now())
+        (url) => (module[url].timestamp + 5000 < Date.now()),
       );
       const nonServingInstances = Object.keys(module).filter(
-         (url) => module[url].status !== HealthCheckStatus.SERVING
+        (url) => module[url].status !== HealthCheckStatus.SERVING,
       );
       if (offlineInstances?.length > 0 || nonServingInstances.length > 0) {
         removedCount += offlineInstances.length + nonServingInstances.length;
@@ -360,7 +375,7 @@ export default class ConfigManager implements IConfigManager {
     moduleName: string,
     moduleAddress: string,
     moduleStatus: HealthCheckStatus,
-    broadcast = true
+    broadcast = true,
   ) {
     if (!this.moduleHealth[moduleName]) {
       this.moduleHealth[moduleName] = {};
@@ -378,9 +393,13 @@ export default class ConfigManager implements IConfigManager {
     };
   }
 
-  moduleList(call: any, callback: any) {
+  moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {
     if (this.registeredModules.size !== 0) {
-      let modules: any[] = [];
+      let modules: {
+        moduleName: string;
+        url: string;
+        serving: boolean
+      }[] = [];
       this.registeredModules.forEach((value: RegisteredModule, key: string) => {
         modules.push({
           moduleName: key,
@@ -413,7 +432,7 @@ export default class ConfigManager implements IConfigManager {
     // todo this should close gracefully I guess.
   }
 
-  async registerModule(call: any, callback: any) {
+  async registerModule(call: any, callback: GrpcResponse<{ result: boolean }>) {
     if (call.request.status < HealthCheckStatus.UNKNOWN || call.request.status > HealthCheckStatus.NOT_SERVING) {
       callback({
         code: status.INVALID_ARGUMENT,
@@ -438,7 +457,7 @@ export default class ConfigManager implements IConfigManager {
     callback(null, { result: true });
   }
 
-  getModuleUrlByNameGrpc(call: any, callback: any) {
+  getModuleUrlByNameGrpc(call: GrpcRequest<{ name: string }>, callback: GrpcResponse<{ moduleUrl: string }>) {
     let name = call.request.name;
     let result = this.getModuleUrlByName(name);
     if (result) {

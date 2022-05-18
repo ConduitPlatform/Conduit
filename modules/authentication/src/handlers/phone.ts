@@ -31,7 +31,7 @@ export class PhoneHandlers {
     let errorMessage = null;
     await this.grpcSdk.config
       .moduleExists('sms')
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (config.phoneAuthentication.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');

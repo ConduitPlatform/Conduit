@@ -56,7 +56,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
         fields: await this.makeFields((details.scope).split(',')),
       },
     };
-    const facebookResponse: any = await axios(facebookOptions).catch((e: any) => console.log(e.message));
+    const facebookResponse: any = await axios(facebookOptions).catch((e) => console.log(e.message));
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
