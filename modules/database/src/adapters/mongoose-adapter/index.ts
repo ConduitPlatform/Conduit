@@ -47,7 +47,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         resolve();
       });
 
-      db.on('error', (err: any) => {
+      db.on('error', (err) => {
         console.error('MongoDB: Connection error:', err.message);
         reject();
       });
@@ -76,7 +76,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       .then(() => {
         deepPopulate = deepPopulate(this.mongoose);
       })
-      .catch((err: any) => {
+      .catch((err) => {
         console.log(err);
         throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
       });

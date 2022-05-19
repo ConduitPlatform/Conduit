@@ -250,7 +250,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         console.log('Sequelize connection established successfully');
         return;
       })
-      .catch((err: any) => {
+      .catch((err) => {
         console.error('Unable to connect to the database: ', err);
         throw err;
       });

@@ -58,7 +58,7 @@ export class SchemaController {
   async createSchema(schema: ConduitSchema): Promise<ConduitSchema> {
     const createdSchema = await this.database
       .createCustomSchemaFromAdapter(schema)
-      .catch((err: any) => {
+      .catch((err) => {
         console.log('Failed to create custom schema');
         console.log(err);
         throw err;
