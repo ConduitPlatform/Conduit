@@ -1,6 +1,6 @@
 import _, { isNil } from 'lodash';
 import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
-import { MultiDocQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
+import { MultiDocQuery, ParsedQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
 
@@ -79,8 +79,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.sync({ alter: true });
   }
 
-  async create(query: SingleDocQuery): Promise<any> {
-    let parsedQuery: { [key: string]: any };
+  async create(query: SingleDocQuery) {
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -92,8 +92,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.create(parsedQuery, { raw: true });
   }
 
-  async createMany(query: MultiDocQuery): Promise<any> {
-    let parsedQuery: [{ [key: string]: any }];
+  async createMany(query: MultiDocQuery) {
+    let parsedQuery: ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -114,8 +114,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     select?: string,
     populate?: string[],
     relations?: any,
-  ): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  ) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -153,7 +153,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     populate?: string[],
     relations?: any,
   ): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -197,8 +197,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return documents;
   }
 
-  deleteOne(query: Query): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  deleteOne(query: Query) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -207,8 +207,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.destroy({ where: parseQuery(parsedQuery), limit: 1 });
   }
 
-  deleteMany(query: Query): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  deleteMany(query: Query) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -223,8 +223,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     updateProvidedOnly: boolean = false,
     populate?: string[],
     relations?: any,
-  ): Promise<any> {
-    let parsedQuery: { [key: string]: any };
+  ) {
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -306,14 +306,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
-  ): Promise<any> {
-    let parsedQuery: { [key: string]: any };
+  ) {
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
       parsedQuery = query;
     }
-    let parsedFilter: { [key: string]: any } | [{ [key: string]: any }];
+    let parsedFilter: ParsedQuery | ParsedQuery[];
     if (typeof filterQuery === 'string') {
       parsedFilter = JSON.parse(filterQuery);
     } else {
@@ -380,7 +380,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   countDocuments(query: Query): Promise<number> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
@@ -389,7 +389,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.count({ where: parseQuery(parsedQuery) });
   }
 
-  private async createWithPopulations(document: any): Promise<any> {
+  private async createWithPopulations(document: ParsedQuery) {
     return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
