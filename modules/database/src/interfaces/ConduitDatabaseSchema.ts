@@ -4,7 +4,7 @@ import {
   ConduitSchema,
   ConduitSchemaExtension,
 } from '@conduitplatform/grpc-sdk';
-import { SchemaAdapter } from './SchemaAdapter';
+import { ParsedQuery, SchemaAdapter } from './SchemaAdapter';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
   private readonly model: SchemaAdapter<any>;
@@ -26,7 +26,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   }
 
   findOne(
-    query: { [key: string]: any },
+    query: ParsedQuery,
     select?: string,
     populate?: string[] | undefined
   ): Promise<any> {
@@ -34,7 +34,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   }
 
   findMany(
-    query: { [key: string]: any },
+    query: ParsedQuery,
     select?: string,
     skip?: number,
     limit?: number,
@@ -44,7 +44,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     return this.model.findMany(query, skip, limit, select, sort, populate);
   }
 
-  create(query: { [key: string]: any }): Promise<any> {
+  create(query: ParsedQuery): Promise<any> {
     return this.model.create(query);
   }
 
@@ -54,7 +54,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
 
   findByIdAndUpdate(
     id: string,
-    document: { [key: string]: any },
+    document: ParsedQuery,
     updateProvidedOnly?: boolean,
     populate?: string[] | undefined,
     relations?: any
@@ -69,22 +69,22 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   }
 
   updateMany(
-    filterQuery: { [key: string]: any },
-    query: { [key: string]: any },
+    filterQuery: ParsedQuery,
+    query: ParsedQuery,
     updateProvidedOnly?: boolean
   ): Promise<any> {
     return this.model.updateMany(filterQuery, query, updateProvidedOnly);
   }
 
-  deleteOne(query: { [key: string]: any }): Promise<any> {
+  deleteOne(query: ParsedQuery): Promise<any> {
     return this.model.deleteOne(query);
   }
 
-  deleteMany(query: { [key: string]: any }): Promise<any> {
+  deleteMany(query: ParsedQuery): Promise<any> {
     return this.model.deleteMany(query);
   }
 
-  countDocuments(query: { [key: string]: any }): Promise<number> {
+  countDocuments(query: ParsedQuery): Promise<number> {
     return this.model.countDocuments(query);
   }
 }
