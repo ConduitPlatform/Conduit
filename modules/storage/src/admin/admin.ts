@@ -32,6 +32,7 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         getFiles: this.getFiles.bind(this),
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
+        createBinaryFile: this.fileHandlers.createBinaryFile.bind(this.fileHandlers),
         patchFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
@@ -94,6 +95,21 @@ export class AdminRoutes {
         },
         new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
         'createFile'
+      ),
+      constructConduitRoute(
+        {
+          path: '/files/binary',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            name: ConduitString.Required,
+            data: ConduitString.Required,
+            folder: ConduitString.Optional,
+            container: ConduitString.Optional,
+            isPublic: ConduitBoolean.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('createBinaryFile', File.getInstance().fields),
+        'createBinaryFile'
       ),
       constructConduitRoute(
         {

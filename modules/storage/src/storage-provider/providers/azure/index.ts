@@ -14,7 +14,7 @@ export class AzureStorage implements IStorageProvider {
 
   constructor(options: StorageConfig) {
     this._storage = BlobServiceClient.fromConnectionString(
-      options.azure.connectionString
+      options.azure.connectionString,
     );
   }
 
@@ -143,12 +143,15 @@ export class AzureStorage implements IStorageProvider {
   async store(
     fileName: string,
     data: any,
-    isPublic: boolean = false
+    isPublic: boolean = false,
   ): Promise<boolean | Error> {
     await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
-      .upload(data, Buffer.byteLength(data));
+      .upload(data, Buffer.byteLength(data))
+      .catch((e: Error) => {
+        throw new Error(e.message);
+      });
     return true;
   }
 
@@ -168,7 +171,7 @@ export class AzureStorage implements IStorageProvider {
   async moveToFolderAndRename(
     currentFilename: string,
     newFilename: string,
-    newFolder: string
+    newFolder: string,
   ): Promise<boolean | Error> {
     // let newBucketFile = this._storage.getContainerClient(newFolder).file(newFilename)
     // await this._storage.getContainerClient(this._activeContainer).file(currentFilename).move(newBucketFile);
@@ -188,7 +191,7 @@ export class AzureStorage implements IStorageProvider {
 
   async moveToContainer(
     filename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     throw new Error('Not Implemented yet!');
   }
@@ -196,7 +199,7 @@ export class AzureStorage implements IStorageProvider {
   async moveToContainerAndRename(
     currentFilename: string,
     newFilename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     throw new Error('Not Implemented yet!');
   }
