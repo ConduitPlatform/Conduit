@@ -1,16 +1,6 @@
-import {
-  Handler,
-  IRouterMatcher,
-  NextFunction,
-  Request,
-  Response,
-  Router,
-} from 'express';
+import { Handler, IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
 
-import {
-  ConduitCommons,
-  ConduitRoute,
-} from '@conduitplatform/commons';
+import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
@@ -97,12 +87,25 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter.patch.bind(this._expressRouter);
         break;
       }
+      case ConduitRouteActions.FILE_UPLOAD: {
+        routerMethod = this._expressRouter.post.bind(this._expressRouter);
+      }
+      case ConduitRouteActions.FILE_DOWNLOAD: {
+        routerMethod = this._expressRouter.get.bind(this._expressRouter);
+      }
       default: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
       }
     }
 
     routerMethod(route.input.path, (req, res) => {
+      if (req.files && route.input.action === ConduitRouteActions.FILE_UPLOAD) {
+        Object.keys(req.files).forEach((key) => {
+          const file = req.files![key];
+          // do stuff
+        })
+        return;
+      }
       let context = extractRequestData(req);
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(

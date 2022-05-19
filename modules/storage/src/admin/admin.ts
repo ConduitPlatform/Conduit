@@ -99,14 +99,7 @@ export class AdminRoutes {
       constructConduitRoute(
         {
           path: '/files/binary',
-          action: ConduitRouteActions.POST,
-          bodyParams: {
-            name: ConduitString.Required,
-            data: ConduitString.Required,
-            folder: ConduitString.Optional,
-            container: ConduitString.Optional,
-            isPublic: ConduitBoolean.Optional,
-          },
+          action: ConduitRouteActions.FILE_UPLOAD,
         },
         new ConduitRouteReturnDefinition('createBinaryFile', File.getInstance().fields),
         'createBinaryFile'
