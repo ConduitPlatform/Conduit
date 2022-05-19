@@ -3,6 +3,7 @@ import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 export type SingleDocQuery = string | { [key: string]: any };
 export type MultiDocQuery = string | [{ [key: string]: any }];
 export type Query = SingleDocQuery | MultiDocQuery;
+export type ParsedQuery = { [key: string]: any };
 
 export interface SchemaAdapter<T> {
   /**
