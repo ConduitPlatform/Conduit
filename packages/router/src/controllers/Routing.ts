@@ -10,7 +10,7 @@ import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import { SocketPush } from '../interfaces';
 import { SwaggerRouterMetadata } from './Rest';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -53,10 +53,10 @@ export class ConduitRoutingController {
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
 
-  constructor(commons: ConduitCommons, expressApp: Application) {
+  constructor(commons: ConduitCommons, expressApp: Application,grpcSdk: ConduitGrpcSdk) {
     this._expressApp = expressApp;
     this._commons = commons;
-    this._restRouter = new RestController(this._commons, swaggerRouterMetadata);
+    this._restRouter = new RestController(this._commons, swaggerRouterMetadata,grpcSdk);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();

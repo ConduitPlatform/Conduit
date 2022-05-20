@@ -56,7 +56,7 @@ export default class AdminModule extends IConduitAdmin {
   ) {
     super(commons);
     this.grpcSdk = grpcSdk;
-    this._restRouter = new RestController(this.commons, swaggerRouterMetadata);
+    this._restRouter = new RestController(this.commons, swaggerRouterMetadata,grpcSdk);
 
     // Register Middleware
     this._restRouter.registerRoute(

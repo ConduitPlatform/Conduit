@@ -5,18 +5,20 @@ import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
+  private grpcSdk: ConduitGrpcSdk;
 
-  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
+  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata, grpcSdk: ConduitGrpcSdk) {
     super(commons);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
+    this.grpcSdk = grpcSdk;
     this.initializeRouter();
   }
 
@@ -98,12 +100,13 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, (req, res) => {
+    routerMethod(route.input.path, async (req, res) => {
+
       if (req.files && route.input.action === ConduitRouteActions.FILE_UPLOAD) {
-        Object.keys(req.files).forEach((key) => {
-          const file = req.files![key];
-          // do stuff
-        })
+        for (const index in req.files) {
+          const file = (req.files as any)[index];
+          await this.grpcSdk.storage!.createFileFromStream(file.originalname,file.mimetype,(file.buffer).toString(),file.folder,file.isPublic);
+        }
         return;
       }
       let context = extractRequestData(req);

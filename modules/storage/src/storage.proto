@@ -49,4 +49,5 @@ service Storage {
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
+  rpc CreateFileFromStream(stream CreateFileRequest) returns (FileResponse);
 }

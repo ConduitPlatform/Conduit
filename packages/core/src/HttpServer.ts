@@ -10,7 +10,7 @@ import {
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
-import fileUpload from 'express-fileupload';
+import multer, { memoryStorage } from 'multer';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
@@ -59,7 +59,8 @@ export class HttpServer {
       'staticResources',
       express.static(path.join(__dirname, 'public')),
     );
-    this.router.registerGlobalMiddleware('fileUpload',fileUpload());
+    const storage = memoryStorage();
+    this.router.registerGlobalMiddleware('multer', multer({ storage: storage }).any());
 
     this.router.registerGlobalMiddleware(
       'errorCatch',
