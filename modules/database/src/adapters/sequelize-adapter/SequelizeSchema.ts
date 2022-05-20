@@ -28,7 +28,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     deepdash.eachDeep(
       this.originalSchema.modelSchema,
       (value: any, key: any, parentValue: any, context: any) => {
-        if (!parentValue?.hasOwnProperty(key)) {
+        if (!parentValue?.hasOwnProperty(key!)) {
           return true;
         }
 

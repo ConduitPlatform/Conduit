@@ -55,7 +55,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     };
     let introspectedSchemas: ConduitSchema[] = [];
     let data: TableData;
-    let tables: any;
+    let tables: any
+    ;
     let tableNames = (
       await this.sequelize.query(
         `select * from pg_tables where schemaname='${sqlSchemaName}';`,
