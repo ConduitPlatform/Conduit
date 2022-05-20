@@ -13,6 +13,8 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { Cookie } from '../../interfaces/Cookie';
+import { RedirectOptions } from './interfaces/RedirectOptions';
+import { AuthParams } from './interfaces/AuthParams';
 
 export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   grpcSdk: ConduitGrpcSdk;
@@ -52,7 +54,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let scopes = call.request.params?.scopes ?? this.defaultScopes;
-    let options: any = {
+    let options: RedirectOptions = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
@@ -61,7 +63,8 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
 
-    let url = Object.keys(options).map((k: any) => {
+    const keys = Object.keys(options) as [keyof RedirectOptions];
+    let url = keys.map((k) => {
       return k + '=' + options[k];
     }).join('&');
     return baseUrl + url;
@@ -70,7 +73,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
     const conduitUrl = (await this.grpcSdk.config.getServerConfig()).url;
-    const myParams: any = {
+    const myParams: AuthParams = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
@@ -82,8 +85,8 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     }
 
     let providerOptions = await this.makeRequest(myParams);
-    const providerResponse: any = await axios(providerOptions).catch((e) => console.log(e));
-    let access_token = providerResponse.data.access_token;
+    const providerResponse = await axios(providerOptions).catch((e) => console.log(e));
+    let access_token = providerResponse?.data.access_token;
     let state = params.state;
     state = {
       clientId: state[0],
