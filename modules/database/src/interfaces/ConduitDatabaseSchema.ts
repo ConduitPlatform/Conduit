@@ -29,7 +29,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     query: ParsedQuery,
     select?: string,
     populate?: string[] | undefined
-  ): Promise<any> {
+  ) {
     return this.model.findOne(query, select, populate);
   }
 
@@ -40,15 +40,15 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     limit?: number,
     sort?: { [key: string]: number } | string[],
     populate?: string[] | undefined
-  ): Promise<any> {
+  ) {
     return this.model.findMany(query, skip, limit, select, sort, populate);
   }
 
-  create(query: ParsedQuery): Promise<any> {
+  create(query: ParsedQuery) {
     return this.model.create(query);
   }
 
-  createMany(query: [{ [key: string]: any }]): Promise<any> {
+  createMany(query: [{ [key: string]: any }]) {
     return this.model.createMany(query);
   }
 
@@ -58,7 +58,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     updateProvidedOnly?: boolean,
     populate?: string[] | undefined,
     relations?: any
-  ): Promise<any> {
+  ) {
     return this.model.findByIdAndUpdate(
       id,
       document,
@@ -72,15 +72,15 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     filterQuery: ParsedQuery,
     query: ParsedQuery,
     updateProvidedOnly?: boolean
-  ): Promise<any> {
+  ) {
     return this.model.updateMany(filterQuery, query, updateProvidedOnly);
   }
 
-  deleteOne(query: ParsedQuery): Promise<any> {
+  deleteOne(query: ParsedQuery) {
     return this.model.deleteOne(query);
   }
 
-  deleteMany(query: ParsedQuery): Promise<any> {
+  deleteMany(query: ParsedQuery) {
     return this.model.deleteMany(query);
   }
 
