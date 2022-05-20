@@ -8,7 +8,7 @@ import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchem
 import {CmsHandlers} from "../../handlers/cms.handler";
 import { ParsedQuery } from '../../interfaces';
 
-type _ConduitSchema = ConduitSchema & {modelOptions: ConduitModelOptions}
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions };
 export class SchemaController {
 
   constructor(
