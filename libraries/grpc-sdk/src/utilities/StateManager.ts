@@ -8,15 +8,15 @@ export class StateManager {
     this.redisClient = redisManager.getClient({ keyPrefix: name });
   }
 
-  setState(stateObj: any): Promise<any> {
+  setState(stateObj: any) {
     return this.setKey('state', stateObj);
   }
 
-  getState(): Promise<any> {
+  getState() {
     return this.getKey('state');
   }
 
-  setKey(keyName: string, value: any, expiry?: number): Promise<any> {
+  setKey(keyName: string, value: any, expiry?: number) {
     if (expiry) {
       return this.redisClient.set(keyName, value, 'PX', expiry);
     } else {
@@ -24,11 +24,11 @@ export class StateManager {
     }
   }
 
-  clearKey(keyName: string): Promise<any> {
+  clearKey(keyName: string) {
     return this.redisClient.del(keyName);
   }
 
-  getKey(keyName: string): Promise<any> {
+  getKey(keyName: string) {
     return this.redisClient.get(keyName);
   }
 }
