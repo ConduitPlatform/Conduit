@@ -19,6 +19,7 @@ message AdminRequest {
   string params = 1;
   string headers = 2;
   string context = 3;
+  string path = 4;
 }
 // all admin responses return their results as stringified json
 message AdminResponse {

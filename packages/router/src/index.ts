@@ -177,29 +177,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
       moduleName,
       this.grpcSdk.grpcToken,
     );
-
-    processedRoutes.forEach((r) => {
-      if (r instanceof ConduitMiddleware) {
-        console.log(
-          'New middleware registered: ' + r.input.path + ' handler url: ' + url,
-        );
-        this.registerRouteMiddleware(r);
-      } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
-        this.registerSocket(r);
-      } else {
-        console.log(
-          'New route registered: ' +
-          r.input.action +
-          ' ' +
-          r.input.path +
-          ' handler url: ' +
-          url,
-        );
-        this._registerRoute(r);
-      }
-    });
     this._grpcRoutes[url] = routes;
+    this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
   }
 

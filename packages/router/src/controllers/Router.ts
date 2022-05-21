@@ -86,7 +86,7 @@ export abstract class ConduitRouter {
     return primaryPromise;
   }
 
-  private scheduleRouterRefresh() {
+  scheduleRouterRefresh() {
     if (this._refreshTimeout) {
       clearTimeout(this._refreshTimeout);
       this._refreshTimeout = null;

@@ -193,11 +193,8 @@ export class GraphQLController extends ConduitRouter {
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
-    if (registered) {
-      this.refreshRouter();
-    } else {
+    if (!registered) {
       this.addConduitRoute(route);
-      this.scheduleApolloRefresh();
     }
   }
 
