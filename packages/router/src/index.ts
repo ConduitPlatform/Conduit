@@ -33,8 +33,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this._routes = [];
     this._globalMiddlewares = [];
     this._internalRouter = new ConduitRoutingController(commons, expressApp);
-    this.initGraphQL();
-    this.initSockets();
+    this._internalRouter.initGraphQL();
+    this._internalRouter.initSockets();
   }
 
   async initialize(server: GrpcServer) {
@@ -218,14 +218,6 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this._internalRouter.cleanupRoutes(routes);
   }
 
-  initGraphQL() {
-    this._internalRouter.initGraphQL();
-  }
-
-  initSockets() {
-    this._internalRouter.initSockets();
-  }
-
   registerGlobalMiddleware(
     name: string,
     middleware: any,
@@ -275,10 +267,6 @@ export class ConduitDefaultRouter extends IConduitRouter {
 
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
-    this._registerRoute(route);
-  }
-
-  _registerRoute(route: ConduitRoute): void {
     this._internalRouter.registerConduitRoute(route);
   }
 
