@@ -3,6 +3,7 @@ import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
+
 export class ConduitModule<T extends CompatServiceDefinition> {
   active: boolean = false;
   private _client?: Client<T>;

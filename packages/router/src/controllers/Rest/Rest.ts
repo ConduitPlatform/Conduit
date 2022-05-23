@@ -1,4 +1,3 @@
-// todo Create the controller that creates REST-specific endpoints
 import {
   Handler,
   IRouterMatcher,
@@ -14,7 +13,6 @@ import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
 import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
-import Multer from 'multer';
 import fs from 'fs';
 
 const swaggerUi = require('swagger-ui-express');
@@ -24,7 +22,7 @@ export class RestController extends ConduitRouter {
   private _swagger: SwaggerGenerator;
   private grpcSdk: ConduitGrpcSdk;
 
-  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata, grpcSdk: ConduitGrpcSdk) {
+  constructor(commons: ConduitCommons, grpcSdk: ConduitGrpcSdk, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(commons);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);

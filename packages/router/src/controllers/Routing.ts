@@ -53,10 +53,10 @@ export class ConduitRoutingController {
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
 
-  constructor(commons: ConduitCommons, expressApp: Application,grpcSdk: ConduitGrpcSdk) {
+  constructor(commons: ConduitCommons, grpcSdk: ConduitGrpcSdk, expressApp: Application) {
     this._expressApp = expressApp;
     this._commons = commons;
-    this._restRouter = new RestController(this._commons, swaggerRouterMetadata,grpcSdk);
+    this._restRouter = new RestController(this._commons, grpcSdk, swaggerRouterMetadata);
     this._middlewareRouter = Router();
     this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
       next();

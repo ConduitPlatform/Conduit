@@ -6,7 +6,6 @@ import {
   StorageDefinition,
 } from '../../protoUtils/storage';
 
-
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'storage', url, grpcToken);

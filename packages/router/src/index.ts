@@ -32,7 +32,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     super(commons, grpcSdk, expressApp);
     this._routes = [];
     this._globalMiddlewares = [];
-    this._internalRouter = new ConduitRoutingController(commons, expressApp,grpcSdk);
+    this._internalRouter = new ConduitRoutingController(commons, grpcSdk, expressApp);
     this.initGraphQL();
     this.initSockets();
   }
