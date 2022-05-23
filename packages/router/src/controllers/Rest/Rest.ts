@@ -7,7 +7,6 @@ import {
   Response,
   Router,
 } from 'express';
-
 import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
@@ -15,7 +14,7 @@ import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
 import ConduitGrpcSdk ,{ ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
-
+import  Multer from 'multer';
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
@@ -114,7 +113,7 @@ export class RestController extends ConduitRouter {
     routerMethod(route.input.path, (req, res) => {
       let context = extractRequestData(req);
       if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
-        const files = req.files as any;
+        const files = req.files! as Express.Multer.File[];
         context.params = {
           ...context.params,
           name: files[0].originalname,
