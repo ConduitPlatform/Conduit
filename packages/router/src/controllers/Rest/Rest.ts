@@ -12,9 +12,11 @@ import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import ConduitGrpcSdk ,{ ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
-import  Multer from 'multer';
+import Multer from 'multer';
+import fs from 'fs';
+
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
@@ -110,14 +112,21 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, (req, res) => {
+    routerMethod(route.input.path, async (req, res) => {
       let context = extractRequestData(req);
       if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
         const files = req.files! as Express.Multer.File[];
-        context.params = {
-          ...context.params,
-          name: files[0].originalname,
-          data: files[0].buffer.toString('base64'),
+        for (const file of files) {
+          const data = fs.readFileSync(`${file.path}`);
+          context.params = {
+            ...context.params,
+            name: file.originalname,
+            data: data.toString('base64'),
+            mimeType: file.mimetype,
+          };
+          fs.unlink(`${file.path}`, (err) => {
+            if (err) throw err; // delete the file›
+          });
         }
       }
 

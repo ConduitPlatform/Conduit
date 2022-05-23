@@ -10,10 +10,11 @@ import {
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
-import multer, { memoryStorage } from 'multer';
+import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
+import fs from 'fs';
 
 export class HttpServer {
   private _initialized: boolean = false;
@@ -39,6 +40,9 @@ export class HttpServer {
   }
 
   start() {
+    fs.mkdir(path.join(__dirname, 'uploads'), (err) => {
+      console.log('Uploads directory created successfully!');
+    });
     this.server.listen(this.port);
     this.server.on('error', this.onError.bind(this));
     this.server.on('Listening', this.onListening.bind(this));
@@ -60,8 +64,8 @@ export class HttpServer {
       express.static(path.join(__dirname, 'public')),
     );
     const storage = multer.diskStorage({
-      destination: function (req, file, cb) {
-        cb(null, '/tmp/conduitUploads')
+      destination: function(req, file, cb) {
+        cb(null, path.join(__dirname, 'uploads'));
       },
     });
     this.router.registerGlobalMiddleware('multer', multer({ storage: storage }).any());

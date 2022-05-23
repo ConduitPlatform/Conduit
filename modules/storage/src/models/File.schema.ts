@@ -22,10 +22,6 @@ const schema = {
     type: TYPE.Boolean,
     default: false,
   },
-  encoding: {
-    type: TYPE.String,
-    required: true,
-  },
   url: TYPE.String,
   mimeType: TYPE.String,
   createdAt: TYPE.Date,
@@ -51,7 +47,6 @@ export class File extends ConduitActiveSchema<File> {
   folder!: string;
   container!: string;
   isPublic?: boolean;
-  encoding?: string;
   url!: string;
   mimeType!: string;
   createdAt!: Date;
