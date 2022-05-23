@@ -40,9 +40,12 @@ export class HttpServer {
   }
 
   start() {
-    fs.mkdir(path.join(__dirname, 'uploads'), (err) => {
-      console.log('Uploads directory created successfully!');
-    });
+    if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
+      fs.mkdir(path.join(__dirname, 'uploads'), (err) => {
+        if (err)  throw err;
+        console.log('Uploads directory created successfully!');
+      });
+    }
     this.server.listen(this.port);
     this.server.on('error', this.onError.bind(this));
     this.server.on('Listening', this.onListening.bind(this));
