@@ -31,7 +31,6 @@ export default class Storage extends ManagedModule<Config> {
       createFile: this.createFile.bind(this),
       updateFile: this.updateFile.bind(this),
       getFileData: this.getFileData.bind(this),
-      createFileFromStream: this.createFileFromStream.bind(this),
     },
   };
   private adminRouter: AdminRoutes;
@@ -148,12 +147,5 @@ export default class Storage extends ManagedModule<Config> {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.updateFile(call);
-  }
-
-  async createFileFromStream(call: any) {
-    for await (const item of call) {
-      console.log(item);
-    }
-    return 5 as any;
   }
 }
