@@ -38,7 +38,7 @@ export enum ConduitRouteActions {
   PATCH = 'PATCH',
   DELETE = 'DELETE',
   FILE_UPLOAD = 'FILE_UPLOAD',
-  FILE_DOWNLOAD = 'GET'
+  FILE_DOWNLOAD = 'FILE_DOWNLOAD'
 }
 
 export interface ConduitRouteOptions {
