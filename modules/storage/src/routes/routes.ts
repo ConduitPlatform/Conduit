@@ -59,6 +59,7 @@ export class StorageRoutes {
             folder: { type: TYPE.String, required: false },
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
+            mimeType: TYPE.String
           },
           action: ConduitRouteActions.FILE_UPLOAD,
           path: '/storage/file',
@@ -108,6 +109,7 @@ export class StorageRoutes {
             data: TYPE.String,
             folder: TYPE.String,
             container: TYPE.String,
+            mimeType: TYPE.String
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/file/:id',
