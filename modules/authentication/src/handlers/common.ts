@@ -130,7 +130,7 @@ export class CommonHandlers {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
       }),
-    ).catch((e: any) => console.log('Failed to delete all access tokens'));
+    ).catch((e) => console.log('Failed to delete all access tokens'));
     return 'Done';
   }
 }

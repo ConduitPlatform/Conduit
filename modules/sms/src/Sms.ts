@@ -1,22 +1,23 @@
 import {
   ManagedModule,
   ConfigController,
-  HealthCheckStatus,
+  HealthCheckStatus, GrpcRequest, GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
-import {
-  SendSmsRequest,
-  SendSmsResponse,
-  SendVerificationCodeRequest,
-  SendVerificationCodeResponse,
-  VerifyRequest, VerifyResponse
-} from './types';
 import { ISmsProvider } from './interfaces/ISmsProvider';
 import { TwilioProvider } from './providers/twilio';
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import {
+  SendSmsRequest,
+  SendSmsResponse,
+  SendVerificationCodeRequest,
+  SendVerificationCodeResponse,
+  VerifyRequest,
+  VerifyResponse,
+} from './protoTypes/sms';
 
 export default class Sms extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -79,7 +80,7 @@ export default class Sms extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async sendSms(call: SendSmsRequest, callback: SendSmsResponse) {
+  async sendSms(call: GrpcRequest<SendSmsRequest>, callback: GrpcCallback<SendSmsResponse>) {
     const to = call.request.to;
     const message = call.request.message;
     if (isNil(this._provider)) {
@@ -100,8 +101,8 @@ export default class Sms extends ManagedModule<Config> {
   }
 
   async sendVerificationCode(
-    call: SendVerificationCodeRequest,
-    callback: SendVerificationCodeResponse
+    call: GrpcRequest<SendVerificationCodeRequest>,
+    callback: GrpcCallback<SendVerificationCodeResponse>,
   ) {
     const to = call.request.to;
     if (isNil(this._provider)) {
@@ -127,7 +128,7 @@ export default class Sms extends ManagedModule<Config> {
     return callback(null, { verificationSid });
   }
 
-  async verify(call: VerifyRequest, callback: VerifyResponse) {
+  async verify(call: GrpcRequest<VerifyRequest>, callback: GrpcCallback<VerifyResponse>) {
     const { verificationSid, code } = call.request;
     if (isNil(this._provider)) {
       return callback({ code: status.INTERNAL, message: 'No sms provider' });

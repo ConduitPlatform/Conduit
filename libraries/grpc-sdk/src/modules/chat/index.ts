@@ -1,5 +1,5 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ChatDefinition, GetRoomResponse, SendMessageRequest, SetConfigResponse } from '../../protoUtils/chat';
+import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat';
 
 export class Chat extends ConduitModule<typeof ChatDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -19,11 +19,11 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
     return this.client!.sendMessage(messageData);
   }
 
-  createRoom(name: string, participants: string[]): Promise<GetRoomResponse> {
+  createRoom(name: string, participants: string[]): Promise<Room> {
     return this.client!.createRoom({ name, participants });
   }
 
-  deleteRoom(id: string): Promise<GetRoomResponse> {
+  deleteRoom(id: string): Promise<Room> {
     return this.client!.deleteRoom({ id });
   }
 }

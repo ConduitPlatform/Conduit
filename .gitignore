@@ -9,6 +9,7 @@
 **/protos/src/*.proto
 **/ProtoUtils/**
 **/protoUtils/**
+**/protoTypes/**
 .vscode
 **/resourceRegistry.log
 .turbo

@@ -2,6 +2,8 @@ import {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
+  GrpcRequest,
+  GrpcCallback,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
@@ -17,6 +19,15 @@ import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment';
+import {
+  UserChangePass,
+  UserCreateRequest,
+  UserDeleteRequest,
+  UserLoginRequest,
+  UserLoginResponse,
+  UserCreateResponse,
+  UserDeleteResponse
+} from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 
 export default class Authentication extends ManagedModule<Config> {
@@ -48,7 +59,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:onConfig', _ => {
+    this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
       this.onConfig()
         .then(() => {
           console.log('Updated authentication configuration');
@@ -99,7 +110,7 @@ export default class Authentication extends ManagedModule<Config> {
 
   // gRPC Service
   // produces login credentials for a user without them having to login
-  async userLogin(call: any, callback: any) {
+  async userLogin(call: GrpcRequest<UserLoginRequest>, callback: GrpcCallback<UserLoginResponse>) {
     const { userId, clientId } = call.request;
     let config = ConfigController.getInstance().config;
     const signTokenOptions: ISignTokenOptions = {
@@ -116,7 +127,7 @@ export default class Authentication extends ManagedModule<Config> {
           .add(config.tokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       })
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
@@ -129,7 +140,7 @@ export default class Authentication extends ManagedModule<Config> {
           .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
           .toDate(),
       })
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
 
@@ -139,7 +150,7 @@ export default class Authentication extends ManagedModule<Config> {
     });
   }
 
-  async userCreate(call: any, callback: any) {
+  async userCreate(call: GrpcRequest<UserCreateRequest>, callback: GrpcCallback<UserCreateResponse>) {
     const email = call.request.email;
     let password = call.request.password;
     const verify = call.request.verify;
@@ -176,12 +187,11 @@ export default class Authentication extends ManagedModule<Config> {
       if (verify && this.sendEmail) {
         const serverConfig = await this.grpcSdk.config.getServerConfig();
         const url = serverConfig.url;
-        const verificationToken: models.Token = await models.Token.getInstance()
-          .create({
-            type: TokenType.VERIFICATION_TOKEN,
-            userId: user._id,
-            token: uuid(),
-          })
+        const verificationToken: models.Token = await models.Token.getInstance().create({
+          type: TokenType.VERIFICATION_TOKEN,
+          userId: user._id,
+          token: uuid(),
+        });
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
@@ -200,7 +210,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   // produces login credentials for a user without them having to login
-  async userDelete(call: any, callback: any) {
+  async userDelete(call: GrpcRequest<UserDeleteRequest>, callback: GrpcCallback<UserDeleteResponse>) {
     const { userId } = call.request;
     try {
       await models.User.getInstance().deleteOne({ _id: userId });
@@ -212,7 +222,7 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
-  async changePass(call: any, callback: any) {
+  async changePass(call: GrpcRequest<UserChangePass>, callback: GrpcCallback<UserCreateResponse>) {
     const email = call.request.email;
     let password = call.request.password;
     if (isNil(password) || password.length === 0) {

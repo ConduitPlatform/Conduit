@@ -9,8 +9,10 @@
   "scripts": {
     "start": "node dist/index.js",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
+    "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
+    "generateTypes": "sh build.sh",
     "build:docker": "docker build -t ghcr.io/conduitplatform/sms:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/sms:latest"
   },
   "directories": {
@@ -29,10 +31,12 @@
     "twilio": "3.54.2"
   },
   "devDependencies": {
+    "grpc-tools": "^1.11.2",
     "@types/convict": "^4.2.1",
     "@types/lodash": "^4.14.149",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "typescript": "~4.2.0"
+    "typescript": "~4.2.0",
+    "ts-proto": "^1.112.1"
   }
 }

@@ -313,7 +313,7 @@ export class CustomEndpointsAdmin {
 
     const customEndpoint = await this.database.getSchemaModel('CustomEndpoints').model
       .findByIdAndUpdate(found._id, found)
-      .catch((e: any) => {
+      .catch((e) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     if (isNil(customEndpoint)) {
@@ -333,7 +333,7 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
     await this.database.getSchemaModel('CustomEndpoints').model.deleteOne({ _id: call.request.params.id })
-      .catch((e: any) => {
+      .catch((e) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     this.customEndpointController.refreshEndpoints();

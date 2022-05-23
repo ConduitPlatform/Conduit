@@ -2,7 +2,7 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
-  HealthCheckStatus,
+  HealthCheckStatus, GrpcRequest, GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -15,6 +15,7 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations';
+import { CreateRoomRequest, DeleteRoomRequest, Room, SendMessageRequest } from './protoTypes/chat';
 
 export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -110,7 +111,7 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async createRoom(call: any, callback: any) {
+  async createRoom(call: GrpcRequest<CreateRoomRequest>, callback: GrpcCallback<Room>) {
     const { name, participants } = call.request;
 
     if (isNil(participants) || !isArray(participants) || participants.length === 0) {
@@ -127,13 +128,10 @@ export default class Chat extends ManagedModule<Config> {
     }
 
     let errorMessage: string | null = null;
-    const room = await models.ChatRoom.getInstance()
+    const room: models.ChatRoom = await models.ChatRoom.getInstance()
       .create({
         name: name,
         participants: participants,
-      })
-      .catch((e: Error) => {
-        errorMessage = e.message;
       });
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
@@ -146,16 +144,10 @@ export default class Chat extends ManagedModule<Config> {
         participants: (room as models.ChatRoom).participants,
       }),
     );
-    callback(null, {
-      result: JSON.stringify({
-        _id: (room as models.ChatRoom)._id,
-        name: (room as models.ChatRoom).name,
-        participants: (room as models.ChatRoom).participants,
-      }),
-    });
+    callback(null, { Id: room._id, name: room.name, participants: room.participants as string[] });
   }
 
-  async sendMessage(call: any, callback: any) {
+  async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
     const userId = call.request.userId;
     const { roomId, message } = call.request;
 
@@ -169,6 +161,7 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
 
+    // @ts-ignore
     if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
       return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
@@ -199,11 +192,11 @@ export default class Chat extends ManagedModule<Config> {
       });
   }
 
-  async deleteRoom(call: any, callback: any) {
+  async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
     const { id } = call.request;
 
     let errorMessage: string | null = null;
-    const room: any = await models.ChatRoom.getInstance()
+    const room: models.ChatRoom = await models.ChatRoom.getInstance()
       .deleteOne({
         _id: id,
       })
@@ -233,12 +226,6 @@ export default class Chat extends ManagedModule<Config> {
         participants: room.participants,
       }),
     );
-    callback(null, {
-      result: JSON.stringify({
-        _id: room._id,
-        name: room.name,
-        participants: room.participants,
-      }),
-    });
+    callback(null, { Id: room._id, name: room.name, participants: room.participants as string[] });
   }
 }

@@ -8,14 +8,16 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc"
+    "prebuild": "npm run generateTypes",
+    "build": "rimraf dist && tsc",
+    "generateTypes": "sh build.sh"
   },
   "license": "ISC",
   "dependencies": {
-    "convict": "^5.2.0",
-    "ioredis": "^4.23.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@grpc/grpc-js": "^1.5.2",
+    "convict": "^5.2.0",
+    "ioredis": "^4.23.0",
     "is-natural-number": "^4.0.1",
     "lodash": "^4.17.15",
     "validator": "^13.0.0"
@@ -32,15 +34,17 @@
     "directory": "packages/commons"
   },
   "devDependencies": {
-    "@types/ioredis": "^4.22.0",
+    "grpc-tools": "^1.11.2",
     "@types/convict": "^4.2.1",
     "@types/express": "~4.16.1",
+    "@types/ioredis": "^4.22.0",
     "@types/is-natural-number": "^4.0.0",
     "@types/lodash": "^4.14.150",
     "@types/node": "^13.9.8",
     "@types/validator": "^13.0.0",
     "express": "~4.16.1",
     "rimraf": "^3.0.2",
+    "ts-proto": "^1.112.1",
     "typescript": "~4.2.0"
   }
 }

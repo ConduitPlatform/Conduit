@@ -1,11 +1,20 @@
-import { Handler, IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
+// todo Create the controller that creates REST-specific endpoints
+import {
+  Handler,
+  IRouterMatcher,
+  NextFunction,
+  Request,
+  Response,
+  Router,
+} from 'express';
 
 import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk ,{ ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import { Cookie } from '../interfaces/Cookie';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -102,7 +111,7 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, async (req, res) => {
+    routerMethod(route.input.path, (req, res) => {
       let context = extractRequestData(req);
       if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
         const files = req.files as any;
@@ -183,7 +192,7 @@ export class RestController extends ConduitRouter {
               delete result.setCookies;
             }
             if (r.removeCookies && r.removeCookies.length) {
-              (r.removeCookies).forEach((cookie: any) => {
+              (r.removeCookies).forEach((cookie: Cookie) => {
                 res.clearCookie(cookie.name, cookie.options);
               });
             }
