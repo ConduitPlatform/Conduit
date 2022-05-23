@@ -32,7 +32,6 @@ export class AdminRoutes {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
         getFiles: this.getFiles.bind(this),
         createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
-        createBinaryFile: this.fileHandlers.createBinaryFile.bind(this.fileHandlers),
         patchFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
         deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
         getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
@@ -84,12 +83,29 @@ export class AdminRoutes {
       constructConduitRoute(
         {
           path: '/files',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            name: ConduitString.Required,
+            data: ConduitString.Required,
+            folder: ConduitString.Optional,
+            container: ConduitString.Optional,
+            mimeType: ConduitString.Optional,
+            isPublic: ConduitBoolean.Optional,
+          },
+        },
+        new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
+        'createFile'
+      ),
+      constructConduitRoute(
+        {
+          path: '/upload/files',
           action: ConduitRouteActions.FILE_UPLOAD,
           bodyParams: {
             name: ConduitString.Required,
             data: ConduitString.Required,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
+            mimeType: ConduitString.Optional,
             isPublic: ConduitBoolean.Optional,
           },
         },
@@ -108,6 +124,7 @@ export class AdminRoutes {
             data: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Optional,
+            mimeType: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('PatchFile', File.getInstance().fields),

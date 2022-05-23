@@ -41,7 +41,6 @@
     "@grpc/proto-loader": "^0.5.4",
     "convict": "^6.0.0",
     "lodash": "^4.17.15",
-    "mime-type": "^4.0.0",
     "uuid": "^7.0.3"
   },
   "devDependencies": {

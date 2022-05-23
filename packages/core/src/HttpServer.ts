@@ -59,7 +59,11 @@ export class HttpServer {
       'staticResources',
       express.static(path.join(__dirname, 'public')),
     );
-    const storage = memoryStorage();
+    const storage = multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, '/tmp/conduitUploads')
+      },
+    });
     this.router.registerGlobalMiddleware('multer', multer({ storage: storage }).any());
 
     this.router.registerGlobalMiddleware(

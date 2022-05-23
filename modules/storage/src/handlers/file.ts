@@ -9,9 +9,6 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
-import { preFileCreation, storeToProvider } from '../storage-provider/utils/utils';
-
-let mime = require('mime-types');
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -19,7 +16,7 @@ export class FileHandlers {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    storageProvider: IStorageProvider,
+    storageProvider: IStorageProvider
   ) {
     this.database = this.grpcSdk.databaseProvider!;
     _StorageContainer.getInstance(this.database);
@@ -44,51 +41,97 @@ export class FileHandlers {
     return file;
   }
 
-  async createBinaryFile(call: ParsedRouterRequest) {
-    const {
-      name,
-      mimeType,
-      isPublic,
-      newFolder,
-      usedContainer,
-      data,
-    } = await preFileCreation(call, this.storageProvider);
-    return await storeToProvider(this.storageProvider, {
-      name,
-      mimeType,
-      newFolder,
-      usedContainer,
-      data,
-      isPublic,
-    }, 'binary').catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
-    });
-  }
-
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
+    const { name, data, folder, container, mimeType, isPublic } = call.request.params;
+    let newFolder;
+    if (isNil(folder)) {
+      newFolder = '/';
+    } else {
+      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    }
+    let config = ConfigController.getInstance().config;
+    let usedContainer = container;
+    // the container is sent from the client
+    if (isNil(usedContainer)) {
+      usedContainer = config.defaultContainer;
+    } else {
+      let container = await _StorageContainer.getInstance().findOne({
+        name: usedContainer,
+      });
+      if (!container) {
+        if (!config.allowContainerCreation) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Container creation is not allowed!'
+          );
+        }
+        let exists = await this.storageProvider.containerExists(usedContainer);
+        if (!exists) {
+          await this.storageProvider.createContainer(usedContainer);
+        }
+        await _StorageContainer.getInstance().create({
+          name: usedContainer,
+          isPublic,
+        });
+      }
+    }
+    let exists;
+    if (!isNil(folder)) {
+      exists = await this.storageProvider
+        .container(usedContainer)
+        .folderExists(newFolder);
+      if (!exists) {
+        await _StorageFolder.getInstance().create({
+          name: newFolder,
+          container: usedContainer,
+          isPublic,
+        });
+        await this.storageProvider.container(usedContainer).createFolder(newFolder);
+      }
+    }
+
+    exists = await File.getInstance().findOne({
       name,
-      mimeType,
-      isPublic,
-      newFolder,
-      usedContainer,
-      data,
-    } = await preFileCreation(call, this.storageProvider);
-    return await storeToProvider(this.storageProvider, {
-      name,
-      mimeType,
-      newFolder,
-      usedContainer,
-      data,
-      isPublic,
-    }, 'base64').catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
+      container: usedContainer,
+      folder: newFolder,
     });
+    if (exists) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+    if (!isString(data)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid data provided');
+    }
+
+    try {
+      const buffer = Buffer.from(data, 'base64');
+
+      await this.storageProvider
+        .container(usedContainer)
+        .store((newFolder ?? '') + name, buffer, isPublic);
+      let publicUrl = null;
+      if (isPublic) {
+        publicUrl = await this.storageProvider
+          .container(usedContainer)
+          .getPublicUrl((newFolder ?? '') + name);
+      }
+
+      const newFile = await File.getInstance().create({
+        name,
+        mimeType,
+        folder: newFolder,
+        container: usedContainer,
+        isPublic,
+        url: publicUrl,
+      });
+
+      return newFile;
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
+    }
   }
 
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, data, name, container, folder } = call.request.params;
-    let mimeType = mime.lookup(name);
+    const { id, data, name, container, folder, mimeType } = call.request.params;
     try {
       const found = await File.getInstance().findOne({ _id: id });
       if (isNil(found)) {
@@ -126,7 +169,7 @@ export class FileHandlers {
           if (!config.allowContainerCreation) {
             throw new GrpcError(
               status.PERMISSION_DENIED,
-              'Container creation is not allowed!',
+              'Container creation is not allowed!'
             );
           }
           const exists = await this.storageProvider.containerExists(newContainer);
@@ -245,8 +288,8 @@ export class FileHandlers {
       } else {
         data = await this.storageProvider.container(file.container).get(file.name);
       }
-      const encoding = file.encoding as BufferEncoding;
-      return { data: data.toString(encoding).toString() };
+
+      return { data: data.toString('base64') };
     } catch (e) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
