@@ -84,7 +84,7 @@ export class AdminRoutes {
       constructConduitRoute(
         {
           path: '/files',
-          action: ConduitRouteActions.POST,
+          action: ConduitRouteActions.FILE_UPLOAD,
           bodyParams: {
             name: ConduitString.Required,
             data: ConduitString.Required,
@@ -95,14 +95,6 @@ export class AdminRoutes {
         },
         new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
         'createFile'
-      ),
-      constructConduitRoute(
-        {
-          path: '/files/binary',
-          action: ConduitRouteActions.FILE_UPLOAD,
-        },
-        new ConduitRouteReturnDefinition('createBinaryFile', File.getInstance().fields),
-        'createBinaryFile'
       ),
       constructConduitRoute(
         {

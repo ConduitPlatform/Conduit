@@ -91,9 +91,11 @@ export class RestController extends ConduitRouter {
       }
       case ConduitRouteActions.FILE_UPLOAD: {
         routerMethod = this._expressRouter.post.bind(this._expressRouter);
+        break;
       }
       case ConduitRouteActions.FILE_DOWNLOAD: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
+        break;
       }
       default: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
@@ -101,15 +103,16 @@ export class RestController extends ConduitRouter {
     }
 
     routerMethod(route.input.path, async (req, res) => {
-
-      if (req.files && route.input.action === ConduitRouteActions.FILE_UPLOAD) {
-        for (const index in req.files) {
-          const file = (req.files as any)[index];
-          await this.grpcSdk.storage!.createFileFromStream(file.originalname,file.mimetype,(file.buffer).toString(),file.folder,file.isPublic);
-        }
-        return;
-      }
       let context = extractRequestData(req);
+      if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
+        const files = req.files as any;
+        context.params = {
+          ...context.params,
+          name: files[0].originalname,
+          data: files[0].buffer.toString('base64'),
+        }
+      }
+
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
         route,

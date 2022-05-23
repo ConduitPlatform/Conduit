@@ -60,7 +60,7 @@ export class StorageRoutes {
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
           },
-          action: ConduitRouteActions.POST,
+          action: ConduitRouteActions.FILE_UPLOAD,
           path: '/storage/file',
           middlewares: ['authMiddleware'],
         },
