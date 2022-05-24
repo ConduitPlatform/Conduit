@@ -5,7 +5,7 @@ const deepdash = require('deepdash/standalone');
 function deepFieldValidate(extFields: any) {
   const uniqueError = new GrpcError(status.INVALID_ARGUMENT, 'Schema extension fields can not be \'unique\'');
   const requiredError = new GrpcError(status.INVALID_ARGUMENT, 'Schema extension fields can not be \'required\'');
-  deepdash.eachDeep(extFields, (value: boolean, key: string) => {
+  deepdash.eachDeep(extFields, (value: any, key: string) => {
     if (key === 'unique' && value === true) throw uniqueError;
     if (key === 'required' && value === true) throw requiredError;
   });
