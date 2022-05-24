@@ -4,6 +4,7 @@ import { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
 import { isBoolean } from 'lodash';
+import { ParsedQuery } from '../../interfaces';
 
 function arrayHandler(value: any) {
   let newArray = [];
@@ -55,7 +56,7 @@ function matchOperation(operator: string, value: any) {
   }
 }
 
-export function parseQuery(query: any) {
+export function parseQuery(query: ParsedQuery) {
   let parsed: any = isArray(query) ? [] : {};
   if (isString(query) || isBoolean(query)) return query;
   for (let key in query) {
@@ -107,8 +108,8 @@ async function _createOrUpdate(obj: any, model: SequelizeSchema) {
  * @throws {Error}
  */
 async function _createWithPopulations(
-  fields: { [key: string]: any },
-  document: { [key: string]: any },
+  fields: ParsedQuery,
+  document: ParsedQuery,
   adapter: SequelizeAdapter,
   validate: boolean = false
 ) {
@@ -162,7 +163,7 @@ async function _createWithPopulations(
  */
 export async function createWithPopulations(
   fields: ConduitModel,
-  document: { [key: string]: any },
+  document: ParsedQuery,
   adapter: SequelizeAdapter
 ): Promise<any> {
   // TODO find a way to validate the whole object, now only the inner objects are validated.

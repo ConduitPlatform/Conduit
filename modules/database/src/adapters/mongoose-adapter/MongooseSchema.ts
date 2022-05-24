@@ -1,5 +1,5 @@
-import { Model, Mongoose, Schema } from 'mongoose';
-import { MultiDocQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
+import { Document, DocumentQuery, Model, Mongoose, Schema } from 'mongoose';
+import { MultiDocQuery, ParsedQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
@@ -31,22 +31,18 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  async create(query: SingleDocQuery): Promise<any> {
-    let parsedQuery: { [key: string]: any };
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
+  async create(query: SingleDocQuery) {
+    const parsedQuery = {
+      ...(typeof query === 'string' ? EJSON.parse(query) : query),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
-
-    parsedQuery.createdAt = new Date();
-    parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
     return this.model.create(parsedQuery).then((r) => r.toObject());
   }
 
-  async createMany(query: MultiDocQuery): Promise<any> {
-    let docs: [{ [key: string]: any }];
+  async createMany(query: MultiDocQuery) {
+    let docs: ParsedQuery[] = [];
     if (typeof query === 'string') {
       docs = EJSON.parse(query);
     } else {
@@ -67,8 +63,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
     populate?: string[],
-  ): Promise<any> {
-    let parsedQuery: { [key: string]: any };
+  ) {
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -92,14 +88,14 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
-  ): Promise<any> {
-    let parsedFilter: { [key: string]: any } | [{ [key: string]: any }];
+  ) {
+    let parsedFilter: ParsedQuery | ParsedQuery[];
     if (typeof filterQuery === 'string') {
       parsedFilter = EJSON.parse(filterQuery);
     } else {
       parsedFilter = filterQuery;
     }
-    let parsedQuery: { [key: string]: any };
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -114,8 +110,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.updateMany(this.parseQuery(parsedFilter), parsedQuery).exec();
   }
 
-  deleteOne(query: Query): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  deleteOne(query: Query) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -124,8 +120,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.deleteOne(this.parseQuery(parsedQuery)).exec();
   }
 
-  deleteMany(query: Query): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  deleteMany(query: Query) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -165,8 +161,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     select?: string,
     sort?: string,
     populate?: string[],
-  ): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  ) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -191,8 +187,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return finalQuery.lean().exec();
   }
 
-  findOne(query: Query, select?: string, populate?: string[]): Promise<any> {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+  findOne(query: Query, select?: string, populate?: string[]) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -206,7 +202,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   countDocuments(query: Query) {
-    let parsedQuery: { [key: string]: any } | [{ [key: string]: any }];
+    let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
     } else {
@@ -215,12 +211,12 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.find(this.parseQuery(parsedQuery)).countDocuments().exec();
   }
 
-  private async createWithPopulations(document: any): Promise<any> {
+  private async createWithPopulations(document: ParsedQuery) {
     return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
-  private parseQuery(query: any) {
-    let parsed: any = {};
+  private parseQuery(query: ParsedQuery) {
+    let parsed = {} as ParsedQuery;
 
     Object.keys(query).forEach((key) => {
       if (query[key]?.hasOwnProperty('$contains')) {

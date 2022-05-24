@@ -16,8 +16,10 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { ParsedQuery } from '../interfaces';
 const escapeStringRegexp = require('escape-string-regexp');
 
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions, _id: string };
 const SYSTEM_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
@@ -31,7 +33,7 @@ export class SchemaAdmin {
   }
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const query: { [p: string]: any } = {
+    const query: ParsedQuery = {
       _id: call.request.params.id,
       name: { $nin: SYSTEM_SCHEMAS },
     };
@@ -46,7 +48,7 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: { [p: string]: any } = { name: { $nin: SYSTEM_SCHEMAS } };
+    let query: ParsedQuery = { name: { $nin: SYSTEM_SCHEMAS } };
     if (owner && owner.length !== 0) {
       query = {
         $and: [
@@ -504,11 +506,11 @@ export class SchemaAdmin {
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas : ConduitSchema[] = Object.values(call.request.params.schemas);
-    const schemaIds = schemas.map((schema: any) => schema._id);
+    const schemas : _ConduitSchema[] = Object.values(call.request.params.schemas);
+    const schemaIds = schemas.map((schema) => schema._id);
     //add schemas to _DeclaredSchema
-    await Promise.all(schemas.map(async (schema: ConduitSchema) => {
-        const recreatedSchema = new ConduitSchema(schema.name,schema.fields,(schema as any).modelOptions);
+    await Promise.all(schemas.map(async (schema: _ConduitSchema) => {
+        const recreatedSchema = new ConduitSchema(schema.name,schema.fields,schema.modelOptions);
         if (isNil(recreatedSchema.fields))
           return null;
         recreatedSchema.ownerModule = 'database';
@@ -522,7 +524,7 @@ export class SchemaAdmin {
   }
 
   private patchSchemaPerms(
-    schema: Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions },
+    schema: _ConduitSchema,
     // @ts-ignore
     perms: ConduitModelOptions['conduit']['permissions'],
   ) {

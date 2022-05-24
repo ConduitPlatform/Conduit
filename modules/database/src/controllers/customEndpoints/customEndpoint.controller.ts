@@ -17,7 +17,7 @@ export class CustomEndpointController {
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
     this.refreshRoutes()
-      .catch((err: any) => {
+      .catch((err) => {
         console.log(err);
       });
     this.initializeState();

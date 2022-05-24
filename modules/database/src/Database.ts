@@ -207,7 +207,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           schema: originalSchema,
         });
       })
-      .catch((err: any) => {
+      .catch((err) => {
         callback({
           code: status.INTERNAL,
           message: err.message,
@@ -310,7 +310,7 @@ export default class DatabaseModule extends ManagedModule<void> {
             schema: originalSchema,
           });
         })
-        .catch((err: any) => {
+        .catch((err) => {
           callback({
             code: status.INTERNAL,
             message: err.message,

@@ -4,6 +4,7 @@ import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { Doc } from '../interfaces';
 
 export class CmsHandlers {
 
@@ -54,7 +55,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    const document: { [key: string]: any } | undefined = await this.database.getSchemaModel(schemaName).model
+    const document: Doc | undefined = await this.database.getSchemaModel(schemaName).model
       ?.findOne({ _id: id }, undefined, populate);
     if (!document) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
@@ -108,7 +109,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocument: any = await this.database.getSchemaModel(schemaName).model
+    let updatedDocument: Doc = await this.database.getSchemaModel(schemaName).model
       ?.findByIdAndUpdate(id, params)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -135,7 +136,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocument: any = await this.database.getSchemaModel(schemaName).model
+    let updatedDocument: Doc = await this.database.getSchemaModel(schemaName).model
       ?.findByIdAndUpdate(id, params, true)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -161,7 +162,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocuments: any[] = [];
+    let updatedDocuments: Doc[] = [];
     for (const doc of params.docs) {
       const updatedDocument = await this.database.getSchemaModel(schemaName).model
         ?.findByIdAndUpdate(doc._id, doc)
@@ -186,7 +187,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocuments: any[] = [];
+    let updatedDocuments: Doc[] = [];
     for (const doc of params.docs) {
       const updatedDocument = await this.database.getSchemaModel(schemaName).model
         ?.findByIdAndUpdate(doc._id, doc, true)

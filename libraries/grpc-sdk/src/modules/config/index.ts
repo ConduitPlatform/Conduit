@@ -14,7 +14,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }
 
-  getServerConfig(): Promise<any> {
+  getServerConfig() {
     let request = {};
     return this.client!.getServerConfig(request)
       .then(res => {
@@ -31,7 +31,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  get(name: string): Promise<any> {
+  get(name: string) {
     let request = {
       key: name,
     };
@@ -41,7 +41,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  updateConfig(config: any, name: string): Promise<any> {
+  updateConfig(config: any, name: string) {
     let request = {
       config: JSON.stringify(config),
       moduleName: name,
@@ -53,7 +53,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  addFieldsToConfig(config: any, name: string): Promise<any> {
+  addFieldsToConfig(config: any, name: string) {
     let request = {
       config: JSON.stringify(config),
       moduleName: name,
@@ -64,7 +64,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  moduleExists(name: string): Promise<any> {
+  moduleExists(name: string) {
     let request = {
       moduleName: name,
     };
@@ -81,7 +81,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  getRedisDetails(): Promise<any> {
+  getRedisDetails() {
     let request: { [key: string]: any } = {};
     return this.client!.getRedisDetails(request);
   }
@@ -90,7 +90,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     name: string,
     url: string,
     healthStatus: Omit<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN>,
-  ): Promise<any> {
+  ) {
     const request: RegisterModuleRequest = {
       moduleName: name.toString(),
       url: url.toString(),
