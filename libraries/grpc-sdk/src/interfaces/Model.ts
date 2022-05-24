@@ -6,6 +6,7 @@ export enum TYPE {
   ObjectId = 'ObjectId',
   JSON = 'JSON',
   Relation = 'Relation',
+  Binary = 'Binary',
 }
 
 export type Array = any[];

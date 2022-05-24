@@ -39,8 +39,28 @@ message GetFileDataResponse {
   string data = 1;
 }
 
-
 message Empty {
+}
+
+message StreamFileRequest {
+  message StreamFileInfo{
+    string name = 1;
+    string mimeType = 2;
+  }
+  oneof request {
+    StreamFileInfo info = 1;
+    bytes chunk = 2;
+  }
+}
+
+message StreamFileResponse {
+  enum UploadStatusCode {
+    Success = 0;
+    Failure = 1;
+  }
+  string message = 1; // need this crap?
+                      // return file/s id/s instead?
+  UploadStatusCode status = 2;
 }
 
 service Storage {
@@ -49,4 +69,5 @@ service Storage {
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
+  rpc StreamFile(stream StreamFileRequest) returns (StreamFileResponse);
 }

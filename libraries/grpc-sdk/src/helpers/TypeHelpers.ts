@@ -13,7 +13,7 @@ class ConduitStringConstructor {
   }
 }
 
-export let ConduitString = ConduitStringConstructor;
+export const ConduitString = ConduitStringConstructor;
 
 class ConduitNumberConstructor {
   // private to disallow creating other instances of this type
@@ -28,7 +28,7 @@ class ConduitNumberConstructor {
   }
 }
 
-export let ConduitNumber = ConduitNumberConstructor;
+export const ConduitNumber = ConduitNumberConstructor;
 
 class ConduitBooleanConstructor {
   // private to disallow creating other instances of this type
@@ -43,7 +43,7 @@ class ConduitBooleanConstructor {
   }
 }
 
-export let ConduitBoolean = ConduitBooleanConstructor;
+export const ConduitBoolean = ConduitBooleanConstructor;
 
 class ConduitDateConstructor {
   // private to disallow creating other instances of this type
@@ -58,7 +58,7 @@ class ConduitDateConstructor {
   }
 }
 
-export let ConduitDate = ConduitDateConstructor;
+export const ConduitDate = ConduitDateConstructor;
 
 class ConduitObjectIdConstructor {
   // private to disallow creating other instances of this type
@@ -73,7 +73,7 @@ class ConduitObjectIdConstructor {
   }
 }
 
-export let ConduitObjectId = ConduitObjectIdConstructor;
+export const ConduitObjectId = ConduitObjectIdConstructor;
 
 class ConduitJSONConstructor {
   // private to disallow creating other instances of this type
@@ -88,7 +88,7 @@ class ConduitJSONConstructor {
   }
 }
 
-export let ConduitJson = ConduitJSONConstructor;
+export const ConduitJson = ConduitJSONConstructor;
 
 class ConduitRelationConstructor {
   // private to disallow creating other instances of this type
@@ -103,4 +103,19 @@ class ConduitRelationConstructor {
   }
 }
 
-export let ConduitRelation = ConduitRelationConstructor;
+export const ConduitRelation = ConduitRelationConstructor;
+
+class ConduitBinaryConstructor {
+  // private to disallow creating other instances of this type
+  private constructor() {}
+
+  static get Optional() {
+    return TYPE.Binary;
+  }
+
+  static get Required(): ConduitModelField {
+    return { type: TYPE.Binary, required: true };
+  }
+}
+
+export const ConduitBinary = ConduitBinaryConstructor;

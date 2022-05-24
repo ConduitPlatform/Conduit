@@ -10,11 +10,11 @@ import {
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
-import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
 import fs from 'fs';
+import multer from 'multer';
 
 export class HttpServer {
   private _initialized: boolean = false;
@@ -62,17 +62,12 @@ export class HttpServer {
       express.urlencoded({ limit: '50mb', extended: false }),
     );
     this.router.registerGlobalMiddleware('cookieParser', cookieParser());
+    const storage = multer.diskStorage({ destination: path.join(__dirname, '/uploads') });
+    this.router.registerGlobalMiddleware('multer', multer({ storage }).single('file'));
     this.router.registerGlobalMiddleware(
       'staticResources',
       express.static(path.join(__dirname, 'public')),
     );
-    const storage = multer.diskStorage({
-      destination: function(req, file, cb) {
-        cb(null, path.join(__dirname, 'uploads'));
-      },
-    });
-    this.router.registerGlobalMiddleware('multer', multer({ storage: storage }).any());
-
     this.router.registerGlobalMiddleware(
       'errorCatch',
       (error: any, req: Request, res: Response, _: NextFunction) => {

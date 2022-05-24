@@ -1,23 +1,31 @@
 import {
-  ManagedModule,
-  DatabaseProvider,
   ConfigController,
-  HealthCheckStatus,
+  DatabaseProvider,
   GrpcCallback,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, { Config } from './config';
-import { AdminRoutes } from './admin/admin';
-import { FileHandlers } from './handlers/file';
-import { StorageRoutes } from './routes/routes';
-import { createStorageProvider, IStorageProvider } from './storage-provider';
+import AppConfigSchema, {Config} from './config';
+import {AdminRoutes} from './admin/admin';
+import {FileHandlers} from './handlers/file';
+import {StorageRoutes} from './routes/routes';
+import {createStorageProvider, IStorageProvider} from './storage-provider';
 import * as models from './models';
 import path from 'path';
-import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { getAwsAccountId } from './storage-provider/utils/utils';
-import { isEmpty } from 'lodash';
-import { runMigrations } from './migrations';
-import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
+import {status} from '@grpc/grpc-js';
+import {isEmpty, isNil} from 'lodash';
+import {getAwsAccountId} from './storage-provider/utils/utils';
+import {runMigrations} from './migrations';
+import {
+  FileResponse,
+  GetFileDataResponse,
+  StreamFileRequest,
+  StreamFileResponse,
+  StreamFileResponse_UploadStatusCode,
+} from './protoTypes/storage';
+
+// TODO: tmp for testing
+import fs from 'fs';
 
 type Callback = (arg1: { code: number; message: string }) => void;
 
@@ -30,6 +38,7 @@ export default class Storage extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
       getFile: this.getFile.bind(this),
       createFile: this.createFile.bind(this),
+      streamFile: this.streamFile.bind(this),
       updateFile: this.updateFile.bind(this),
       getFileData: this.getFileData.bind(this),
     },
@@ -139,6 +148,21 @@ export default class Storage extends ManagedModule<Config> {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.createFile(call);
+  }
+
+  async streamFile(call: any, callback: GrpcCallback<FileResponse>) {
+    if (call.request.info) {
+      console.log('Stream started...')
+    } else {
+      console.log('Stream chunk received...')
+    }
+    call.on('end', async () => {
+      callback(null, {
+        id: '',
+        url: '',
+        name: '',
+      });
+    });
   }
 
   async updateFile(call: any, callback: GrpcCallback<FileResponse>) {
