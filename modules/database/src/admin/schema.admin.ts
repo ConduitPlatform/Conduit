@@ -496,12 +496,25 @@ export class SchemaAdmin {
   }
 
   async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
+    const { search, sort } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    const schemas = await this.database
-      .getSchemaModel('_PendingSchemas')
-      .model.findMany({}, skip, limit, undefined, sort);
+    let query;
+    if (!isNil(search)) {
+      let identifier = escapeStringRegexp(search);
+      query = { $regex: `.*${identifier}.*`, $options: 'i' };
+    }
+    const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany(
+      query
+        ? {
+            name: query,
+          }
+        : {},
+      skip,
+      limit,
+      undefined,
+      sort
+    );
     return { schemas };
   }
 
