@@ -1,26 +1,20 @@
----
-name: Grpc-SDK
-route: /grpc-sdk
-menu: Development
----
-
 # Conduit SDK module
 
-This module provides a framework to bind all conduit modules in a safe way.
-It is also used to register and replace modules. In future this can be used
-to entirely replace the routing provider for example or the cms with another
-implementation.
+This module provides a framework to bind all conduit modules in a safe and consistent way.
+
+It is also used to provide syntactic sugar, that make development easier.
 
 ## Build Steps
 
 - run build.sh
 - run npm build
 
-## Features [WIP]
+## Features
 
-- Defines an Interface for all modular functionalities of Conduit
-- Provides constructors for model declaration in Conduit
-
-### TODO
-
-- EVERYTHING
+- Service registration & Discovery
+- Route registration
+- Provides wrappers for grpc handlers to support async
+- Parses incoming requests and outgoing responses to JSON
+- Provides health check service out of the box
+- Manages the grpc server so you don't have to
+- Provides typings for common Conduit models
