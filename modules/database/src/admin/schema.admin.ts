@@ -501,8 +501,8 @@ export class SchemaAdmin {
     const limit = call.request.params.limit ?? 25;
     let query = {};
     if (!isNil(search)) {
-      let identifier = escapeStringRegexp(search);
-      query ={ name : { $regex: `.*${identifier}.*`, $options: 'i' }};
+      const identifier = escapeStringRegexp(search);
+      query = { name : { $regex: `.*${identifier}.*`, $options: 'i' }};
     }
     const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany(
       query,
