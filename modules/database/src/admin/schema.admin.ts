@@ -499,17 +499,13 @@ export class SchemaAdmin {
     const { search, sort } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query;
+    let query = {};
     if (!isNil(search)) {
       let identifier = escapeStringRegexp(search);
-      query = { $regex: `.*${identifier}.*`, $options: 'i' };
+      query ={ name : { $regex: `.*${identifier}.*`, $options: 'i' }};
     }
     const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany(
-      query
-        ? {
-            name: query,
-          }
-        : {},
+      query,
       skip,
       limit,
       undefined,
