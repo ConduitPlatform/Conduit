@@ -87,7 +87,7 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    if(await this._activeAdapter.isPopulated()) {
+    if (await this._activeAdapter.isPopulated()) {
       const isConduitDb = await this._activeAdapter.isConduitDb();
       if (!isConduitDb) {
         await this.introspectDb();
@@ -558,7 +558,7 @@ export default class DatabaseModule extends ManagedModule<void> {
 
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if(isEmpty(schema.fields))
+        if (isEmpty(schema.fields))
           return null;
         await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
