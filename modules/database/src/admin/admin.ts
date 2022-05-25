@@ -288,6 +288,12 @@ export class AdminHandlers {
       constructConduitRoute({
         path: '/introspection/schemas',
         action: ConduitRouteActions.GET,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
+        }
       },
       new ConduitRouteReturnDefinition('GetPendingSchemas', { schemas: [PendingSchemas.fields] }),
       'getPendingSchemas'
