@@ -82,9 +82,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
   }
 
+  async isPopulated(): Promise<boolean> {
+    return (
+      (await this.mongoose.connection.db.listCollections().toArray()).filter(
+        (c) => c.name !== '_declaredschemas'
+      ).length > 0
+    );
+  }
+
   async isConduitDb(): Promise<boolean> {
     return !!(await this.mongoose.connection.db.collection('_declaredschemas').findOne({
-      ownerModule : 'core',
+      ownerModule: 'core',
     }));
   }
 
@@ -117,18 +125,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         {}
       );
       // Remove declared schemas with imported:true
-      let schemas = (await db.listCollections().toArray()).filter((schema: ConduitSchema) => {
-        // Filter out non-imported declared schemas
-        return (
-          !INITIAL_DB_SCHEMAS.includes(schema.name) &&
-          !declaredSchemas.find((declaredSchema: ConduitSchema) => {
-            return (
-              declaredSchema.name === schema.name &&
-              isNil((declaredSchema as any).modelOptions.conduit!.imported)
-            );
-          })
-        );
-      });
+      let schemas = (await db.listCollections().toArray()).filter(
+        (schema: ConduitSchema) => {
+          // Filter out non-imported declared schemas
+          return (
+            !INITIAL_DB_SCHEMAS.includes(schema.name) &&
+            !declaredSchemas.find((declaredSchema: ConduitSchema) => {
+              return (
+                declaredSchema.name === schema.name &&
+                isNil((declaredSchema as any).modelOptions.conduit!.imported)
+              );
+            })
+          );
+        }
+      );
       schemas = await Promise.all(
         schemas.map(async (schema: ConduitSchema) => {
           const declaredSchema = declaredSchemas.find(
@@ -161,7 +171,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             schemaNames.push(schema.name);
           }
         })
-        );
+      );
     } else {
       schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
       schemaNames = schemaNames.filter((s) => !INITIAL_DB_SCHEMAS.includes(s));

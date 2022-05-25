@@ -31,6 +31,17 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
+  async isPopulated(): Promise<boolean> {
+    return this.sequelize
+    .query(`SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME <> '_DeclaredSchema';`)
+    .then((res) => parseInt((res as any)[0][0].count) > 0)
+    .catch((e) => {
+      console.log(e);
+      return false;
+    });
+  }
 
   async isConduitDb() {
     return this.sequelize

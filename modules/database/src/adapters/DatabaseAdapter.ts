@@ -8,7 +8,10 @@ import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
   models?: { [name: string]: T };
-
+  /**
+   * Checks if the database has been populated with user defined schemas
+   */
+  abstract isPopulated(): Promise<boolean>;
   /**
    * Checks if the database has already been connected with Conduit
    */
