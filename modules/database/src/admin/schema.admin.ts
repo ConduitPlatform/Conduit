@@ -511,7 +511,7 @@ export class SchemaAdmin {
       undefined,
       sort
     );
-    return { schemas };
+    return { schemas, count: schemas.length };
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
