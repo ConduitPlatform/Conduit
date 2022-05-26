@@ -1,8 +1,8 @@
 # Conduit SDK module
 
-This module provides a framework to bind all conduit modules in a safe and consistent way.
+This module provides a framework to bind all Conduit modules in a safe and consistent way.
 
-It is also used to provide syntactic sugar, that make development easier.
+It is also used to provide syntactic sugar that makes development easier.
 
 ## Build Steps
 
