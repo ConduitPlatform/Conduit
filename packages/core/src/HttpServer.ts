@@ -10,9 +10,11 @@ import {
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
+import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
+import fs from 'fs';
 
 export class HttpServer {
   private _initialized: boolean = false;
@@ -38,6 +40,12 @@ export class HttpServer {
   }
 
   start() {
+    if (!fs.existsSync(path.join(__dirname, 'uploads'))) {
+      fs.mkdir(path.join(__dirname, 'uploads'), (err) => {
+        if (err)  throw err;
+        console.log('Uploads directory created successfully!');
+      });
+    }
     this.server.listen(this.port);
     this.server.on('error', this.onError.bind(this));
     this.server.on('Listening', this.onListening.bind(this));
@@ -45,7 +53,6 @@ export class HttpServer {
 
   private registerGlobalMiddleware() {
     this.router.registerGlobalMiddleware('cors', cors());
-
     this.router.registerGlobalMiddleware(
       'jsonParser',
       express.json({ limit: '50mb' }),
@@ -59,6 +66,12 @@ export class HttpServer {
       'staticResources',
       express.static(path.join(__dirname, 'public')),
     );
+    const storage = multer.diskStorage({
+      destination: function(req, file, cb) {
+        cb(null, path.join(__dirname, 'uploads'));
+      },
+    });
+    this.router.registerGlobalMiddleware('multer', multer({ storage: storage }).any());
 
     this.router.registerGlobalMiddleware(
       'errorCatch',

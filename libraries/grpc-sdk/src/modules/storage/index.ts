@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageDefinition } from '../../protoUtils/storage';
+import {
+  FileResponse,
+  GetFileDataResponse,
+  SetConfigResponse,
+  StorageDefinition,
+} from '../../protoUtils/storage';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {

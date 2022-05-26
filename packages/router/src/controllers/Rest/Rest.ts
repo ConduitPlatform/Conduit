@@ -1,4 +1,3 @@
-// todo Create the controller that creates REST-specific endpoints
 import {
   Handler,
   IRouterMatcher,
@@ -7,28 +6,27 @@ import {
   Response,
   Router,
 } from 'express';
-
-import {
-  ConduitCommons,
-  ConduitRoute,
-} from '@conduitplatform/commons';
+import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
+import fs from 'fs';
 
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
+  private grpcSdk: ConduitGrpcSdk;
 
-  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
+  constructor(commons: ConduitCommons, grpcSdk: ConduitGrpcSdk, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(commons);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
+    this.grpcSdk = grpcSdk;
     this.initializeRouter();
   }
 
@@ -99,13 +97,37 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter.patch.bind(this._expressRouter);
         break;
       }
+      case ConduitRouteActions.FILE_UPLOAD: {
+        routerMethod = this._expressRouter.post.bind(this._expressRouter);
+        break;
+      }
+      case ConduitRouteActions.FILE_DOWNLOAD: {
+        routerMethod = this._expressRouter.get.bind(this._expressRouter);
+        break;
+      }
       default: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
       }
     }
 
-    routerMethod(route.input.path, (req, res) => {
+    routerMethod(route.input.path, async (req, res) => {
       let context = extractRequestData(req);
+      if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
+        const files = req.files! as Express.Multer.File[];
+        for (const file of files) {
+          const data = fs.readFileSync(`${file.path}`);
+          context.params = {
+            ...context.params,
+            name: file.originalname,
+            data: data.toString('base64'),
+            mimeType: file.mimetype,
+          };
+          fs.unlink(`${file.path}`, (err) => {
+            if (err) throw err; // delete the file›
+          });
+        }
+      }
+
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
         route,

@@ -1,6 +1,4 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
-import { isNil } from 'lodash';
-import { ConfigController } from '@conduitplatform/grpc-sdk';
 import { StorageConfig } from '../interfaces';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
