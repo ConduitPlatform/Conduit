@@ -91,7 +91,7 @@ export class ConduitRoutingController {
 
   registerMiddleware(
     middleware: (req: Request, res: Response, next: NextFunction) => void,
-    socketMiddleware: boolean
+    socketMiddleware: boolean,
   ) {
     this._middlewareRouter.use(middleware);
     if (socketMiddleware) {
@@ -107,7 +107,7 @@ export class ConduitRoutingController {
 
   registerRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void)
+    router: Router | ((req: Request, res: Response, next: NextFunction) => void),
   ) {
     this._restRouter.registerRoute(path, router);
   }
@@ -128,5 +128,36 @@ export class ConduitRoutingController {
 
   async socketPush(data: SocketPush) {
     await this._socketRouter?.handleSocketPush(data);
+  }
+
+
+  registerRoutes(processedRoutes: (
+    | ConduitRoute
+    | ConduitMiddleware
+    | ConduitSocket
+    )[], url: string) {
+    processedRoutes.forEach((r) => {
+      if (r instanceof ConduitMiddleware) {
+        console.log(
+          'New middleware registered: ' + r.input.path + ' handler url: ' + url,
+        );
+        this.registerRouteMiddleware(r);
+      } else if (r instanceof ConduitSocket) {
+        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
+        this.registerConduitSocket(r);
+      } else {
+        console.log(
+          'New route registered: ' +
+          r.input.action +
+          ' ' +
+          r.input.path +
+          ' handler url: ' +
+          url,
+        );
+        this.registerConduitRoute(r);
+      }
+    });
+    this._restRouter.scheduleRouterRefresh();
+    this._graphQLRouter?.scheduleRouterRefresh();
   }
 }

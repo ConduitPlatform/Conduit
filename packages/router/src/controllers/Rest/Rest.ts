@@ -50,10 +50,7 @@ export class RestController extends ConduitRouter {
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
-    // If the route has been registered, then we need to reinitialize the router so the actual routes change
-    if (registered) {
-      this.refreshRouter();
-    } else {
+    if (!registered) {
       this.addConduitRoute(route);
     }
   }
@@ -104,7 +101,14 @@ export class RestController extends ConduitRouter {
       }
     }
 
-    routerMethod(route.input.path, (req, res) => {
+    routerMethod(route.input.path, this.constructHandler(route));
+
+    this._swagger.addRouteSwaggerDocumentation(route);
+  }
+
+  constructHandler(route: ConduitRoute): (req: Request, res: Response) => void {
+    const self = this;
+    return (req, res) => {
       let context = extractRequestData(req);
       let hashKey: string;
       let { caching, cacheAge, scope } = extractCaching(
@@ -190,55 +194,58 @@ export class RestController extends ConduitRouter {
             res.end();
           }
         })
-        .catch((err: Error | ConduitError | any) => {
-          if (err.hasOwnProperty('status')) {
-            console.log(err);
-            res.status((err as ConduitError).status).json({
-              name: err.name,
-              status: (err as ConduitError).status,
-              message: err.message,
-            });
-          } else if (err.hasOwnProperty('code')) {
-            let statusCode: number;
-            let name: string;
-            switch (err.code) {
-              case 3:
-                name = 'INVALID_ARGUMENTS';
-                statusCode = 400;
-                break;
-              case 5:
-                name = 'NOT_FOUND';
-                statusCode = 404;
-                break;
-              case 7:
-                name = 'FORBIDDEN';
-                statusCode = 403;
-                break;
-              case 16:
-                name = 'UNAUTHORIZED';
-                statusCode = 401;
-                break;
-              default:
-                name = 'INTERNAL_SERVER_ERROR';
-                statusCode = 500;
-            }
-            res.status(statusCode).json({
-              name,
-              status: statusCode,
-              message: err.details,
-            });
-          } else {
-            console.log(err);
-            res.status(500).json({
-              name: 'INTERNAL_SERVER_ERROR',
-              status: 500,
-              message: 'Something went wrong',
-            });
-          }
-        });
-    });
+        .catch(this.handleError(res));
+    };
+  }
 
-    this._swagger.addRouteSwaggerDocumentation(route);
+  handleError(res: Response): (err: Error | ConduitError) => void {
+    return (err: Error | ConduitError | any) => {
+      console.log(err);
+      if (err.hasOwnProperty('status')) {
+        return res.status((err as ConduitError).status).json({
+          name: err.name,
+          status: (err as ConduitError).status,
+          message: err.message,
+        });
+      }
+      if (err.hasOwnProperty('code')) {
+        let statusCode: number;
+        let name: string;
+        switch (err.code) {
+          case 3:
+            name = 'INVALID_ARGUMENTS';
+            statusCode = 400;
+            break;
+          case 5:
+            name = 'NOT_FOUND';
+            statusCode = 404;
+            break;
+          case 7:
+            name = 'FORBIDDEN';
+            statusCode = 403;
+            break;
+          case 16:
+            name = 'UNAUTHORIZED';
+            statusCode = 401;
+            break;
+          default:
+            name = 'INTERNAL_SERVER_ERROR';
+            statusCode = 500;
+            break;
+        }
+        return res.status(statusCode).json({
+          name,
+          status: statusCode,
+          message: err.details,
+        });
+      }
+      res.status(500).json({
+        name: 'INTERNAL_SERVER_ERROR',
+        status: 500,
+        message: 'Something went wrong',
+      });
+
+    };
   }
 
   protected _refreshRouter() {

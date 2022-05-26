@@ -33,8 +33,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this._routes = [];
     this._globalMiddlewares = [];
     this._internalRouter = new ConduitRoutingController(commons, expressApp);
-    this.initGraphQL();
-    this.initSockets();
+    this._internalRouter.initGraphQL();
+    this._internalRouter.initSockets();
   }
 
   async initialize(server: GrpcServer) {
@@ -177,29 +177,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
       moduleName,
       this.grpcSdk.grpcToken,
     );
-
-    processedRoutes.forEach((r) => {
-      if (r instanceof ConduitMiddleware) {
-        console.log(
-          'New middleware registered: ' + r.input.path + ' handler url: ' + url,
-        );
-        this.registerRouteMiddleware(r);
-      } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
-        this.registerSocket(r);
-      } else {
-        console.log(
-          'New route registered: ' +
-          r.input.action +
-          ' ' +
-          r.input.path +
-          ' handler url: ' +
-          url,
-        );
-        this._registerRoute(r);
-      }
-    });
     this._grpcRoutes[url] = routes;
+    this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
   }
 
@@ -237,14 +216,6 @@ export class ConduitDefaultRouter extends IConduitRouter {
     routes.push(...this._sdkRoutes);
 
     this._internalRouter.cleanupRoutes(routes);
-  }
-
-  initGraphQL() {
-    this._internalRouter.initGraphQL();
-  }
-
-  initSockets() {
-    this._internalRouter.initSockets();
   }
 
   registerGlobalMiddleware(
@@ -296,10 +267,6 @@ export class ConduitDefaultRouter extends IConduitRouter {
 
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
-    this._registerRoute(route);
-  }
-
-  _registerRoute(route: ConduitRoute): void {
     this._internalRouter.registerConduitRoute(route);
   }
 

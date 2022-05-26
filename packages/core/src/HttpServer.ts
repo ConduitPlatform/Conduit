@@ -13,12 +13,14 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
+import { ConduitLogger } from './utils/logging/logger';
 
 export class HttpServer {
   private _initialized: boolean = false;
   private router: IConduitRouter;
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
+  private readonly logger: ConduitLogger;
 
   get initialized() {
     return this._initialized;
@@ -28,6 +30,7 @@ export class HttpServer {
     private readonly commons: ConduitCommons,
     private readonly port: number | string,
   ) {
+    this.logger = new ConduitLogger();
   }
 
   initialize() {
@@ -45,7 +48,7 @@ export class HttpServer {
 
   private registerGlobalMiddleware() {
     this.router.registerGlobalMiddleware('cors', cors());
-
+    this.router.registerGlobalMiddleware('logger', this.logger.middleware);
     this.router.registerGlobalMiddleware(
       'jsonParser',
       express.json({ limit: '50mb' }),
