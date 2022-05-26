@@ -504,14 +504,14 @@ export class SchemaAdmin {
       const identifier = escapeStringRegexp(search);
       query = { name : { $regex: `.*${identifier}.*`, $options: 'i' }};
     }
-    const schemas = await this.database.getSchemaModel('_PendingSchemas').model.findMany(
-      query,
-      skip,
-      limit,
-      undefined,
-      sort
-    );
-    return { schemas };
+    const schemasPromise = this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.findMany(query, skip, limit, undefined, sort);
+    const schemasCountPromise = this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.countDocuments(query);
+    const [schemas, count] = await Promise.all([schemasPromise, schemasCountPromise]);
+    return { schemas, count };
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
