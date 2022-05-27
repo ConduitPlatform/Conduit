@@ -5,23 +5,20 @@ import {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import AppConfigSchema, {Config} from './config';
-import {AdminRoutes} from './admin/admin';
-import {FileHandlers} from './handlers/file';
-import {StorageRoutes} from './routes/routes';
-import {createStorageProvider, IStorageProvider} from './storage-provider';
+import AppConfigSchema, { Config } from './config';
+import { AdminRoutes } from './admin/admin';
+import { FileHandlers } from './handlers/file';
+import { StorageRoutes } from './routes/routes';
+import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
-import {status} from '@grpc/grpc-js';
-import {isEmpty, isNil} from 'lodash';
-import {getAwsAccountId} from './storage-provider/utils/utils';
-import {runMigrations} from './migrations';
+import { status} from '@grpc/grpc-js';
+import { isEmpty, isNil } from 'lodash';
+import { getAwsAccountId } from './storage-provider/utils/utils';
+import { runMigrations } from './migrations';
 import {
   FileResponse,
   GetFileDataResponse,
-  StreamFileRequest,
-  StreamFileResponse,
-  StreamFileResponse_UploadStatusCode,
 } from './protoTypes/storage';
 
 // TODO: tmp for testing
@@ -151,16 +148,38 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   async streamFile(call: any, callback: GrpcCallback<FileResponse>) {
-    if (call.request.info) {
-      console.log('Stream started...')
-    } else {
-      console.log('Stream chunk received...')
+    // if (call.request.info) {
+    //   console.log('Stream started...')
+    // } else {
+    //   console.log('Stream chunk received...')
+    // }
+    // TEST file write
+    const fileUploadsPath = path.resolve(__dirname, 'uploads');
+    if (!fs.existsSync(fileUploadsPath)) {
+      fs.mkdir(fileUploadsPath, (err) => {
+        if (err)  throw err;
+      });
     }
+    let writeStream: fs.WriteStream;
+    let filePath = '';
+    let mimeType = '';
+    call.on('data', (data: any) => { // TODO: type
+      console.log(data);
+      if (data.info) {
+        filePath = path.resolve(fileUploadsPath, data.info.name);
+        mimeType = data.info.mimeType;
+        writeStream = fs.createWriteStream(filePath);
+      } else {
+        writeStream.write(data.chunk);
+      }
+    })
     call.on('end', async () => {
-      callback(null, {
+      writeStream.close();
+      console.log('BIG SUCKESS');
+      return callback(null, {
         id: '',
         url: '',
-        name: '',
+        name: 'BIG SUCCESS',
       });
     });
   }

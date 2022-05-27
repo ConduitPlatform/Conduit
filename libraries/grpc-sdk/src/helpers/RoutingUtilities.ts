@@ -1,5 +1,5 @@
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
-import { SocketProtoDescription } from '../interfaces';
+import { ConduitRouteActions, SocketProtoDescription } from '../interfaces';
 import path from 'path';
 import fs from 'fs';
 
@@ -23,6 +23,18 @@ message RouterResponse {
   string redirect = 2;
   repeated Cookie setCookies = 3;
   repeated Cookie removeCookies = 4;
+}
+
+message StreamRouterRequest {
+  oneof request {
+    RouterRequest info = 1;
+    bytes chunk = 2;
+  }
+}
+
+message StreamRouterResponse {
+  string result = 1;
+  string redirect = 2;
 }
 
 message SocketRequest {
@@ -89,6 +101,8 @@ export function createProtoFunctions(paths: any[]) {
   paths.forEach((r) => {
     if (r.hasOwnProperty('events')) {
       protoFunctions += createProtoFunctionsForSocket(r, protoFunctions);
+    } else if ('action' in r && r.action === ConduitRouteActions.FILE_UPLOAD) {
+      protoFunctions += createProtoFunctionForStreamRoute(r, protoFunctions);
     } else {
       protoFunctions += createProtoFunctionForRoute(r, protoFunctions);
     }
@@ -124,6 +138,16 @@ function createProtoFunctionForRoute(path: any, protoFunctions: string) {
   }
 
   return `rpc ${newFunction}(RouterRequest) returns (RouterResponse);\n`;
+}
+
+function createProtoFunctionForStreamRoute(path: any, protoFunctions: string) {
+  const newFunction = createGrpcFunctionName(path.grpcFunction);
+
+  if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
+    return '';
+  }
+
+  return `rpc ${newFunction}(stream StreamRouterRequest) returns (StreamRouterResponse);\n`;
 }
 
 function createGrpcFunctionName(grpcFunction: string) {

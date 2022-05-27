@@ -9,6 +9,8 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
+import path from "path";
+import fs from "fs";
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -77,38 +79,73 @@ export class FileHandlers {
     }
   }
 
-  async uploadFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { folder, container, isPublic } = await this.getFileParams(call);
-    const files = call.request.context.files;
-    for (const fileField of Object.keys(files)) {
-      const { fileName } = files[fileField];
-      const exists = await File.getInstance().findOne({ name: fileName, container, folder });
-      if (exists) {
-        // TODO: Generated files could have identical names, we should offer a way to rename ??
-        throw new GrpcError(
-          status.ALREADY_EXISTS,
-          `File path already exists: ${container}/${folder}/${fileName}`,
-        );
+  // async uploadFile(call: any): Promise<UnparsedRouterResponse> { // TODO: Type this
+  async uploadFile(call: any) {
+    const fileUploadsPath = path.resolve(__dirname, '..', 'uploads');
+    if (!fs.existsSync(fileUploadsPath)) {
+      fs.mkdir(fileUploadsPath, (err) => {
+        if (err) throw err; // TODO: Create this outside handler or throw GrpcError
+      });
+    }
+    let writeStream: fs.WriteStream;
+    let filePath = '';
+    let mimeType = '';
+    call.on('data', (data: any) => { // TODO: type
+      console.log(data);
+      if (data.info) {
+        filePath = path.resolve(fileUploadsPath, data.info.name);
+        mimeType = data.info.mimeType;
+        writeStream = fs.createWriteStream(filePath);
+      } else {
+        writeStream.write(data.chunk);
       }
-    }
-    const successful: string[] = [];
-    for (const fileField of Object.keys(files)) {
-      const { fileName, mimeType } = files[fileField];
-      await File.getInstance()
-        .create({
-          name: fileName,
-          mimeType,
-          folder,
-          container,
-          isPublic,
-        })
-        .catch(async e => {
-          await File.getInstance().deleteMany({ name: { $in: successful } }).catch();
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-      successful.push(fileName)
-    }
-    return `Uploading files: ${successful}`;
+    })
+    call.on('end', async () => {
+      writeStream.close();
+      console.log('BIG SUCKESS');
+      return {
+        id: '',
+        url: '',
+        name: 'BIG SUCCESS',
+      };
+    });
+
+
+
+    // const { folder, container, isPublic } = await this.getFileParams(call);
+    // const files = call.request.context.files;
+    // for (const fileField of Object.keys(files)) {
+    //   const { fileName } = files[fileField];
+    //   const exists = await File.getInstance().findOne({ name: fileName, container, folder });
+    //   if (exists) {
+    //     // TODO: Generated files could have identical names, we should offer a way to rename ??
+    //     throw new GrpcError(
+    //       status.ALREADY_EXISTS,
+    //       `File path already exists: ${container}/${folder}/${fileName}`,
+    //     );
+    //   }
+    // }
+    // const successful: string[] = [];
+    // for (const fileField of Object.keys(files)) {
+    //   const { fileName, mimeType } = files[fileField];
+    //   await File.getInstance()
+    //     .create({
+    //       name: fileName,
+    //       mimeType,
+    //       folder,
+    //       container,
+    //       isPublic,
+    //     })
+    //     .catch(async e => {
+    //       await File.getInstance().deleteMany({ name: { $in: successful } }).catch();
+    //       throw new GrpcError(status.INTERNAL, e.message);
+    //     });
+    //   successful.push(fileName)
+    // }
+    // return `Uploading files: ${successful}`;
+
+
+
 
     // Post-Handler:
     // Upload data to provider

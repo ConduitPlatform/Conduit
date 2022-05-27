@@ -11,8 +11,8 @@ import {
   SocketProtoDescription,
   instanceOfSocketProtoDescription,
 } from '../interfaces';
-import { ConduitRoute } from '../classes/ConduitRoute';
-import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from '../classes';
+import { ConduitRouteParameters, ConduitStreamRouteParameters } from '@conduitplatform/grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -92,7 +92,7 @@ function createHandlerForRoute(
   metadata: Metadata,
   moduleName?: string,
 ) {
-  const handler = (req: ConduitRouteParameters) => {
+  const handler = (req: ConduitRouteParameters | ConduitStreamRouteParameters) => {
     let request = {
       params: req.params ? JSON.stringify(req.params) : null,
       path: req.path,

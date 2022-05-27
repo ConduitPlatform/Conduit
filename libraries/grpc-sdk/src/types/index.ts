@@ -42,6 +42,18 @@ export type ParsedSocketRequest = GrpcRequest<{
   context: { [key: string]: any };
 }>;
 
+export type StreamRequest = { // TODO: Inconsistent naming + add GrpcRequest for metadata
+  info?: {
+    params: { [field: string]: any };
+    path: string;
+    headers: { [field: string]: any };
+    context: { [field: string]: any };
+  };
+  chunk?: Uint8Array;
+};
+
+export type StreamIterable = AsyncIterable<StreamRequest>;
+
 type EventResponse = {
   event: string;
   data: { [key: string]: any };

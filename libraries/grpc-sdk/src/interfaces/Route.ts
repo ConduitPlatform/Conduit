@@ -8,6 +8,14 @@ export interface ConduitRouteParameters {
   context?: { [field: string]: any };
 }
 
+export interface StreamFileData { // used for ConduitRouteAction.FILE_UPLOAD
+  file: Express.Multer.File,
+}
+
+export interface ConduitStreamRouteParameters extends ConduitRouteParameters {
+  data: StreamFileData,
+}
+
 export enum RouteOptionType {
   String = 'String',
   Number = 'Number',
@@ -38,7 +46,6 @@ export enum ConduitRouteActions {
   PATCH = 'PATCH',
   DELETE = 'DELETE',
   FILE_UPLOAD = 'FILE_UPLOAD',
-  FILE_DOWNLOAD = 'FILE_DOWNLOAD'
 }
 
 export interface ConduitRouteOptions {
@@ -52,3 +59,8 @@ export interface ConduitRouteOptions {
   middlewares?: string[];
   cacheControl?: string;
 }
+
+export type ConduitStreamRouteOptions = Omit<
+  ConduitRouteOptions,
+  'bodyParams' | 'action'
+> & { action: ConduitRouteActions.FILE_UPLOAD };

@@ -1,6 +1,7 @@
 import { Request } from 'express';
-import { ConduitError, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitRouteParameters, StreamIterable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
+import fs from 'fs';
 
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};

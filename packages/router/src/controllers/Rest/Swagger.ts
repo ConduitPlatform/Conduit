@@ -1,7 +1,7 @@
 import { ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
-import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import {ConduitRouteActions, ConduitRouteOptions} from '@conduitplatform/grpc-sdk';
 
 export type SwaggerRouterMetadata = {
   readonly urlPrefix: string,
@@ -138,12 +138,12 @@ export class SwaggerGenerator {
       }
     }
 
-    if (!isNil(route.input.bodyParams) && (route.input.bodyParams as any) !== '') {
+    if (!isNil((route.input as ConduitRouteOptions).bodyParams) && (route.input as any).bodyParams !== '') {
       routeDoc['requestBody'] = {
         description: route.input.description,
         content: {
           'application/json': {
-            schema: this._parser.extractTypes('body', route.input.bodyParams, true),
+            schema: this._parser.extractTypes('body', (route.input as ConduitRouteOptions).bodyParams!, true),
           },
         },
         required: true,

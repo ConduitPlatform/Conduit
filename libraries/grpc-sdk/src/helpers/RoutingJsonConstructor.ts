@@ -1,5 +1,5 @@
 import { ConduitMiddleware, ConduitRoute, ConduitRouteReturnDefinition, ConduitSocket } from '../classes';
-import { ConduitRouteOptions, EventsProtoDescription } from '../interfaces';
+import { ConduitRouteOptions, ConduitStreamRouteOptions, EventsProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {
   let routeObject: any = {
@@ -26,11 +26,11 @@ export function constructRoute(route: ConduitRoute) {
 }
 
 export function constructConduitRoute(
-  input: ConduitRouteOptions,
+  input: ConduitRouteOptions | ConduitStreamRouteOptions,
   type: ConduitRouteReturnDefinition,
   handler: string
 ) {
-  let routeObject: any = {
+  const routeObject: any = {
     options: input,
     returns: {
       name: type.name,
@@ -44,7 +44,7 @@ export function constructConduitRoute(
   if (!routeObject.options.middlewares) {
     routeObject.options.middlewares = [];
   }
-  for (let option in routeObject.options) {
+  for (const option in routeObject.options) {
     if (!routeObject.options.hasOwnProperty(option)) continue;
     if (option === 'middlewares') continue;
     routeObject.options[option] = JSON.stringify(routeObject.options[option]);

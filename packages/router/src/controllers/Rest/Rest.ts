@@ -11,7 +11,7 @@ import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, ConduitRouteActions, ConduitRouteOptions, TYPE } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
 
 const swaggerUi = require('swagger-ui-express');
@@ -100,10 +100,6 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter.post.bind(this._expressRouter);
         break;
       }
-      case ConduitRouteActions.FILE_DOWNLOAD: {
-        routerMethod = this._expressRouter.get.bind(this._expressRouter);
-        break;
-      }
       default: {
         routerMethod = this._expressRouter.get.bind(this._expressRouter);
       }
@@ -112,8 +108,13 @@ export class RestController extends ConduitRouter {
     routerMethod(route.input.path, async (req, res) => {
       const context = extractRequestData(req);
       if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
-        console.log(req.file);
-        await this.grpcSdk.storage!.streamFile(req.file);
+        if (!req.file) {
+          return res.status(400).json({
+            name: 'INVALID_ARGUMENTS',
+            status: 400,
+            message: 'No file provided',
+          });
+        }
       }
 
       let hashKey: string;
@@ -125,7 +126,7 @@ export class RestController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then((r) => {
           validateParams(context.params, {
-            ...route.input.bodyParams,
+            ...((route.input as ConduitRouteOptions).bodyParams ? (route.input as ConduitRouteOptions).bodyParams : {}),
             ...route.input.queryParams,
             ...route.input.urlParams,
           });
@@ -133,6 +134,9 @@ export class RestController extends ConduitRouter {
         })
         .then((r) => {
           Object.assign(context.context, r);
+          if (route.input.action === ConduitRouteActions.FILE_UPLOAD) {
+            return route.executeStreamRequest({ ...context, data: { file: req.file! }});
+          }
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
           }

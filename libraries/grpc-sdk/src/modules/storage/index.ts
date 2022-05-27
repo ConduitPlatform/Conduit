@@ -4,8 +4,6 @@ import {
   GetFileDataResponse,
   SetConfigResponse,
   StorageDefinition,
-  DeepPartial,
-  StreamFileRequest, StreamFileResponse
 } from '../../protoUtils/storage';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
@@ -38,27 +36,5 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     isPublic: boolean = false,
   ): Promise<FileResponse> {
     return this.client!.createFile({name, mimeType, data, folder, isPublic});
-  }
-
-  async streamFile(file: Express.Multer.File) {
-    await this.client!.streamFile(this.streamFileRequest(file));
-  }
-
-  private async* streamFileRequest(file: Express.Multer.File): AsyncIterable<DeepPartial<StreamFileRequest>> {
-    yield {
-      info: {
-        name: file.originalname,
-        mimeType: file.mimetype,
-      },
-      chunk: undefined,
-    };
-    // TODO: Split up file or stream with busboy instead
-    const chunks: Buffer[] = [];
-    for (const chunk of chunks) {
-      yield {
-        info: undefined,
-        chunk,
-      };
-    }
   }
 }

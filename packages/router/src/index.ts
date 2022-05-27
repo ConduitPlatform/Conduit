@@ -303,6 +303,10 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this._internalRouter.registerConduitRoute(route);
   }
 
+  _registerStreamRoute(route: ConduitRoute): void { // TODO: Split type??
+    this._internalRouter.registerConduitStreamRoute(route);
+  }
+
   registerRouteMiddleware(middleware: ConduitMiddleware): void {
     this._internalRouter.registerRouteMiddleware(middleware);
   }

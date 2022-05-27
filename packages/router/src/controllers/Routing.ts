@@ -117,6 +117,10 @@ export class ConduitRoutingController {
     this._restRouter.registerConduitRoute(route);
   }
 
+  registerConduitStreamRoute(route: ConduitRoute) {
+    this._restRouter.registerConduitRoute(route);
+  }
+
   registerConduitSocket(socket: ConduitSocket) {
     this._socketRouter?.registerConduitSocket(socket);
   }
