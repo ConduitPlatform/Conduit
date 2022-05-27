@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database';
-import { Query } from '../../interfaces/Query';
+import { Query } from '../../interfaces/Indexable';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {

@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { ConduitError, TYPE } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
+import { Indexable, Params } from '../../interfaces/Indexable';
 
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
@@ -42,8 +43,8 @@ export function extractRequestData(req: Request) {
 }
 
 export function validateParams(
-  params: { [key: string]: any },
-  routeDefinedParams: { [key: string]: any },
+  params: Params,
+  routeDefinedParams: Params,
 ) {
   for (const key of Object.keys(routeDefinedParams)) {
     if (
@@ -70,8 +71,8 @@ export function validateParams(
 
 function validateArray(
   fieldName: string,
-  param: { [key: string]: any }[],
-  routeDefinedArray: { [key: string]: any }[] | string[],
+  param: Params[],
+  routeDefinedArray: Indexable[] | string[],
 ) {
   const type = routeDefinedArray[0];
   if (isObject(type)) {
@@ -97,8 +98,8 @@ function validateArray(
 
 function validateObject(
   fieldName: string,
-  param: { [key: string]: any },
-  routeDefinedObject: { [key: string]: any },
+  param: Params,
+  routeDefinedObject: Params,
 ) {
   if (routeDefinedObject.required && isNil(param)) {
     throw ConduitError.userInput(`${fieldName} is required`);
