@@ -1,8 +1,8 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database';
+import { Query } from '../../interfaces/Query';
 
-type ParsedQuery = { [key: string]: any };
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'database', url, grpcToken);
@@ -77,13 +77,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  processQuery(query: ParsedQuery) {
+  processQuery(query: Query) {
     return JSON.stringify(query);
   }
 
   findOne<T>(
     schemaName: string,
-    query: ParsedQuery,
+    query: Query,
     select?: string,
     populate?: string | string[],
   ): Promise<T> {
@@ -117,7 +117,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   findMany<T>(
     schemaName: string,
-    query: ParsedQuery,
+    query: Query,
     select?: string,
     skip?: number,
     limit?: number,
@@ -150,7 +150,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  create<T>(schemaName: string, query: ParsedQuery): Promise<T> {
+  create<T>(schemaName: string, query: Query): Promise<T> {
     return this.client!.create(
       { schemaName, query: this.processQuery(query) })
       .then(res => {
@@ -158,7 +158,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  createMany<T>(schemaName: string, query: ParsedQuery): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: Query): Promise<T[] | any[]> {
     return this.client!.createMany(
       { schemaName, query: this.processQuery(query) })
       .then(res => {
@@ -169,7 +169,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   findByIdAndUpdate<T>(
     schemaName: string,
     id: string,
-    document: ParsedQuery,
+    document: Query,
     updateProvidedOnly: boolean = false,
     populate?: string | string[],
   ): Promise<T | any> {
@@ -192,8 +192,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   updateMany(
     schemaName: string,
-    filterQuery: ParsedQuery,
-    query: ParsedQuery,
+    filterQuery: Query,
+    query: Query,
     updateProvidedOnly: boolean = false,
   ) {
     return this.client!.updateMany(
@@ -208,7 +208,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  deleteOne(schemaName: string, query: ParsedQuery) {
+  deleteOne(schemaName: string, query: Query) {
     return this.client!.deleteOne(
       { schemaName, query: this.processQuery(query) })
       .then(res => {
@@ -216,7 +216,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  deleteMany(schemaName: string, query: ParsedQuery) {
+  deleteMany(schemaName: string, query: Query) {
     return this.client!.deleteMany(
       { schemaName, query: this.processQuery(query) })
       .then(res => {
@@ -224,7 +224,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       });
   }
 
-  countDocuments(schemaName: string, query: ParsedQuery): Promise<number> {
+  countDocuments(schemaName: string, query: Query): Promise<number> {
     return this.client!.countDocuments(
       { schemaName, query: this.processQuery(query) })
       .then(res => {

@@ -1,4 +1,5 @@
 import { Metadata, status } from '@grpc/grpc-js';
+import { Context, Params, Headers, Indexable } from '../interfaces/Query';
 
 export type GrpcRequest<T> = { request: T; metadata?: Metadata; };
 export type GrpcResponse<T> = (
@@ -21,15 +22,15 @@ export class GrpcError extends Error {
 }
 
 export type ParsedRouterRequest = GrpcRequest<{
-  params: { [key: string]: any };
+  params: Params;
   path: string;
-  headers: { [key: string]: any };
-  context: { [key: string]: any };
+  headers: Headers;
+  context: Context;
 }>;
 
 export type UnparsedRouterResponse =
-  | { result?: { [key: string]: any }; redirect?: string, setCookies: { [key: string]: any }, removeCookies: { [key: string]: any } }
-  | { [key: string]: any }
+  | { result?: Indexable; redirect?: string, setCookies: Indexable, removeCookies: Indexable }
+  | Indexable
   | string;
 
 export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
@@ -39,12 +40,12 @@ export type ParsedSocketRequest = GrpcRequest<{
   event: string;
   socketId: string;
   params: any[];
-  context: { [key: string]: any };
+  context: Context;
 }>;
 
 type EventResponse = {
   event: string;
-  data: { [key: string]: any };
+  data: Indexable;
   receivers?: string[];
 };
 
