@@ -5,7 +5,7 @@ cp ../core/src/core.proto ./src/
 
 
 echo "Generating typescript code"
-./node_modules/.bin/grpc_tools_node_protoc \
+protoc \
   --plugin=./node_modules/.bin/protoc-gen-ts_proto\
   --ts_proto_out=./src/protoTypes\
   --ts_proto_opt=onlyTypes=true\

@@ -26,11 +26,11 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.5.2",
-    "@grpc/proto-loader": "^0.5.4",
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/router": "^1.0.1",
+    "@grpc/grpc-js": "^1.5.2",
+    "@grpc/proto-loader": "^0.5.4",
     "bcrypt": "^5.0.1",
     "convict": "^6.0.0",
     "jsonwebtoken": "^8.5.1",

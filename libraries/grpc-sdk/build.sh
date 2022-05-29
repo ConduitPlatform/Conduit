@@ -7,7 +7,7 @@ rm -rf ./src/protoUtils
 mkdir ./src/protoUtils
 
 echo "Generating typescript code"
-./node_modules/.bin/grpc_tools_node_protoc \
+protoc \
   --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_opt=esModuleInterop=true \
   --ts_proto_opt=outputServices=generic-definitions,useExactTypes=false \
