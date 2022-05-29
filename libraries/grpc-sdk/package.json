@@ -12,7 +12,7 @@
     "build": "rimraf dist && tsc",
     "protoc": "sh build.sh"
   },
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@grpc/grpc-js": "^1.5.3",
     "@grpc/proto-loader": "^0.6.9",
@@ -33,9 +33,6 @@
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com/ConduitPlatform/conduit.git",
