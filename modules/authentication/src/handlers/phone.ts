@@ -36,11 +36,11 @@ export class PhoneHandlers {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.sms = this.grpcSdk.sms!;
-      this.initialized = true;
-      return true;
+      return this.initialized = true;
     } else {
+
       console.log('sms phone authentication not active');
-      return false;
+      return this.initialized = false;
     }
   }
 
@@ -94,8 +94,6 @@ export class PhoneHandlers {
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { phone } = call.request.params;
     const context = call.request.context;
     const clientId = context.clientId;

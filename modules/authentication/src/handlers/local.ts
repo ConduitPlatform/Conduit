@@ -13,9 +13,8 @@ import ConduitGrpcSdk, {
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
-import { AccessToken, RefreshToken, Token, User } from '../models';
+import { AccessToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
 
 export class LocalHandlers {
@@ -34,43 +33,35 @@ export class LocalHandlers {
   }
 
   async validate(): Promise<Boolean> {
-    let promise: Promise<void>;
     if (this.sendEmail) {
-      promise = this.grpcSdk.config.get('email')
-        .then((emailConfig: any) => {
-          if (!emailConfig.active) {
-            throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
-          }
-        })
-        .catch(_ => {
-          throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
-        });
-    } else {
-      promise = Promise.resolve();
+      let emailConfig;
+      try {
+        emailConfig = await this.grpcSdk.config.get('email');
+      } catch (e) {
+        this.initialized = false;
+        throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+      }
+      if (!emailConfig.active) {
+        this.initialized = false;
+        throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+      }
     }
-
-    return promise
-      .then(() => {
-        if (!this.initialized) {
-          return this.initDbAndEmail();
-        }
-      })
-      .then((r) => {
+    if (!this.initialized) {
+      try {
+        await this.initDbAndEmail();
         console.log('Local is active');
-        return true;
-      })
-      .catch((err: Error) => {
+      } catch (err) {
         console.error(err.message);
         console.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
         throw err;
-      });
+      }
+    }
+    return this.initialized;
   }
 
   async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
 
     if (AuthUtils.invalidEmailAddress(email)) {
@@ -119,9 +110,27 @@ export class LocalHandlers {
     return { user };
   }
 
+  private async _authenticateChecks(password: string, config: any, user: User) {
+    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+    if (!user.hashedPassword)
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
+    if (!passwordsMatch)
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+
+
+    if (config.local.verification.required && !user.isVerified) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You must verify your account to login',
+      );
+    }
+  }
+
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     let { email, password } = call.request.params;
     const context = call.request.context;
     if (isNil(context))
@@ -137,6 +146,7 @@ export class LocalHandlers {
     }
 
     email = email.toLowerCase();
+    const config = ConfigController.getInstance().config;
 
     const user: User | null = await User.getInstance().findOne(
       { email },
@@ -144,23 +154,7 @@ export class LocalHandlers {
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-    if (!user.hashedPassword)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch)
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-
-    const config = ConfigController.getInstance().config;
-    if (config.local.verification.required && !user.isVerified) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'You must verify your account to login',
-      );
-    }
+    await this._authenticateChecks(password, config, user);
 
     if (user.hasTwoFA) {
       const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, user.phoneNumber!);
@@ -187,31 +181,12 @@ export class LocalHandlers {
     }
     const clientConfig = config.clients;
     await AuthUtils.signInClientOperations(this.grpcSdk, clientConfig, user._id, clientId);
-
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment()
-        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-    let refreshToken: RefreshToken | null = null;
-    if (config.generateRefreshToken) {
-      refreshToken = await RefreshToken.getInstance().create({
+    const [accessToken, refreshToken] = await AuthUtils
+      .createUserTokensAsPromise(this.grpcSdk, {
         userId: user._id,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
+        clientId: clientId,
+        config,
       });
-    }
 
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
@@ -238,16 +213,12 @@ export class LocalHandlers {
 
     return {
       userId: user._id.toString(),
-      accessToken: accessToken.token,
+      accessToken: accessToken!.token,
       refreshToken: !isNil(refreshToken) ? refreshToken.token : undefined,
     };
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized) {
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    }
-
     const { email } = call.request.params;
     const config = ConfigController.getInstance().config;
 
@@ -283,10 +254,6 @@ export class LocalHandlers {
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized) {
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    }
-
     const {
       passwordResetToken: passwordResetTokenParam,
       password: newPassword,
@@ -435,9 +402,6 @@ export class LocalHandlers {
   }
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-
     const verificationTokenParam = call.request.params.verificationToken;
 
     const config = ConfigController.getInstance().config;

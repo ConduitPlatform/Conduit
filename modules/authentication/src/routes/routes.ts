@@ -59,8 +59,8 @@ export class AuthenticationRoutes {
   }
 
   async registerRoutes() {
-    let config = null;
-    let serverConfig = null;
+    const config = ConfigController.getInstance().config;
+    let serverConfig;
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -76,9 +76,6 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
-      const authConfig = await this.grpcSdk.config
-        .get('authentication')
-        .catch(console.error);
       const fields = User.getInstance().fields;
       delete fields.hashedPassword;
       this._routingManager.route(
@@ -110,6 +107,7 @@ export class AuthenticationRoutes {
         new ConduitRouteReturnDefinition('LoginResponse', {
           userId: ConduitString.Optional,
           accessToken: ConduitString.Optional,
+          message: ConduitString.Optional,
           refreshToken: ConduitString.Optional,
         }),
         this.localHandlers.authenticate.bind(this.localHandlers),
@@ -180,7 +178,7 @@ export class AuthenticationRoutes {
         this.localHandlers.verifyEmail.bind(this.localHandlers),
       );
 
-      if (authConfig?.twofa.enabled) {
+      if (config.twofa.enabled) {
         this._routingManager.route(
           {
             path: '/local/twofa',
@@ -194,7 +192,7 @@ export class AuthenticationRoutes {
           new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
             userId: ConduitString.Optional,
             accessToken: ConduitString.Optional,
-            refreshToken: ConduitString.Optional,
+            refreshToken: config.generateRefreshToken ? ConduitString.Required : ConduitString.Optional,
             message: ConduitString.Optional,
           }),
           this.localHandlers.verify2FA.bind(this.localHandlers),
@@ -258,9 +256,10 @@ export class AuthenticationRoutes {
     }
     errorMessage = null;
 
-    config = ConfigController.getInstance().config;
+
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingManager, new FacebookSettings(this.grpcSdk, config, serverConfig.url));
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, this._routingManager,
+      new FacebookSettings(this.grpcSdk, config, serverConfig.url));
     authActive = await this.facebookHandlers
       .validate()
       .catch((e) => (errorMessage = e));
@@ -269,7 +268,8 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingManager, new GoogleSettings(this.grpcSdk, config, serverConfig.url));
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, this._routingManager,
+      new GoogleSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -279,7 +279,8 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingManager, new GithubSettings(this.grpcSdk, config, serverConfig.url));
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, this._routingManager,
+      new GithubSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.githubHandlers
       .validate()
@@ -289,7 +290,8 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingManager, new SlackSettings(this.grpcSdk, config, serverConfig.url));
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, this._routingManager,
+      new SlackSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.slackHandlers
       .validate()
@@ -299,7 +301,8 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingManager, new FigmaSettings(this.grpcSdk, config, serverConfig.url));
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, this._routingManager,
+      new FigmaSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.figmaHandlers
       .validate()
@@ -309,7 +312,8 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingManager, new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, this._routingManager,
+      new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.microsoftHandlers
       .validate()
@@ -337,14 +341,15 @@ export class AuthenticationRoutes {
         new ConduitRouteReturnDefinition('VerifyServiceResponse', {
           serviceId: ConduitString.Required,
           accessToken: ConduitString.Required,
-          refreshToken: ConduitString.Required,
+          refreshToken: config.generateRefreshToken ? ConduitString.Required : ConduitString.Optional,
         }),
         this.serviceHandler.authenticate.bind(this.serviceHandler),
       );
 
       enabled = true;
     }
-    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingManager, new TwitchSettings(this.grpcSdk, config, serverConfig.url));
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, this._routingManager,
+      new TwitchSettings(this.grpcSdk, config, serverConfig.url));
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()
@@ -374,22 +379,24 @@ export class AuthenticationRoutes {
         new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
         this.commonHandlers.deleteUser.bind(this.commonHandlers),
       );
-      this._routingManager.route(
-        {
-          path: '/renew',
-          action: ConduitRouteActions.POST,
-          description: `Renews the access and refresh tokens 
+      if (config.generateRefreshToken) {
+        this._routingManager.route(
+          {
+            path: '/renew',
+            action: ConduitRouteActions.POST,
+            description: `Renews the access and refresh tokens 
               when provided with a valid refresh token.`,
-          bodyParams: {
-            refreshToken: ConduitString.Required,
+            bodyParams: {
+              refreshToken: ConduitString.Required,
+            },
           },
-        },
-        new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-          accessToken: ConduitString.Required,
-          refreshToken: ConduitString.Required,
-        }),
-        this.commonHandlers.renewAuth.bind(this.commonHandlers),
-      );
+          new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
+            accessToken: ConduitString.Required,
+            refreshToken: ConduitString.Required,
+          }),
+          this.commonHandlers.renewAuth.bind(this.commonHandlers),
+        );
+      }
 
       this._routingManager.route(
         {
