@@ -14,7 +14,7 @@ import { FacebookSettings } from './facebook.settings';
 import { FacebookUser } from './facebook.user';
 
 export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FacebookSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: FacebookSettings) {
     super(grpcSdk, 'facebook', settings);
     this.mapScopes = {
       email: 'email',
@@ -81,8 +81,8 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/facebook',
         action: ConduitRouteActions.POST,
@@ -99,7 +99,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       this.authenticate.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/init/facebook',
         action: ConduitRouteActions.GET,
@@ -112,7 +112,7 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       this.redirect.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/facebook',
         action: ConduitRouteActions.GET,

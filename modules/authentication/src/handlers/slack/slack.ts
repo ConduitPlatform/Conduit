@@ -14,7 +14,7 @@ import { SlackUser } from './slack.user';
 
 export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: SlackSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: SlackSettings) {
     super(grpcSdk, 'slack', settings);
     this.defaultScopes = ["users:read"];
   }
@@ -56,8 +56,8 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/init/slack',
         action: ConduitRouteActions.GET,
@@ -70,7 +70,7 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
       this.redirect.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/slack',
         action: ConduitRouteActions.GET,

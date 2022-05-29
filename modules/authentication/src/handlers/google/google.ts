@@ -12,7 +12,7 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GoogleSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
     super(grpcSdk, 'google', settings);
     this.defaultScopes = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
   }
@@ -58,8 +58,8 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/google',
         action: ConduitRouteActions.POST,
@@ -78,7 +78,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       this.authenticate.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/init/google',
         action: ConduitRouteActions.GET,
@@ -91,7 +91,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
       this.redirect.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/google',
         action: ConduitRouteActions.GET,

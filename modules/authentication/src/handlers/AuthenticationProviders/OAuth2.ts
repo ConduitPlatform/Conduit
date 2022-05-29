@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController,
+  ConfigController, RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -15,8 +15,9 @@ import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { Cookie } from '../../interfaces/Cookie';
 import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
+import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 
-export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
+export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implements IAuthenticationStrategy{
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
@@ -31,7 +32,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     this.settings = settings;
   }
 
-  async validate(): Promise<Boolean> {
+  async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig[this.providerName].enabled) {
       console.log(`${this.providerName} not active`);
@@ -195,7 +196,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> {
     };
   }
 
-  abstract declareRoutes(): void;
+  abstract declareRoutes(routingManager: RoutingManager): void;
 
   abstract makeRequest(data: any): Promise<AxiosRequestConfig>;
 
