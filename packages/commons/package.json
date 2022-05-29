@@ -34,7 +34,6 @@
     "directory": "packages/commons"
   },
   "devDependencies": {
-    "grpc-tools": "^1.11.2",
     "@types/convict": "^4.2.1",
     "@types/express": "~4.16.1",
     "@types/ioredis": "^4.22.0",
