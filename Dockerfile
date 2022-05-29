@@ -1,4 +1,4 @@
-FROM node:fermium
+FROM node:gallium
 
 ARG BUILDING_SERVICE
 
@@ -6,8 +6,7 @@ COPY . /app
 
 WORKDIR /app
 
-RUN apt-get update && \
-    curl -OL https://github.com/google/protobuf/releases/download/v3.17.3/protoc-3.17.3-linux-x86_64.zip && \
+RUN curl -OL https://github.com/google/protobuf/releases/download/v3.17.3/protoc-3.17.3-linux-x86_64.zip && \
     unzip -o ./protoc-3.17.3-linux-x86_64.zip -d /usr/local bin/protoc && \
     unzip -o ./protoc-3.17.3-linux-x86_64.zip -d /usr/local include/* && \
     rm -f protoc-3.17.3-linux-x86_64.zip
