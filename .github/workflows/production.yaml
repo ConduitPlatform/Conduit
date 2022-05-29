@@ -8,7 +8,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
@@ -26,14 +26,14 @@ jobs:
         run: |
           make all
   publish_sdk:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
-          node-version: 14
+          node-version: 16
           registry-url: https://npm.pkg.github.com
           scope: '@conduitplatform'
           always-auth: true
