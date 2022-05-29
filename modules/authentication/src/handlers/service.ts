@@ -21,16 +21,14 @@ export class ServiceHandler {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
       console.error('Service not active');
+      this.initialized = false;
       throw ConduitError.forbidden('Service auth is deactivated');
     }
     console.log('Service is active');
-    this.initialized = true;
-    return true;
+    return this.initialized = true;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { serviceName, token } = call.request.params;
 
     const context = call.request.context;
