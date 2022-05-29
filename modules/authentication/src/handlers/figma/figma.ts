@@ -14,7 +14,7 @@ import { FigmaSettings } from './figma.settings';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: FigmaSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: FigmaSettings) {
     super(grpcSdk, 'figma', settings);
     this.defaultScopes = ["users:profile:read"];
   }
@@ -56,8 +56,8 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/init/figma',
         action: ConduitRouteActions.GET,
@@ -69,7 +69,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
       this.redirect.bind(this),
     );
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/figma',
         action: ConduitRouteActions.GET,

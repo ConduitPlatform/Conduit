@@ -11,7 +11,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: TwitchSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: TwitchSettings) {
     super(grpcSdk, 'twitch', settings);
   }
 
@@ -53,8 +53,8 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/hook/twitch',
         action: ConduitRouteActions.GET,
@@ -72,14 +72,14 @@ export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
       this.authorize.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/init/twitch',
         description: `Begins the Twitch authentication.`,
         action: ConduitRouteActions.GET,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('TwitchInitResponse', 'String'),
       this.redirect.bind(this),

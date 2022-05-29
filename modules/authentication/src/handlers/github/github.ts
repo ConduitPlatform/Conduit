@@ -11,7 +11,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 
 export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: GithubSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: GithubSettings) {
     super(grpcSdk, 'github', settings);
     this.defaultScopes = ["read:user","repo"];
   }
@@ -43,8 +43,8 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
     };
   }
 
-  declareRoutes() {
-    this.routingManager.route(
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/init/github',
         action: ConduitRouteActions.GET,
@@ -57,7 +57,7 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
       this.redirect.bind(this),
     );
 
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/github',
         action: ConduitRouteActions.GET,

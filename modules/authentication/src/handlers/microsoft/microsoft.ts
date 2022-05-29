@@ -11,7 +11,7 @@ import { MicrosoftSettings } from './microsoft.settings';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager, settings: MicrosoftSettings) {
+  constructor(grpcSdk: ConduitGrpcSdk, settings: MicrosoftSettings) {
     super(grpcSdk, 'microsoft', settings);
     this.defaultScopes = ["openid"];
   }
@@ -48,8 +48,8 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     };
   }
 
-  async declareRoutes() {
-    this.routingManager.route(
+  async declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/init/microsoft',
         action: ConduitRouteActions.GET,
@@ -61,7 +61,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
       new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
       this.redirect.bind(this),
     );
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/hook/microsoft',
         action: ConduitRouteActions.GET,

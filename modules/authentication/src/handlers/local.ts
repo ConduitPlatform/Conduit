@@ -11,13 +11,15 @@ import ConduitGrpcSdk, {
   SMS,
   UnparsedRouterResponse,
   ConfigController,
+  RoutingManager, ConduitRouteActions, ConduitString, ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
 import { AccessToken, Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { Cookie } from '../interfaces/Cookie';
+import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class LocalHandlers {
+export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
   private smsModule: SMS;
   private initialized: boolean = false;
@@ -32,7 +34,186 @@ export class LocalHandlers {
     });
   }
 
-  async validate(): Promise<Boolean> {
+  async declareRoutes(routingManager: RoutingManager, config: any): Promise<void> {
+    const fields = User.getInstance().fields;
+    delete fields.hashedPassword;
+    routingManager.route(
+      {
+        path: '/local/new',
+        action: ConduitRouteActions.POST,
+        description: 'Creates a new user using email/password.',
+        bodyParams: {
+          email: ConduitString.Required,
+          password: ConduitString.Required,
+        },
+        middlewares: [],
+      },
+      new ConduitRouteReturnDefinition('RegisterResponse', fields),
+      this.register.bind(this));
+
+    routingManager.route(
+      {
+        path: '/local',
+        action: ConduitRouteActions.POST,
+        description: `Login endpoint that can be used to authenticate. 
+              If 2FA is used for the user then instead of tokens 
+              you will receive a message indicating the need for a token from the 2FA mechanism.`,
+        bodyParams: {
+          email: ConduitString.Required,
+          password: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('LoginResponse', {
+        userId: ConduitString.Optional,
+        accessToken: ConduitString.Optional,
+        message: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
+      }),
+      this.authenticate.bind(this),
+    );
+
+    let emailOnline = false;
+    await this.grpcSdk.config.moduleExists('email')
+      .then(_ => {
+        emailOnline = true;
+      })
+      .catch(_ => {
+      });
+    if (emailOnline) {
+      routingManager.route(
+        {
+          path: '/forgot-password',
+          action: ConduitRouteActions.POST,
+          bodyParams: {
+            email: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
+        this.forgotPassword.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/reset-password',
+          action: ConduitRouteActions.POST,
+          description: `Used after the user clicks on the 'forgot password' link and
+                 requires the token from the url and the new password`,
+          bodyParams: {
+            passwordResetToken: ConduitString.Required,
+            password: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
+        this.resetPassword.bind(this),
+      );
+    }
+
+    routingManager.route(
+      {
+        path: '/local/change-password',
+        action: ConduitRouteActions.POST,
+        description: `Changes the user's password but requires the old password first.
+                 If 2FA is enabled then a message will be returned asking for token input.`,
+        bodyParams: {
+          oldPassword: ConduitString.Required,
+          newPassword: ConduitString.Required,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChangePasswordResponse', 'String'),
+      this.changePassword.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: '/hook/verify-email/:verificationToken',
+        action: ConduitRouteActions.GET,
+        description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+        urlParams: {
+          verificationToken: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
+      this.verifyEmail.bind(this),
+    );
+
+    if (config.twofa.enabled) {
+      routingManager.route(
+        {
+          path: '/local/twofa',
+          action: ConduitRouteActions.POST,
+          description: `Verifies the 2FA token.`,
+          bodyParams: {
+            email: ConduitString.Required,
+            code: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
+          userId: ConduitString.Optional,
+          accessToken: ConduitString.Optional,
+          refreshToken: config.generateRefreshToken ? ConduitString.Required : ConduitString.Optional,
+          message: ConduitString.Optional,
+        }),
+        this.verify2FA.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/local/enable-twofa',
+          action: ConduitRouteActions.UPDATE,
+          description: `Enables a phone based 2FA method for a user and 
+                requires their phone number.`,
+          middlewares: ['authMiddleware'],
+          bodyParams: {
+            phoneNumber: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
+        this.enableTwoFa.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/local/verifyPhoneNumber',
+          action: ConduitRouteActions.POST,
+          description: `Verifies the phone number provided for the 2FA mechanism.`,
+          middlewares: ['authMiddleware'],
+          bodyParams: {
+            code: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
+        this.verifyPhoneNumber.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/local/disable-twofa',
+          action: ConduitRouteActions.UPDATE,
+          description: `Disables the user's 2FA mechanism.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
+        this.disableTwoFa.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/local/change-password/verify',
+          action: ConduitRouteActions.POST,
+          description: `Used to provide the 2FA token for password change.`,
+          bodyParams: {
+            code: ConduitString.Required,
+          },
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
+        this.verifyChangePassword.bind(this),
+      );
+    }
+  }
+
+  async validate(): Promise<boolean> {
     if (this.sendEmail) {
       let emailConfig;
       try {
