@@ -70,17 +70,6 @@ export default class AdminModule extends IConduitAdmin {
     );
 
     this._grpcRoutes = {};
-    this._sdkRoutes = [
-      adminRoutes.getLoginRoute(this.commons),
-      adminRoutes.getModulesRoute(this.commons),
-      adminRoutes.getCreateAdminRoute(this.commons),
-      adminRoutes.getAdminUsersRoute(this.commons),
-    ];
-
-    // Register Routes
-    this._sdkRoutes.forEach((route) => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
   }
 
   async initialize(server: GrpcServer) {
@@ -95,6 +84,17 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     await this.handleDatabase().catch(console.log);
+    this._sdkRoutes = [
+      adminRoutes.getLoginRoute(this.commons),
+      adminRoutes.getModulesRoute(this.commons),
+      adminRoutes.getCreateAdminRoute(this.commons),
+      adminRoutes.getAdminUsersRoute(),
+    ];
+
+    // Register Routes
+    this._sdkRoutes.forEach((route) => {
+      this._restRouter.registerConduitRoute(route);
+    }, this);
     this.attachRouter();
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');

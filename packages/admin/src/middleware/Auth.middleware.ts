@@ -41,7 +41,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     }
     const { id } = decoded;
 
-    Admin.getInstance(grpcSdk.database!)
+    Admin.getInstance()
       .findOne({ _id: id })
       .then((admin: any) => {
         if (isNil(admin)) {

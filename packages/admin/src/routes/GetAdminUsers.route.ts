@@ -1,19 +1,18 @@
-import { ConduitCommons } from '@conduitplatform/commons';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
-import { Admin, schema } from '../models';
+import { Admin } from '../models';
 
-export function getAdminUsersRoute(conduit: ConduitCommons) {
+export function getAdminUsersRoute() {
   return new ConduitRoute(
     {
       path: '/admins',
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetAdminUsers', {
-      result: [schema],
+      result: [Admin.getInstance().fields],
     }),
     async () => {
-      const admins = await Admin.getInstance().findMany({});
+      const admins = await Admin.getInstance().findMany({}, '-password');
       return { result: admins };
     }
   );
