@@ -121,8 +121,7 @@ export class SchemaAdmin {
       permissions,
     } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
-    const authentication = call.request.params.authentication ?? false;
-    const crudOperations = call.request.params.crudOperations ?? true;
+    const crudOperations = call.request.params.crudOperations;
 
     if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
       throw new GrpcError(
@@ -153,8 +152,8 @@ export class SchemaAdmin {
     });
 
     const schemaOptions = isNil(modelOptions)
-      ? { conduit: { cms: { enabled, authentication, crudOperations } } }
-      : { ...modelOptions, conduit: { cms: { enabled, authentication, crudOperations } } };
+      ? { conduit: { cms: { enabled, crudOperations } } }
+      : { ...modelOptions, conduit: { cms: { enabled, crudOperations } } };
     schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
     return this.schemaController
