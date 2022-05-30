@@ -89,6 +89,7 @@ export default class AdminModule extends IConduitAdmin {
       adminRoutes.getModulesRoute(this.commons),
       adminRoutes.getCreateAdminRoute(this.commons),
       adminRoutes.getAdminUsersRoute(),
+      adminRoutes.deleteAdminUserRoute(),
     ];
 
     // Register Routes
