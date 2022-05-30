@@ -13,7 +13,7 @@ import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
-    super(grpcSdk, 'google', new GoogleSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'google', new GoogleSettings(config, serverConfig.url));
     this.defaultScopes = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   }
 

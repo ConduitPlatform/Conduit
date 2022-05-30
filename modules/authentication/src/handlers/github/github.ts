@@ -12,7 +12,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
-    super(grpcSdk, 'github', new GithubSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'github', new GithubSettings(config, serverConfig.url));
     this.defaultScopes = ['read:user', 'repo'];
   }
 
