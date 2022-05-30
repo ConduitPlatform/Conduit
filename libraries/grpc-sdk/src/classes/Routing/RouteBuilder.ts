@@ -36,7 +36,7 @@ export class RouteBuilder {
     if (!Array.isArray(middleware)) {
       middleware = [middleware];
     }
-    if (this._options.middlewares?.length !== 0) {
+    if (this._options.middlewares !== undefined && this._options.middlewares?.length !== 0) {
       if (allowDuplicates) {
         this._options.middlewares?.concat(middleware);
       } else {

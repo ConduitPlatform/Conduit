@@ -155,24 +155,25 @@ export class AdminHandlers {
             fields: ConduitJson.Required,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: {
+            authentication: {
               create: {
-                enabled: ConduitBoolean.Required,
-                authentication: ConduitBoolean.Required,
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
               },
               read: {
-                enabled: ConduitBoolean.Required,
-                authentication: ConduitBoolean.Required,
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
               },
               update: {
-                enabled: ConduitBoolean.Required,
-                authentication: ConduitBoolean.Required,
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
               },
               delete: {
-                enabled: ConduitBoolean.Required,
-                authentication: ConduitBoolean.Required,
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
               },
             },
+            crudOperations: ConduitBoolean.Optional,
             permissions: {
               extendable: ConduitBoolean.Optional,
               canCreate: ConduitBoolean.Optional,
