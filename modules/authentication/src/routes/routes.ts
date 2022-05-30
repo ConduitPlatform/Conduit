@@ -55,7 +55,7 @@ export class AuthenticationRoutes {
     this.localHandlers = new LocalHandlers(grpcSdk, emailServing);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
-    this.phoneHandlers = new PhoneHandlers(grpcSdk, this._routingManager);
+    this.phoneHandlers = new PhoneHandlers(grpcSdk);
   }
 
   async registerRoutes() {
@@ -183,55 +183,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     if (enabled) {
-      this._routingManager.route(
-        {
-          path: '/user',
-          description: `Returns the authenticated user.`,
-          action: ConduitRouteActions.GET,
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('User', User.getInstance().fields),
-        this.commonHandlers.getUser.bind(this.commonHandlers),
-      );
-      this._routingManager.route(
-        {
-          path: '/user',
-          description: `Deletes the authenticated user.`,
-          action: ConduitRouteActions.DELETE,
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
-        this.commonHandlers.deleteUser.bind(this.commonHandlers),
-      );
-      if (config.generateRefreshToken) {
-        this._routingManager.route(
-          {
-            path: '/renew',
-            action: ConduitRouteActions.POST,
-            description: `Renews the access and refresh tokens 
-              when provided with a valid refresh token.`,
-            bodyParams: {
-              refreshToken: ConduitString.Required,
-            },
-          },
-          new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-            accessToken: ConduitString.Required,
-            refreshToken: ConduitString.Required,
-          }),
-          this.commonHandlers.renewAuth.bind(this.commonHandlers),
-        );
-      }
-
-      this._routingManager.route(
-        {
-          path: '/logout',
-          action: ConduitRouteActions.POST,
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-        this.commonHandlers.logOut.bind(this.commonHandlers),
-      );
-
+      this.commonHandlers.declareRoutes(this._routingManager, config);
       this._routingManager.middleware({ path: '/', name: 'authMiddleware' }, this.middleware.bind(this));
     }
     return this._routingManager.registerRoutes()
