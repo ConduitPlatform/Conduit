@@ -72,14 +72,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.authenticate.bind(this),
     );
 
-    let emailOnline = false;
-    await this.grpcSdk.config.moduleExists('email')
-      .then(_ => {
-        emailOnline = true;
-      })
-      .catch(_ => {
-      });
-    if (emailOnline) {
+    if (this.emailModule) {
       routingManager.route(
         {
           path: '/forgot-password',

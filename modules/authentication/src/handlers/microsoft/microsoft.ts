@@ -48,7 +48,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     };
   }
 
-  async declareRoutes(routingManager: RoutingManager) {
+  declareRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
         path: '/init/microsoft',

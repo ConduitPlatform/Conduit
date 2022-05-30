@@ -6,13 +6,14 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController,
+  ConfigController, RoutingManager, ConduitRouteActions, ConduitRouteReturnDefinition, ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, User } from '../models';
 import { Cookie } from '../interfaces/Cookie';
+import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class CommonHandlers {
+export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
   }
 
@@ -132,5 +133,60 @@ export class CommonHandlers {
       }),
     ).catch((e) => console.log('Failed to delete all access tokens'));
     return 'Done';
+  }
+
+  declareRoutes(routingManager: RoutingManager, config: any): void {
+    routingManager.route(
+      {
+        path: '/user',
+        description: `Returns the authenticated user.`,
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('User', User.getInstance().fields),
+      this.getUser.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user',
+        description: `Deletes the authenticated user.`,
+        action: ConduitRouteActions.DELETE,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
+      this.deleteUser.bind(this),
+    );
+    if (config.generateRefreshToken) {
+      routingManager.route(
+        {
+          path: '/renew',
+          action: ConduitRouteActions.POST,
+          description: `Renews the access and refresh tokens 
+              when provided with a valid refresh token.`,
+          bodyParams: {
+            refreshToken: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
+          accessToken: ConduitString.Required,
+          refreshToken: ConduitString.Required,
+        }),
+        this.renewAuth.bind(this),
+      );
+    }
+
+    routingManager.route(
+      {
+        path: '/logout',
+        action: ConduitRouteActions.POST,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+      this.logOut.bind(this),
+    );
+  }
+
+  validate(): Promise<boolean> {
+    return Promise.resolve(true);
   }
 }
