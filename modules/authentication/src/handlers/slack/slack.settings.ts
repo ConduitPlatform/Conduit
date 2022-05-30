@@ -1,27 +1,21 @@
 import { OAuth2Settings } from '../AuthenticationProviders/interfaces/OAuth2Settings';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class SlackSettings implements OAuth2Settings {
-  accessTokenMethod: string;
+  accessTokenMethod = 'POST';
   accountLinking: boolean;
-  authorizeUrl: string;
+  authorizeUrl = 'https://slack.com/oauth/authorize?';
   callbackUrl: string;
   clientId: string;
   clientSecret: string;
   finalRedirect: string;
-  providerName: string;
-  tokenUrl: string;
-  responseType: string;
+  providerName = 'slack';
+  tokenUrl = 'https://slack.com/api/oauth.access';
+  responseType = 'code';
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverUrl: string) {
-    this.providerName = 'slack';
-    this.authorizeUrl = 'https://slack.com/oauth/authorize?';
+  constructor(config: any, serverUrl: string) {
     this.clientId = config.slack.clientId;
     this.callbackUrl = serverUrl + '/hook/authentication/slack';
-    this.responseType = 'code';
-    this.tokenUrl = 'https://slack.com/api/oauth.access';
     this.clientSecret = config.slack.clientSecret;
-    this.accessTokenMethod = 'POST';
     this.finalRedirect = config.slack.redirect_uri;
     this.accountLinking = config.slack.accountLinking;
   }

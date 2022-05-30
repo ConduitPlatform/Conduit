@@ -12,7 +12,7 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 export class TwitchHandlers extends OAuth2<TwitchUser, TwitchSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
-    super(grpcSdk, 'twitch', new TwitchSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'twitch', new TwitchSettings(config, serverConfig.url));
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<TwitchUser> {

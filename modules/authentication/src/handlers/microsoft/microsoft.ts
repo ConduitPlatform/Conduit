@@ -12,7 +12,7 @@ import { MicrosoftSettings } from './microsoft.settings';
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
-    super(grpcSdk, 'microsoft', new MicrosoftSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'microsoft', new MicrosoftSettings(config, serverConfig.url));
     this.defaultScopes = ['openid'];
   }
 

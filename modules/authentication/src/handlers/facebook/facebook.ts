@@ -15,7 +15,7 @@ import { FacebookUser } from './facebook.user';
 
 export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string}) {
-    super(grpcSdk, 'facebook', new FacebookSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'facebook', new FacebookSettings(config, serverConfig.url));
     this.mapScopes = {
       email: 'email',
       user_birthday: 'birthday',

@@ -15,7 +15,7 @@ import { FigmaSettings } from './figma.settings';
 export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
-    super(grpcSdk, 'figma', new FigmaSettings(grpcSdk, config, serverConfig.url));
+    super(grpcSdk, 'figma', new FigmaSettings(config, serverConfig.url));
     this.defaultScopes = ['users:profile:read'];
   }
 
