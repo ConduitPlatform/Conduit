@@ -11,39 +11,24 @@ import ConduitGrpcSdk, {
   RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { FacebookHandlers } from '../handlers/facebook/facebook';
-import { GoogleHandlers } from '../handlers/google/google';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
-import { TwitchHandlers } from '../handlers/twitch/twitch';
 import { isNil } from 'lodash';
 import moment from 'moment';
 import { AccessToken, User } from '../models';
-import { GoogleSettings } from '../handlers/google/google.settings';
-import { FacebookSettings } from '../handlers/facebook/facebook.settings';
-import { TwitchSettings } from '../handlers/twitch/twitch.settings';
-import { GithubHandlers } from '../handlers/github/github';
-import { GithubSettings } from '../handlers/github/github.settings';
-import { SlackSettings } from '../handlers/slack/slack.settings';
-import { SlackHandlers } from '../handlers/slack/slack';
-import { FigmaHandlers } from '../handlers/figma/figma';
-import { FigmaSettings } from '../handlers/figma/figma.settings';
-import { MicrosoftHandlers } from '../handlers/microsoft/microsoft';
-import { MicrosoftSettings } from '../handlers/microsoft/microsoft.settings';
+import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
+import { OAuth2 } from '../handlers/oauth2/OAuth2';
+import { Payload } from '../handlers/oauth2/interfaces/Payload';
+import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
+
+type OAuthHandler = typeof oauth2;
 
 export class AuthenticationRoutes {
   private readonly localHandlers: LocalHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly phoneHandlers: PhoneHandlers;
-  private facebookHandlers: FacebookHandlers;
-  private googleHandlers: GoogleHandlers;
-  private twitchHandlers: TwitchHandlers;
-  private githubHandlers: GithubHandlers;
-  private slackHandlers: SlackHandlers;
-  private figmaHandlers: FigmaHandlers;
-  private microsoftHandlers: MicrosoftHandlers;
   private readonly _routingManager: RoutingManager;
 
   constructor(
@@ -60,7 +45,7 @@ export class AuthenticationRoutes {
 
   async registerRoutes() {
     const config = ConfigController.getInstance().config;
-    let serverConfig;
+    let serverConfig: { url: string };
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -82,64 +67,22 @@ export class AuthenticationRoutes {
     errorMessage = null;
 
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, config, serverConfig);
-    authActive = await this.facebookHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.facebookHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
-
-    this.googleHandlers = new GoogleHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.googleHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.googleHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
-
-    this.githubHandlers = new GithubHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.githubHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.githubHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
-
-    this.slackHandlers = new SlackHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.slackHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.slackHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
-
-    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.figmaHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.figmaHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
-
-    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.microsoftHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.microsoftHandlers.declareRoutes(this._routingManager);
-      enabled = true;
-    }
+    await Promise.all((Object.keys(oauth2) as (keyof OAuthHandler)[])
+      .map((key: keyof OAuthHandler, value) => {
+        let handler: OAuth2<Payload, OAuth2Settings> = new oauth2[key](
+          this.grpcSdk,
+          config,
+          serverConfig,
+        );
+        return handler
+          .validate()
+          .then(() => {
+            handler.declareRoutes(this._routingManager);
+            enabled = true;
+            return;
+          })
+          .catch();
+      }));
 
     errorMessage = null;
     authActive = await this.serviceHandler
@@ -164,15 +107,6 @@ export class AuthenticationRoutes {
         this.serviceHandler.authenticate.bind(this.serviceHandler),
       );
 
-      enabled = true;
-    }
-    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, config, serverConfig);
-    errorMessage = null;
-    authActive = await this.twitchHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
-    if (!errorMessage && authActive) {
-      this.twitchHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
     if (enabled) {
