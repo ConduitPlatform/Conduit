@@ -11,9 +11,9 @@ import { OAuth2 } from '../AuthenticationProviders/OAuth2';
 
 export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: GithubSettings) {
-    super(grpcSdk, 'github', settings);
-    this.defaultScopes = ["read:user","repo"];
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+    super(grpcSdk, 'github', new GithubSettings(grpcSdk, config, serverConfig.url));
+    this.defaultScopes = ['read:user', 'repo'];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GithubUser> {
@@ -50,8 +50,8 @@ export class GithubHandlers extends OAuth2<GithubUser, GithubSettings> {
         action: ConduitRouteActions.GET,
         description: `Begins the Github authentication`,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
       this.redirect.bind(this),

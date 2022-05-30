@@ -82,8 +82,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
 
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    this.facebookHandlers = new FacebookHandlers(this.grpcSdk,
-      new FacebookSettings(this.grpcSdk, config, serverConfig.url));
+    this.facebookHandlers = new FacebookHandlers(this.grpcSdk, config, serverConfig);
     authActive = await this.facebookHandlers
       .validate()
       .catch((e) => (errorMessage = e));
@@ -92,8 +91,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.googleHandlers = new GoogleHandlers(this.grpcSdk,
-      new GoogleSettings(this.grpcSdk, config, serverConfig.url));
+    this.googleHandlers = new GoogleHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.googleHandlers
       .validate()
@@ -103,8 +101,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.githubHandlers = new GithubHandlers(this.grpcSdk,
-      new GithubSettings(this.grpcSdk, config, serverConfig.url));
+    this.githubHandlers = new GithubHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.githubHandlers
       .validate()
@@ -114,8 +111,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.slackHandlers = new SlackHandlers(this.grpcSdk,
-      new SlackSettings(this.grpcSdk, config, serverConfig.url));
+    this.slackHandlers = new SlackHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.slackHandlers
       .validate()
@@ -125,8 +121,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.figmaHandlers = new FigmaHandlers(this.grpcSdk,
-      new FigmaSettings(this.grpcSdk, config, serverConfig.url));
+    this.figmaHandlers = new FigmaHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.figmaHandlers
       .validate()
@@ -136,8 +131,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk,
-      new MicrosoftSettings(this.grpcSdk, config, serverConfig.url));
+    this.microsoftHandlers = new MicrosoftHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.microsoftHandlers
       .validate()
@@ -172,8 +166,7 @@ export class AuthenticationRoutes {
 
       enabled = true;
     }
-    this.twitchHandlers = new TwitchHandlers(this.grpcSdk,
-      new TwitchSettings(this.grpcSdk, config, serverConfig.url));
+    this.twitchHandlers = new TwitchHandlers(this.grpcSdk, config, serverConfig);
     errorMessage = null;
     authActive = await this.twitchHandlers
       .validate()

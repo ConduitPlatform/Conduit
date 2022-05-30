@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -14,9 +14,9 @@ import { SlackUser } from './slack.user';
 
 export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: SlackSettings) {
-    super(grpcSdk, 'slack', settings);
-    this.defaultScopes = ["users:read"];
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+    super(grpcSdk, 'slack', new SlackSettings(grpcSdk, config, serverConfig.url));
+    this.defaultScopes = ['users:read'];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<SlackUser> {
@@ -36,12 +36,11 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
     }
 
 
-    let payload: SlackUser = {
+    return {
       id: slackResponse.data.profile.avatar_hash,
       email: slackResponse.data.profile.email,
       data: { ...slackResponse.data.profile },
     };
-    return payload;
   }
 
   async makeRequest(data: any) {
@@ -63,8 +62,8 @@ export class SlackHandlers extends OAuth2<SlackUser, SlackSettings> {
         action: ConduitRouteActions.GET,
         description: `Begins the Slack authentication`,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
       this.redirect.bind(this),

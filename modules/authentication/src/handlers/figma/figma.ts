@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -14,9 +14,9 @@ import { FigmaSettings } from './figma.settings';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: FigmaSettings) {
-    super(grpcSdk, 'figma', settings);
-    this.defaultScopes = ["users:profile:read"];
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+    super(grpcSdk, 'figma', new FigmaSettings(grpcSdk, config, serverConfig.url));
+    this.defaultScopes = ['users:profile:read'];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FigmaUser> {
@@ -36,12 +36,11 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with figma failed');
     }
 
-    let payload: FigmaUser = {
+    return {
       id: figmaResponse.data.id,
       email: figmaResponse.data.email,
       data: { ...figmaResponse.data },
     };
-    return payload;
   }
 
   async makeRequest(data: any) {
@@ -63,8 +62,8 @@ export class FigmaHandlers extends OAuth2<FigmaUser, FigmaSettings> {
         action: ConduitRouteActions.GET,
         description: `Begins the Figma authentication`,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
       this.redirect.bind(this),
