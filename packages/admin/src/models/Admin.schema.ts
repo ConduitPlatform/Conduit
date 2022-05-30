@@ -4,7 +4,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
-const schema = {
+export const schema = {
   _id: TYPE.ObjectId,
   username: {
     type: TYPE.String,
