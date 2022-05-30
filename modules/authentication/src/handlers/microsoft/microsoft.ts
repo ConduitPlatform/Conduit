@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
@@ -11,9 +11,9 @@ import { MicrosoftSettings } from './microsoft.settings';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, settings: MicrosoftSettings) {
-    super(grpcSdk, 'microsoft', settings);
-    this.defaultScopes = ["openid"];
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+    super(grpcSdk, 'microsoft', new MicrosoftSettings(grpcSdk, config, serverConfig.url));
+    this.defaultScopes = ['openid'];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<MicrosoftUser> {
@@ -25,12 +25,11 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
 
       },
     });
-    const payload: MicrosoftUser = {
+    return {
       id: microsoftResponse.data.id,
       email: microsoftResponse.data.mail,
       data: { ...microsoftResponse.data },
     };
-    return payload;
   }
 
   async makeRequest(data: any) {
@@ -55,8 +54,8 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
         action: ConduitRouteActions.GET,
         description: `Begins the Microsoft authentication`,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
       this.redirect.bind(this),
@@ -81,6 +80,6 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-    return scopes.join(',')
+    return scopes.join(',');
   }
 }

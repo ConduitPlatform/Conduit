@@ -3,7 +3,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../AuthenticationProviders/OAuth2';
@@ -12,9 +12,9 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
-  constructor(grpcSdk: ConduitGrpcSdk, settings: GoogleSettings) {
-    super(grpcSdk, 'google', settings);
-    this.defaultScopes = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+    super(grpcSdk, 'google', new GoogleSettings(grpcSdk, config, serverConfig.url));
+    this.defaultScopes = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
@@ -31,7 +31,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         throw new Error(error.message);
       });
 
-    let googlePayload: GoogleUser = {
+    return {
       id: googleUser.id,
       email: googleUser.email,
       data: {
@@ -43,7 +43,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         family_name: googleUser.familyName,
       },
     };
-    return googlePayload;
   }
 
   async makeRequest(data: any) {
@@ -84,8 +83,8 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
         action: ConduitRouteActions.GET,
         description: `Begins the Google authentication`,
         bodyParams: {
-          scopes: [ConduitString.Optional]
-        }
+          scopes: [ConduitString.Optional],
+        },
       },
       new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
       this.redirect.bind(this),
@@ -111,6 +110,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, GoogleSettings> {
   }
 
   async constructScopes(scopes: string[]): Promise<string> {
-    return scopes.join(" ");
+    return scopes.join(' ');
   }
 }

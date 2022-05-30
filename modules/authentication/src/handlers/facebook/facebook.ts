@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -14,8 +14,8 @@ import { FacebookSettings } from './facebook.settings';
 import { FacebookUser } from './facebook.user';
 
 export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
-  constructor(grpcSdk: ConduitGrpcSdk, settings: FacebookSettings) {
-    super(grpcSdk, 'facebook', settings);
+  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string}) {
+    super(grpcSdk, 'facebook', new FacebookSettings(grpcSdk, config, serverConfig.url));
     this.mapScopes = {
       email: 'email',
       user_birthday: 'birthday',
@@ -61,12 +61,11 @@ export class FacebookHandlers extends OAuth2<Payload, FacebookSettings> {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
 
-    let payload: FacebookUser = {
+    return {
       id: facebookResponse.data.id,
       email: facebookResponse.data.email,
       data: { ...facebookResponse.data },
     };
-    return payload;
   }
 
   async makeRequest(data: any) {
