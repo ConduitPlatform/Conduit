@@ -19,7 +19,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<MicrosoftUser> {
     let microsoftToken = details.accessToken;
-    const microsoftResponse: any = await axios.get('https://graph.microsoft.com/v1.0/me/', {
+    const microsoftResponse: MicrosoftUser = await axios.get('https://graph.microsoft.com/v1.0/me/', {
       headers: {
         Authorization: `Bearer ${microsoftToken}`,
         'Content-Type': 'application/json',
