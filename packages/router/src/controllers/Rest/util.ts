@@ -1,7 +1,6 @@
 import { Request } from 'express';
-import { ConduitError, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitError, TYPE, Indexable, Params } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
-import { Indexable, Params } from '../../interfaces/Indexable';
 
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
