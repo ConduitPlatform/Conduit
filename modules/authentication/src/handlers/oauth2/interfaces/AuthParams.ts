@@ -5,3 +5,4 @@ export interface AuthParams {
   redirect_uri: string;
   grant_type?: string;
 }
+export type AuthParamsKey = keyof AuthParams

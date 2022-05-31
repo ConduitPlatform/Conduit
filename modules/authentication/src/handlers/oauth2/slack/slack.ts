@@ -14,6 +14,7 @@ import * as slackParameters from './slack.json';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { SlackResponse } from './slack.response';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
 
@@ -42,7 +43,7 @@ export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: any) {
+  async makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,

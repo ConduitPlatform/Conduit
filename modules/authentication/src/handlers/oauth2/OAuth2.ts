@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, User } from '../../models';
+import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
@@ -199,7 +199,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
 
   abstract declareRoutes(routingManager: RoutingManager): void;
 
-  abstract makeRequest(data: any): Promise<AxiosRequestConfig>;
+  abstract makeRequest(data: AuthParams): Promise<AxiosRequestConfig>;
 
   abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 

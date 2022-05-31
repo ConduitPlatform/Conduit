@@ -10,6 +10,7 @@ import * as twitchParameters from './twitch.json';
 import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
 
@@ -41,7 +42,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: any) {
+  async makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,

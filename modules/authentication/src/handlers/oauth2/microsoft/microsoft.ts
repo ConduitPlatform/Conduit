@@ -10,6 +10,7 @@ import { MicrosoftUser } from './microsoft.user';
 import { MicrosoftSettings } from './microsoft.settings';
 import * as microsoftParameters from './microsoft.json';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 
@@ -34,15 +35,15 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     };
   }
 
-  async makeRequest(data: any) {
-    data = Object.keys(data).map((k) => {
-      return k + '=' + data[k];
+  async makeRequest(data: AuthParams) {
+    let requestData: string = Object.keys(data).map((k) => {
+      return k + '=' + data[k as keyof AuthParams];
     }).join('&');
 
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
-      data: data,
+      data: requestData,
       headers: {
         'Accept': 'application/json',
       },

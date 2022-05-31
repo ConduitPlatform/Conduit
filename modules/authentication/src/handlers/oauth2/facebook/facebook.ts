@@ -14,6 +14,7 @@ import { OAuth2 } from '../OAuth2';
 import { FacebookUser } from './facebook.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
 
@@ -37,8 +38,8 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
     this.defaultScopes = ['public_profile', 'email'];
   }
 
-  async makeFields(scopes: string[]): Promise<string> {
-    return scopes.map((scope: any) => {
+  makeFields(scopes: string[]): string {
+    return scopes.map((scope: string) => {
       return this.mapScopes[scope];
     }).join(',');
   }
@@ -50,7 +51,7 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
     let facebookOptions: AxiosRequestConfig = {
       params: {
         access_token: details.accessToken,
-        fields: await this.makeFields((details.scope).split(',')),
+        fields: this.makeFields((details.scope).split(',')),
       },
     };
     const facebookResponse: FacebookUser = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
@@ -65,7 +66,7 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: any) {
+  async makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,

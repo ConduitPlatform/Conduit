@@ -10,6 +10,7 @@ import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import * as githubParameters from './github.json';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
 
@@ -32,7 +33,7 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: any) {
+  async makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,

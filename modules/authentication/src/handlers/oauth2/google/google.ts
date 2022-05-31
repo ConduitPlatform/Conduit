@@ -12,6 +12,7 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
+import { AuthParams } from '../interfaces/AuthParams';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }, serverConfig: { url: string }) {
@@ -47,7 +48,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: any) {
+  async makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
