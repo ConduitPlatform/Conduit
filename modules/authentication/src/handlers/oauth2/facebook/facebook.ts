@@ -51,14 +51,12 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
     let facebookOptions: AxiosRequestConfig = {
-      method: 'GET',
-      url: 'https://graph.facebook.com/v13.0/me',
       params: {
         access_token: details.accessToken,
         fields: await this.makeFields((details.scope).split(',')),
       },
     };
-    const facebookResponse: any = await axios(facebookOptions).catch((e) => console.log(e.message));
+    const facebookResponse: FacebookUser = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
