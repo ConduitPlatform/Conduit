@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { RefreshToken, User } from '../../models';
+import { AccessToken, RefreshToken, User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
 import axios, { AxiosRequestConfig } from 'axios';
 import { Payload } from './interfaces/Payload';
@@ -17,7 +17,7 @@ import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 
-export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implements IAuthenticationStrategy{
+export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
@@ -30,7 +30,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
     this.settings = settings;
-    this.settings.provider = providerName
+    this.settings.provider = providerName;
   }
 
   async validate(): Promise<boolean> {
@@ -103,14 +103,13 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     return {
       redirect: this.settings.finalRedirect +
         '?accessToken=' +
-        (tokens.accessToken as any) +
+        tokens.accessToken +
         '&refreshToken=' +
-        (tokens.refreshToken as any),
+        tokens.refreshToken,
     };
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-
     let payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: call.request.params['clientId'],
@@ -140,13 +139,13 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     }
     return {
       userId: user!._id.toString(),
-      accessToken: (tokens.accessToken as string),
-      refreshToken: !isNil(tokens.refreshToken) ? (tokens.refreshToken as RefreshToken).token : undefined,
+      accessToken: tokens.accessToken,
+      refreshToken: !isNil(tokens.refreshToken) ? tokens.refreshToken : undefined,
 
     };
   }
 
-  async createOrUpdateUser(payload: any): Promise<User> {
+  async createOrUpdateUser(payload: T): Promise<User> {
     let user: User | null | any = null;
     if (payload.hasOwnProperty('email')) {
       user = await User.getInstance().findOne({
@@ -181,7 +180,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     return user;
   }
 
-  async createTokens(userId: string, clientId: string, config: any) {
+  async createTokens(userId: string, clientId: string, config: AuthUtils.TokenOptions) {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {
@@ -192,8 +191,8 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     );
     return {
       userId: userId.toString(),
-      accessToken: (accessToken as any).token,
-      refreshToken: (refreshToken as any).token,
+      accessToken: accessToken!.token,
+      refreshToken: refreshToken?.token,
     };
   }
 
