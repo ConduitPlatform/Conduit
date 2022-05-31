@@ -35,7 +35,6 @@ export class DatabaseRoutes {
     handler: RequestHandlers
   }[], crud: boolean = true) {
     if (crud) {
-
       this.crudRoutes = routes;
     } else {
       this.customRoutes = routes;
