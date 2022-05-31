@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  RoutingManager, TYPE,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { GithubUser } from './github.user';
@@ -25,12 +25,11 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
         Authorization: `token ${github_access_token}`,
       },
     });
-    const githubPayload: GithubUser = {
+    return {
       id: githubProfile.data.id,
       email: githubProfile.data.email,
       data: { ...githubProfile.data },
     };
-    return githubPayload as any;
   }
 
   async makeRequest(data: any) {

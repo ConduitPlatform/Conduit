@@ -44,7 +44,7 @@ export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
 
   async makeRequest(data: any) {
     return {
-      method: this.settings.accessTokenMethod as any,
+      method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
       params: { ...data },
       headers: {
