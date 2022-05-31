@@ -21,7 +21,7 @@ export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
     this.defaultScopes = ['users:read'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<SlackUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<SlackUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const slackResponse: SlackResponse = await axios.get('https://slack.com/api/users.profile.get', {

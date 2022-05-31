@@ -20,7 +20,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
     this.defaultScopes = ['users:profile:read'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<FigmaUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FigmaUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const figmaOptions: AxiosRequestConfig = {

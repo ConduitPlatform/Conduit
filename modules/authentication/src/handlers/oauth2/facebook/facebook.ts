@@ -46,7 +46,7 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
     return scopes.join(',');
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<FacebookUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
