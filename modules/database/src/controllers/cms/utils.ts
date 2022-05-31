@@ -65,6 +65,7 @@ function removeRequiredFields(fields: any) {
 export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandlers) {
   let routesArray: any = [];
   const authenticatedRead = actualSchema.modelOptions.conduit.cms.authentication.read.authenticated;
+  const readIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.read.enabled;
   let route = new RouteBuilder()
     .path(`/${schemaName}/:id`)
     .method(ConduitRouteActions.GET)
@@ -77,7 +78,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     .handler(handlers.getDocumentById.bind(handlers));
   if (authenticatedRead)
     route.middleware('authMiddleware');
-  routesArray.push(route.build());
+  if (readIsEnabled)
+    routesArray.push(route.build());
 
   route = new RouteBuilder()
     .path(`/${schemaName}`)
@@ -98,7 +100,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
   if (authenticatedRead) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (readIsEnabled)
+    routesArray.push(route.build());
 
   let assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
@@ -111,10 +114,12 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     .return(`create${schemaName}`, actualSchema.fields)
     .handler(handlers.createDocument.bind(handlers));
   const authenticatedCreate = actualSchema.modelOptions.conduit.cms.authentication.create.authenticated;
+  const createIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.create.enabled;
   if (authenticatedCreate) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (createIsEnabled)
+    routesArray.push(route.build());
 
   route = new RouteBuilder()
     .path(`/${schemaName}/many`)
@@ -127,7 +132,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
   if (authenticatedCreate) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (createIsEnabled)
+    routesArray.push(route.build());
 
   route = new RouteBuilder()
     .path(`/${schemaName}/many`)
@@ -143,10 +149,12 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     })
     .handler(handlers.updateManyDocuments.bind(handlers));
   const authenticatedUpdate = actualSchema.modelOptions.conduit.cms.authentication.update.authenticated;
+  const updateIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.update.enabled;
   if (authenticatedUpdate) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (updateIsEnabled)
+    routesArray.push(route.build());
 
   route = new RouteBuilder()
     .path(`/${schemaName}/many`)
@@ -169,7 +177,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
   if (authenticatedUpdate) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (updateIsEnabled)
+    routesArray.push(route.build());
 
   route = new RouteBuilder()
     .path(`/${schemaName}/:id`)
@@ -197,7 +206,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
   if (authenticatedUpdate) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (updateIsEnabled)
+    routesArray.push(route.build());
   route = new RouteBuilder()
     .path(`/${schemaName}/:id`)
     .method(ConduitRouteActions.DELETE)
@@ -207,10 +217,12 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     .return(`delete${schemaName}`, TYPE.String)
     .handler(handlers.deleteDocument.bind(handlers));
   const authenticatedDelete = actualSchema.modelOptions.conduit.cms.authentication.delete.authenticated;
+  const deleteIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.delete.enabled;
   if (authenticatedDelete) {
     route.middleware('authMiddleware');
   }
-  routesArray.push(route.build());
+  if (deleteIsEnabled)
+    routesArray.push(route.build());
 
   return routesArray;
 }

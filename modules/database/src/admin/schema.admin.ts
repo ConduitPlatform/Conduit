@@ -121,7 +121,6 @@ export class SchemaAdmin {
       permissions,
     } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
-    const crudOperations = call.request.params.crudOperations;
     const authentication = call.request.params.authentication;
 
     if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
@@ -153,8 +152,8 @@ export class SchemaAdmin {
     });
 
     const schemaOptions = isNil(modelOptions)
-      ? { conduit: { cms: { enabled, crudOperations, authentication } } }
-      : { ...modelOptions, conduit: { cms: { enabled, crudOperations, authentication } } };
+      ? { conduit: { cms: { enabled, authentication } } }
+      : { ...modelOptions, conduit: { cms: { enabled, authentication } } };
     schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
     return this.schemaController
@@ -168,12 +167,13 @@ export class SchemaAdmin {
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
+    let {
       id,
       name,
       fields,
       modelOptions,
       permissions,
+      authentication
     } = call.request.params;
 
     if (!isNil(name) && name !== '') {
@@ -201,12 +201,11 @@ export class SchemaAdmin {
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
     const enabled = call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
 
-    const authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
-    const crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
+    authentication = call.request.params.authentication ?? requestedSchema.modelOptions.conduit.cms.authentication;
     requestedSchema.modelOptions = merge(
       requestedSchema.modelOptions,
       modelOptions,
-      { conduit: { cms: { enabled, authentication, crudOperations} } },
+      { conduit: { cms: { enabled, authentication } } },
     );
 
 
