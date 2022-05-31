@@ -146,7 +146,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
   }
 
   async createOrUpdateUser(payload: T): Promise<User> {
-    let user: User | null | any = null;
+    let user: User | null = null;
     if (payload.hasOwnProperty('email')) {
       user = await User.getInstance().findOne({
         email: payload.email,
@@ -157,7 +157,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
       });
     }
     if (!isNil(user)) {
-      if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+      if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
       if (!this.settings.accountLinking) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
@@ -165,6 +165,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
         );
       }
 
+      // @ts-ignore
       user[this.providerName] = payload;
       // TODO look into this again, as the email the user has registered will still not be verified
       if (!user.isVerified) user.isVerified = true;
@@ -177,7 +178,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
         isVerified: true,
       });
     }
-    return user;
+    return user!;
   }
 
   async createTokens(userId: string, clientId: string, config: AuthUtils.TokenOptions) {
