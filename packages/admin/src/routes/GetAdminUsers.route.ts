@@ -19,20 +19,23 @@ export function getAdminUsersRoute() {
       },
     },
     new ConduitRouteReturnDefinition('GetAdminUsers', {
-      result: [Admin.getInstance().fields],
+      admins: [Admin.getInstance().fields],
+      count: ConduitNumber.Required,
     }),
     async (params: ConduitRouteParameters) => {
       const skip = params.params!.skip ?? 0;
       const limit = params.params!.limit ?? 25;
       const sort = params.params!.sort;
-      const admins = await Admin.getInstance().findMany(
+      const adminsPromise = Admin.getInstance().findMany(
         {},
         '-password',
         skip,
         limit,
         sort
       );
-      return { result: admins };
+      const adminsCountPromise = Admin.getInstance().countDocuments({});
+      const [admins, count] = await Promise.all([adminsPromise, adminsCountPromise]);
+      return { admins, count };
     }
   );
 }
