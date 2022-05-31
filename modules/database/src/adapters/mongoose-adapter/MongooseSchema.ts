@@ -1,4 +1,4 @@
-import { Document, DocumentQuery, Model, Mongoose, Schema } from 'mongoose';
+import { Model, Mongoose, Schema } from 'mongoose';
 import { MultiDocQuery, ParsedQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';

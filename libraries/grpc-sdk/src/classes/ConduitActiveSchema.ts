@@ -1,6 +1,7 @@
 import { ConduitModel, ConduitModelOptions } from '../interfaces';
 import { ConduitSchema } from './ConduitSchema';
 import { DatabaseProvider } from '../modules';
+import { Query } from '../interfaces';
 
 export class ConduitActiveSchema<T> extends ConduitSchema {
   private readonly dbInstance: DatabaseProvider;
@@ -17,7 +18,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   }
 
   findOne(
-    query: { [key: string]: any },
+    query: Query,
     select?: string,
     populate?: string | string[]
   ): Promise<T | null> {
@@ -25,7 +26,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   }
 
   findMany(
-    query: { [key: string]: any },
+    query: Query,
     select?: string,
     skip?: number,
     limit?: number,
@@ -43,17 +44,17 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     );
   }
 
-  create(query: { [key: string]: any }): Promise<T> {
+  create(query: Query): Promise<T> {
     return this.dbInstance.create<T>(this.name, query);
   }
 
-  createMany(query: { [key: string]: any }): Promise<T[]> {
+  createMany(query: Query): Promise<T[]> {
     return this.dbInstance.createMany<T>(this.name, query);
   }
 
   findByIdAndUpdate(
     id: string,
-    document: { [key: string]: any },
+    document: Query,
     updateProvidedOnly?: boolean,
     populate?: string | string[],
   ): Promise<T | null> {
@@ -67,22 +68,22 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   }
 
   updateMany(
-    filterQuery: { [key: string]: any },
-    query: { [key: string]: any },
+    filterQuery: Query,
+    query: Query,
     updateProvidedOnly?: boolean
   ) {
     return this.dbInstance.updateMany(this.name, filterQuery, query, updateProvidedOnly);
   }
 
-  deleteOne(query: { [key: string]: any }) {
+  deleteOne(query: Query) {
     return this.dbInstance.deleteOne(this.name, query);
   }
 
-  deleteMany(query: { [key: string]: any }) {
+  deleteMany(query: Query) {
     return this.dbInstance.deleteMany(this.name, query);
   }
 
-  countDocuments(query: { [key: string]: any }): Promise<number> {
+  countDocuments(query: Query): Promise<number> {
     return this.dbInstance.countDocuments(this.name, query);
   }
 }

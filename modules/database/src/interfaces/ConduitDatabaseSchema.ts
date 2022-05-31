@@ -4,7 +4,7 @@ import {
   ConduitSchema,
   ConduitSchemaExtension,
 } from '@conduitplatform/grpc-sdk';
-import { ParsedQuery, SchemaAdapter } from './SchemaAdapter';
+import { MultiDocQuery, ParsedQuery, SchemaAdapter } from './SchemaAdapter';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
   private readonly model: SchemaAdapter<any>;
@@ -48,7 +48,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     return this.model.create(query);
   }
 
-  createMany(query: [{ [key: string]: any }]) {
+  createMany(query: MultiDocQuery) {
     return this.model.createMany(query);
   }
 
