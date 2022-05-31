@@ -155,7 +155,7 @@ export class AdminHandlers {
             fields: ConduitJson.Required,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: {
+            crudOperations: {
               create: {
                 enabled: ConduitBoolean.Optional,
                 authenticated: ConduitBoolean.Required,
@@ -196,7 +196,7 @@ export class AdminHandlers {
             fields: ConduitJson.Optional,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: {
+            crudOperations: {
               create: {
                 enabled: ConduitBoolean.Optional,
                 authenticated: ConduitBoolean.Optional,

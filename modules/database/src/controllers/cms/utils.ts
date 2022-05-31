@@ -64,8 +64,8 @@ function removeRequiredFields(fields: any) {
 
 export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandlers) {
   let routesArray: any = [];
-  const authenticatedRead = actualSchema.modelOptions.conduit.cms.authentication.read.authenticated;
-  const readIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.read.enabled;
+  const authenticatedRead = actualSchema.modelOptions.conduit.cms.crudOperations.read.authenticated;
+  const readIsEnabled = actualSchema.modelOptions.conduit.cms.crudOperations.read.enabled;
   let route = new RouteBuilder()
     .path(`/${schemaName}/:id`)
     .method(ConduitRouteActions.GET)
@@ -113,8 +113,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     .bodyParams(assignableFields)
     .return(`create${schemaName}`, actualSchema.fields)
     .handler(handlers.createDocument.bind(handlers));
-  const authenticatedCreate = actualSchema.modelOptions.conduit.cms.authentication.create.authenticated;
-  const createIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.create.enabled;
+  const authenticatedCreate = actualSchema.modelOptions.conduit.cms.crudOperations.create.authenticated;
+  const createIsEnabled = actualSchema.modelOptions.conduit.cms.crudOperations.create.enabled;
   if (authenticatedCreate) {
     route.middleware('authMiddleware');
   }
@@ -148,8 +148,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
       docs: [actualSchema.fields],
     })
     .handler(handlers.updateManyDocuments.bind(handlers));
-  const authenticatedUpdate = actualSchema.modelOptions.conduit.cms.authentication.update.authenticated;
-  const updateIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.update.enabled;
+  const authenticatedUpdate = actualSchema.modelOptions.conduit.cms.crudOperations.update.authenticated;
+  const updateIsEnabled = actualSchema.modelOptions.conduit.cms.crudOperations.update.enabled;
   if (authenticatedUpdate) {
     route.middleware('authMiddleware');
   }
@@ -216,8 +216,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     })
     .return(`delete${schemaName}`, TYPE.String)
     .handler(handlers.deleteDocument.bind(handlers));
-  const authenticatedDelete = actualSchema.modelOptions.conduit.cms.authentication.delete.authenticated;
-  const deleteIsEnabled = actualSchema.modelOptions.conduit.cms.authentication.delete.enabled;
+  const authenticatedDelete = actualSchema.modelOptions.conduit.cms.crudOperations.delete.authenticated;
+  const deleteIsEnabled = actualSchema.modelOptions.conduit.cms.crudOperations.delete.enabled;
   if (authenticatedDelete) {
     route.middleware('authMiddleware');
   }
