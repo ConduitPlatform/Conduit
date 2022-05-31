@@ -1,7 +1,7 @@
 import { ConduitModel, ConduitModelOptions } from '../interfaces';
 import { ConduitSchema } from './ConduitSchema';
 import { DatabaseProvider } from '../modules';
-import { Query } from '../interfaces/Indexable';
+import { Query } from '../interfaces';
 
 export class ConduitActiveSchema<T> extends ConduitSchema {
   private readonly dbInstance: DatabaseProvider;
