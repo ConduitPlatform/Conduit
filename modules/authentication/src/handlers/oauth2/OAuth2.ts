@@ -86,7 +86,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
       myParams['grant_type'] = this.settings.grantType;
     }
 
-    let providerOptions = await this.makeRequest(myParams);
+    let providerOptions = this.makeRequest(myParams);
     const providerResponse: { data: { access_token: string } } = await axios(providerOptions);
     let access_token = providerResponse.data.access_token;
     let state = params.state;
@@ -199,7 +199,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
 
   abstract declareRoutes(routingManager: RoutingManager): void;
 
-  abstract makeRequest(data: AuthParams): Promise<AxiosRequestConfig>;
+  abstract makeRequest(data: AuthParams): AxiosRequestConfig;
 
   abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 

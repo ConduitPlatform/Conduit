@@ -48,7 +48,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
     };
   }
 
-  async makeRequest(data: AuthParams) {
+  makeRequest(data: AuthParams) {
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,

@@ -35,7 +35,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     };
   }
 
-  async makeRequest(data: AuthParams) {
+  makeRequest(data: AuthParams) {
     let requestData: string = Object.keys(data).map((k) => {
       return k + '=' + data[k as keyof AuthParams];
     }).join('&');
