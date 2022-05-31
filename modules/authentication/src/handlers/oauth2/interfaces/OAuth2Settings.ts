@@ -1,3 +1,5 @@
+import { ProviderConfig } from './ProviderConfig';
+
 export class OAuth2Settings {
   providerName: string;
   authorizeUrl: string;
@@ -14,12 +16,7 @@ export class OAuth2Settings {
   responseType?: string;
   scopeSeperator?: string;
 
-  constructor(private readonly serverUrl: string, providerConfig: {
-    accountLinking: boolean,
-    clientId: string,
-    clientSecret: string,
-    redirect_uri: string
-  }, providerParams: {
+  constructor(private readonly serverUrl: string, providerConfig: ProviderConfig, providerParams: {
     accessTokenMethod: string,
     grantType?: string,
     authorizeUrl: string,

@@ -87,7 +87,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     }
 
     let providerOptions = await this.makeRequest(myParams);
-    const providerResponse: any = await axios(providerOptions).catch((e) => console.log(e));
+    const providerResponse: { data: { access_token: string } } = await axios(providerOptions);
     let access_token = providerResponse.data.access_token;
     let state = params.state;
     state = {

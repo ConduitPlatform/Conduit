@@ -11,9 +11,10 @@ import * as googleParameters from './google.json';
 import { GoogleUser } from './google.user';
 import axios from 'axios';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'google', new OAuth2Settings(serverConfig.url, config.google, googleParameters));
     this.defaultScopes = ['https://www.googleapis.com/auth/userinfo.email', ' https://www.googleapis.com/auth/userinfo.profile'];
   }

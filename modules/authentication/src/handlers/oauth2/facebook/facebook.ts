@@ -13,10 +13,11 @@ import { Payload } from '../interfaces/Payload';
 import { OAuth2 } from '../OAuth2';
 import { FacebookUser } from './facebook.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'facebook', new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters));
     this.mapScopes = {
       email: 'email',

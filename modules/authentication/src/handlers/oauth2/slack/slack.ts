@@ -13,10 +13,11 @@ import { SlackUser } from './slack.user';
 import * as slackParameters from './slack.json';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { SlackResponse } from './slack.response';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { slack:ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'slack', new OAuth2Settings(serverConfig.url, config.slack, slackParameters));
     this.defaultScopes = ['users:read'];
   }

@@ -9,10 +9,11 @@ import { TwitchUser } from './twitch.user';
 import * as twitchParameters from './twitch.json';
 import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { twitch: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'twitch', new OAuth2Settings(serverConfig.url, config.twitch, twitchParameters));
   }
 

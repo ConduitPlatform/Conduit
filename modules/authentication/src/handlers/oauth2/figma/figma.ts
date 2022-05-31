@@ -12,10 +12,11 @@ import { OAuth2 } from '../OAuth2';
 import { FigmaUser } from './figma.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import * as figmaParameters from './figma.json';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { figma: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'figma', new OAuth2Settings(serverConfig.url, config.figma, figmaParameters));
     this.defaultScopes = ['users:profile:read'];
   }

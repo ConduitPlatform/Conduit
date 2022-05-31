@@ -9,10 +9,11 @@ import { OAuth2 } from '../OAuth2';
 import { MicrosoftUser } from './microsoft.user';
 import { MicrosoftSettings } from './microsoft.settings';
 import * as microsoftParameters from './microsoft.json';
+import { ProviderConfig } from '../interfaces/ProviderConfig';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 
-  constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { microsoft: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'microsoft', new MicrosoftSettings(serverConfig.url, config.microsoft, microsoftParameters));
     this.defaultScopes = ['openid'];
   }
