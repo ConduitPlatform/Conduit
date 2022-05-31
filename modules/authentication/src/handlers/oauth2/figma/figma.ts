@@ -36,7 +36,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
       data: null,
     };
 
-    const figmaResponse: any = await axios(figmaOptions).catch((e) => console.log(e.message));
+    const figmaResponse: { data: FigmaUser } = await axios(figmaOptions);
     if (isNil(figmaResponse.data.email) || isNil(figmaResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with figma failed');
     }
