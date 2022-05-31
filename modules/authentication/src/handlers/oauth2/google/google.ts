@@ -15,7 +15,7 @@ import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: any, serverConfig: { url: string }) {
     super(grpcSdk, 'google', new OAuth2Settings(serverConfig.url, config.google, googleParameters));
-    this.defaultScopes = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
+    this.defaultScopes = ['https://www.googleapis.com/auth/userinfo.email', ' https://www.googleapis.com/auth/userinfo.profile'];
   }
 
   async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {

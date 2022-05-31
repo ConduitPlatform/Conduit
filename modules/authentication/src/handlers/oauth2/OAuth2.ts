@@ -23,7 +23,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
   protected settings: S;
   initialized: boolean = false;
   mapScopes: any;
-  defaultScopes: any;
+  defaultScopes: string [];
 
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
