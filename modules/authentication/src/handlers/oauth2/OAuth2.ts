@@ -22,7 +22,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
   private providerName: string;
   protected settings: S;
   initialized: boolean = false;
-  mapScopes: any;
+  mapScopes: { [key: string]: string };
   defaultScopes: string [];
 
 
