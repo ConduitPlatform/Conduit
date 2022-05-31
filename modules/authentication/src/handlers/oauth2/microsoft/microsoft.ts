@@ -39,7 +39,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     }).join('&');
 
     return {
-      method: this.settings.accessTokenMethod as any,
+      method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
       data: data,
       headers: {

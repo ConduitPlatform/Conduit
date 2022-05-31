@@ -7,7 +7,7 @@ export class OAuth2Settings {
   accountLinking: boolean;
   clientId: string;
   clientSecret: string;
-  accessTokenMethod: string;
+  accessTokenMethod: 'GET' | 'POST';
   grantType?: string;
   state?: string;
   scope?: string;
@@ -30,7 +30,7 @@ export class OAuth2Settings {
     this.clientId = providerConfig.clientId;
     this.clientSecret = providerConfig.clientSecret;
     this.finalRedirect = providerConfig.redirect_uri;
-    this.accessTokenMethod = providerParams.accessTokenMethod;
+    this.accessTokenMethod = providerParams.accessTokenMethod === 'GET' ? 'GET' : 'POST';
     this.authorizeUrl = providerParams.authorizeUrl;
     this.tokenUrl = providerParams.tokenUrl;
     this.grantType = providerParams.grantType;
