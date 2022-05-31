@@ -17,7 +17,7 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
     this.defaultScopes = ['read:user', 'repo'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GithubUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<GithubUser> {
     let github_access_token = details.accessToken;
     const githubProfile = await axios.get('https://api.github.com/user', {
       headers: {

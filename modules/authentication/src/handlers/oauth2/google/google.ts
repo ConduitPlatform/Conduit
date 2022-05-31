@@ -18,7 +18,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
     this.defaultScopes = ['https://www.googleapis.com/auth/userinfo.email', ' https://www.googleapis.com/auth/userinfo.profile'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<GoogleUser> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 

@@ -17,7 +17,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
     this.defaultScopes = ['openid'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<MicrosoftUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<MicrosoftUser> {
     let microsoftToken = details.accessToken;
     const microsoftResponse: MicrosoftUser = await axios.get('https://graph.microsoft.com/v1.0/me/', {
       headers: {

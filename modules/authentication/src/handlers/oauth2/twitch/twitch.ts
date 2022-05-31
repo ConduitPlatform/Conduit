@@ -16,7 +16,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
     super(grpcSdk, 'twitch', new OAuth2Settings(serverConfig.url, config.twitch, twitchParameters));
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<TwitchUser> {
+  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string[] }): Promise<TwitchUser> {
     let twitch_access_token = details.accessToken;
     let expires_in = undefined;
     let id;
