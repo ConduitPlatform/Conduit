@@ -86,8 +86,4 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
     );
 
   }
-
-  async constructScopes(scopes: string[]): Promise<string> {
-    return scopes.join(',');
-  }
 }

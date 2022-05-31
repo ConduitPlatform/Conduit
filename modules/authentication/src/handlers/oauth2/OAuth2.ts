@@ -203,5 +203,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
 
   abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
 
-  abstract constructScopes(scopes: string[]): Promise<string>;
+  constructScopes(scopes: string[]): string {
+    return scopes.join(',');
+  }
 }

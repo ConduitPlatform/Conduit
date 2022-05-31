@@ -111,7 +111,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
     );
   }
 
-  async constructScopes(scopes: string[]): Promise<string> {
+  constructScopes(scopes: string[]): string {
     return scopes.join(' ');
   }
 }

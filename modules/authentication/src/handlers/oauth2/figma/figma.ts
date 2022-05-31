@@ -88,8 +88,4 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
       this.authorize.bind(this),
     );
   }
-
-  async constructScopes(scopes: string[]): Promise<any> {
-    return scopes;
-  }
 }
