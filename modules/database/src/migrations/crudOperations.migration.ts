@@ -8,8 +8,9 @@ export async function migrateCrudOperations(adapter: DatabaseAdapter<MongooseSch
     .findMany({ 'modelOptions.conduit.cms.enabled': { $exists: true } });
 
   for (const schema of cmsSchemas) {
-    const { crudOperations, authentication } = schema.modelOptions.conduit.cms;
+    const { crudOperations, authentication, enabled } = schema.modelOptions.conduit.cms;
     const cms = {
+      enabled: enabled,
       crudOperations: {
         create: {
           enabled: crudOperations,
@@ -29,8 +30,11 @@ export async function migrateCrudOperations(adapter: DatabaseAdapter<MongooseSch
         },
       },
     };
-    await model.findByIdAndUpdate(schema._id, {
-      conduit: { cms },
+    const id = (schema._id).toString()
+    await model.findByIdAndUpdate(id,{
+      modelOptions: {
+        conduit: { cms }
+      },
     });
   }
 }
