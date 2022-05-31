@@ -1,5 +1,5 @@
-export interface Payload {
+export interface Payload<T> {
   id: string;
   email?: string;
-  data: {};
+  data: T;
 }

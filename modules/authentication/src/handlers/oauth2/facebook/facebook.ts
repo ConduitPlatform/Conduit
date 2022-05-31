@@ -15,8 +15,9 @@ import { FacebookUser } from './facebook.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
+import { ConnectionParams } from '../interfaces/ConnectionParams';
 
-export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
+export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
 
   constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }, serverConfig: { url: string }) {
     super(grpcSdk, 'facebook', new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters));
@@ -44,7 +45,7 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
     }).join(',');
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FacebookUser> {
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<FacebookUser>> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
@@ -54,7 +55,7 @@ export class FacebookHandlers extends OAuth2<Payload, OAuth2Settings> {
         fields: this.makeFields((details.scope).split(',')),
       },
     };
-    const facebookResponse: FacebookUser = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
+    const facebookResponse: { data: FacebookUser } = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }

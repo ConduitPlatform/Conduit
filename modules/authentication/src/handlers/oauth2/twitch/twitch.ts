@@ -11,6 +11,8 @@ import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
+import { Payload } from '../interfaces/Payload';
+import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
 
@@ -18,7 +20,7 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
     super(grpcSdk, 'twitch', new OAuth2Settings(serverConfig.url, config.twitch, twitchParameters));
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<TwitchUser> {
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<TwitchUser>> {
     let twitch_access_token = details.accessToken;
     let expires_in = undefined;
     let id;

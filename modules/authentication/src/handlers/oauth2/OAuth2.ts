@@ -16,8 +16,9 @@ import { Cookie } from '../../interfaces/Cookie';
 import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
+import { ConnectionParams } from './interfaces/ConnectionParams';
 
-export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implements IAuthenticationStrategy {
+export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
@@ -145,7 +146,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
     };
   }
 
-  async createOrUpdateUser(payload: T): Promise<User> {
+  async createOrUpdateUser(payload: Payload<T>): Promise<User> {
     let user: User | null = null;
     if (payload.hasOwnProperty('email')) {
       user = await User.getInstance().findOne({
@@ -201,7 +202,7 @@ export abstract class OAuth2<T extends Payload, S extends OAuth2Settings> implem
 
   abstract makeRequest(data: AuthParams): AxiosRequestConfig;
 
-  abstract connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<T>;
+  abstract connectWithProvider(details: ConnectionParams): Promise<Payload<T>>;
 
   constructScopes(scopes: string[]): string {
     return scopes.join(',');

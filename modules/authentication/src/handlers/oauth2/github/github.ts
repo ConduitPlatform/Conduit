@@ -11,6 +11,8 @@ import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import * as githubParameters from './github.json';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
+import { Payload } from '../interfaces/Payload';
+import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
 
@@ -19,7 +21,7 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
     this.defaultScopes = ['read:user', 'repo'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GithubUser> {
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<GithubUser>> {
     let github_access_token = details.accessToken;
     const githubProfile = await axios.get('https://api.github.com/user', {
       headers: {

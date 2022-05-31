@@ -14,6 +14,8 @@ import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import * as figmaParameters from './figma.json';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
+import { ConnectionParams } from '../interfaces/ConnectionParams';
+import { Payload } from '../interfaces/Payload';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
 
@@ -22,7 +24,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
     this.defaultScopes = ['users:profile:read'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<FigmaUser> {
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<FigmaUser>> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const figmaOptions: AxiosRequestConfig = {

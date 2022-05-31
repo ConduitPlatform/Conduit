@@ -13,6 +13,8 @@ import axios from 'axios';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
+import { ConnectionParams } from '../interfaces/ConnectionParams';
+import { Payload } from '../interfaces/Payload';
 
 export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { google: ProviderConfig }, serverConfig: { url: string }) {
@@ -20,7 +22,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
     this.defaultScopes = ['https://www.googleapis.com/auth/userinfo.email', ' https://www.googleapis.com/auth/userinfo.profile'];
   }
 
-  async connectWithProvider(details: { accessToken: string, clientId: string, scope: string }): Promise<GoogleUser> {
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<GoogleUser>> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
