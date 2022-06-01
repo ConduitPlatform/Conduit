@@ -1,5 +1,6 @@
 import { ConduitError, ConduitSchema } from "@conduitplatform/grpc-sdk";
 import { cloneDeep, isArray, isEmpty, isObject, isString, merge } from "lodash";
+import { Fields } from "../../interfaces";
 
 const deepdash = require("deepdash/standalone");
 
@@ -36,7 +37,7 @@ export function systemRequiredValidator(oldSchema: ConduitSchema, newSchema: Con
 }
 
 function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
-    const tempObj: { [key: string]: any } = {};
+    const tempObj: Fields = {};
 
     Object.keys(oldSchemaFields).forEach((key) => {
       if (!oldSchemaFields[key].type && !isString(oldSchemaFields[key]) && !isArray(oldSchemaFields[key])) {

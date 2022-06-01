@@ -119,12 +119,13 @@ export namespace AuthUtils {
     };
   }
 
-  export function createUserTokens(sdk: ConduitGrpcSdk, tokenOptions: TokenOptions) {
+  export function createUserTokens(sdk: ConduitGrpcSdk, tokenOptions: TokenOptions):
+    [accesstoken: Promise<AccessToken>, refreshToken?: Promise<RefreshToken>] {
     const signTokenOptions: ISignTokenOptions = {
       secret: tokenOptions.config.jwtSecret,
       expiresIn: tokenOptions.config.tokenInvalidationPeriod,
     };
-    const accessToken = sdk.databaseProvider!.create('AccessToken', {
+    const accessToken = AccessToken.getInstance().create({
       userId: tokenOptions.userId,
       clientId: tokenOptions.clientId,
       token: AuthUtils.signToken({ id: tokenOptions.userId }, signTokenOptions),
@@ -134,7 +135,7 @@ export namespace AuthUtils {
     });
     let refreshToken;
     if (tokenOptions.config.generateRefreshToken) {
-      refreshToken = sdk.databaseProvider!.create('RefreshToken', {
+      refreshToken = RefreshToken.getInstance().create({
         userId: tokenOptions.userId,
         clientId: tokenOptions.clientId,
         token: AuthUtils.randomToken(),
@@ -144,7 +145,7 @@ export namespace AuthUtils {
       });
     }
 
-    return [accessToken, refreshToken];
+    return refreshToken ? [accessToken, refreshToken] : [accessToken];
   }
 
   export function createUserTokensAsPromise(

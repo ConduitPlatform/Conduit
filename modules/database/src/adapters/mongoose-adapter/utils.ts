@@ -2,6 +2,7 @@ import { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from './index';
 import _, { isArray, isObject } from 'lodash';
 import { MongooseSchema } from './MongooseSchema';
+import { Doc, Fields } from '../../interfaces';
 
 /**
  * @throws {Error}
@@ -22,8 +23,8 @@ async function _createOrUpdate(obj: any, model: MongooseSchema) {
  * @throws {Error}
  */
 async function _createWithPopulations(
-  fields: { [key: string]: any },
-  document: { [key: string]: any },
+  fields: Fields,
+  document: Doc,
   adapter: MongooseAdapter,
   validate: boolean = false
 ) {
@@ -79,7 +80,7 @@ async function _createWithPopulations(
  */
 export async function createWithPopulations(
   fields: ConduitModel,
-  document: { [key: string]: any },
+  document: Doc,
   adapter: MongooseAdapter
 ): Promise<any> {
   // TODO find a way to validate the whole object, now only the inner objects are validated.

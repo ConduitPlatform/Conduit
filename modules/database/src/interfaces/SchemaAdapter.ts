@@ -5,6 +5,7 @@ export type MultiDocQuery = string | [{ [key: string]: any }];
 export type Query = SingleDocQuery | MultiDocQuery;
 export type ParsedQuery = { [key: string]: any };
 export type Doc = ParsedQuery;
+export type Fields = ParsedQuery;
 
 export interface SchemaAdapter<T> {
   /**
