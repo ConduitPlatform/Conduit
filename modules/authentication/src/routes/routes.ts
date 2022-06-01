@@ -89,6 +89,14 @@ export class AuthenticationRoutes {
       .validate()
       .catch((e) => (errorMessage = e));
     if (!errorMessage && authActive) {
+      let returnField = {
+        serviceId: ConduitString.Required,
+        accessToken: ConduitString.Required,
+      };
+      if(config.generateRefreshToken){
+        returnField = Object.assign(returnField, {refreshToken:ConduitString.Required});
+      }
+
       this._routingManager.route(
         {
           path: '/service',
@@ -99,11 +107,7 @@ export class AuthenticationRoutes {
             token: ConduitString.Required,
           },
         },
-        new ConduitRouteReturnDefinition('VerifyServiceResponse', {
-          serviceId: ConduitString.Required,
-          accessToken: ConduitString.Required,
-          refreshToken: config.generateRefreshToken ? ConduitString.Required : ConduitString.Optional,
-        }),
+        new ConduitRouteReturnDefinition('VerifyServiceResponse', returnField),
         this.serviceHandler.authenticate.bind(this.serviceHandler),
       );
 
