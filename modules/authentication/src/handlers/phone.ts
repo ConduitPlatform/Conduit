@@ -17,16 +17,17 @@ import { TokenType } from '../constants/TokenType';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
+import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class PhoneHandlers {
+export class PhoneHandlers implements IAuthenticationStrategy{
   private sms: SMS;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly routingManager: RoutingManager) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
 
   }
 
-  async validate(): Promise<Boolean> {
+  async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
     let errorMessage = null;
     await this.grpcSdk.config
@@ -36,16 +37,16 @@ export class PhoneHandlers {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.sms = this.grpcSdk.sms!;
-      this.initialized = true;
-      return true;
+      return this.initialized = true;
     } else {
+
       console.log('sms phone authentication not active');
-      return false;
+      return this.initialized = false;
     }
   }
 
-  async declareRoutes() {
-    this.routingManager.route(
+  async declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
       {
         path: '/phone',
         action: ConduitRouteActions.POST,
@@ -60,7 +61,7 @@ export class PhoneHandlers {
       }),
       this.authenticate.bind(this),
     );
-    this.routingManager.route(
+    routingManager.route(
       {
         path: '/phone/verify',
         action: ConduitRouteActions.POST,
@@ -94,8 +95,6 @@ export class PhoneHandlers {
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { phone } = call.request.params;
     const context = call.request.context;
     const clientId = context.clientId;
