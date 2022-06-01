@@ -18,7 +18,7 @@
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@types/request-promise": "^4.1.48",
-    "convict": "^5.2.0",
+    "convict": "^6.2.3",
     "deepdash": "^5.0.4",
     "lodash": "^4.17.15"
   },
