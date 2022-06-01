@@ -1,32 +1,51 @@
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
+import { generateUniqueCollectionName } from './utils/collectionName';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
-  models?: { [name: string]: T };
+  models: { [name: string]: T } = {};
+  protected foreignSchemaCollections: Set<string> = new Set([]);
+
   /**
    * Checks whether the database has been populated with user defined schemas
    */
   abstract isPopulated(): Promise<boolean>;
+
   /**
    * Checks whether the database has already been connected with Conduit
    */
   abstract isConduitDb(): Promise<boolean>;
 
   /**
-   * Introspects all schemas of current db connection, registers them to conduit
+   * Introspects all schemas of current db connection, registers them to Conduit
    */
-  abstract introspectDatabase(isConduitDb : boolean): Promise<ConduitSchema[]>;
+  abstract introspectDatabase(isConduitDb: boolean): Promise<ConduitSchema[]>;
+
+  /**
+   * Retrieves all schemas not related to Conduit and stores them in adapter
+   */
+  abstract retrieveForeignSchemas(): Promise<void>;
 
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param schema
    */
-  abstract createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter<any>>;
+  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter<any>> {
+    if (!this.models) {
+      this.models = {};
+    }
+    this.updateCollectionName(schema, true);
+    return this._createSchemaFromAdapter(schema);
+  }
+
+  protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter<any>>;
+
+  protected abstract updateCollectionName(schema: ConduitSchema, setPrefix: boolean): void;
 
   async createCustomSchemaFromAdapter(schema: ConduitSchema) {
     schema.ownerModule = 'database';
@@ -38,7 +57,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
    * @param schemaName
    */
   getSchema(schemaName: string): ConduitSchema {
-    if (this.models && this.models![schemaName]) {
+    if (this.models && this.models[schemaName]) {
       return this.models[schemaName].originalSchema;
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
@@ -50,14 +69,14 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     }
     const self = this;
     return Object.keys(this.models).map((modelName) => {
-      return self.models![modelName].originalSchema;
+      return self.models[modelName].originalSchema;
     });
   }
 
   abstract deleteSchema(schemaName: string, deleteData: boolean, callerModule: string): Promise<string>;
 
   async getBaseSchema(schemaName: string): Promise<ConduitSchema> {
-    if (this.models && this.models![schemaName]) {
+    if (this.models && this.models[schemaName]) {
       const schema = this.models[schemaName].originalSchema;
       return this.models['_DeclaredSchema'].findOne(
         JSON.stringify({ name: schemaName }),
@@ -87,7 +106,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     this.fixDatabaseSchemaOwnership(schema);
     if (schema.name === '_DeclaredSchema') return true;
 
-    const model = await this.models!['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
+    const model = await this.models['_DeclaredSchema'].findOne( JSON.stringify({ name: schema.name }));
     if (model && (model.ownerModule === schema.ownerModule)) {
       return true;
     } else if (model) {
@@ -99,9 +118,9 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
 
-    const model = await this.models!['_DeclaredSchema'].findOne(JSON.stringify({name:schema.name}));
+    const model = await this.models['_DeclaredSchema'].findOne(JSON.stringify({name:schema.name}));
     if (model) {
-      await this.models!['_DeclaredSchema']
+      await this.models['_DeclaredSchema']
         .findByIdAndUpdate(
           model._id,
           JSON.stringify({
@@ -109,30 +128,33 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
             fields: schema.fields,
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
+            collectionName: schema.collectionName,
             extensions: (schema as ConduitDatabaseSchema).extensions,
           }),
             true
         );
     } else {
-      await this.models!['_DeclaredSchema']
+      await this.models['_DeclaredSchema']
         .create( JSON.stringify({
           name: schema.name,
           fields: schema.fields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
+          collectionName: schema.collectionName,
           extensions: (schema as ConduitDatabaseSchema).extensions,
         }));
     }
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models: any = await this.models!['_DeclaredSchema'].findMany('{}');
+    let models: any = await this.models['_DeclaredSchema'].findMany('{}');
     models = models
       .map((model: any) => {
-        let schema = new ConduitSchema(
+        const schema = new ConduitSchema(
           model.name,
           model.fields,
-          model.modelOptions
+          model.modelOptions,
+          model.collectionName,
         );
         schema.ownerModule = model.ownerModule;
         (schema as ConduitDatabaseSchema).extensions = model.extensions;

@@ -13,7 +13,8 @@ import {
 } from '../../introspection/mongoose/utils';
 import { isNil } from 'lodash';
 import { isMatch } from 'lodash';
-let parseSchema = require('mongodb-schema');
+import {generateUniqueCollectionName} from "../utils/collectionName";
+const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -29,8 +30,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     useFindAndModify: false,
     useUnifiedTopology: true,
   };
-
-  registeredSchemas: Map<string, ConduitSchema>;
 
   constructor(connectionString: string) {
     super();
@@ -88,6 +87,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         (c) => c.name !== '_declaredschemas'
       ).length > 0
     );
+  }
+
+  async retrieveForeignSchemas(): Promise<void> {
+    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
+    let collectionNames: string[] = [];
+    (await this.mongoose.connection.db.listCollections().toArray()).forEach(c => collectionNames.push(c.name));
+    const declaredSchemaCollectionName = this.models['_DeclaredSchema'].originalSchema.collectionName;
+    for (const collection of collectionNames) {
+      if (collection === declaredSchemaCollectionName) continue;
+      const collectionInDeclaredSchemas = declaredSchemas.some((declaredSchema: ConduitSchema) =>
+          declaredSchema.collectionName === collection
+      );
+      if (!collectionInDeclaredSchemas) {
+        this.foreignSchemaCollections.add(collection);
+      }
+    }
   }
 
   async isConduitDb(): Promise<boolean> {
@@ -156,7 +171,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           );
         }
       );
-      schemas = await Promise.all(
+      await Promise.all(
         schemas.map(async (schema: ConduitSchema) => {
           const declaredSchema = declaredSchemas.find(
             (declaredSchema: ConduitSchema) =>
@@ -220,11 +235,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return introspectedSchemas;
   }
 
-  async createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
-    if (!this.models) {
-      this.models = {};
+  protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
+    let collectionName = (schema.collectionName && schema.collectionName !== '')
+      ? schema.collectionName
+      : pluralize(schema.name);
+    if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
+      collectionName = collectionName.startsWith('_') ? `cnd${collectionName}` : `cnd_${collectionName}`;
     }
+    (schema as any).collectionName = collectionName;
+  }
 
+  protected async _createSchemaFromAdapter(schema: ConduitSchema): Promise<MongooseSchema> {
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
         schema = systemRequiredValidator(
@@ -254,16 +275,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this
     );
-    if (schema.name !== '_DeclaredSchema') {
-      await this.saveSchemaToDatabase(original);
-    }
+    await this.saveSchemaToDatabase(original);
 
     return this.models[schema.name];
   }
 
   getSchemaModel(schemaName: string): { model: MongooseSchema; relations: any } {
-    if (this.models && this.models![schemaName]) {
-      return { model: this.models![schemaName], relations: null };
+    if (this.models && this.models[schemaName]) {
+      return { model: this.models[schemaName], relations: null };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -279,14 +298,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
-      await this.models![schemaName].model.collection.drop().catch((e: Error) => {
+      await this.models[schemaName].model.collection.drop().catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    this.models!['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
+    this.models['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
       (model) => {
         if (model) {
-          this.models!['_DeclaredSchema'].deleteOne(
+          this.models['_DeclaredSchema'].deleteOne(
             JSON.stringify({ name: schemaName })
           ).catch((e: Error) => {
             throw new GrpcError(status.INTERNAL, e.message);
@@ -295,7 +314,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
     );
 
-    delete this.models![schemaName];
+    delete this.models[schemaName];
     delete this.mongoose.connection.models[schemaName];
     return 'Schema deleted!';
   }

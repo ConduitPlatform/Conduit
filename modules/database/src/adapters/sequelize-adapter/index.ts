@@ -13,13 +13,13 @@ import {
 } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { isMatch } from 'lodash';
+import pluralize from "../../utils/pluralize";
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connectionUri: string;
   sequelize: Sequelize;
-  registeredSchemas: Map<string, ConduitSchema>;
 
   constructor(connectionUri: string) {
     super();
@@ -41,6 +41,23 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       console.log(e);
       return false;
     });
+  }
+
+  async retrieveForeignSchemas(): Promise<void> {
+    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
+    const tableNames: string[] = (
+      await this.sequelize.query(`select * from pg_tables where schemaname='${sqlSchemaName}';`)
+    )[0].map((t: any) => t.tablename);
+    const declaredSchemaTableName = this.models['_DeclaredSchema'].originalSchema.collectionName;
+    for (const table of tableNames) {
+      if (table === declaredSchemaTableName) continue;
+      const tableInDeclaredSchemas = declaredSchemas.some((declaredSchema: ConduitSchema) =>
+        declaredSchema.collectionName === table
+      );
+      if (!tableInDeclaredSchemas) {
+        this.foreignSchemaCollections.add(table);
+      }
+    }
   }
 
   async isConduitDb() {
@@ -188,11 +205,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return schema;
   }
 
-  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
-    if (!this.models) {
-      this.models = {};
+  protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
+    let collectionName = (schema.collectionName && schema.collectionName !== '') ? schema.collectionName : schema.name;
+    if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
+      collectionName = collectionName.startsWith('_') ? `cnd${collectionName}` : `cnd_${collectionName}`;
     }
+    (schema as any).collectionName = collectionName;
+    (schema as any).name = collectionName;
+  }
 
+  protected async _createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
         schema = systemRequiredValidator(
@@ -224,11 +246,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
+    await this.saveSchemaToDatabase(original);
 
-    if (schema.name !== '_DeclaredSchema') {
-      await this.saveSchemaToDatabase(original);
-    }
-    return this.models![schema.name];
+    return this.models[schema.name];
   }
 
   async deleteSchema(
@@ -242,12 +262,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
-      await this.models![schemaName].model.drop();
+      await this.models[schemaName].model.drop();
     }
-    this.models!['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
+    this.models['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
       (model) => {
         if (model) {
-          this.models!['_DeclaredSchema'].deleteOne(
+          this.models['_DeclaredSchema'].deleteOne(
             JSON.stringify({ name: schemaName }),
           ).catch((e: Error) => {
             throw new GrpcError(status.INTERNAL, e.message);
@@ -255,17 +275,17 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         }
       },
     );
-    delete this.models![schemaName];
+    delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
     return 'Schema deleted!';
   }
 
   getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
-    if (this.models && this.models![schemaName]) {
+    if (this.models && this.models[schemaName]) {
       const self = this;
       let relations: any = {};
       for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] = self.models![this.models[schemaName].relations[key]];
+        relations[this.models[schemaName].relations[key]] = self.models[this.models[schemaName].relations[key]];
       }
       return { model: this.models[schemaName], relations };
     }
