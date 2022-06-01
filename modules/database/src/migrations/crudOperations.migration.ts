@@ -1,12 +1,13 @@
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { ConduitActiveSchema, ConduitSchema } from '@conduitplatform/grpc-sdk';
 
 export async function migrateCrudOperations(adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>) {
   const model = adapter.getSchemaModel('_DeclaredSchema').model;
-  const cmsSchemas = await model
-    .findMany({ 'modelOptions.conduit.cms.enabled': { $exists: true } });
-
+  let cmsSchemas = await model
+    .findMany({ 'modelOptions.conduit.cms': { $exists: true } });
+  cmsSchemas = cmsSchemas.filter((schema: any) => typeof schema.modelOptions.conduit!.cms.crudOperations === 'boolean');
   for (const schema of cmsSchemas) {
     const { crudOperations, authentication, enabled } = schema.modelOptions.conduit.cms;
     const cms = {
@@ -30,10 +31,10 @@ export async function migrateCrudOperations(adapter: DatabaseAdapter<MongooseSch
         },
       },
     };
-    const id = (schema._id).toString()
-    await model.findByIdAndUpdate(id,{
+    const id = (schema._id).toString();
+    await model.findByIdAndUpdate(id, {
       modelOptions: {
-        conduit: { cms }
+        conduit: { cms },
       },
     });
   }
