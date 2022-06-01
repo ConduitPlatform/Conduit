@@ -1,4 +1,4 @@
-import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
+import { ARRAY_TYPE, ConduitModel, ConduitModelField, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 
 export const INITIAL_DB_SCHEMAS = [
   '_declaredschemas',
@@ -18,13 +18,20 @@ export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
   return conduitSchema as ConduitModel;
 }
 
-function extractType(field: any): ConduitModelField {
+function extractType(field: Indexable): ConduitModelField {
   let conduitField: Partial<ConduitModelField> = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
       (t: string) => t !== 'Undefined' && t !== 'Null'
     )[0];
-  } else {
+  }
+  else if (field.type === 'Array' && field.hasOwnProperty('types')) {
+    let nestedField = field.types[0];
+    while(nestedField.hasOwnProperty('types'))
+      nestedField = nestedField.types[0];
+    conduitField.type = [{type: nestedField.name}];
+  }
+   else {
     conduitField.type = field.type;
   }
   if(conduitField.type === 'Document') {

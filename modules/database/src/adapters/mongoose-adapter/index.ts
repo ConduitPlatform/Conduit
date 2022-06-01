@@ -111,8 +111,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         },
         cms: {
           authentication: false,
-          crudOperations: false,
-          enabled: false,
+          crudOperations: {},
+          enabled: true,
         },
       },
     };
