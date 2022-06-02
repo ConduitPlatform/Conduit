@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE,
+  TYPE, ConduitRouteObject, Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -31,7 +31,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getForms: this.getForms.bind(this),
@@ -46,7 +46,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private static getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {
@@ -135,7 +135,7 @@ export class AdminHandlers {
   async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query:any = {}
+    let query: Query = {}
     let identifier;
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);

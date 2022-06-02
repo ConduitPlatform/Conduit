@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   ConduitNumber,
   ConduitBoolean,
-  TYPE,
+  TYPE, ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status} from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -29,7 +29,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getUsers: this.getUsers.bind(this),
@@ -51,7 +51,7 @@ export class AdminHandlers {
       });
   }
 
-   private getRegisteredRoutes(): any[] {
+   private static getRegisteredRoutes(): ConduitRouteObject[] {
     const userFields = User.getInstance().fields;
     delete userFields.hashedPassword;
      return [

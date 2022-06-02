@@ -23,7 +23,7 @@ import * as models from './models';
 import path from 'path';
 
 export default class ConfigManager implements IConfigManager {
-  databaseCallback: any;
+  databaseCallback: () => Promise<void>;
   registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
   moduleHealth: { [field: string]: { [field: string]: { timestamp: number, status: HealthCheckStatus } } } = {};
   grpcSdk: ConduitGrpcSdk;
@@ -34,7 +34,7 @@ export default class ConfigManager implements IConfigManager {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     private readonly sdk: ConduitCommons,
-    databaseCallback: any,
+    databaseCallback: () => Promise<void>,
   ) {
     this.grpcSdk = grpcSdk;
     this.databaseCallback = databaseCallback;
@@ -75,7 +75,11 @@ export default class ConfigManager implements IConfigManager {
     try {
       if (!loadedState || loadedState.length === 0) return;
       let state = JSON.parse(loadedState);
-      let success: any[] = [];
+      let success: {
+        name: string,
+        url: string,
+        instance: string,
+      }[] = [];
       if (state.modules) {
         for (const module of state.modules) {
           try {

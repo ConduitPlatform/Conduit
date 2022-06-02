@@ -94,7 +94,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       }
     }
     this.updateHealth(HealthCheckStatus.SERVING);
-    const modelPromises = Object.values(models).flatMap((model: any) => {
+    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
     });
@@ -121,7 +121,7 @@ export default class DatabaseModule extends ManagedModule<void> {
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
-            receivedSchema.collectionName
+            receivedSchema.collectionName,
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
@@ -140,7 +140,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
-      this.userRouter = new DatabaseRoutes(this.grpcServer,  this._activeAdapter, this.grpcSdk);
+      this.userRouter = new DatabaseRoutes(this.grpcServer, this._activeAdapter, this.grpcSdk);
       const schemaController = new SchemaController(
         this.grpcSdk,
         this._activeAdapter,
@@ -156,7 +156,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         this.grpcSdk,
         this._activeAdapter,
         schemaController,
-        customEndpointController
+        customEndpointController,
       );
     } else {
       this.grpcSdk.core.healthCheckWatcher.once('grpc-health-change:Core', boundFunctionRef);
@@ -180,18 +180,18 @@ export default class DatabaseModule extends ManagedModule<void> {
       call.request.schema!.name,
       JSON.parse(call.request.schema!.modelSchema),
       JSON.parse(call.request.schema!.modelOptions),
-      call.request.schema!.collectionName
+      call.request.schema!.collectionName,
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'Names cannot include spaces and - characters',
       });
-    } 
+    }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: SchemaAdapter<any>) => {
+      .then((schemaAdapter: SchemaAdapter<MongooseAdapter | SequelizeAdapter>) => {
         const originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
@@ -267,7 +267,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        call.metadata!.get('module-name')![0] as string as string
+        call.metadata!.get('module-name')![0] as string as string,
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -286,7 +286,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = call.metadata!.get('module-name')![0] as string as string;
+      const extOwner = call.metadata!.get('module-name')![0] as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
@@ -294,7 +294,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       }
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
-        .then((schemaAdapter: SchemaAdapter<any>) => {
+        .then((schemaAdapter: SchemaAdapter<MongooseAdapter | SequelizeAdapter>) => {
           const originalSchema = {
             name: schemaAdapter.originalSchema.name,
             modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
@@ -333,7 +333,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -361,7 +361,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         select,
         sort,
         populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -441,7 +441,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations
+        schemaAdapter.relations,
       );
       const resultString = JSON.stringify(result);
 
@@ -471,7 +471,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly
+        call.request.updateProvidedOnly,
       );
       const resultString = JSON.stringify(result);
 
@@ -567,9 +567,9 @@ export default class DatabaseModule extends ManagedModule<void> {
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
             extensions: (schema as any).extensions,
-          })
+          }),
         );
-      })
+      }),
     );
   }
 }

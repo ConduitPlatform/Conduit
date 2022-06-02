@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   ConduitNumber,
-  ConduitRouteActions,
+  ConduitRouteActions, ConduitRouteObject,
   ConduitRouteReturnDefinition,
   ConduitString,
   constructConduitRoute,
@@ -48,7 +48,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         // Schemas
@@ -88,7 +88,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private static getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       // Schemas
       constructConduitRoute(

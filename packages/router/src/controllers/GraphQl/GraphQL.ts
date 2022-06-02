@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -31,7 +31,7 @@ export class GraphQLController extends ConduitRouter {
   queries!: string;
   mutations!: string;
   resolvers: any;
-  private _apollo?: any;
+  private _apollo?: express.Router;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
@@ -49,7 +49,7 @@ export class GraphQLController extends ConduitRouter {
       plugins: [cookiePlugin],
       context: ({ req, res }: any) => {
         const context = (req as any).conduit || {};
-        let headers: any = req.headers;
+        let headers = req.headers;
         return { context, headers, setCookie: [], removeCookie: [], res };
       },
     });

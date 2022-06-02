@@ -1,7 +1,7 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import { DatabaseProviderDefinition, DropCollectionResponse } from '../../protoUtils/database';
-import { Query } from '../../interfaces/Indexable';
+import { Query } from '../../interfaces';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -103,7 +103,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   constructSortObj(sort: string[]) {
-    let sortObj: any = {};
+    let sortObj: Query = {};
     sort.forEach((sortVal: string) => {
       sortVal = sortVal.trim();
       if (sortVal.indexOf('-') !== -1) {

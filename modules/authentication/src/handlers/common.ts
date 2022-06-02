@@ -12,6 +12,7 @@ import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, User } from '../models';
 import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { Config } from '../config';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -135,7 +136,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     return 'Done';
   }
 
-  declareRoutes(routingManager: RoutingManager, config: any): void {
+  declareRoutes(routingManager: RoutingManager, config: Config): void {
     routingManager.route(
       {
         path: '/user',

@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   RouteOptionType,
   ConduitString,
-  TYPE,
+  TYPE, ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -32,7 +32,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         sendNotification: this.sendNotification.bind(this),
@@ -46,7 +46,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private static getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {

@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE,
+  TYPE, ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
@@ -35,7 +35,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
+    const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getTemplates: this.getTemplates.bind(this),
@@ -54,7 +54,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private static getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {

@@ -61,7 +61,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: await this.constructScopes(scopes),
+      scope: this.constructScopes(scopes),
     };
     let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
@@ -93,7 +93,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: await this.constructScopes(state.slice(1, state.length)),
+      scopes: this.constructScopes(state.slice(1, state.length)),
     };
 
     let clientId = state.clientId;

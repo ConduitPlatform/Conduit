@@ -1,7 +1,7 @@
 import ConduitGrpcSdk, {
   GrpcError,
-  ParsedRouterRequest,
-  UnparsedRouterResponse
+  ParsedRouterRequest, Query,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { assignmentValidation, inputValidation, queryValidation } from './utils';
@@ -33,7 +33,7 @@ export class CustomEndpointsAdmin {
     const { schemaName } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let identifier, query: any = {};
+    let identifier, query: Query = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };

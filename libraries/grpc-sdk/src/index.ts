@@ -22,7 +22,7 @@ import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
 import { HealthDefinition, HealthCheckResponse_ServingStatus } from './protoUtils/grpc_health_check';
-import { ModuleListResponse_ModuleResponse } from './protoUtils/core'
+import { GetRedisDetailsResponse, ModuleListResponse_ModuleResponse } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 
@@ -264,16 +264,16 @@ export default class ConduitGrpcSdk {
     emitter.removeAllListeners(`module-connection-update:${moduleName}`);
   }
 
-  initializeEventBus(): Promise<any> {
+  initializeEventBus(): Promise<EventBus> {
     return this.config
       .getRedisDetails()
-      .then((r: any) => {
+      .then((r: GetRedisDetailsResponse) => {
         let redisManager = new RedisManager(r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;
       })
-      .catch((err: any) => {
+      .catch((err: Error) => {
         console.error('Failed to initialize event bus');
         throw err;
       });
