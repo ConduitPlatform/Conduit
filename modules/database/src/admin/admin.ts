@@ -155,8 +155,24 @@ export class AdminHandlers {
             fields: ConduitJson.Required,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: {
+              create: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              read: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              update: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              delete: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+            },
             permissions: {
               extendable: ConduitBoolean.Optional,
               canCreate: ConduitBoolean.Optional,
@@ -180,8 +196,24 @@ export class AdminHandlers {
             fields: ConduitJson.Optional,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: {
+              create: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              read: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              update: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              delete: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+            },
             permissions: {
               extendable: ConduitBoolean.Optional,
               canCreate: ConduitBoolean.Optional,

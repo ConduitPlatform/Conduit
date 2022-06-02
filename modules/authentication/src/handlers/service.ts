@@ -5,32 +5,31 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController,
+  ConfigController, RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, Service } from '../models';
 import { status } from '@grpc/grpc-js';
 import { Cookie } from '../interfaces/Cookie';
+import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class ServiceHandler {
+export class ServiceHandler implements IAuthenticationStrategy{
   private initialized: boolean = false;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
   }
 
-  async validate(): Promise<Boolean> {
+  async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
       console.error('Service not active');
+      this.initialized = false;
       throw ConduitError.forbidden('Service auth is deactivated');
     }
     console.log('Service is active');
-    this.initialized = true;
-    return true;
+    return this.initialized = true;
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (!this.initialized)
-      throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
     const { serviceName, token } = call.request.params;
 
     const context = call.request.context;
@@ -93,5 +92,8 @@ export class ServiceHandler {
       accessToken: (accessToken as any).token,
       refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
     };
+  }
+
+  declareRoutes(routingManager: RoutingManager): void {
   }
 }

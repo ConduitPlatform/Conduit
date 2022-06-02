@@ -12,7 +12,7 @@
     "build": "rimraf dist && tsc",
     "protoc": "sh build.sh"
   },
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@grpc/grpc-js": "^1.5.3",
     "@grpc/proto-loader": "^0.6.9",
@@ -33,9 +33,6 @@
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "repository": {
     "type": "git",
     "url": "ssh://git@github.com/ConduitPlatform/conduit.git",
@@ -48,7 +45,6 @@
     "@types/lodash": "^4.14.178",
     "@types/node": "^13.9.8",
     "copyfiles": "^2.2.0",
-    "grpc-tools": "^1.11.2",
     "rimraf": "^3.0.2",
     "ts-proto": "^1.105.0",
     "typescript": "~4.2.0"

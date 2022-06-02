@@ -17,7 +17,7 @@ import {
 export function getCreateAdminRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
     {
-      path: '/create',
+      path: '/admins',
       action: ConduitRouteActions.POST,
       bodyParams: {
         username: ConduitString.Required,

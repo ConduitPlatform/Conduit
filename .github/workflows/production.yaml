@@ -8,7 +8,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     permissions:
       contents: read
       packages: write
@@ -26,15 +26,14 @@ jobs:
         run: |
           make all
   publish_sdk:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
-          node-version: 14
-          registry-url: https://npm.pkg.github.com
+          node-version: 16
           scope: '@conduitplatform'
           always-auth: true
       - name: Cache dependencies
@@ -44,19 +43,12 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      - run: npm config set allow-same-version true
-      - name: Authenticate with GitHub package registry
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
-          echo "@conduitplatform:registry=https://npm.pkg.github.com/" >> .npmrc
-          echo "always-auth: true" >> .npmrc
-        working-directory: ./libraries/grpc-sdk
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
           version: '3.17.3'
       - name: actually_publish
-        run: npm install && npm version ${{ env.RELEASE_VERSION }} && npm publish
+        run: npm install && npm version ${{ env.RELEASE_VERSION }} && npm publish --access public
         working-directory: ./libraries/grpc-sdk
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

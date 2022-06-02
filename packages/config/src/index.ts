@@ -61,10 +61,13 @@ export default class ConfigManager implements IConfigManager {
       },
     );
     this.highAvailability();
-    const self = this;
-    setInterval(() => {
-      self.monitorModuleHealth();
-    }, 5000);
+    const disableModuleRemoval = process.env.DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL === 'true';
+    if (!disableModuleRemoval) {
+      const self = this;
+      setInterval(() => {
+        self.monitorModuleHealth();
+      }, 5000);
+    }
   }
 
   async highAvailability() {
