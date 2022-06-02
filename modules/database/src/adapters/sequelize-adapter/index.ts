@@ -161,8 +161,25 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         },
         cms: {
           authentication: false,
-          crudOperations: false,
-          enabled: false,
+          crudOperations: {
+              create: {
+                enabled: false,
+                authenticated: false,
+              },
+              read: {
+                enabled: false,
+                authenticated: false,
+              },
+              update: {
+                enabled: false,
+                authenticated: false,
+              },
+              delete: {
+                enabled: false,
+                authenticated: false,
+              },
+          },
+          enabled: true,
         },
       },
     });
