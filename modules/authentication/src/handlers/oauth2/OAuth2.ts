@@ -17,6 +17,7 @@ import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
+import { OAuthRequest } from './interfaces/MakeRequest';
 
 export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
@@ -200,7 +201,16 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
 
   abstract declareRoutes(routingManager: RoutingManager): void;
 
-  abstract makeRequest(data: AuthParams): AxiosRequestConfig;
+  makeRequest(data: AuthParams): OAuthRequest {
+    return {
+      method: this.settings.accessTokenMethod,
+      url: this.settings.tokenUrl,
+      params: { ...data },
+      headers: {
+        'Accept': 'application/json',
+      },
+    };
+  }
 
   abstract connectWithProvider(details: ConnectionParams): Promise<Payload<T>>;
 

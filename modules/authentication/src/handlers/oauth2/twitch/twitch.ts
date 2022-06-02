@@ -44,18 +44,6 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
     };
   }
 
-  makeRequest(data: AuthParams) {
-    return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
-      params: { ...data },
-      headers: {
-        'Accept': 'application/json',
-      },
-      data: null,
-    };
-  }
-
   declareRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
