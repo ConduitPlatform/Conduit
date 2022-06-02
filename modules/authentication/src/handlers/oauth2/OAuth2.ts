@@ -62,7 +62,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: await this.constructScopes(scopes),
+      scope: this.constructScopes(scopes),
     };
     let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
@@ -94,7 +94,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: await this.constructScopes(state.slice(1, state.length)),
+      scopes: this.constructScopes(state.slice(1, state.length)),
     };
 
     let clientId = state.clientId;
@@ -102,6 +102,29 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     let tokens = await this.createTokens(user._id, clientId, config);
+
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      if (cookieOptions.path === '') {
+        delete cookieOptions.path;
+      }
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: tokens.accessToken,
+        options: cookieOptions,
+      }];
+      if (!isNil(tokens.refreshToken)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: tokens.refreshToken,
+          options: cookieOptions,
+        });
+      }
+      return {
+        redirect: this.settings.finalRedirect,
+        setCookies: cookies,
+      };
+    }
     return {
       redirect: this.settings.finalRedirect +
         '?accessToken=' +
