@@ -527,6 +527,13 @@ export class SchemaAdmin {
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas);
+    if (schemas.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Argument schemas is required and must be a non-empty array!',
+      );
+    }
     const schemaNames = schemas.map((schema) => schema.name);
     await Promise.all(schemas.map(async (schema: _ConduitSchema) => {
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,schema.modelOptions);
@@ -538,8 +545,7 @@ export class SchemaAdmin {
     await this.database.getSchemaModel('_PendingSchemas').model.deleteMany(
       { name: { $in: schemaNames } }
     );
-    schemaNames.forEach(collection => this.database.foreignSchemaCollections.delete(collection));
-    return `${schemas.length} schemas finalized successfully`;
+    return `${schemas.length} ${schemas.length > 1 ? 'schemas' : 'schema'} finalized successfully`;
   }
 
   private patchSchemaPerms(
