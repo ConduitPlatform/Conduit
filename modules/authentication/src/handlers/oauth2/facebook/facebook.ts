@@ -67,6 +67,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   }
 
   declareRoutes(routingManager: RoutingManager) {
+    super.declareRoutes(routingManager);
     routingManager.route(
       {
         path: '/facebook',
@@ -82,37 +83,6 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
         refreshToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/init/facebook',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Facebook authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/hook/facebook',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Facebook using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('FacebookResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
-      }),
-      this.authorize.bind(this),
     );
   }
 }

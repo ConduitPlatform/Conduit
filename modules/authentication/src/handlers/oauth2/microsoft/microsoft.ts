@@ -1,9 +1,4 @@
-import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
-  RoutingManager,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { OAuth2 } from '../OAuth2';
 import { MicrosoftUser } from './microsoft.user';
@@ -51,37 +46,5 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
         'Accept': 'application/json',
       },
     };
-  }
-
-  declareRoutes(routingManager: RoutingManager) {
-    routingManager.route(
-      {
-        path: '/init/microsoft',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Microsoft authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('MicrosoftInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/hook/microsoft',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Microsoft using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
-        },
-      },
-      new ConduitRouteReturnDefinition('MicrosoftResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
-    );
   }
 }

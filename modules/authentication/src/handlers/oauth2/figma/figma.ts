@@ -1,10 +1,6 @@
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -45,37 +41,5 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
       email: figmaResponse.data.email,
       data: { ...figmaResponse.data },
     };
-  }
-
-  declareRoutes(routingManager: RoutingManager) {
-    routingManager.route(
-      {
-        path: '/init/figma',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Figma authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('FigmaInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/hook/figma',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Figma using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
-        },
-      },
-      new ConduitRouteReturnDefinition('FigmaResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
-    );
   }
 }

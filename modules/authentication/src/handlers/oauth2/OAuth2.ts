@@ -3,13 +3,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController, RoutingManager,
+  ConfigController, RoutingManager, ConduitRouteActions, ConduitString, ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
-import axios  from 'axios';
+import axios from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { Cookie } from '../../interfaces/Cookie';
@@ -199,7 +199,39 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     };
   }
 
-  abstract declareRoutes(routingManager: RoutingManager): void;
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: `/init/${this.providerName}`,
+        description: `Begins ${this.capitalizeProvider()} authentication.`,
+        action: ConduitRouteActions.GET,
+        bodyParams: {
+          scopes: [ConduitString.Optional],
+        },
+      },
+      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}InitResponse`, 'String'),
+      this.redirect.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: `/hook/${this.providerName}`,
+        action: ConduitRouteActions.GET,
+        description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
+        urlParams: {
+          code: ConduitString.Required,
+          state: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
+      }),
+      this.authorize.bind(this),
+    );
+
+  }
 
   makeRequest(data: AuthParams): OAuthRequest {
     return {
@@ -217,4 +249,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
   constructScopes(scopes: string[]): string {
     return scopes.join(',');
   }
+
+  private capitalizeProvider = () => {
+    return this.providerName.charAt(0).toUpperCase()
+      + this.providerName.substr(1);
+  };
 }

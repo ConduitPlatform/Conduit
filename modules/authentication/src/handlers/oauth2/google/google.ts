@@ -50,6 +50,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   }
 
   declareRoutes(routingManager: RoutingManager) {
+    super.declareRoutes(routingManager);
     routingManager.route(
       {
         path: '/google',
@@ -67,37 +68,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
         refreshToken: ConduitString.Required,
       }),
       this.authenticate.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/init/google',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Google authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('GoogleInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/hook/google',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Google using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
-        },
-      },
-      new ConduitRouteReturnDefinition('GoogleResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
     );
   }
 

@@ -1,10 +1,6 @@
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios from 'axios';
@@ -42,38 +38,5 @@ export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
       email: slackResponse.data.profile.email,
       data: { ...slackResponse.data.profile },
     };
-  }
-
-  declareRoutes(routingManager: RoutingManager) {
-    routingManager.route(
-      {
-        path: '/init/slack',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Slack authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('SlackInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/hook/slack',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Slack using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
-        },
-      },
-      new ConduitRouteReturnDefinition('SlackResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
-    );
   }
 }

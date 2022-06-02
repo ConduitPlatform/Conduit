@@ -1,9 +1,4 @@
-import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
-  RoutingManager,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
 import { GithubUser } from './github.user';
 import { OAuth2 } from '../OAuth2';
@@ -32,38 +27,5 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
       email: githubProfile.data.email,
       data: { ...githubProfile.data },
     };
-  }
-
-  declareRoutes(routingManager: RoutingManager) {
-    routingManager.route(
-      {
-        path: '/init/github',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Github authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('GithubInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/hook/github',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Github using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
-        },
-      },
-      new ConduitRouteReturnDefinition('GithubResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
-    );
   }
 }
