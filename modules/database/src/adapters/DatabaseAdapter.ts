@@ -1,7 +1,6 @@
 import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
-import { generateUniqueCollectionName } from './utils/collectionName';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
@@ -9,22 +8,12 @@ import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
-  protected foreignSchemaCollections: Set<string> = new Set([]);
-
-  /**
-   * Checks whether the database has been populated with user defined schemas
-   */
-  abstract isPopulated(): Promise<boolean>;
-
-  /**
-   * Checks whether the database has already been connected with Conduit
-   */
-  abstract isConduitDb(): Promise<boolean>;
+  foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
 
   /**
    * Introspects all schemas of current db connection, registers them to Conduit
    */
-  abstract introspectDatabase(isConduitDb: boolean): Promise<ConduitSchema[]>;
+  abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
@@ -33,13 +22,17 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
-   * @param schema
+   * @param {ConduitSchema} schema
+   * @param {boolean} imported Whether schema is an introspected schema
    */
-  async createSchemaFromAdapter(schema: ConduitSchema): Promise<SchemaAdapter<any>> {
+  async createSchemaFromAdapter(schema: ConduitSchema, imported = false): Promise<SchemaAdapter<any>> {
     if (!this.models) {
       this.models = {};
     }
-    this.updateCollectionName(schema, true);
+    this.updateCollectionName(schema, !imported);
+    if (imported) {
+      this.foreignSchemaCollections.delete(schema.collectionName);
+    }
     return this._createSchemaFromAdapter(schema);
   }
 

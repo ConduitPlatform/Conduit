@@ -64,6 +64,7 @@ export class AdminHandlers {
         setSchemaExtension: this.schemaAdmin.setSchemaExtension.bind(this.schemaAdmin),
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
         getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
+        getIntrospectionStatus: this.schemaAdmin.getIntrospectionStatus.bind(this.schemaAdmin),
         introspectDatabase: this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
         getPendingSchemas: this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
         finalizeSchemas: this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
@@ -309,6 +310,18 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('SetSchemaPermissions', 'String'),
         'setSchemaPerms',
+      ),
+      constructConduitRoute({
+          path: '/introspection',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetIntrospectionStatus', {
+          foreignSchemas: [ConduitString.Required],
+          foreignSchemaCount: ConduitNumber.Required,
+          importedSchemas: [ConduitString.Required],
+          importedSchemaCount: ConduitNumber.Required,
+        }),
+        'getIntrospectionStatus'
       ),
       constructConduitRoute({
         path: '/introspection',

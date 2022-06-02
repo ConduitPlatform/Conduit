@@ -7,13 +7,7 @@ import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from "../utils/extensions";
 import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
-import {
-  INITIAL_DB_SCHEMAS,
-  mongoSchemaConverter,
-} from '../../introspection/mongoose/utils';
-import { isNil } from 'lodash';
-import { isMatch } from 'lodash';
-import {generateUniqueCollectionName} from "../utils/collectionName";
+import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -81,14 +75,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
   }
 
-  async isPopulated(): Promise<boolean> {
-    return (
-      (await this.mongoose.connection.db.listCollections().toArray()).filter(
-        (c) => c.name !== '_declaredschemas'
-      ).length > 0
-    );
-  }
-
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
     let collectionNames: string[] = [];
@@ -105,13 +91,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
   }
 
-  async isConduitDb(): Promise<boolean> {
-    return !!(await this.mongoose.connection.db.collection('_declaredschemas').findOne({
-      ownerModule: 'core',
-    }));
-  }
-
-  async introspectDatabase(isConduitDb: boolean = true): Promise<ConduitSchema[]> {
+  async introspectDatabase(): Promise<ConduitSchema[]> {
     let introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
     const schemaOptions = {
@@ -148,68 +128,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         },
       },
     };
-    let schemaNames: string[] = [];
-
-    if (isConduitDb) {
-      await db.collection('_pendingschemas').deleteMany({});
-      // Reintrospect schemas
-      let declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
-        {}
-      );
-      // Remove declared schemas with imported:true
-      let schemas = (await db.listCollections().toArray()).filter(
-        (schema: ConduitSchema) => {
-          // Filter out non-imported declared schemas
-          return (
-            !INITIAL_DB_SCHEMAS.includes(schema.name) &&
-            !declaredSchemas.find((declaredSchema: ConduitSchema) => {
-              return (
-                declaredSchema.name === schema.name &&
-                isNil((declaredSchema as any).modelOptions.conduit!.imported)
-              );
-            })
-          );
-        }
-      );
-      await Promise.all(
-        schemas.map(async (schema: ConduitSchema) => {
-          const declaredSchema = declaredSchemas.find(
-            (declaredSchema: ConduitSchema) =>
-              pluralize(declaredSchema.name) === pluralize(schema.name)
-          );
-          if (!isNil(declaredSchema)) {
-            if (declaredSchema.ownerModule === 'database') {
-              // check for diffs in existing schemas
-              await parseSchema(
-                db.collection(schema.name).find(),
-                async (err: Error, originalSchema: any) => {
-                  if (err) {
-                    throw new GrpcError(status.INTERNAL, err.message);
-                  }
-                  originalSchema = mongoSchemaConverter(originalSchema);
-                  schema = new ConduitSchema(
-                    schema.name,
-                    originalSchema,
-                    schemaOptions,
-                    schema.name
-                  );
-                  if (!isMatch(schema.fields, declaredSchema.fields)) {
-                    schemaNames.push(schema.name);
-                  }
-                }
-              );
-            }
-          } else {
-            schemaNames.push(schema.name);
-          }
-        })
-      );
-    } else {
-      schemaNames = (await db.listCollections().toArray()).map((s) => s.name);
-      schemaNames = schemaNames.filter((s) => !INITIAL_DB_SCHEMAS.includes(s));
-    }
+    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
+    // Wipe Pending Schemas
+    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema.collectionName;
+    await db.collection(pendingSchemaCollectionName).deleteMany({});
+    // Update Collection Names and Find Introspectable Schemas
+    const importedSchemas: string[] = [];
+    declaredSchemas.forEach((schema: ConduitSchema) => {
+      this.updateCollectionName(schema);
+      if ((schema as any).modelOptions.conduit.imported) {
+        importedSchemas.push(schema.collectionName);
+      }
+    });
+    const introspectableSchemas = Array.from(this.foreignSchemaCollections).concat(importedSchemas);
+    // Process Schemas
     await Promise.all(
-      schemaNames.map(async (collectionName) => {
+      introspectableSchemas.map(async (collectionName) => {
         await parseSchema(
           db.collection(collectionName).find(),
           async (err: Error, originalSchema: any) => {
@@ -223,9 +157,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
               schemaOptions,
               collectionName
             );
-
             schema.ownerModule = 'database';
-
             introspectedSchemas.push(schema);
             console.log(`Introspected schema ${collectionName}`);
           }
