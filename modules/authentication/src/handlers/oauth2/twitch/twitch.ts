@@ -10,7 +10,6 @@ import * as twitchParameters from './twitch.json';
 import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { AuthParams } from '../interfaces/AuthParams';
 import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 

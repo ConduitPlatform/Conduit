@@ -13,7 +13,6 @@ import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { AuthParams } from '../interfaces/AuthParams';
 import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { OAuthRequest } from '../interfaces/MakeRequest';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
 

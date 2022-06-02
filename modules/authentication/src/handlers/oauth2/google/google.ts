@@ -12,7 +12,6 @@ import { GoogleUser } from './google.user';
 import axios from 'axios';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { AuthParams } from '../interfaces/AuthParams';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { Payload } from '../interfaces/Payload';
 

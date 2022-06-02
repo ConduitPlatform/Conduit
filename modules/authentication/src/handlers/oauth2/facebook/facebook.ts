@@ -14,7 +14,6 @@ import { OAuth2 } from '../OAuth2';
 import { FacebookUser } from './facebook.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { AuthParams } from '../interfaces/AuthParams';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
