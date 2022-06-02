@@ -11,12 +11,12 @@ import {
   SocketProtoDescription,
   instanceOfSocketProtoDescription,
 } from '../interfaces';
-import { ConduitRoute } from '../classes/ConduitRoute';
+import { ConduitRoute } from '../classes';
 import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 
-function getDescriptor(protofile: string): any {
+function getDescriptor(protofile: string) {
   let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {

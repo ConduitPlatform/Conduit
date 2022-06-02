@@ -17,6 +17,7 @@ import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
+import { Config } from '../../config';
 
 export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
@@ -182,7 +183,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     return user!;
   }
 
-  async createTokens(userId: string, clientId: string, config: AuthUtils.TokenOptions) {
+  async createTokens(userId: string, clientId: string, config: Config) {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {

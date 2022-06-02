@@ -5,7 +5,7 @@ import { isArray, isNil, isObject } from 'lodash';
 export function extractRequestData(req: Request) {
   const context = (req as any).conduit || {};
   let params: any = {};
-  let headers: any = req.headers;
+  let headers = req.headers;
   if (req.query) {
     let newObj = {};
     Object.keys(req.query).forEach((k: string) => {

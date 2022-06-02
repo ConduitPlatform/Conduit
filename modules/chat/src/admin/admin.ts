@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ConduitString,
   ConduitNumber,
-  TYPE, ConduitRouteObject,
+  TYPE, ConduitRouteObject, Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -113,7 +113,7 @@ export class AdminHandlers{
      ];
    }
 
-  private async validateUsersInput(users: any[]) {
+  private async validateUsersInput(users: User[]) {
     const uniqueUsers = Array.from(new Set(users));
     const usersToBeAdded: void | User[] = await User.getInstance().findMany({ _id: { $in: uniqueUsers } })
     if (isNil(usersToBeAdded)) {
@@ -132,7 +132,7 @@ export class AdminHandlers{
     const { search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query:any = {},populates;
+    let query: Query = {},populates;
     let identifier;
     if (!isNil(populate)) {
       populates = populateArray(populate);
@@ -193,7 +193,7 @@ export class AdminHandlers{
     const { senderUser, roomId, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query:any = {};
+    let query: Query = {};
     let populates;
     if (!isNil(populate)) {
       populates = populateArray(populate);
