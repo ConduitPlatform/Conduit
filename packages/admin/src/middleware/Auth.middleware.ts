@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitModelOptions } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
@@ -47,7 +47,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }
-        (req as any).conduit.admin = admin;
+        (req as ConduitModelOptions).conduit!.admin = admin;
         next();
       })
       .catch((error: Error) => {
