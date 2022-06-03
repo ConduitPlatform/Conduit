@@ -3,13 +3,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController, RoutingManager,
+  ConfigController, RoutingManager, ConduitRouteActions, ConduitString, ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
 import { AuthUtils } from '../../utils/auth';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { Cookie } from '../../interfaces/Cookie';
@@ -17,6 +17,7 @@ import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
+import { OAuthRequest } from './interfaces/MakeRequest';
 
 export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
@@ -61,7 +62,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
-      scope: await this.constructScopes(scopes),
+      scope: this.constructScopes(scopes),
     };
     let baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
@@ -93,7 +94,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     let state = params.state;
     state = {
       clientId: state[0],
-      scopes: await this.constructScopes(state.slice(1, state.length)),
+      scopes: this.constructScopes(state.slice(1, state.length)),
     };
 
     let clientId = state.clientId;
@@ -101,6 +102,29 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     let tokens = await this.createTokens(user._id, clientId, config);
+
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      if (cookieOptions.path === '') {
+        delete cookieOptions.path;
+      }
+      const cookies: Cookie[] = [{
+        name: 'accessToken',
+        value: tokens.accessToken,
+        options: cookieOptions,
+      }];
+      if (!isNil(tokens.refreshToken)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: tokens.refreshToken,
+          options: cookieOptions,
+        });
+      }
+      return {
+        redirect: this.settings.finalRedirect,
+        setCookies: cookies,
+      };
+    }
     return {
       redirect: this.settings.finalRedirect +
         '?accessToken=' +
@@ -198,13 +222,59 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     };
   }
 
-  abstract declareRoutes(routingManager: RoutingManager): void;
+  declareRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: `/init/${this.providerName}`,
+        description: `Begins ${this.capitalizeProvider()} authentication.`,
+        action: ConduitRouteActions.GET,
+        bodyParams: {
+          scopes: [ConduitString.Optional],
+        },
+      },
+      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}InitResponse`, 'String'),
+      this.redirect.bind(this),
+    );
 
-  abstract makeRequest(data: AuthParams): AxiosRequestConfig;
+    routingManager.route(
+      {
+        path: `/hook/${this.providerName}`,
+        action: ConduitRouteActions.GET,
+        description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
+        urlParams: {
+          code: ConduitString.Required,
+          state: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
+        userId: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
+      }),
+      this.authorize.bind(this),
+    );
+
+  }
+
+  makeRequest(data: AuthParams): OAuthRequest {
+    return {
+      method: this.settings.accessTokenMethod,
+      url: this.settings.tokenUrl,
+      params: { ...data },
+      headers: {
+        'Accept': 'application/json',
+      },
+    };
+  }
 
   abstract connectWithProvider(details: ConnectionParams): Promise<Payload<T>>;
 
   constructScopes(scopes: string[]): string {
     return scopes.join(',');
   }
+
+  private capitalizeProvider = () => {
+    return this.providerName.charAt(0).toUpperCase()
+      + this.providerName.substr(1);
+  };
 }
