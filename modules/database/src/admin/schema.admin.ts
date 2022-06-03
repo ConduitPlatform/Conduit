@@ -506,6 +506,15 @@ export class SchemaAdmin {
     return 'Schemas successfully introspected';
   }
 
+  async getPendingSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const query: ParsedQuery = { _id: call.request.params.id };
+    const requestedSchema = await this.database.getSchemaModel('_PendingSchemas').model.findOne(query);
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Pending schema does not exist');
+    }
+    return requestedSchema;
+  }
+
   async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { search, sort } = call.request.params;
     const skip = call.request.params.skip ?? 0;

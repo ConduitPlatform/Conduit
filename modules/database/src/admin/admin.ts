@@ -66,6 +66,7 @@ export class AdminHandlers {
         getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
         getIntrospectionStatus: this.schemaAdmin.getIntrospectionStatus.bind(this.schemaAdmin),
         introspectDatabase: this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
+        getPendingSchema: this.schemaAdmin.getPendingSchema.bind(this.schemaAdmin),
         getPendingSchemas: this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
         finalizeSchemas: this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
         // Documents
@@ -329,6 +330,17 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
       'introspectDatabase'
+      ),
+      constructConduitRoute(
+        {
+          path: '/introspection/schemas/:id',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('GetSPendingSchema', PendingSchemas.fields),
+        'getPendingSchema',
       ),
       constructConduitRoute({
         path: '/introspection/schemas',
