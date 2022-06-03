@@ -16,6 +16,7 @@ import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations';
 import { CreateRoomRequest, DeleteRoomRequest, Room, SendMessageRequest } from './protoTypes/chat';
+import { ConduitActiveSchema } from '@conduitplatform/grpc-sdk';
 
 export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -101,9 +102,10 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
+    const promises = Object.values(models).map((model) => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+      //TODO: add support for multiple schemas types
+      if (Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields).length !== 0) { // borrowed foreign model 
         return this.database.createSchemaFromAdapter(modelInstance);
       }
     });

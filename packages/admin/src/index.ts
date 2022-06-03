@@ -316,7 +316,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
+    const promises = Object.values(models).map((model) => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
