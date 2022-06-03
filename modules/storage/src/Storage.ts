@@ -4,6 +4,8 @@ import {
   ConfigController,
   HealthCheckStatus,
   GrpcCallback,
+  GrpcRequest,
+  ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin/admin';
@@ -17,7 +19,7 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
-import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
+import { FileResponse, GetFileDataResponse, GetFileRequest } from './protoTypes/storage';
 
 type Callback = (arg1: { code: number; message: string }) => void;
 
@@ -114,7 +116,7 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async getFile(call: any, callback: GrpcCallback<FileResponse>) {
+  async getFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -123,7 +125,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFile(call);
   }
 
-  async getFileData(call: any, callback: GrpcCallback<GetFileDataResponse>) {
+  async getFileData(call: ParsedRouterRequest, callback: GrpcCallback<GetFileDataResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -132,7 +134,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.getFileData(call);
   }
 
-  async createFile(call: any, callback: GrpcCallback<FileResponse>) {
+  async createFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
@@ -141,7 +143,7 @@ export default class Storage extends ManagedModule<Config> {
     await this._fileHandlers.createFile(call);
   }
 
-  async updateFile(call: any, callback: GrpcCallback<FileResponse>) {
+  async updateFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,

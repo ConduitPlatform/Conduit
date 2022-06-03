@@ -1,4 +1,4 @@
-import { status } from '@grpc/grpc-js';
+import { ServerWritableStream, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
   GrpcServer,
@@ -433,7 +433,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  watchModules(call: any) {
+  watchModules(call: ServerWritableStream<void,ModuleListResponse>) {
     const self = this;
     this.moduleRegister.on('serving-modules-update', () => {
       let modules: any[] = [];
