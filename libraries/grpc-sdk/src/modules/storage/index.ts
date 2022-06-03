@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { FileResponse, GetFileDataResponse, SetConfigResponse, StorageDefinition } from '../../protoUtils/storage';
+import {
+  FileResponse,
+  GetFileDataResponse,
+  SetConfigResponse,
+  StorageDefinition,
+} from '../../protoUtils/storage';
 
 export class Storage extends ConduitModule<typeof StorageDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -8,11 +13,9 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
   }
 
   setConfig(newConfig: any): Promise<SetConfigResponse> {
-    return this.client!.setConfig(
-      { newConfig: JSON.stringify(newConfig) })
-      .then(res => {
-        return JSON.parse(res.updatedConfig);
-      });
+    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
+      return JSON.parse(res.updatedConfig);
+    });
   }
 
   getFile(id: string): Promise<FileResponse> {

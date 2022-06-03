@@ -1,11 +1,8 @@
-import Mail from "nodemailer/lib/mailer";
+import Mail from 'nodemailer/lib/mailer';
 
-export interface SendgridMailOptions extends Mail.Options{
-    templateId: string;
-    dynamicTemplateData:{
-        [key:string]:any;
-    };
-            
-    
-   
+export interface SendgridMailOptions extends Mail.Options {
+  templateId: string;
+  dynamicTemplateData: {
+    [key: string]: any;
+  };
 }

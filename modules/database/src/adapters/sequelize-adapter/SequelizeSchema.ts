@@ -1,6 +1,12 @@
 import _, { isNil } from 'lodash';
 import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
-import { MultiDocQuery, ParsedQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
+import {
+  MultiDocQuery,
+  ParsedQuery,
+  Query,
+  SchemaAdapter,
+  SingleDocQuery,
+} from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
 
@@ -23,7 +29,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     this.relations = {};
     const self = this;
     let primaryKeyExists = false;
-    let idField : string = '';
+    let idField: string = '';
 
     deepdash.eachDeep(
       this.originalSchema.modelSchema,
@@ -31,7 +37,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         if (!parentValue?.hasOwnProperty(key!)) {
           return true;
         }
-
 
         if (parentValue[key].hasOwnProperty('select')) {
           if (!parentValue[key].select) {
@@ -46,11 +51,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           this.relations[key] = parentValue[key].model;
         }
 
-        if(parentValue[key].hasOwnProperty('primaryKey') && parentValue[key].primaryKey) {
+        if (
+          parentValue[key].hasOwnProperty('primaryKey') &&
+          parentValue[key].primaryKey
+        ) {
           primaryKeyExists = true;
           idField = key;
         }
-
       },
     );
     if (!primaryKeyExists) {
@@ -59,14 +66,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       };
-    }
-    else {
+    } else {
       schema.modelSchema._id = {
         type: DataTypes.VIRTUAL,
         get() {
           return `${this[idField]}`;
-        }
-      }
+        },
+      };
     }
 
     this.model = sequelize.define(schema.name, schema.modelSchema as any, {
@@ -109,12 +115,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.bulkCreate(parsedQuery);
   }
 
-  async findOne(
-    query: Query,
-    select?: string,
-    populate?: string[],
-    relations?: any,
-  ) {
+  async findOne(query: Query, select?: string, populate?: string[], relations?: any) {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -185,7 +186,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               if (!cache.hasOwnProperty(document[relation])) {
                 cache[document[relation]] = await relations[
                   this.relations[relation]
-                  ].findOne({ _id: document[relation] });
+                ].findOne({ _id: document[relation] });
               }
               document[relation] = cache[document[relation]];
             }
@@ -291,7 +292,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
             if (!cache.hasOwnProperty(document[relation])) {
               cache[document[relation]] = await relations[
                 this.relations[relation]
-                ].findOne({ _id: document[relation] });
+              ].findOne({ _id: document[relation] });
             }
             document[relation] = cache[document[relation]];
           }

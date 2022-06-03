@@ -17,9 +17,16 @@ import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }, serverConfig: { url: string }) {
-    super(grpcSdk, 'facebook', new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters));
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    config: { facebook: ProviderConfig },
+    serverConfig: { url: string },
+  ) {
+    super(
+      grpcSdk,
+      'facebook',
+      new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters),
+    );
     this.mapScopes = {
       email: 'email',
       user_birthday: 'birthday',
@@ -39,9 +46,11 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   }
 
   makeFields(scopes: string[]): string {
-    return scopes.map((scope: string) => {
-      return this.mapScopes[scope];
-    }).join(',');
+    return scopes
+      .map((scope: string) => {
+        return this.mapScopes[scope];
+      })
+      .join(',');
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<FacebookUser>> {
@@ -51,10 +60,13 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
     let facebookOptions: AxiosRequestConfig = {
       params: {
         access_token: details.accessToken,
-        fields: this.makeFields((details.scope).split(',')),
+        fields: this.makeFields(details.scope.split(',')),
       },
     };
-    const facebookResponse: { data: FacebookUser } = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
+    const facebookResponse: { data: FacebookUser } = await axios.get(
+      'https://graph.facebook.com/v13.0/me',
+      facebookOptions,
+    );
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }

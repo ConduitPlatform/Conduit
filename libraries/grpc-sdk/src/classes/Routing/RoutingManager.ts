@@ -14,21 +14,19 @@ import { constructProtoFile, wrapFunctionsAsync } from '../../helpers/RoutingUti
 import { RouteBuilder } from './RouteBuilder';
 
 export class RoutingManager {
-
   private _moduleRoutes: {
     [key: string]: {
-      options: ConduitRouteOptions,
-      returns: { name: string; fields: string; },
-      grpcFunctionName: string,
+      options: ConduitRouteOptions;
+      returns: { name: string; fields: string };
+      grpcFunctionName: string;
       grpcFunction: RequestHandlers;
-    }
+    };
   } = {};
   private _routeHandlers: {
-    [key: string]: RequestHandlers
+    [key: string]: RequestHandlers;
   } = {};
 
-  constructor(private readonly _router: Router, private readonly _server: GrpcServer) {
-  }
+  constructor(private readonly _router: Router, private readonly _server: GrpcServer) {}
 
   get(path: string): RouteBuilder {
     return new RouteBuilder(this).method(ConduitRouteActions.GET).path(path);
@@ -55,7 +53,10 @@ export class RoutingManager {
     this._routeHandlers = {};
   }
 
-  middleware(input: ConduitMiddlewareOptions, handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>) {
+  middleware(
+    input: ConduitMiddlewareOptions,
+    handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
+  ) {
     let routeObject: any = {
       options: input,
       grpcFunction: input.name,
@@ -66,15 +67,22 @@ export class RoutingManager {
     for (let option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
-      if (typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String) continue;
+      if (
+        typeof routeObject.options[option] === 'string' ||
+        routeObject.options[option] instanceof String
+      )
+        continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
-  route(input: ConduitRouteOptions, type: ConduitRouteReturnDefinition, handler: RequestHandlers) {
+  route(
+    input: ConduitRouteOptions,
+    type: ConduitRouteReturnDefinition,
+    handler: RequestHandlers,
+  ) {
     let routeObject: any = {
       options: input,
       returns: {
@@ -90,8 +98,11 @@ export class RoutingManager {
     for (let option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
-      if (typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String) continue;
+      if (
+        typeof routeObject.options[option] === 'string' ||
+        routeObject.options[option] instanceof String
+      )
+        continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
@@ -102,7 +113,6 @@ export class RoutingManager {
     let routeObject: any = {
       options: input,
       events: '',
-
     };
     let eventsObj: EventsProtoDescription = {};
     if (!routeObject.options.middlewares) {
@@ -111,8 +121,11 @@ export class RoutingManager {
     for (let option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
-      if (typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String) continue;
+      if (
+        typeof routeObject.options[option] === 'string' ||
+        routeObject.options[option] instanceof String
+      )
+        continue;
       routeObject.options[option] = JSON.stringify(routeObject.options[option]);
     }
     let primary: string;
@@ -136,30 +149,41 @@ export class RoutingManager {
 
   async registerRoutes() {
     if (Object.keys(this._routeHandlers).length === 0) return;
-    let modifiedFunctions: { [name: string]: (call: any, callback: any) => void } = wrapFunctionsAsync(this._routeHandlers);
-    const protoDescriptions = constructProtoFile(this._router.moduleName, Object.values(this._moduleRoutes));
+    let modifiedFunctions: {
+      [name: string]: (call: any, callback: any) => void;
+    } = wrapFunctionsAsync(this._routeHandlers);
+    const protoDescriptions = constructProtoFile(
+      this._router.moduleName,
+      Object.values(this._moduleRoutes),
+    );
     await this._server.addService(
       protoDescriptions.path,
       protoDescriptions.name + '.router.Router',
       modifiedFunctions,
     );
-    return this._router.register(Object.values(this._moduleRoutes), protoDescriptions.file);
+    return this._router.register(
+      Object.values(this._moduleRoutes),
+      protoDescriptions.file,
+    );
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {
     if (options.name) {
       return options.name.charAt(0).toUpperCase() + options.name.slice(1);
     } else {
-      let name = options.action.charAt(0) + options.action.slice(1).toLowerCase() + this.extractNameFromPath(options.path)
-      ;
+      let name =
+        options.action.charAt(0) +
+        options.action.slice(1).toLowerCase() +
+        this.extractNameFromPath(options.path);
       return name.charAt(0).toUpperCase() + name.slice(1);
     }
   }
 
   private extractNameFromPath(path: string) {
     path = path.replace(/[-:]/g, '/');
-    return path.split('/').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join('');
+    return path
+      .split('/')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('');
   }
-
-
 }

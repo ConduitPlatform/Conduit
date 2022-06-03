@@ -26,7 +26,7 @@ async function _createWithPopulations(
   fields: Fields,
   document: Doc,
   adapter: MongooseAdapter,
-  validate: boolean = false
+  validate: boolean = false,
 ) {
   for (const key of Object.keys(document)) {
     if (key === '$set') {
@@ -81,7 +81,7 @@ async function _createWithPopulations(
 export async function createWithPopulations(
   fields: ConduitModel,
   document: Doc,
-  adapter: MongooseAdapter
+  adapter: MongooseAdapter,
 ): Promise<any> {
   // TODO find a way to validate the whole object, now only the inner objects are validated.
   // The problem is that if we validate the object it will fail because the references will have an object

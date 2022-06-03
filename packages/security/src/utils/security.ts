@@ -20,7 +20,7 @@ export async function validateClient(
       const [_, regex] = client.domain.split('*.');
       match = sendDomain.endsWith(regex); // check if the regex matches with the hostname
     } else {
-      match = (client.domain === sendDomain);
+      match = client.domain === sendDomain;
     }
     return match;
   }

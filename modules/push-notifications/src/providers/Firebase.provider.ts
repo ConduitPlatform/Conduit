@@ -23,9 +23,10 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     try {
       this.fcm = firebase.app(serviceAccount.projectId).messaging();
     } catch (e) {
-      this.fcm = firebase.initializeApp(firebaseOptions, serviceAccount.projectId).messaging();
+      this.fcm = firebase
+        .initializeApp(firebaseOptions, serviceAccount.projectId)
+        .messaging();
     }
-
   }
 
   // TODO check for disabled notifications for users
@@ -35,10 +36,9 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     const userId = sendTo;
     if (isNil(userId)) return;
 
-    const notificationToken = await NotificationToken.getInstance()
-      .findOne({
-        userId,
-      });
+    const notificationToken = await NotificationToken.getInstance().findOne({
+      userId,
+    });
     if (isNil(notificationToken)) {
       return;
     }
@@ -58,13 +58,12 @@ export class FirebaseProvider implements IPushNotificationsProvider {
   }
 
   async sendMany(params: ISendNotification[]): Promise<any> {
-    const userIds = params.map((param) => param.sendTo);
-    const notificationsObj = keyBy(params, (param) => param.sendTo);
+    const userIds = params.map(param => param.sendTo);
+    const notificationsObj = keyBy(params, param => param.sendTo);
 
-    const notificationTokens = await NotificationToken.getInstance()
-      .findMany({
-        userId: { $in: userIds },
-      });
+    const notificationTokens = await NotificationToken.getInstance().findMany({
+      userId: { $in: userIds },
+    });
 
     const promises = notificationTokens.map(async (token: any) => {
       const id = token.userId.toString();
@@ -87,13 +86,10 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     return Promise.all(promises);
   }
 
-  async sendToManyDevices(
-    params: ISendNotificationToManyDevices,
-  ): Promise<any> {
-    const notificationTokens = await NotificationToken.getInstance()
-      .findMany({
-        userId: { $in: params.sendTo },
-      });
+  async sendToManyDevices(params: ISendNotificationToManyDevices): Promise<any> {
+    const notificationTokens = await NotificationToken.getInstance().findMany({
+      userId: { $in: params.sendTo },
+    });
     if (notificationTokens.length === 0) return;
 
     const promises = notificationTokens.map(async (notToken: any) => {

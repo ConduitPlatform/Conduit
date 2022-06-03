@@ -28,11 +28,11 @@ export function addServiceToServer(
   functions: { [name: string]: Function },
 ) {
   const packageDefinition = protoLoader.loadSync(protoFilePath, {
-      keepCase: true,
-      longs: String,
-      enums: String,
-      defaults: true,
-      oneofs: true,
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
   });
   const protoDescriptor = loadPackageDefinition(packageDefinition);
   const objs = descriptorObject.split('.');

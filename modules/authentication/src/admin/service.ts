@@ -9,7 +9,6 @@ import { isNil } from 'lodash';
 import { Service } from '../models';
 
 export class ServiceAdmin {
-
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async getServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -40,7 +39,10 @@ export class ServiceAdmin {
 
   async deleteService(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     await Service.getInstance().deleteOne({ _id: call.request.params.id });
-    this.grpcSdk.bus?.publish('authentication:delete:service', JSON.stringify({ id: call.request.params.id }));
+    this.grpcSdk.bus?.publish(
+      'authentication:delete:service',
+      JSON.stringify({ id: call.request.params.id }),
+    );
     return 'OK';
   }
 
@@ -50,7 +52,7 @@ export class ServiceAdmin {
     let service: Service | null = await Service.getInstance().findByIdAndUpdate(
       call.request.params.id,
       { hashedToken },
-      true
+      true,
     );
     if (isNil(service)) {
       throw new GrpcError(status.NOT_FOUND, 'Service does not exist');

@@ -25,19 +25,23 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
       name: 'clientSecret',
       type: 'apiKey',
       in: 'header',
-      description: 'A security client secret, retrievable through [POST] /security/client',
+      description:
+        'A security client secret, retrievable through [POST] /security/client',
     },
     userToken: {
       type: 'http',
       scheme: 'bearer',
       bearerFormat: 'Bearer',
-      description: 'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
+      description:
+        'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
     },
   },
-  globalSecurityHeaders: [{
-    clientId: [],
-    clientSecret: [],
-  }],
+  globalSecurityHeaders: [
+    {
+      clientId: [],
+      clientSecret: [],
+    },
+  ],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
     if (route.input.middlewares?.includes('authMiddleware')) {
       swaggerRouteDoc.security[0].userToken = [];
@@ -67,9 +71,11 @@ export class ConduitRoutingController {
       self._middlewareRouter(req, res, next);
     });
 
-    this._expressApp.use((err: ConduitError, req: Request, res: Response, _: NextFunction) => {
-      res.status(err?.status || 500).send(err.message);
-    });
+    this._expressApp.use(
+      (err: ConduitError, req: Request, res: Response, _: NextFunction) => {
+        res.status(err?.status || 500).send(err.message);
+      },
+    );
 
     this._expressApp.use((req, res, next) => {
       if (req.url.startsWith('/graphql') && this._graphQLRouter) {
@@ -130,13 +136,11 @@ export class ConduitRoutingController {
     await this._socketRouter?.handleSocketPush(data);
   }
 
-
-  registerRoutes(processedRoutes: (
-    | ConduitRoute
-    | ConduitMiddleware
-    | ConduitSocket
-    )[], url: string) {
-    processedRoutes.forEach((r) => {
+  registerRoutes(
+    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
+    url: string,
+  ) {
+    processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
         console.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
@@ -148,11 +152,11 @@ export class ConduitRoutingController {
       } else {
         console.log(
           'New route registered: ' +
-          r.input.action +
-          ' ' +
-          r.input.path +
-          ' handler url: ' +
-          url,
+            r.input.action +
+            ' ' +
+            r.input.path +
+            ' handler url: ' +
+            url,
         );
         this.registerConduitRoute(r);
       }

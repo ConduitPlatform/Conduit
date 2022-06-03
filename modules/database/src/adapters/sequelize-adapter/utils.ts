@@ -111,7 +111,7 @@ async function _createWithPopulations(
   fields: ParsedQuery,
   document: ParsedQuery,
   adapter: SequelizeAdapter,
-  validate: boolean = false
+  validate: boolean = false,
 ) {
   for (const key of Object.keys(document)) {
     if (key === '$set') {
@@ -164,7 +164,7 @@ async function _createWithPopulations(
 export async function createWithPopulations(
   fields: ConduitModel,
   document: ParsedQuery,
-  adapter: SequelizeAdapter
+  adapter: SequelizeAdapter,
 ): Promise<any> {
   // TODO find a way to validate the whole object, now only the inner objects are validated.
   // The problem is that if we validate the object it will fail because the references will have an object

@@ -10,7 +10,7 @@ export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
   const grpcKey = process.env.GRPC_KEY;
   const verify = createVerifier({ key: grpcKey });
   const wrappedFunctions: { [name: string]: Function } = {};
-  Object.keys(functions).forEach((name) => {
+  Object.keys(functions).forEach(name => {
     wrappedFunctions[name] = (call: any, callback: any) => {
       const grpcToken = call.metadata.get('grpc-token')[0];
       if (!grpcToken) {
@@ -31,7 +31,7 @@ export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
         return;
       }
       functions[name](call, callback);
-    }
+    };
   });
   return wrappedFunctions;
 }

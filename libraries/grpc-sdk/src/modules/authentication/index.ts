@@ -14,11 +14,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   }
 
   setConfig(newConfig: any): Promise<SetConfigResponse> {
-    return this.client!.setConfig(
-      { newConfig: JSON.stringify(newConfig) })
-      .then(res => {
-        return JSON.parse(res.updatedConfig);
-      });
+    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
+      return JSON.parse(res.updatedConfig);
+    });
   }
 
   userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {

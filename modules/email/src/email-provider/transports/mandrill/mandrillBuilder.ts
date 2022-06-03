@@ -4,12 +4,9 @@ import { TemplateOptions } from '../../interfaces/TemplateOptions';
 import { Var } from '../../interfaces/Var';
 
 export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
-
   constructor() {
-
     super();
     this._mailOptions.mandrillOptions = {} as any;
-
   }
 
   setTemplate(template: TemplateOptions): MandrillBuilder {
@@ -33,9 +30,6 @@ export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
     });
     this._mailOptions.mandrillOptions.message.global_merge_vars = variables;
 
-
     return this;
   }
-
-
 }

@@ -49,7 +49,7 @@ function extractArrayType(arrayField: any[]) {
 }
 
 function extractObjectType(objectField: any) {
-  let res: { type: any, defaultValue?: any, primaryKey?: boolean } = { type: null };
+  let res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
     res.type = extractType(objectField.type);

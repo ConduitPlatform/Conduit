@@ -3,4 +3,4 @@ export type DeclaredSchemaExtension = {
   ownerModule: string;
   createdAt: Date;
   updatedAt: Date;
-}
+};

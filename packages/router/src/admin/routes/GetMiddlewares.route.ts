@@ -1,13 +1,7 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { ConduitDefaultRouter } from '../../index';
 import { isNil } from 'lodash';
-import {
-  ConduitRouteActions,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 
 export function getMiddlewares(router: ConduitDefaultRouter) {
   return new ConduitRoute(
@@ -19,11 +13,15 @@ export function getMiddlewares(router: ConduitDefaultRouter) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response: string [] = [];
+      let response: string[] = [];
       const module = router.getGrpcRoutes();
       Object.keys(module).forEach((url: string) => {
         module[url].forEach((item: any) => {
-          if (item.returns == null && !isNil(item.grpcFunction) && item.grpcFunction !== '') {
+          if (
+            item.returns == null &&
+            !isNil(item.grpcFunction) &&
+            item.grpcFunction !== ''
+          ) {
             response.push(item.grpcFunction);
           }
         });

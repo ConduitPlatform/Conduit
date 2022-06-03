@@ -10,22 +10,30 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, config: { microsoft: ProviderConfig }, serverConfig: { url: string }) {
-    super(grpcSdk, 'microsoft', new MicrosoftSettings(serverConfig.url, config.microsoft, microsoftParameters));
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    config: { microsoft: ProviderConfig },
+    serverConfig: { url: string },
+  ) {
+    super(
+      grpcSdk,
+      'microsoft',
+      new MicrosoftSettings(serverConfig.url, config.microsoft, microsoftParameters),
+    );
     this.defaultScopes = ['openid'];
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<MicrosoftUser>> {
     let microsoftToken = details.accessToken;
-    const microsoftResponse: { data: MicrosoftUser } = await axios
-      .get('https://graph.microsoft.com/v1.0/me/', {
+    const microsoftResponse: { data: MicrosoftUser } = await axios.get(
+      'https://graph.microsoft.com/v1.0/me/',
+      {
         headers: {
           Authorization: `Bearer ${microsoftToken}`,
           'Content-Type': 'application/json',
-
         },
-      });
+      },
+    );
     return {
       id: microsoftResponse.data.id,
       email: microsoftResponse.data.mail,
@@ -34,16 +42,18 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
   }
 
   makeRequest(data: AuthParams) {
-    let requestData: string = Object.keys(data).map((k) => {
-      return k + '=' + data[k as keyof AuthParams];
-    }).join('&');
+    let requestData: string = Object.keys(data)
+      .map(k => {
+        return k + '=' + data[k as keyof AuthParams];
+      })
+      .join('&');
 
     return {
       method: this.settings.accessTokenMethod,
       url: this.settings.tokenUrl,
       data: requestData,
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     };
   }

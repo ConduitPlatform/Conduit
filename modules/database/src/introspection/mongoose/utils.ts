@@ -21,7 +21,7 @@ function extractType(field: Indexable) {
   let conduitField: Partial<ConduitModelField> = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
-      (t: string) => t !== 'Undefined' && t !== 'Null'
+      (t: string) => t !== 'Undefined' && t !== 'Null',
     )[0];
   } else if (
     (field.type === 'Array' || field.name === 'Array') &&

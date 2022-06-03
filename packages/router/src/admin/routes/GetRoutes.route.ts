@@ -1,12 +1,6 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { ConduitDefaultRouter } from '../../index';
-import {
-  ConduitRouteActions,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
 
 export function getRoutes(router: ConduitDefaultRouter) {
   return new ConduitRoute(
@@ -18,7 +12,7 @@ export function getRoutes(router: ConduitDefaultRouter) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response: any [] = [];
+      let response: any[] = [];
       const module = router.getGrpcRoutes();
       console.log(module);
       Object.keys(module).forEach((url: string) => {

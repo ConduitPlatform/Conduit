@@ -15,7 +15,7 @@ function extractParam(param: string, required: boolean = false) {
 function extractArrayParam(
   param: string,
   required: boolean = false,
-  originalParam?: any
+  originalParam?: any,
 ) {
   if (GQL_PRIMITIVES.indexOf(param)) {
     return `[${param}]` + (required ? '!' : '');

@@ -8,7 +8,6 @@ import { EmailProviderClass } from '../../models/EmailProviderClass';
 import { NodemailerBuilder } from '../nodemailer/nodemailerBuilder';
 
 export class SmtpProvider extends EmailProviderClass {
-
   constructor(transportSettings: any) {
     super(createTransport(transportSettings));
   }

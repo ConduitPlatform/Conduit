@@ -4,10 +4,7 @@ export class ConduitSocket {
   private readonly _input: ConduitSocketOptions;
   readonly events: Record<string, ConduitSocketEvent>;
 
-  constructor(
-    input: ConduitSocketOptions,
-    events: Record<string, ConduitSocketEvent>
-  ) {
+  constructor(input: ConduitSocketOptions, events: Record<string, ConduitSocketEvent>) {
     this._input = input;
     this.events = events;
   }
@@ -23,5 +20,4 @@ export class ConduitSocket {
   returnTypeFields(event: string): ConduitModel | string {
     return this.events[event]?.returnType?.fields || '';
   }
-
 }

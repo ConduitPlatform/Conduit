@@ -1,6 +1,6 @@
 import { Schema } from 'mongoose';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
-import { isNil, isObject, cloneDeep} from 'lodash';
+import { isNil, isObject, cloneDeep } from 'lodash';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -47,7 +47,8 @@ function convert(value: any, key: any, parentValue: any, context: any) {
     parentValue[key] = Schema.Types.Mixed;
   }
 
-  if (parentValue[key]?.systemRequired) { // Remove this after custom modules are updated
+  if (parentValue[key]?.systemRequired) {
+    // Remove this after custom modules are updated
     delete parentValue[key].systemRequired;
   }
 }

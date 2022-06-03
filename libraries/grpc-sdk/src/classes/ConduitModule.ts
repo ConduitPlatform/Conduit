@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 export class ConduitModule<T extends CompatServiceDefinition> {
   active: boolean = false;
   private _client?: Client<T>;
-  private _healthClient?: Client<typeof HealthDefinition>
+  private _healthClient?: Client<typeof HealthDefinition>;
   protected channel?: Channel;
   protected protoPath?: string;
   protected type?: T;
@@ -16,7 +16,12 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   protected readonly healthCheckEmitter = new EventEmitter();
   protected readonly _grpcToken?: string;
 
-  constructor(clientName: string, serviceName: string, serviceUrl: string, grpcToken?: string) {
+  constructor(
+    clientName: string,
+    serviceName: string,
+    serviceUrl: string,
+    grpcToken?: string,
+  ) {
     this._clientName = clientName;
     this._serviceUrl = serviceUrl;
     this._grpcToken = grpcToken;
@@ -35,22 +40,16 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
     const clientFactory = createClientFactory().use(
-      this._grpcToken ?
-      getGrpcSignedTokenInterceptor(this._grpcToken) :
-      getModuleNameInterceptor(this._clientName)
+      this._grpcToken
+        ? getGrpcSignedTokenInterceptor(this._grpcToken)
+        : getModuleNameInterceptor(this._clientName),
     );
-    this._client = clientFactory.create(
-      this.type!,
-      this.channel,
-    );
-    this._healthClient = clientFactory.create(
-      HealthDefinition,
-      this.channel,
-    );
+    this._client = clientFactory.create(this.type!, this.channel);
+    this._healthClient = clientFactory.create(HealthDefinition, this.channel);
     this.active = true;
   }
 
-  get client(): Client<T> | undefined{
+  get client(): Client<T> | undefined {
     return this._client;
   }
 
@@ -70,10 +69,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   check(service: string = '') {
-    return this.healthClient!.check({ service })
-      .then((res: HealthCheckResponse) => {
-        return res.status;
-      });
+    return this.healthClient!.check({ service }).then((res: HealthCheckResponse) => {
+      return res.status;
+    });
   }
 
   async watch(service: string = '') {

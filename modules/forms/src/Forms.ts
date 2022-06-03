@@ -36,7 +36,7 @@ export default class Forms extends ManagedModule<Config> {
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('email', (serving) => {
+    await this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
       } else {
@@ -67,8 +67,16 @@ export default class Forms extends ManagedModule<Config> {
         await this.registerSchemas();
         await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
         this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
-        this.formController = new FormsController(this.grpcSdk, this.userRouter, this.userRouter._routingManager);
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this.formController);
+        this.formController = new FormsController(
+          this.grpcSdk,
+          this.userRouter,
+          this.userRouter._routingManager,
+        );
+        this.adminRouter = new AdminHandlers(
+          this.grpcServer,
+          this.grpcSdk,
+          this.formController,
+        );
         this.isRunning = true;
       }
       this.updateHealth(HealthCheckStatus.SERVING);

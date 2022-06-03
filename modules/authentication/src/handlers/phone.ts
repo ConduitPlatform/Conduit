@@ -19,29 +19,24 @@ import moment = require('moment');
 import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class PhoneHandlers implements IAuthenticationStrategy{
+export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
     let errorMessage = null;
-    await this.grpcSdk.config
-      .moduleExists('sms')
-      .catch((e) => (errorMessage = e.message));
+    await this.grpcSdk.config.moduleExists('sms').catch(e => (errorMessage = e.message));
     if (config.phoneAuthentication.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.sms = this.grpcSdk.sms!;
-      return this.initialized = true;
+      return (this.initialized = true);
     } else {
-
       console.log('sms phone authentication not active');
-      return this.initialized = false;
+      return (this.initialized = false);
     }
   }
 
@@ -91,7 +86,13 @@ export class PhoneHandlers implements IAuthenticationStrategy{
     const { phone, code } = call.request.params;
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    return await AuthUtils.verifyCode(this.grpcSdk, clientId, user, TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN, code);
+    return await AuthUtils.verifyCode(
+      this.grpcSdk,
+      clientId,
+      user,
+      TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
+      code,
+    );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -101,9 +102,7 @@ export class PhoneHandlers implements IAuthenticationStrategy{
     const config = ConfigController.getInstance().config;
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    let user: User | null = await User.getInstance().findOne(
-      { phoneNumber: phone },
-    );
+    let user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     if (isNil(user)) {
       user = await User.getInstance().create({
         phoneNumber: phone,
@@ -144,11 +143,13 @@ export class PhoneHandlers implements IAuthenticationStrategy{
       }
       if (config.setCookies.enabled) {
         const cookieOptions = config.setCookies.options;
-        const cookies: Cookie[] = [{
-          name: 'accessToken',
-          value: (accessToken as AccessToken).token,
-          options: cookieOptions,
-        }];
+        const cookies: Cookie[] = [
+          {
+            name: 'accessToken',
+            value: (accessToken as AccessToken).token,
+            options: cookieOptions,
+          },
+        ];
         if (!isNil((refreshToken as RefreshToken).token)) {
           cookies.push({
             name: 'refreshToken',
@@ -164,11 +165,15 @@ export class PhoneHandlers implements IAuthenticationStrategy{
       return {
         userId: user._id.toString(),
         accessToken: accessToken.token,
-        refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
+        refreshToken: !isNil(refreshToken)
+          ? (refreshToken as RefreshToken).token
+          : undefined,
       };
-
     } else {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.sms!, user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(
+        this.sms!,
+        user.phoneNumber!,
+      );
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -188,7 +193,6 @@ export class PhoneHandlers implements IAuthenticationStrategy{
       return {
         message: 'Login verification code sent!',
       };
-
     }
   }
 }

@@ -10,5 +10,5 @@ export abstract class IConduitAdmin {
 
   setConfig(moduleConfig: any) {
     this.commons.getBus().publish('config:update:admin', JSON.stringify(moduleConfig));
-  };
+  }
 }

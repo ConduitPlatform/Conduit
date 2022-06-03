@@ -49,17 +49,13 @@ export class AuthenticationRoutes {
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
-    let phoneActive = await this.phoneHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
+    let phoneActive = await this.phoneHandlers.validate().catch(e => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes(this._routingManager);
     }
 
-    let authActive = await this.localHandlers
-      .validate()
-      .catch((e) => (errorMessage = e));
+    let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
       await this.localHandlers.declareRoutes(this._routingManager, config);
       enabled = true;
@@ -67,34 +63,37 @@ export class AuthenticationRoutes {
     errorMessage = null;
 
     serverConfig = await this.grpcSdk.config.getServerConfig();
-    await Promise.all((Object.keys(oauth2) as (keyof OAuthHandler)[])
-      .map((key: keyof OAuthHandler, value) => {
-        let handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
-          this.grpcSdk,
-          config,
-          serverConfig,
-        );
-        return handler
-          .validate()
-          .then(() => {
-            handler.declareRoutes(this._routingManager);
-            enabled = true;
-            return;
-          })
-          .catch();
-      }));
+    await Promise.all(
+      (Object.keys(oauth2) as (keyof OAuthHandler)[]).map(
+        (key: keyof OAuthHandler, value) => {
+          let handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
+            this.grpcSdk,
+            config,
+            serverConfig,
+          );
+          return handler
+            .validate()
+            .then(() => {
+              handler.declareRoutes(this._routingManager);
+              enabled = true;
+              return;
+            })
+            .catch();
+        },
+      ),
+    );
 
     errorMessage = null;
-    authActive = await this.serviceHandler
-      .validate()
-      .catch((e) => (errorMessage = e));
+    authActive = await this.serviceHandler.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
       let returnField = {
         serviceId: ConduitString.Required,
         accessToken: ConduitString.Required,
       };
-      if(config.generateRefreshToken){
-        returnField = Object.assign(returnField, {refreshToken:ConduitString.Required});
+      if (config.generateRefreshToken) {
+        returnField = Object.assign(returnField, {
+          refreshToken: ConduitString.Required,
+        });
       }
 
       this._routingManager.route(
@@ -115,13 +114,15 @@ export class AuthenticationRoutes {
     }
     if (enabled) {
       this.commonHandlers.declareRoutes(this._routingManager, config);
-      this._routingManager.middleware({ path: '/', name: 'authMiddleware' }, this.middleware.bind(this));
+      this._routingManager.middleware(
+        { path: '/', name: 'authMiddleware' },
+        this.middleware.bind(this),
+      );
     }
-    return this._routingManager.registerRoutes()
-      .catch((err: Error) => {
-        console.log('Failed to register routes for module');
-        console.log(err);
-      });
+    return this._routingManager.registerRoutes().catch((err: Error) => {
+      console.log('Failed to register routes for module');
+      console.log(err);
+    });
   }
 
   async middleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

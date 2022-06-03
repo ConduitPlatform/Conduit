@@ -4,9 +4,7 @@ import {
   ConduitCommons,
   IConduitRouter,
 } from '@conduitplatform/commons';
-import {
-  ConduitRouteActions as Actions,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions as Actions } from '@conduitplatform/grpc-sdk';
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
@@ -49,10 +47,7 @@ export class HttpServer {
   private registerGlobalMiddleware() {
     this.router.registerGlobalMiddleware('cors', cors());
     this.router.registerGlobalMiddleware('logger', this.logger.middleware);
-    this.router.registerGlobalMiddleware(
-      'jsonParser',
-      express.json({ limit: '50mb' }),
-    );
+    this.router.registerGlobalMiddleware('jsonParser', express.json({ limit: '50mb' }));
     this.router.registerGlobalMiddleware(
       'urlParser',
       express.urlencoded({ limit: '50mb', extended: false }),
@@ -98,7 +93,7 @@ export class HttpServer {
         },
         new ReturnDefinition('HealthResult', 'String'),
         () => {
-          return new Promise((resolve) => {
+          return new Promise(resolve => {
             if (Core.getInstance().initialized) {
               resolve('Conduit is online!');
             } else {
@@ -114,7 +109,8 @@ export class HttpServer {
     if (error.syscall !== 'listen') {
       throw error;
     }
-    const bind = typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
+    const bind =
+      typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
@@ -132,7 +128,8 @@ export class HttpServer {
 
   onListening() {
     const address = this.server.address();
-    const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
+    const bind =
+      typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
     console.log('Listening on ' + bind);
   }
 }

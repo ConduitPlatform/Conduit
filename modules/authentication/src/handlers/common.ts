@@ -6,7 +6,11 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController, RoutingManager, ConduitRouteActions, ConduitRouteReturnDefinition, ConduitString,
+  ConfigController,
+  RoutingManager,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, User } from '../models';
@@ -14,8 +18,7 @@ import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
 export class CommonHandlers implements IAuthenticationStrategy {
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
@@ -69,11 +72,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [{
-        name: 'accessToken',
-        value: newAccessToken.token,
-        options: cookieOptions,
-      }];
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: newAccessToken.token,
+          options: cookieOptions,
+        },
+      ];
       if (!isNil(refreshToken!)) {
         cookies.push({
           name: 'refreshToken',
@@ -100,18 +105,27 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const authToken = call.request.headers.authorization;
     const clientConfig = config.clients;
 
-    await AuthUtils.logOutClientOperations(this.grpcSdk, clientConfig, authToken, clientId, user._id);
+    await AuthUtils.logOutClientOperations(
+      this.grpcSdk,
+      clientConfig,
+      authToken,
+      clientId,
+      user._id,
+    );
     const options = config.setCookies.options;
     if (config.setCookies.enabled) {
       return {
         result: 'LoggedOut',
-        removeCookies: [{
-          name: 'accessToken',
-          options: options,
-        }, {
-          name: 'refreshToken',
-          options: options,
-        }],
+        removeCookies: [
+          {
+            name: 'accessToken',
+            options: options,
+          },
+          {
+            name: 'refreshToken',
+            options: options,
+          },
+        ],
       };
     }
     return 'LoggedOut';
@@ -131,7 +145,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
       }),
-    ).catch((e) => console.log('Failed to delete all access tokens'));
+    ).catch(e => console.log('Failed to delete all access tokens'));
     return 'Done';
   }
 

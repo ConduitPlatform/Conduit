@@ -14,7 +14,6 @@ import {
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
 
-
 export function getLoginRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
     {
@@ -32,7 +31,11 @@ export function getLoginRoute(conduit: ConduitCommons) {
       const config: IConfigManager = conduit.getConfigManager();
       const { username, password } = params.params!;
       if (isNil(username) || isNil(password)) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Both username and password must be provided');
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Both username and password must be provided',
+        );
       }
 
       const admin = await Admin.getInstance().findOne({ username });

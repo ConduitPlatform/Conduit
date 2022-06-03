@@ -24,19 +24,22 @@ export class NotificationTokensHandler {
     NotificationToken.getInstance()
       .findOne({ userId, platform })
       .then((oldToken: any) => {
-        if (!isNil(oldToken))
-          return NotificationToken.getInstance().deleteOne(oldToken);
+        if (!isNil(oldToken)) return NotificationToken.getInstance().deleteOne(oldToken);
       })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     const newTokenDocument = await NotificationToken.getInstance()
       .create({
         userId,
         token,
         platform,
       })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     return {
       newTokenDocument,
-    }
+    };
   }
 }

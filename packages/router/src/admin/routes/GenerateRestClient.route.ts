@@ -1,7 +1,4 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import {
   ConduitBoolean,
   ConduitRouteActions,
@@ -45,7 +42,7 @@ export function generateRestClient() {
         const zipPath = path.resolve(__dirname, 'generate/rest.zip');
         await exec(`zip -r ${zipPath} ${outputPath}`);
         const file = fs.readFileSync(zipPath).toString('base64');
-        unlink(zipPath, (err) => {
+        unlink(zipPath, err => {
           if (err) throw new ConduitError(err.name, status.INTERNAL, err.message);
         });
         return {

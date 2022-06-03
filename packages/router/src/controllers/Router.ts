@@ -12,9 +12,7 @@ export abstract class ConduitRouter {
   protected _registeredRoutes: Map<string, ConduitRoute>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
-  protected constructor(
-    protected readonly commons: ConduitCommons,
-  ) {
+  protected constructor(protected readonly commons: ConduitCommons) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
   }
@@ -44,15 +42,11 @@ export abstract class ConduitRouter {
   }
 
   protected findInCache(hashKey: string) {
-    return this.commons
-      .getState()
-      .getKey('hash-' + hashKey);
+    return this.commons.getState().getKey('hash-' + hashKey);
   }
   // age is in seconds
   protected storeInCache(hashKey: string, data: any, age: number) {
-    this.commons
-      .getState()
-      .setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
+    this.commons.getState().setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
 
   registerMiddleware(middleware: ConduitMiddleware) {
@@ -63,17 +57,17 @@ export abstract class ConduitRouter {
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
-    let primaryPromise = new Promise((resolve) => {
+    let primaryPromise = new Promise(resolve => {
       resolve({});
     });
     const self = this;
     if (this._middlewares && middlewares) {
-      middlewares.forEach((m) => {
+      middlewares.forEach(m => {
         if (!this._middlewares?.hasOwnProperty(m))
           primaryPromise = Promise.reject('Middleware does not exist');
-        primaryPromise = primaryPromise.then((r) => {
+        primaryPromise = primaryPromise.then(r => {
           return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
-            params
+            params,
           ).then((p: any) => {
             if (p.result) {
               Object.assign(r, JSON.parse(p.result));

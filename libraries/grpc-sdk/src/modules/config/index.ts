@@ -1,14 +1,23 @@
 import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { HealthCheckStatus } from '../../types';
-import { ConfigDefinition, RegisterModuleRequest, ModuleHealthRequest } from '../../protoUtils/core';
+import {
+  ConfigDefinition,
+  RegisterModuleRequest,
+  ModuleHealthRequest,
+} from '../../protoUtils/core';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
   private coreLive = false;
   private readonly _serviceHealthStatusGetter: Function;
 
-  constructor(moduleName: string, url: string, serviceHealthStatusGetter: Function, grpcToken?: string) {
+  constructor(
+    moduleName: string,
+    url: string,
+    serviceHealthStatusGetter: Function,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'config', url, grpcToken);
     this.initializeClient(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
@@ -16,29 +25,24 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
 
   getServerConfig() {
     let request = {};
-    return this.client!.getServerConfig(request)
-      .then(res => {
-        return JSON.parse(res.data);
-      });
+    return this.client!.getServerConfig(request).then(res => {
+      return JSON.parse(res.data);
+    });
   }
 
-  getModuleUrlByName(
-    name: string,
-  ): Promise<{ url: string }> {
-    return this.client!.getModuleUrlByName({ name: name })
-      .then(res => {
-        return { url: res.moduleUrl };
-      });
+  getModuleUrlByName(name: string): Promise<{ url: string }> {
+    return this.client!.getModuleUrlByName({ name: name }).then(res => {
+      return { url: res.moduleUrl };
+    });
   }
 
   get(name: string) {
     let request = {
       key: name,
     };
-    return this.client!.get(request)
-      .then(res => {
-        return JSON.parse(res.data);
-      });
+    return this.client!.get(request).then(res => {
+      return JSON.parse(res.data);
+    });
   }
 
   updateConfig(config: any, name: string) {
@@ -47,10 +51,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       moduleName: name,
     };
 
-    return this.client!.updateConfig(request)
-      .then(res => {
-        return JSON.parse(res.result);
-      });
+    return this.client!.updateConfig(request).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   addFieldsToConfig(config: any, name: string) {
@@ -58,10 +61,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       config: JSON.stringify(config),
       moduleName: name,
     };
-    return this.client!.addFieldsToConfig(request)
-      .then(res => {
-        return JSON.parse(res.result);
-      });
+    return this.client!.addFieldsToConfig(request).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   moduleExists(name: string) {
@@ -102,7 +104,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         self.coreLive = true;
         return res.result;
       })
-      .then((r) => {
+      .then(r => {
         setInterval(() => self.moduleHealthProbe.bind(self)(name, url), 2000);
         return r;
       });

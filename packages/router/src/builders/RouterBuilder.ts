@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { RouteBuilder } from './RouteBuilder';
-import {
-  ConduitRouterBuilder,
-} from '@conduitplatform/commons';
+import { ConduitRouterBuilder } from '@conduitplatform/commons';
 import { ConduitRouteOptions } from '@conduitplatform/grpc-sdk';
 
 export class RouterBuilder extends ConduitRouterBuilder {

@@ -43,7 +43,6 @@ export class EmailProvider {
           rejectUnauthorized: false,
         },
       });
-
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
       const mandrillSettings: MandrillConfig = {
@@ -72,11 +71,12 @@ export class EmailProvider {
     return this._transport.getBuilder();
   }
 
-  sendEmail(email: EmailBuilderClass<Mail.Options>): Promise<SentMessageInfo> | undefined {
+  sendEmail(
+    email: EmailBuilderClass<Mail.Options>,
+  ): Promise<SentMessageInfo> | undefined {
     if (!this._transport) {
       throw new Error('Email  transport not initialized!');
     }
     return this._transport.sendEmail(email.getMailObject());
   }
-
 }

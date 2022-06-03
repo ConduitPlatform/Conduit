@@ -55,8 +55,13 @@ export namespace AuthUtils {
     return Promise.all(deleteUserTokens(sdk, query));
   }
 
-  export async function verifyCode(grpcSdk: ConduitGrpcSdk, clientId: string, user: User, tokenType: string, code: string): Promise<any> {
-
+  export async function verifyCode(
+    grpcSdk: ConduitGrpcSdk,
+    clientId: string,
+    user: User,
+    tokenType: string,
+    code: string,
+  ): Promise<any> {
     const verificationRecord: Token | null = await Token.getInstance().findOne({
       userId: user._id,
       type: tokenType,
@@ -119,8 +124,10 @@ export namespace AuthUtils {
     };
   }
 
-  export function createUserTokens(sdk: ConduitGrpcSdk, tokenOptions: TokenOptions):
-    [accesstoken: Promise<AccessToken>, refreshToken?: Promise<RefreshToken>] {
+  export function createUserTokens(
+    sdk: ConduitGrpcSdk,
+    tokenOptions: TokenOptions,
+  ): [accesstoken: Promise<AccessToken>, refreshToken?: Promise<RefreshToken>] {
     const signTokenOptions: ISignTokenOptions = {
       secret: tokenOptions.config.jwtSecret,
       expiresIn: tokenOptions.config.tokenInvalidationPeriod,
@@ -168,8 +175,13 @@ export namespace AuthUtils {
       );
   }
 
-  export async function signInClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, userId: string, clientId: string) {
-    const isAnonymous = ('anonymous-client' === clientId);
+  export async function signInClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: any,
+    userId: string,
+    clientId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
     if (!clientConfig.multipleUserSessions) {
       await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
         userId: userId,
@@ -183,12 +195,18 @@ export namespace AuthUtils {
     }
   }
 
-  export async function logOutClientOperations(grpcSdk: ConduitGrpcSdk, clientConfig: any, authToken: string, clientId: string, userId: string) {
-    const isAnonymous = ('anonymous-client' === clientId);
+  export async function logOutClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: any,
+    authToken: string,
+    clientId: string,
+    userId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
     const token = authToken.split(' ')[1];
     if (!clientConfig.multipleUserSessions) {
       await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
-        clientId: (!isAnonymous && clientConfig.multipleClientLogins) ? clientId : null,
+        clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
         userId: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {

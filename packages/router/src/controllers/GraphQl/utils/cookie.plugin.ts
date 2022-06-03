@@ -4,7 +4,6 @@ module.exports = {
   requestDidStart() {
     return {
       willSendResponse(requestContext: any) {
-
         const { setCookie, removeCookie } = requestContext.context;
         const { res } = requestContext.context;
 
@@ -23,7 +22,6 @@ module.exports = {
         }
         return requestContext;
       },
-
     };
   },
 };

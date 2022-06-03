@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { PlatformTypesEnum } from '@conduitplatform/commons';
 
 const schema = {

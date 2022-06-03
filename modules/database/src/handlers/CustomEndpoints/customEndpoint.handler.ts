@@ -32,7 +32,7 @@ export class CustomEndpointHandler {
           endpoint.query,
           endpoint.inputs,
           params,
-          call.request.context
+          call.request.context,
         );
       } catch (e) {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -53,7 +53,7 @@ export class CustomEndpointHandler {
           if (createString.length !== OperationsEnum.GET) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
-              const res = endpoint.inputs.filter((input) => {
+              const res = endpoint.inputs.filter(input => {
                 return input.name === r.assignmentField.value && input.optional;
               });
               if (res && res.length > 0) {
@@ -61,19 +61,19 @@ export class CustomEndpointHandler {
               }
               throw new GrpcError(
                 status.INTERNAL,
-                `Field ${r.assignmentField.value} is missing from input`
+                `Field ${r.assignmentField.value} is missing from input`,
               );
             }
             createString += constructAssignment(
               r.schemaField,
               r.action,
-              JSON.stringify(params[r.assignmentField.value])
+              JSON.stringify(params[r.assignmentField.value]),
             );
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
               throw new GrpcError(
                 status.INTERNAL,
-                `Field ${r.assignmentField.value} is missing from context`
+                `Field ${r.assignmentField.value} is missing from context`,
               );
             }
             let context: any = call.request.context;
@@ -83,23 +83,23 @@ export class CustomEndpointHandler {
               } else {
                 throw new GrpcError(
                   status.INTERNAL,
-                  `Field ${r.assignmentField.value} is missing from context`
+                  `Field ${r.assignmentField.value} is missing from context`,
                 );
               }
             }
             createString += constructAssignment(
               r.schemaField,
               r.action,
-              JSON.stringify(context)
+              JSON.stringify(context),
             );
           } else {
             createString += constructAssignment(
               r.schemaField,
               r.action,
-              JSON.stringify(r.assignmentField.value)
+              JSON.stringify(r.assignmentField.value),
             );
           }
-        }
+        },
       );
     }
 
@@ -128,11 +128,11 @@ export class CustomEndpointHandler {
           params['skip'],
           params['limit'],
           sortObj,
-          params['populate']
+          params['populate'],
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
           endpoint.selectedSchemaName,
-          searchQuery
+          searchQuery,
         );
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
@@ -143,31 +143,31 @@ export class CustomEndpointHandler {
           undefined,
           undefined,
           sortObj,
-          params['populate']
+          params['populate'],
         );
       }
     } else if (endpoint.operation === OperationsEnum.POST) {
       promise = this.grpcSdk.databaseProvider!.create(
         endpoint.selectedSchemaName,
-        createObj
+        createObj,
       );
     } else if (endpoint.operation === OperationsEnum.PUT) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
         searchQuery,
-        createObj
+        createObj,
       );
     } else if (endpoint.operation === OperationsEnum.DELETE) {
       promise = this.grpcSdk.databaseProvider!.deleteMany(
         endpoint.selectedSchemaName,
-        searchQuery
+        searchQuery,
       );
     } else if (endpoint.operation === OperationsEnum.PATCH) {
       promise = this.grpcSdk.databaseProvider!.updateMany(
         endpoint.selectedSchemaName,
         searchQuery,
         createObj,
-        true
+        true,
       );
     } else {
       process.exit(-1);
@@ -188,12 +188,14 @@ export class CustomEndpointHandler {
         }
         return r;
       })
-      .catch((e: Error) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   private parseCreateQuery(query: string): any {
     // add brackets to each field
-    const arr = query.split(',').map((val) => `{${val}}`);
+    const arr = query.split(',').map(val => `{${val}}`);
     const res: any = {};
     for (const el of arr) {
       const tmp = JSON.parse(el);

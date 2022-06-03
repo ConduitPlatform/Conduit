@@ -16,13 +16,17 @@ export class OAuth2Settings {
   responseType?: string;
   scopeSeperator?: string;
 
-  constructor(private readonly serverUrl: string, providerConfig: ProviderConfig, providerParams: {
-    accessTokenMethod: string,
-    grantType?: string,
-    authorizeUrl: string,
-    tokenUrl: string,
-    responseType: string,
-  }) {
+  constructor(
+    private readonly serverUrl: string,
+    providerConfig: ProviderConfig,
+    providerParams: {
+      accessTokenMethod: string;
+      grantType?: string;
+      authorizeUrl: string;
+      tokenUrl: string;
+      responseType: string;
+    },
+  ) {
     this.accountLinking = providerConfig.accountLinking;
     this.clientId = providerConfig.clientId;
     this.clientSecret = providerConfig.clientSecret;
@@ -37,6 +41,5 @@ export class OAuth2Settings {
   set provider(providerName: string) {
     this.providerName = providerName;
     this.callbackUrl = `${this.serverUrl}/hook/authentication/${this.providerName}`;
-
   }
 }

@@ -42,7 +42,7 @@ export class GoogleCloudStorage implements IStorageProvider {
 
   async moveToContainer(
     filename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     let newBucketFile = this._storage.bucket(newContainer).file(filename);
     await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
@@ -52,7 +52,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   async moveToContainerAndRename(
     currentFilename: string,
     newFilename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     let newBucketFile = this._storage.bucket(newContainer).file(newFilename);
     await this._storage
@@ -145,7 +145,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   async store(
     fileName: string,
     data: any,
-    isPublic: boolean = false
+    isPublic: boolean = false,
   ): Promise<boolean | Error> {
     await this._storage.bucket(this._activeBucket).file(fileName).save(data);
     if (isPublic) {
@@ -169,7 +169,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   async moveToFolderAndRename(
     currentFilename: string,
     newFilename: string,
-    newFolder: string
+    newFolder: string,
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented!');
   }

@@ -8,45 +8,37 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
   }
 
   setConfig(newConfig: any) {
-    return this.client!.setConfig(
-      { newConfig: JSON.stringify(newConfig) })
-      .then(res => {
-        return JSON.parse(res.updatedConfig);
-      });
+    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
+      return JSON.parse(res.updatedConfig);
+    });
   }
 
   sendNotificationToken(token: string, platform: string, userId: string) {
-    return this.client!.setNotificationToken(
-      {
-        token,
-        platform,
-        userId,
-      })
-      .then(res => {
-        return JSON.parse(res.newTokenDocument);
-      });
+    return this.client!.setNotificationToken({
+      token,
+      platform,
+      userId,
+    }).then(res => {
+      return JSON.parse(res.newTokenDocument);
+    });
   }
 
   getNotificationTokens(userId: string) {
-    return this.client!.getNotificationTokens(
-      {
-        userId,
-      })
-      .then(res => {
-        return res.tokenDocuments;
-      });
+    return this.client!.getNotificationTokens({
+      userId,
+    }).then(res => {
+      return res.tokenDocuments;
+    });
   }
 
   sendNotification(sendTo: string, title: string, body?: string, data?: string) {
-    return this.client!.sendNotification(
-      {
-        sendTo,
-        title,
-        body,
-        data,
-      })
-      .then(res => {
-        return JSON.parse(res.message);
-      });
+    return this.client!.sendNotification({
+      sendTo,
+      title,
+      body,
+      data,
+    }).then(res => {
+      return JSON.parse(res.message);
+    });
   }
 }

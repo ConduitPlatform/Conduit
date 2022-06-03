@@ -3,6 +3,6 @@ export default {
     enabled: {
       format: 'Boolean',
       default: false,
-    }
+    },
   },
 };

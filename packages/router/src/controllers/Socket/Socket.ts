@@ -25,7 +25,7 @@ export class SocketController extends ConduitRouter {
   private globalMiddlewares: ((
     req: Request,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => void)[];
 
   constructor(commons: ConduitCommons, expressApp: Application) {
@@ -50,7 +50,7 @@ export class SocketController extends ConduitRouter {
     });
     this.subClient = this.pubClient.duplicate();
     this.io.adapter(
-      createAdapter({ pubClient: this.pubClient, subClient: this.subClient })
+      createAdapter({ pubClient: this.pubClient, subClient: this.subClient }),
     );
     this.httpServer.listen(process.env.SOCKET_PORT || 3001);
     this._registeredNamespaces = new Map();
@@ -58,7 +58,7 @@ export class SocketController extends ConduitRouter {
   }
 
   registerGlobalMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void
+    middleware: (req: Request, res: Response, next: NextFunction) => void,
   ) {
     this.globalMiddlewares.push(middleware);
   }
@@ -72,7 +72,7 @@ export class SocketController extends ConduitRouter {
     this._registeredNamespaces.set(namespace, conduitSocket);
 
     const self = this;
-    this.globalMiddlewares.forEach((middleware) => {
+    this.globalMiddlewares.forEach(middleware => {
       self.io.of(namespace).use((socket, next) => {
         // @ts-ignore
         socket.request.path = namespace;
@@ -88,7 +88,7 @@ export class SocketController extends ConduitRouter {
       };
       self
         .checkMiddlewares(context, conduitSocket.input.middlewares)
-        .then((r) => {
+        .then(r => {
           Object.assign(context.context, r);
           next();
         })
@@ -97,7 +97,7 @@ export class SocketController extends ConduitRouter {
         });
     });
 
-    this.io.of(namespace).on('connect', (socket) => {
+    this.io.of(namespace).on('connect', socket => {
       conduitSocket
         .executeRequest({
           event: 'connect',
@@ -105,10 +105,10 @@ export class SocketController extends ConduitRouter {
           // @ts-ignore
           context: socket.request.conduit,
         })
-        .then((res) => {
+        .then(res => {
           this.handleResponse(res, socket);
         })
-        .catch((e) => {
+        .catch(e => {
           socket.emit('conduit_error', e);
         });
 
@@ -121,10 +121,10 @@ export class SocketController extends ConduitRouter {
             // @ts-ignore
             context: socket.request.conduit,
           })
-          .then((res) => {
+          .then(res => {
             this.handleResponse(res, socket);
           })
-          .catch((e) => {
+          .catch(e => {
             socket.emit('conduit_error', e);
           });
       });
@@ -137,10 +137,10 @@ export class SocketController extends ConduitRouter {
             // @ts-ignore
             context: socket.request.conduit,
           })
-          .then((res) => {
+          .then(res => {
             this.handleResponse(res, socket);
           })
-          .catch((e) => {
+          .catch(e => {
             socket.emit('conduit_error', e);
           });
       });

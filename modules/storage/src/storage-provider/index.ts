@@ -6,7 +6,7 @@ import { AWSS3Storage } from './providers/aws';
 
 export function createStorageProvider(
   provider: string,
-  options: StorageConfig
+  options: StorageConfig,
 ): IStorageProvider {
   if (provider === 'google') {
     return new GoogleCloudStorage(options);

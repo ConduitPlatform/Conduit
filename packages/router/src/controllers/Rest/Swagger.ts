@@ -4,17 +4,17 @@ import { isNil } from 'lodash';
 import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 
 export type SwaggerRouterMetadata = {
-  readonly urlPrefix: string,
+  readonly urlPrefix: string;
   readonly securitySchemes: {
     [field: string]: {
-      [field: string]:  string
-    }
-  },
+      [field: string]: string;
+    };
+  };
   readonly globalSecurityHeaders: {
-    [field: string]: [],
-  }[],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void,
-}
+    [field: string]: [];
+  }[];
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void;
+};
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: any;
@@ -42,7 +42,9 @@ export class SwaggerGenerator {
     };
     this._parser = new SwaggerParser();
     this._routerMetadata = routerMetadata;
-    this._stringifiedGlobalSecurityHeaders = JSON.stringify(this._routerMetadata.globalSecurityHeaders);
+    this._stringifiedGlobalSecurityHeaders = JSON.stringify(
+      this._routerMetadata.globalSecurityHeaders,
+    );
   }
 
   get swaggerDoc() {
@@ -155,7 +157,7 @@ export class SwaggerGenerator {
     const returnDefinition = this._parser.extractTypes(
       route.returnTypeName,
       route.returnTypeFields,
-      false
+      false,
     );
     routeDoc.responses[200].content['application/json'].schema = {
       $ref: `#/components/schemas/${route.returnTypeName}`,
@@ -163,7 +165,8 @@ export class SwaggerGenerator {
     if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
       this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
     }
-    const path = this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
+    const path =
+      this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
     if (this._swaggerDoc.paths.hasOwnProperty(path)) {
       this._swaggerDoc.paths[path][method] = routeDoc;
     } else {

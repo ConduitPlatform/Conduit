@@ -50,7 +50,7 @@ export class LocalStorage implements IStorageProvider {
       path += name;
     }
 
-    return new Promise(function(res, reject) {
+    return new Promise(function (res, reject) {
       try {
         rmSync(resolve(path), { recursive: true });
         res(true);
@@ -68,12 +68,12 @@ export class LocalStorage implements IStorageProvider {
       path += fileName;
     }
     if (!existsSync(resolve(path))) {
-      return new Promise(function(res, reject) {
+      return new Promise(function (res, reject) {
         reject(new Error('File does not exist'));
       });
     }
-    return new Promise(function(res, reject) {
-      readFile(resolve(path), function(err, data) {
+    return new Promise(function (res, reject) {
+      readFile(resolve(path), function (err, data) {
         if (err) reject(err);
         else res(data);
       });
@@ -87,8 +87,8 @@ export class LocalStorage implements IStorageProvider {
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
-    return new Promise(function(res, reject) {
-      writeFile(resolve(path), data, function(err) {
+    return new Promise(function (res, reject) {
+      writeFile(resolve(path), data, function (err) {
         if (err) reject(err);
         else res(true);
       });
@@ -97,17 +97,17 @@ export class LocalStorage implements IStorageProvider {
 
   async createFolder(name: string): Promise<boolean | Error> {
     const self = this;
-    return new Promise(async function(res, reject) {
+    return new Promise(async function (res, reject) {
       let path = self._storagePath + '/' + self._activeContainer;
       const containerExists = await self.folderExists(self._activeContainer);
       if (!containerExists) {
-        mkdir(path, function(err) {
+        mkdir(path, function (err) {
           if (err) reject(err);
         });
       }
       if (self._activeContainer !== name) {
         path = self._storagePath + '/' + self._activeContainer + '/' + name;
-        mkdir(resolve(path), function(err) {
+        mkdir(resolve(path), function (err) {
           if (err) reject(err);
           else res(true);
         });
@@ -123,8 +123,8 @@ export class LocalStorage implements IStorageProvider {
     if (name !== self._activeContainer) {
       path += name;
     }
-    return new Promise(function(res) {
-      access(resolve(path), function(err) {
+    return new Promise(function (res) {
+      access(resolve(path), function (err) {
         if (err) res(false);
         else res(true);
       });
@@ -138,8 +138,8 @@ export class LocalStorage implements IStorageProvider {
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
-    return new Promise(function(res, reject) {
-      unlink(resolve(path), function(err) {
+    return new Promise(function (res, reject) {
+      unlink(resolve(path), function (err) {
         if (err) reject(err);
         else res(true);
       });
@@ -153,7 +153,7 @@ export class LocalStorage implements IStorageProvider {
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
-    return new Promise(function(res) {
+    return new Promise(function (res) {
       if (!existsSync(resolve(path))) {
         res(false);
       } else {
@@ -166,25 +166,21 @@ export class LocalStorage implements IStorageProvider {
     const self = this;
     let path = self._storagePath + '/' + self._activeContainer + '/';
 
-    return new Promise(function(res, reject) {
-      rename(
-        resolve(path, currentFilename),
-        resolve(path, newFilename),
-        function(err) {
-          if (err) reject(err);
-          else res(true);
-        },
-      );
+    return new Promise(function (res, reject) {
+      rename(resolve(path, currentFilename), resolve(path, newFilename), function (err) {
+        if (err) reject(err);
+        else res(true);
+      });
     });
   }
 
   moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
     const self = this;
-    return new Promise(function(res, reject) {
+    return new Promise(function (res, reject) {
       rename(
         resolve(self._storagePath, filename),
         resolve(self._rootStoragePath, newFolder, filename),
-        function(err) {
+        function (err) {
           if (err) reject(err);
           else res(true);
         },
@@ -198,11 +194,11 @@ export class LocalStorage implements IStorageProvider {
     newFolder: string,
   ): Promise<boolean | Error> {
     const self = this;
-    return new Promise(function(res, reject) {
+    return new Promise(function (res, reject) {
       rename(
         resolve(self._storagePath, currentFilename),
         resolve(self._rootStoragePath, newFolder, newFilename),
-        function(err) {
+        function (err) {
           if (err) reject(err);
           else res(true);
         },

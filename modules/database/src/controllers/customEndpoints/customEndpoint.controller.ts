@@ -16,10 +16,9 @@ export class CustomEndpointController {
     private router: DatabaseRoutes,
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
-    this.refreshRoutes()
-      .catch((err) => {
-        console.log(err);
-      });
+    this.refreshRoutes().catch(err => {
+      console.log(err);
+    });
     this.initializeState();
   }
 
@@ -30,16 +29,18 @@ export class CustomEndpointController {
   }
 
   refreshRoutes() {
-    return this.database.getSchemaModel('CustomEndpoints').model
-      .findMany({ enabled: true })
+    return this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findMany({ enabled: true })
       .then((r: ICustomEndpoint[]) => {
         if (!r || r.length == 0) {
           return console.log('No custom endpoints to register');
         }
         let routes: any[] = [];
         r.forEach((schema: ICustomEndpoint) => {
-
-          routes.push(createCustomEndpointRoute(schema, this.handler.entryPoint.bind(this.handler)));
+          routes.push(
+            createCustomEndpointRoute(schema, this.handler.entryPoint.bind(this.handler)),
+          );
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
 

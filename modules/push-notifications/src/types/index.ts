@@ -29,4 +29,3 @@ export type SendNotificationRequest = GrpcRequest<{
 export type SendNotificationResponse = GrpcResponse<{
   message: string;
 }>;
-

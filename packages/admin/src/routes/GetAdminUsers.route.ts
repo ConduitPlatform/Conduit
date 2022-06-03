@@ -31,11 +31,11 @@ export function getAdminUsersRoute() {
         '-password',
         skip,
         limit,
-        sort
+        sort,
       );
       const adminsCountPromise = Admin.getInstance().countDocuments({});
       const [admins, count] = await Promise.all([adminsPromise, adminsCountPromise]);
       return { admins, count };
-    }
+    },
   );
 }
