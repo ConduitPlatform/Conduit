@@ -8,10 +8,7 @@ import {
   Router,
 } from 'express';
 
-import {
-  ConduitCommons,
-  ConduitRoute,
-} from '@conduitplatform/commons';
+import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
@@ -34,7 +31,10 @@ export class RestController extends ConduitRouter {
 
   registerRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[],
+    router:
+      | Router
+      | ((req: Request, res: Response, next: NextFunction) => void)
+      | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
     const key = `*-${path}`;
     const registered = this._registeredLocalRoutes.has(key);
@@ -66,7 +66,10 @@ export class RestController extends ConduitRouter {
 
   private addRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void) | ((req: Request, res: Response, next: NextFunction) => void)[],
+    router:
+      | Router
+      | ((req: Request, res: Response, next: NextFunction) => void)
+      | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
     this._expressRouter.use(path, router);
   }
@@ -117,7 +120,7 @@ export class RestController extends ConduitRouter {
       );
       self
         .checkMiddlewares(context, route.input.middlewares)
-        .then((r) => {
+        .then(r => {
           validateParams(context.params, {
             ...route.input.bodyParams,
             ...route.input.queryParams,
@@ -125,7 +128,7 @@ export class RestController extends ConduitRouter {
           });
           return r;
         })
-        .then((r) => {
+        .then(r => {
           Object.assign(context.context, r);
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
@@ -133,7 +136,7 @@ export class RestController extends ConduitRouter {
           if (caching) {
             hashKey = createHashKey(context.path, context.context, context.params);
             return this.findInCache(hashKey)
-              .then((r) => {
+              .then(r => {
                 if (r) {
                   return { fromCache: true, data: JSON.parse(r) };
                 } else {
@@ -173,14 +176,13 @@ export class RestController extends ConduitRouter {
             }
             if (r.setCookies && r.setCookies.length) {
               r.setCookies.forEach((cookie: any) => {
-                if (cookie.options.path === '')
-                  delete cookie.options.path;
+                if (cookie.options.path === '') delete cookie.options.path;
                 res.cookie(cookie.name, cookie.value, cookie.options);
               });
               delete result.setCookies;
             }
             if (r.removeCookies && r.removeCookies.length) {
-              (r.removeCookies).forEach((cookie: Cookie) => {
+              r.removeCookies.forEach((cookie: Cookie) => {
                 res.clearCookie(cookie.name, cookie.options);
               });
             }
@@ -244,7 +246,6 @@ export class RestController extends ConduitRouter {
         status: 500,
         message: 'Something went wrong',
       });
-
     };
   }
 
@@ -254,7 +255,7 @@ export class RestController extends ConduitRouter {
       const [method, path] = key.split('-');
       this.addRoute(path, route);
     });
-    this._registeredRoutes.forEach((route) => {
+    this._registeredRoutes.forEach(route => {
       this.addConduitRoute(route);
     });
   }

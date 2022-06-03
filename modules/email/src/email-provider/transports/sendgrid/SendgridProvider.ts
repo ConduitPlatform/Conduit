@@ -27,10 +27,11 @@ export class SendgridProvider extends EmailProviderClass {
       body: {
         name: data.name,
         generation: 'dynamic',
-
       },
     };
-    const template_res: SendgridTemplate = (await this._sgClient.request(create_request))[0];
+    const template_res: SendgridTemplate = (
+      await this._sgClient.request(create_request)
+    )[0];
     let info: Template = {
       name: template_res.body.id,
       id: template_res.body.name,
@@ -61,7 +62,6 @@ export class SendgridProvider extends EmailProviderClass {
   }
 
   async getTemplateInfo(template_id: string): Promise<Template> {
-
     const request = {
       method: 'GET',
       url: '/v3/templates/' + template_id,
@@ -71,7 +71,6 @@ export class SendgridProvider extends EmailProviderClass {
     const versions = response.body.versions;
     var retVersions: any = [];
     versions.forEach((version: any) => {
-
       retVersions.push({
         name: version.name,
         id: version.id,
@@ -99,10 +98,11 @@ export class SendgridProvider extends EmailProviderClass {
       },
     };
     const resp = (await this._sgClient.request(request))[0];
-    const retList = (resp.body.templates as any []).map(async (element: Template) => await this.getTemplateInfo(element.id));
+    const retList = (resp.body.templates as any[]).map(
+      async (element: Template) => await this.getTemplateInfo(element.id),
+    );
 
     return Promise.all(retList);
-
   }
 
   async updateTemplate(data: UpdateEmailTemplate) {
@@ -120,7 +120,6 @@ export class SendgridProvider extends EmailProviderClass {
   }
 
   async deleteTemplate(id: string) {
-
     const request = {
       method: 'DELETE',
       url: '/v3/templates/' + id,
@@ -135,7 +134,4 @@ export class SendgridProvider extends EmailProviderClass {
   getBuilder() {
     return new SendgridMailBuilder();
   }
-
 }
-
-

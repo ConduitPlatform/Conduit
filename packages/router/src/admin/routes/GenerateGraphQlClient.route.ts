@@ -1,14 +1,12 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { generate } from '@graphql-codegen/cli';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import fs, { unlink } from 'fs';
 import { isEmpty } from 'lodash';
 import {
-  GrpcError, ConduitBoolean,
+  GrpcError,
+  ConduitBoolean,
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
@@ -64,7 +62,7 @@ export function generateGraphQlClient() {
           },
         });
         const file = fs.readFileSync(outputPath).toString('base64');
-        unlink(outputPath, (err) => {
+        unlink(outputPath, err => {
           if (err) throw new ConduitError(err.name, status.INTERNAL, err.message);
         });
         return {
@@ -154,7 +152,7 @@ const checkConfig = (validOptions: string[], configOptions: string[]) => {
     return '';
   }
 
-  const invalidOptions = configOptions.filter((e) => !validOptions.includes(e));
+  const invalidOptions = configOptions.filter(e => !validOptions.includes(e));
   if (!isEmpty(invalidOptions)) {
     throw new GrpcError(
       status.INVALID_ARGUMENT,

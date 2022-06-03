@@ -74,10 +74,10 @@ function getFormattedModuleName(moduleName: string) {
 }
 
 export function wrapFunctionsAsync(functions: {
-  [name: string]: RequestHandlers
+  [name: string]: RequestHandlers;
 }): { [name: string]: (call: any, callback?: any) => void } {
   let modifiedFunctions: { [name: string]: (call: any, callback?: any) => void } = {};
-  Object.keys(functions).forEach((key) => {
+  Object.keys(functions).forEach(key => {
     modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
   });
   return modifiedFunctions;
@@ -86,7 +86,7 @@ export function wrapFunctionsAsync(functions: {
 export function createProtoFunctions(paths: any[]) {
   let protoFunctions = '';
 
-  paths.forEach((r) => {
+  paths.forEach(r => {
     if (r.hasOwnProperty('events')) {
       protoFunctions += createProtoFunctionsForSocket(r, protoFunctions);
     } else {
@@ -103,7 +103,7 @@ function createProtoFunctionsForSocket(
 ) {
   let newFunctions = '';
   const events = JSON.parse(path.events);
-  Object.keys(events).forEach((event) => {
+  Object.keys(events).forEach(event => {
     const newFunction = createGrpcFunctionName(events[event].grpcFunction);
 
     if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {

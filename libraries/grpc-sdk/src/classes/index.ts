@@ -12,5 +12,5 @@ export * from './ManagedModule';
 export * from './ModuleManager';
 export * from './Routing/RoutingManager';
 export * from './Routing/RouteBuilder';
-export * from './ConfigController'
-export * from './ConduitParser'
+export * from './ConfigController';
+export * from './ConduitParser';

@@ -16,7 +16,7 @@ export interface FacebookUser {
   short_name?: string;
   name_format?: string;
   about?: string;
-  age_range?: { max: number, min: number };
+  age_range?: { max: number; min: number };
   birthday?: string;
   education?: FacebookExperience[];
   email?: string;

@@ -24,19 +24,19 @@ export interface ConduitSocketEventHandler {
 
 export interface EventsProtoDescription {
   [name: string]: {
-    grpcFunction: string,
-    params: string,
+    grpcFunction: string;
+    params: string;
     returns: {
-      name: string,
-      fields: string
-    }
-  }
+      name: string;
+      fields: string;
+    };
+  };
 }
 
 export interface SocketProtoDescription {
-  options: ConduitSocketOptions,
+  options: ConduitSocketOptions;
   // JSON stringify EventsProtoDescription
-  events: string,
+  events: string;
 }
 
 function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {

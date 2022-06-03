@@ -1,7 +1,5 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
-  GrpcError,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios, { AxiosRequestConfig } from 'axios';
 import { OAuth2 } from '../OAuth2';
@@ -13,9 +11,16 @@ import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { Payload } from '../interfaces/Payload';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, config: { figma: ProviderConfig }, serverConfig: { url: string }) {
-    super(grpcSdk, 'figma', new OAuth2Settings(serverConfig.url, config.figma, figmaParameters));
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    config: { figma: ProviderConfig },
+    serverConfig: { url: string },
+  ) {
+    super(
+      grpcSdk,
+      'figma',
+      new OAuth2Settings(serverConfig.url, config.figma, figmaParameters),
+    );
     this.defaultScopes = ['users:profile:read'];
   }
 
@@ -26,7 +31,7 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
       method: 'GET',
       url: 'https://api.figma.com/v1/me',
       headers: {
-        'Authorization': 'Bearer ' + details.accessToken,
+        Authorization: 'Bearer ' + details.accessToken,
       },
       data: null,
     };

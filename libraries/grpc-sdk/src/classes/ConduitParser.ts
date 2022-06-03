@@ -7,7 +7,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
   abstract extractTypes(
     name: string,
     fields: ConduitModel | ConduitRouteOption | string,
-    isInput: boolean
+    isInput: boolean,
   ): ParseResult;
 
   protected abstract getType(conduitType: any): string | any;
@@ -16,7 +16,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   protected abstract getProcessingObject(
     name: string,
-    isArray: boolean
+    isArray: boolean,
   ): ProcessingObject;
 
   protected abstract finalizeProcessingObject(object: ProcessingObject): ProcessingObject;
@@ -26,7 +26,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     name: string,
     value: any,
     isRequired: boolean,
-    isArray: boolean
+    isArray: boolean,
   ): void;
 
   protected abstract getResultFromObject(
@@ -35,7 +35,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     fieldName: string,
     value: any,
     isRequired: boolean,
-    isArray: boolean
+    isArray: boolean,
   ): void;
 
   protected abstract getResultFromArray(
@@ -44,7 +44,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     name: string,
     value: any[],
     isRequired: boolean,
-    nestedType?: boolean
+    nestedType?: boolean,
   ): void;
 
   protected abstract getResultFromRelation(
@@ -53,12 +53,12 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     name: string,
     value: any,
     isRequired: boolean,
-    isArray: boolean
+    isArray: boolean,
   ): void;
 
   protected extractTypesInternal(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string
+    fields: ConduitModel | ConduitRouteOption | string,
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, false);
     if (typeof fields === 'string') {
@@ -77,7 +77,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             name,
             field,
             fields[field] as Array<any>,
-            false
+            false,
           );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
@@ -91,7 +91,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   field,
                   (fields[field] as any).model,
                   (fields[field] as any).required,
-                  false
+                  false,
                 );
               } else {
                 this.getResultFromString(
@@ -99,7 +99,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   field,
                   (fields[field] as any).type,
                   (fields[field] as any).required,
-                  false
+                  false,
                 );
               }
             }
@@ -111,7 +111,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 field,
                 (fields[field] as any).type as Array<any>,
                 (fields[field] as any).required,
-                true
+                true,
               );
             } else {
               this.getResultFromObject(
@@ -120,7 +120,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 field,
                 (fields[field] as any).type,
                 (fields[field] as any).required,
-                false
+                false,
               );
             }
           } else {
@@ -130,7 +130,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               field,
               fields[field] as any,
               false,
-              false
+              false,
             );
           }
         }
@@ -143,7 +143,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
   protected arrayHandler(
     name: string,
     field: string,
-    value: Array<any>
+    value: Array<any>,
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, true);
     // if array contains simply a type
@@ -158,7 +158,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           field,
           value[0].model,
           value[0].required,
-          true
+          true,
         );
       } else if (typeof value[0].type === 'string') {
         this.getResultFromString(
@@ -166,7 +166,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           field,
           value[0].type,
           value[0].required,
-          true
+          true,
         );
       } else if (Array.isArray(value[0].type)) {
         this.getResultFromArray(
@@ -175,7 +175,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           field,
           value[0].type as Array<any>,
           value[0].required,
-          true
+          true,
         );
       }
       // if the array has "type" but is an object
@@ -186,7 +186,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           field,
           value[0].type,
           value[0].required,
-          true
+          true,
         );
       }
     }

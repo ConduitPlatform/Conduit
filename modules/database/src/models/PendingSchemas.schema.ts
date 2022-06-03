@@ -30,5 +30,5 @@ export const PendingSchemas = new ConduitSchema(
         canDelete: false,
       },
     },
-  }
+  },
 );

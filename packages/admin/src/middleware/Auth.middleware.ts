@@ -8,10 +8,11 @@ import { isDev } from '../utils/middleware';
 
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
   return async function authMiddleware(req: Request, res: Response, next: NextFunction) {
-    if ( // Excluded routes
+    if (
+      // Excluded routes
       req.originalUrl.indexOf('/admin/login') === 0 ||
       req.originalUrl.indexOf('/admin/modules') === 0 ||
-      (req.originalUrl.indexOf('/admin/swagger') === 0 && await isDev(conduit))
+      (req.originalUrl.indexOf('/admin/swagger') === 0 && (await isDev(conduit)))
     ) {
       return next();
     }
@@ -28,7 +29,8 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     }
 
     const [prefix, token] = args;
-    if (prefix !== 'Bearer' && prefix !== 'JWT') { // Compat (<=0.12.2): JWT
+    if (prefix !== 'Bearer' && prefix !== 'JWT') {
+      // Compat (<=0.12.2): JWT
       return res
         .status(401)
         .json({ error: "The Authorization header must be prefixed by 'Bearer '" });

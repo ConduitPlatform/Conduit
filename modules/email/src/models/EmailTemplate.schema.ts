@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -21,7 +17,7 @@ const schema = {
   variables: {
     type: [TYPE.String],
   },
-  sender:{
+  sender: {
     type: TYPE.String,
   },
   externalManaged: {

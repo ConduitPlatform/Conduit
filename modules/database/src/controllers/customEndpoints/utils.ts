@@ -1,5 +1,7 @@
 import {
-  ConduitRouteActions, RequestHandlers, RouteBuilder,
+  ConduitRouteActions,
+  RequestHandlers,
+  RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint } from '../../interfaces';
@@ -66,7 +68,10 @@ function extractParams(
   return resultingObject;
 }
 
-export function createCustomEndpointRoute(endpoint: ICustomEndpoint, handler: RequestHandlers) {
+export function createCustomEndpointRoute(
+  endpoint: ICustomEndpoint,
+  handler: RequestHandlers,
+) {
   let route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
     .method(getOperation(endpoint.operation))
@@ -77,9 +82,9 @@ export function createCustomEndpointRoute(endpoint: ICustomEndpoint, handler: Re
   let inputs = endpoint.inputs;
   let returns: any = { result: [endpoint.returns] };
   if (getOperation(endpoint.operation) === ConduitRouteActions.GET) {
-    route.cacheControl(endpoint.authentication
-      ? 'private, max-age=10'
-      : 'public, max-age=10');
+    route.cacheControl(
+      endpoint.authentication ? 'private, max-age=10' : 'public, max-age=10',
+    );
   }
   if (endpoint.paginated) {
     inputs.push({

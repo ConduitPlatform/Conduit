@@ -108,8 +108,9 @@ export class MailgunProvider extends EmailProviderClass {
   }
 
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
-
-    const [err, resp] = await to(this._mailgunSdk.delete(`/${this.domain}/templates/${id}`));
+    const [err, resp] = await to(
+      this._mailgunSdk.delete(`/${this.domain}/templates/${id}`),
+    );
     if (err) {
       throw new Error(err.message);
     }

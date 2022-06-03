@@ -1,9 +1,4 @@
-import {
-  IConduitCore,
-  IConduitAdmin,
-  IConduitRouter,
-  IConduitSecurity,
-} from './modules';
+import { IConduitCore, IConduitAdmin, IConduitRouter, IConduitSecurity } from './modules';
 import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
@@ -102,7 +97,7 @@ export class ConduitCommons {
   static validateConfig(configInput: any, configSchema: any): Boolean {
     if (isNil(configInput)) return false;
 
-    return Object.keys(configInput).every((key) => {
+    return Object.keys(configInput).every(key => {
       if (configSchema.hasOwnProperty(key)) {
         if (isPlainObject(configInput[key])) {
           return this.validateConfig(configInput[key], configSchema[key]);

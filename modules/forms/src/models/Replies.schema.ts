@@ -1,9 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
-import { Forms } from './Forms.schema'
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { Forms } from './Forms.schema';
 
 const schema = {
   _id: TYPE.ObjectId,

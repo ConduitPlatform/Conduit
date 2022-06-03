@@ -1,4 +1,9 @@
-import { ConduitMiddleware, ConduitRoute, ConduitRouteReturnDefinition, ConduitSocket } from '../classes';
+import {
+  ConduitMiddleware,
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  ConduitSocket,
+} from '../classes';
 import { ConduitRouteOptions, EventsProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {
@@ -28,7 +33,7 @@ export function constructRoute(route: ConduitRoute) {
 export function constructConduitRoute(
   input: ConduitRouteOptions,
   type: ConduitRouteReturnDefinition,
-  handler: string
+  handler: string,
 ) {
   let routeObject: any = {
     options: input,

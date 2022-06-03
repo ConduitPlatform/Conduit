@@ -95,12 +95,13 @@ Generic module env variables are also supported, with required ones being obliga
 
 ### Generic Module
 
-|  Variable        |  Description                                  | Required |  Example        |
-| :--------------: | :-------------------------------------------- | :------: | :-------------: |
-| `CONDUIT_SERVER` | Conduit Core's address and port               |   True   | `0.0.0.0:55152` |
-| `SERVICE_IP`     | Always 0.0.0.0 and a port numer               |   True   | `0.0.0.0:55190` |
-| `SERVICE_URL`    | **Deprecated** in v0.11, same as `SERVICE_IP` | ~~True~~ | `0.0.0.0:55190` |
-| `REGISTER_NAME`  | Set to `true` if running in Kubernetes        |   False  | `true`          |
+|                 Variable                 | Description                                                           | Required |      Example       |
+|:----------------------------------------:|:----------------------------------------------------------------------| :------: |:------------------:|
+|             `CONDUIT_SERVER`             | Conduit Core's address and port                                       |   True   |  `0.0.0.0:55152`   |
+|               `SERVICE_IP`               | Always 0.0.0.0 and a port numer                                       |   True   |  `0.0.0.0:55190`   |
+|             `REGISTER_NAME`              | Set to `true` if running in Kubernetes                                |   False  |       `true`       |
+|               `GRPC_KEY`                 | Specify a key to enable gRPC protection (must be used across modules) |   False  | `H+MbQeThWmZq4t6w` |
+| `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config                       |   False  |       `true`       |
 
 ## Information ℹ️
 

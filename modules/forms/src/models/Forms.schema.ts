@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -19,7 +15,8 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  emailField: { // name of dynamically specified email field in Forms.fields
+  emailField: {
+    // name of dynamically specified email field in Forms.fields
     type: TYPE.String,
     required: true,
   },

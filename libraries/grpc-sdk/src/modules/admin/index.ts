@@ -37,14 +37,14 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
   async registerAdminAsync(
     server: GrpcServer,
     paths: any[],
-    functions: { [name: string]: (call: any, callback?: any) => Promise<any> }
+    functions: { [name: string]: (call: any, callback?: any) => Promise<any> },
   ): Promise<any> {
     let modifiedFunctions: { [name: string]: Function } = {};
-    Object.keys(functions).forEach((key) => {
+    Object.keys(functions).forEach(key => {
       modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
     });
     let protoFunctions = '';
-    paths.forEach((r) => {
+    paths.forEach(r => {
       protoFunctions += `rpc ${
         r.grpcFunction.charAt(0).toUpperCase() + r.grpcFunction.slice(1)
       }(AdminRequest) returns (AdminResponse);\n`;
@@ -56,7 +56,11 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
 
     let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protoFile);
-    await server.addService(protoPath, this.moduleName + '.admin.Admin', modifiedFunctions);
+    await server.addService(
+      protoPath,
+      this.moduleName + '.admin.Admin',
+      modifiedFunctions,
+    );
     // fs.unlinkSync(protoPath);
 
     //added sleep as a precaution
@@ -69,7 +73,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
 
   register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
     let protoFunctions = '';
-    paths.forEach((r) => {
+    paths.forEach(r => {
       if (!protoFile) {
         protoFunctions += `rpc ${
           r.protoName.charAt(0).toUpperCase() + r.protoName.slice(1)

@@ -11,7 +11,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     name: string,
     fields?: ConduitModel,
     schemaOptions?: ConduitModelOptions,
-    collectionName?: string
+    collectionName?: string,
   ) {
     super(name, fields ?? {}, schemaOptions, collectionName);
     this.dbInstance = dbInstance;
@@ -20,7 +20,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   findOne(
     query: Query,
     select?: string,
-    populate?: string | string[]
+    populate?: string | string[],
   ): Promise<T | null> {
     return this.dbInstance.findOne<T>(this.name, query, select, populate);
   }
@@ -31,7 +31,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     skip?: number,
     limit?: number,
     sort?: { [key: string]: number } | string[],
-    populate?: string | string[]
+    populate?: string | string[],
   ): Promise<T[]> {
     return this.dbInstance.findMany<T>(
       this.name,
@@ -40,7 +40,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
       skip,
       limit,
       sort,
-      populate
+      populate,
     );
   }
 
@@ -67,11 +67,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     );
   }
 
-  updateMany(
-    filterQuery: Query,
-    query: Query,
-    updateProvidedOnly?: boolean
-  ) {
+  updateMany(filterQuery: Query, query: Query, updateProvidedOnly?: boolean) {
     return this.dbInstance.updateMany(this.name, filterQuery, query, updateProvidedOnly);
   }
 

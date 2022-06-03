@@ -3,7 +3,8 @@ import {
   ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
-  GrpcRequest, GrpcCallback,
+  GrpcRequest,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema from './config';
@@ -103,7 +104,10 @@ export default class Email extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async registerTemplate(call: GrpcRequest<RegisterTemplateRequest>, callback: GrpcCallback<RegisterTemplateResponse>) {
+  async registerTemplate(
+    call: GrpcRequest<RegisterTemplateRequest>,
+    callback: GrpcCallback<RegisterTemplateResponse>,
+  ) {
     const params = {
       name: call.request.name,
       subject: call.request.subject,
@@ -113,13 +117,16 @@ export default class Email extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const template = await this.emailService
       .registerTemplate(params)
-      .catch((e) => (errorMessage = e.message));
+      .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
     return callback(null, { template: JSON.stringify(template) });
   }
 
-  async sendEmail(call: GrpcRequest<SendEmailRequest>, callback: GrpcCallback<SendEmailResponse>) {
+  async sendEmail(
+    call: GrpcRequest<SendEmailRequest>,
+    callback: GrpcCallback<SendEmailResponse>,
+  ) {
     const template = call.request.templateName;
     const params = {
       email: call.request.params!.email,

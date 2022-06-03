@@ -11,12 +11,12 @@ export class ConduitSchema {
     name: string,
     fields: ConduitModel,
     schemaOptions?: ConduitModelOptions,
-    collectionName?: string
+    collectionName?: string,
   ) {
     this.name = name;
     this.fields = fields;
     this.schemaOptions = schemaOptions ?? {};
-    this.collectionName = (collectionName && collectionName !== '') ? collectionName : '';
+    this.collectionName = collectionName && collectionName !== '' ? collectionName : '';
   }
 
   get modelSchema(): ConduitModel {

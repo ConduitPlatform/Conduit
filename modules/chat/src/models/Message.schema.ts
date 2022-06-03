@@ -1,9 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
-import { ChatRoom } from './ChatRoom.schema'
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { ChatRoom } from './ChatRoom.schema';
 import { User } from './User.model';
 
 const schema = {
@@ -22,11 +18,13 @@ const schema = {
     model: 'ChatRoom',
     required: true,
   },
-  readBy: [{
-    type: TYPE.Relation,
-    model: 'User',
-    required: true,
-  }],
+  readBy: [
+    {
+      type: TYPE.Relation,
+      model: 'User',
+      required: true,
+    },
+  ],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };

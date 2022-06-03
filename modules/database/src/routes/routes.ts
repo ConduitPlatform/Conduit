@@ -2,7 +2,8 @@ import { CmsHandlers } from '../handlers/cms.handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  GrpcServer, RequestHandlers,
+  GrpcServer,
+  RequestHandlers,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
@@ -12,28 +13,35 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 export class DatabaseRoutes {
   private readonly handlers: CmsHandlers;
   private crudRoutes: {
-    input: ConduitRouteOptions,
-    returnType: ConduitRouteReturnDefinition,
-    handler: RequestHandlers
+    input: ConduitRouteOptions;
+    returnType: ConduitRouteReturnDefinition;
+    handler: RequestHandlers;
   }[] = [];
   private customRoutes: {
-    input: ConduitRouteOptions,
-    returnType: ConduitRouteReturnDefinition,
-    handler: RequestHandlers
+    input: ConduitRouteOptions;
+    returnType: ConduitRouteReturnDefinition;
+    handler: RequestHandlers;
   }[] = [];
   private _scheduledTimeout: any = null;
   private _routingManager: RoutingManager;
 
-  constructor(readonly server: GrpcServer, private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly server: GrpcServer,
+    private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this.handlers = new CmsHandlers(grpcSdk, database);
     this._routingManager = new RoutingManager(this.grpcSdk.router, server);
   }
 
-  addRoutes(routes: {
-    input: ConduitRouteOptions,
-    returnType: ConduitRouteReturnDefinition,
-    handler: RequestHandlers
-  }[], crud: boolean = true) {
+  addRoutes(
+    routes: {
+      input: ConduitRouteOptions;
+      returnType: ConduitRouteReturnDefinition;
+      handler: RequestHandlers;
+    }[],
+    crud: boolean = true,
+  ) {
     if (crud) {
       this.crudRoutes = routes;
     } else {
@@ -65,14 +73,12 @@ export class DatabaseRoutes {
 
   private _refreshRoutes() {
     this._routingManager.clear();
-    this.crudRoutes.concat(this.customRoutes)
-      .forEach(route => {
-        this._routingManager.route(route.input, route.returnType, route.handler);
-      });
-    this._routingManager.registerRoutes()
-      .catch((err: Error) => {
-        console.log('Failed to register routes for module');
-        console.log(err);
-      });
+    this.crudRoutes.concat(this.customRoutes).forEach(route => {
+      this._routingManager.route(route.input, route.returnType, route.handler);
+    });
+    this._routingManager.registerRoutes().catch((err: Error) => {
+      console.log('Failed to register routes for module');
+      console.log(err);
+    });
   }
 }

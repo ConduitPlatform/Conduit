@@ -17,7 +17,7 @@ export class ConduitMiddleware {
   constructor(
     input: ConduitMiddlewareOptions,
     middlewareName: string,
-    handler: (request: ConduitRouteParameters) => Promise<any>
+    handler: (request: ConduitRouteParameters) => Promise<any>,
   ) {
     this._input = input;
     this._middlewareName = middlewareName;

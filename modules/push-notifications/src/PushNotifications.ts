@@ -10,7 +10,9 @@ import { PushNotificationsRoutes } from './routes/routes';
 import * as models from './models';
 import {
   GetNotificationTokensRequest,
-  GetNotificationTokensResponse, SendNotificationRequest, SendNotificationResponse,
+  GetNotificationTokensResponse,
+  SendNotificationRequest,
+  SendNotificationResponse,
   SetNotificationTokenRequest,
   SetNotificationTokenResponse,
 } from './types';
@@ -49,7 +51,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('authentication', (serving) => {
+    await this.grpcSdk.monitorModule('authentication', serving => {
       if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
       } else {
@@ -87,7 +89,8 @@ export default class PushNotifications extends ManagedModule<Config> {
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
         return this.database.createSchemaFromAdapter(modelInstance);
       }
     });
@@ -116,7 +119,7 @@ export default class PushNotifications extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     models.NotificationToken.getInstance()
       .findOne({ userId, platform })
-      .then((oldToken) => {
+      .then(oldToken => {
         if (!isNil(oldToken))
           return models.NotificationToken.getInstance().deleteOne(oldToken);
       })
@@ -158,7 +161,10 @@ export default class PushNotifications extends ManagedModule<Config> {
     return callback(null, { tokenDocuments });
   }
 
-  async sendNotification(call: SendNotificationRequest, callback: SendNotificationResponse) {
+  async sendNotification(
+    call: SendNotificationRequest,
+    callback: SendNotificationResponse,
+  ) {
     let data = call.request.data;
     let params: ISendNotification;
     try {
@@ -173,11 +179,9 @@ export default class PushNotifications extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: e.message });
     }
     let errorMessage: string | null = null;
-    await this._provider!
-      .sendToDevice(params)
-      .catch((e) => {
-        errorMessage = e;
-      });
+    await this._provider!.sendToDevice(params).catch(e => {
+      errorMessage = e;
+    });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }

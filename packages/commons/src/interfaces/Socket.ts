@@ -18,9 +18,9 @@ export interface ConduitSocketOptions {
 }
 
 export type EventResponse = {
-  event: string,
-  data: string
-  receivers?: string[]
+  event: string;
+  data: string;
+  receivers?: string[];
 };
 
 export function isInstanceOfEventResponse(object: any): object is EventResponse {
@@ -31,12 +31,14 @@ export function isInstanceOfEventResponse(object: any): object is EventResponse 
 }
 
 export type JoinRoomResponse = {
-  rooms: string[]
+  rooms: string[];
 };
 
 export type ConduitSocketHandlerResponse = Promise<EventResponse | JoinRoomResponse>;
 
-export type ConduitSocketEventHandler = (request: ConduitSocketParameters) => ConduitSocketHandlerResponse;
+export type ConduitSocketEventHandler = (
+  request: ConduitSocketParameters,
+) => ConduitSocketHandlerResponse;
 
 export interface ConduitSocketEvent {
   name: string;
@@ -46,13 +48,10 @@ export interface ConduitSocketEvent {
 }
 
 export class ConduitSocket {
-  private readonly _input: ConduitSocketOptions
+  private readonly _input: ConduitSocketOptions;
   private readonly _events: Map<string, ConduitSocketEvent>;
 
-  constructor(
-    input: ConduitSocketOptions,
-    events: Map<string, ConduitSocketEvent>
-  ) {
+  constructor(input: ConduitSocketOptions, events: Map<string, ConduitSocketEvent>) {
     this._input = input;
     this._events = events;
   }
@@ -73,22 +72,24 @@ export class ConduitSocket {
 
 export interface EventsProtoDescription {
   [name: string]: {
-    grpcFunction: string,
-    params: string,
+    grpcFunction: string;
+    params: string;
     returns: {
-      name: string,
-      fields: string
-    }
-  }
+      name: string;
+      fields: string;
+    };
+  };
 }
 
 export interface SocketProtoDescription {
-  options: ConduitSocketOptions,
+  options: ConduitSocketOptions;
   // JSON stringify EventsProtoDescription
-  events: string,
+  events: string;
 }
 
-export function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {
+export function instanceOfSocketProtoDescription(
+  object: any,
+): object is SocketProtoDescription {
   if (!('options' in object)) {
     return false;
   }

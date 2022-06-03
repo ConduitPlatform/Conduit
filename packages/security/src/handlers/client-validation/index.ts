@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons  } from '@conduitplatform/commons';
-import { ConfigController, DatabaseProvider,ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitCommons } from '@conduitplatform/commons';
+import {
+  ConfigController,
+  DatabaseProvider,
+  ConduitError,
+} from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { validateClient } from '../../utils/security';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';
@@ -17,7 +21,7 @@ export class ClientValidator {
     sdk
       .getConfigManager()
       .get('core')
-      .then((res) => {
+      .then(res => {
         if (res.env === 'production') {
           self.prod = true;
         }
@@ -57,13 +61,15 @@ export class ClientValidator {
     let key = await this.sdk.getState().getKey(clientid as string);
     if (key) {
       let [_clientsecret, _platform, _domain] = key.split(',');
-      let validPlatform = await validateClient(req,
+      let validPlatform = await validateClient(
+        req,
         {
           clientSecret: _clientsecret,
           platform: _platform,
           domain: _domain,
         },
-        true);
+        true,
+      );
       if (validPlatform) {
         (req as any).conduit.clientId = clientid;
         return next();
@@ -73,7 +79,7 @@ export class ClientValidator {
     }
     Client.getInstance()
       .findOne({ clientId: clientid }, 'clientSecret platform domain')
-      .then(async (client) => {
+      .then(async client => {
         if (isNil(client)) {
           return {
             validated: false,
@@ -91,7 +97,13 @@ export class ClientValidator {
         delete req.headers.clientsecret;
         (req as any).conduit.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk.getState().setKey(`${clientid}`, `${clientsecret},${valid.client!.platform},${valid.client!.domain}`, 100000);
+        this.sdk
+          .getState()
+          .setKey(
+            `${clientid}`,
+            `${clientsecret},${valid.client!.platform},${valid.client!.domain}`,
+            100000,
+          );
         next();
       })
       .catch(() => {

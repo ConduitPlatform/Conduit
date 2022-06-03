@@ -1,4 +1,4 @@
-import { ModuleManager } from "@conduitplatform/grpc-sdk";
+import { ModuleManager } from '@conduitplatform/grpc-sdk';
 import SmsModule from './Sms';
 import { Config } from './config';
 

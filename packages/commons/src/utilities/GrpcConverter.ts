@@ -26,8 +26,7 @@ function getDescriptor(protofile: string): any {
     defaults: true,
     oneofs: true,
   });
-  fs.unlink(protoPath, () => {
-  });
+  fs.unlink(protoPath, () => {});
   return loadPackageDefinition(packageDefinition);
 }
 
@@ -38,7 +37,7 @@ export function grpcToConduitRoute(
   grpcToken?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let routes: [
-      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription,
   ] = request.routes;
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
@@ -58,7 +57,7 @@ export function grpcToConduitRoute(
 
 function createHandlers(
   routes: [
-      { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription
+    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription,
   ],
   client: any,
   moduleName?: string,
@@ -66,7 +65,7 @@ function createHandlers(
 ) {
   const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
 
-  routes.forEach((r) => {
+  routes.forEach(r => {
     let route;
     const metadata = new Metadata();
     if (grpcToken) {
@@ -114,8 +113,7 @@ function createHandlerForRoute(
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   let returns: any = route.returns;
@@ -124,8 +122,7 @@ function createHandlerForRoute(
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
   if (!options.path.startsWith('/')) {

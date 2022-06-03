@@ -1,6 +1,6 @@
-import { TYPE } from "@conduitplatform/grpc-sdk";
-import { isNil } from "lodash";
-import { Sequelize } from "sequelize";
+import { TYPE } from '@conduitplatform/grpc-sdk';
+import { isNil } from 'lodash';
+import { Sequelize } from 'sequelize';
 
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
@@ -54,7 +54,7 @@ function extractProperties(field: any) {
   }
   if (field.hasOwnProperty('foreignKey') && !field.foreignKey.isPrimaryKey) {
     field.type = TYPE.Relation;
-    switch(field.foreignKey.constraint_type){
+    switch (field.foreignKey.constraint_type) {
       case 'UNIQUE':
         field.unique = true;
         break;
@@ -72,11 +72,11 @@ function extractProperties(field: any) {
   }
   if (field.hasOwnProperty('defaultValue') && !isNil(field.defaultValue)) {
     field.default = field.defaultValue;
-    if(typeof field.default === 'string' && field.default.startsWith('uuid_generate')) {
+    if (typeof field.default === 'string' && field.default.startsWith('uuid_generate')) {
       field.default = Sequelize.fn(field.default);
     }
   }
-  if(field.hasOwnProperty('allowNull')) {
+  if (field.hasOwnProperty('allowNull')) {
     field.required = !field.allowNull;
   }
 

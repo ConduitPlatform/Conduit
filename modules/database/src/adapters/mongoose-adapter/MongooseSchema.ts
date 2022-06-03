@@ -1,5 +1,11 @@
 import { Model, Mongoose, Schema } from 'mongoose';
-import { MultiDocQuery, ParsedQuery, Query, SchemaAdapter, SingleDocQuery } from '../../interfaces';
+import {
+  MultiDocQuery,
+  ParsedQuery,
+  Query,
+  SchemaAdapter,
+  SingleDocQuery,
+} from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
@@ -22,9 +28,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
 
     if (!isNil(schema.collectionName)) {
       (schema as any).schemaOptions.collection = schema.collectionName;
-    }
-    else {
-      (schema as any).collectionName = schema.name //restore collectionName
+    } else {
+      (schema as any).collectionName = schema.name; //restore collectionName
     }
     let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});
@@ -36,9 +41,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       ...(typeof query === 'string' ? EJSON.parse(query) : query),
       createdAt: new Date(),
       updatedAt: new Date(),
-    }
+    };
     await this.createWithPopulations(parsedQuery);
-    return this.model.create(parsedQuery).then((r) => r.toObject());
+    return this.model.create(parsedQuery).then(r => r.toObject());
   }
 
   async createMany(query: MultiDocQuery) {
@@ -55,7 +60,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       await this.createWithPopulations(doc);
     }
 
-    return this.model.insertMany(docs).then((r) => r);
+    return this.model.insertMany(docs).then(r => r);
   }
 
   async findByIdAndUpdate(
@@ -140,7 +145,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
           if (this.originalSchema.modelSchema[r[0]]) {
             controlBool = false;
           } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
-            throw new Error('Failed populating \'' + final + '\'');
+            throw new Error("Failed populating '" + final + "'");
           } else {
             r.splice(0, 1);
           }
@@ -218,7 +223,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   private parseQuery(query: ParsedQuery) {
     let parsed = {} as ParsedQuery;
 
-    Object.keys(query).forEach((key) => {
+    Object.keys(query).forEach(key => {
       if (query[key]?.hasOwnProperty('$contains')) {
         parsed[key] = { $in: query[key]['$contains'] };
       } else {

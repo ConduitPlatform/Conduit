@@ -21,8 +21,11 @@ import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
-import { HealthDefinition, HealthCheckResponse_ServingStatus } from './protoUtils/grpc_health_check';
-import { ModuleListResponse_ModuleResponse } from './protoUtils/core'
+import {
+  HealthDefinition,
+  HealthCheckResponse_ServingStatus,
+} from './protoUtils/grpc_health_check';
+import { ModuleListResponse_ModuleResponse } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 
@@ -53,7 +56,12 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
-  constructor(serverUrl: string, serviceHealthStatusGetter: Function, name?: string, watchModules = true) {
+  constructor(
+    serverUrl: string,
+    serviceHealthStatusGetter: Function,
+    name?: string,
+    watchModules = true,
+  ) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -81,7 +89,10 @@ export default class ConduitGrpcSdk {
       while (true) {
         try {
           const state = await this.core.check();
-          if (this.name === 'database' || (state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+          if (
+            this.name === 'database' ||
+            ((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING
+          ) {
             console.log('Core connection established');
             this._initialize();
             break;
@@ -98,10 +109,16 @@ export default class ConduitGrpcSdk {
   }
 
   private _initialize() {
-    if (this._initialized) throw new Error('Module\'s grpc-sdk has already been initialized');
-    (this._config as any)  = new Config(this.name, this.serverUrl, this._serviceHealthStatusGetter, this._grpcToken);
+    if (this._initialized)
+      throw new Error("Module's grpc-sdk has already been initialized");
+    (this._config as any) = new Config(
+      this.name,
+      this.serverUrl,
+      this._serviceHealthStatusGetter,
+      this._grpcToken,
+    );
     (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    (this._router as any)  = new Router(this.name, this.serverUrl, this._grpcToken);
+    (this._router as any) = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
     if (this._watchModules) {
       this.watchModules();
@@ -223,8 +240,10 @@ export default class ConduitGrpcSdk {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
     emitter.on('serving-modules-update', (modules: any) => {
-      Object.keys(this._modules).forEach((r) => {
-        const found = modules.filter((m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving);
+      Object.keys(this._modules).forEach(r => {
+        const found = modules.filter(
+          (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
+        );
         if ((!found || found.length === 0) && this._availableModules[r]) {
           this._modules[r]?.closeConnection();
           emitter.emit(`module-connection-update:${r}`, false);
@@ -248,7 +267,8 @@ export default class ConduitGrpcSdk {
     wait: boolean = true,
   ) {
     if (wait) await this.waitForExistence(moduleName);
-    this._modules['chat']?.healthClient?.check({})
+    this._modules['chat']?.healthClient
+      ?.check({})
       .then(res => {
         callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
       })
@@ -284,16 +304,15 @@ export default class ConduitGrpcSdk {
    * This will only work on known modules, since the primary usage for the sdk is internal
    */
   initializeModules() {
-    return this._config!
-      .moduleList()
-      .then((r) => {
+    return this._config!.moduleList()
+      .then(r => {
         this.lastSearch = Date.now();
-        r.forEach((m) => {
+        r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
         });
         return 'ok';
       })
-      .catch((err) => {
+      .catch(err => {
         if (err.code !== 5) {
           console.error(err);
         }
@@ -301,7 +320,11 @@ export default class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (this._modules[moduleName] || (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])) return;
+    if (
+      this._modules[moduleName] ||
+      (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
+    )
+      return;
     if (this._availableModules[moduleName]) {
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
@@ -309,7 +332,12 @@ export default class ConduitGrpcSdk {
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      this._modules[moduleName] = new ConduitModule(this.name, moduleName, moduleUrl, this._grpcToken);
+      this._modules[moduleName] = new ConduitModule(
+        this.name,
+        moduleName,
+        moduleUrl,
+        this._grpcToken,
+      );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
     }
   }
@@ -322,7 +350,9 @@ export default class ConduitGrpcSdk {
     if (this._modules[name]) return this._modules[name].client!;
   }
 
-  getHealthClient<T extends CompatServiceDefinition>(name: string): Client<typeof HealthDefinition> | undefined {
+  getHealthClient<T extends CompatServiceDefinition>(
+    name: string,
+  ): Client<typeof HealthDefinition> | undefined {
     if (this._modules[name]) return this._modules[name].healthClient!;
   }
 

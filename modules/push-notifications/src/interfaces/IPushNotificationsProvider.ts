@@ -6,7 +6,5 @@ export interface IPushNotificationsProvider {
 
   sendMany(params: ISendNotification[]): Promise<any>;
 
-  sendToManyDevices(
-    params: ISendNotificationToManyDevices,
-  ): Promise<any>;
+  sendToManyDevices(params: ISendNotificationToManyDevices): Promise<any>;
 }

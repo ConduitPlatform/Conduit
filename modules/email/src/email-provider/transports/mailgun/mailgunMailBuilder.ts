@@ -3,7 +3,6 @@ import { MailgunEmailOptions } from '../../interfaces/mailgun/MailgunEmailOption
 import { TemplateOptions } from '../../interfaces/TemplateOptions';
 
 export class MailgunMailBuilder extends EmailBuilderClass<MailgunEmailOptions> {
-
   constructor() {
     super();
   }

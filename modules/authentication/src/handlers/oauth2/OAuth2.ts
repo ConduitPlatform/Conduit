@@ -3,7 +3,11 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController, RoutingManager, ConduitRouteActions, ConduitString, ConduitRouteReturnDefinition,
+  ConfigController,
+  RoutingManager,
+  ConduitRouteActions,
+  ConduitString,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -19,14 +23,14 @@ import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy
 import { ConnectionParams } from './interfaces/ConnectionParams';
 import { OAuthRequest } from './interfaces/MakeRequest';
 
-export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthenticationStrategy {
+export abstract class OAuth2<T, S extends OAuth2Settings>
+  implements IAuthenticationStrategy {
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
   initialized: boolean = false;
   mapScopes: { [key: string]: string };
-  defaultScopes: string [];
-
+  defaultScopes: string[];
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -68,11 +72,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     options['state'] = call.request.context.clientId + ',' + options.scope;
 
     const keys = Object.keys(options) as [keyof RedirectOptions];
-    let url = keys.map((k) => {
-      return k + '=' + options[k];
-    }).join('&');
+    let url = keys
+      .map(k => {
+        return k + '=' + options[k];
+      })
+      .join('&');
     return baseUrl + url;
-  };
+  }
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
@@ -84,12 +90,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
     };
 
-    if ((this.settings).hasOwnProperty('grantType')) {
+    if (this.settings.hasOwnProperty('grantType')) {
       myParams['grant_type'] = this.settings.grantType;
     }
 
     let providerOptions = this.makeRequest(myParams);
-    const providerResponse: { data: { access_token: string } } = await axios(providerOptions);
+    const providerResponse: { data: { access_token: string } } = await axios(
+      providerOptions,
+    );
     let access_token = providerResponse.data.access_token;
     let state = params.state;
     state = {
@@ -98,7 +106,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     };
 
     let clientId = state.clientId;
-    let payload = await this.connectWithProvider({ accessToken: access_token, clientId, scope: state.scopes });
+    let payload = await this.connectWithProvider({
+      accessToken: access_token,
+      clientId,
+      scope: state.scopes,
+    });
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     let tokens = await this.createTokens(user._id, clientId, config);
@@ -108,11 +120,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       if (cookieOptions.path === '') {
         delete cookieOptions.path;
       }
-      const cookies: Cookie[] = [{
-        name: 'accessToken',
-        value: tokens.accessToken,
-        options: cookieOptions,
-      }];
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: tokens.accessToken,
+          options: cookieOptions,
+        },
+      ];
       if (!isNil(tokens.refreshToken)) {
         cookies.push({
           name: 'refreshToken',
@@ -126,7 +140,8 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       };
     }
     return {
-      redirect: this.settings.finalRedirect +
+      redirect:
+        this.settings.finalRedirect +
         '?accessToken=' +
         tokens.accessToken +
         '&refreshToken=' +
@@ -142,14 +157,20 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
     });
     let user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
-    let tokens = await this.createTokens(user._id, call.request.params['clientId'], config);
+    let tokens = await this.createTokens(
+      user._id,
+      call.request.params['clientId'],
+      config,
+    );
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [{
-        name: 'accessToken',
-        value: tokens.accessToken,
-        options: cookieOptions,
-      }];
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: tokens.accessToken,
+          options: cookieOptions,
+        },
+      ];
       if (!isNil(tokens.refreshToken)) {
         cookies.push({
           name: 'refreshToken',
@@ -166,7 +187,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       userId: user!._id.toString(),
       accessToken: tokens.accessToken,
       refreshToken: !isNil(tokens.refreshToken) ? tokens.refreshToken : undefined,
-
     };
   }
 
@@ -195,7 +215,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       // TODO look into this again, as the email the user has registered will still not be verified
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
-
     } else {
       user = await User.getInstance().create({
         email: payload.email,
@@ -232,7 +251,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
           scopes: [ConduitString.Optional],
         },
       },
-      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}InitResponse`, 'String'),
+      new ConduitRouteReturnDefinition(
+        `${this.capitalizeProvider()}InitResponse`,
+        'String',
+      ),
       this.redirect.bind(this),
     );
 
@@ -253,7 +275,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       }),
       this.authorize.bind(this),
     );
-
   }
 
   makeRequest(data: AuthParams): OAuthRequest {
@@ -262,7 +283,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
       url: this.settings.tokenUrl,
       params: { ...data },
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     };
   }
@@ -274,7 +295,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings> implements IAuthentica
   }
 
   private capitalizeProvider = () => {
-    return this.providerName.charAt(0).toUpperCase()
-      + this.providerName.substr(1);
+    return this.providerName.charAt(0).toUpperCase() + this.providerName.substr(1);
   };
 }

@@ -10,7 +10,7 @@ import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
-export abstract class ManagedModule<T> extends ConduitServiceModule{
+export abstract class ManagedModule<T> extends ConduitServiceModule {
   abstract readonly config?: convict.Config<T>;
   service?: ConduitService;
 
@@ -18,7 +18,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule{
     super(moduleName);
   }
 
-  get name() { return this._moduleName; }
+  get name() {
+    return this._moduleName;
+  }
 
   initialize(grpcSdk: ConduitGrpcSdk) {
     this.grpcSdk = grpcSdk;
@@ -32,7 +34,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule{
 
   async onRegister() {}
 
-  async preConfig(config: T) { return config }
+  async preConfig(config: T) {
+    return config;
+  }
 
   async onConfig() {}
 
@@ -43,8 +47,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule{
 
   async startGrpcServer() {
     if (this.service) {
-      this._serviceName = this.service.protoDescription.substring(this.service.protoDescription.indexOf('.') + 1);
-      await this.grpcServer.addService(this.service.protoPath, this.service.protoDescription, this.service.functions);
+      this._serviceName = this.service.protoDescription.substring(
+        this.service.protoDescription.indexOf('.') + 1,
+      );
+      await this.grpcServer.addService(
+        this.service.protoPath,
+        this.service.protoDescription,
+        this.service.functions,
+      );
       await this.addHealthCheckService();
       await this.grpcServer.start();
       console.log('gRPC server is online');
@@ -72,7 +82,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule{
       const moduleConfig = await this.grpcSdk.config.updateConfig(config, this.name);
       ConfigController.getInstance().config = moduleConfig;
       await this.onConfig();
-      this.grpcSdk.bus?.publish(kebabCase(this.name) + ':config:update', JSON.stringify(moduleConfig));
+      this.grpcSdk.bus?.publish(
+        kebabCase(this.name) + ':config:update',
+        JSON.stringify(moduleConfig),
+      );
       return callback(null, { updatedConfig: JSON.stringify(moduleConfig) });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: e.message });

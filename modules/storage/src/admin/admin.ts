@@ -20,7 +20,7 @@ export class AdminRoutes {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly fileHandlers: FileHandlers
+    private readonly fileHandlers: FileHandlers,
   ) {
     this.registerAdminRoutes();
   }
@@ -60,7 +60,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('File', File.getInstance().fields),
-        'getFile'
+        'getFile',
       ),
       constructConduitRoute(
         {
@@ -78,7 +78,7 @@ export class AdminRoutes {
           files: ['File'],
           filesCount: ConduitNumber.Required,
         }),
-        'getFiles'
+        'getFiles',
       ),
       constructConduitRoute(
         {
@@ -94,7 +94,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
-        'createFile'
+        'createFile',
       ),
       constructConduitRoute(
         {
@@ -112,7 +112,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('PatchFile', File.getInstance().fields),
-        'patchFile'
+        'patchFile',
       ),
       constructConduitRoute(
         {
@@ -125,7 +125,7 @@ export class AdminRoutes {
         new ConduitRouteReturnDefinition('DeleteFile', {
           success: ConduitString.Required,
         }),
-        'deleteFile'
+        'deleteFile',
       ),
       constructConduitRoute(
         {
@@ -142,7 +142,7 @@ export class AdminRoutes {
           url: ConduitString.Optional,
           redirect: ConduitString.Optional,
         }),
-        'getFileUrl'
+        'getFileUrl',
       ),
       constructConduitRoute(
         {
@@ -155,7 +155,7 @@ export class AdminRoutes {
         new ConduitRouteReturnDefinition('GetFileData', {
           data: ConduitString.Required,
         }),
-        'getFileData'
+        'getFileData',
       ),
       constructConduitRoute(
         {
@@ -172,7 +172,7 @@ export class AdminRoutes {
           folders: [_StorageFolder.getInstance().fields],
           folderCount: ConduitNumber.Required,
         }),
-        'getFolders'
+        'getFolders',
       ),
       constructConduitRoute(
         {
@@ -186,9 +186,9 @@ export class AdminRoutes {
         },
         new ConduitRouteReturnDefinition(
           'CreateFolder',
-          _StorageFolder.getInstance().fields
+          _StorageFolder.getInstance().fields,
         ),
-        'createFolder'
+        'createFolder',
       ),
       constructConduitRoute(
         {
@@ -199,7 +199,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
-        'deleteFolder'
+        'deleteFolder',
       ),
       constructConduitRoute(
         {
@@ -214,7 +214,7 @@ export class AdminRoutes {
           containers: [_StorageContainer.getInstance().fields],
           containersCount: ConduitNumber.Required,
         }),
-        'getContainers'
+        'getContainers',
       ),
       constructConduitRoute(
         {
@@ -227,9 +227,9 @@ export class AdminRoutes {
         },
         new ConduitRouteReturnDefinition(
           'CreateContainer',
-          _StorageContainer.getInstance().fields
+          _StorageContainer.getInstance().fields,
         ),
-        'createContainer'
+        'createContainer',
       ),
       constructConduitRoute(
         {
@@ -241,9 +241,9 @@ export class AdminRoutes {
         },
         new ConduitRouteReturnDefinition(
           'DeleteContainer',
-          _StorageContainer.getInstance().fields
+          _StorageContainer.getInstance().fields,
         ),
-        'deleteContainer'
+        'deleteContainer',
       ),
     ];
   }
@@ -380,7 +380,7 @@ export class AdminRoutes {
     } catch (e) {
       throw new GrpcError(
         e.status ?? status.INTERNAL,
-        e.message ?? 'Something went wrong'
+        e.message ?? 'Something went wrong',
       );
     }
   }
@@ -407,7 +407,7 @@ export class AdminRoutes {
     } catch (e) {
       throw new GrpcError(
         e.status ?? status.INTERNAL,
-        e.message ?? 'Something went wrong'
+        e.message ?? 'Something went wrong',
       );
     }
   }

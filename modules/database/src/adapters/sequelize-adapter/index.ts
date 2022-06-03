@@ -27,15 +27,20 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async retrieveForeignSchemas(): Promise<void> {
-    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
+    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
+      {},
+    );
     const tableNames: string[] = (
-      await this.sequelize.query(`select * from pg_tables where schemaname='${sqlSchemaName}';`)
+      await this.sequelize.query(
+        `select * from pg_tables where schemaname='${sqlSchemaName}';`,
+      )
     )[0].map((t: any) => t.tablename);
-    const declaredSchemaTableName = this.models['_DeclaredSchema'].originalSchema.collectionName;
+    const declaredSchemaTableName = this.models['_DeclaredSchema'].originalSchema
+      .collectionName;
     for (const table of tableNames) {
       if (table === declaredSchemaTableName) continue;
-      const tableInDeclaredSchemas = declaredSchemas.some((declaredSchema: ConduitSchema) =>
-        declaredSchema.collectionName === table
+      const tableInDeclaredSchemas = declaredSchemas.some(
+        (declaredSchema: ConduitSchema) => declaredSchema.collectionName === table,
       );
       if (!tableInDeclaredSchemas) {
         this.foreignSchemaCollections.add(table);
@@ -55,9 +60,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       schema: sqlSchemaName,
     };
     const introspectedSchemas: ConduitSchema[] = [];
-    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany({});
+    const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
+      {},
+    );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema.collectionName;
+    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema
+      .collectionName;
     await this.getSchemaModel(pendingSchemaCollectionName).model.deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
@@ -67,7 +75,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         importedSchemas.push(schema.collectionName);
       }
     });
-    const introspectableSchemas = Array.from(this.foreignSchemaCollections).concat(importedSchemas);
+    const introspectableSchemas = Array.from(this.foreignSchemaCollections).concat(
+      importedSchemas,
+    );
     // Process Schemas
     const auto = new SequelizeAuto(this.sequelize, '', '', {
       ...options,
@@ -75,8 +85,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     });
     const data = await auto.run();
     const tables = Object.fromEntries(
-      Object.entries(data.tables).filter(
-        ([key]) => introspectableSchemas.includes(key.replace(`${sqlSchemaName}.`, '')),
+      Object.entries(data.tables).filter(([key]) =>
+        introspectableSchemas.includes(key.replace(`${sqlSchemaName}.`, '')),
       ),
     );
     for (const tableName of Object.keys(tables)) {
@@ -112,22 +122,22 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         cms: {
           authentication: false,
           crudOperations: {
-              create: {
-                enabled: false,
-                authenticated: false,
-              },
-              read: {
-                enabled: false,
-                authenticated: false,
-              },
-              update: {
-                enabled: false,
-                authenticated: false,
-              },
-              delete: {
-                enabled: false,
-                authenticated: false,
-              },
+            create: {
+              enabled: false,
+              authenticated: false,
+            },
+            read: {
+              enabled: false,
+              authenticated: false,
+            },
+            update: {
+              enabled: false,
+              authenticated: false,
+            },
+            delete: {
+              enabled: false,
+              authenticated: false,
+            },
           },
           enabled: true,
         },
@@ -139,15 +149,22 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
-    let collectionName = (schema.collectionName && schema.collectionName !== '') ? schema.collectionName : schema.name;
+    let collectionName =
+      schema.collectionName && schema.collectionName !== ''
+        ? schema.collectionName
+        : schema.name;
     if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
-      collectionName = collectionName.startsWith('_') ? `cnd${collectionName}` : `cnd_${collectionName}`;
+      collectionName = collectionName.startsWith('_')
+        ? `cnd${collectionName}`
+        : `cnd_${collectionName}`;
     }
     (schema as any).collectionName = collectionName;
     (schema as any).name = collectionName;
   }
 
-  protected async _createSchemaFromAdapter(schema: ConduitSchema): Promise<SequelizeSchema> {
+  protected async _createSchemaFromAdapter(
+    schema: ConduitSchema,
+  ): Promise<SequelizeSchema> {
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
         schema = systemRequiredValidator(
@@ -197,17 +214,17 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (deleteData) {
       await this.models[schemaName].model.drop();
     }
-    this.models['_DeclaredSchema'].findOne(JSON.stringify({ name: schemaName })).then(
-      (model) => {
+    this.models['_DeclaredSchema']
+      .findOne(JSON.stringify({ name: schemaName }))
+      .then(model => {
         if (model) {
-          this.models['_DeclaredSchema'].deleteOne(
-            JSON.stringify({ name: schemaName }),
-          ).catch((e: Error) => {
-            throw new GrpcError(status.INTERNAL, e.message);
-          });
+          this.models['_DeclaredSchema']
+            .deleteOne(JSON.stringify({ name: schemaName }))
+            .catch((e: Error) => {
+              throw new GrpcError(status.INTERNAL, e.message);
+            });
         }
-      },
-    );
+      });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
     return 'Schema deleted!';
@@ -218,7 +235,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       const self = this;
       let relations: any = {};
       for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] = self.models[this.models[schemaName].relations[key]];
+        relations[this.models[schemaName].relations[key]] =
+          self.models[this.models[schemaName].relations[key]];
       }
       return { model: this.models[schemaName], relations };
     }
@@ -232,7 +250,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         console.log('Sequelize connection established successfully');
         return;
       })
-      .catch((err) => {
+      .catch(err => {
         console.error('Unable to connect to the database: ', err);
         throw err;
       });

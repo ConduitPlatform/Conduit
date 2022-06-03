@@ -1,5 +1,9 @@
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { ConduitModel, ConduitRouteOptions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitRouteOptions,
+  ConduitRouteParameters,
+} from '@conduitplatform/grpc-sdk';
 
 export class ConduitRoute {
   private _returnType: ConduitRouteReturnDefinition;
@@ -9,7 +13,7 @@ export class ConduitRoute {
   constructor(
     input: ConduitRouteOptions,
     type: ConduitRouteReturnDefinition,
-    handler: (request: ConduitRouteParameters) => Promise<any>
+    handler: (request: ConduitRouteParameters) => Promise<any>,
   ) {
     this._input = input;
     this._returnType = type;

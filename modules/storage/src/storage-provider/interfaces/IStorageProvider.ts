@@ -47,7 +47,7 @@ export interface IStorageProvider {
   moveToFolderAndRename(
     currentFilename: string,
     newFilename: string,
-    newFolder: string
+    newFolder: string,
   ): Promise<boolean | Error>;
 
   moveToContainer(filename: string, newContainer: string): Promise<boolean | Error>;
@@ -55,6 +55,6 @@ export interface IStorageProvider {
   moveToContainerAndRename(
     currentFilename: string,
     newFilename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error>;
 }

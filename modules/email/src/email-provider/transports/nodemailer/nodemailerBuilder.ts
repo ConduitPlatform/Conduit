@@ -11,4 +11,3 @@ export class NodemailerBuilder extends EmailBuilderClass<Mail.Options> {
     super();
   }
 }
-

@@ -1,7 +1,5 @@
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, {
-  GrpcError,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import axios from 'axios';
 import { OAuth2 } from '../OAuth2';
@@ -14,24 +12,36 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, config: { slack: ProviderConfig }, serverConfig: { url: string }) {
-    super(grpcSdk, 'slack', new OAuth2Settings(serverConfig.url, config.slack, slackParameters));
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    config: { slack: ProviderConfig },
+    serverConfig: { url: string },
+  ) {
+    super(
+      grpcSdk,
+      'slack',
+      new OAuth2Settings(serverConfig.url, config.slack, slackParameters),
+    );
     this.defaultScopes = ['users:read'];
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<SlackUser>> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
-    const slackResponse: SlackResponse = await axios.get('https://slack.com/api/users.profile.get', {
-      headers: {
-        'Authorization': 'Bearer ' + details.accessToken,
+    const slackResponse: SlackResponse = await axios.get(
+      'https://slack.com/api/users.profile.get',
+      {
+        headers: {
+          Authorization: 'Bearer ' + details.accessToken,
+        },
       },
-    });
-    if (isNil(slackResponse.data.profile.email) || isNil(slackResponse.data.profile.avatar_hash)) {
+    );
+    if (
+      isNil(slackResponse.data.profile.email) ||
+      isNil(slackResponse.data.profile.avatar_hash)
+    ) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with slack failed');
     }
-
 
     return {
       id: slackResponse.data.profile.avatar_hash,

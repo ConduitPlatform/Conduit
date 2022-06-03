@@ -29,7 +29,6 @@ export function getGetConfigRoute(
       config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
-
       const dbConfig = await models.Config.getInstance().findOne({});
       if (isNil(dbConfig)) {
         return { result: { config: {} } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction

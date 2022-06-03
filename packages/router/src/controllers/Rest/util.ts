@@ -41,10 +41,7 @@ export function extractRequestData(req: Request) {
   return { context, params, headers, path };
 }
 
-export function validateParams(
-  params: Params,
-  routeDefinedParams: Params,
-) {
+export function validateParams(params: Params, routeDefinedParams: Params) {
   for (const key of Object.keys(routeDefinedParams)) {
     if (
       isArray(routeDefinedParams[key]) ||
@@ -95,11 +92,7 @@ function validateArray(
   return param;
 }
 
-function validateObject(
-  fieldName: string,
-  param: Params,
-  routeDefinedObject: Params,
-) {
+function validateObject(fieldName: string, param: Params, routeDefinedObject: Params) {
   if (routeDefinedObject.required && isNil(param)) {
     throw ConduitError.userInput(`${fieldName} is required`);
   } else if (isNil(param)) {

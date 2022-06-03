@@ -31,18 +31,22 @@ export interface ConduitModel {
     | any[]; // removing this caused multiple issues
 }
 
-export const ConduitModelOptionsPermModifyType = ['Everything', 'Nothing', 'ExtensionOnly'];
+export const ConduitModelOptionsPermModifyType = [
+  'Everything',
+  'Nothing',
+  'ExtensionOnly',
+];
 
 export interface ConduitModelOptions {
   timestamps?: boolean;
   _id?: boolean;
   conduit?: {
-    [field: string]: any,
+    [field: string]: any;
     permissions?: {
-      extendable: boolean,
-      canCreate: boolean,
-      canModify: 'Everything' | 'Nothing' | 'ExtensionOnly',
-      canDelete: boolean,
-    },
+      extendable: boolean;
+      canCreate: boolean;
+      canModify: 'Everything' | 'Nothing' | 'ExtensionOnly';
+      canDelete: boolean;
+    };
   };
 }

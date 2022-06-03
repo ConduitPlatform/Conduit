@@ -8,8 +8,11 @@ import { Forms } from '../models';
 import { FormsRoutes } from '../routes/routes';
 
 export class FormsController {
-
-  constructor(private readonly grpcSdk: ConduitGrpcSdk, private readonly router: FormsRoutes, private readonly routingManager: RoutingManager) {
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly router: FormsRoutes,
+    private readonly routingManager: RoutingManager,
+  ) {
     this.refreshRoutes();
     this.initializeState();
   }
@@ -38,7 +41,7 @@ export class FormsController {
   private _registerRoutes(forms: Forms[]) {
     this.routingManager.clear();
     forms.forEach((r: Forms) => {
-      Object.keys(r.fields).forEach((key) => {
+      Object.keys(r.fields).forEach(key => {
         r.fields[key] = TYPE.String;
       });
       this.routingManager.route(
@@ -51,6 +54,5 @@ export class FormsController {
         this.router.submitForm.bind(this.router),
       );
     });
-
   }
 }

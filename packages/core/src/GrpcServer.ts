@@ -1,7 +1,9 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
-  GrpcServer as ConduitGrpcServer, GrpcRequest, GrpcCallback,
+  GrpcServer as ConduitGrpcServer,
+  GrpcRequest,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
@@ -24,15 +26,13 @@ export class GrpcServer {
     return this._initialized;
   }
 
-  constructor(
-    private readonly commons: ConduitCommons,
-    private readonly port: number,
-  ) {
+  constructor(private readonly commons: ConduitCommons, private readonly port: number) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
     this.server = new ConduitGrpcServer(this.port.toString());
-    this.server.createNewServer()
-      .then((port) => {
+    this.server
+      .createNewServer()
+      .then(port => {
         const _url = '0.0.0.0:' + port.toString();
         const grpcSdk = new ConduitGrpcSdk(
           _url,
@@ -44,15 +44,11 @@ export class GrpcServer {
         );
         grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(
-            new ConfigManager(
-              grpcSdk,
-              this.commons,
-              async () => {
-                if (!this._initialized) {
-                  await this.bootstrapSdkComponents(grpcSdk);
-                }
-              },
-            ),
+            new ConfigManager(grpcSdk, this.commons, async () => {
+              if (!this._initialized) {
+                await this.bootstrapSdkComponents(grpcSdk);
+              }
+            }),
           );
           await this.commons.getConfigManager().initialize(this.server);
           this.server.start();
@@ -63,19 +59,14 @@ export class GrpcServer {
         return this.addHealthService();
       })
       .then()
-      .catch((err) => {
+      .catch(err => {
         console.error(err);
         process.exit(-1);
       });
   }
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
-    this.commons.registerAdmin(
-      new AdminModule(
-        this.commons,
-        grpcSdk,
-      ),
-    );
+    this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
     this.commons.registerRouter(
       new ConduitDefaultRouter(
         this.commons,
@@ -87,7 +78,8 @@ export class GrpcServer {
     Core.getInstance().httpServer.start();
     await this.commons.getConfigManager().registerAppConfig();
     let error;
-    this.commons.getConfigManager()
+    this.commons
+      .getConfigManager()
       .get('core')
       .catch((err: any) => (error = err));
     if (error) {
@@ -118,7 +110,10 @@ export class GrpcServer {
   }
 
   private set serviceHealthState(
-    state: Exclude<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN>,
+    state: Exclude<
+      HealthCheckStatus,
+      HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN
+    >,
   ) {
     if (this._serviceHealthState !== state) {
       this.events.emit('grpc-health-change:Core', state);
@@ -137,7 +132,10 @@ export class GrpcServer {
     );
   }
 
-  private healthCheck(call: GrpcRequest<{ service: string }>, callback: GrpcCallback<{ status: HealthCheckStatus }>) {
+  private healthCheck(
+    call: GrpcRequest<{ service: string }>,
+    callback: GrpcCallback<{ status: HealthCheckStatus }>,
+  ) {
     callback(null, { status: this.getServiceHealthState(call.request.service) });
   }
 

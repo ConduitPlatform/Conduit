@@ -3,7 +3,6 @@ import { TemplateOptions } from '../../interfaces/TemplateOptions';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
 import { Var } from '../../interfaces/Var';
 
-
 export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions> {
   constructor() {
     super();
@@ -20,5 +19,4 @@ export class SendgridMailBuilder extends EmailBuilderClass<SendgridMailOptions> 
 
     return this;
   }
-
 }
