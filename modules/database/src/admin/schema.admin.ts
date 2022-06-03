@@ -474,12 +474,24 @@ export class SchemaAdmin {
     return { modules };
   }
 
+  async getIntrospectionStatus(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const foreignSchemas = Array.from(this.database.foreignSchemaCollections);
+    const importedSchemas: string[] = (await this.database.getSchemaModel('_DeclaredSchema')
+      .model.findMany({ 'modelOptions.conduit.imported': true }))
+      .map((schema: ConduitSchema) => schema.collectionName);
+    return {
+      foreignSchemas,
+      foreignSchemaCount: foreignSchemas.length,
+      importedSchemas,
+      importedSchemaCount: importedSchemas.length,
+    };
+  }
+
   async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const introspectedSchemas = await this.database.introspectDatabase(true);
+    const introspectedSchemas = await this.database.introspectDatabase();
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if(isEmpty(schema.fields))
-          return null;
+        if (isEmpty(schema.fields)) return null;
         await this.database.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
             name: schema.name,
@@ -492,6 +504,15 @@ export class SchemaAdmin {
       })
     );
     return 'Schemas successfully introspected';
+  }
+
+  async getPendingSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const query: ParsedQuery = { _id: call.request.params.id };
+    const requestedSchema = await this.database.getSchemaModel('_PendingSchemas').model.findOne(query);
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Pending schema does not exist');
+    }
+    return requestedSchema;
   }
 
   async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -514,21 +535,26 @@ export class SchemaAdmin {
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas : _ConduitSchema[] = Object.values(call.request.params.schemas);
-    const schemaIds = schemas.map((schema) => schema._id);
-    //add schemas to _DeclaredSchema
+    const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas);
+    if (schemas.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Argument schemas is required and must be a non-empty array!',
+      );
+    }
+    const schemaNames = schemas.map((schema) => schema.name);
     await Promise.all(schemas.map(async (schema: _ConduitSchema) => {
         const recreatedSchema = new ConduitSchema(schema.name,schema.fields,schema.modelOptions);
-        if (isNil(recreatedSchema.fields))
-          return null;
+        if (isNil(recreatedSchema.fields)) return null;
         recreatedSchema.ownerModule = 'database';
         recreatedSchema.schemaOptions.conduit!.imported = true;
-        await this.database.createSchemaFromAdapter(recreatedSchema);
+        await this.database.createSchemaFromAdapter(recreatedSchema, true);
     }));
-    //remove finalized schemas from pending schemas
-    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany({ _id: { $in: schemaIds } });
-    
-    return `${schemas.length} schemas finalized successfully`;
+    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany(
+      { name: { $in: schemaNames } }
+    );
+    return `${schemas.length} ${schemas.length > 1 ? 'schemas' : 'schema'} finalized successfully`;
   }
 
   private patchSchemaPerms(

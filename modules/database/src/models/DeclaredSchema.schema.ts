@@ -35,6 +35,10 @@ export const DeclaredSchema = new ConduitSchema(
       type: TYPE.String,
       required: true,
     },
+    collectionName: {
+      type: TYPE.String,
+      required: true,
+    },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
   },
