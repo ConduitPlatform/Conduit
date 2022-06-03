@@ -22,8 +22,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
       console.error('Service not active');
-      this.initialized = false;
-      throw ConduitError.forbidden('Service auth is deactivated');
+      return (this.initialized = false);
     }
     console.log('Service is active');
     return (this.initialized = true);

@@ -43,7 +43,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig[this.providerName].enabled) {
       console.log(`${this.providerName} not active`);
-      throw ConduitError.forbidden(`${this.providerName} auth is deactivated`);
+      return (this.initialized = false);
     }
     if (
       !authConfig[this.providerName] ||
@@ -51,13 +51,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       !authConfig[this.providerName].clientSecret
     ) {
       console.log(`${this.providerName} is not active`);
-      throw ConduitError.forbidden(
-        `Cannot enable ${this.providerName} auth due to missing clientId or client secret`,
-      );
+      return (this.initialized = false);
     }
     console.log(`${this.providerName} is active`);
-    this.initialized = true;
-    return true;
+
+    return (this.initialized = true);
   }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

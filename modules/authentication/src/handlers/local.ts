@@ -218,16 +218,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
       try {
         emailConfig = await this.grpcSdk.config.get('email');
       } catch (e) {
-        this.initialized = false;
-        throw ConduitError.forbidden(
-          'Cannot use email verification without Email module being enabled',
-        );
+        console.log('Cannot use email verification without Email module being enabled');
+        return (this.initialized = false);
       }
       if (!emailConfig.active) {
-        this.initialized = false;
-        throw ConduitError.forbidden(
-          'Cannot use email verification without Email module being enabled',
-        );
+        console.log('Cannot use email verification without Email module being enabled');
+        return (this.initialized = false);
       }
     }
     if (!this.initialized) {
