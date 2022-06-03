@@ -78,7 +78,7 @@ export class AuthenticationRoutes {
               enabled = true;
               return;
             })
-            .catch();
+            .catch(e => console.error(e));
         },
       ),
     );
