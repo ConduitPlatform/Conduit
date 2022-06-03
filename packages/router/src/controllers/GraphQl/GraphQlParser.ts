@@ -167,7 +167,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
         if (Array.isArray(parentObj[fieldName])) {
           if (typeof parentObj[fieldName][0] === 'string') {
             return parentObj[fieldName].map((obj: any) => {
-              id: obj;
+              obj;
             });
           }
           return parentObj[fieldName];
