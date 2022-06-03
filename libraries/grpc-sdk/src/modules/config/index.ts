@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { HealthCheckStatus } from '../../types';
 import { ConfigDefinition, RegisterModuleRequest, ModuleHealthRequest } from '../../protoUtils/core';
+import { Indexable } from '../../interfaces';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
@@ -82,7 +83,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getRedisDetails() {
-    let request: { [key: string]: any } = {};
+    let request: Indexable = {};
     return this.client!.getRedisDetails(request);
   }
 

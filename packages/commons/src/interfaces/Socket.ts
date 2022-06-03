@@ -1,11 +1,11 @@
 import { ConduitRouteReturnDefinition } from '../classes/ConduitRouteReturn';
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 
 export interface ConduitSocketParameters {
   event: string;
   socketId: string;
   params?: any[];
-  context?: { [field: string]: any };
+  context?: Indexable;
 }
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
