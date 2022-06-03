@@ -90,7 +90,7 @@ export default class Sms extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     await this._provider
       .sendSms(to, message)
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
@@ -118,7 +118,7 @@ export default class Sms extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const verificationSid = await this._provider
       .sendVerificationCode(to)
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
@@ -143,7 +143,7 @@ export default class Sms extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const verified = await this._provider
       .verify(verificationSid, code)
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,

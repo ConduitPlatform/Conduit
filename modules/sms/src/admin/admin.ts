@@ -67,7 +67,7 @@ export class AdminHandlers {
 
     await this.provider
       .sendSms(to, message)
-      .catch((e: any) => (errorMessage = e.message));
+      .catch((e) => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }

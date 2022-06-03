@@ -87,12 +87,7 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async onServerStart() {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
-    if (await this._activeAdapter.isPopulated()) {
-      const isConduitDb = await this._activeAdapter.isConduitDb();
-      if (!isConduitDb) {
-        await this.introspectDb();
-      }
-    }
+    await this._activeAdapter.retrieveForeignSchemas();
     this.updateHealth(HealthCheckStatus.SERVING);
     const modelPromises = Object.values(models).flatMap((model: any) => {
       if (model.name === '_DeclaredSchema') return [];
@@ -549,27 +544,5 @@ export default class DatabaseModule extends ManagedModule<void> {
         message: err.message,
       });
     }
-  }
-
-  private async introspectDb() {
-    console.log(`Database is not a Conduit DB. Starting introspection...`);
-    let introspectedSchemas = await this._activeAdapter.introspectDatabase(false);
-    await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
-
-    await Promise.all(
-      introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if (isEmpty(schema.fields))
-          return null;
-        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
-          JSON.stringify({
-            name: schema.name,
-            fields: schema.fields,
-            modelOptions: schema.schemaOptions,
-            ownerModule: schema.ownerModule,
-            extensions: (schema as any).extensions,
-          })
-        );
-      })
-    );
   }
 }

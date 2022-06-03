@@ -64,7 +64,9 @@ export class AdminHandlers {
         setSchemaExtension: this.schemaAdmin.setSchemaExtension.bind(this.schemaAdmin),
         setSchemaPerms: this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
         getSchemaOwners: this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
+        getIntrospectionStatus: this.schemaAdmin.getIntrospectionStatus.bind(this.schemaAdmin),
         introspectDatabase: this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
+        getPendingSchema: this.schemaAdmin.getPendingSchema.bind(this.schemaAdmin),
         getPendingSchemas: this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
         finalizeSchemas: this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
         // Documents
@@ -155,8 +157,24 @@ export class AdminHandlers {
             fields: ConduitJson.Required,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: {
+              create: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              read: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              update: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+              delete: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Required,
+              },
+            },
             permissions: {
               extendable: ConduitBoolean.Optional,
               canCreate: ConduitBoolean.Optional,
@@ -180,8 +198,24 @@ export class AdminHandlers {
             fields: ConduitJson.Optional,
             modelOptions: ConduitJson.Optional,
             enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            authentication: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
+            crudOperations: {
+              create: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              read: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              update: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+              delete: {
+                enabled: ConduitBoolean.Optional,
+                authenticated: ConduitBoolean.Optional,
+              },
+            },
             permissions: {
               extendable: ConduitBoolean.Optional,
               canCreate: ConduitBoolean.Optional,
@@ -279,11 +313,34 @@ export class AdminHandlers {
         'setSchemaPerms',
       ),
       constructConduitRoute({
+          path: '/introspection',
+          action: ConduitRouteActions.GET,
+        },
+        new ConduitRouteReturnDefinition('GetIntrospectionStatus', {
+          foreignSchemas: [ConduitString.Required],
+          foreignSchemaCount: ConduitNumber.Required,
+          importedSchemas: [ConduitString.Required],
+          importedSchemaCount: ConduitNumber.Required,
+        }),
+        'getIntrospectionStatus'
+      ),
+      constructConduitRoute({
         path: '/introspection',
         action: ConduitRouteActions.POST,
       },
       new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
       'introspectDatabase'
+      ),
+      constructConduitRoute(
+        {
+          path: '/introspection/schemas/:id',
+          action: ConduitRouteActions.GET,
+          urlParams: {
+            id: { type: RouteOptionType.String, required: true },
+          },
+        },
+        new ConduitRouteReturnDefinition('GetSPendingSchema', PendingSchemas.fields),
+        'getPendingSchema',
       ),
       constructConduitRoute({
         path: '/introspection/schemas',

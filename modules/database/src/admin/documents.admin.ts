@@ -5,6 +5,7 @@ import { populateArray, wrongFields } from '../utils/utilities';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { Doc } from '../interfaces';
 
 export class DocumentsAdmin {
 
@@ -24,7 +25,7 @@ export class DocumentsAdmin {
     if (!isNil(populate)) {
       populates = populateArray(populate);
     }
-    const document: { [key: string]: any } = await this.database.getSchemaModel(schemaName).model
+    const document: Doc = await this.database.getSchemaModel(schemaName).model
       .findOne(
         { _id: id },
         undefined,
@@ -44,7 +45,6 @@ export class DocumentsAdmin {
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-
     if (!query || query.length === '') {
       query = {};
     }
@@ -95,7 +95,7 @@ export class DocumentsAdmin {
     if (!wrongFields(currentFields, changedFields)) {
       throw new GrpcError(status.NOT_FOUND, 'Wrong input fields!');
     }
-    const dbDocument: { [key: string]: any } = await this.database.getSchemaModel(schemaName).model
+    const dbDocument: Doc = await this.database.getSchemaModel(schemaName).model
       .findOne({ _id: id });
 
     Object.assign(dbDocument, changedDocument);
@@ -111,7 +111,7 @@ export class DocumentsAdmin {
     }
     let updatedDocuments: any[] = [];
     for (const doc of changedDocuments) {
-      const dbDocument: { [key: string]: any } = await this.database.getSchemaModel(schemaName).model
+      const dbDocument: Doc = await this.database.getSchemaModel(schemaName).model
         .findOne( { _id: doc._id });
       Object.assign(dbDocument, doc);
       const updatedDocument = await this.database.getSchemaModel(schemaName).model
