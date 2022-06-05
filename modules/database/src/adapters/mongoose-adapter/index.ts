@@ -8,6 +8,7 @@ import { stitchSchema } from '../utils/extensions';
 import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
@@ -88,7 +89,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
       const collectionInDeclaredSchemas = declaredSchemas.some(
-        (declaredSchema: ConduitSchema) => declaredSchema.collectionName === collection,
+        (declaredSchema: ConduitSchema) => {
+          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+            return declaredSchema.collectionName === collection;
+          } else {
+            return pluralize(declaredSchema.name) === collection;
+          }
+        },
       );
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);

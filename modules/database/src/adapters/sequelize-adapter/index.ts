@@ -40,7 +40,13 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     for (const table of tableNames) {
       if (table === declaredSchemaTableName) continue;
       const tableInDeclaredSchemas = declaredSchemas.some(
-        (declaredSchema: ConduitSchema) => declaredSchema.collectionName === table,
+        (declaredSchema: ConduitSchema) => {
+          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+            return declaredSchema.collectionName === table;
+          } else {
+            return declaredSchema.name === table;
+          }
+        },
       );
       if (!tableInDeclaredSchemas) {
         this.foreignSchemaCollections.add(table);
