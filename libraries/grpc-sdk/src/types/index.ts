@@ -1,5 +1,5 @@
 import { Metadata, status } from '@grpc/grpc-js';
-import { Context, Params, Headers, Indexable } from '../interfaces/Indexable';
+import { Context, Params, Headers, Indexable } from '../interfaces';
 
 export type GrpcRequest<T> = { request: T; metadata?: Metadata };
 export type GrpcResponse<T> = (

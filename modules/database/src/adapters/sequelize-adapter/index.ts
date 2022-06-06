@@ -1,7 +1,12 @@
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitModel, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitSchema,
+  GrpcError,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';
@@ -77,7 +82,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
       this.updateCollectionName(schema);
-      if ((schema as any).modelOptions.conduit.imported) {
+      if ((schema as Indexable).modelOptions.conduit.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -105,7 +110,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return introspectedSchemas;
   }
 
-  async introspectSchema(table: any, originalName: string): Promise<ConduitSchema> {
+  async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
     sqlSchemaConverter(table);
 
     await this.sequelize.query(
@@ -198,7 +203,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       this,
     );
 
-    const noSync = this.models[schema.name].originalSchema.schemaOptions.conduit.noSync;
+    const noSync = this.models[schema.name].originalSchema.schemaOptions.conduit!.noSync;
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
@@ -236,10 +241,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Schema deleted!';
   }
 
-  getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: any } {
+  getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: Indexable } {
     if (this.models && this.models[schemaName]) {
       const self = this;
-      let relations: any = {};
+      let relations: Indexable = {};
       for (const key in this.models[schemaName].relations) {
         relations[this.models[schemaName].relations[key]] =
           self.models[this.models[schemaName].relations[key]];
@@ -249,7 +254,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  async ensureConnected(): Promise<any> {
+  async ensureConnected() {
     return this.sequelize
       .authenticate()
       .then(() => {

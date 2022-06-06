@@ -52,8 +52,12 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     return this.result;
   }
 
-  protected getType(conduitType: any) {
-    let res: any = {};
+  protected getType(conduitType: TYPE) {
+    let res: {
+      type?: string;
+      format?: string;
+      properties?: object;
+    } = {};
     switch (conduitType) {
       case TYPE.JSON:
         res.type = 'object';

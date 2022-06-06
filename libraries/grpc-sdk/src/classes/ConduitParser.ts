@@ -3,6 +3,7 @@ import {
   ConduitModel,
   ConduitModelField,
   ConduitRouteOption,
+  TYPE,
 } from '../interfaces';
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
@@ -15,7 +16,15 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isInput: boolean,
   ): ParseResult;
 
-  protected abstract getType(conduitType: any): string | any;
+  protected abstract getType(
+    conduitType: TYPE,
+  ):
+    | string
+    | {
+        type?: string;
+        format?: string;
+        properties?: object;
+      };
 
   protected abstract getInitializedResult(): ParseResult; // provides an (empty) initialized object of generic type ParseResult
 
