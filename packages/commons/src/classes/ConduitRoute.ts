@@ -32,7 +32,7 @@ export class ConduitRoute {
     return this._returnType.fields;
   }
 
-  executeRequest(request: ConduitRouteParameters): Promise<any> {
+  executeRequest(request: ConduitRouteParameters) {
     return this._handler(request);
   }
 }

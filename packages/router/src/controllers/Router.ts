@@ -4,7 +4,11 @@ import {
   ConduitRoute,
 } from '@conduitplatform/commons';
 import { NextFunction, Request, Response, Router } from 'express';
-import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitRouteActions,
+  ConduitRouteParameters,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 
 export abstract class ConduitRouter {
   protected _expressRouter: Router;
@@ -23,9 +27,9 @@ export abstract class ConduitRouter {
     this.scheduleRouterRefresh();
   }
 
-  cleanupRoutes(routes: any) {
+  cleanupRoutes(routes: { action: string; path: string }[]) {
     let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
-    routes.forEach((route: any) => {
+    routes.forEach(route => {
       let key = `${route.action}-${route.path}`;
       if (this._registeredRoutes.has(key)) {
         newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
@@ -44,8 +48,9 @@ export abstract class ConduitRouter {
   protected findInCache(hashKey: string) {
     return this.commons.getState().getKey('hash-' + hashKey);
   }
+
   // age is in seconds
-  protected storeInCache(hashKey: string, data: any, age: number) {
+  protected storeInCache(hashKey: string, data: Indexable, age: number) {
     this.commons.getState().setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
 

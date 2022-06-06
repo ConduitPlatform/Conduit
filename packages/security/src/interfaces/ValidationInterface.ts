@@ -1,5 +1,5 @@
 export interface ValidationInterface {
-  validated?: any;
+  validated?: boolean;
   client?: {
     platform: string;
     domain: string;

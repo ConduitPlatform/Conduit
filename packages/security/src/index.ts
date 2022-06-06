@@ -6,7 +6,8 @@ import { ClientValidator } from './handlers/client-validation';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
-import convict from './config';
+import convict, { Config } from './config';
+import { NextFunction, Request, Response } from 'express';
 
 class SecurityModule extends IConduitSecurity {
   constructor(commons: ConduitCommons, private readonly grpcSdk: ConduitGrpcSdk) {
@@ -59,17 +60,20 @@ class SecurityModule extends IConduitSecurity {
       true,
     );
     router.registerGlobalMiddleware('helmetMiddleware', helmet());
-    router.registerGlobalMiddleware('helmetGqlFix', (req: any, res: any, next: any) => {
-      if (
-        (req.url === '/graphql' ||
-          req.url.startsWith('/swagger') ||
-          req.url.startsWith('/admin/swagger')) &&
-        req.method === 'GET'
-      ) {
-        res.removeHeader('Content-Security-Policy');
-      }
-      next();
-    });
+    router.registerGlobalMiddleware(
+      'helmetGqlFix',
+      (req: Request, res: Response, next: NextFunction) => {
+        if (
+          (req.url === '/graphql' ||
+            req.url.startsWith('/swagger') ||
+            req.url.startsWith('/admin/swagger')) &&
+          req.method === 'GET'
+        ) {
+          res.removeHeader('Content-Security-Policy');
+        }
+        next();
+      },
+    );
     router.registerGlobalMiddleware(
       'clientMiddleware',
       clientValidator.middleware.bind(clientValidator),
@@ -77,7 +81,7 @@ class SecurityModule extends IConduitSecurity {
     );
   }
 
-  setConfig(moduleConfig: any) {
+  setConfig(moduleConfig: Config) {
     try {
       ConfigController.getInstance().config = moduleConfig;
       this.registerAdminRoutes(moduleConfig.clientValidation.enabled);

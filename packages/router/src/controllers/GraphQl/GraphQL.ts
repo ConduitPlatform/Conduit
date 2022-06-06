@@ -324,7 +324,7 @@ export class GraphQLController extends ConduitRouter {
           if (caching) {
             return self
               .findInCache(hashKey)
-              .then(r => {
+              .then((r: string | null) => {
                 if (r) {
                   return { fromCache: true, data: JSON.parse(r) };
                 } else {

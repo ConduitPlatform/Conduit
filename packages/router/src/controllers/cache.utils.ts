@@ -1,9 +1,10 @@
 import { ConduitRoute } from '@conduitplatform/commons';
 import { CacheScope } from 'apollo-cache-control';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 const crypto = require('crypto');
 
-export function createHashKey(path: string, context: any, params: any) {
+export function createHashKey(path: string, context: Indexable, params: Indexable) {
   let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
   hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
   return hashKey;
