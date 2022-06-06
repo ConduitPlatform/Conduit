@@ -1,5 +1,5 @@
 import { ConduitModelOptions, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension, SchemaAdapter } from '../interfaces';
+import { DeclaredSchemaExtension, Schema, SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -9,7 +9,7 @@ type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   extensions: DeclaredSchemaExtension[];
 };
-export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
+export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
@@ -32,7 +32,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
-  ): Promise<SchemaAdapter<any>> {
+  ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
     }
@@ -43,9 +43,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     return this._createSchemaFromAdapter(schema);
   }
 
-  protected abstract _createSchemaFromAdapter(
-    schema: ConduitSchema,
-  ): Promise<SchemaAdapter<any>>;
+  protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
   protected abstract updateCollectionName(
     schema: ConduitSchema,
@@ -98,9 +96,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     }
   }
 
-  abstract getSchemaModel(
-    schemaName: string,
-  ): { model: SchemaAdapter<any>; relations: any };
+  abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
@@ -186,7 +182,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     schema: ConduitSchema,
     extOwner: string,
     extFields: ConduitSchema['fields'],
-  ): Promise<SchemaAdapter<any>> {
+  ): Promise<Schema> {
     if (
       !schema.schemaOptions.conduit ||
       !schema.schemaOptions.conduit.permissions ||

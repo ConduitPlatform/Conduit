@@ -28,7 +28,7 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from './interfaces';
+import { Schema, SchemaAdapter } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -192,7 +192,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: SchemaAdapter<MongooseAdapter | SequelizeAdapter>) => {
+      .then((schemaAdapter: Schema) => {
         const originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
@@ -298,7 +298,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       }
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
-        .then((schemaAdapter: SchemaAdapter<MongooseAdapter | SequelizeAdapter>) => {
+        .then((schemaAdapter: Schema) => {
           const originalSchema = {
             name: schemaAdapter.originalSchema.name,
             modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),

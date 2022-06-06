@@ -1,4 +1,6 @@
 import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | [Indexable];
@@ -6,6 +8,7 @@ export type Query = SingleDocQuery | MultiDocQuery;
 export type ParsedQuery = Indexable;
 export type Doc = ParsedQuery;
 export type Fields = ParsedQuery;
+export type Schema = MongooseSchema | SequelizeSchema;
 
 export interface SchemaAdapter<T> {
   /**
