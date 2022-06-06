@@ -1,4 +1,4 @@
-export interface DeleteEmailTemplate{
-    id:string;
-    message:string;
+export interface DeleteEmailTemplate {
+  id: string;
+  message: string;
 }

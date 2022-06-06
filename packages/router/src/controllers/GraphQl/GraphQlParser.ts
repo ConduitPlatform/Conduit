@@ -1,4 +1,8 @@
-import { ConduitParser, ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitParser,
+  ConduitModel,
+  ConduitRouteOption,
+} from '@conduitplatform/grpc-sdk';
 
 export interface ResolverDefinition {
   [key: string]: {
@@ -26,7 +30,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   extractTypes(
     name: string,
     fields: ConduitModel | ConduitRouteOption | string,
-    isInput: boolean
+    isInput: boolean,
   ): ParseResult {
     this.isInput = isInput;
     this.result = this.getInitializedResult();
@@ -40,10 +44,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     }
   }
 
-  protected getProcessingObject(
-    name: string,
-    isArray: boolean
-  ): ProcessingObject {
+  protected getProcessingObject(name: string, isArray: boolean): ProcessingObject {
     return {
       finalString: '',
       typeString: isArray ? '' : ` ${this.isInput ? 'input' : 'type'} ${name} {`,
@@ -80,7 +81,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     processingObject.typeString +=
       `${name}: ${isArray ? '[' : ''}` +
@@ -94,7 +95,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     fieldName: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     // object of some kind
     let nestedName = this.constructName(name, fieldName);
@@ -115,7 +116,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any[],
     isRequired: boolean = false,
-    nestedType?: boolean
+    nestedType?: boolean,
   ): void {
     let arrayProcessing = super.arrayHandler(resolverName, name, value);
     if (nestedType) {
@@ -135,7 +136,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     name: string,
     value: any,
     isRequired: boolean = false,
-    isArray: boolean
+    isArray: boolean,
   ): void {
     this.addToRelation(this.result, value);
     this.constructResolver(resolverName, name, true);

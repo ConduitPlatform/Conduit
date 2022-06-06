@@ -1,7 +1,7 @@
 import { Metadata, status } from '@grpc/grpc-js';
 import { Context, Params, Headers, Indexable } from '../interfaces/Indexable';
 
-export type GrpcRequest<T> = { request: T; metadata?: Metadata; };
+export type GrpcRequest<T> = { request: T; metadata?: Metadata };
 export type GrpcResponse<T> = (
   err: {
     code: number;
@@ -29,7 +29,12 @@ export type ParsedRouterRequest = GrpcRequest<{
 }>;
 
 export type UnparsedRouterResponse =
-  | { result?: Indexable; redirect?: string, setCookies: Indexable, removeCookies: Indexable }
+  | {
+      result?: Indexable;
+      redirect?: string;
+      setCookies: Indexable;
+      removeCookies: Indexable;
+    }
   | Indexable
   | string;
 

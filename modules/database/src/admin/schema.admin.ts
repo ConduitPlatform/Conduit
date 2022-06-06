@@ -19,25 +19,28 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { ParsedQuery } from '../interfaces';
 const escapeStringRegexp = require('escape-string-regexp');
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions, _id: string };
-const SYSTEM_SCHEMAS = ['CustomEndpoints','_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+  _id: string;
+};
+const SYSTEM_SCHEMAS = ['CustomEndpoints', '_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
-
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController,
-  ) {
-  }
+  ) {}
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {
       _id: call.request.params.id,
       name: { $nin: SYSTEM_SCHEMAS },
     };
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne(query);
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne(query);
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -51,10 +54,7 @@ export class SchemaAdmin {
     let query: ParsedQuery = { name: { $nin: SYSTEM_SCHEMAS } };
     if (owner && owner.length !== 0) {
       query = {
-        $and: [
-          query,
-          { ownerModule: { $in: owner } },
-        ],
+        $and: [query, { ownerModule: { $in: owner } }],
       };
     }
     let identifier;
@@ -63,28 +63,26 @@ export class SchemaAdmin {
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
     if (!isNil(enabled)) {
-      const enabledQuery = { $or: [{ ownerModule: { $ne: 'database' } }, { 'modelOptions.conduit.cms.enabled': true }] };
+      const enabledQuery = {
+        $or: [
+          { ownerModule: { $ne: 'database' } },
+          { 'modelOptions.conduit.cms.enabled': true },
+        ],
+      };
       const disabledQuery = { 'modelOptions.conduit.cms.enabled': false };
       query = {
-        $and: [
-          query,
-          enabled ? enabledQuery : disabledQuery,
-        ],
+        $and: [query, enabled ? enabledQuery : disabledQuery],
       };
     }
 
-    const schemasPromise = await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
-      query,
-      skip,
-      limit,
-      sort,
-    );
-    const documentsCountPromise = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments(query);
+    const schemasPromise = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany(query, skip, limit, sort);
+    const documentsCountPromise = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.countDocuments(query);
 
-    const [schemas, count] = await Promise.all([
-      schemasPromise,
-      documentsCountPromise,
-    ]);
+    const [schemas, count] = await Promise.all([schemasPromise, documentsCountPromise]);
 
     return { schemas, count };
   }
@@ -94,14 +92,13 @@ export class SchemaAdmin {
     const { limit } = call.request.params ?? 25;
     const query = '{}';
     const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
-    const schemasExtensionsPromise = schemaAdapter.model
-      .findMany(
-        query,
-        skip,
-        limit,
-        'name extensions',
-        undefined,
-      );
+    const schemasExtensionsPromise = schemaAdapter.model.findMany(
+      query,
+      skip,
+      limit,
+      'name extensions',
+      undefined,
+    );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
     const [schemasExtensions, totalCount] = await Promise.all([
@@ -114,12 +111,7 @@ export class SchemaAdmin {
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
-      name,
-      fields,
-      modelOptions,
-      permissions,
-    } = call.request.params;
+    const { name, fields, modelOptions, permissions } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
     const crudOperations = call.request.params.crudOperations;
 
@@ -133,14 +125,22 @@ export class SchemaAdmin {
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INVALID_ARGUMENT, errorMessage);
     }
-    if (permissions && permissions.canModify && !(ConduitModelOptionsPermModifyType.includes(permissions.canModify))) {
+    if (
+      permissions &&
+      permissions.canModify &&
+      !ConduitModelOptionsPermModifyType.includes(permissions.canModify)
+    ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
+        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(
+          ', ',
+        )}`,
+      );
     }
 
-    const existingSchema = await this.database.getSchemaModel('_DeclaredSchema').model
-      .findOne({ name });
+    const existingSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ name });
     if (existingSchema) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Schema name is already in use!');
     }
@@ -156,14 +156,9 @@ export class SchemaAdmin {
       : { ...modelOptions, conduit: { cms: { enabled, crudOperations } } };
     schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
-    return this.schemaController
-      .createSchema(
-        new ConduitSchema(
-          name,
-          fields,
-          schemaOptions,
-        ),
-      );
+    return this.schemaController.createSchema(
+      new ConduitSchema(name, fields, schemaOptions),
+    );
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -173,7 +168,7 @@ export class SchemaAdmin {
       fields,
       modelOptions,
       permissions,
-      crudOperations
+      crudOperations,
     } = call.request.params;
 
     if (!isNil(name) && name !== '') {
@@ -183,10 +178,13 @@ export class SchemaAdmin {
       );
     }
 
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: id,
-    });
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: id,
+      });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -199,24 +197,23 @@ export class SchemaAdmin {
     }
     requestedSchema.name = name ? name : requestedSchema.name;
     requestedSchema.fields = fields ? fields : requestedSchema.fields;
-    const enabled = call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
+    const enabled =
+      call.request.params.enabled ?? requestedSchema.modelOptions.conduit.cms.enabled;
 
-    crudOperations = call.request.params.crudOperations ?? requestedSchema.modelOptions.conduit.cms.crudOperations;
-    requestedSchema.modelOptions = merge(
-      requestedSchema.modelOptions,
-      modelOptions,
-      { conduit: { cms: { enabled, crudOperations } } },
+    crudOperations =
+      call.request.params.crudOperations ??
+      requestedSchema.modelOptions.conduit.cms.crudOperations;
+    requestedSchema.modelOptions = merge(requestedSchema.modelOptions, modelOptions, {
+      conduit: { cms: { enabled, crudOperations } },
+    });
+
+    const updatedSchema = await this.database.createCustomSchemaFromAdapter(
+      new ConduitSchema(
+        requestedSchema.name,
+        requestedSchema.fields,
+        requestedSchema.modelOptions,
+      ),
     );
-
-
-    const updatedSchema = await this.database
-      .createCustomSchemaFromAdapter(
-        new ConduitSchema(
-          requestedSchema.name,
-          requestedSchema.fields,
-          requestedSchema.modelOptions,
-        ),
-      );
     if (isNil(updatedSchema)) {
       throw new GrpcError(status.INTERNAL, 'Could not update schema');
     }
@@ -238,19 +235,23 @@ export class SchemaAdmin {
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, deleteData } = call.request.params;
 
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'database',
-      name: { $nin: SYSTEM_SCHEMAS },
-      _id: id,
-    });
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: id,
+      });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
     // Temp: error out until Admin handles this case
-    const endpoints = await this.database.getSchemaModel('CustomEndpoints').model.findMany({
-      selectedSchema: id,
-    });
+    const endpoints = await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findMany({
+        selectedSchema: id,
+      });
     if (!isNil(endpoints) && endpoints.length !== 0) {
       throw new GrpcError(
         status.ABORTED,
@@ -258,12 +259,17 @@ export class SchemaAdmin {
       );
     }
 
-    await this.database.getSchemaModel('_DeclaredSchema').model
-      .deleteOne(requestedSchema);
-    await this.database.getSchemaModel('CustomEndpoints').model
-      .deleteMany({ selectedSchema: id });
-    const message = await this.database
-      .deleteSchema(requestedSchema.name, deleteData, 'database');
+    await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.deleteOne(requestedSchema);
+    await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.deleteMany({ selectedSchema: id });
+    const message = await this.database.deleteSchema(
+      requestedSchema.name,
+      deleteData,
+      'database',
+    );
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
@@ -280,26 +286,33 @@ export class SchemaAdmin {
       );
     }
 
-    const requestedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
-      ownerModule: 'database',
-      name: { $nin: SYSTEM_SCHEMAS },
-      _id: { $in: ids },
-    });
+    const requestedSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: { $in: ids },
+      });
     if (requestedSchemas.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
-    const foundSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: { $in: ids },
-    });
+    const foundSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.countDocuments({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: { $in: ids },
+      });
     if (foundSchemas !== requestedSchemas.length) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
 
     for (const schema of requestedSchemas) {
-      const endpoints = await this.database.getSchemaModel('CustomEndpoints').model.countDocuments({
-        selectedSchema: schema._id,
-      });
+      const endpoints = await this.database
+        .getSchemaModel('CustomEndpoints')
+        .model.countDocuments({
+          selectedSchema: schema._id,
+        });
       if (!isNil(endpoints) && endpoints > 0) {
         // Temp: error out until Admin handles this case
         throw new GrpcError(
@@ -310,10 +323,12 @@ export class SchemaAdmin {
       await this.database.deleteSchema(schema.name, deleteData, 'database');
     }
 
-    await this.database.getSchemaModel('_DeclaredSchema').model
-      .deleteMany({ _id: { $in: ids } });
-    await this.database.getSchemaModel('CustomEndpoints').model
-      .deleteMany({ selectedSchema: { $in: ids } });
+    await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.deleteMany({ _id: { $in: ids } });
+    await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.deleteMany({ selectedSchema: { $in: ids } });
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
@@ -321,33 +336,34 @@ export class SchemaAdmin {
   }
 
   async toggleSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: call.request.params.id,
-    });
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: call.request.params.id,
+      });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    requestedSchema.modelOptions.conduit.cms.enabled =
-      !requestedSchema.modelOptions.conduit.cms.enabled;
+    requestedSchema.modelOptions.conduit.cms.enabled = !requestedSchema.modelOptions
+      .conduit.cms.enabled;
 
-    const updatedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findByIdAndUpdate(
-      requestedSchema._id,
-      requestedSchema,
-    );
+    const updatedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findByIdAndUpdate(requestedSchema._id, requestedSchema);
     if (isNil(updatedSchema)) {
       throw new GrpcError(
         status.INTERNAL,
         `Could not ${
-          requestedSchema.modelOptions.conduit.cms.enabled
-            ? 'enable'
-            : 'disable'
+          requestedSchema.modelOptions.conduit.cms.enabled ? 'enable' : 'disable'
         } schema`,
       );
     }
-    await this.database.getSchemaModel('CustomEndpoints').model
-      .updateMany(
+    await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.updateMany(
         { selectedSchema: call.request.params.id },
         { enabled: requestedSchema.modelOptions.conduit.cms.enabled },
       );
@@ -373,28 +389,37 @@ export class SchemaAdmin {
       );
     }
 
-    const requestedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: { $in: ids },
-    });
+    const requestedSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: { $in: ids },
+      });
     if (isNil(requestedSchemas)) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
-    const foundDocumentsCount = await this.database.getSchemaModel('_DeclaredSchema').model.countDocuments({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: { $in: ids },
-    });
+    const foundDocumentsCount = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.countDocuments({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: { $in: ids },
+      });
     if (foundDocumentsCount !== requestedSchemas.length) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
 
-    const updatedSchemas = await this.database.getSchemaModel('_DeclaredSchema').model.updateMany(
-      {
-        ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-        _id: { $in: ids },
-      },
-      { 'modelOptions.conduit.cms.enabled': enabled },
-    );
+    const updatedSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.updateMany(
+        {
+          ownerModule: 'database',
+          name: { $nin: SYSTEM_SCHEMAS },
+          _id: { $in: ids },
+        },
+        { 'modelOptions.conduit.cms.enabled': enabled },
+      );
     if (isNil(updatedSchemas)) {
       throw new GrpcError(
         status.INTERNAL,
@@ -402,8 +427,9 @@ export class SchemaAdmin {
       );
     }
 
-    await this.database.getSchemaModel('CustomEndpoints').model
-      .updateMany({ selectedSchema: { $in: ids } }, { enabled: enabled });
+    await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.updateMany({ selectedSchema: { $in: ids } }, { enabled: enabled });
 
     if (!enabled) {
       this.schemaController.refreshRoutes();
@@ -417,7 +443,9 @@ export class SchemaAdmin {
   }
 
   async setSchemaExtension(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ _id: call.request.params.schemaId });
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: call.request.params.schemaId });
     if (!requestedSchema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -426,7 +454,8 @@ export class SchemaAdmin {
       call.request.params.fields,
     );
     let base = await this.database.getBaseSchema(requestedSchema.name);
-    await this.database.setSchemaExtension(base, 'database', extension.modelSchema)
+    await this.database
+      .setSchemaExtension(base, 'database', extension.modelSchema)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -436,23 +465,27 @@ export class SchemaAdmin {
   async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
 
-    const requestedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      ownerModule: 'database', name: { $nin: SYSTEM_SCHEMAS },
-      _id: id,
-    });
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        ownerModule: 'database',
+        name: { $nin: SYSTEM_SCHEMAS },
+        _id: id,
+      });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    this.patchSchemaPerms(
-      requestedSchema,
-      { extendable, canCreate, canModify, canDelete },
-    );
+    this.patchSchemaPerms(requestedSchema, {
+      extendable,
+      canCreate,
+      canModify,
+      canDelete,
+    });
 
-    const updatedSchema = await this.database.getSchemaModel('_DeclaredSchema').model.findByIdAndUpdate(
-      requestedSchema._id,
-      requestedSchema,
-    );
+    const updatedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findByIdAndUpdate(requestedSchema._id, requestedSchema);
     if (isNil(updatedSchema)) {
       throw new GrpcError(status.INTERNAL, 'Could not update schema permissions');
     }
@@ -462,24 +495,37 @@ export class SchemaAdmin {
 
   async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const modules: string[] = [];
-    const schemas = await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
-      {},
-      undefined,
-      undefined,
-      'ownerModule'
-    );
+    const schemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({}, undefined, undefined, 'ownerModule');
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
     return { modules };
   }
 
+  async getIntrospectionStatus(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const foreignSchemas = Array.from(this.database.foreignSchemaCollections);
+    const importedSchemas: string[] = (
+      await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findMany({ 'modelOptions.conduit.imported': true })
+    ).map((schema: ConduitSchema) => schema.collectionName);
+    return {
+      foreignSchemas,
+      foreignSchemaCount: foreignSchemas.length,
+      importedSchemas,
+      importedSchemaCount: importedSchemas.length,
+    };
+  }
+
   async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const introspectedSchemas = await this.database.introspectDatabase(true);
+    const introspectedSchemas = await this.database.introspectDatabase();
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if(isEmpty(schema.fields))
-          return null;
+        if (isEmpty(schema.fields)) return null;
         await this.database.getSchemaModel('_PendingSchemas').model.create(
           JSON.stringify({
             name: schema.name,
@@ -487,11 +533,22 @@ export class SchemaAdmin {
             modelOptions: schema.schemaOptions,
             ownerModule: schema.ownerModule,
             extensions: (schema as any).extensions,
-          })
+          }),
         );
-      })
+      }),
     );
     return 'Schemas successfully introspected';
+  }
+
+  async getPendingSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const query: ParsedQuery = { _id: call.request.params.id };
+    const requestedSchema = await this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.findOne(query);
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Pending schema does not exist');
+    }
+    return requestedSchema;
   }
 
   async getPendingSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -501,7 +558,7 @@ export class SchemaAdmin {
     let query = {};
     if (!isNil(search)) {
       const identifier = escapeStringRegexp(search);
-      query = { name : { $regex: `.*${identifier}.*`, $options: 'i' }};
+      query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
     }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')
@@ -514,21 +571,34 @@ export class SchemaAdmin {
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas : _ConduitSchema[] = Object.values(call.request.params.schemas);
-    const schemaIds = schemas.map((schema) => schema._id);
-    //add schemas to _DeclaredSchema
-    await Promise.all(schemas.map(async (schema: _ConduitSchema) => {
-        const recreatedSchema = new ConduitSchema(schema.name,schema.fields,schema.modelOptions);
-        if (isNil(recreatedSchema.fields))
-          return null;
+    const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas);
+    if (schemas.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Argument schemas is required and must be a non-empty array!',
+      );
+    }
+    const schemaNames = schemas.map(schema => schema.name);
+    await Promise.all(
+      schemas.map(async (schema: _ConduitSchema) => {
+        const recreatedSchema = new ConduitSchema(
+          schema.name,
+          schema.fields,
+          schema.modelOptions,
+        );
+        if (isNil(recreatedSchema.fields)) return null;
         recreatedSchema.ownerModule = 'database';
         recreatedSchema.schemaOptions.conduit!.imported = true;
-        await this.database.createSchemaFromAdapter(recreatedSchema);
-    }));
-    //remove finalized schemas from pending schemas
-    await this.database.getSchemaModel('_PendingSchemas').model.deleteMany({ _id: { $in: schemaIds } });
-    
-    return `${schemas.length} schemas finalized successfully`;
+        await this.database.createSchemaFromAdapter(recreatedSchema, true);
+      }),
+    );
+    await this.database
+      .getSchemaModel('_PendingSchemas')
+      .model.deleteMany({ name: { $in: schemaNames } });
+    return `${schemas.length} ${
+      schemas.length > 1 ? 'schemas' : 'schema'
+    } finalized successfully`;
   }
 
   private patchSchemaPerms(
@@ -536,10 +606,16 @@ export class SchemaAdmin {
     // @ts-ignore
     perms: ConduitModelOptions['conduit']['permissions'],
   ) {
-    if (perms!.canModify && !(ConduitModelOptionsPermModifyType.includes(perms!.canModify))) {
+    if (
+      perms!.canModify &&
+      !ConduitModelOptionsPermModifyType.includes(perms!.canModify)
+    ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(', ')}`);
+        `canModify permission must be one of: ${ConduitModelOptionsPermModifyType.join(
+          ', ',
+        )}`,
+      );
     }
     schema.modelOptions.conduit!.permissions!.extendable =
       perms!.extendable ?? schema.modelOptions.conduit!.permissions!.extendable;

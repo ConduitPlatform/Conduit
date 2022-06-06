@@ -1,8 +1,5 @@
 import express, { NextFunction, Request, Response } from 'express';
-import {
-  ConduitCommons,
-  ConduitRoute,
-} from '@conduitplatform/commons';
+import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { GraphQlParser, ParseResult } from './GraphQlParser';
 import { findPopulation } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -113,7 +110,7 @@ export class GraphQLController extends ConduitRouter {
       pathName = pathName.slice(0, pathName.length);
     }
     let uniqueName: string = '';
-    pathName.forEach((r) => {
+    pathName.forEach(r => {
       uniqueName += r.slice(0, 1).toUpperCase() + r.slice(1);
     });
     let name = input.name ? input.name : input.action.toLowerCase() + uniqueName;
@@ -200,7 +197,7 @@ export class GraphQLController extends ConduitRouter {
 
   protected _refreshRouter() {
     this.initialize();
-    this._registeredRoutes.forEach((route) => {
+    this._registeredRoutes.forEach(route => {
       // we should probably implement some kind of caching for this
       // so it does not recalculate the types for the routes that have not changed
       // but it needs to be done carefully
@@ -386,7 +383,7 @@ export class GraphQLController extends ConduitRouter {
           delete params.params;
           return route.executeRequest.bind(route)({ ...context, params: args });
         })
-        .then((r) => {
+        .then(r => {
           let result = r.result ? r.result : r;
           if (r.setCookies) {
             context.setCookie = r.setCookies;

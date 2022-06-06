@@ -33,7 +33,7 @@ export class FormsRoutes {
     let fileData: any = {};
     let honeyPot: boolean = false;
     let possibleSpam: boolean = false;
-    Object.keys(data).forEach((r) => {
+    Object.keys(data).forEach(r => {
       if (form.fields[r] === 'File') {
         fileData[r] = data[r];
         delete data[r];
@@ -81,19 +81,19 @@ export class FormsRoutes {
       });
 
     let text = '';
-    Object.keys(data).forEach((r) => {
+    Object.keys(data).forEach(r => {
       text += `</br>${r}: ${data[r]}`;
     });
     await this.grpcSdk
       .emailProvider!.sendEmail('FormSubmission', {
-      email: form.forwardTo,
-      sender: 'forms',
-      replyTo: form.emailField ? data[form.emailField] : null,
-      variables: {
-        data: text,
-      },
-      attachments: Object.values(fileData),
-    })
+        email: form.forwardTo,
+        sender: 'forms',
+        replyTo: form.emailField ? data[form.emailField] : null,
+        variables: {
+          data: text,
+        },
+        attachments: Object.values(fileData),
+      })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });

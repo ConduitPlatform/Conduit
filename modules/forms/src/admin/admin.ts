@@ -11,7 +11,9 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE, ConduitRouteObject, Query,
+  TYPE,
+  ConduitRouteObject,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -21,11 +23,10 @@ import { Forms, FormReplies } from '../models';
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
-
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly formsController: FormsController
+    private readonly formsController: FormsController,
   ) {
     this.registerAdminRoutes();
   }
@@ -62,7 +63,7 @@ export class AdminHandlers {
           forms: [Forms.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getForms'
+        'getForms',
       ),
       constructConduitRoute(
         {
@@ -77,7 +78,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('CreateForm', 'String'),
-        'createForm'
+        'createForm',
       ),
       constructConduitRoute(
         {
@@ -95,7 +96,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('UpdateForm', 'String'),
-        'updateForm'
+        'updateForm',
       ),
       constructConduitRoute(
         {
@@ -103,13 +104,13 @@ export class AdminHandlers {
           action: ConduitRouteActions.DELETE,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          }
+          },
         },
         new ConduitRouteReturnDefinition('DeleteForms', {
           forms: [Forms.getInstance().fields],
           count: ConduitString.Required,
         }),
-        'deleteForms'
+        'deleteForms',
       ),
       constructConduitRoute(
         {
@@ -127,7 +128,7 @@ export class AdminHandlers {
           replies: [FormReplies.getInstance().fields],
           count: ConduitNumber.Required,
         }),
-        'getFormReplies'
+        'getFormReplies',
       ),
     ];
   }
@@ -135,23 +136,17 @@ export class AdminHandlers {
   async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {}
+    let query: Query = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
-      query['name'] =  { $regex: `.*${identifier}.*`, $options: 'i'};
+      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
-    const formsPromise = Forms.getInstance()
-      .findMany(
-        query,
-        undefined,
-        skip,
-        limit,
-      );
+    const formsPromise = Forms.getInstance().findMany(query, undefined, skip, limit);
     const countPromise = Forms.getInstance().countDocuments({});
-    const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(
-      (e) => { throw new GrpcError(status.INTERNAL, e.message); }
-    );
+    const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
     return { forms, count };
   }
 
@@ -159,14 +154,21 @@ export class AdminHandlers {
     if (Object.keys(call.request.params.fields).length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
     }
-    Object.keys(call.request.params.fields).forEach((r) => {
-      if (['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object should contain fields that have their value as a type of: String, File, Date, Number');
+    Object.keys(call.request.params.fields).forEach(r => {
+      if (
+        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
+        );
       }
     });
     const formExists = await Forms.getInstance()
       .findOne({ name: call.request.params.name })
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch(e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     if (formExists) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Form name already taken');
     }
@@ -178,7 +180,9 @@ export class AdminHandlers {
         emailField: call.request.params.emailField,
         enabled: call.request.params.enabled,
       })
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch(e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     this.formsController.refreshRoutes();
     return 'Ok';
@@ -188,9 +192,14 @@ export class AdminHandlers {
     if (Object.keys(call.request.params.fields).length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
     }
-    Object.keys(call.request.params.fields).forEach((r) => {
-      if (['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object should contain fields that have their value as a type of: String, File, Date, Number');
+    Object.keys(call.request.params.fields).forEach(r => {
+      if (
+        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
+        );
       }
     });
     Forms.getInstance()
@@ -201,18 +210,26 @@ export class AdminHandlers {
         emailField: call.request.params.emailField,
         enabled: call.request.params.enabled,
       })
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch(e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     this.formsController.refreshRoutes();
     return 'Ok';
   }
 
   async deleteForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (call.request.params.ids.length === 0) { // array check is required
-      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    if (call.request.params.ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be a non-empty array',
+      );
     }
     const forms = await Forms.getInstance()
       .deleteMany({ _id: { $in: call.request.params.ids } })
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+      .catch(e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     const totalCount = (forms as any).deletedCount;
     return { forms, totalCount };
   }
@@ -220,16 +237,19 @@ export class AdminHandlers {
   async getFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const repliesPromise = FormReplies.getInstance()
-      .findMany(
-        { form: call.request.params.formId },
-        undefined,
-        skip,
-        limit,
-      );
-    const countPromise = FormReplies.getInstance().countDocuments({ form: call.request.params.formId });
+    const repliesPromise = FormReplies.getInstance().findMany(
+      { form: call.request.params.formId },
+      undefined,
+      skip,
+      limit,
+    );
+    const countPromise = FormReplies.getInstance().countDocuments({
+      form: call.request.params.formId,
+    });
     const [replies, count] = await Promise.all([repliesPromise, countPromise]).catch(
-      (e) => { throw new GrpcError(status.INTERNAL, e.message); }
+      e => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      },
     );
     return { replies, count };
   }

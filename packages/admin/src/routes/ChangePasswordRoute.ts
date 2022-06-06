@@ -33,7 +33,7 @@ export function changePasswordRoute(conduit: ConduitCommons) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
           400,
-          'Both old and new password must be provided'
+          'Both old and new password must be provided',
         );
       }
       const hashRounds = (await conduit.getConfigManager().get('admin')).auth.hashRounds;
@@ -46,6 +46,6 @@ export function changePasswordRoute(conduit: ConduitCommons) {
         password: await hash(newPassword, hashRounds ?? 11),
       });
       return { result: { message: 'OK' } };
-    }
+    },
   );
 }

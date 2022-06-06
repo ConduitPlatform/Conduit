@@ -20,7 +20,6 @@ export type CreateSchemaExtensionRequest = GrpcRequest<{
   extension: SchemaExtension;
 }>;
 
-
 export type GetSchemaRequest = GrpcRequest<{
   schemaName: string;
 }>;
@@ -59,7 +58,7 @@ export type QueryRequest = GrpcRequest<{
 
 export type DropCollectionResponse = GrpcResponse<{
   result: string;
-}>
+}>;
 
 export type DropCollectionRequest = GrpcRequest<{
   schemaName: string;
@@ -75,7 +74,7 @@ export type UpdateRequest = GrpcRequest<{
   id: string;
   query: string;
   updateProvidedOnly?: boolean;
-  populate?: string[]
+  populate?: string[];
 }>;
 
 export type UpdateManyRequest = GrpcRequest<{

@@ -9,10 +9,7 @@ import * as models from './models';
 import convict from './config';
 
 class SecurityModule extends IConduitSecurity {
-  constructor(
-    commons: ConduitCommons,
-    private readonly grpcSdk: ConduitGrpcSdk,
-  ) {
+  constructor(commons: ConduitCommons, private readonly grpcSdk: ConduitGrpcSdk) {
     super(commons);
     this.initialize()
       .then(() => {
@@ -22,7 +19,6 @@ class SecurityModule extends IConduitSecurity {
         console.error('Security: Failed to initialize');
         console.error(err);
       });
-
   }
 
   async initialize() {
@@ -30,13 +26,17 @@ class SecurityModule extends IConduitSecurity {
     await runMigrations(this.grpcSdk);
     await this.registerConfig();
 
-    await this.registerAdminRoutes(ConfigController.getInstance().config.clientValidation.enabled);
+    await this.registerAdminRoutes(
+      ConfigController.getInstance().config.clientValidation.enabled,
+    );
     this.setupMiddlewares();
 
-    this.commons.getBus()?.subscribe('config:update:security', (message) => {
+    this.commons.getBus()?.subscribe('config:update:security', message => {
       try {
         ConfigController.getInstance().config = JSON.parse(message);
-        this.registerAdminRoutes(ConfigController.getInstance().config.clientValidation.enabled);
+        this.registerAdminRoutes(
+          ConfigController.getInstance().config.clientValidation.enabled,
+        );
       } catch (e) {
         throw new Error(e);
       }
@@ -89,7 +89,9 @@ class SecurityModule extends IConduitSecurity {
 
   async registerConfig() {
     let error;
-    let config = await this.commons.getConfigManager().get('security')
+    let config = await this.commons
+      .getConfigManager()
+      .get('security')
       .catch((e: Error) => {
         error = e;
       });

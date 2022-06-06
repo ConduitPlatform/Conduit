@@ -25,11 +25,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     this.extensions = extensions;
   }
 
-  findOne(
-    query: ParsedQuery,
-    select?: string,
-    populate?: string[] | undefined
-  ) {
+  findOne(query: ParsedQuery, select?: string, populate?: string[] | undefined) {
     return this.model.findOne(query, select, populate);
   }
 
@@ -39,7 +35,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     skip?: number,
     limit?: number,
     sort?: { [key: string]: number } | string[],
-    populate?: string[] | undefined
+    populate?: string[] | undefined,
   ) {
     return this.model.findMany(query, skip, limit, select, sort, populate);
   }
@@ -57,22 +53,18 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     document: ParsedQuery,
     updateProvidedOnly?: boolean,
     populate?: string[] | undefined,
-    relations?: any
+    relations?: any,
   ) {
     return this.model.findByIdAndUpdate(
       id,
       document,
       updateProvidedOnly,
       populate,
-      relations
+      relations,
     );
   }
 
-  updateMany(
-    filterQuery: ParsedQuery,
-    query: ParsedQuery,
-    updateProvidedOnly?: boolean
-  ) {
+  updateMany(filterQuery: ParsedQuery, query: ParsedQuery, updateProvidedOnly?: boolean) {
     return this.model.updateMany(filterQuery, query, updateProvidedOnly);
   }
 

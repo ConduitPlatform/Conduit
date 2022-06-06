@@ -1,7 +1,4 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { Client } from '../../models';
 import {
   ConduitRouteActions,

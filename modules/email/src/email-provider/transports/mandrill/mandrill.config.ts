@@ -1,6 +1,5 @@
 export interface MandrillConfig {
-    auth: {
-      apiKey: string;
-    }
-  }
-  
+  auth: {
+    apiKey: string;
+  };
+}

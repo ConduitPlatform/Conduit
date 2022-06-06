@@ -17,7 +17,7 @@ export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) 
   }
   if (usersToBeAdded.length != uniqueUsers.length) {
     const dbUserIds = usersToBeAdded.map((user: any) => user._id);
-    const wrongIds = uniqueUsers.filter((id) => !dbUserIds.includes(id));
+    const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
     if (wrongIds.length != 0) {
       return Promise.reject({
         code: status.INVALID_ARGUMENT,
@@ -45,7 +45,10 @@ export async function sendInvitations(
       sender: sender._id,
     });
     if (invitationsCount > 0) {
-      throw new GrpcError(status.ALREADY_EXISTS, `users array contains invited member ids`);
+      throw new GrpcError(
+        status.ALREADY_EXISTS,
+        `users array contains invited member ids`,
+      );
     }
     let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
       receiver: invitedUser._id,
@@ -59,23 +62,26 @@ export async function sendInvitations(
       const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
       const roomName = room.name;
       const userName = sender.email;
-      await grpcSdk.emailProvider!.sendEmail('ChatRoomInvitation', {
-        email: invitedUser.email,
-        sender: 'no-reply',
-        variables: {
-          acceptLink,
-          declineLink,
-          userName,
-          roomName,
-        },
-      }).catch((e: Error) => {
-        throw new Error(e.message);
-      });
+      await grpcSdk
+        .emailProvider!.sendEmail('ChatRoomInvitation', {
+          email: invitedUser.email,
+          sender: 'no-reply',
+          variables: {
+            acceptLink,
+            declineLink,
+            userName,
+            roomName,
+          },
+        })
+        .catch((e: Error) => {
+          throw new Error(e.message);
+        });
     }
     if (sendNotification) {
       const body = `User ${sender._id} has invited you to join in room ${room.name}`;
       const title = 'You have an invitation request!';
-      await grpcSdk.pushNotifications!.sendNotification(invitedUser._id, title, body)
+      await grpcSdk
+        .pushNotifications!.sendNotification(invitedUser._id, title, body)
         .catch((e: Error) => {
           throw new Error(e.message);
         });

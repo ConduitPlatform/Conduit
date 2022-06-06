@@ -1,10 +1,19 @@
-import { ParsedRouterRequest, ParsedSocketRequest, UnparsedRouterResponse, UnparsedSocketResponse } from '../types';
+import {
+  ParsedRouterRequest,
+  ParsedSocketRequest,
+  UnparsedRouterResponse,
+  UnparsedSocketResponse,
+} from '../types';
 
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
 
-export type RouterRequestHandler = (call: ParsedRouterRequest) => Promise<UnparsedRouterResponse>;
-export type SocketRequestHandler = (call: ParsedSocketRequest) => Promise<UnparsedSocketResponse>;
+export type RouterRequestHandler = (
+  call: ParsedRouterRequest,
+) => Promise<UnparsedRouterResponse>;
+export type SocketRequestHandler = (
+  call: ParsedSocketRequest,
+) => Promise<UnparsedSocketResponse>;
 export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
 
 export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
@@ -18,7 +27,12 @@ export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
   };
 }
 
-function generateLog(routerRequest: boolean, requestReceive: number, call: any, status?: Status) {
+function generateLog(
+  routerRequest: boolean,
+  requestReceive: number,
+  call: any,
+  status?: Status,
+) {
   let log = '';
   if (routerRequest) {
     log += `Request: ${call.request.path}`;
@@ -62,7 +76,7 @@ export function wrapRouterGrpcFunction(
     }
 
     fun(call)
-      .then((r) => {
+      .then(r => {
         if (!r) return;
         if (routerRequest) {
           if (typeof r === 'string') {
@@ -91,7 +105,7 @@ export function wrapRouterGrpcFunction(
         }
         generateLog(routerRequest, requestReceive, call, undefined);
       })
-      .catch((error) => {
+      .catch(error => {
         generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
         console.log(error.message ?? 'Something went wrong');
         callback({

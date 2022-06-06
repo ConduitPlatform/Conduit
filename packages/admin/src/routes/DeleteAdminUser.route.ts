@@ -34,6 +34,6 @@ export function deleteAdminUserRoute() {
       }
       admin = await Admin.getInstance().deleteOne({ _id: id });
       return { result: { message: 'Admin deleted.' } };
-    }
+    },
   );
 }

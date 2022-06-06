@@ -12,7 +12,10 @@ import ConduitGrpcSdk, {
   SMS,
   UnparsedRouterResponse,
   ConfigController,
-  RoutingManager, ConduitRouteActions, ConduitString, ConduitRouteReturnDefinition,
+  RoutingManager,
+  ConduitRouteActions,
+  ConduitString,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
 import { AccessToken, Token, User } from '../models';
@@ -30,7 +33,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly sendEmail: boolean,
   ) {
-    grpcSdk.config.get('security').then((config) => {
+    grpcSdk.config.get('security').then(config => {
       this.clientValidation = config.clientValidation.enabled;
     });
   }
@@ -50,7 +53,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares: [],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', fields),
-      this.register.bind(this));
+      this.register.bind(this),
+    );
 
     routingManager.route(
       {
@@ -145,7 +149,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
           userId: ConduitString.Optional,
           accessToken: ConduitString.Optional,
-          refreshToken: config.generateRefreshToken ? ConduitString.Required : ConduitString.Optional,
+          refreshToken: config.generateRefreshToken
+            ? ConduitString.Required
+            : ConduitString.Optional,
           message: ConduitString.Optional,
         }),
         this.verify2FA.bind(this),
@@ -213,12 +219,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
       try {
         emailConfig = await this.grpcSdk.config.get('email');
       } catch (e) {
-        this.initialized = false;
-        throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+        console.log('Cannot use email verification without Email module being enabled');
+        return (this.initialized = false);
       }
       if (!emailConfig.active) {
-        this.initialized = false;
-        throw ConduitError.forbidden('Cannot use email verification without Email module being enabled');
+        console.log('Cannot use email verification without Email module being enabled');
+        return (this.initialized = false);
       }
     }
     if (!this.initialized) {
@@ -240,10 +246,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     let { email, password } = call.request.params;
 
     if (AuthUtils.invalidEmailAddress(email)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Invalid email address provided',
-      );
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
     email = email.toLowerCase();
@@ -296,7 +299,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (!passwordsMatch)
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
-
     if (config.local.verification.required && !user.isVerified) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
@@ -314,10 +316,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const clientId = context.clientId;
 
     if (AuthUtils.invalidEmailAddress(email)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Invalid email address provided',
-      );
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
     email = email.toLowerCase();
@@ -332,7 +331,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await LocalHandlers._authenticateChecks(password, config, user);
 
     if (user.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, user.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(
+        this.smsModule,
+        user.phoneNumber!,
+      );
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -355,24 +357,33 @@ export class LocalHandlers implements IAuthenticationStrategy {
       };
     }
     const clientConfig = config.clients;
-    await AuthUtils.signInClientOperations(this.grpcSdk, clientConfig, user._id, clientId);
-    const [accessToken, refreshToken] = await AuthUtils
-      .createUserTokensAsPromise(this.grpcSdk, {
+    await AuthUtils.signInClientOperations(
+      this.grpcSdk,
+      clientConfig,
+      user._id,
+      clientId,
+    );
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
         userId: user._id,
         clientId: clientId,
         config,
-      });
+      },
+    );
 
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
       if (cookieOptions.path === '') {
         delete cookieOptions.path;
       }
-      const cookies: Cookie[] = [{
-        name: 'accessToken',
-        value: (accessToken as AccessToken).token,
-        options: cookieOptions,
-      }];
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: (accessToken as AccessToken).token,
+          options: cookieOptions,
+        },
+      ];
       if (!isNil(refreshToken)) {
         cookies.push({
           name: 'refreshToken',
@@ -459,7 +470,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (passwordsMatch)
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'Password can\'t be the same as the old one',
+        "Password can't be the same as the old one",
       );
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
@@ -518,7 +529,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
     if (dbUser.hasTwoFA) {
-      const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, dbUser.phoneNumber!);
+      const verificationSid = await AuthUtils.sendVerificationCode(
+        this.smsModule,
+        dbUser.phoneNumber!,
+      );
       if (verificationSid === '') {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
@@ -627,7 +641,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    return await AuthUtils.verifyCode(this.grpcSdk, clientId, user, TokenType.TWO_FA_VERIFICATION_TOKEN, code);
+    return await AuthUtils.verifyCode(
+      this.grpcSdk,
+      clientId,
+      user,
+      TokenType.TWO_FA_VERIFICATION_TOKEN,
+      code,
+    );
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -638,7 +658,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
-    const verificationSid = await AuthUtils.sendVerificationCode(this.smsModule, phoneNumber);
+    const verificationSid = await AuthUtils.sendVerificationCode(
+      this.smsModule,
+      phoneNumber,
+    );
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
@@ -736,9 +759,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     let errorMessage = null;
-    await this.grpcSdk.config
-      .moduleExists('sms')
-      .catch((e) => (errorMessage = e.message));
+    await this.grpcSdk.config.moduleExists('sms').catch(e => (errorMessage = e.message));
     if (config.twofa.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
@@ -747,7 +768,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       console.log('sms 2fa not active');
     }
 
-    if ((config.phoneAuthentication.enabled) && !errorMessage) {
+    if (config.phoneAuthentication.enabled && !errorMessage) {
       // maybe check if verify is enabled in sms module
       await this.grpcSdk.waitForExistence('sms');
       this.smsModule = this.grpcSdk.sms!;
@@ -762,7 +783,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   private registerTemplates() {
-    const promises = Object.values(templates).map((template) => {
+    const promises = Object.values(templates).map(template => {
       return this.emailModule.registerTemplate(template);
     });
     Promise.all(promises)

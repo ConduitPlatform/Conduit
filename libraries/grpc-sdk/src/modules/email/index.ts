@@ -8,11 +8,9 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
   }
 
   setConfig(newConfig: any) {
-    return this.client!.setConfig(
-      { newConfig: JSON.stringify(newConfig) })
-      .then(res => {
-        return JSON.parse(res.updatedConfig);
-      });
+    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
+      return JSON.parse(res.updatedConfig);
+    });
   }
 
   registerTemplate(template: {
@@ -21,16 +19,14 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     body: string;
     variables: string[];
   }) {
-    return this.client!.registerTemplate(
-      {
-        name: template.name,
-        subject: template.subject,
-        body: template.body,
-        variables: template.variables,
-      })
-      .then(res => {
-        return JSON.parse(res.template);
-      });
+    return this.client!.registerTemplate({
+      name: template.name,
+      subject: template.subject,
+      body: template.body,
+      variables: template.variables,
+    }).then(res => {
+      return JSON.parse(res.template);
+    });
   }
 
   sendEmail(
@@ -44,20 +40,18 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
       attachments?: string[];
     },
   ) {
-    return this.client!.sendEmail(
-      {
-        templateName,
-        params: {
-          email: params.email,
-          variables: JSON.stringify(params.variables),
-          sender: params.sender,
-          replyTo: params.replyTo,
-          cc: params.cc ?? [],
-          attachments: params.attachments ?? [],
-        },
-      })
-      .then(res => {
-        return res.sentMessageInfo;
-      });
+    return this.client!.sendEmail({
+      templateName,
+      params: {
+        email: params.email,
+        variables: JSON.stringify(params.variables),
+        sender: params.sender,
+        replyTo: params.replyTo,
+        cc: params.cc ?? [],
+        attachments: params.attachments ?? [],
+      },
+    }).then(res => {
+      return res.sentMessageInfo;
+    });
   }
 }

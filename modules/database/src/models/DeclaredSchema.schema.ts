@@ -29,9 +29,13 @@ export const DeclaredSchema = new ConduitSchema(
     ],
     modelOptions: {
       type: TYPE.JSON,
-      required: true
+      required: true,
     },
     ownerModule: {
+      type: TYPE.String,
+      required: true,
+    },
+    collectionName: {
       type: TYPE.String,
       required: true,
     },

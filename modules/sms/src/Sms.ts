@@ -1,7 +1,9 @@
 import {
   ManagedModule,
   ConfigController,
-  HealthCheckStatus, GrpcRequest, GrpcCallback,
+  HealthCheckStatus,
+  GrpcRequest,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin/admin';
@@ -80,7 +82,10 @@ export default class Sms extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async sendSms(call: GrpcRequest<SendSmsRequest>, callback: GrpcCallback<SendSmsResponse>) {
+  async sendSms(
+    call: GrpcRequest<SendSmsRequest>,
+    callback: GrpcCallback<SendSmsResponse>,
+  ) {
     const to = call.request.to;
     const message = call.request.message;
     if (isNil(this._provider)) {
@@ -88,9 +93,7 @@ export default class Sms extends ManagedModule<Config> {
     }
 
     let errorMessage: string | null = null;
-    await this._provider
-      .sendSms(to, message)
-      .catch((e) => (errorMessage = e.message));
+    await this._provider.sendSms(to, message).catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
@@ -118,7 +121,7 @@ export default class Sms extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const verificationSid = await this._provider
       .sendVerificationCode(to)
-      .catch((e) => (errorMessage = e.message));
+      .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,
@@ -143,7 +146,7 @@ export default class Sms extends ManagedModule<Config> {
     let errorMessage: string | null = null;
     const verified = await this._provider
       .verify(verificationSid, code)
-      .catch((e) => (errorMessage = e.message));
+      .catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage))
       return callback({
         code: status.INTERNAL,

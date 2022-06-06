@@ -6,7 +6,8 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   GrpcError,
-  ConduitString, ConduitRouteObject,
+  ConduitString,
+  ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -18,7 +19,7 @@ export class AdminHandlers {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    provider: ISmsProvider | undefined
+    provider: ISmsProvider | undefined,
   ) {
     this.provider = provider;
     this.registerAdminRoutes();
@@ -32,7 +33,7 @@ export class AdminHandlers {
     const paths = AdminHandlers.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        sendSms: this.sendSms.bind(this)
+        sendSms: this.sendSms.bind(this),
       })
       .catch((err: Error) => {
         console.log('Failed to register admin routes for module!');
@@ -48,11 +49,11 @@ export class AdminHandlers {
           action: ConduitRouteActions.POST,
           bodyParams: {
             to: ConduitString.Required,
-            message: ConduitString.Required
+            message: ConduitString.Required,
           },
         },
         new ConduitRouteReturnDefinition('SendSMS', 'String'),
-        'sendSms'
+        'sendSms',
       ),
     ];
   }
@@ -65,9 +66,7 @@ export class AdminHandlers {
       throw new GrpcError(status.INTERNAL, 'No SMS provider');
     }
 
-    await this.provider
-      .sendSms(to, message)
-      .catch((e) => (errorMessage = e.message));
+    await this.provider.sendSms(to, message).catch(e => (errorMessage = e.message));
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }

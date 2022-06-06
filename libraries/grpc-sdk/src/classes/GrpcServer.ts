@@ -14,7 +14,7 @@ export class GrpcServer {
   }[] = [];
 
   constructor(port?: string) {
-    this._url = `0.0.0.0:${ port ?? '5000' }`;
+    this._url = `0.0.0.0:${port ?? '5000'}`;
   }
 
   private _url: string;
@@ -77,15 +77,15 @@ export class GrpcServer {
     if (this.started) {
       this.started = false;
       //gracefully shutdown so that there are no service disruption
-      await new Promise<void>((resolve) => this.grpcServer!.tryShutdown(() => resolve()));
+      await new Promise<void>(resolve => this.grpcServer!.tryShutdown(() => resolve()));
     }
     await this.createNewServer();
-    this._services.forEach((service) => {
+    this._services.forEach(service => {
       addServiceToServer(
         this.grpcServer!,
         service.protoFilePath,
         service.protoDescription,
-        service.functions
+        service.functions,
       );
     });
     if (!this.started && this.startedOnce) {

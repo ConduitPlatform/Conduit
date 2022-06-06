@@ -1,8 +1,4 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -49,6 +45,6 @@ export class Config extends ConduitActiveSchema<Config> {
       fields: Config.getInstance().fields,
       schemaOptions: Config.getInstance().schemaOptions,
       collectionName: Config.getInstance().collectionName,
-    }
+    };
   }
 }

@@ -11,7 +11,7 @@ export function createHashKey(path: string, context: any, params: any) {
 
 export function extractCaching(
   route: ConduitRoute,
-  reqCacheHeader?: string
+  reqCacheHeader?: string,
 ): { caching: boolean; cacheAge?: number; scope?: string } {
   let caching: boolean = false;
   let cacheAge: any | undefined;
@@ -32,7 +32,7 @@ export function extractCaching(
 
 export function extractCachingGql(
   route: ConduitRoute,
-  cacheHeader?: string
+  cacheHeader?: string,
 ): { caching: boolean; cacheAge?: number; scope?: CacheScope } {
   let { caching, cacheAge, scope } = extractCaching(route, cacheHeader);
   scope = scope === 'public' ? CacheScope.Public : CacheScope.Private;

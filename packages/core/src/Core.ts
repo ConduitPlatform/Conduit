@@ -1,5 +1,5 @@
 import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
-import { HttpServer} from './HttpServer';
+import { HttpServer } from './HttpServer';
 import { GrpcServer } from './GrpcServer';
 import { isNil } from 'lodash';
 
@@ -8,9 +8,15 @@ export class Core extends IConduitCore {
   private readonly _httpServer: HttpServer;
   private readonly _grpcServer: GrpcServer;
 
-  get httpServer() { return this._httpServer; }
-  get grpcServer() { return this._grpcServer; }
-  get initialized() { return this._httpServer.initialized && this._grpcServer.initialized; }
+  get httpServer() {
+    return this._httpServer;
+  }
+  get grpcServer() {
+    return this._grpcServer;
+  }
+  get initialized() {
+    return this._httpServer.initialized && this._grpcServer.initialized;
+  }
 
   private constructor(httpPort: number | string, grpcPort: number) {
     super(ConduitCommons.getInstance('core'));

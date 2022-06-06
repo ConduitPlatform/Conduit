@@ -1,7 +1,4 @@
-import ConduitGrpcSdk, {
-  ManagedModule,
-  ConfigController,
-} from '..';
+import ConduitGrpcSdk, { ManagedModule, ConfigController } from '..';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
@@ -12,12 +9,18 @@ export class ModuleManager<T> {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
-    this.serviceAddress = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[0] : '0.0.0.0';
-    this.servicePort = process.env.SERVICE_IP ? process.env.SERVICE_IP.split(':')[1] : undefined;
+    this.serviceAddress = process.env.SERVICE_IP
+      ? process.env.SERVICE_IP.split(':')[0]
+      : '0.0.0.0';
+    this.servicePort = process.env.SERVICE_IP
+      ? process.env.SERVICE_IP.split(':')[1]
+      : undefined;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
         process.env.CONDUIT_SERVER,
-        () => { return this.module.healthState; },
+        () => {
+          return this.module.healthState;
+        },
         module.name,
       );
     } catch {
@@ -31,20 +34,24 @@ export class ModuleManager<T> {
     const self = this;
     try {
       await this.preRegisterLifecycle();
-      const url = (process.env.REGISTER_NAME === 'true'
-        ? `${self.module.name}:`
-        : `${self.serviceAddress}:`) + self.module.port;
-      await self.grpcSdk.config.registerModule(self.module.name, url, this.module.healthState);
+      const url =
+        (process.env.REGISTER_NAME === 'true'
+          ? `${self.module.name}:`
+          : `${self.serviceAddress}:`) + self.module.port;
+      await self.grpcSdk.config.registerModule(
+        self.module.name,
+        url,
+        this.module.healthState,
+      );
     } catch (err) {
       console.log('Failed to initialize server');
       console.error(err);
       process.exit(-1);
     }
-    await this.postRegisterLifecycle()
-      .catch((err: Error) => {
-        console.log('Failed to activate module');
-        console.error(err);
-      });
+    await this.postRegisterLifecycle().catch((err: Error) => {
+      console.log('Failed to activate module');
+      console.error(err);
+    });
   }
 
   private async preRegisterLifecycle(): Promise<void> {

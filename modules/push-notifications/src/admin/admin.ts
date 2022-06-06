@@ -8,12 +8,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   RouteOptionType,
   ConduitString,
-  TYPE, ConduitRouteObject,
+  TYPE,
+  ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
-import { NotificationToken } from '../models'
+import { NotificationToken } from '../models';
 
 export class AdminHandlers {
   private provider: IPushNotificationsProvider;
@@ -21,7 +22,7 @@ export class AdminHandlers {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    provider: IPushNotificationsProvider
+    provider: IPushNotificationsProvider,
   ) {
     this.provider = provider;
     this.registerAdminRoutes();
@@ -60,7 +61,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('SendNotification', 'String'),
-        'sendNotification'
+        'sendNotification',
       ),
       constructConduitRoute(
         {
@@ -69,7 +70,7 @@ export class AdminHandlers {
           bodyParams: {},
         },
         new ConduitRouteReturnDefinition('SendNotifications', {}),
-        'sendNotifications'
+        'sendNotifications',
       ),
       constructConduitRoute(
         {
@@ -83,7 +84,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
-        'sendNotificationToManyDevices'
+        'sendNotificationToManyDevices',
       ),
       constructConduitRoute(
         {
@@ -96,7 +97,7 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('GetNotificationToken', {
           tokenDocuments: [NotificationToken.getInstance().fields],
         }),
-        'getNotificationToken'
+        'getNotificationToken',
       ),
     ];
   }
@@ -108,9 +109,9 @@ export class AdminHandlers {
       body: call.request.params.body,
       data: call.request.params.data,
     };
-    await this.provider
-      .sendToDevice(params)
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+    await this.provider.sendToDevice(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
     return 'Ok';
   }
 
@@ -119,9 +120,15 @@ export class AdminHandlers {
     throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
-  async sendNotificationToManyDevices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (call.request.params.userIds.length === 0) { // array check is required
-      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be an non-empty array');
+  async sendNotificationToManyDevices(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    if (call.request.params.userIds.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be an non-empty array',
+      );
     }
     const params = {
       sendTo: call.request.params.userIds,
@@ -129,14 +136,16 @@ export class AdminHandlers {
       body: call.request.params.body,
       data: call.request.params.data,
     };
-    await this.provider
-      .sendToManyDevices(params)
-      .catch((e) => { throw new GrpcError(status.INTERNAL, e.message); });
+    await this.provider.sendToManyDevices(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
     return 'Ok';
   }
 
   async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const tokenDocuments = await NotificationToken.getInstance().findMany({ userId: call.request.params.userId });
+    const tokenDocuments = await NotificationToken.getInstance().findMany({
+      userId: call.request.params.userId,
+    });
     if (isNil(tokenDocuments)) {
       throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
     }

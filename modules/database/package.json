@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.149",
+    "@types/node": "14.14.31",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
     "ts-proto": "^1.112.1",

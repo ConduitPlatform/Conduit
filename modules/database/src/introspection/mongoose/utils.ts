@@ -1,10 +1,9 @@
-import { ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
-
-export const INITIAL_DB_SCHEMAS = [
-  '_declaredschemas',
-  'customendpoints',
-  '_pendingschemas',
-];
+import {
+  ConduitModel,
+  ConduitModelField,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 /**
  * This function should take as an input a mongo-schema object and convert it to a conduit schema
@@ -18,17 +17,24 @@ export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
   return conduitSchema as ConduitModel;
 }
 
-function extractType(field: any): ConduitModelField {
+function extractType(field: Indexable) {
   let conduitField: Partial<ConduitModelField> = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
-      (t: string) => t !== 'Undefined' && t !== 'Null'
+      (t: string) => t !== 'Undefined' && t !== 'Null',
     )[0];
+  } else if (
+    (field.type === 'Array' || field.name === 'Array') &&
+    field.hasOwnProperty('types')
+  ) {
+    let nestedField = field.types[0];
+    nestedField = extractType(nestedField.types[0]);
+    return [nestedField];
   } else {
-    conduitField.type = field.type;
+    conduitField.type = field.type ?? field.name;
   }
-  if(conduitField.type === 'Document') {
-    conduitField.type = 'Object' as any; //workaround for Document types
+  if (conduitField.type === 'Document') {
+    conduitField.type = TYPE.JSON; //workaround for Document types
   }
   return conduitField;
 }

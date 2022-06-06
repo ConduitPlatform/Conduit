@@ -5,5 +5,5 @@ export abstract class IConduitCore {
 
   setConfig(moduleConfig: any) {
     this.commons.getBus().publish('config:update:core', JSON.stringify(moduleConfig));
-  };
+  }
 }

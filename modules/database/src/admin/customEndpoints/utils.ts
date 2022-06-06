@@ -9,12 +9,7 @@ import { isNil } from 'lodash';
  * location: String (Body, queryParams, url)
  * }
  */
-export function queryValidation(
-  query: any,
-  findSchema: any,
-  inputs: any,
-): true | string {
-
+export function queryValidation(query: any, findSchema: any, inputs: any): true | string {
   if (query.hasOwnProperty('AND')) {
     if (Object.keys(query).length !== 1) {
       return 'Invalid number of keys';
@@ -26,11 +21,17 @@ export function queryValidation(
     }
     query = query['OR'];
   } else if (query.hasOwnProperty('schemaField')) {
-    let error = _queryValidation(findSchema, inputs, query.schemaField, query.operation, query.comparisonField);
+    let error = _queryValidation(
+      findSchema,
+      inputs,
+      query.schemaField,
+      query.operation,
+      query.comparisonField,
+    );
     if (error !== true) {
       return error;
     }
-    query['AND'] = [{...query}];
+    query['AND'] = [{ ...query }];
     delete query.schemaField;
     delete query.operation;
     delete query.comparisonField;
@@ -41,7 +42,13 @@ export function queryValidation(
 
   for (const q of query) {
     if (q.hasOwnProperty('schemaField')) {
-      let error = _queryValidation(findSchema, inputs, q.schemaField, q.operation, q.comparisonField);
+      let error = _queryValidation(
+        findSchema,
+        inputs,
+        q.schemaField,
+        q.operation,
+        q.comparisonField,
+      );
       if (error !== true) {
         return error;
       }
@@ -58,13 +65,12 @@ export function queryValidation(
   return true;
 }
 
-
 function _queryValidation(
   findSchema: any,
   inputs: any,
   schemaField: string,
   operation: number,
-  comparisonField: any
+  comparisonField: any,
 ) {
   if (isNil(schemaField) || isNil(operation) || isNil(comparisonField)) {
     return 'schemaField, operation and comparisonField must be present in the input';
@@ -116,7 +122,7 @@ export function inputValidation(
   name: string,
   type: any,
   location: number,
-  isArray?: boolean
+  isArray?: boolean,
 ): boolean | string {
   if (isNil(name) || isNil(type) || isNil(location)) {
     return 'Name, type and location must be present in the input';
@@ -157,7 +163,7 @@ export function assignmentValidation(
   operation: number,
   schemaField: string,
   assignmentField: any,
-  action: number
+  action: number,
 ): boolean | string {
   if (isNil(schemaField) || isNil(assignmentField) || isNil(action)) {
     return 'schemaField, assignmentField and action must be present in the input';

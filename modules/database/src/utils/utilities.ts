@@ -27,8 +27,7 @@ export function wrongFields(schemaFields: any, updateFields: any): boolean {
 
   if (!isEqual(schemaFields, updateFields)) {
     for (const element of updateFields) {
-      if (!schemaFields.includes(element))
-        return false;
+      if (!schemaFields.includes(element)) return false;
     }
   }
 
@@ -42,22 +41,22 @@ export function validateSchemaInput(
   enabled?: any,
 ) {
   if (!isNil(enabled) && !isBoolean(enabled)) {
-    return 'Field \'enabled\' must be of type Boolean';
+    return "Field 'enabled' must be of type Boolean";
   }
 
-  if (!isNil(name) && !isString(name)) return 'Field \'name\' must be of type String';
+  if (!isNil(name) && !isString(name)) return "Field 'name' must be of type String";
 
   if (!isNil(modelOptions)) {
     let optionsValidationError = null;
     if (!isPlainObject(modelOptions)) {
       optionsValidationError = 'Model options must be an object';
     }
-    Object.keys(modelOptions).forEach((key) => {
+    Object.keys(modelOptions).forEach(key => {
       if (key === 'timestamps' && !isBoolean(modelOptions[key])) {
-        optionsValidationError = 'Option \'timestamps\' must be of type Boolean';
+        optionsValidationError = "Option 'timestamps' must be of type Boolean";
       }
       if (key !== 'timestamps') {
-        optionsValidationError = 'Only \'timestamps\' option is allowed';
+        optionsValidationError = "Only 'timestamps' option is allowed";
       }
     });
     if (!isNil(optionsValidationError)) return optionsValidationError;
@@ -65,9 +64,9 @@ export function validateSchemaInput(
 
   if (isNil(fields)) return null;
   if (!isPlainObject(fields)) {
-    return '\'fields\' must be an object';
+    return "'fields' must be an object";
   }
-  if (isEmpty(fields)) return '\'fields\' can\'t be an empty object';
+  if (isEmpty(fields)) return "'fields' can't be an empty object";
 
   let fieldsErrorFlag = false;
   deepdash.eachDeep(fields, (value: any, key: any, parent: any, ctx: any) => {

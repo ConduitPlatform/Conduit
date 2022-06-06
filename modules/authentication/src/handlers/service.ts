@@ -5,28 +5,27 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  ConfigController, RoutingManager,
+  ConfigController,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, Service } from '../models';
 import { status } from '@grpc/grpc-js';
 import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 
-export class ServiceHandler implements IAuthenticationStrategy{
+export class ServiceHandler implements IAuthenticationStrategy {
   private initialized: boolean = false;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
       console.error('Service not active');
-      this.initialized = false;
-      throw ConduitError.forbidden('Service auth is deactivated');
+      return (this.initialized = false);
     }
     console.log('Service is active');
-    return this.initialized = true;
+    return (this.initialized = true);
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -70,11 +69,13 @@ export class ServiceHandler implements IAuthenticationStrategy{
     );
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [{
-        name: 'accessToken',
-        value: (accessToken as AccessToken).token,
-        options: cookieOptions,
-      }];
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: (accessToken as AccessToken).token,
+          options: cookieOptions,
+        },
+      ];
       if (!isNil((refreshToken as RefreshToken).token)) {
         cookies.push({
           name: 'refreshToken',
@@ -90,10 +91,11 @@ export class ServiceHandler implements IAuthenticationStrategy{
     return {
       serviceId: serviceUser._id.toString(),
       accessToken: (accessToken as any).token,
-      refreshToken: !isNil(refreshToken) ? (refreshToken as RefreshToken).token : undefined,
+      refreshToken: !isNil(refreshToken)
+        ? (refreshToken as RefreshToken).token
+        : undefined,
     };
   }
 
-  declareRoutes(routingManager: RoutingManager): void {
-  }
+  declareRoutes(routingManager: RoutingManager): void {}
 }

@@ -28,7 +28,8 @@ export default {
         default: false,
       },
       send_email: {
-        doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
+        doc:
+          'Defines if the authenticator should automatically send a verification e-mail to the user',
         format: 'Boolean',
         default: false,
       },

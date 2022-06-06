@@ -54,7 +54,7 @@ export default class Storage extends ManagedModule<Config> {
     await this.registerSchemas();
     await this.grpcSdk.monitorModule(
       'authentication',
-      (serving) => {
+      serving => {
         this.enableAuthRoutes = serving;
         this.refreshAppRoutes();
       },
@@ -86,7 +86,11 @@ export default class Storage extends ManagedModule<Config> {
         aws,
       });
       this._fileHandlers.updateProvider(this.storageProvider);
-      this.adminRouter = new AdminRoutes(this.grpcServer, this.grpcSdk, this._fileHandlers);
+      this.adminRouter = new AdminRoutes(
+        this.grpcServer,
+        this.grpcSdk,
+        this._fileHandlers,
+      );
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
     }

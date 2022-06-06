@@ -1,4 +1,4 @@
-export interface Var { 
-    name: string;
-    content: string; 
+export interface Var {
+  name: string;
+  content: string;
 }

@@ -5,14 +5,20 @@ import {
   ConduitCommons,
   ConduitMiddleware,
   ConduitRoute,
-  ConduitSocket, Empty,
+  ConduitSocket,
+  Empty,
   grpcToConduitRoute,
-  IConduitRouter, RegisterConduitRouteRequest,
+  IConduitRouter,
+  RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
 } from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcCallback, GrpcRequest, GrpcServer } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  GrpcCallback,
+  GrpcRequest,
+  GrpcServer,
+} from '@conduitplatform/grpc-sdk';
 import { SocketPush } from './interfaces';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
@@ -21,7 +27,9 @@ export class ConduitDefaultRouter extends IConduitRouter {
   private _internalRouter: ConduitRoutingController;
   private readonly _globalMiddlewares: string[];
   private readonly _routes: any[];
-  private _grpcRoutes: { [field: string]: RegisterConduitRouteRequest_PathDefinition[] } = {};
+  private _grpcRoutes: {
+    [field: string]: RegisterConduitRouteRequest_PathDefinition[];
+  } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
 
   constructor(
@@ -81,7 +89,11 @@ export class ConduitDefaultRouter extends IConduitRouter {
     });
   }
 
-  updateState(protofile: string, routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
+  updateState(
+    protofile: string,
+    routes: RegisterConduitRouteRequest_PathDefinition[],
+    url: string,
+  ) {
     this.commons
       .getState()
       .getKey('router')
@@ -114,7 +126,11 @@ export class ConduitDefaultRouter extends IConduitRouter {
       });
   }
 
-  publishAdminRouteData(protofile: string, routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
+  publishAdminRouteData(
+    protofile: string,
+    routes: RegisterConduitRouteRequest_PathDefinition[],
+    url: string,
+  ) {
     this.commons.getBus().publish(
       'router',
       JSON.stringify({
@@ -125,7 +141,10 @@ export class ConduitDefaultRouter extends IConduitRouter {
     );
   }
 
-  async registerGrpcRoute(call: GrpcRequest<RegisterConduitRouteRequest>, callback: GrpcCallback<null>) {
+  async registerGrpcRoute(
+    call: GrpcRequest<RegisterConduitRouteRequest>,
+    callback: GrpcCallback<null>,
+  ) {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
@@ -162,12 +181,17 @@ export class ConduitDefaultRouter extends IConduitRouter {
     callback(null, undefined);
   }
 
-  internalRegisterRoute(protofile: any, routes: RegisterConduitRouteRequest_PathDefinition[], url: string, moduleName?: string) {
+  internalRegisterRoute(
+    protofile: any,
+    routes: RegisterConduitRouteRequest_PathDefinition[],
+    url: string,
+    moduleName?: string,
+  ) {
     let processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
-      )[] = grpcToConduitRoute(
+    )[] = grpcToConduitRoute(
       'Router',
       {
         protoFile: protofile,

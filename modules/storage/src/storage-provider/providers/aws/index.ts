@@ -52,7 +52,7 @@ export class AWSS3Storage implements IStorageProvider {
         GrantRead: isPublic
           ? 'uri="http://acs.amazonaws.com/groups/global/AllUsers"'
           : undefined,
-      })
+      }),
     );
     return true;
   }
@@ -61,7 +61,7 @@ export class AWSS3Storage implements IStorageProvider {
       new GetObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
-      })
+      }),
     );
 
     const data = await streamToBuffer(stream.Body as Readable);
@@ -81,7 +81,7 @@ export class AWSS3Storage implements IStorageProvider {
         Bucket: this._activeContainer,
         Key: name + '.keep.txt',
         Body: 'DO NOT DELETE',
-      })
+      }),
     );
     return true;
   }
@@ -92,7 +92,7 @@ export class AWSS3Storage implements IStorageProvider {
         new HeadObjectCommand({
           Bucket: this._activeContainer,
           Key: name + '.keep.txt',
-        })
+        }),
       );
       return true;
     } catch (error) {
@@ -111,7 +111,7 @@ export class AWSS3Storage implements IStorageProvider {
     await this._storage.send(
       new CreateBucketCommand({
         Bucket: name,
-      })
+      }),
     );
     this._activeContainer = name;
     return true;
@@ -138,7 +138,7 @@ export class AWSS3Storage implements IStorageProvider {
     await this._storage.send(
       new DeleteBucketCommand({
         Bucket: name,
-      })
+      }),
     );
     return true;
   }
@@ -166,7 +166,7 @@ export class AWSS3Storage implements IStorageProvider {
       new DeleteObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
-      })
+      }),
     );
     return true;
   }
@@ -177,7 +177,7 @@ export class AWSS3Storage implements IStorageProvider {
         new HeadObjectCommand({
           Bucket: this._activeContainer,
           Key: fileName,
-        })
+        }),
       );
       return true;
     } catch (error) {
@@ -215,14 +215,14 @@ export class AWSS3Storage implements IStorageProvider {
   async moveToFolderAndRename(
     currentFilename: string,
     newFilename: string,
-    newFolder: string
+    newFolder: string,
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
 
   async moveToContainer(
     filename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
@@ -230,7 +230,7 @@ export class AWSS3Storage implements IStorageProvider {
   async moveToContainerAndRename(
     currentFilename: string,
     newFilename: string,
-    newContainer: string
+    newContainer: string,
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
@@ -240,7 +240,7 @@ export class AWSS3Storage implements IStorageProvider {
       new ListObjectsCommand({
         Bucket: this._activeContainer,
         Prefix: name,
-      })
+      }),
     );
     if (!files.Contents) return [];
     return files.Contents;

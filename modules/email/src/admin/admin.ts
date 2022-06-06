@@ -11,7 +11,9 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE, ConduitRouteObject, Query,
+  TYPE,
+  ConduitRouteObject,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
@@ -27,7 +29,10 @@ const escapeStringRegexp = require('escape-string-regexp');
 export class AdminHandlers {
   private emailService: EmailService;
 
-  constructor(private readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    private readonly server: GrpcServer,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this.registerAdminRoutes();
   }
 
@@ -230,9 +235,7 @@ export class AdminHandlers {
     const subject_vars = getHBValues(subject);
 
     let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
-    variables = variables.filter(
-      (value, index) => variables.indexOf(value) === index,
-    );
+    variables = variables.filter((value, index) => variables.indexOf(value) === index);
 
     if (externalManaged) {
       if (isNil(_id)) {
@@ -270,22 +273,23 @@ export class AdminHandlers {
   }
 
   async patchTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params.id });
+    const templateDocument = await EmailTemplate.getInstance().findOne({
+      _id: call.request.params.id,
+    });
     if (isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
 
-    ['name', 'subject', 'body'].forEach((key) => {
+    ['name', 'subject', 'body'].forEach(key => {
       if (call.request.params[key]) {
         // @ts-ignore
         templateDocument[key] = call.request.params[key];
       }
     });
 
-    templateDocument.variables = Object.keys(getHBValues(call.request.params.body)).concat(
-      Object.keys(getHBValues(call.request.params.subject)),
-    );
+    templateDocument.variables = Object.keys(
+      getHBValues(call.request.params.body),
+    ).concat(Object.keys(getHBValues(call.request.params.subject)));
     if (templateDocument.variables) {
       templateDocument.variables = templateDocument.variables.filter(
         (value, index) => templateDocument.variables!.indexOf(value) === index,
@@ -321,8 +325,9 @@ export class AdminHandlers {
   }
 
   async deleteTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params.id });
+    const templateDocument = await EmailTemplate.getInstance().findOne({
+      _id: call.request.params.id,
+    });
     if (!isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
@@ -334,7 +339,8 @@ export class AdminHandlers {
       });
     let deleted;
     if (templateDocument!.externalManaged) {
-      deleted = await this.emailService.deleteExternalTemplate(templateDocument!.externalId!)
+      deleted = await this.emailService
+        .deleteExternalTemplate(templateDocument!.externalId!)
         ?.catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
@@ -345,11 +351,17 @@ export class AdminHandlers {
 
   async deleteTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids } = call.request.params;
-    if (ids.length === 0) { // array check is required
-      throw new GrpcError(status.INVALID_ARGUMENT, 'ids is required and must be a non-empty array');
+    if (ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be a non-empty array',
+      );
     }
     let totalCount = ids.length;
-    const templateDocuments = await EmailTemplate.getInstance().findMany({ _id: { $in: ids } });
+    const templateDocuments = await EmailTemplate.getInstance().findMany({
+      _id: { $in: ids },
+    });
     const foundDocuments = templateDocuments.length;
     if (foundDocuments !== totalCount) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids array contains invalid ids');
@@ -357,7 +369,8 @@ export class AdminHandlers {
 
     for (let template of templateDocuments) {
       if (template.externalManaged) {
-        await this.emailService.deleteExternalTemplate(template.externalId!)
+        await this.emailService
+          .deleteExternalTemplate(template.externalId!)
           ?.catch((e: Error) => {
             throw new GrpcError(status.INTERNAL, e.message);
           });
@@ -373,8 +386,9 @@ export class AdminHandlers {
   }
 
   async uploadTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const templateDocument = await EmailTemplate.getInstance()
-      .findOne({ _id: call.request.params._id });
+    const templateDocument = await EmailTemplate.getInstance().findOne({
+      _id: call.request.params._id,
+    });
     if (isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
@@ -383,7 +397,8 @@ export class AdminHandlers {
       name: templateDocument.name,
       body: templateDocument.body,
     };
-    const created = await (this.emailService.createExternalTemplate(template)!)
+    const created = await this.emailService
+      .createExternalTemplate(template)!
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -402,9 +417,7 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const [err, externalTemplates] = await to(
-      this.emailService.getExternalTemplates()!,
-    );
+    const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
     if (!isNil(err)) {
       throw new GrpcError(status.INTERNAL, err.message);
     }
@@ -426,15 +439,18 @@ export class AdminHandlers {
     return { templateDocuments, totalCount };
   }
 
-  async syncExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async syncExternalTemplates(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
     let errorMessage: string | null = null;
     const externalTemplates: any = await this.emailService.getExternalTemplates();
 
     let updated = [];
     let totalCount = 0;
     for (let element of externalTemplates) {
-      const templateDocument = await EmailTemplate.getInstance()
-        .findOne({ externalId: element.id });
+      const templateDocument = await EmailTemplate.getInstance().findOne({
+        externalId: element.id,
+      });
 
       if (isNil(templateDocument)) {
         throw new GrpcError(status.NOT_FOUND, 'Template does not exist');

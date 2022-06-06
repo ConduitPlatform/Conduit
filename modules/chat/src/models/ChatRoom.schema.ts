@@ -1,9 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
-import { User } from './User.model'
+import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { User } from './User.model';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -11,11 +7,13 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  participants: [{
-    type: TYPE.Relation,
-    model: 'User',
-    required: true,
-  }],
+  participants: [
+    {
+      type: TYPE.Relation,
+      model: 'User',
+      required: true,
+    },
+  ],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };

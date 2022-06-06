@@ -14,13 +14,19 @@ import { OAuth2 } from '../OAuth2';
 import { FacebookUser } from './facebook.user';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { AuthParams } from '../interfaces/AuthParams';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
-
-  constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }, serverConfig: { url: string }) {
-    super(grpcSdk, 'facebook', new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters));
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    config: { facebook: ProviderConfig },
+    serverConfig: { url: string },
+  ) {
+    super(
+      grpcSdk,
+      'facebook',
+      new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters),
+    );
     this.mapScopes = {
       email: 'email',
       user_birthday: 'birthday',
@@ -40,9 +46,11 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   }
 
   makeFields(scopes: string[]): string {
-    return scopes.map((scope: string) => {
-      return this.mapScopes[scope];
-    }).join(',');
+    return scopes
+      .map((scope: string) => {
+        return this.mapScopes[scope];
+      })
+      .join(',');
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<FacebookUser>> {
@@ -52,10 +60,13 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
     let facebookOptions: AxiosRequestConfig = {
       params: {
         access_token: details.accessToken,
-        fields: this.makeFields((details.scope).split(',')),
+        fields: this.makeFields(details.scope.split(',')),
       },
     };
-    const facebookResponse: { data: FacebookUser } = await axios.get('https://graph.facebook.com/v13.0/me', facebookOptions);
+    const facebookResponse: { data: FacebookUser } = await axios.get(
+      'https://graph.facebook.com/v13.0/me',
+      facebookOptions,
+    );
     if (isNil(facebookResponse.data.email) || isNil(facebookResponse.data.id)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authentication with facebook failed');
     }
@@ -67,19 +78,8 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
     };
   }
 
-  makeRequest(data: AuthParams) {
-    return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
-      params: { ...data },
-      headers: {
-        'Accept': 'application/json',
-      },
-      data: null,
-    };
-  }
-
   declareRoutes(routingManager: RoutingManager) {
+    super.declareRoutes(routingManager);
     routingManager.route(
       {
         path: '/facebook',
@@ -95,37 +95,6 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
         refreshToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/init/facebook',
-        action: ConduitRouteActions.GET,
-        description: `Begins the Facebook authentication`,
-        bodyParams: {
-          scopes: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('FacebookInitResponse', 'String'),
-      this.redirect.bind(this),
-    );
-
-    routingManager.route(
-      {
-        path: '/hook/facebook',
-        action: ConduitRouteActions.GET,
-        description: `Login/register with Facebook using redirection mechanism.`,
-        urlParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Optional],
-        },
-      },
-      new ConduitRouteReturnDefinition('FacebookResponse', {
-        userId: ConduitString.Required,
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
-      }),
-      this.authorize.bind(this),
     );
   }
 }

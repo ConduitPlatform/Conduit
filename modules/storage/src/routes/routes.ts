@@ -120,6 +120,6 @@ export class StorageRoutes {
       );
     }
 
-   await this._routingManager.registerRoutes();
+    await this._routingManager.registerRoutes();
   }
 }

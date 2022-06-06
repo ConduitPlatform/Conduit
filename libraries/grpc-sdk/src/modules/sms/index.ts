@@ -1,5 +1,10 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { SendSmsResponse, SendVerificationCodeResponse, SmsDefinition, VerifyResponse } from '../../protoUtils/sms';
+import {
+  SendSmsResponse,
+  SendVerificationCodeResponse,
+  SmsDefinition,
+  VerifyResponse,
+} from '../../protoUtils/sms';
 
 export class SMS extends ConduitModule<typeof SmsDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -8,11 +13,9 @@ export class SMS extends ConduitModule<typeof SmsDefinition> {
   }
 
   setConfig(newConfig: any): Promise<any> {
-    return this.client!.setConfig(
-      { newConfig: JSON.stringify(newConfig) })
-      .then(res => {
-        return JSON.parse(res.updatedConfig);
-      });
+    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
+      return JSON.parse(res.updatedConfig);
+    });
   }
 
   sendSms(to: string, message: string): Promise<SendSmsResponse> {

@@ -13,7 +13,7 @@ export function constructQuery(
     array?: boolean;
   }[],
   params: any,
-  context: any
+  context: any,
 ) {
   let res: any = {};
   let resTopLevel: string;
@@ -66,11 +66,11 @@ function _constructQuery(
     array?: boolean;
   }[],
   params: any,
-  context: any
+  context: any,
 ) {
   if (query.comparisonField.type === 'Input') {
     if (isNil(params[query.comparisonField.value])) {
-      let res = inputs.filter((input) => {
+      let res = inputs.filter(input => {
         return input.name === query.comparisonField.value && input.optional;
       });
       if (res && res.length > 0) {
@@ -84,7 +84,7 @@ function _constructQuery(
       query.schemaField,
       query.operation,
       params[query.comparisonField.value],
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
@@ -101,14 +101,14 @@ function _constructQuery(
       query.schemaField,
       query.operation,
       context,
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   } else {
     return _translateQuery(
       query.schemaField,
       query.operation,
       query.comparisonField.value,
-      query.comparisonField.like
+      query.comparisonField.like,
     );
   }
 }
@@ -117,7 +117,7 @@ function _translateQuery(
   schemaField: string,
   operation: number,
   comparisonField: any,
-  like?: boolean
+  like?: boolean,
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -164,7 +164,7 @@ function _translateQuery(
 export function constructAssignment(
   schemaField: string,
   action: number,
-  assignmentValue: any
+  assignmentValue: any,
 ) {
   //   SET: 0,
   //   INCREMENT: 1,

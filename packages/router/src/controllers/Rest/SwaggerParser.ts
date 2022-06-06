@@ -1,4 +1,9 @@
-import { ConduitParser, TYPE, ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitParser,
+  TYPE,
+  ConduitModel,
+  ConduitRouteOption,
+} from '@conduitplatform/grpc-sdk';
 
 export interface ParseResult {
   type: string;

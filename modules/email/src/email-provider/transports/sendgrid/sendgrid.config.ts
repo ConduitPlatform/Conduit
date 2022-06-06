@@ -1,4 +1,3 @@
 export interface SendGridConfig {
-    apiKey: string;
+  apiKey: string;
 }
-  

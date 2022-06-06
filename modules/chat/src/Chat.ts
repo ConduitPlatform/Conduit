@@ -2,7 +2,9 @@ import {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
-  HealthCheckStatus, GrpcRequest, GrpcCallback,
+  HealthCheckStatus,
+  GrpcRequest,
+  GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -15,7 +17,12 @@ import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations';
-import { CreateRoomRequest, DeleteRoomRequest, Room, SendMessageRequest } from './protoTypes/chat';
+import {
+  CreateRoomRequest,
+  DeleteRoomRequest,
+  Room,
+  SendMessageRequest,
+} from './protoTypes/chat';
 
 export default class Chat extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -53,8 +60,10 @@ export default class Chat extends ManagedModule<Config> {
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('authentication', (serving) => {
-      this.updateHealth(serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING);
+    await this.grpcSdk.monitorModule('authentication', serving => {
+      this.updateHealth(
+        serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
+      );
     });
   }
 
@@ -64,18 +73,21 @@ export default class Chat extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
-      this._sendEmail = config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
+      this._sendEmail =
+        config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
       if (this._sendEmail) {
-        await this.grpcSdk.monitorModule('email', (serving) => {
+        await this.grpcSdk.monitorModule('email', serving => {
           this._emailServing = serving;
           this.refreshAppRoutes(); // redundant while called directly by onConfig() with sendPushNotification === true
         });
       } else {
         this.grpcSdk.unmonitorModule('email');
       }
-      this._sendPushNotification = config.explicit_room_joins.enabled && config.explicit_room_joins.send_notification;
+      this._sendPushNotification =
+        config.explicit_room_joins.enabled &&
+        config.explicit_room_joins.send_notification;
       if (this._sendPushNotification) {
-        await this.grpcSdk.monitorModule('pushNotifications', (serving) => {
+        await this.grpcSdk.monitorModule('pushNotifications', serving => {
           this._pushNotificationsServing = serving;
           this.refreshAppRoutes();
         });
@@ -83,7 +95,8 @@ export default class Chat extends ManagedModule<Config> {
         this.grpcSdk.unmonitorModule('pushNotifications');
       }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      if (!this._sendEmail && !this._sendPushNotification) { // avoid redundant refreshes
+      if (!this._sendEmail && !this._sendPushNotification) {
+        // avoid redundant refreshes
         await this.refreshAppRoutes();
       }
       this.updateHealth(HealthCheckStatus.SERVING);
@@ -103,7 +116,8 @@ export default class Chat extends ManagedModule<Config> {
   protected registerSchemas() {
     const promises = Object.values(models).map((model: any) => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) { // borrowed foreign model
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
         return this.database.createSchemaFromAdapter(modelInstance);
       }
     });
@@ -128,11 +142,10 @@ export default class Chat extends ManagedModule<Config> {
     }
 
     let errorMessage: string | null = null;
-    const room: models.ChatRoom = await models.ChatRoom.getInstance()
-      .create({
-        name: name,
-        participants: participants,
-      });
+    const room: models.ChatRoom = await models.ChatRoom.getInstance().create({
+      name: name,
+      participants: participants,
+    });
     if (!isNil(errorMessage)) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -144,7 +157,11 @@ export default class Chat extends ManagedModule<Config> {
         participants: (room as models.ChatRoom).participants,
       }),
     );
-    callback(null, { Id: room._id, name: room.name, participants: room.participants as string[] });
+    callback(null, {
+      Id: room._id,
+      name: room.name,
+      participants: room.participants as string[],
+    });
   }
 
   async sendMessage(call: GrpcRequest<SendMessageRequest>, callback: GrpcCallback<null>) {
@@ -226,6 +243,10 @@ export default class Chat extends ManagedModule<Config> {
         participants: room.participants,
       }),
     );
-    callback(null, { Id: room._id, name: room.name, participants: room.participants as string[] });
+    callback(null, {
+      Id: room._id,
+      name: room.name,
+      participants: room.participants as string[],
+    });
   }
 }

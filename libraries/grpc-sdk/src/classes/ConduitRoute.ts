@@ -9,7 +9,7 @@ export class ConduitRoute {
   constructor(
     input: ConduitRouteOptions,
     type: ConduitRouteReturnDefinition,
-    handler: string
+    handler: string,
   ) {
     this._input = input;
     if (!this._input.middlewares) {

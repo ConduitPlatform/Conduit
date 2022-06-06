@@ -5,8 +5,10 @@ import { isDev } from '../utils/middleware';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
   return async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
-    if ( // Excluded routes
-      (req.originalUrl.indexOf('/admin/swagger') === 0 && await isDev(conduit))
+    if (
+      // Excluded routes
+      req.originalUrl.indexOf('/admin/swagger') === 0 &&
+      (await isDev(conduit))
     ) {
       return next();
     }
@@ -18,5 +20,5 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
     if (isNil(masterKey) || masterKey !== master)
       return res.status(401).json({ error: 'Unauthorized' });
     next();
-  }
+  };
 }

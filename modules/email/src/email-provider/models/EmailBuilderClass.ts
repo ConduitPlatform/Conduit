@@ -10,7 +10,6 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
   }
 
   setSender(sender: string): EmailBuilderClass<T> {
-
     this._mailOptions.from = sender;
     return this;
   }
@@ -25,9 +24,15 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
     return this;
   }
 
-  setReceiver(receiver: string | Address | Array<string | Address>, clearReceiver?: boolean): EmailBuilderClass<T> {
+  setReceiver(
+    receiver: string | Address | Array<string | Address>,
+    clearReceiver?: boolean,
+  ): EmailBuilderClass<T> {
     if (typeof receiver === 'string') {
-      if (this._mailOptions.to && (this._mailOptions.to as Array<string | Address>).length > 0) {
+      if (
+        this._mailOptions.to &&
+        (this._mailOptions.to as Array<string | Address>).length > 0
+      ) {
         if (typeof this._mailOptions.to !== 'string') {
           if (clearReceiver) {
             this._mailOptions.to = [];
@@ -40,14 +45,19 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
         this._mailOptions.to = receiver;
       }
     } else {
-      if (this._mailOptions.to && (this._mailOptions.to as Array<string | Address>).length > 0) {
+      if (
+        this._mailOptions.to &&
+        (this._mailOptions.to as Array<string | Address>).length > 0
+      ) {
         if (typeof this._mailOptions.to !== 'string') {
           if (clearReceiver) {
             this._mailOptions.to = [];
           }
           (this._mailOptions.to as Array<string | Address>).concat(receiver);
         } else {
-          this._mailOptions.to = (receiver as Array<string | Address>).concat([this._mailOptions.to]);
+          this._mailOptions.to = (receiver as Array<string | Address>).concat([
+            this._mailOptions.to,
+          ]);
         }
       } else {
         this._mailOptions.to = receiver;
@@ -58,7 +68,10 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
 
   setCC(cc: string | string[], clearCC?: boolean): EmailBuilderClass<T> {
     if (typeof cc === 'string') {
-      if (this._mailOptions.cc && (this._mailOptions.cc as Array<string | Address>).length > 0) {
+      if (
+        this._mailOptions.cc &&
+        (this._mailOptions.cc as Array<string | Address>).length > 0
+      ) {
         if (typeof this._mailOptions.cc !== 'string') {
           if (clearCC) {
             this._mailOptions.cc = [];
@@ -71,7 +84,10 @@ export abstract class EmailBuilderClass<T extends Mail.Options> {
         this._mailOptions.cc = cc;
       }
     } else {
-      if (this._mailOptions.cc && (this._mailOptions.cc as Array<string | Address>).length > 0) {
+      if (
+        this._mailOptions.cc &&
+        (this._mailOptions.cc as Array<string | Address>).length > 0
+      ) {
         if (typeof this._mailOptions.cc !== 'string') {
           if (clearCC) {
             this._mailOptions.cc = [];

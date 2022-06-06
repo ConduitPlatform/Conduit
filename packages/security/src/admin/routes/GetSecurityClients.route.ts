@@ -1,12 +1,6 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { Client } from '../../models';
-import {
-  ConduitRouteActions,
-  ConduitRouteParameters,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 export function getGetSecurityClientsRoute() {
   return new ConduitRoute(

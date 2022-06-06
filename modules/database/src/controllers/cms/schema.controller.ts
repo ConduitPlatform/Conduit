@@ -1,16 +1,20 @@
-import ConduitGrpcSdk, { ConduitModelOptions, ConduitSchema as ConduitSchema } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitModelOptions,
+  ConduitSchema as ConduitSchema,
+} from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes/routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import {CmsHandlers} from "../../handlers/cms.handler";
+import { CmsHandlers } from '../../handlers/cms.handler';
 import { ParsedQuery } from '../../interfaces';
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & { modelOptions: ConduitModelOptions };
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+};
 export class SchemaController {
-
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
@@ -22,14 +26,15 @@ export class SchemaController {
 
   initializeState() {
     this.grpcSdk.bus?.subscribe('database:customSchema:create', (message: string) => {
-        this.refreshRoutes();
+      this.refreshRoutes();
     });
   }
 
   refreshRoutes() {
-    this.database.getSchemaModel('_DeclaredSchema').model
-      .findMany({ 'modelOptions.conduit.cms.enabled': true })
-      .then((r) => {
+    this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
+      .then(r => {
         if (r) {
           let routeSchemas: any = {};
           r.forEach((schema: _ConduitSchema) => {
@@ -60,20 +65,24 @@ export class SchemaController {
   async createSchema(schema: ConduitSchema): Promise<ConduitSchema> {
     const createdSchema = await this.database
       .createCustomSchemaFromAdapter(schema)
-      .catch((err) => {
+      .catch(err => {
         console.log('Failed to create custom schema');
         console.log(err);
         throw err;
       });
-    this.grpcSdk.bus?.publish('database:customSchema:create', createdSchema.originalSchema.name);
+    this.grpcSdk.bus?.publish(
+      'database:customSchema:create',
+      createdSchema.originalSchema.name,
+    );
     this.refreshRoutes();
     return createdSchema.originalSchema;
   }
 
   private async loadExistingSchemas() {
-    this.database.getSchemaModel('_DeclaredSchema').model
-      .findMany({ 'modelOptions.conduit.cms.enabled': true })
-      .then((r) => {
+    this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
+      .then(r => {
         let promise = new Promise((resolve, reject) => {
           resolve('ok');
         });
@@ -83,11 +92,11 @@ export class SchemaController {
               r.modelOptions = JSON.parse(r.modelOptions);
             }
             const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
-            promise = promise.then((r) => {
+            promise = promise.then(r => {
               return this.database.createCustomSchemaFromAdapter(schema);
             });
           });
-          promise.then((p) => {
+          promise.then(p => {
             let routeSchemas: any = {};
             r.forEach((schema: _ConduitSchema) => {
               if (schema.modelOptions.conduit?.cms?.crudOperations) {
@@ -106,8 +115,8 @@ export class SchemaController {
   }
 
   private _registerRoutes(schemas: ParsedQuery) {
-    let handlers = new CmsHandlers(this.grpcSdk,this.database);
+    let handlers = new CmsHandlers(this.grpcSdk, this.database);
 
-    this.router.addRoutes(sortAndConstructRoutes(schemas,handlers));
+    this.router.addRoutes(sortAndConstructRoutes(schemas, handlers));
   }
 }

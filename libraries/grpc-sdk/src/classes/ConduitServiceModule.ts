@@ -1,7 +1,4 @@
-import ConduitGrpcSdk, {
-  GrpcServer,
-  HealthCheckStatus,
-} from '..';
+import ConduitGrpcSdk, { GrpcServer, HealthCheckStatus } from '..';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
@@ -44,13 +41,18 @@ export abstract class ConduitServiceModule {
       {
         Check: this.healthCheck.bind(this),
         Watch: this.healthWatch.bind(this),
-      }
+      },
     );
   }
 
   updateHealth(state: HealthCheckStatus, init = false) {
-    if ((state === HealthCheckStatus.UNKNOWN && !init) || state === HealthCheckStatus.SERVICE_UNKNOWN) {
-      throw new Error(`Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`);
+    if (
+      (state === HealthCheckStatus.UNKNOWN && !init) ||
+      state === HealthCheckStatus.SERVICE_UNKNOWN
+    ) {
+      throw new Error(
+        `Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`,
+      );
     }
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
@@ -72,9 +74,12 @@ export abstract class ConduitServiceModule {
     if (service && service !== this._serviceName) {
       call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });
     } else {
-      this.events.on(`grpc-health-change:${this._serviceName}`, (status: HealthCheckStatus) => {
-        call.write({ status });
-      });
+      this.events.on(
+        `grpc-health-change:${this._serviceName}`,
+        (status: HealthCheckStatus) => {
+          call.write({ status });
+        },
+      );
     }
   }
 }
