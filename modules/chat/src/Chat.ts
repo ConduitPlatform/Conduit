@@ -5,6 +5,7 @@ import {
   HealthCheckStatus,
   GrpcRequest,
   GrpcCallback,
+  ConduitActiveSchema,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -114,9 +115,13 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
+    const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) {
+      //TODO: add support for multiple schemas types
+      if (
+        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
+          .length !== 0
+      ) {
         // borrowed foreign model
         return this.database.createSchemaFromAdapter(modelInstance);
       }

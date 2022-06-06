@@ -2,19 +2,19 @@ import {
   ConduitModel,
   ConduitModelOptions,
   ConduitSchema,
-  ConduitSchemaExtension,
 } from '@conduitplatform/grpc-sdk';
+import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
 import { MultiDocQuery, ParsedQuery, SchemaAdapter } from './SchemaAdapter';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
   private readonly model: SchemaAdapter<any>;
-  extensions: any[];
+  extensions: DeclaredSchemaExtension[];
 
   constructor(
     model: SchemaAdapter<any>,
     name: string,
     ownerModule: string,
-    extensions: any[] = [],
+    extensions: DeclaredSchemaExtension[] = [],
     fields?: ConduitModel,
     modelOptions?: ConduitModelOptions,
     collectionName?: string,

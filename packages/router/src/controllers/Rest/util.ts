@@ -1,9 +1,15 @@
 import { Request } from 'express';
-import { ConduitError, TYPE, Indexable, Params } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitError,
+  TYPE,
+  Indexable,
+  Params,
+  ConduitModelOptions,
+} from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 export function extractRequestData(req: Request) {
-  const context = (req as any).conduit || {};
+  const context = (req as ConduitModelOptions).conduit || {};
   let params: any = {};
   let headers = req.headers;
   if (req.query) {

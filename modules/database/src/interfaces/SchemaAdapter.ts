@@ -1,9 +1,9 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 
-export type SingleDocQuery = string | { [key: string]: any };
-export type MultiDocQuery = string | [{ [key: string]: any }];
+export type SingleDocQuery = string | Indexable;
+export type MultiDocQuery = string | [Indexable];
 export type Query = SingleDocQuery | MultiDocQuery;
-export type ParsedQuery = { [key: string]: any };
+export type ParsedQuery = Indexable;
 export type Doc = ParsedQuery;
 export type Fields = ParsedQuery;
 

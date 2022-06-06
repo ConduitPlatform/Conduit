@@ -13,6 +13,8 @@ import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
+import { ServerWritableStream } from '@grpc/grpc-js';
+import { HealthCheckRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/grpc_health_check';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 
@@ -139,7 +141,9 @@ export class GrpcServer {
     callback(null, { status: this.getServiceHealthState(call.request.service) });
   }
 
-  private healthWatch(call: any) {
+  private healthWatch(
+    call: ServerWritableStream<{ service: string }, { status: HealthCheckStatus }>,
+  ) {
     const healthState = this.getServiceHealthState(call.request.service);
     if (healthState === HealthCheckStatus.SERVICE_UNKNOWN) {
       call.write({ status: HealthCheckStatus.SERVICE_UNKNOWN });

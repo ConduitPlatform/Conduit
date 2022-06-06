@@ -1,4 +1,9 @@
-import { ConduitModel, ConduitRouteOption } from '../interfaces';
+import {
+  Array,
+  ConduitModel,
+  ConduitModelField,
+  ConduitRouteOption,
+} from '../interfaces';
 
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
@@ -76,29 +81,29 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             processingObject,
             name,
             field,
-            fields[field] as Array<any>,
+            fields[field] as Array,
             false,
           );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
           if ((fields[field] as any).type) {
             // if type is simply a type
-            if (typeof (fields[field] as any).type === 'string') {
-              if ((fields[field] as any).type === 'Relation') {
+            if (typeof (fields[field] as ConduitModelField).type === 'string') {
+              if ((fields[field] as ConduitModelField).type === 'Relation') {
                 this.getResultFromRelation(
                   processingObject,
                   name,
                   field,
-                  (fields[field] as any).model,
-                  (fields[field] as any).required,
+                  (fields[field] as ConduitModelField).model,
+                  (fields[field] as ConduitModelField).required!,
                   false,
                 );
               } else {
                 this.getResultFromString(
                   processingObject,
                   field,
-                  (fields[field] as any).type,
-                  (fields[field] as any).required,
+                  (fields[field] as ConduitModelField).type,
+                  (fields[field] as ConduitModelField).required!,
                   false,
                 );
               }
@@ -109,8 +114,8 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 processingObject,
                 name,
                 field,
-                (fields[field] as any).type as Array<any>,
-                (fields[field] as any).required,
+                (fields[field] as ConduitModelField).type as Array,
+                (fields[field] as ConduitModelField).required!,
                 true,
               );
             } else {
@@ -118,8 +123,8 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 processingObject,
                 name,
                 field,
-                (fields[field] as any).type,
-                (fields[field] as any).required,
+                (fields[field] as ConduitModelField).type,
+                (fields[field] as ConduitModelField).required!,
                 false,
               );
             }
@@ -128,7 +133,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               processingObject,
               name,
               field,
-              fields[field] as any,
+              fields[field] as ConduitModelField,
               false,
               false,
             );
@@ -140,11 +145,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     return processingObject;
   }
 
-  protected arrayHandler(
-    name: string,
-    field: string,
-    value: Array<any>,
-  ): ProcessingObject {
+  protected arrayHandler(name: string, field: string, value: Array): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, true);
     // if array contains simply a type
     if (typeof value[0] === 'string') {
@@ -173,7 +174,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           processingObject,
           name,
           field,
-          value[0].type as Array<any>,
+          value[0].type as Array,
           value[0].required,
           true,
         );

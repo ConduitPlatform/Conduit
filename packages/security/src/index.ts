@@ -116,7 +116,7 @@ class SecurityModule extends IConduitSecurity {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
+    const promises = Object.values(models).map(model => {
       let modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });

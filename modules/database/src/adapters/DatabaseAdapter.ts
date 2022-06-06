@@ -1,10 +1,14 @@
-import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { SchemaAdapter } from '../interfaces';
+import { ConduitModelOptions, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import { DeclaredSchemaExtension, SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+  extensions: DeclaredSchemaExtension[];
+};
 export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
@@ -154,10 +158,10 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models: any = await this.models['_DeclaredSchema'].findMany('{}');
+    let models = await this.models!['_DeclaredSchema'].findMany('{}');
     models = models
-      .map((model: any) => {
-        const schema = new ConduitSchema(
+      .map((model: _ConduitSchema) => {
+        let schema = new ConduitSchema(
           model.name,
           model.fields,
           model.modelOptions,
