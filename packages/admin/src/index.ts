@@ -15,6 +15,7 @@ import {
   IConduitAdmin,
   grpcToConduitRoute,
   RegisterAdminRouteRequest,
+  RouteT,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -287,7 +288,7 @@ export default class AdminModule extends IConduitAdmin {
       'Admin',
       {
         protoFile: protofile,
-        routes: routes,
+        routes: routes as RouteT[],
         routerUrl: url,
       },
       moduleName,

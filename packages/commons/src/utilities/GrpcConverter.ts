@@ -10,9 +10,10 @@ import {
   JoinRoomResponse,
   SocketProtoDescription,
   instanceOfSocketProtoDescription,
+  RouteT,
 } from '../interfaces';
 import { ConduitRoute } from '../classes';
-import { ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteParameters, Indexable } from '@conduitplatform/grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -32,13 +33,15 @@ function getDescriptor(protofile: string) {
 
 export function grpcToConduitRoute(
   routerName: string,
-  request: any,
+  request: {
+    protoFile: string;
+    routes: RouteT[];
+    routerUrl: string;
+  },
   moduleName?: string,
   grpcToken?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
-  let routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription,
-  ] = request.routes;
+  let routes = request.routes;
 
   let routerDescriptor: any = getDescriptor(request.protoFile);
   //this can break everything change it
@@ -56,9 +59,7 @@ export function grpcToConduitRoute(
 }
 
 function createHandlers(
-  routes: [
-    { options: any; returns?: any; grpcFunction: string } | SocketProtoDescription,
-  ],
+  routes: RouteT[],
   client: any,
   moduleName?: string,
   grpcToken?: string,
@@ -116,7 +117,7 @@ function createHandlerForRoute(
     } catch (e) {}
   }
 
-  let returns: any = route.returns;
+  let returns = route.returns;
   if (returns) {
     for (let k in returns) {
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
@@ -156,7 +157,7 @@ function createHandlerForRoute(
 
 function createHandlerForSocket(
   socket: SocketProtoDescription,
-  client: any,
+  client: Indexable,
   metadata: Metadata,
   moduleName?: string,
 ) {

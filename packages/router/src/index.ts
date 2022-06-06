@@ -11,6 +11,7 @@ import {
   IConduitRouter,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
+  RouteT,
   SocketData,
 } from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
@@ -18,6 +19,7 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   GrpcServer,
+  Route,
 } from '@conduitplatform/grpc-sdk';
 import { SocketPush } from './interfaces';
 import * as adminRoutes from './admin/routes';
@@ -28,7 +30,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
   private readonly _globalMiddlewares: string[];
   private readonly _routes: any[];
   private _grpcRoutes: {
-    [field: string]: RegisterConduitRouteRequest_PathDefinition[];
+    [field: string]: RouteT[];
   } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
 
@@ -162,7 +164,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
 
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.routes,
+        call.request.routes as RouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
@@ -182,8 +184,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
   }
 
   internalRegisterRoute(
-    protofile: any,
-    routes: RegisterConduitRouteRequest_PathDefinition[],
+    protofile: string,
+    routes: RouteT[],
     url: string,
     moduleName?: string,
   ) {
