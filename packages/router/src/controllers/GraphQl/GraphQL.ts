@@ -15,6 +15,7 @@ import {
   ConduitRouteActions,
   ConduitRouteOption,
   ConduitRouteOptions,
+  Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
@@ -44,8 +45,8 @@ export class GraphQLController extends ConduitRouter {
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
       plugins: [cookiePlugin],
-      context: ({ req, res }: any) => {
-        const context = (req as any).conduit || {};
+      context: ({ req, res }: Indexable) => {
+        const context = req.conduit || {};
         let headers = req.headers;
         return { context, headers, setCookie: [], removeCookie: [], res };
       },
@@ -175,7 +176,7 @@ export class GraphQLController extends ConduitRouter {
       this.types + ' ' + this.generateQuerySchema() + ' ' + this.generateMutationSchema();
   }
 
-  shouldPopulate(args: any, info: any) {
+  shouldPopulate(args: Indexable, info: Indexable) {
     let resolveInfo = parseResolveInfo(info);
     let objs = resolveInfo.fieldsByTypeName;
     objs = objs[Object.keys(objs)[0]];
@@ -281,10 +282,10 @@ export class GraphQLController extends ConduitRouter {
     });
   }
 
-  private extractResult(returnTypeFields: String, result: any) {
+  private extractResult(returnTypeFields: String, result: Indexable | string) {
     switch (returnTypeFields) {
       case TYPE.JSON:
-        return JSON.parse(result);
+        return JSON.parse(result as string);
       default:
         return result;
     }
@@ -296,10 +297,10 @@ export class GraphQLController extends ConduitRouter {
     }
     const self = this;
     this.resolvers['Query'][actionName] = (
-      parent: any,
-      args: any,
+      parent: Indexable,
+      args: Indexable,
       context: any,
-      info: any,
+      info: Indexable,
     ) => {
       let { caching, cacheAge, scope } = extractCachingGql(
         route,
@@ -313,7 +314,7 @@ export class GraphQLController extends ConduitRouter {
       let hashKey: string;
       return self
         .checkMiddlewares(context, route.input.middlewares)
-        .then((r: any) => {
+        .then(r => {
           Object.assign(context.context, r);
           let params = Object.assign(args, args.params);
           delete params.params;
@@ -323,7 +324,7 @@ export class GraphQLController extends ConduitRouter {
           if (caching) {
             return self
               .findInCache(hashKey)
-              .then((r: any) => {
+              .then(r => {
                 if (r) {
                   return { fromCache: true, data: JSON.parse(r) };
                 } else {
@@ -337,7 +338,7 @@ export class GraphQLController extends ConduitRouter {
             return route.executeRequest.bind(route)({ ...context, params });
           }
         })
-        .then((r: any) => {
+        .then(r => {
           let result;
           if (r.fromCache) {
             return r.data;
@@ -368,16 +369,16 @@ export class GraphQLController extends ConduitRouter {
     }
     const self = this;
     this.resolvers['Mutation'][actionName] = (
-      parent: any,
-      args: any,
+      parent: Indexable,
+      args: Indexable,
       context: any,
-      info: any,
+      info: Indexable,
     ) => {
       args = self.shouldPopulate(args, info);
       context.path = route.input.path;
       return self
         .checkMiddlewares(context, route.input.middlewares)
-        .then((r: any) => {
+        .then(r => {
           Object.assign(context.context, r);
           let params = Object.assign(args, args.params);
           delete params.params;

@@ -1,5 +1,7 @@
 import ConduitGrpcSdk, {
+  ConduitSchema,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   Query,
   UnparsedRouterResponse,
@@ -397,7 +399,7 @@ export class CustomEndpointsAdmin {
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findMany({}, undefined, undefined, 'selectedSchema selectedSchemaName');
-    customEndpoints.forEach((endpoint: any) => {
+    customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());
         schemaNames.push(endpoint.selectedSchemaName);
