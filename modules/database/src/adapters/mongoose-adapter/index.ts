@@ -33,7 +33,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.mongoose = new Mongoose();
   }
 
-  async ensureConnected(): Promise<any> {
+  async ensureConnected(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       let db = this.mongoose.connection;
       db.on('connected', () => {

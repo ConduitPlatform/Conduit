@@ -180,7 +180,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   abstract connect(): void;
 
-  abstract ensureConnected(): Promise<any>;
+  abstract ensureConnected(): Promise<void>;
 
   setSchemaExtension(
     schema: ConduitSchema,
