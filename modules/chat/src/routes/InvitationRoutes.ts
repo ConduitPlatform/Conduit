@@ -147,8 +147,8 @@ export class InvitationRoutes {
     if (isNil(chatRoom)) {
       throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');
     }
-    const receiver = invitationTokenDoc.receiver as any;
-    if (chatRoom.participants.indexOf(receiver) !== -1) {
+    const receiver = invitationTokenDoc.receiver;
+    if ((chatRoom.participants as string[]).indexOf(receiver as string) !== -1) {
       throw new GrpcError(
         status.NOT_FOUND,
         `User is already a member of target chat room`,
@@ -157,7 +157,7 @@ export class InvitationRoutes {
     const accepted = answer === 'accept';
     let message;
     if (!isNil(invitationTokenDoc) && accepted) {
-      chatRoom.participants.push(receiver);
+      (chatRoom.participants as string[]).push(receiver as string);
       await ChatRoom.getInstance().findByIdAndUpdate(roomId, chatRoom);
       message = 'Invitation accepted';
     } else {

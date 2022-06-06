@@ -24,7 +24,7 @@ export class TwilioProvider implements ISmsProvider {
     this.client = twilio(this.accountSID, this.authToken);
   }
 
-  sendSms(to: string, message: string): Promise<any> {
+  sendSms(to: string, message: string) {
     return this.client.messages.create({
       body: message,
       to,
@@ -32,7 +32,7 @@ export class TwilioProvider implements ISmsProvider {
     });
   }
 
-  async sendVerificationCode(to: string): Promise<string> {
+  async sendVerificationCode(to: string) {
     if (this.serviceSid === undefined) {
       return Promise.reject(Error('no service sid specified'));
     }

@@ -230,7 +230,7 @@ export class AdminHandlers {
       .catch(e => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    const totalCount = (forms as any).deletedCount;
+    const totalCount = forms.deletedCount;
     return { forms, totalCount };
   }
 
