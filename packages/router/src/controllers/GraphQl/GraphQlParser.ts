@@ -2,6 +2,7 @@ import {
   ConduitParser,
   ConduitModel,
   ConduitRouteOption,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 
 export interface ResolverDefinition {
@@ -57,7 +58,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     return object;
   }
 
-  protected getType(conduitType: any) {
+  protected getType(conduitType: string) {
     switch (conduitType) {
       case 'String':
         return conduitType;
@@ -79,7 +80,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
   protected getResultFromString(
     processingObject: ProcessingObject,
     name: string,
-    value: any,
+    value: string,
     isRequired: boolean = false,
     isArray: boolean,
   ): void {
@@ -93,7 +94,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     name: string,
     fieldName: string,
-    value: any,
+    value: string | ConduitModel | ConduitRouteOption,
     isRequired: boolean = false,
     isArray: boolean,
   ): void {
@@ -134,7 +135,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     resolverName: string,
     name: string,
-    value: any,
+    value: string,
     isRequired: boolean = false,
     isArray: boolean,
   ): void {
@@ -164,10 +165,10 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     }
     if (this.result.parentResolve[parent][fieldName]) return;
     if (isRelation) {
-      this.result.parentResolve[parent][fieldName] = (parentObj: any) => {
+      this.result.parentResolve[parent][fieldName] = (parentObj: Indexable) => {
         if (Array.isArray(parentObj[fieldName])) {
           if (typeof parentObj[fieldName][0] === 'string') {
-            return parentObj[fieldName].map((obj: any) => {
+            return parentObj[fieldName].map((obj: Indexable) => {
               id: obj;
             });
           }
@@ -180,7 +181,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
         }
       };
     } else {
-      this.result.parentResolve[parent][fieldName] = (parentObj: any) => {
+      this.result.parentResolve[parent][fieldName] = (parentObj: Indexable) => {
         return parentObj[fieldName];
       };
     }

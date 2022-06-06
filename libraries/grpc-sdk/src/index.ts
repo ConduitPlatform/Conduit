@@ -86,7 +86,7 @@ export default class ConduitGrpcSdk {
     if (this.name === 'core') {
       this._initialize();
     } else {
-      (this._core as any) = new Core(this.name, this.serverUrl, this._grpcToken);
+      (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
       console.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
@@ -114,14 +114,14 @@ export default class ConduitGrpcSdk {
   private _initialize() {
     if (this._initialized)
       throw new Error("Module's grpc-sdk has already been initialized");
-    (this._config as any) = new Config(
+    (this._config as unknown) = new Config(
       this.name,
       this.serverUrl,
       this._serviceHealthStatusGetter,
       this._grpcToken,
     );
-    (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    (this._router as any) = new Router(this.name, this.serverUrl, this._grpcToken);
+    (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
+    (this._router as unknown) = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
     if (this._watchModules) {
       this.watchModules();
