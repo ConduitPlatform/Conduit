@@ -5,6 +5,7 @@ import {
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
+  SocketProtoDescription,
 } from '../../interfaces';
 import { ParsedRouterRequest, UnparsedRouterResponse } from '../../types';
 import { ConduitRouteReturnDefinition, GrpcServer } from '../index';
@@ -154,7 +155,7 @@ export class RoutingManager {
     } = wrapFunctionsAsync(this._routeHandlers);
     const protoDescriptions = constructProtoFile(
       this._router.moduleName,
-      Object.values(this._moduleRoutes),
+      Object.values((this._moduleRoutes as unknown) as SocketProtoDescription[]),
     );
     await this._server.addService(
       protoDescriptions.path,

@@ -8,11 +8,16 @@ import {
   isString,
   isEqual,
 } from 'lodash';
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitModelOptions,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 
-export function wrongFields(schemaFields: any, updateFields: any): boolean {
+export function wrongFields(schemaFields: string[], updateFields: string[]): boolean {
   const blackList = ['updatedAt', 'createdAt', '_id', '__v'];
   for (const element of blackList) {
     let index1 = schemaFields.indexOf(element);
@@ -35,10 +40,10 @@ export function wrongFields(schemaFields: any, updateFields: any): boolean {
 }
 
 export function validateSchemaInput(
-  name: any,
-  fields: any,
-  modelOptions: any,
-  enabled?: any,
+  name: string,
+  fields: ConduitModel,
+  modelOptions: ConduitModelOptions,
+  enabled?: boolean,
 ) {
   if (!isNil(enabled) && !isBoolean(enabled)) {
     return "Field 'enabled' must be of type Boolean";
@@ -69,57 +74,60 @@ export function validateSchemaInput(
   if (isEmpty(fields)) return "'fields' can't be an empty object";
 
   let fieldsErrorFlag = false;
-  deepdash.eachDeep(fields, (value: any, key: any, parent: any, ctx: any) => {
-    if (fieldsErrorFlag) {
-      ctx.break();
-      return false;
-    }
-
-    if (isObject(value) && !value.hasOwnProperty('type')) return true;
-    else if (isString(value) && key !== 'default') {
-      fieldsErrorFlag = !Object.keys(TYPE).includes(value);
-      return false;
-    } else if (isPlainObject(value) && value.hasOwnProperty('type')) {
-      if (!fieldsErrorFlag && isObject(value.type)) {
-        return true;
-      } else if (!fieldsErrorFlag && isArray(value.type)) {
-        if (value.type.length > 1) fieldsErrorFlag = true;
-        if (!fieldsErrorFlag)
-          fieldsErrorFlag = !Object.values(TYPE).includes(value.type[0]);
+  deepdash.eachDeep(
+    fields,
+    (value: any, key: string, parent: Indexable, ctx: Indexable) => {
+      if (fieldsErrorFlag) {
+        ctx.break();
         return false;
-      } else fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
-      if (!fieldsErrorFlag && value.type === TYPE.Relation) {
-        if (value.hasOwnProperty('model')) {
-          if (!isString(value.model)) fieldsErrorFlag = true;
-        } else {
-          fieldsErrorFlag = true;
-        }
-      }
-      if (!fieldsErrorFlag && value.hasOwnProperty('select')) {
-        fieldsErrorFlag = !isBoolean(value.select);
-      }
-      if (!fieldsErrorFlag && value.hasOwnProperty('unique')) {
-        fieldsErrorFlag = !isBoolean(value.unique);
-      }
-      if (!fieldsErrorFlag && value.hasOwnProperty('required')) {
-        fieldsErrorFlag = !isBoolean(value.required);
       }
 
-      return false;
-    } else if (isArray(value)) {
-      if (value.length > 1) fieldsErrorFlag = true;
-      if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value[0]);
-      return false;
-    } else if (key === 'select' || key === 'required' || key === 'unique') {
-      fieldsErrorFlag = !isBoolean(value);
-    } else if (key === 'default') {
-      fieldsErrorFlag = !isString(value);
-    } else if (key === 'type') return true;
-    else {
-      fieldsErrorFlag = true;
-      return false;
-    }
-  });
+      if (isObject(value) && !value.hasOwnProperty('type')) return true;
+      else if (isString(value) && key !== 'default') {
+        fieldsErrorFlag = !Object.keys(TYPE).includes(value);
+        return false;
+      } else if (isPlainObject(value) && value.hasOwnProperty('type')) {
+        if (!fieldsErrorFlag && isObject(value.type)) {
+          return true;
+        } else if (!fieldsErrorFlag && isArray(value.type)) {
+          if (value.type.length > 1) fieldsErrorFlag = true;
+          if (!fieldsErrorFlag)
+            fieldsErrorFlag = !Object.values(TYPE).includes(value.type[0]);
+          return false;
+        } else fieldsErrorFlag = !Object.keys(TYPE).includes(value.type);
+        if (!fieldsErrorFlag && value.type === TYPE.Relation) {
+          if (value.hasOwnProperty('model')) {
+            if (!isString(value.model)) fieldsErrorFlag = true;
+          } else {
+            fieldsErrorFlag = true;
+          }
+        }
+        if (!fieldsErrorFlag && value.hasOwnProperty('select')) {
+          fieldsErrorFlag = !isBoolean(value.select);
+        }
+        if (!fieldsErrorFlag && value.hasOwnProperty('unique')) {
+          fieldsErrorFlag = !isBoolean(value.unique);
+        }
+        if (!fieldsErrorFlag && value.hasOwnProperty('required')) {
+          fieldsErrorFlag = !isBoolean(value.required);
+        }
+
+        return false;
+      } else if (isArray(value)) {
+        if (value.length > 1) fieldsErrorFlag = true;
+        if (!fieldsErrorFlag) fieldsErrorFlag = !Object.values(TYPE).includes(value[0]);
+        return false;
+      } else if (key === 'select' || key === 'required' || key === 'unique') {
+        fieldsErrorFlag = !isBoolean(value);
+      } else if (key === 'default') {
+        fieldsErrorFlag = !isString(value);
+      } else if (key === 'type') return true;
+      else {
+        fieldsErrorFlag = true;
+        return false;
+      }
+    },
+  );
   if (fieldsErrorFlag) return 'Invalid schema fields configuration';
 }
 

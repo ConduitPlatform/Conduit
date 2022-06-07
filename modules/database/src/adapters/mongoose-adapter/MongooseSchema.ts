@@ -7,11 +7,13 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitModelOptions, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
+
+type _ConduitModelOptions = ConduitModelOptions & { collection: string };
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -27,11 +29,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.originalSchema = originalSchema;
 
     if (!isNil(schema.collectionName)) {
-      (schema as any).schemaOptions.collection = schema.collectionName;
+      (schema.schemaOptions as _ConduitModelOptions).collection = schema.collectionName;
     } else {
-      (schema as any).collectionName = schema.name; //restore collectionName
+      (schema as Indexable).collectionName = schema.name; //restore collectionName
     }
-    let mongooseSchema = new Schema(schema.modelSchema as any, schema.schemaOptions);
+    let mongooseSchema = new Schema(schema.modelSchema, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
@@ -136,7 +138,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   calculatePopulates(queryObj: any, population: string[]) {
-    population.forEach((r: any, index: number) => {
+    population.forEach((r: string | string[], index: number) => {
       let final = r.toString().trim();
       if (r.indexOf('.') !== -1) {
         r = final.split('.');

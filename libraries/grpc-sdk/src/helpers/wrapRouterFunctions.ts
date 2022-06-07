@@ -7,6 +7,7 @@ import {
 
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
+import { Indexable } from '../interfaces';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
@@ -16,7 +17,7 @@ export type SocketRequestHandler = (
 ) => Promise<UnparsedSocketResponse>;
 export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
 
-export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
+export function wrapCallObjectForRouter(call: Indexable): ParsedRouterRequest {
   return {
     request: {
       params: call.request,
@@ -30,7 +31,7 @@ export function wrapCallObjectForRouter(call: any): ParsedRouterRequest {
 function generateLog(
   routerRequest: boolean,
   requestReceive: number,
-  call: any,
+  call: Indexable,
   status?: Status,
 ) {
   let log = '';
@@ -44,7 +45,7 @@ function generateLog(
   console.log(log);
 }
 
-function parseRequestData(data: any) {
+function parseRequestData(data: string) {
   if (typeof data === 'string' && data.length !== 0) {
     return JSON.parse(data);
   } else if (typeof data === 'string') {
@@ -54,7 +55,7 @@ function parseRequestData(data: any) {
 
 export function wrapRouterGrpcFunction(
   fun: RequestHandlers,
-): (call: any, callback: any) => void {
+): (call: Indexable, callback: any) => void {
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
     let routerRequest = true;
