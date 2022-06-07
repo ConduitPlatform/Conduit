@@ -1,6 +1,13 @@
 import path from 'path';
 import fs from 'fs';
-import { credentials, Metadata, loadPackageDefinition } from '@grpc/grpc-js';
+import {
+  credentials,
+  Metadata,
+  loadPackageDefinition,
+  GrpcObject,
+  ServiceClientConstructor,
+  Client,
+} from '@grpc/grpc-js';
 import {
   ConduitSocket,
   ConduitMiddleware,
@@ -12,8 +19,13 @@ import {
   instanceOfSocketProtoDescription,
   RouteT,
 } from '../interfaces';
-import { ConduitRoute } from '../classes';
-import { ConduitRouteParameters, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '../classes';
+import {
+  ConduitRouteOptions,
+  ConduitRouteParameters,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
+import { RouterDescriptor } from '../interfaces/RouterDescriptor';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -43,24 +55,28 @@ export function grpcToConduitRoute(
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
   let routes = request.routes;
 
-  let routerDescriptor: any = getDescriptor(request.protoFile);
+  let routerDescriptor: RouterDescriptor = getDescriptor(request.protoFile);
   //this can break everything change it
   while (Object.keys(routerDescriptor)[0] !== routerName) {
-    routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
+    routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]] as GrpcObject;
   }
   routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   const serverIp = request.routerUrl;
-  const client = new routerDescriptor(serverIp, credentials.createInsecure(), {
-    'grpc.max_receive_message_length': 1024 * 1024 * 100,
-    'grpc.max_send_message_length': 1024 * 1024 * 100,
-  });
+  const client = new (routerDescriptor as ServiceClientConstructor)(
+    serverIp,
+    credentials.createInsecure(),
+    {
+      'grpc.max_receive_message_length': 1024 * 1024 * 100,
+      'grpc.max_send_message_length': 1024 * 1024 * 100,
+    },
+  );
 
   return createHandlers(routes, client, moduleName, grpcToken);
 }
 
 function createHandlers(
   routes: RouteT[],
-  client: any,
+  client: Client,
   moduleName?: string,
   grpcToken?: string,
 ) {
@@ -87,7 +103,7 @@ function createHandlers(
 }
 
 function createHandlerForRoute(
-  route: { options: any; returns?: any; grpcFunction: string },
+  route: { options: Indexable; returns?: Indexable; grpcFunction: string },
   client: any,
   metadata: Metadata,
   moduleName?: string,
@@ -100,16 +116,20 @@ function createHandlerForRoute(
       context: JSON.stringify(req.context),
     };
     return new Promise((resolve, reject) => {
-      client[route.grpcFunction](request, metadata, (err: any, result: any) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(result);
-      });
+      client[route.grpcFunction](
+        request,
+        metadata,
+        (err: Error, result: Indexable | string) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(result);
+        },
+      );
     });
   };
 
-  let options: any = route.options;
+  let options: Indexable = route.options;
   for (let k in options) {
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
@@ -149,7 +169,11 @@ function createHandlerForRoute(
   }
 
   if (returns) {
-    return new ConduitRoute(options, returns, handler);
+    return new ConduitRoute(
+      options as ConduitRouteOptions,
+      returns as ConduitRouteReturnDefinition,
+      handler,
+    );
   } else {
     return new ConduitMiddleware(options, route.grpcFunction, handler);
   }
