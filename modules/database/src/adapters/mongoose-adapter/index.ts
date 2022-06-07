@@ -1,7 +1,12 @@
 import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModelOptions,
+  ConduitSchema,
+  GrpcError,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';
@@ -11,6 +16,10 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
+
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+};
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -151,7 +160,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
       this.updateCollectionName(schema);
-      if ((schema as any).modelOptions.conduit.imported) {
+      if (((schema as unknown) as _ConduitSchema).modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -163,7 +172,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       introspectableSchemas.map(async collectionName => {
         await parseSchema(
           db.collection(collectionName).find(),
-          async (err: Error, originalSchema: any) => {
+          async (err: Error, originalSchema: Indexable) => {
             if (err) {
               throw new GrpcError(status.INTERNAL, err.message);
             }
@@ -216,7 +225,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    const original: any = JSON.parse(JSON.stringify(schema));
+    const original = JSON.parse(JSON.stringify(schema));
     stitchSchema(schema);
     const newSchema = schemaConverter(schema);
 
@@ -234,7 +243,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return this.models[schema.name];
   }
 
-  getSchemaModel(schemaName: string): { model: MongooseSchema; relations: any } {
+  getSchemaModel(schemaName: string): { model: MongooseSchema; relations: null } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName], relations: null };
     }

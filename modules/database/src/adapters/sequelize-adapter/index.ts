@@ -191,7 +191,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    const original: any = JSON.parse(JSON.stringify(schema));
+    const original: ConduitSchema = JSON.parse(JSON.stringify(schema));
     stitchSchema(schema);
     const newSchema = schemaConverter(schema);
 
