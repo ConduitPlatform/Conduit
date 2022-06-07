@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.12.6...v0.13.0-rc.0) (2022-06-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **admin:** admin users crud ops (#177)
+* **database:** crud granularity (#180)
+* This does not affect the APIs.
+Modules simply require a rebuild using the latest grpc-sdk.
+
+### Features
+
+* **admin:** admin users crud ops ([#177](https://github.com/ConduitPlatform/Conduit/issues/177)) ([7f84036](https://github.com/ConduitPlatform/Conduit/commit/7f84036d5477cac19af20c4822de0c7edde932c9))
+* **authentication, router, grpc-sdk:** support for cookies ([bc6967e](https://github.com/ConduitPlatform/Conduit/commit/bc6967ea89c40d53fdd109b60f96ef485a99caee))
+* **authentication:** logins and logouts from multiple clients/sessions ([#138](https://github.com/ConduitPlatform/Conduit/issues/138)) ([816da50](https://github.com/ConduitPlatform/Conduit/commit/816da50f6ad820c2f9cf486fdb60111f7fa86d61))
+* **chat:** chat room invites ([#119](https://github.com/ConduitPlatform/Conduit/issues/119)) ([34c87a8](https://github.com/ConduitPlatform/Conduit/commit/34c87a8553c4743abd1caba82ca39a7f684e3648))
+* **chat:** send push notifications for invite([#124](https://github.com/ConduitPlatform/Conduit/issues/124)) ([32dd502](https://github.com/ConduitPlatform/Conduit/commit/32dd502b3d8280c1f8f6d3fe46494b6395d633e9))
+* **config:** DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL env var ([#178](https://github.com/ConduitPlatform/Conduit/issues/178)) ([8ac2d96](https://github.com/ConduitPlatform/Conduit/commit/8ac2d9655ef589cd28d29072e5e06d22a67a4b8c))
+* **database:** crud granularity ([#180](https://github.com/ConduitPlatform/Conduit/issues/180)) ([86cfa37](https://github.com/ConduitPlatform/Conduit/commit/86cfa3714707e53d3b2ef28c1d7cb0d25b748b04))
+* **database:** DB introspection ([#128](https://github.com/ConduitPlatform/Conduit/issues/128)) ([49680fe](https://github.com/ConduitPlatform/Conduit/commit/49680feda2848f45a4e3e133cb35ad8408b27a56))
+* **database:** disable auto-introspection ([#186](https://github.com/ConduitPlatform/Conduit/issues/186)) ([da9a3df](https://github.com/ConduitPlatform/Conduit/commit/da9a3df614411fedc0886d1df7b16e8f982b4ea0))
+* gRPC request protection ([#133](https://github.com/ConduitPlatform/Conduit/issues/133)) ([409fde5](https://github.com/ConduitPlatform/Conduit/commit/409fde57d74befeba127a87a7d93024b1a806dc6))
+* reactive module dependency handling ([#150](https://github.com/ConduitPlatform/Conduit/issues/150)) ([275c50c](https://github.com/ConduitPlatform/Conduit/commit/275c50c3436ae543ed4ff5a8598b97285b7de0dc))
+* **security:** configurable client validation ([60963d7](https://github.com/ConduitPlatform/Conduit/commit/60963d76c1ca2e19f572b5ab6f35d020e6d81ef1))
+
+
+### Bug Fixes
+
+* **authentication,chat,email,forms,push-notifications,sms,storage:** config types([#148](https://github.com/ConduitPlatform/Conduit/issues/148)) ([eeaaf2c](https://github.com/ConduitPlatform/Conduit/commit/eeaaf2c9771245464edf96578487f6506fbbed7d))
+* **authentication,chat:** return types and naming consistencies ([138a40a](https://github.com/ConduitPlatform/Conduit/commit/138a40a6d205cd6cf753d57b4c5ae0f14a9ff9fc))
+* **authentication:** replace hardcoded Conduit url ([#135](https://github.com/ConduitPlatform/Conduit/issues/135)) ([f26854e](https://github.com/ConduitPlatform/Conduit/commit/f26854e41488818e0c30ad528b17d7b34d8ef7db))
+* **authentication:** wrong errors thrown in validation ([#188](https://github.com/ConduitPlatform/Conduit/issues/188)) ([25fe60d](https://github.com/ConduitPlatform/Conduit/commit/25fe60d38c48e6f2f232f3f8b6b141f74cf51a82))
+* **chat:** add uuid missing dependency ([65eaa04](https://github.com/ConduitPlatform/Conduit/commit/65eaa04d8f96f3b8688f71212edbe98d2b4d64d5))
+* **commons,config,core,router,admin,security:** config update ([#131](https://github.com/ConduitPlatform/Conduit/issues/131)) ([3f224b4](https://github.com/ConduitPlatform/Conduit/commit/3f224b4ac7d6fd179768590a2de4c885c432af10))
+* **config,grpc-sdk:** updateModuleHealth() not reregistering removed modules ([#163](https://github.com/ConduitPlatform/Conduit/issues/163)) ([3075e06](https://github.com/ConduitPlatform/Conduit/commit/3075e06ea8c79c020e0d23ef78b5526600ad2a86))
+* **database:** array type not extracted properly ([#182](https://github.com/ConduitPlatform/Conduit/issues/182)) ([7cb2546](https://github.com/ConduitPlatform/Conduit/commit/7cb25460f22a6ad6ab37c47f4005c5db34cfb607))
+* **database:** crud ops migration ([6cf7070](https://github.com/ConduitPlatform/Conduit/commit/6cf7070187a66f86f216f8bb824b9fc397b083a5))
+* **database:** crudOperations migration fixed ([#181](https://github.com/ConduitPlatform/Conduit/issues/181)) ([259b0d1](https://github.com/ConduitPlatform/Conduit/commit/259b0d15cf50e2272458bd4485edcabe542dcc29))
+* **database:** database module triggers introspection on unpopulated dbs ([#169](https://github.com/ConduitPlatform/Conduit/issues/169)) ([e55fb56](https://github.com/ConduitPlatform/Conduit/commit/e55fb56f5c40419dcb61fb3f9e4bdd6016df555a))
+* **database:** fix casing for mongo ObjectId types in type extraction ([#190](https://github.com/ConduitPlatform/Conduit/issues/190)) ([c10dc38](https://github.com/ConduitPlatform/Conduit/commit/c10dc381ba8bbedeade2deb030ff33128d1527ba))
+* **database:** get pending query params not parsed, add search param ([#168](https://github.com/ConduitPlatform/Conduit/issues/168)) ([9e5e266](https://github.com/ConduitPlatform/Conduit/commit/9e5e266d990714abe73e1f541154a24af50ee896))
+* **database:** pending schemas import safe defaults in finalizeSchemas() ([#191](https://github.com/ConduitPlatform/Conduit/issues/191)) ([5ff94df](https://github.com/ConduitPlatform/Conduit/commit/5ff94df25b265222ec12f0a816e236f7e3edbf66))
+* **database:** put crud operation not properly checked ([#189](https://github.com/ConduitPlatform/Conduit/issues/189)) ([5dbbf55](https://github.com/ConduitPlatform/Conduit/commit/5dbbf55a37b472a1eeaa625e516087c630eb2fb9))
+* **grpc-sdk:** wrapRouterFunctions request logging ([#155](https://github.com/ConduitPlatform/Conduit/issues/155)) ([71cbb66](https://github.com/ConduitPlatform/Conduit/commit/71cbb66044b6451922f98031e6c0652c03d4484b))
+* node types ([#185](https://github.com/ConduitPlatform/Conduit/issues/185)) ([3afc6eb](https://github.com/ConduitPlatform/Conduit/commit/3afc6ebc2e3b63f2116d33c127f7f33991fb5c8f))
+* **router:** get middlewares route bug fixed ([#153](https://github.com/ConduitPlatform/Conduit/issues/153)) ([87351b5](https://github.com/ConduitPlatform/Conduit/commit/87351b52468c8eabe9ab77ac30913712c44418d4))
+* **router:** moment missing dependency ([5b3667c](https://github.com/ConduitPlatform/Conduit/commit/5b3667c600179970b1f58eefee59b28448afa2df))
+* **security:** client validation check routing bug ([7ca4fa9](https://github.com/ConduitPlatform/Conduit/commit/7ca4fa9a670f883041a39626ae87cc1442ed71a8))
+* **security:** domain regex checks ([#156](https://github.com/ConduitPlatform/Conduit/issues/156)) ([045419b](https://github.com/ConduitPlatform/Conduit/commit/045419b6333b897dfd4fa523e6727b2362a931b7))
+* **security:** regex validation issue ([#149](https://github.com/ConduitPlatform/Conduit/issues/149)) ([5465779](https://github.com/ConduitPlatform/Conduit/commit/54657795d41047bb7e502c877d3b385b1673017e))
+* **security:** specific case for domain ([#157](https://github.com/ConduitPlatform/Conduit/issues/157)) ([ef1d0db](https://github.com/ConduitPlatform/Conduit/commit/ef1d0db83ccc4b2d72a5701af856580d54ddddec))
+
+
+*  feat(core,config,commons,grpc-sdk,database)!: implement gRPC health check protocol ([efbd0b0](https://github.com/ConduitPlatform/Conduit/commit/efbd0b0ccecc66a83dd73a7cbbc2d8204ee73e42))
+
 ### [0.12.6](https://github.com/ConduitPlatform/Conduit/compare/v0.12.5...v0.12.6) (2022-04-13)
 
 ### [0.12.5](https://github.com/ConduitPlatform/Conduit/compare/v0.12.4...v0.12.5) (2022-04-04)
