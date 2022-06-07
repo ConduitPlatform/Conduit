@@ -1,8 +1,8 @@
 import {
   ConduitSchema,
   GrpcError,
-  GrpcResponse,
   GrpcRequest,
+  GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
@@ -28,14 +28,13 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { Schema, SchemaAdapter } from './interfaces';
+import { Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import { isEmpty } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule<void> {
   config = undefined;
@@ -574,26 +573,5 @@ export default class DatabaseModule extends ManagedModule<void> {
         message: err.message,
       });
     }
-  }
-
-  private async introspectDb() {
-    console.log(`Database is not a Conduit DB. Starting introspection...`);
-    let introspectedSchemas = await this._activeAdapter.introspectDatabase();
-    await this._activeAdapter.createSchemaFromAdapter(models.PendingSchemas);
-
-    await Promise.all(
-      introspectedSchemas.map(async (schema: ConduitSchema) => {
-        if (isEmpty(schema.fields)) return null;
-        await this._activeAdapter.getSchemaModel('_PendingSchemas').model.create(
-          JSON.stringify({
-            name: schema.name,
-            fields: schema.fields,
-            modelOptions: schema.schemaOptions,
-            ownerModule: schema.ownerModule,
-            extensions: (schema as any).extensions,
-          }),
-        );
-      }),
-    );
   }
 }

@@ -30,7 +30,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = AdminHandlers.getRegisteredRoutes();
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         sendSms: this.sendSms.bind(this),
@@ -41,7 +41,7 @@ export class AdminHandlers {
       });
   }
 
-  private static getRegisteredRoutes(): ConduitRouteObject[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {

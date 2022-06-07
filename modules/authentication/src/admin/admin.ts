@@ -33,7 +33,7 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = AdminHandlers.getRegisteredRoutes();
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getUsers: this.getUsers.bind(this),
@@ -55,7 +55,7 @@ export class AdminHandlers {
       });
   }
 
-  private static getRegisteredRoutes(): ConduitRouteObject[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     const userFields = User.getInstance().fields;
     delete userFields.hashedPassword;
     return [

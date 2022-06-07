@@ -288,7 +288,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return { user };
   }
 
-  private static async _authenticateChecks(password: string, config: Config, user: User) {
+  private async _authenticateChecks(password: string, config: Config, user: User) {
     if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
     if (!user.hashedPassword)
       throw new GrpcError(
@@ -328,7 +328,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     );
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-    await LocalHandlers._authenticateChecks(password, config, user);
+    await this._authenticateChecks(password, config, user);
 
     if (user.hasTwoFA) {
       const verificationSid = await AuthUtils.sendVerificationCode(

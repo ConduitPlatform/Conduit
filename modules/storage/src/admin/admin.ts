@@ -28,7 +28,7 @@ export class AdminRoutes {
   }
 
   private registerAdminRoutes() {
-    const paths = AdminRoutes.getRegisteredRoutes();
+    const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
@@ -51,7 +51,7 @@ export class AdminRoutes {
       });
   }
 
-  private static getRegisteredRoutes(): ConduitRouteObject[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {
