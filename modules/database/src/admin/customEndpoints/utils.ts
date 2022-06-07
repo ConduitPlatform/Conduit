@@ -1,4 +1,4 @@
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 /**
@@ -9,7 +9,11 @@ import { isNil } from 'lodash';
  * location: String (Body, queryParams, url)
  * }
  */
-export function queryValidation(query: any, findSchema: any, inputs: any): true | string {
+export function queryValidation(
+  query: any,
+  findSchema: Indexable,
+  inputs: Indexable,
+): true | string {
   if (query.hasOwnProperty('AND')) {
     if (Object.keys(query).length !== 1) {
       return 'Invalid number of keys';
@@ -66,11 +70,11 @@ export function queryValidation(query: any, findSchema: any, inputs: any): true 
 }
 
 function _queryValidation(
-  findSchema: any,
-  inputs: any,
+  findSchema: Indexable,
+  inputs: Indexable,
   schemaField: string,
   operation: number,
-  comparisonField: any,
+  comparisonField: Indexable,
 ) {
   if (isNil(schemaField) || isNil(operation) || isNil(comparisonField)) {
     return 'schemaField, operation and comparisonField must be present in the input';
@@ -100,7 +104,7 @@ function _queryValidation(
       return 'comparisonField value is not present in selected schema!';
     }
   } else if (comparisonField.type === 'Input') {
-    let inputNames = inputs.map((r: any) => r.name);
+    let inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(comparisonField.value)) {
       return 'comparisonField value is not present in provided inputs!';
     }
@@ -158,11 +162,11 @@ export function inputValidation(
  * }
  */
 export function assignmentValidation(
-  findSchema: any,
-  inputs: any,
+  findSchema: Indexable,
+  inputs: Indexable,
   operation: number,
   schemaField: string,
-  assignmentField: any,
+  assignmentField: Indexable,
   action: number,
 ): boolean | string {
   if (isNil(schemaField) || isNil(assignmentField) || isNil(action)) {
@@ -194,7 +198,7 @@ export function assignmentValidation(
   }
 
   if (assignmentField.type === 'Input') {
-    let inputNames = inputs.map((r: any) => r.name);
+    let inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(assignmentField.value)) {
       return 'assignmentField value is not present in provided inputs!';
     }
