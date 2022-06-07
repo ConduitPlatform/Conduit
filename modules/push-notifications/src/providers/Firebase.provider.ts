@@ -31,7 +31,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
 
   // TODO check for disabled notifications for users
 
-  async sendToDevice(params: ISendNotification): Promise<any> {
+  async sendToDevice(params: ISendNotification) {
     const { sendTo, type } = params;
     const userId = sendTo;
     if (isNil(userId)) return;
@@ -57,7 +57,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     return this.fcm.send(message);
   }
 
-  async sendMany(params: ISendNotification[]): Promise<any> {
+  async sendMany(params: ISendNotification[]) {
     const userIds = params.map(param => param.sendTo);
     const notificationsObj = keyBy(params, param => param.sendTo);
 
@@ -65,7 +65,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
       userId: { $in: userIds },
     });
 
-    const promises = notificationTokens.map(async (token: any) => {
+    const promises = notificationTokens.map(async token => {
       const id = token.userId.toString();
       const data = notificationsObj[id];
 
@@ -86,13 +86,13 @@ export class FirebaseProvider implements IPushNotificationsProvider {
     return Promise.all(promises);
   }
 
-  async sendToManyDevices(params: ISendNotificationToManyDevices): Promise<any> {
+  async sendToManyDevices(params: ISendNotificationToManyDevices) {
     const notificationTokens = await NotificationToken.getInstance().findMany({
       userId: { $in: params.sendTo },
     });
     if (notificationTokens.length === 0) return;
 
-    const promises = notificationTokens.map(async (notToken: any) => {
+    const promises = notificationTokens.map(async notToken => {
       const message: firebase.messaging.Message = {
         token: notToken.token,
         notification: {

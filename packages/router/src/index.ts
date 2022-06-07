@@ -6,11 +6,11 @@ import {
   ConduitMiddleware,
   ConduitRoute,
   ConduitSocket,
-  Empty,
   grpcToConduitRoute,
   IConduitRouter,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
+  RouteT,
   SocketData,
 } from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
@@ -26,9 +26,9 @@ import path from 'path';
 export class ConduitDefaultRouter extends IConduitRouter {
   private _internalRouter: ConduitRoutingController;
   private readonly _globalMiddlewares: string[];
-  private readonly _routes: any[];
+  private readonly _routes: string[];
   private _grpcRoutes: {
-    [field: string]: RegisterConduitRouteRequest_PathDefinition[];
+    [field: string]: RouteT[];
   } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
 
@@ -97,7 +97,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this.commons
       .getState()
       .getKey('router')
-      .then((r: any) => {
+      .then(r => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
@@ -162,7 +162,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
 
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.routes,
+        call.request.routes as RouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
@@ -182,8 +182,8 @@ export class ConduitDefaultRouter extends IConduitRouter {
   }
 
   internalRegisterRoute(
-    protofile: any,
-    routes: RegisterConduitRouteRequest_PathDefinition[],
+    protofile: string,
+    routes: RouteT[],
     url: string,
     moduleName?: string,
   ) {
@@ -213,7 +213,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
         rooms: call.request.rooms,
-        namespace: `/${(call as any).metadata.get('module-name')[0]}/`,
+        namespace: `/${call.metadata!.get('module-name')[0]}/`,
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
@@ -231,7 +231,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
       let routesArray = this._grpcRoutes[grpcRoute];
       routes.push(
-        ...routesArray.map((route: any) => {
+        ...routesArray.map(route => {
           return { action: route.options.action, path: route.options.path };
         }),
       );

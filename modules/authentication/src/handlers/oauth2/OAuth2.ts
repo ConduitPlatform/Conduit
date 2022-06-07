@@ -21,6 +21,7 @@ import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
+import { Config } from '../../config';
 import { OAuthRequest } from './interfaces/MakeRequest';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
@@ -223,7 +224,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     return user!;
   }
 
-  async createTokens(userId: string, clientId: string, config: AuthUtils.TokenOptions) {
+  async createTokens(userId: string, clientId: string, config: Config) {
     const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
       this.grpcSdk,
       {

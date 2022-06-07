@@ -1,4 +1,9 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitActiveSchema,
+  DatabaseProvider,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -163,13 +168,13 @@ export class User extends ConduitActiveSchema<User> {
     id: string;
     token: string;
     tokenExpires: Date;
-    data: any;
+    data: Indexable;
   };
   facebook?: {
     id: string;
     token: string;
     //tokenExpires: string;
-    data: any;
+    data: Indexable;
   };
   kakao?: {
     id: string;
@@ -183,31 +188,31 @@ export class User extends ConduitActiveSchema<User> {
     token: string;
     tokenExpires: string;
     profile_image_url?: string;
-    data: any;
+    data: Indexable;
   };
   slack?: {
     id: string;
     token: string;
     tokenExpires: Date;
-    data: any;
+    data: Indexable;
   };
   figma?: {
     id: string;
     token: string;
     tokenExpires: Date;
-    data: any;
+    data: Indexable;
   };
   microsoft?: {
     id: string;
     token: string;
     tokenExpires: Date;
-    data: any;
+    data: Indexable;
   };
   github?: {
     id: string;
     token: string;
     tokenExpires: Date;
-    data: any;
+    data: Indexable;
   };
 
   active: boolean;

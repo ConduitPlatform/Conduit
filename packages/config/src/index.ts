@@ -1,4 +1,4 @@
-import { status } from '@grpc/grpc-js';
+import { ServerWritableStream, status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   HealthCheckStatus,
   GrpcServer,
@@ -24,7 +24,7 @@ import * as models from './models';
 import path from 'path';
 
 export default class ConfigManager implements IConfigManager {
-  databaseCallback: any;
+  databaseCallback: () => Promise<void>;
   registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
   moduleHealth: {
     [field: string]: {
@@ -39,7 +39,7 @@ export default class ConfigManager implements IConfigManager {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     private readonly sdk: ConduitCommons,
-    databaseCallback: any,
+    databaseCallback: () => Promise<void>,
   ) {
     this.grpcSdk = grpcSdk;
     this.databaseCallback = databaseCallback;
@@ -81,7 +81,11 @@ export default class ConfigManager implements IConfigManager {
     try {
       if (!loadedState || loadedState.length === 0) return;
       let state = JSON.parse(loadedState);
-      let success: any[] = [];
+      let success: {
+        name: string;
+        url: string;
+        instance: string;
+      }[] = [];
       if (state.modules) {
         for (const module of state.modules) {
           try {
@@ -453,7 +457,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  watchModules(call: any) {
+  watchModules(call: ServerWritableStream<void, ModuleListResponse>) {
     const self = this;
     this.moduleRegister.on('serving-modules-update', () => {
       let modules: any[] = [];

@@ -12,6 +12,8 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitJson,
   TYPE,
+  ConduitRouteObject,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
@@ -20,6 +22,7 @@ import { getHBValues } from '../parse-test/getHBValues';
 import { EmailService } from '../services/email.service';
 import { EmailTemplate } from '../models';
 import { Config } from '../config';
+import { Template } from '../email-provider/interfaces/Template';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -57,7 +60,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {
@@ -196,7 +199,7 @@ export class AdminHandlers {
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: any = {};
+    let query: Query = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
       if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
@@ -247,7 +250,7 @@ export class AdminHandlers {
         if (err) {
           throw new GrpcError(status.INTERNAL, err.message);
         }
-        externalId = (template as any)?.id;
+        externalId = (template as Template)?.id;
       } else {
         externalId = _id;
       }
@@ -394,11 +397,11 @@ export class AdminHandlers {
       name: templateDocument.name,
       body: templateDocument.body,
     };
-    const created = await (this.emailService.createExternalTemplate(
-      template,
-    ) as any).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
+    const created = await this.emailService
+      .createExternalTemplate(template)!
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
 
     if (templateDocument) {
       templateDocument['externalManaged'] = true;
@@ -414,9 +417,7 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const [err, externalTemplates] = await to(
-      this.emailService.getExternalTemplates() as any,
-    );
+    const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
     if (!isNil(err)) {
       throw new GrpcError(status.INTERNAL, err.message);
     }
@@ -424,7 +425,7 @@ export class AdminHandlers {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
     let templateDocuments: any = [];
-    (externalTemplates as any).forEach((element: any) => {
+    (externalTemplates as Template[]).forEach((element: Template) => {
       templateDocuments.push({
         _id: element.id,
         name: element.name,

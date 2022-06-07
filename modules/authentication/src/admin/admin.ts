@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitBoolean,
   TYPE,
+  ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -54,7 +55,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     const userFields = User.getInstance().fields;
     delete userFields.hashedPassword;
     return [

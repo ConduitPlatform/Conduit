@@ -50,3 +50,12 @@ export interface ConduitRouteOptions {
   middlewares?: string[];
   cacheControl?: string;
 }
+
+export interface ConduitRouteObject {
+  options: ConduitRouteOptions;
+  returns: {
+    name: string;
+    fields: string;
+  };
+  grpcFunction: string;
+}

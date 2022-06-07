@@ -1,6 +1,9 @@
 import ConduitGrpcSdk, {
+  ConduitSchema,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -33,7 +36,7 @@ export class CustomEndpointsAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let identifier,
-      query: any = {};
+      query: Query = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
@@ -100,7 +103,7 @@ export class CustomEndpointsAdmin {
       );
     }
 
-    let findSchema: any;
+    let findSchema: Indexable;
     if (!isNil(selectedSchema)) {
       // Find schema using selectedSchema
       if (selectedSchema.length === 0) {
@@ -145,7 +148,7 @@ export class CustomEndpointsAdmin {
       );
     }
     if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: any) => {
+      inputs.forEach((r: Indexable) => {
         let error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
           throw new GrpcError(status.INVALID_ARGUMENT, error as string);
@@ -197,7 +200,7 @@ export class CustomEndpointsAdmin {
     ) {
       assignments.forEach(
         (r: {
-          schemaField: any;
+          schemaField: string;
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
@@ -293,7 +296,7 @@ export class CustomEndpointsAdmin {
       );
     }
     if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: any) => {
+      inputs.forEach((r: Indexable) => {
         let error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
           throw new GrpcError(status.INVALID_ARGUMENT, error as string);
@@ -396,7 +399,7 @@ export class CustomEndpointsAdmin {
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findMany({}, undefined, undefined, 'selectedSchema selectedSchemaName');
-    customEndpoints.forEach((endpoint: any) => {
+    customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());
         schemaNames.push(endpoint.selectedSchemaName);

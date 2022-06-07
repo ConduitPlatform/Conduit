@@ -5,6 +5,8 @@ import {
   ConfigController,
   DatabaseProvider,
   ConduitError,
+  ConduitModelOptions,
+  ConduitModel,
 } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { validateClient } from '../../utils/security';
@@ -29,7 +31,8 @@ export class ClientValidator {
   }
 
   async middleware(req: Request, res: Response, next: NextFunction) {
-    if (isNil((req as any).conduit)) (req as any).conduit = {};
+    if (isNil((req as ConduitModelOptions).conduit))
+      (req as ConduitModelOptions).conduit = {};
     const { clientid, clientsecret } = req.headers;
     // if incoming call is a webhook or an admin call
     if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
@@ -48,7 +51,7 @@ export class ClientValidator {
 
     const securityConfig = ConfigController.getInstance().config;
     if (!securityConfig.clientValidation.enabled) {
-      (req as any).conduit.clientId = 'anonymous-client';
+      (req as ConduitModelOptions).conduit!.clientId = 'anonymous-client';
       delete req.headers.clientsecret;
       delete req.headers.clientid;
       return next();
@@ -71,7 +74,7 @@ export class ClientValidator {
         true,
       );
       if (validPlatform) {
-        (req as any).conduit.clientId = clientid;
+        (req as ConduitModelOptions).conduit!.clientId = clientid;
         return next();
       }
       // if not valid allow the execution to continue,
@@ -95,7 +98,7 @@ export class ClientValidator {
           throw ConduitError.unauthorized();
         }
         delete req.headers.clientsecret;
-        (req as any).conduit.clientId = clientid;
+        (req as ConduitModelOptions).conduit!.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
         this.sdk
           .getState()

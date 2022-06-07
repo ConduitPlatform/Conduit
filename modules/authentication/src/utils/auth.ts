@@ -6,11 +6,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   SMS,
   ConfigController,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { Config } from '../config';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -22,7 +24,7 @@ export namespace AuthUtils {
     return jwt.sign(data, secret, { expiresIn });
   }
 
-  export function verify(token: string, secret: string): any {
+  export function verify(token: string, secret: string): string | object | null {
     try {
       return jwt.verify(token, secret);
     } catch (error) {
@@ -41,17 +43,17 @@ export namespace AuthUtils {
   export interface TokenOptions {
     userId: string;
     clientId: string;
-    config: any;
+    config: Config;
   }
 
-  export function deleteUserTokens(sdk: ConduitGrpcSdk, query: any) {
+  export function deleteUserTokens(sdk: ConduitGrpcSdk, query: Query) {
     let promise1 = sdk.databaseProvider!.deleteMany('AccessToken', query);
     let promise2 = sdk.databaseProvider!.deleteMany('RefreshToken', query);
 
     return [promise1, promise2];
   }
 
-  export function deleteUserTokensAsPromise(sdk: ConduitGrpcSdk, query: any) {
+  export function deleteUserTokensAsPromise(sdk: ConduitGrpcSdk, query: Query) {
     return Promise.all(deleteUserTokens(sdk, query));
   }
 
@@ -177,7 +179,7 @@ export namespace AuthUtils {
 
   export async function signInClientOperations(
     grpcSdk: ConduitGrpcSdk,
-    clientConfig: any,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
     userId: string,
     clientId: string,
   ) {
@@ -197,7 +199,7 @@ export namespace AuthUtils {
 
   export async function logOutClientOperations(
     grpcSdk: ConduitGrpcSdk,
-    clientConfig: any,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
     authToken: string,
     clientId: string,
     userId: string,

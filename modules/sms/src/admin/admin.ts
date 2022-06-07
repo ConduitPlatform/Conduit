@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   GrpcError,
   ConduitString,
+  ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -40,7 +41,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {

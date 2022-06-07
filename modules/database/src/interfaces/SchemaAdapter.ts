@@ -1,11 +1,14 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 
-export type SingleDocQuery = string | { [key: string]: any };
-export type MultiDocQuery = string | [{ [key: string]: any }];
+export type SingleDocQuery = string | Indexable;
+export type MultiDocQuery = string | [Indexable];
 export type Query = SingleDocQuery | MultiDocQuery;
-export type ParsedQuery = { [key: string]: any };
+export type ParsedQuery = Indexable;
 export type Doc = ParsedQuery;
 export type Fields = ParsedQuery;
+export type Schema = MongooseSchema | SequelizeSchema;
 
 export interface SchemaAdapter<T> {
   /**
@@ -22,12 +25,13 @@ export interface SchemaAdapter<T> {
    * @param query
    * @param select
    * @param populate
+   * @param relations
    */
   findOne(
     query: Query,
     select?: string,
     populate?: string[],
-    relations?: any,
+    relations?: Indexable,
   ): Promise<any>;
 
   /**
@@ -37,6 +41,8 @@ export interface SchemaAdapter<T> {
    * @param limit
    * @param select
    * @param sort
+   * @param relations
+   * @param populate
    */
   findMany(
     query: Query,
@@ -45,7 +51,7 @@ export interface SchemaAdapter<T> {
     select?: string,
     sort?: any,
     populate?: string[],
-    relations?: any,
+    relations?: Indexable,
   ): Promise<any>;
 
   /**
@@ -65,7 +71,7 @@ export interface SchemaAdapter<T> {
     document: SingleDocQuery,
     updateProvidedOnly?: boolean,
     populate?: string[],
-    relations?: any,
+    relations?: Indexable,
   ): Promise<any>;
 
   updateMany(

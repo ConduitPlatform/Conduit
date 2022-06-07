@@ -1,5 +1,12 @@
 import _, { isNil } from 'lodash';
-import { DataTypes, FindOptions, ModelCtor, Sequelize } from 'sequelize';
+import {
+  DataTypes,
+  FindAttributeOptions,
+  FindOptions,
+  ModelCtor,
+  Order,
+  Sequelize,
+} from 'sequelize';
 import {
   MultiDocQuery,
   ParsedQuery,
@@ -9,19 +16,20 @@ import {
 } from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
-  originalSchema: any;
-  excludedFields: any[];
-  relations: any;
+  originalSchema: ConduitSchema;
+  excludedFields: string[];
+  relations: Indexable;
 
   constructor(
     sequelize: Sequelize,
-    schema: any,
-    originalSchema: any,
+    schema: Indexable,
+    originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
   ) {
     this.originalSchema = originalSchema;
@@ -33,7 +41,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     deepdash.eachDeep(
       this.originalSchema.modelSchema,
-      (value: any, key: any, parentValue: any, context: any) => {
+      (value: Indexable, key: string, parentValue: Indexable, context: Indexable) => {
         if (!parentValue?.hasOwnProperty(key!)) {
           return true;
         }
@@ -75,7 +83,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       };
     }
 
-    this.model = sequelize.define(schema.name, schema.modelSchema as any, {
+    this.model = sequelize.define(schema.name, schema.modelSchema, {
       ...schema.modelOptions,
       freezeTableName: true,
     });
@@ -115,7 +123,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.bulkCreate(parsedQuery);
   }
 
-  async findOne(query: Query, select?: string, populate?: string[], relations?: any) {
+  async findOne(
+    query: Query,
+    select?: string,
+    populate?: string[],
+    relations?: Indexable,
+  ) {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -123,7 +136,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
-    options.attributes = { exclude: [...this.excludedFields] };
+    options.attributes = ({
+      exclude: [...this.excludedFields],
+    } as unknown) as FindAttributeOptions;
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
@@ -150,9 +165,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: any,
+    sort?: Order,
     populate?: string[],
-    relations?: any,
+    relations?: Indexable,
   ): Promise<any> {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
@@ -161,7 +176,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
-    options.attributes = { exclude: [...this.excludedFields] };
+    options.attributes = ({
+      exclude: [...this.excludedFields],
+    } as unknown) as FindAttributeOptions;
     if (!isNil(skip)) {
       options.offset = skip;
     }
@@ -179,7 +196,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
-        let cache: any = {};
+        let cache: Indexable = {};
         for (const document of documents) {
           if (this.relations.hasOwnProperty(relation)) {
             if (relations.hasOwnProperty(this.relations[relation])) {
@@ -223,7 +240,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
     populate?: string[],
-    relations?: any,
+    relations?: Indexable,
   ) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -286,7 +303,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     let document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
-        let cache: any = {};
+        let cache: Indexable = {};
         if (this.relations.hasOwnProperty(relation)) {
           if (relations.hasOwnProperty(this.relations[relation])) {
             if (!cache.hasOwnProperty(document[relation])) {

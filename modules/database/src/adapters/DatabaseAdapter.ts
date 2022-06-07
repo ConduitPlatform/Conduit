@@ -1,11 +1,15 @@
-import { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { SchemaAdapter } from '../interfaces';
+import { ConduitModelOptions, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import { DeclaredSchemaExtension, Schema, SchemaAdapter } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
-export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+  extensions: DeclaredSchemaExtension[];
+};
+export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
@@ -28,7 +32,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
-  ): Promise<SchemaAdapter<any>> {
+  ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
     }
@@ -39,9 +43,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     return this._createSchemaFromAdapter(schema);
   }
 
-  protected abstract _createSchemaFromAdapter(
-    schema: ConduitSchema,
-  ): Promise<SchemaAdapter<any>>;
+  protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
   protected abstract updateCollectionName(
     schema: ConduitSchema,
@@ -94,9 +96,7 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
     }
   }
 
-  abstract getSchemaModel(
-    schemaName: string,
-  ): { model: SchemaAdapter<any>; relations: any };
+  abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
@@ -154,10 +154,10 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models: any = await this.models['_DeclaredSchema'].findMany('{}');
+    let models = await this.models!['_DeclaredSchema'].findMany('{}');
     models = models
-      .map((model: any) => {
-        const schema = new ConduitSchema(
+      .map((model: _ConduitSchema) => {
+        let schema = new ConduitSchema(
           model.name,
           model.fields,
           model.modelOptions,
@@ -176,13 +176,13 @@ export abstract class DatabaseAdapter<T extends SchemaAdapter<any>> {
 
   abstract connect(): void;
 
-  abstract ensureConnected(): Promise<any>;
+  abstract ensureConnected(): Promise<void>;
 
   setSchemaExtension(
     schema: ConduitSchema,
     extOwner: string,
     extFields: ConduitSchema['fields'],
-  ): Promise<SchemaAdapter<any>> {
+  ): Promise<Schema> {
     if (
       !schema.schemaOptions.conduit ||
       !schema.schemaOptions.conduit.permissions ||

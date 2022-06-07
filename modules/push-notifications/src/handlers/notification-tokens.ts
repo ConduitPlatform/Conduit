@@ -23,7 +23,7 @@ export class NotificationTokensHandler {
     const userId = context.user._id;
     NotificationToken.getInstance()
       .findOne({ userId, platform })
-      .then((oldToken: any) => {
+      .then(oldToken => {
         if (!isNil(oldToken)) return NotificationToken.getInstance().deleteOne(oldToken);
       })
       .catch((e: Error) => {

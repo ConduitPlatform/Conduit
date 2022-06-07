@@ -1,5 +1,5 @@
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
-import { SocketProtoDescription } from '../interfaces';
+import { Indexable, SocketProtoDescription } from '../interfaces';
 import path from 'path';
 import fs from 'fs';
 
@@ -56,7 +56,7 @@ message SocketResponse {
 }
 `;
 
-export function constructProtoFile(moduleName: string, paths: any[]) {
+export function constructProtoFile(moduleName: string, paths: SocketProtoDescription[]) {
   let formattedModuleName = getFormattedModuleName(moduleName);
   const protoFunctions = createProtoFunctions(paths);
   let protoFile = protofile_template
@@ -75,15 +75,19 @@ function getFormattedModuleName(moduleName: string) {
 
 export function wrapFunctionsAsync(functions: {
   [name: string]: RequestHandlers;
-}): { [name: string]: (call: any, callback?: any) => void } {
-  let modifiedFunctions: { [name: string]: (call: any, callback?: any) => void } = {};
+}): {
+  [name: string]: (call: Indexable, callback?: Indexable) => void;
+} {
+  let modifiedFunctions: {
+    [name: string]: (call: Indexable, callback?: Indexable) => void;
+  } = {};
   Object.keys(functions).forEach(key => {
     modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
   });
   return modifiedFunctions;
 }
 
-export function createProtoFunctions(paths: any[]) {
+export function createProtoFunctions(paths: SocketProtoDescription[]) {
   let protoFunctions = '';
 
   paths.forEach(r => {
@@ -116,7 +120,7 @@ function createProtoFunctionsForSocket(
   return newFunctions;
 }
 
-function createProtoFunctionForRoute(path: any, protoFunctions: string) {
+function createProtoFunctionForRoute(path: Indexable, protoFunctions: string) {
   const newFunction = createGrpcFunctionName(path.grpcFunction);
 
   if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {

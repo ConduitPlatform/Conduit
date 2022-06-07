@@ -1,8 +1,8 @@
 import {
   ConduitSchema,
   GrpcError,
-  GrpcResponse,
   GrpcRequest,
+  GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
@@ -28,14 +28,13 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { SchemaAdapter } from './interfaces';
+import { Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import { isEmpty } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule<void> {
   config = undefined;
@@ -85,7 +84,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
     await this._activeAdapter.retrieveForeignSchemas();
     this.updateHealth(HealthCheckStatus.SERVING);
-    const modelPromises = Object.values(models).flatMap((model: any) => {
+    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (model.name === '_DeclaredSchema') return [];
       return this._activeAdapter.createSchemaFromAdapter(model);
     });
@@ -192,7 +191,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
       .createSchemaFromAdapter(schema)
-      .then((schemaAdapter: SchemaAdapter<any>) => {
+      .then((schemaAdapter: Schema) => {
         const originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
@@ -298,7 +297,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       }
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
-        .then((schemaAdapter: SchemaAdapter<any>) => {
+        .then((schemaAdapter: Schema) => {
           const originalSchema = {
             name: schemaAdapter.originalSchema.name,
             modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),

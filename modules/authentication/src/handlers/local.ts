@@ -2,7 +2,8 @@ import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
+import { Config } from '../config';
+
 import ConduitGrpcSdk, {
   ConduitError,
   Email,
@@ -37,7 +38,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
   }
 
-  async declareRoutes(routingManager: RoutingManager, config: any): Promise<void> {
+  async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
     const fields = User.getInstance().fields;
     delete fields.hashedPassword;
     routingManager.route(
@@ -287,7 +288,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return { user };
   }
 
-  private async _authenticateChecks(password: string, config: any, user: User) {
+  private async _authenticateChecks(password: string, config: Config, user: User) {
     if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
     if (!user.hashedPassword)
       throw new GrpcError(

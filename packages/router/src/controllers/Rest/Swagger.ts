@@ -1,7 +1,7 @@
 import { ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
-import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
 
 export type SwaggerRouterMetadata = {
   readonly urlPrefix: string;
@@ -13,11 +13,11 @@ export type SwaggerRouterMetadata = {
   readonly globalSecurityHeaders: {
     [field: string]: [];
   }[];
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void;
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void;
 };
 
 export class SwaggerGenerator {
-  private readonly _swaggerDoc: any;
+  private readonly _swaggerDoc: Indexable;
   private readonly _routerMetadata: SwaggerRouterMetadata;
   private readonly _stringifiedGlobalSecurityHeaders: string;
   private _parser: SwaggerParser;
@@ -58,7 +58,7 @@ export class SwaggerGenerator {
     if (serviceName.trim() === '') {
       serviceName = 'core';
     }
-    const routeDoc: any = {
+    const routeDoc: Indexable = {
       summary: route.input.name,
       description: route.input.description,
       tags: [serviceName],
@@ -75,7 +75,10 @@ export class SwaggerGenerator {
       security: JSON.parse(this._stringifiedGlobalSecurityHeaders),
     };
 
-    if (!isNil(route.input.urlParams) && (route.input.urlParams as any) !== '') {
+    if (
+      !isNil(route.input.urlParams) &&
+      ((route.input.urlParams as unknown) as string) !== ''
+    ) {
       for (const name in route.input.urlParams) {
         let type = '';
         if (typeof route.input.urlParams[name] === 'object') {
@@ -108,7 +111,10 @@ export class SwaggerGenerator {
       }
     }
 
-    if (!isNil(route.input.queryParams) && (route.input.queryParams as any) !== '') {
+    if (
+      !isNil(route.input.queryParams) &&
+      ((route.input.queryParams as unknown) as string) !== ''
+    ) {
       for (const name in route.input.queryParams) {
         let type = '';
         if (typeof route.input.queryParams[name] === 'object') {
@@ -140,7 +146,10 @@ export class SwaggerGenerator {
       }
     }
 
-    if (!isNil(route.input.bodyParams) && (route.input.bodyParams as any) !== '') {
+    if (
+      !isNil(route.input.bodyParams) &&
+      ((route.input.bodyParams as unknown) as string) !== ''
+    ) {
       routeDoc['requestBody'] = {
         description: route.input.description,
         content: {

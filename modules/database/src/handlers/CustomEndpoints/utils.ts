@@ -1,10 +1,12 @@
 import moment from 'moment';
 import { isNil } from 'lodash';
+import { Indexable } from '@conduitplatform/grpc-sdk';
+import { CustomEndpointsQuery } from '../../interfaces/CustomEndpointsQuery';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
 export function constructQuery(
-  endpointQuery: any,
+  endpointQuery: Indexable,
   inputs: {
     name: string;
     type: string;
@@ -12,10 +14,10 @@ export function constructQuery(
     optional?: boolean;
     array?: boolean;
   }[],
-  params: any,
-  context: any,
+  params: Indexable,
+  context: Indexable,
 ) {
-  let res: any = {};
+  let res: Indexable = {};
   let resTopLevel: string;
   let endpointTopLevel: string;
 
@@ -30,7 +32,7 @@ export function constructQuery(
   }
 
   res[resTopLevel] = [];
-  endpointQuery[endpointTopLevel].forEach((query: any) => {
+  endpointQuery[endpointTopLevel].forEach((query: CustomEndpointsQuery) => {
     if (query.hasOwnProperty('schemaField')) {
       const r = _constructQuery(query, inputs, params, context);
       if (!isNil(r)) {
@@ -65,8 +67,8 @@ function _constructQuery(
     optional?: boolean;
     array?: boolean;
   }[],
-  params: any,
-  context: any,
+  params: Indexable,
+  context: Indexable,
 ) {
   if (query.comparisonField.type === 'Input') {
     if (isNil(params[query.comparisonField.value])) {
@@ -164,7 +166,7 @@ function _translateQuery(
 export function constructAssignment(
   schemaField: string,
   action: number,
-  assignmentValue: any,
+  assignmentValue: string,
 ) {
   //   SET: 0,
   //   INCREMENT: 1,

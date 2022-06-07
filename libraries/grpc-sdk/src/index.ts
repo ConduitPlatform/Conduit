@@ -25,7 +25,10 @@ import {
   HealthDefinition,
   HealthCheckResponse_ServingStatus,
 } from './protoUtils/grpc_health_check';
-import { ModuleListResponse_ModuleResponse } from './protoUtils/core';
+import {
+  GetRedisDetailsResponse,
+  ModuleListResponse_ModuleResponse,
+} from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 
@@ -83,7 +86,7 @@ export default class ConduitGrpcSdk {
     if (this.name === 'core') {
       this._initialize();
     } else {
-      (this._core as any) = new Core(this.name, this.serverUrl, this._grpcToken);
+      (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
       console.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
@@ -111,14 +114,14 @@ export default class ConduitGrpcSdk {
   private _initialize() {
     if (this._initialized)
       throw new Error("Module's grpc-sdk has already been initialized");
-    (this._config as any) = new Config(
+    (this._config as unknown) = new Config(
       this.name,
       this.serverUrl,
       this._serviceHealthStatusGetter,
       this._grpcToken,
     );
-    (this._admin as any) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    (this._router as any) = new Router(this.name, this.serverUrl, this._grpcToken);
+    (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
+    (this._router as unknown) = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
     if (this._watchModules) {
       this.watchModules();
@@ -284,16 +287,16 @@ export default class ConduitGrpcSdk {
     emitter.removeAllListeners(`module-connection-update:${moduleName}`);
   }
 
-  initializeEventBus(): Promise<any> {
+  initializeEventBus(): Promise<EventBus> {
     return this.config
       .getRedisDetails()
-      .then((r: any) => {
+      .then((r: GetRedisDetailsResponse) => {
         let redisManager = new RedisManager(r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;
       })
-      .catch((err: any) => {
+      .catch((err: Error) => {
         console.error('Failed to initialize event bus');
         throw err;
       });

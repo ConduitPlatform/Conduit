@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   ConduitJson,
   ConduitNumber,
   ConduitRouteActions,
+  ConduitRouteObject,
   ConduitRouteReturnDefinition,
   ConduitString,
   constructConduitRoute,
@@ -104,7 +105,7 @@ export class AdminHandlers {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       // Schemas
       constructConduitRoute(

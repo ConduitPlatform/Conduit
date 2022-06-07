@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import { ChatMessage, ChatRoom } from '../models';
 import { isArray, isNil } from 'lodash';
@@ -74,7 +75,7 @@ export class ChatRoutes {
       throw new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
     }
     let room;
-    let query: any = { name: roomName, participants: [user._id] };
+    let query: Query = { name: roomName, participants: [user._id] };
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()
@@ -220,7 +221,7 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      const query = { room: { $in: rooms.map((room: any) => room._id) } };
+      const query = { room: { $in: rooms.map((room: ChatRoom) => room._id) } };
       messagesPromise = ChatMessage.getInstance().findMany(
         query,
         undefined,
@@ -368,7 +369,7 @@ export class ChatRoutes {
   async connect(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance().findMany({ participants: user._id });
-    return { rooms: rooms.map((room: any) => room._id) };
+    return { rooms: rooms.map((room: ChatRoom) => room._id) };
   }
 
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {

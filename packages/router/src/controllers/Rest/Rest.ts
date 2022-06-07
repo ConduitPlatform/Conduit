@@ -175,7 +175,7 @@ export class RestController extends ConduitRouter {
               };
             }
             if (r.setCookies && r.setCookies.length) {
-              r.setCookies.forEach((cookie: any) => {
+              r.setCookies.forEach((cookie: Cookie) => {
                 if (cookie.options.path === '') delete cookie.options.path;
                 res.cookie(cookie.name, cookie.value, cookie.options);
               });

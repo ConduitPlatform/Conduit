@@ -1,40 +1,58 @@
-import { ConduitRouteActions, RouteBuilder, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitModelField,
+  ConduitModelOptions,
+  ConduitRouteActions,
+  ConduitSchema,
+  Indexable,
+  RouteBuilder,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { CmsHandlers } from '../../handlers/cms.handler';
+import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
 
-export function compareFunction(schemaA: any, schemaB: any): number {
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+};
+
+export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   let hasA = [];
   let hasB = [];
-  for (const k in schemaA.fields) {
-    if (schemaA.fields[k].model) {
-      hasA.push(schemaA.fields[k].model);
+  const fieldsA = schemaA.fields as ConduitModel;
+  const fieldsB = schemaB.fields as ConduitModel;
+  for (const k in fieldsA) {
+    if ((fieldsA[k] as ConduitModelField).model) {
+      hasA.push((fieldsA[k] as ConduitModelField).model);
     }
   }
-  for (const k in schemaB.fields) {
-    if (schemaB.fields[k].model) {
-      hasB.push(schemaB.fields[k].model);
+  for (const k in fieldsB) {
+    if ((fieldsB[k] as ConduitModelField).model) {
+      hasB.push((fieldsB[k] as ConduitModelField).model);
     }
   }
+  const schemaAName = ((schemaA as unknown) as ConduitSchema).name;
+  const schemaBName = ((schemaB as unknown) as ConduitSchema).name;
 
   if (hasA.length === 0 && hasB.length === 0) {
     return 0;
   } else if (hasA.length === 0 && hasB.length !== 0) {
-    if (hasB.indexOf(schemaA.name)) {
+    if (hasB.indexOf(schemaAName)) {
       return -1;
     } else {
       return 1;
     }
   } else if (hasA.length !== 0 && hasB.length === 0) {
-    if (hasA.indexOf(schemaB.name)) {
+    if (hasA.indexOf(schemaBName)) {
       return -1;
     } else {
       return 1;
     }
   } else {
-    if (hasA.indexOf(schemaB.name) && hasB.indexOf(schemaA.name)) {
+    if (hasA.indexOf(schemaBName) && hasB.indexOf(schemaAName)) {
       return 1;
-    } else if (hasA.indexOf(schemaB.name)) {
+    } else if (hasA.indexOf(schemaBName)) {
       return -1;
-    } else if (hasB.indexOf(schemaA.name)) {
+    } else if (hasB.indexOf(schemaAName)) {
       return 1;
     } else {
       return 1;
@@ -42,27 +60,33 @@ export function compareFunction(schemaA: any, schemaB: any): number {
   }
 }
 
-function removeRequiredFields(fields: any) {
+function removeRequiredFields(fields: ConduitModel) {
   for (let field in fields) {
-    if (fields[field].required === true) {
-      fields[field].required = false;
+    const modelField = fields[field] as ConduitModelField;
+    if (modelField.required === true) {
+      modelField.required = false;
     }
-    if (Array.isArray(fields[field].type)) {
-      if (typeof fields[field].type[0] === 'object') {
-        fields[field].type[0] = removeRequiredFields(fields[field].type[0]);
+    if (Array.isArray(modelField.type)) {
+      if (typeof modelField.type[0] === 'object') {
+        modelField.type[0] = removeRequiredFields(modelField.type[0]);
       }
-    } else if (typeof fields[field].type === 'object') {
-      fields[field].type = removeRequiredFields(fields[field].type);
+    } else if (typeof modelField.type === 'object') {
+      modelField.type = removeRequiredFields(modelField.type as ConduitModel);
     }
   }
   return fields;
 }
 
-export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandlers) {
-  let routesArray: any = [];
-  const authenticatedRead =
-    actualSchema.modelOptions.conduit.cms.crudOperations.read.authenticated;
-  const readIsEnabled = actualSchema.modelOptions.conduit.cms.crudOperations.read.enabled;
+export function getOps(
+  schemaName: string,
+  actualSchema: _ConduitSchema,
+  handlers: CmsHandlers,
+) {
+  let routesArray: ConduitBuiltRoute[] = [];
+  const authenticatedRead = actualSchema.modelOptions.conduit!.cms.crudOperations.read
+    .authenticated;
+  const readIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.read
+    .enabled;
   if (readIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
@@ -92,10 +116,10 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     if (authenticatedRead) route.middleware('authMiddleware');
     routesArray.push(route.build());
   }
-  const authenticatedCreate =
-    actualSchema.modelOptions.conduit.cms.crudOperations.create.authenticated;
-  const createIsEnabled =
-    actualSchema.modelOptions.conduit.cms.crudOperations.create.enabled;
+  const authenticatedCreate = actualSchema.modelOptions.conduit!.cms.crudOperations.create
+    .authenticated;
+  const createIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.create
+    .enabled;
 
   let assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
@@ -125,10 +149,10 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
     routesArray.push(route.build());
   }
 
-  const authenticatedUpdate =
-    actualSchema.modelOptions.conduit.cms.crudOperations.update.authenticated;
-  const updateIsEnabled =
-    actualSchema.modelOptions.conduit.cms.crudOperations.update.enabled;
+  const authenticatedUpdate = actualSchema.modelOptions.conduit!.cms.crudOperations.update
+    .authenticated;
+  const updateIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.update
+    .enabled;
   if (updateIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/many`)
@@ -187,17 +211,21 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
       .urlParams({
         id: { type: TYPE.String, required: true },
       })
-      .bodyParams(removeRequiredFields(Object.assign({}, assignableFields)))
+      .bodyParams(
+        (removeRequiredFields(
+          Object.assign({}, assignableFields),
+        ) as unknown) as ConduitModel,
+      )
       .return(`patch${schemaName}`, actualSchema.fields)
       .handler(handlers.patchDocument.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
     routesArray.push(route.build());
   }
-  const authenticatedDelete =
-    actualSchema.modelOptions.conduit.cms.crudOperations.delete.authenticated;
-  const deleteIsEnabled =
-    actualSchema.modelOptions.conduit.cms.crudOperations.delete.enabled;
+  const authenticatedDelete = actualSchema.modelOptions.conduit!.cms.crudOperations.delete
+    .authenticated;
+  const deleteIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.delete
+    .enabled;
   if (deleteIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
@@ -214,11 +242,8 @@ export function getOps(schemaName: string, actualSchema: any, handlers: CmsHandl
   return routesArray;
 }
 
-export function sortAndConstructRoutes(
-  schemas: { [name: string]: any },
-  handlers: CmsHandlers,
-): any[] {
-  let routesArray: any[] = [];
+export function sortAndConstructRoutes(schemas: Indexable, handlers: CmsHandlers) {
+  let routesArray: ConduitBuiltRoute[] = [];
   let schemaSort = [];
   for (const k in schemas) {
     schemaSort.push(k);

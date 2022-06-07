@@ -2,15 +2,17 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
+import { Sort } from '../../interfaces/Sort';
 
 export class CustomEndpointHandler {
-  private static routeControllers: { [name: string]: any } = {};
+  private static routeControllers: Indexable = {};
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
@@ -23,7 +25,7 @@ export class CustomEndpointHandler {
     const path = call.request.path.split('/')[3];
     const endpoint: ICustomEndpoint = CustomEndpointHandler.routeControllers[path];
     const params = call.request.params;
-    let searchQuery: any = {};
+    let searchQuery: Indexable = {};
     let createString = '';
 
     if (endpoint.operation !== OperationsEnum.POST) {
@@ -76,7 +78,7 @@ export class CustomEndpointHandler {
                 `Field ${r.assignmentField.value} is missing from context`,
               );
             }
-            let context: any = call.request.context;
+            let context = call.request.context;
             for (const key of r.assignmentField.value.split('.')) {
               if (context.hasOwnProperty(key)) {
                 context = context[key];
@@ -103,16 +105,16 @@ export class CustomEndpointHandler {
       );
     }
 
-    let sortObj: any = null;
+    let sortObj: Sort | null = null;
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
       const sort = params.sort;
       sortObj = {};
       sort.forEach((sortVal: string) => {
         sortVal = sortVal.trim();
         if (sortVal.indexOf('-') !== -1) {
-          sortObj[sortVal.substr(1)] = -1;
+          (sortObj as Indexable)[sortVal.substr(1)] = -1;
         } else {
-          sortObj[sortVal] = 1;
+          (sortObj as Indexable)[sortVal] = 1;
         }
       });
     }
@@ -127,7 +129,7 @@ export class CustomEndpointHandler {
           undefined,
           params['skip'],
           params['limit'],
-          sortObj,
+          sortObj as Sort,
           params['populate'],
         );
         const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
@@ -142,7 +144,7 @@ export class CustomEndpointHandler {
           undefined,
           undefined,
           undefined,
-          sortObj,
+          sortObj as Sort,
           params['populate'],
         );
       }
@@ -193,10 +195,10 @@ export class CustomEndpointHandler {
       });
   }
 
-  private parseCreateQuery(query: string): any {
+  private parseCreateQuery(query: string) {
     // add brackets to each field
     const arr = query.split(',').map(val => `{${val}}`);
-    const res: any = {};
+    const res: Indexable = {};
     for (const el of arr) {
       const tmp = JSON.parse(el);
       const key = Object.keys(tmp)[0];

@@ -5,6 +5,8 @@ import { GrpcServer } from '../../classes';
 import { AdminDefinition } from '../../protoUtils/core';
 import { wrapRouterGrpcFunction } from '../../helpers';
 import { sleep } from '../../utilities';
+import { Indexable } from '../../interfaces';
+import { ParsedRouterRequest } from '../../types';
 
 let protofile_template = `
 syntax = "proto3";
@@ -36,8 +38,10 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
 
   async registerAdminAsync(
     server: GrpcServer,
-    paths: any[],
-    functions: { [name: string]: (call: any, callback?: any) => Promise<any> },
+    paths: Indexable[],
+    functions: {
+      [name: string]: (call: ParsedRouterRequest, callback?: Indexable) => Promise<any>;
+    },
   ): Promise<any> {
     let modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach(key => {
@@ -71,7 +75,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     return sleep(3000).then(() => this.register(paths, protoFile));
   }
 
-  register(paths: any[], protoFile?: string, serverUrl?: string): Promise<any> {
+  register(paths: Indexable[], protoFile?: string, serverUrl?: string): Promise<any> {
     let protoFunctions = '';
     paths.forEach(r => {
       if (!protoFile) {

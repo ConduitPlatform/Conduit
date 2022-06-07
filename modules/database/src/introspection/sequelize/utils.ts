@@ -1,11 +1,11 @@
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { Sequelize } from 'sequelize';
 
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
  */
-export function sqlSchemaConverter(sqlSchema: any) {
+export function sqlSchemaConverter(sqlSchema: Indexable) {
   for (const fieldName of Object.keys(sqlSchema)) {
     let field = sqlSchema[fieldName];
     field.type = extractType(field.type);
@@ -47,7 +47,7 @@ function extractType(type: string) {
   }
 }
 
-function extractProperties(field: any) {
+function extractProperties(field: Indexable) {
   if (field.hasOwnProperty('enum')) {
     field.enum = field.special;
     delete field.special;

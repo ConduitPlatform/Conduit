@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   GrpcServer,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
@@ -15,6 +16,7 @@ import {
   IConduitAdmin,
   grpcToConduitRoute,
   RegisterAdminRouteRequest,
+  RouteT,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -48,7 +50,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
       masterKey: [],
     },
   ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     if (route.input.path !== '/login' && route.input.path !== '/modules') {
       swaggerRouteDoc.security[0].adminToken = [];
     }
@@ -168,7 +170,7 @@ export default class AdminModule extends IConduitAdmin {
     }
     const state = JSON.parse(r);
     if (state.routes) {
-      state.routes.forEach((r: any) => {
+      state.routes.forEach((r: Indexable) => {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
@@ -202,11 +204,11 @@ export default class AdminModule extends IConduitAdmin {
     this.commons
       .getState()
       .getKey('admin')
-      .then((r: any) => {
+      .then(r => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
-        (state.routes as any[]).forEach((val, i) => {
+        (state.routes as Indexable[]).forEach((val, i) => {
           if (val.url === url) {
             index = i;
           }
@@ -254,7 +256,7 @@ export default class AdminModule extends IConduitAdmin {
     await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
-      .then(async (existing: any) => {
+      .then(async existing => {
         if (isNil(existing)) {
           const adminConfig = await this.commons.getConfigManager().get('admin');
           const hashRounds = adminConfig.auth.hashRounds;
@@ -282,12 +284,12 @@ export default class AdminModule extends IConduitAdmin {
     const processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware
-      | ConduitSocket // can go
-    )[] = grpcToConduitRoute(
+      | ConduitSocket
+    )[] = grpcToConduitRoute( // can go
       'Admin',
       {
         protoFile: protofile,
-        routes: routes,
+        routes: routes as RouteT[],
         routerUrl: url,
       },
       moduleName,
@@ -335,7 +337,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private registerSchemas() {
-    const promises = Object.values(models).map((model: any) => {
+    const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });

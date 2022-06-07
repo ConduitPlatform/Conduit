@@ -10,6 +10,8 @@ import ConduitGrpcSdk, {
   ConduitString,
   ConduitNumber,
   ConduitBoolean,
+  ConduitRouteObject,
+  Query,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -49,7 +51,7 @@ export class AdminRoutes {
       });
   }
 
-  private getRegisteredRoutes(): any[] {
+  private getRegisteredRoutes(): ConduitRouteObject[] {
     return [
       constructConduitRoute(
         {
@@ -250,7 +252,7 @@ export class AdminRoutes {
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip, limit, folder, search } = call.request.params;
-    const query: { container: string; folder?: string; name?: any } = {
+    const query: Query = {
       container: call.request.params.container,
     };
 
@@ -269,7 +271,7 @@ export class AdminRoutes {
   }
 
   async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let query: { container: string; name?: any } = {
+    let query: Query = {
       container: call.request.params.container,
     };
     if (!isNil(call.request.params.parent)) {

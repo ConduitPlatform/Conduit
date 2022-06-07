@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import _, { isArray, isObject, isString } from 'lodash';
-import { ConduitModel } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
 import { isBoolean } from 'lodash';
@@ -57,18 +57,18 @@ function matchOperation(operator: string, value: any) {
 }
 
 export function parseQuery(query: ParsedQuery) {
-  let parsed: any = isArray(query) ? [] : {};
+  let parsed: Indexable = isArray(query) ? [] : {};
   if (isString(query) || isBoolean(query)) return query;
   for (let key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
-        [Op.or]: query[key].map((operation: any) => {
+        [Op.or]: query[key].map((operation: ParsedQuery) => {
           return parseQuery(operation);
         }),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
-        [Op.and]: query[key].map((operation: any) => {
+        [Op.and]: query[key].map((operation: ParsedQuery) => {
           return parseQuery(operation);
         }),
       });
@@ -92,7 +92,7 @@ export function parseQuery(query: ParsedQuery) {
 /**
  * @throws {Error}
  */
-async function _createOrUpdate(obj: any, model: SequelizeSchema) {
+async function _createOrUpdate(obj: Indexable, model: SequelizeSchema) {
   if (obj.hasOwnProperty('_id')) {
     const _id = obj._id;
     delete obj._id;
@@ -126,7 +126,7 @@ async function _createWithPopulations(
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
-        let val: any = document[key][i];
+        let val = document[key][i];
         if (!isObject(val)) {
           continue;
         }
