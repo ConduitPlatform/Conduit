@@ -75,7 +75,9 @@ function getFormattedModuleName(moduleName: string) {
 
 export function wrapFunctionsAsync(functions: {
   [name: string]: RequestHandlers;
-}): { [name: string]: (call: Indexable, callback?: Indexable) => void } {
+}): {
+  [name: string]: (call: Indexable, callback?: Indexable) => void;
+} {
   let modifiedFunctions: {
     [name: string]: (call: Indexable, callback?: Indexable) => void;
   } = {};

@@ -60,4 +60,3 @@ export class NotificationToken extends ConduitActiveSchema<NotificationToken> {
     return NotificationToken._instance;
   }
 }
-

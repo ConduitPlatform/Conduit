@@ -52,10 +52,10 @@ export interface ConduitRouteOptions {
 }
 
 export interface ConduitRouteObject {
-  options: ConduitRouteOptions,
+  options: ConduitRouteOptions;
   returns: {
-    name: string,
-    fields: string
-  },
-  grpcFunction: string,
+    name: string;
+    fields: string;
+  };
+  grpcFunction: string;
 }
