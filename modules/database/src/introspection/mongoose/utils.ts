@@ -36,5 +36,9 @@ function extractType(field: Indexable) {
   if (conduitField.type === 'Document') {
     conduitField.type = TYPE.JSON; //workaround for Document types
   }
+  if (conduitField.type === 'ObjectID') {
+    conduitField.type = TYPE.ObjectId; // fix casing for ObjectID
+  }
+
   return conduitField;
 }

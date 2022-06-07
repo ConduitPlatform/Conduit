@@ -459,7 +459,7 @@ export class SchemaAdmin {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    return await this.database.getSchema(requestedSchema.name);
+    return this.database.getSchema(requestedSchema.name);
   }
 
   async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -589,7 +589,40 @@ export class SchemaAdmin {
         );
         if (isNil(recreatedSchema.fields)) return null;
         recreatedSchema.ownerModule = 'database';
-        recreatedSchema.schemaOptions.conduit!.imported = true;
+        const defaultCrudOperations = {
+          create: { enabled: false, authenticated: false },
+          read: { enabled: false, authenticated: false },
+          update: { enabled: false, authenticated: false },
+          delete: { enabled: false, authenticated: false },
+        };
+        const defaultPermissions = {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing',
+          canDelete: false,
+        };
+        recreatedSchema.schemaOptions.conduit = merge(
+          recreatedSchema.schemaOptions.conduit,
+          {
+            imported: true,
+            noSync: true,
+            cms: {
+              enabled: recreatedSchema.schemaOptions.conduit?.cms?.enabled ?? true,
+              crudOperations: recreatedSchema.schemaOptions.conduit?.cms?.crudOperations
+                ? merge(
+                    defaultCrudOperations,
+                    recreatedSchema.schemaOptions.conduit.cms.crudOperations,
+                  )
+                : defaultCrudOperations,
+            },
+            permissions: recreatedSchema.schemaOptions.conduit?.permissions
+              ? merge(
+                  defaultPermissions,
+                  recreatedSchema.schemaOptions.conduit.permissions,
+                )
+              : defaultPermissions,
+          },
+        );
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
       }),
     );
