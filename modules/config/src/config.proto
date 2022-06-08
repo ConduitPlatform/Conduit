@@ -1,0 +1,86 @@
+syntax = "proto3";
+package conduit.config;
+
+service Config {
+  rpc Get (GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
+  rpc AddFieldsToConfig(UpdateRequest) returns (UpdateResponse);
+  rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+  rpc ModuleList (Empty) returns (ModuleListResponse);
+  rpc WatchModules (Empty) returns (stream ModuleListResponse);
+  rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+  rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
+  rpc GetServerConfig (Empty) returns (GetConfigResponse);
+  rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
+  rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
+}
+
+
+message Empty {
+}
+
+message ModuleHealthRequest {
+  string moduleName = 1;
+  string url = 2;
+  int32 status = 3; // [0, 1, 2]
+}
+
+message ModuleByNameRequest {
+  string name = 1;
+}
+
+message ModuleByNameResponse {
+  string moduleUrl = 1;
+}
+
+message RegisterModuleRequest {
+  string moduleName = 1;
+  string url = 2;
+  int32 healthStatus = 3; // [0, 1, 2]
+}
+
+message RegisterModuleResponse {
+  bool result = 1;
+}
+
+message ModuleListResponse {
+  repeated ModuleResponse modules = 1;
+  message ModuleResponse {
+    string moduleName = 1;
+    string url = 2;
+    bool serving = 3;
+  }
+}
+
+message ModuleExistsRequest {
+  string moduleName = 1;
+}
+
+message ModuleExistsResponse {
+  string url = 1;
+}
+
+message GetConfigRequest {
+  string key = 1;
+}
+
+message GetRedisDetailsResponse {
+  string redisHost = 1;
+  int32 redisPort = 2;
+}
+
+message GetConfigResponse {
+  string data = 1;
+}
+message UpdateRequest {
+  string config = 1;
+  string moduleName = 2;
+}
+message UpdateResponse {
+  string result = 1;
+}
+
+message RegisterModulesConfigRequest {
+  string moduleName = 1;
+  string newModulesConfigSchema = 2;
+}
