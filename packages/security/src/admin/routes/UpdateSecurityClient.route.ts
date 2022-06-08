@@ -43,7 +43,7 @@ export function getUpdateSecurityClientRoute() {
         _id: params.params!.id,
       });
       if (isNil(client)) {
-        throw new ConduitError('INVALID_PARAMS', 400, 'Client id not found');
+        throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
       }
       if (platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
