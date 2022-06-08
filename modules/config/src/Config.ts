@@ -7,23 +7,21 @@ import ConduitGrpcSdk, {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import {
-  ConduitCommons,
-  GetConfigResponse,
-  GetRedisDetailsResponse,
-  IConfigManager,
-  ModuleListResponse,
-  RegisteredModule,
-  UpdateRequest,
-  UpdateResponse,
-} from '@conduitplatform/commons';
 import { EventEmitter } from 'events';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import path from 'path';
+import {
+  GetConfigResponse,
+  GetRedisDetailsResponse,
+  ModuleListResponse,
+  UpdateRequest,
+  UpdateResponse,
+} from './protoTypes/config';
+import { RegisteredModule } from './interfaces/RegisteredModule';
 
-export default class ConfigManager implements IConfigManager {
+export default class ConfigManager {
   databaseCallback: () => Promise<void>;
   registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
   moduleHealth: {
@@ -36,11 +34,7 @@ export default class ConfigManager implements IConfigManager {
   private configDocId: string | null = null;
   private servingStatusUpdate: boolean = false;
 
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    private readonly sdk: ConduitCommons,
-    databaseCallback: () => Promise<void>,
-  ) {
+  constructor(grpcSdk: ConduitGrpcSdk, databaseCallback: () => Promise<void>) {
     this.grpcSdk = grpcSdk;
     this.databaseCallback = databaseCallback;
     this.moduleRegister = new EventEmitter();
@@ -77,7 +71,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async highAvailability() {
-    const loadedState = await this.sdk.getState().getKey('config');
+    const loadedState = await this.grpcSdk.state!.getKey('config');
     try {
       if (!loadedState || loadedState.length === 0) return;
       let state = JSON.parse(loadedState);
@@ -111,9 +105,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   setState(state: any) {
-    this.sdk
-      .getState()
-      .setKey('config', JSON.stringify(state))
+    this.grpcSdk
+      .state!.setKey('config', JSON.stringify(state))
       .then(() => {
         console.log('Updated state');
       })
@@ -123,9 +116,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   updateState(name: string, url: string, instance: string) {
-    this.sdk
-      .getState()
-      .getKey('config')
+    this.grpcSdk
+      .state!.getKey('config')
       .then(r => {
         let state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
@@ -139,7 +131,7 @@ export default class ConfigManager implements IConfigManager {
           instance,
           url,
         });
-        return this.sdk.getState().setKey('config', JSON.stringify(state));
+        return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
       })
       .then(() => {
         console.log('Updated state');
@@ -150,7 +142,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   publishModuleData(type: string, name: string, instance: string, url?: string) {
-    this.sdk.getBus().publish(
+    this.grpcSdk.bus!.publish(
       'config',
       JSON.stringify({
         type,
