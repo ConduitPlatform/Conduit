@@ -21,6 +21,8 @@ export function getCreateSecurityClientRoute() {
       bodyParams: {
         platform: ConduitString.Required,
         domain: ConduitString.Optional,
+        alias: ConduitString.Optional,
+        notes: ConduitString.Optional,
       },
     },
     new ConduitRouteReturnDefinition('CreateSecurityClient', {
@@ -29,9 +31,11 @@ export function getCreateSecurityClientRoute() {
       clientSecret: ConduitString.Required,
       platform: ConduitString.Required,
       domain: ConduitString.Optional,
+      alias: ConduitString.Optional,
+      notes: ConduitString.Optional,
     }),
     async (params: ConduitRouteParameters) => {
-      const { platform, domain } = params.params!;
+      const { platform, domain, alias, notes } = params.params!;
       if (!Object.values(PlatformTypesEnum).includes(platform)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
       }
@@ -67,8 +71,20 @@ export function getCreateSecurityClientRoute() {
         clientSecret: hash,
         platform,
         domain,
+        alias,
+        notes,
       });
-      return { result: { id: client._id, clientId, clientSecret, platform, domain } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return {
+        result: {
+          id: client._id,
+          clientId,
+          clientSecret,
+          platform,
+          domain,
+          alias,
+          notes,
+        },
+      }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );
 }
