@@ -48,7 +48,7 @@ jobs:
         with:
           version: '3.17.3'
       - name: actually_publish
-        run: npm install && npm version ${{ env.RELEASE_VERSION }} && npm publish --access public
+        run: npm install --workspaces=false && npm version ${{ env.RELEASE_VERSION }} --workspaces=false && npm publish --access public --workspaces=false
         working-directory: ./libraries/grpc-sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
