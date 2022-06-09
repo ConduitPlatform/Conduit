@@ -1,48 +1,49 @@
 import {
-  PlatformTypesEnum,
   ConduitRoute,
   ConduitRouteReturnDefinition,
+  PlatformTypesEnum,
 } from '@conduitplatform/commons';
-import { Client } from '../../models';
-import { randomBytes } from 'crypto';
-import * as bcrypt from 'bcrypt';
 import {
+  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
-  ConduitError,
+  RouteOptionType,
 } from '@conduitplatform/grpc-sdk';
+import { Client } from '../../models';
+import { isNil } from 'lodash';
 
-export function getCreateSecurityClientRoute() {
+export function getUpdateSecurityClientRoute() {
   return new ConduitRoute(
     {
-      path: '/security/client',
-      action: ConduitRouteActions.POST,
+      path: '/security/client/:id',
+      urlParams: {
+        id: ConduitString.Required,
+      },
+      action: ConduitRouteActions.UPDATE,
       bodyParams: {
-        platform: ConduitString.Required,
         domain: ConduitString.Optional,
         alias: ConduitString.Optional,
         notes: ConduitString.Optional,
       },
     },
-    new ConduitRouteReturnDefinition('CreateSecurityClient', {
+    new ConduitRouteReturnDefinition('UpdateSecurityClient', {
       id: ConduitString.Required,
       clientId: ConduitString.Required,
-      clientSecret: ConduitString.Required,
-      platform: ConduitString.Required,
+      platform: ConduitString.Optional,
       domain: ConduitString.Optional,
       alias: ConduitString.Optional,
       notes: ConduitString.Optional,
     }),
     async (params: ConduitRouteParameters) => {
-      const { platform, domain, alias, notes } = params.params!;
-      if (!Object.values(PlatformTypesEnum).includes(platform)) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
+      const { domain, alias, notes } = params.params!;
+      let client = await Client.getInstance().findOne({
+        _id: params.params!.id,
+      });
+      if (isNil(client)) {
+        throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
       }
-      let clientId = randomBytes(15).toString('hex');
-      let clientSecret = randomBytes(64).toString('hex');
-      let hash = await bcrypt.hash(clientSecret, 10);
-      if (platform === PlatformTypesEnum.WEB) {
+      if (client.platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
           throw new ConduitError(
             'INVALID_ARGUMENTS',
@@ -66,25 +67,21 @@ export function getCreateSecurityClientRoute() {
         if (!domainPattern.test(comparedDomain) && domain !== '*')
           throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
       }
-      let client = await Client.getInstance().create({
-        clientId,
-        clientSecret: hash,
-        platform,
-        domain,
+
+      client = await Client.getInstance().findByIdAndUpdate(client._id, {
+        domain: client.platform === PlatformTypesEnum.WEB ? domain : undefined,
         alias,
         notes,
       });
       return {
         result: {
-          id: client._id,
-          clientId,
-          clientSecret,
-          platform,
-          domain,
+          id: client!._id,
+          clientId: client!.clientId,
+          domain: client!.platform === PlatformTypesEnum.WEB ? domain : undefined,
           alias,
           notes,
         },
-      }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      };
     },
   );
 }

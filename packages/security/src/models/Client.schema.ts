@@ -13,6 +13,14 @@ const schema = {
     required: true,
     select: false,
   },
+  alias: {
+    type: TYPE.String,
+    required: false,
+  },
+  notes: {
+    type: TYPE.String,
+    required: false,
+  },
   domain: {
     type: TYPE.String,
     required: false,
