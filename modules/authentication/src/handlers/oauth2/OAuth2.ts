@@ -246,7 +246,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         path: `/init/${this.providerName}`,
         description: `Begins ${this.capitalizeProvider()} authentication.`,
         action: ConduitRouteActions.GET,
-        bodyParams: {
+        queryParams: {
           scopes: [ConduitString.Optional],
         },
       },
@@ -262,7 +262,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         path: `/hook/${this.providerName}`,
         action: ConduitRouteActions.GET,
         description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
-        urlParams: {
+        queryParams: {
           code: ConduitString.Required,
           state: [ConduitString.Required],
         },
