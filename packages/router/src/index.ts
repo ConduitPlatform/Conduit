@@ -305,8 +305,6 @@ export class ConduitDefaultRouter extends IConduitRouter {
   private registerAdminRoutes() {
     this.commons.getAdmin().registerRoute(adminRoutes.getRoutes(this));
     this.commons.getAdmin().registerRoute(adminRoutes.getMiddlewares(this));
-    this.commons.getAdmin().registerRoute(adminRoutes.generateRestClient());
-    this.commons.getAdmin().registerRoute(adminRoutes.generateGraphQlClient());
   }
 
   setConfig(moduleConfig: any) {
