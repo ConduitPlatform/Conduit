@@ -22,7 +22,6 @@ export function getUpdateSecurityClientRoute() {
       },
       action: ConduitRouteActions.UPDATE,
       bodyParams: {
-        platform: ConduitString.Optional,
         domain: ConduitString.Optional,
         alias: ConduitString.Optional,
         notes: ConduitString.Optional,
@@ -31,21 +30,20 @@ export function getUpdateSecurityClientRoute() {
     new ConduitRouteReturnDefinition('UpdateSecurityClient', {
       id: ConduitString.Required,
       clientId: ConduitString.Required,
-      clientSecret: ConduitString.Required,
       platform: ConduitString.Optional,
       domain: ConduitString.Optional,
       alias: ConduitString.Optional,
       notes: ConduitString.Optional,
     }),
     async (params: ConduitRouteParameters) => {
-      const { platform, domain, alias, notes } = params.params!;
+      const { domain, alias, notes } = params.params!;
       let client = await Client.getInstance().findOne({
         _id: params.params!.id,
       });
       if (isNil(client)) {
         throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
       }
-      if (platform === PlatformTypesEnum.WEB) {
+      if (client.platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
           throw new ConduitError(
             'INVALID_ARGUMENTS',
@@ -71,8 +69,7 @@ export function getUpdateSecurityClientRoute() {
       }
 
       client = await Client.getInstance().findByIdAndUpdate(client._id, {
-        platform,
-        domain: platform === PlatformTypesEnum.WEB ? domain : undefined,
+        domain: client.platform === PlatformTypesEnum.WEB ? domain : undefined,
         alias,
         notes,
       });
@@ -80,9 +77,7 @@ export function getUpdateSecurityClientRoute() {
         result: {
           id: client!._id,
           clientId: client!.clientId,
-          clientSecret: client!.clientSecret,
-          platform,
-          domain,
+          domain: client!.platform === PlatformTypesEnum.WEB ? domain : undefined,
           alias,
           notes,
         },
