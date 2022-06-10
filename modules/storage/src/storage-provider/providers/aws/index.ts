@@ -95,7 +95,7 @@ export class AWSS3Storage implements IStorageProvider {
         }),
       );
       return true;
-    } catch (error) {
+    } catch (error: any) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404
@@ -122,7 +122,7 @@ export class AWSS3Storage implements IStorageProvider {
     try {
       await this._storage.send(new HeadBucketCommand({ Bucket: name }));
       return true;
-    } catch (error) {
+    } catch (error: any) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404
@@ -180,7 +180,7 @@ export class AWSS3Storage implements IStorageProvider {
         }),
       );
       return true;
-    } catch (error) {
+    } catch (error: any) {
       if (
         error.$metadata.httpStatusCode === 403 ||
         error.$metadata.httpStatusCode === 404

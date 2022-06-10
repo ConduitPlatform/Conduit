@@ -80,12 +80,13 @@ export default class Storage extends ManagedModule<Config> {
     } else {
       await this.updateConfig();
       const storageConfig = ConfigController.getInstance().config;
-      const { provider, local, google, azure, aws } = storageConfig;
+      const { provider, local, google, azure, aws, aliyun } = storageConfig;
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,
         azure,
         aws,
+        aliyun,
       });
       this._fileHandlers.updateProvider(this.storageProvider);
       this.adminRouter = new AdminRoutes(

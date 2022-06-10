@@ -1,8 +1,6 @@
 export interface IStorageProvider {
   store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error>;
 
-  get(fileName: string, downloadPath?: string): Promise<any | Error>;
-
   /**
    * Used to create a new folder
    * @param name For the folder

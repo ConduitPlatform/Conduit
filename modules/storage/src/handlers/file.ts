@@ -125,7 +125,7 @@ export class FileHandlers {
       });
 
       return newFile;
-    } catch (e) {
+    } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
     }
   }
@@ -220,7 +220,7 @@ export class FileHandlers {
       found.folder = newFolder;
       found.container = newContainer;
       return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
-    } catch (e) {
+    } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }
@@ -243,7 +243,7 @@ export class FileHandlers {
       await File.getInstance().deleteOne({ _id: call.request.params.id });
 
       return { success: true };
-    } catch (e) {
+    } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }
@@ -265,7 +265,7 @@ export class FileHandlers {
         return { result: url };
       }
       return { redirect: url };
-    } catch (e) {
+    } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }
@@ -290,7 +290,7 @@ export class FileHandlers {
       }
 
       return { data: data.toString('base64') };
-    } catch (e) {
+    } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
     }
   }

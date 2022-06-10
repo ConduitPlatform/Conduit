@@ -39,11 +39,13 @@
     "@google-cloud/storage": "^4.7.0",
     "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",
+    "ali-oss": "^6.17.1",
     "convict": "^6.0.0",
     "lodash": "^4.17.15",
     "uuid": "^7.0.3"
   },
   "devDependencies": {
+    "@types/ali-oss": "^6.16.3",
     "@types/convict": "^4.2.1",
     "@types/lodash": "^4.14.149",
     "@types/node": "14.14.31",
