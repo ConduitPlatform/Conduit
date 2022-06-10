@@ -118,7 +118,7 @@ export class AliyunStorage implements IStorageProvider {
   }
 
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
-    let { content } = await this._ossClient.get(fileName);
+    const { content } = await this._ossClient.get(fileName);
 
     if (downloadPath) {
       fs.writeFileSync(downloadPath, content);

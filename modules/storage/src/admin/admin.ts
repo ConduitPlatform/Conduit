@@ -379,7 +379,7 @@ export class AdminRoutes {
         });
       }
       return container;
-    } catch (e: any) {
+    } catch (e) {
       throw new GrpcError(
         e.status ?? status.INTERNAL,
         e.message ?? 'Something went wrong',
@@ -406,7 +406,7 @@ export class AdminRoutes {
         throw new GrpcError(status.ALREADY_EXISTS, 'Container already exists');
       }
       return container;
-    } catch (e: any) {
+    } catch (e) {
       throw new GrpcError(
         e.status ?? status.INTERNAL,
         e.message ?? 'Something went wrong',
