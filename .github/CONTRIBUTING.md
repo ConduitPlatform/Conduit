@@ -66,11 +66,11 @@ Commit messages should follow the [commit message convention](https://github.com
 npx lerna run build
 
 # Building Individual Modules (eg: Database)
-npx lerna run build --scope=@conduit/database-provider
+npx lerna run build --scope=@conduit/database
 
 # Running a module with env vars
 CONDUIT_SERVER="0.0.0.0:55152" SERVICE_IP="0.0.0.0:55183" \
-npx lerna run start --scope=@conduit/database-provider
+npx lerna run start --scope=@conduit/database
 ```
 
 Find out more about [Lerna](https://lerna.js.org/).
