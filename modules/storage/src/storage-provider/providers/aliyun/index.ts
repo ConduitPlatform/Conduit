@@ -1,6 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 
-import OSS, { CopyObjectOptions } from 'ali-oss';
+import OSS from 'ali-oss';
 
 import fs from 'fs';
 
