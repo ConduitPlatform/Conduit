@@ -3024,10 +3024,10 @@
   dependencies:
     "@types/node" "*"
 
-"@types/ali-oss@^6.16.3":
-  version "6.16.3"
-  resolved "https://registry.npmmirror.com/@types/ali-oss/-/ali-oss-6.16.3.tgz#0f7ffe8516a35385e4629446763f084916dd82f8"
-  integrity sha512-LISYGoacASedVKV2XN4dYC46QpbrvUYq2X8NjAnAsxZEqdK5RPxr82WG5MW8j/7RSJv3k4flpXXf1kSSt1G4fQ==
+"@types/ali-oss@^6.16.4":
+  version "6.16.4"
+  resolved "https://registry.npmmirror.com/@types/ali-oss/-/ali-oss-6.16.4.tgz#2927e6b940a49c2828609c0f73ff407ded0626d1"
+  integrity sha512-jcPp0qugBVcuFtewnlCVnpVDFqkNiGIklXHzq8kftFVXlBBYmVdAUYasyz1UGPMtF4qkbbAVToUxJnee+ky+NQ==
 
 "@types/bcrypt@^3.0.0":
   version "3.0.0"

@@ -175,8 +175,7 @@ export class AliyunStorage implements IStorageProvider {
 
     this._ossClient.useBucket(newContainer);
 
-    // FIXME copy api type error
-    await this._ossClient.copy(filename, filename, oldBucket as CopyObjectOptions);
+    await this._ossClient.copy(filename, filename, oldBucket);
 
     this._ossClient.useBucket(oldBucket);
 
@@ -194,12 +193,7 @@ export class AliyunStorage implements IStorageProvider {
 
     this._ossClient.useBucket(newContainer);
 
-    // FIXME copy api type error
-    await this._ossClient.copy(
-      newFilename,
-      currentFilename,
-      oldBucket as CopyObjectOptions,
-    );
+    await this._ossClient.copy(newFilename, currentFilename, oldBucket);
 
     this._ossClient.useBucket(oldBucket);
 

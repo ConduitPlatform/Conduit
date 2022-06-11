@@ -45,7 +45,7 @@
     "uuid": "^7.0.3"
   },
   "devDependencies": {
-    "@types/ali-oss": "^6.16.3",
+    "@types/ali-oss": "^6.16.4",
     "@types/convict": "^4.2.1",
     "@types/lodash": "^4.14.149",
     "@types/node": "14.14.31",
