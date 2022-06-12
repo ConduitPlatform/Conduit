@@ -106,6 +106,10 @@ You may find additional scripts in the `scripts` section of the `package.json` f
 - **`docker`**: contains OCI-container related utilities
 
 - **`benchmarks`**: contains benchmarking utilities
+
+## License
+
+By contributing to Conduit & Conduit Platform repositories, you agree that your contributions will be licensed under the license specified in the repository you are contributing to.
     
 ## Credits
 
