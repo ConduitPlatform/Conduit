@@ -20,9 +20,9 @@ export function createStorageProvider(
       return new AliyunStorage(options);
     case 'local':
       return new LocalStorage(options);
+    default:
+      return new LocalStorage(options);
   }
-
-  return new LocalStorage(options);
 }
 
 export * from './interfaces';

@@ -59,13 +59,7 @@ export class AliyunStorage implements IStorageProvider {
   }
 
   async folderExists(name: string): Promise<boolean | Error> {
-    return await this._ossClient
-      .head(name)
-      .then(() => true)
-      .catch(err => {
-        if (err.status === 404) return false;
-        throw err;
-      });
+    return await this.exists(name);
   }
 
   async deleteFolder(name: string): Promise<boolean | Error> {
@@ -81,7 +75,12 @@ export class AliyunStorage implements IStorageProvider {
       );
       mark = res.nextMarker;
 
-      await this._ossClient.deleteMulti(res.objects.map(it => it.name));
+      await this._ossClient.deleteMulti(
+        res.objects.map(it => it.name),
+        {
+          quiet: true,
+        },
+      );
     } while (mark);
 
     return true;
