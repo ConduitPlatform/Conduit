@@ -3,19 +3,25 @@ import { GoogleCloudStorage } from './providers/google';
 import { LocalStorage } from './providers/local';
 import { AzureStorage } from './providers/azure';
 import { AWSS3Storage } from './providers/aws';
+import { AliyunStorage } from './providers/aliyun';
 
 export function createStorageProvider(
-  provider: string,
+  provider: keyof StorageConfig,
   options: StorageConfig,
 ): IStorageProvider {
-  if (provider === 'google') {
-    return new GoogleCloudStorage(options);
-  } else if (provider === 'azure') {
-    return new AzureStorage(options);
-  } else if (provider === 'aws') {
-    return new AWSS3Storage(options);
-  } else {
-    return new LocalStorage(options);
+  switch (provider) {
+    case 'google':
+      return new GoogleCloudStorage(options);
+    case 'azure':
+      return new AzureStorage(options);
+    case 'aws':
+      return new AWSS3Storage(options);
+    case 'aliyun':
+      return new AliyunStorage(options);
+    case 'local':
+      return new LocalStorage(options);
+    default:
+      return new LocalStorage(options);
   }
 }
 

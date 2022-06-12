@@ -15,6 +15,11 @@ export interface StorageConfig {
   azure: {
     connectionString: string;
   };
+  aliyun: {
+    accessKeyId: string;
+    accessKeySecret: string;
+    region: string;
+  };
   local: {
     storagePath: string;
   };

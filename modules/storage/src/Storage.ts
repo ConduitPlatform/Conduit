@@ -4,7 +4,6 @@ import {
   ConfigController,
   HealthCheckStatus,
   GrpcCallback,
-  GrpcRequest,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
@@ -19,7 +18,7 @@ import { isNil } from 'lodash';
 import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
-import { FileResponse, GetFileDataResponse, GetFileRequest } from './protoTypes/storage';
+import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
 
 type Callback = (arg1: { code: number; message: string }) => void;
 
@@ -80,12 +79,13 @@ export default class Storage extends ManagedModule<Config> {
     } else {
       await this.updateConfig();
       const storageConfig = ConfigController.getInstance().config;
-      const { provider, local, google, azure, aws } = storageConfig;
+      const { provider, local, google, azure, aws, aliyun } = storageConfig;
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,
         azure,
         aws,
+        aliyun,
       });
       this._fileHandlers.updateProvider(this.storageProvider);
       this.adminRouter = new AdminRoutes(

@@ -42,6 +42,20 @@ export default {
       default: '',
     },
   },
+  aliyun: {
+    region: {
+      type: String,
+      default: '',
+    },
+    accessKeyId: {
+      type: String,
+      default: '',
+    },
+    accessKeySecret: {
+      type: String,
+      default: '',
+    },
+  },
   local: {
     storagePath: {
       type: String,
