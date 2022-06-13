@@ -16,8 +16,8 @@ type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
 };
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
-  let hasA = [];
-  let hasB = [];
+  const hasA = [];
+  const hasB = [];
   const fieldsA = schemaA.fields as ConduitModel;
   const fieldsB = schemaB.fields as ConduitModel;
   for (const k in fieldsA) {
@@ -61,7 +61,7 @@ export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): n
 }
 
 function removeRequiredFields(fields: ConduitModel) {
-  for (let field in fields) {
+  for (const field in fields) {
     const modelField = fields[field] as ConduitModelField;
     if (modelField.required === true) {
       modelField.required = false;
@@ -82,7 +82,7 @@ export function getOps(
   actualSchema: _ConduitSchema,
   handlers: CmsHandlers,
 ) {
-  let routesArray: ConduitBuiltRoute[] = [];
+  const routesArray: ConduitBuiltRoute[] = [];
   const authenticatedRead = actualSchema.modelOptions.conduit!.cms.crudOperations.read
     .authenticated;
   const readIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.read
@@ -121,7 +121,7 @@ export function getOps(
   const createIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.create
     .enabled;
 
-  let assignableFields = Object.assign({}, actualSchema.fields);
+  const assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
   delete assignableFields.createdAt;
   delete assignableFields.updatedAt;
@@ -227,7 +227,7 @@ export function getOps(
   const deleteIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.delete
     .enabled;
   if (deleteIsEnabled) {
-    let route = new RouteBuilder()
+    const route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.DELETE)
       .urlParams({
@@ -244,7 +244,7 @@ export function getOps(
 
 export function sortAndConstructRoutes(schemas: Indexable, handlers: CmsHandlers) {
   let routesArray: ConduitBuiltRoute[] = [];
-  let schemaSort = [];
+  const schemaSort = [];
   for (const k in schemas) {
     schemaSort.push(k);
   }

@@ -21,7 +21,7 @@ export class MandrillBuilder extends EmailBuilderClass<MandrillEmailOptions> {
     }
     this._mailOptions.mandrillOptions.message.merge = true;
     this._mailOptions.mandrillOptions.message.merge_language = 'handlebars';
-    let variables: Var[] = [];
+    const variables: Var[] = [];
     Object.keys(template.variables).forEach(key => {
       variables.push({
         name: key,

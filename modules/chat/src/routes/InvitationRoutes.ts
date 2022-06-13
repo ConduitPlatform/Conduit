@@ -103,7 +103,7 @@ export class InvitationRoutes {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
     let message;
-    let receiver = user._id;
+    const receiver = user._id;
     const accepted = answer === 'accept';
     const chatRoom = await ChatRoom.getInstance().findOne({
       _id: invitationTokenDoc.room,

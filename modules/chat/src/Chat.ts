@@ -146,7 +146,7 @@ export default class Chat extends ManagedModule<Config> {
       return callback({ code: e.code, message: e.message });
     }
 
-    let errorMessage: string | null = null;
+    const errorMessage: string | null = null;
     const room: models.ChatRoom = await models.ChatRoom.getInstance().create({
       name: name,
       participants: participants,

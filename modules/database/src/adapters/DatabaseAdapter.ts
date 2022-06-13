@@ -157,7 +157,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     let models = await this.models!['_DeclaredSchema'].findMany('{}');
     models = models
       .map((model: _ConduitSchema) => {
-        let schema = new ConduitSchema(
+        const schema = new ConduitSchema(
           model.name,
           model.fields,
           model.modelOptions,

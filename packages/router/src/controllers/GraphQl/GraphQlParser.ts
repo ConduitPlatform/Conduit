@@ -24,7 +24,7 @@ export interface ProcessingObject {
 
 export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> {
   constructName(parent: string, child: string) {
-    let parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
+    const parentName = parent.slice(0, 1).toUpperCase() + parent.slice(1);
     return parentName + child.slice(0, 1).toUpperCase() + child.slice(1);
   }
 
@@ -99,7 +99,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
   ): void {
     // object of some kind
-    let nestedName = this.constructName(name, fieldName);
+    const nestedName = this.constructName(name, fieldName);
     this.constructResolver(name, fieldName);
     processingObject.typeString +=
       fieldName +
@@ -119,7 +119,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     nestedType?: boolean,
   ): void {
-    let arrayProcessing = super.arrayHandler(resolverName, name, value);
+    const arrayProcessing = super.arrayHandler(resolverName, name, value);
     if (nestedType) {
       processingObject.typeString +=
         arrayProcessing.typeString.slice(0, arrayProcessing.typeString.length - 1) +

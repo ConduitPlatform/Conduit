@@ -20,8 +20,8 @@ const deepdash = require('deepdash/standalone');
 export function wrongFields(schemaFields: string[], updateFields: string[]): boolean {
   const blackList = ['updatedAt', 'createdAt', '_id', '__v'];
   for (const element of blackList) {
-    let index1 = schemaFields.indexOf(element);
-    let index2 = updateFields.indexOf(element);
+    const index1 = schemaFields.indexOf(element);
+    const index2 = updateFields.indexOf(element);
     if (index1 > -1) {
       schemaFields.splice(index1, 1);
     }

@@ -24,7 +24,7 @@ export class GrpcServer {
   }
 
   async createNewServer(): Promise<number> {
-    let serverResult = await createServer(this._url);
+    const serverResult = await createServer(this._url);
     this.grpcServer = serverResult.server;
     this._url = this._url.split(':')[0] + ':' + serverResult.port.toString();
     return serverResult.port;
@@ -66,7 +66,7 @@ export class GrpcServer {
 
   async wait(time: number) {
     return new Promise<void>((resolve, reject) => {
-      let timeout = setTimeout(() => {
+      const timeout = setTimeout(() => {
         clearTimeout(timeout);
         resolve();
       }, time);

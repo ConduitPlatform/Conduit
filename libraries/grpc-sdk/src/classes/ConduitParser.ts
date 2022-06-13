@@ -78,7 +78,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     if (typeof fields === 'string') {
       this.getResultFromString(processingObject, 'result', fields, false, false);
     } else {
-      for (let field in fields) {
+      for (const field in fields) {
         if (!fields.hasOwnProperty(field)) continue;
         // if field is simply a type
         if (typeof fields[field] === 'string') {
@@ -155,7 +155,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
   }
 
   protected arrayHandler(name: string, field: string, value: Array): ProcessingObject {
-    let processingObject: ProcessingObject = this.getProcessingObject(name, true);
+    const processingObject: ProcessingObject = this.getProcessingObject(name, true);
     // if array contains simply a type
     if (typeof value[0] === 'string') {
       this.getResultFromString(processingObject, field, value[0], false, true);

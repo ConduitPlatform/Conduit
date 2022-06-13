@@ -105,9 +105,9 @@ export default class DatabaseModule extends ManagedModule<void> {
         return;
       }
       try {
-        let receivedSchema = JSON.parse(message);
+        const receivedSchema = JSON.parse(message);
         if (receivedSchema.name) {
-          let schema = new ConduitSchema(
+          const schema = new ConduitSchema(
             receivedSchema.name,
             receivedSchema.modelSchema,
             receivedSchema.modelOptions,
@@ -176,7 +176,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     call: GrpcRequest<CreateSchemaRequest>,
     callback: SchemaResponse,
   ) {
-    let schema = new ConduitSchema(
+    const schema = new ConduitSchema(
       call.request.schema!.name,
       JSON.parse(call.request.schema!.modelSchema),
       JSON.parse(call.request.schema!.modelOptions),

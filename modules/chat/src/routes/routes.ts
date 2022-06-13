@@ -75,7 +75,7 @@ export class ChatRoutes {
       throw new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
     }
     let room;
-    let query: Query = { name: roomName, participants: [user._id] };
+    const query: Query = { name: roomName, participants: [user._id] };
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()

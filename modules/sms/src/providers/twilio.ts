@@ -37,7 +37,7 @@ export class TwilioProvider implements ISmsProvider {
       return Promise.reject(Error('no service sid specified'));
     }
 
-    let verification = await this.client.verify
+    const verification = await this.client.verify
       .services(this.serviceSid)
       .verifications.create({ to, channel: 'sms' })
       .catch(console.error);
@@ -53,7 +53,7 @@ export class TwilioProvider implements ISmsProvider {
     if (this.serviceSid === undefined) {
       return Promise.reject(Error('no service sid specified'));
     }
-    let verificationCheck = await this.client.verify
+    const verificationCheck = await this.client.verify
       .services(this.serviceSid)
       .verificationChecks.create({ verificationSid, code })
       .catch(console.error);

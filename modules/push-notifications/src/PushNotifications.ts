@@ -165,7 +165,7 @@ export default class PushNotifications extends ManagedModule<Config> {
     call: SendNotificationRequest,
     callback: SendNotificationResponse,
   ) {
-    let data = call.request.data;
+    const data = call.request.data;
     let params: ISendNotification;
     try {
       params = {

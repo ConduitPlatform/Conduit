@@ -36,7 +36,7 @@ export class CustomEndpointController {
         if (!r || r.length == 0) {
           return console.log('No custom endpoints to register');
         }
-        let routes: any[] = [];
+        const routes: any[] = [];
         r.forEach((schema: ICustomEndpoint) => {
           routes.push(
             createCustomEndpointRoute(schema, this.handler.entryPoint.bind(this.handler)),

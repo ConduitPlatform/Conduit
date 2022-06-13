@@ -42,7 +42,7 @@ export function getCreateAdminRoute(conduit: ConduitCommons) {
       }
       const adminConfig = await conduit.getConfigManager().get('admin');
       const hashRounds = adminConfig.auth.hashRounds;
-      let pass = await hashPassword(password, hashRounds);
+      const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });
 
       return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction

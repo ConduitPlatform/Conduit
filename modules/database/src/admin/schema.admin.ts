@@ -453,7 +453,7 @@ export class SchemaAdmin {
       requestedSchema.name,
       call.request.params.fields,
     );
-    let base = await this.database.getBaseSchema(requestedSchema.name);
+    const base = await this.database.getBaseSchema(requestedSchema.name);
     await this.database
       .setSchemaExtension(base, 'database', extension.modelSchema)
       .catch((e: Error) => {
@@ -463,7 +463,7 @@ export class SchemaAdmin {
   }
 
   async setSchemaPerms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { id, extendable, canCreate, canModify, canDelete } = call.request.params;
+    const { id, extendable, canCreate, canModify, canDelete } = call.request.params;
 
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')

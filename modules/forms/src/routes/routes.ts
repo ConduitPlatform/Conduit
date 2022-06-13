@@ -30,7 +30,7 @@ export class FormsRoutes {
     }
 
     const data = call.request.params;
-    let fileData: any = {};
+    const fileData: any = {};
     let honeyPot: boolean = false;
     let possibleSpam: boolean = false;
     Object.keys(data).forEach(r => {

@@ -41,7 +41,7 @@ async function _createWithPopulations(
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
-        let val: any = document[key][i];
+        const val: any = document[key][i];
         if (!isObject(val)) {
           continue;
         }

@@ -268,7 +268,7 @@ export class AdminHandlers {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { email, password } = call.request.params;
+    const { email, password } = call.request.params;
     if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
@@ -280,7 +280,7 @@ export class AdminHandlers {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
     }
 
-    let hashedPassword = await AuthUtils.hashPassword(password);
+    const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
       email,
       hashedPassword,
@@ -294,7 +294,7 @@ export class AdminHandlers {
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
 
-    let user: User | null = await User.getInstance().findOne({ _id: id });
+    const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     } else if (hasTwoFA && isNil(phoneNumber) && isNil(user.phoneNumber)) {
@@ -311,19 +311,19 @@ export class AdminHandlers {
       phoneNumber: phoneNumber ?? user.phoneNumber,
     };
 
-    let res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
+    const res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
     this.grpcSdk.bus?.publish('authentication:update:user', JSON.stringify(res));
     return { res };
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let user: User | null = await User.getInstance().findOne({
+    const user: User | null = await User.getInstance().findOne({
       _id: call.request.params.id,
     });
     if (isNil(user)) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
-    let res = await User.getInstance().deleteOne({ _id: call.request.params.id });
+    const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'User was deleted';
   }
@@ -338,12 +338,12 @@ export class AdminHandlers {
       );
     }
 
-    let users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
+    const users: User[] = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
 
-    let res = await User.getInstance().deleteMany({ _id: { $in: ids } });
+    const res = await User.getInstance().deleteMany({ _id: { $in: ids } });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'Users were deleted';
   }
@@ -389,7 +389,7 @@ export class AdminHandlers {
         'ids is required and must be a non-empty array',
       );
     }
-    let users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
+    const users: User[] | null = await User.getInstance().findMany({ _id: { $in: ids } });
     if (users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
     }

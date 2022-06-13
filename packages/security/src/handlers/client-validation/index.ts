@@ -61,10 +61,10 @@ export class ClientValidator {
       return next(ConduitError.unauthorized());
     }
 
-    let key = await this.sdk.getState().getKey(clientid as string);
+    const key = await this.sdk.getState().getKey(clientid as string);
     if (key) {
-      let [_clientsecret, _platform, _domain] = key.split(',');
-      let validPlatform = await validateClient(
+      const [_clientsecret, _platform, _domain] = key.split(',');
+      const validPlatform = await validateClient(
         req,
         {
           clientSecret: _clientsecret,

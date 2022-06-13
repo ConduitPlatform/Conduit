@@ -22,8 +22,8 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<TwitchUser>> {
-    let twitch_access_token = details.accessToken;
-    let expires_in = undefined;
+    const twitch_access_token = details.accessToken;
+    const expires_in = undefined;
     let id;
     let email;
     let profile_image_url;

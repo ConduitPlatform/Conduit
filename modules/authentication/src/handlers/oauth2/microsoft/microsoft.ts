@@ -24,7 +24,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<MicrosoftUser>> {
-    let microsoftToken = details.accessToken;
+    const microsoftToken = details.accessToken;
     const microsoftResponse: { data: MicrosoftUser } = await axios.get(
       'https://graph.microsoft.com/v1.0/me/',
       {
@@ -42,7 +42,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
   }
 
   makeRequest(data: AuthParams) {
-    let requestData: string = Object.keys(data)
+    const requestData: string = Object.keys(data)
       .map(k => {
         return k + '=' + data[k as keyof AuthParams];
       })

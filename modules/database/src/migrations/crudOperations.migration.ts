@@ -6,7 +6,7 @@ export async function migrateCrudOperations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
   const model = adapter.getSchemaModel('_DeclaredSchema').model;
-  let cmsSchemas = await model.findMany({
+  const cmsSchemas = await model.findMany({
     $or: [
       { 'modelOptions.conduit.cms.crudOperations': true },
       { 'modelOptions.conduit.cms.crudOperations': false },

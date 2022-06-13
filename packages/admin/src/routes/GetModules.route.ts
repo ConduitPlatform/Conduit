@@ -16,7 +16,7 @@ export function getModulesRoute(conduit: ConduitCommons) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response: any[] = [];
+      const response: any[] = [];
       // this is used here as such, because the config manager is simply the config package
       // TODO update the config manager interface so that we don't need these castings
       ((conduit.getConfigManager() as any).registeredModules as Map<

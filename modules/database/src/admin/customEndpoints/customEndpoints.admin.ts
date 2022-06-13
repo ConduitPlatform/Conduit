@@ -149,14 +149,14 @@ export class CustomEndpointsAdmin {
     }
     if (!isNil(inputs) && inputs.length > 0) {
       inputs.forEach((r: Indexable) => {
-        let error = inputValidation(r.name, r.type, r.location, r.array);
+        const error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
           throw new GrpcError(status.INVALID_ARGUMENT, error as string);
         }
       });
     }
 
-    let endpoint = {
+    const endpoint = {
       name,
       operation,
       selectedSchema,
@@ -187,7 +187,7 @@ export class CustomEndpointsAdmin {
       endpoint.sorted = sorted;
     }
     if (operation !== OperationsEnum.POST) {
-      let error = queryValidation(query, findSchema, inputs);
+      const error = queryValidation(query, findSchema, inputs);
       if (error !== true) {
         throw new GrpcError(status.INVALID_ARGUMENT, error as string);
       }
@@ -204,7 +204,7 @@ export class CustomEndpointsAdmin {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          let error = assignmentValidation(
+          const error = assignmentValidation(
             findSchema,
             inputs,
             operation,
@@ -297,7 +297,7 @@ export class CustomEndpointsAdmin {
     }
     if (!isNil(inputs) && inputs.length > 0) {
       inputs.forEach((r: Indexable) => {
-        let error = inputValidation(r.name, r.type, r.location, r.array);
+        const error = inputValidation(r.name, r.type, r.location, r.array);
         if (error !== true) {
           throw new GrpcError(status.INVALID_ARGUMENT, error as string);
         }
@@ -317,7 +317,7 @@ export class CustomEndpointsAdmin {
       );
     }
     if (found.operation !== OperationsEnum.POST) {
-      let error = queryValidation(query, findSchema, inputs);
+      const error = queryValidation(query, findSchema, inputs);
       if (error !== true) {
         throw new GrpcError(status.INVALID_ARGUMENT, error as string);
       }
@@ -334,7 +334,7 @@ export class CustomEndpointsAdmin {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          let error = assignmentValidation(
+          const error = assignmentValidation(
             findSchema,
             inputs,
             found.operation,

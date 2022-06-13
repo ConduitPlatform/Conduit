@@ -44,7 +44,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async ensureConnected(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      let db = this.mongoose.connection;
+      const db = this.mongoose.connection;
       db.on('connected', () => {
         console.log('MongoDB: Database is connected');
         resolve();
@@ -89,7 +89,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
     );
-    let collectionNames: string[] = [];
+    const collectionNames: string[] = [];
     (await this.mongoose.connection.db.listCollections().toArray()).forEach(c =>
       collectionNames.push(c.name),
     );
@@ -113,7 +113,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
-    let introspectedSchemas: ConduitSchema[] = [];
+    const introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
     const schemaOptions = {
       timestamps: true,

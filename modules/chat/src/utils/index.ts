@@ -50,14 +50,14 @@ export async function sendInvitations(
         `users array contains invited member ids`,
       );
     }
-    let invitationToken: InvitationToken = await InvitationToken.getInstance().create({
+    const invitationToken: InvitationToken = await InvitationToken.getInstance().create({
       receiver: invitedUser._id,
       sender: sender._id,
       token: uuid(),
       room: roomId,
     });
     if (sendEmail) {
-      let result = { invitationToken, hostUrl: url };
+      const result = { invitationToken, hostUrl: url };
       const acceptLink = `${result.hostUrl}/hook/chat/invitations/accept/${result.invitationToken.token}`;
       const declineLink = `${result.hostUrl}/hook/chat/invitations/decline/${result.invitationToken.token}`;
       const roomName = room.name;

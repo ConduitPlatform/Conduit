@@ -7,7 +7,7 @@ import {
 import { ConduitRouteOptions, EventsProtoDescription } from '../interfaces';
 
 export function constructRoute(route: ConduitRoute) {
-  let routeObject: any = {
+  const routeObject: any = {
     options: {},
     returns: {},
     grpcFunction: '',
@@ -21,7 +21,7 @@ export function constructRoute(route: ConduitRoute) {
     name: route.returnTypeName,
     fields: JSON.stringify(route.returnTypeFields),
   };
-  for (let option in routeObject.options) {
+  for (const option in routeObject.options) {
     if (!routeObject.options.hasOwnProperty(option)) continue;
     if (option === 'middlewares') continue;
     routeObject.options[option] = JSON.stringify(routeObject.options[option]);
@@ -35,7 +35,7 @@ export function constructConduitRoute(
   type: ConduitRouteReturnDefinition,
   handler: string,
 ) {
-  let routeObject: any = {
+  const routeObject: any = {
     options: input,
     returns: {
       name: type.name,
@@ -49,7 +49,7 @@ export function constructConduitRoute(
   if (!routeObject.options.middlewares) {
     routeObject.options.middlewares = [];
   }
-  for (let option in routeObject.options) {
+  for (const option in routeObject.options) {
     if (!routeObject.options.hasOwnProperty(option)) continue;
     if (option === 'middlewares') continue;
     routeObject.options[option] = JSON.stringify(routeObject.options[option]);
@@ -58,7 +58,7 @@ export function constructConduitRoute(
 }
 
 export function constructMiddleware(route: ConduitMiddleware) {
-  let routeObject: any = {
+  const routeObject: any = {
     options: {},
     grpcFunction: '',
   };
@@ -66,7 +66,7 @@ export function constructMiddleware(route: ConduitMiddleware) {
   routeObject.options = route.input.path ? route.input : null;
   routeObject.options.middlewares = [];
 
-  for (let option in routeObject.options) {
+  for (const option in routeObject.options) {
     if (!routeObject.options.hasOwnProperty(option)) continue;
     routeObject.options[option] = JSON.stringify(routeObject.options[option]);
   }
@@ -75,7 +75,7 @@ export function constructMiddleware(route: ConduitMiddleware) {
 }
 
 export function constructSocket(socket: ConduitSocket) {
-  let eventsObj: EventsProtoDescription = {};
+  const eventsObj: EventsProtoDescription = {};
 
   Object.keys(socket.events).forEach((eventName: string) => {
     const event = socket.events[eventName];

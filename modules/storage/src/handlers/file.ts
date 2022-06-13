@@ -49,13 +49,13 @@ export class FileHandlers {
     } else {
       newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
     }
-    let config = ConfigController.getInstance().config;
+    const config = ConfigController.getInstance().config;
     let usedContainer = container;
     // the container is sent from the client
     if (isNil(usedContainer)) {
       usedContainer = config.defaultContainer;
     } else {
-      let container = await _StorageContainer.getInstance().findOne({
+      const container = await _StorageContainer.getInstance().findOne({
         name: usedContainer,
       });
       if (!container) {
@@ -65,7 +65,7 @@ export class FileHandlers {
             'Container creation is not allowed!',
           );
         }
-        let exists = await this.storageProvider.containerExists(usedContainer);
+        const exists = await this.storageProvider.containerExists(usedContainer);
         if (!exists) {
           await this.storageProvider.createContainer(usedContainer);
         }
@@ -137,7 +137,7 @@ export class FileHandlers {
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
-      let config = ConfigController.getInstance().config;
+      const config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
         .container(found.container)
         .get((found.folder ?? '') + found.name);
@@ -230,11 +230,11 @@ export class FileHandlers {
       throw new GrpcError(status.INVALID_ARGUMENT, 'The provided id is invalid');
     }
     try {
-      let found = await File.getInstance().findOne({ _id: call.request.params.id });
+      const found = await File.getInstance().findOne({ _id: call.request.params.id });
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
-      let success = await this.storageProvider
+      const success = await this.storageProvider
         .container(found.container)
         .delete((found.folder ?? '') + found.name);
       if (!success) {
@@ -257,7 +257,7 @@ export class FileHandlers {
       if (found.isPublic) {
         return { redirect: found.url };
       }
-      let url = await this.storageProvider
+      const url = await this.storageProvider
         .container(found.container)
         .getSignedUrl((found.folder ?? '') + found.name);
 

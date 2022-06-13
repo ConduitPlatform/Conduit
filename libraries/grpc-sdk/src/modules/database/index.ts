@@ -101,7 +101,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   constructSortObj(sort: string[]) {
-    let sortObj: Query = {};
+    const sortObj: Query = {};
     sort.forEach((sortVal: string) => {
       sortVal = sortVal.trim();
       if (sortVal.indexOf('-') !== -1) {

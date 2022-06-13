@@ -291,7 +291,7 @@ export default class ConduitGrpcSdk {
     return this.config
       .getRedisDetails()
       .then((r: GetRedisDetailsResponse) => {
-        let redisManager = new RedisManager(r.redisHost, r.redisPort);
+        const redisManager = new RedisManager(r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;

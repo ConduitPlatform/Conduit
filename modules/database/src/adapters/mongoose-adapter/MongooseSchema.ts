@@ -33,7 +33,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       (schema as Indexable).collectionName = schema.name; //restore collectionName
     }
-    let mongooseSchema = new Schema(schema.modelSchema, schema.schemaOptions);
+    const mongooseSchema = new Schema(schema.modelSchema, schema.schemaOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
@@ -55,8 +55,8 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       docs = query;
     }
-    let date = new Date();
-    for (let doc of docs) {
+    const date = new Date();
+    for (const doc of docs) {
       doc.createdAt = date;
       doc.updatedAt = date;
       await this.createWithPopulations(doc);
@@ -139,7 +139,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
 
   calculatePopulates(queryObj: any, population: string[]) {
     population.forEach((r: string | string[], index: number) => {
-      let final = r.toString().trim();
+      const final = r.toString().trim();
       if (r.indexOf('.') !== -1) {
         r = final.split('.');
         let controlBool = true;
@@ -223,7 +223,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   private parseQuery(query: ParsedQuery) {
-    let parsed = {} as ParsedQuery;
+    const parsed = {} as ParsedQuery;
 
     Object.keys(query).forEach(key => {
       if (query[key]?.hasOwnProperty('$contains')) {

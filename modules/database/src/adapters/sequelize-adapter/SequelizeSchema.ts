@@ -113,7 +113,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    let date = new Date();
+    const date = new Date();
     for (const doc of parsedQuery) {
       doc.createdAt = date;
       doc.updatedAt = date;
@@ -135,7 +135,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
+    const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
     options.attributes = ({
       exclude: [...this.excludedFields],
     } as unknown) as FindAttributeOptions;
@@ -143,7 +143,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       options.attributes = this.parseSelect(select);
     }
 
-    let document = await this.model.findOne(options);
+    const document = await this.model.findOne(options);
 
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
@@ -175,7 +175,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    let options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
+    const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
     options.attributes = ({
       exclude: [...this.excludedFields],
     } as unknown) as FindAttributeOptions;
@@ -196,7 +196,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
-        let cache: Indexable = {};
+        const cache: Indexable = {};
         for (const document of documents) {
           if (this.relations.hasOwnProperty(relation)) {
             if (relations.hasOwnProperty(this.relations[relation])) {
@@ -287,7 +287,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     if (parsedQuery.hasOwnProperty('$pull')) {
-      let dbDocument = await this.model.findByPk(id).catch(console.error);
+      const dbDocument = await this.model.findByPk(id).catch(console.error);
       for (const key in parsedQuery['$push']) {
         const ind = dbDocument[key].indexOf(parsedQuery['$push'][key]);
         if (ind > -1) {
@@ -300,10 +300,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
-    let document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
+    const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
-        let cache: Indexable = {};
+        const cache: Indexable = {};
         if (this.relations.hasOwnProperty(relation)) {
           if (relations.hasOwnProperty(this.relations[relation])) {
             if (!cache.hasOwnProperty(document[relation])) {
@@ -377,8 +377,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     if (parsedQuery.hasOwnProperty('$pull')) {
-      let documents = await this.findMany(filterQuery).catch(console.error);
-      for (let document of documents) {
+      const documents = await this.findMany(filterQuery).catch(console.error);
+      for (const document of documents) {
         for (const key in parsedQuery['$push']) {
           const ind = document[key].indexOf(parsedQuery['$push'][key]);
           if (ind > -1) {
@@ -412,9 +412,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   private parseSelect(select: string): string[] | { exclude: string[] } {
-    let include = [];
-    let exclude = [...this.excludedFields];
-    let attributes = select.split(' ');
+    const include = [];
+    const exclude = [...this.excludedFields];
+    const attributes = select.split(' ');
     let returnInclude = false;
 
     for (const attribute of attributes) {

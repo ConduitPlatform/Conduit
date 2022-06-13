@@ -12,7 +12,7 @@ export function getRoutes(router: ConduitDefaultRouter) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response: any[] = [];
+      const response: any[] = [];
       const module = router.getGrpcRoutes();
       console.log(module);
       Object.keys(module).forEach((url: string) => {

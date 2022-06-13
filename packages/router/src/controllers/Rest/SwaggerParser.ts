@@ -53,7 +53,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
   }
 
   protected getType(conduitType: TYPE) {
-    let res: {
+    const res: {
       type?: string;
       format?: string;
       properties?: object;

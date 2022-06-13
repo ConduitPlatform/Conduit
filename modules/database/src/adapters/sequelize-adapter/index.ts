@@ -244,7 +244,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: Indexable } {
     if (this.models && this.models[schemaName]) {
       const self = this;
-      let relations: Indexable = {};
+      const relations: Indexable = {};
       for (const key in this.models[schemaName].relations) {
         relations[this.models[schemaName].relations[key]] =
           self.models[this.models[schemaName].relations[key]];

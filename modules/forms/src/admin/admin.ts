@@ -136,7 +136,7 @@ export class AdminHandlers {
   async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {};
+    const query: Query = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);

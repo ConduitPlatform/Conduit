@@ -57,14 +57,14 @@ message SocketResponse {
 `;
 
 export function constructProtoFile(moduleName: string, paths: SocketProtoDescription[]) {
-  let formattedModuleName = getFormattedModuleName(moduleName);
+  const formattedModuleName = getFormattedModuleName(moduleName);
   const protoFunctions = createProtoFunctions(paths);
   let protoFile = protofile_template
     .toString()
     .replace('MODULE_FUNCTIONS', protoFunctions);
   protoFile = protoFile.replace('MODULE_NAME', formattedModuleName);
 
-  let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+  const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protoFile);
   return { path: protoPath, name: formattedModuleName, file: protoFile };
 }
@@ -78,7 +78,7 @@ export function wrapFunctionsAsync(functions: {
 }): {
   [name: string]: (call: Indexable, callback?: Indexable) => void;
 } {
-  let modifiedFunctions: {
+  const modifiedFunctions: {
     [name: string]: (call: Indexable, callback?: Indexable) => void;
   } = {};
   Object.keys(functions).forEach(key => {

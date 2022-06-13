@@ -203,7 +203,7 @@ export class CustomEndpointHandler {
       const tmp = JSON.parse(el);
       const key = Object.keys(tmp)[0];
       if (!key) continue;
-      let innerKey = Object.keys(tmp[key])[0];
+      const innerKey = Object.keys(tmp[key])[0];
       if (!res.hasOwnProperty(key)) res[key] = tmp[key];
       else res[key][innerKey] = tmp[key][innerKey];
     }

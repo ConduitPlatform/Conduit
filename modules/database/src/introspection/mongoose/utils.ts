@@ -18,7 +18,7 @@ export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
 }
 
 function extractType(field: Indexable) {
-  let conduitField: Partial<ConduitModelField> = {};
+  const conduitField: Partial<ConduitModelField> = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
       (t: string) => t !== 'Undefined' && t !== 'Null',

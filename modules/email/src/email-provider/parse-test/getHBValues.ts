@@ -15,13 +15,13 @@ export function getHBValues(text: any) {
   const setVar = (variable: any, val: any) => {
     // Dot Notation Breakdown
     if (variable.match(/\.*\./) && !variable.match(/\s/)) {
-      let notation = variable.split('.');
+      const notation = variable.split('.');
       _.set(context, notation, '');
     } else {
       context[variable.trim()] = val;
     }
   };
-  for (let tag of tags) {
+  for (const tag of tags) {
     if (tag.startsWith('! ')) {
       continue;
     }
@@ -47,7 +47,7 @@ export function getHBValues(text: any) {
     }
     if (tag.startsWith('#with ')) {
       const v = tag.split(' ')[1];
-      let newContext = {};
+      const newContext = {};
       context[v] = newContext;
       stack.push(context);
       context = newContext;

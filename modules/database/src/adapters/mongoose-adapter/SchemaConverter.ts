@@ -8,7 +8,7 @@ const deepdash = require('deepdash/standalone');
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  let copy = cloneDeep(jsonSchema);
+  const copy = cloneDeep(jsonSchema);
   if (copy.modelSchema.hasOwnProperty('_id')) {
     delete copy.modelSchema['_id'];
   }

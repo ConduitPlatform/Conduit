@@ -17,7 +17,7 @@ export function constructQuery(
   params: Indexable,
   context: Indexable,
 ) {
-  let res: Indexable = {};
+  const res: Indexable = {};
   let resTopLevel: string;
   let endpointTopLevel: string;
 
@@ -72,7 +72,7 @@ function _constructQuery(
 ) {
   if (query.comparisonField.type === 'Input') {
     if (isNil(params[query.comparisonField.value])) {
-      let res = inputs.filter(input => {
+      const res = inputs.filter(input => {
         return input.name === query.comparisonField.value && input.optional;
       });
       if (res && res.length > 0) {
@@ -130,7 +130,7 @@ function _translateQuery(
   //   EQUAL_SET: 6, //'equal to any of the following'
   //   NEQUAL_SET: 7, //'not equal to any of the following'
   //   CONTAIN: 8, //'an array containing'
-  let isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
+  const isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
   if (isDate) {
     comparisonField = { $date: comparisonField };
   } else if (like) {

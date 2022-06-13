@@ -6,7 +6,7 @@ export class RateLimiter {
   private _limiter: any;
 
   constructor(redisHost: string, redisPort: number) {
-    let redisClient: RedisClient = new RedisClient({
+    const redisClient: RedisClient = new RedisClient({
       host: redisHost,
       port: redisPort,
       enable_offline_queue: false,
@@ -25,7 +25,7 @@ export class RateLimiter {
   get limiter() {
     const self = this;
     return (req: any, res: any, next: any) => {
-      let ip =
+      const ip =
         req.headers['cf-connecting-ip'] ||
         req.headers['x-original-forwarded-for'] ||
         req.headers['x-forwarded-for'] ||

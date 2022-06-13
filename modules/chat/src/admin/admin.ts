@@ -215,7 +215,7 @@ export class AdminHandlers {
     const { senderUser, roomId, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {};
+    const query: Query = {};
     let populates;
     if (!isNil(populate)) {
       populates = populateArray(populate);

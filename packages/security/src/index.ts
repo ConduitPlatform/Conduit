@@ -46,7 +46,7 @@ class SecurityModule extends IConduitSecurity {
 
   setupMiddlewares() {
     const router = this.commons.getRouter();
-    let clientValidator: ClientValidator = new ClientValidator(
+    const clientValidator: ClientValidator = new ClientValidator(
       this.grpcSdk.database!,
       this.commons,
     );
@@ -122,7 +122,7 @@ class SecurityModule extends IConduitSecurity {
 
   private registerSchemas() {
     const promises = Object.values(models).map(model => {
-      let modelInstance = model.getInstance(this.grpcSdk.database!);
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);

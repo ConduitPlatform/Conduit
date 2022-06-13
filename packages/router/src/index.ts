@@ -61,9 +61,9 @@ export class ConduitDefaultRouter extends IConduitRouter {
   }
 
   async highAvailability() {
-    let r = await this.commons.getState().getKey('router');
+    const r = await this.commons.getState().getKey('router');
     if (!r || r.length === 0) return;
-    let state = JSON.parse(r);
+    const state = JSON.parse(r);
     if (state.routes) {
       state.routes.forEach((r: any) => {
         try {
@@ -76,7 +76,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     }
 
     this.commons.getBus().subscribe('router', (message: string) => {
-      let messageParsed = JSON.parse(message);
+      const messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
           messageParsed.protofile,
@@ -98,7 +98,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
       .getState()
       .getKey('router')
       .then(r => {
-        let state = !r || r.length === 0 ? {} : JSON.parse(r);
+        const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
         (state.routes as any[]).forEach((val, i) => {
@@ -148,7 +148,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     const moduleName = call.metadata!.get('module-name')[0];
     try {
       if (!call.request.routerUrl) {
-        let result = this.commons
+        const result = this.commons
           .getConfigManager()!
           .getModuleUrlByName(call.metadata!.get('module-name')![0] as string);
         if (!result) {
@@ -187,7 +187,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     url: string,
     moduleName?: string,
   ) {
-    let processedRoutes: (
+    const processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
@@ -208,7 +208,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
 
   async socketPush(call: GrpcRequest<SocketData>, callback: GrpcCallback<null>) {
     try {
-      let socketData: SocketPush = {
+      const socketData: SocketPush = {
         event: call.request.event,
         data: JSON.parse(call.request.data),
         receivers: call.request.receivers,
@@ -229,7 +229,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
   cleanupRoutes() {
     const routes: { action: string; path: string }[] = [];
     Object.keys(this._grpcRoutes).forEach((grpcRoute: string) => {
-      let routesArray = this._grpcRoutes[grpcRoute];
+      const routesArray = this._grpcRoutes[grpcRoute];
       routes.push(
         ...routesArray.map(route => {
           return { action: route.options.action, path: route.options.path };
@@ -260,7 +260,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
   }
 
   registerRouter(routerBuilder: RouterBuilder) {
-    let { name, router } = routerBuilder.construct();
+    const { name, router } = routerBuilder.construct();
     this._routes.push(name);
     this._internalRouter.registerRoute(name, router);
   }

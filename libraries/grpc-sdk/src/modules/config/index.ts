@@ -25,7 +25,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getServerConfig() {
-    let request = {};
+    const request = {};
     return this.client!.getServerConfig(request).then(res => {
       return JSON.parse(res.data);
     });
@@ -38,7 +38,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   get(name: string) {
-    let request = {
+    const request = {
       key: name,
     };
     return this.client!.get(request).then(res => {
@@ -47,7 +47,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   updateConfig(config: any, name: string) {
-    let request = {
+    const request = {
       config: JSON.stringify(config),
       moduleName: name,
     };
@@ -58,7 +58,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   addFieldsToConfig(config: any, name: string) {
-    let request = {
+    const request = {
       config: JSON.stringify(config),
       moduleName: name,
     };
@@ -68,14 +68,14 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   moduleExists(name: string) {
-    let request = {
+    const request = {
       moduleName: name,
     };
     return this.client!.moduleExists(request);
   }
 
   moduleList(): Promise<any[]> {
-    let request = {};
+    const request = {};
     return this.client!.moduleList(request)
       .then(res => res.modules)
       .catch(err => {
@@ -85,7 +85,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getRedisDetails() {
-    let request: Indexable = {};
+    const request: Indexable = {};
     return this.client!.getRedisDetails(request);
   }
 
@@ -146,7 +146,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     this.emitter.setMaxListeners(150);
     try {
       const call = this.client!.watchModules({});
-      for await (let data of call) {
+      for await (const data of call) {
         self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {

@@ -58,14 +58,14 @@ export class RoutingManager {
     input: ConduitMiddlewareOptions,
     handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
   ) {
-    let routeObject: any = {
+    const routeObject: any = {
       options: input,
       grpcFunction: input.name,
     };
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
-    for (let option in routeObject.options) {
+    for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
       if (
@@ -84,7 +84,7 @@ export class RoutingManager {
     type: ConduitRouteReturnDefinition,
     handler: RequestHandlers,
   ) {
-    let routeObject: any = {
+    const routeObject: any = {
       options: input,
       returns: {
         name: type.name,
@@ -96,7 +96,7 @@ export class RoutingManager {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
-    for (let option in routeObject.options) {
+    for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
       if (
@@ -111,15 +111,15 @@ export class RoutingManager {
   }
 
   socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
-    let routeObject: any = {
+    const routeObject: any = {
       options: input,
       events: '',
     };
-    let eventsObj: EventsProtoDescription = {};
+    const eventsObj: EventsProtoDescription = {};
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
-    for (let option in routeObject.options) {
+    for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;
       if (
@@ -150,7 +150,7 @@ export class RoutingManager {
 
   async registerRoutes() {
     if (Object.keys(this._routeHandlers).length === 0) return;
-    let modifiedFunctions: {
+    const modifiedFunctions: {
       [name: string]: (call: any, callback: any) => void;
     } = wrapFunctionsAsync(this._routeHandlers);
     const protoDescriptions = constructProtoFile(
@@ -172,7 +172,7 @@ export class RoutingManager {
     if (options.name) {
       return options.name.charAt(0).toUpperCase() + options.name.slice(1);
     } else {
-      let name =
+      const name =
         options.action.charAt(0) +
         options.action.slice(1).toLowerCase() +
         this.extractNameFromPath(options.path);

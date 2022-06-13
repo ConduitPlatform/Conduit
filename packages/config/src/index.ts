@@ -80,8 +80,8 @@ export default class ConfigManager implements IConfigManager {
     const loadedState = await this.sdk.getState().getKey('config');
     try {
       if (!loadedState || loadedState.length === 0) return;
-      let state = JSON.parse(loadedState);
-      let success: {
+      const state = JSON.parse(loadedState);
+      const success: {
         name: string;
         url: string;
         instance: string;
@@ -127,7 +127,7 @@ export default class ConfigManager implements IConfigManager {
       .getState()
       .getKey('config')
       .then(r => {
-        let state = !r || r.length === 0 ? {} : JSON.parse(r);
+        const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
         state.modules = state.modules.filter(
           (module: { name: string; instance: string; url: string }) => {
@@ -436,7 +436,7 @@ export default class ConfigManager implements IConfigManager {
 
   moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {
     if (this.registeredModules.size !== 0) {
-      let modules: {
+      const modules: {
         moduleName: string;
         url: string;
         serving: boolean;
@@ -460,7 +460,7 @@ export default class ConfigManager implements IConfigManager {
   watchModules(call: ServerWritableStream<void, ModuleListResponse>) {
     const self = this;
     this.moduleRegister.on('serving-modules-update', () => {
-      let modules: any[] = [];
+      const modules: any[] = [];
       self.registeredModules.forEach((value: RegisteredModule, key: string) => {
         modules.push({
           moduleName: key,
@@ -505,8 +505,8 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<{ name: string }>,
     callback: GrpcResponse<{ moduleUrl: string }>,
   ) {
-    let name = call.request.name;
-    let result = this.getModuleUrlByName(name);
+    const name = call.request.name;
+    const result = this.getModuleUrlByName(name);
     if (result) {
       callback(null, { moduleUrl: result });
     } else {

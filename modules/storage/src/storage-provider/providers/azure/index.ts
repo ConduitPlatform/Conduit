@@ -19,17 +19,17 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async deleteContainer(name: string): Promise<boolean | Error> {
-    let t = await this._storage.getContainerClient(name).deleteIfExists();
+    const t = await this._storage.getContainerClient(name).deleteIfExists();
     return t.succeeded;
   }
 
   async deleteFolder(name: string): Promise<boolean | Error> {
-    let exists = await this.folderExists(name);
+    const exists = await this.folderExists(name);
     if (!exists) return false;
     console.log('Folder found');
 
     console.log('Getting blobs list..');
-    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    const containerClient = await this._storage.getContainerClient(this._activeContainer);
     console.log('Deleting blobs...');
     let i = 0;
     for await (const blob of containerClient.listBlobsFlat()) {
@@ -50,10 +50,10 @@ export class AzureStorage implements IStorageProvider {
    * @param name For the folder
    */
   async createFolder(name: string): Promise<boolean | Error> {
-    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    const containerClient = await this._storage.getContainerClient(this._activeContainer);
     await containerClient.createIfNotExists();
 
-    let exists = await containerClient.getBlockBlobClient(name + '.keep.txt').exists();
+    const exists = await containerClient.getBlockBlobClient(name + '.keep.txt').exists();
 
     if (exists) {
       return true;
@@ -65,7 +65,7 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async folderExists(name: string): Promise<boolean | Error> {
-    let containerClient = await this._storage.getContainerClient(this._activeContainer);
+    const containerClient = await this._storage.getContainerClient(this._activeContainer);
     let exists = await containerClient.exists();
     if (!exists) return false;
 
@@ -93,7 +93,7 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async exists(fileName: string): Promise<boolean | Error> {
-    let containerExists = await this._storage
+    const containerExists = await this._storage
       .getContainerClient(this._activeContainer)
       .exists();
     if (!containerExists) return false;
@@ -105,11 +105,11 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
-    let promise = await this._storage
+    const promise = await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .download(0);
-    let data: Buffer = await streamToBuffer(promise.readableStreamBody);
+    const data: Buffer = await streamToBuffer(promise.readableStreamBody);
     if (downloadPath) {
       fs.writeFileSync(downloadPath, data);
     }
@@ -117,7 +117,7 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async getSignedUrl(fileName: string): Promise<any | Error> {
-    let containerClient = this._storage.getContainerClient(this._activeContainer);
+    const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,
@@ -128,7 +128,7 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async getPublicUrl(fileName: string): Promise<any | Error> {
-    let containerClient = this._storage.getContainerClient(this._activeContainer);
+    const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,

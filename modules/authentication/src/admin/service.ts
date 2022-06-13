@@ -49,7 +49,7 @@ export class ServiceAdmin {
   async renewToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const token = AuthUtils.randomToken();
     const hashedToken = await AuthUtils.hashPassword(token);
-    let service: Service | null = await Service.getInstance().findByIdAndUpdate(
+    const service: Service | null = await Service.getInstance().findByIdAndUpdate(
       call.request.params.id,
       { hashedToken },
       true,
