@@ -94,7 +94,7 @@ export class ConduitCommons {
   }
 
   // this validator doesn't support custom convict types
-  static validateConfig(configInput: any, configSchema: any): Boolean {
+  static validateConfig(configInput: any, configSchema: any): boolean {
     if (isNil(configInput)) return false;
 
     return Object.keys(configInput).every(key => {
