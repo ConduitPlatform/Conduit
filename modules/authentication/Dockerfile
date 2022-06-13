@@ -5,7 +5,7 @@ WORKDIR /app
 COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authentication
 
 RUN apk update && \
-    apk add --no-cache --virtual .gyp python2 make g++ && \
+    apk add --no-cache --virtual .gyp python3 make g++ && \
     yarn install --production --pure-lockfile --non-interactive && \
     yarn cache clean && \
     apk del .gyp
