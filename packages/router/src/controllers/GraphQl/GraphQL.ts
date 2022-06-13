@@ -282,7 +282,7 @@ export class GraphQLController extends ConduitRouter {
     });
   }
 
-  private extractResult(returnTypeFields: String, result: Indexable | string) {
+  private extractResult(returnTypeFields: string, result: Indexable | string) {
     switch (returnTypeFields) {
       case TYPE.JSON:
         return JSON.parse(result as string);
