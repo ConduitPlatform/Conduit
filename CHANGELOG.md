@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc0...v0.13.0-rc.1) (2022-06-13)
+
+
+### Features
+
+* **security:** added notes and alias options for creating client ids ([#196](https://github.com/ConduitPlatform/Conduit/issues/196)) ([f79eba0](https://github.com/ConduitPlatform/Conduit/commit/f79eba034e32e42bb796118125c7ea88c2802070))
+* **storage:** aliyun storage provider ([#199](https://github.com/ConduitPlatform/Conduit/issues/199)) ([0c04b94](https://github.com/ConduitPlatform/Conduit/commit/0c04b9459ca4b885e81e3f54e980351ee89f0ce8))
+
+
+### Bug Fixes
+
+* **authentication:** wrong param types in OAuth2 requests ([#198](https://github.com/ConduitPlatform/Conduit/issues/198)) ([90c07f3](https://github.com/ConduitPlatform/Conduit/commit/90c07f35129f3fab0c52036a646f86c3d7000d85))
+* grpc-sdk publishing action ([81311a7](https://github.com/ConduitPlatform/Conduit/commit/81311a71a8454c148dc36844ebb21c1fc0f65317))
+
 ## [0.13.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.12.6...v0.13.0-rc.0) (2022-06-07)
 
 
