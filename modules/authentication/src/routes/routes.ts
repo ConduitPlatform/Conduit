@@ -49,7 +49,7 @@ export class AuthenticationRoutes {
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
-    let phoneActive = await this.phoneHandlers.validate().catch(e => (errorMessage = e));
+    const phoneActive = await this.phoneHandlers.validate().catch(e => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes(this._routingManager);
@@ -66,7 +66,7 @@ export class AuthenticationRoutes {
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map(
         (key: keyof OAuthHandler, value) => {
-          let handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
+          const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
             this.grpcSdk,
             config,
             serverConfig,
@@ -126,8 +126,8 @@ export class AuthenticationRoutes {
   }
 
   async middleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let context = call.request.context;
-    let headers = call.request.headers;
+    const context = call.request.context;
+    const headers = call.request.headers;
 
     const header = (headers['Authorization'] || headers['authorization']) as string;
     if (isNil(header)) {
@@ -139,7 +139,7 @@ export class AuthenticationRoutes {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header malformed');
     }
 
-    let accessToken = await AccessToken.getInstance().findOne({
+    const accessToken = await AccessToken.getInstance().findOne({
       token: args[1],
       clientId: context.clientId,
     });
@@ -156,7 +156,7 @@ export class AuthenticationRoutes {
       );
     }
 
-    let user = await User.getInstance().findOne({
+    const user = await User.getInstance().findOne({
       _id: accessToken.userId,
     });
     if (isNil(user)) {

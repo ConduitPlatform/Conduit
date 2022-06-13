@@ -8,7 +8,7 @@ import { sleep } from '../../utilities';
 import { Indexable } from '../../interfaces';
 import { ParsedRouterRequest } from '../../types';
 
-let protofile_template = `
+const protofile_template = `
 syntax = "proto3";
 package MODULE_NAME.admin;
 
@@ -43,7 +43,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
       [name: string]: (call: ParsedRouterRequest, callback?: Indexable) => Promise<any>;
     },
   ): Promise<any> {
-    let modifiedFunctions: { [name: string]: Function } = {};
+    const modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach(key => {
       modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
     });
@@ -58,7 +58,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
       .replace('MODULE_FUNCTIONS', protoFunctions);
     protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
 
-    let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+    const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
     fs.writeFileSync(protoPath, protoFile);
     await server.addService(
       protoPath,
@@ -91,7 +91,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
       protoFile = protoFile.replace('MODULE_NAME', this.moduleName);
     }
 
-    let request = {
+    const request = {
       routes: paths,
       protoFile: protoFile,
       adminUrl: serverUrl,

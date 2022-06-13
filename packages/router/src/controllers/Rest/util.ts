@@ -10,10 +10,10 @@ import { isArray, isNil, isObject } from 'lodash';
 
 export function extractRequestData(req: Request) {
   const context = (req as ConduitModelOptions).conduit || {};
-  let params: any = {};
-  let headers = req.headers;
+  const params: any = {};
+  const headers = req.headers;
   if (req.query) {
-    let newObj = {};
+    const newObj = {};
     Object.keys(req.query).forEach((k: string) => {
       if (!req.query.hasOwnProperty(k)) return;
       // @ts-ignore
@@ -43,7 +43,7 @@ export function extractRequestData(req: Request) {
       params.populate = [params.populate];
     }
   }
-  let path = req.baseUrl + req.path;
+  const path = req.baseUrl + req.path;
   return { context, params, headers, path };
 }
 

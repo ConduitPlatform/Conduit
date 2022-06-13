@@ -36,7 +36,7 @@ export class SchemaController {
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then(r => {
         if (r) {
-          let routeSchemas: any = {};
+          const routeSchemas: any = {};
           r.forEach((schema: _ConduitSchema) => {
             if (typeof schema.modelOptions === 'string') {
               schema.modelOptions = JSON.parse(schema.modelOptions);
@@ -97,7 +97,7 @@ export class SchemaController {
             });
           });
           promise.then(p => {
-            let routeSchemas: any = {};
+            const routeSchemas: any = {};
             r.forEach((schema: _ConduitSchema) => {
               if (schema.modelOptions.conduit?.cms?.crudOperations) {
                 routeSchemas[schema.name] = schema;
@@ -115,7 +115,7 @@ export class SchemaController {
   }
 
   private _registerRoutes(schemas: ParsedQuery) {
-    let handlers = new CmsHandlers(this.grpcSdk, this.database);
+    const handlers = new CmsHandlers(this.grpcSdk, this.database);
 
     this.router.addRoutes(sortAndConstructRoutes(schemas, handlers));
   }

@@ -174,7 +174,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocuments: Doc[] = [];
+    const updatedDocuments: Doc[] = [];
     for (const doc of params.docs) {
       const updatedDocument = await this.database
         .getSchemaModel(schemaName)
@@ -201,7 +201,7 @@ export class CmsHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let updatedDocuments: Doc[] = [];
+    const updatedDocuments: Doc[] = [];
     for (const doc of params.docs) {
       const updatedDocument = await this.database
         .getSchemaModel(schemaName)

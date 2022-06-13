@@ -28,9 +28,9 @@ export abstract class ConduitRouter {
   }
 
   cleanupRoutes(routes: { action: string; path: string }[]) {
-    let newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
+    const newRegisteredRoutes: Map<string, ConduitRoute> = new Map();
     routes.forEach(route => {
-      let key = `${route.action}-${route.path}`;
+      const key = `${route.action}-${route.path}`;
       if (this._registeredRoutes.has(key)) {
         newRegisteredRoutes.set(key, this._registeredRoutes.get(key)!);
       }

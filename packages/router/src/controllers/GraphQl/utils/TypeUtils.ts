@@ -3,7 +3,7 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 const deepdash = require('deepdash/standalone');
 
 function _extractNestedPopulation(path: string) {
-  let paths = path.split('.');
+  const paths = path.split('.');
   while (paths.indexOf('fieldsByTypeName') !== -1) {
     paths.splice(paths.indexOf('fieldsByTypeName'), 2);
   }
@@ -16,12 +16,12 @@ export function findPopulation(
   relations: string[],
 ): string[] | undefined {
   if (relations.length === 0) return undefined;
-  let result: string[] = [];
+  const result: string[] = [];
   deepdash.eachDeep(
     fields,
     (value: Indexable, key: string, parent: Indexable, context: Indexable) => {
       if (value.fieldsByTypeName) {
-        let keys = Object.keys(value.fieldsByTypeName);
+        const keys = Object.keys(value.fieldsByTypeName);
         if (
           keys.length > 0 &&
           relations.indexOf(keys[0]) !== -1 &&

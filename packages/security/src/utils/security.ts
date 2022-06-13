@@ -24,7 +24,7 @@ export async function validateClient(
     }
     return match;
   }
-  let clientsecret = req.headers.clientsecret;
+  const clientsecret = req.headers.clientsecret;
   if (fromRedis) {
     return clientsecret === client.clientSecret;
   }

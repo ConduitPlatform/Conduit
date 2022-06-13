@@ -164,7 +164,7 @@ export class LocalStorage implements IStorageProvider {
 
   rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
     const self = this;
-    let path = self._storagePath + '/' + self._activeContainer + '/';
+    const path = self._storagePath + '/' + self._activeContainer + '/';
 
     return new Promise(function (res, reject) {
       rename(resolve(path, currentFilename), resolve(path, newFilename), function (err) {

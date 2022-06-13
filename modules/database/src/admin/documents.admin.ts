@@ -120,7 +120,7 @@ export class DocumentsAdmin {
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    let updatedDocuments: any[] = [];
+    const updatedDocuments: any[] = [];
     for (const doc of changedDocuments) {
       const dbDocument: Doc = await this.database
         .getSchemaModel(schemaName)

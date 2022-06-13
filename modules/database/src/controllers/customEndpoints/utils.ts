@@ -34,7 +34,7 @@ function extractParams(
     array?: boolean;
   }[],
 ) {
-  let resultingObject: any = {};
+  const resultingObject: any = {};
   inputs.forEach(
     (r: {
       name: string;
@@ -72,14 +72,14 @@ export function createCustomEndpointRoute(
   endpoint: ICustomEndpoint,
   handler: RequestHandlers,
 ) {
-  let route = new RouteBuilder()
+  const route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
     .method(getOperation(endpoint.operation))
     .handler(handler);
   if (endpoint.authentication) {
     route.middleware('authMiddleware');
   }
-  let inputs = endpoint.inputs;
+  const inputs = endpoint.inputs;
   let returns: any = { result: [endpoint.returns] };
   if (getOperation(endpoint.operation) === ConduitRouteActions.GET) {
     route.cacheControl(
@@ -112,7 +112,7 @@ export function createCustomEndpointRoute(
     });
   }
   if (!isNil(endpoint.inputs) && endpoint.inputs.length > 0) {
-    let params = extractParams(endpoint.inputs);
+    const params = extractParams(endpoint.inputs);
     if (params['bodyParams']) {
       route.bodyParams(params['bodyParams']);
     }

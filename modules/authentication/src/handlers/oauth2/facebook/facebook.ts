@@ -57,7 +57,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
     if (!this.initialized)
       throw new GrpcError(status.NOT_FOUND, 'Requested resource not found');
 
-    let facebookOptions: AxiosRequestConfig = {
+    const facebookOptions: AxiosRequestConfig = {
       params: {
         access_token: details.accessToken,
         fields: this.makeFields(details.scope.split(',')),

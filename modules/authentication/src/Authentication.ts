@@ -119,7 +119,7 @@ export default class Authentication extends ManagedModule<Config> {
     callback: GrpcCallback<UserLoginResponse>,
   ) {
     const { userId, clientId } = call.request;
-    let config = ConfigController.getInstance().config;
+    const config = ConfigController.getInstance().config;
     const signTokenOptions: ISignTokenOptions = {
       secret: config.jwtSecret,
       expiresIn: config.tokenInvalidationPeriod,

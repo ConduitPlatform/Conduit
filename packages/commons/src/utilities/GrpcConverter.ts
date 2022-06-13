@@ -30,7 +30,7 @@ import { RouterDescriptor } from '../interfaces/RouterDescriptor';
 const protoLoader = require('@grpc/proto-loader');
 
 function getDescriptor(protofile: string) {
-  let protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+  const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
   var packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
@@ -53,7 +53,7 @@ export function grpcToConduitRoute(
   moduleName?: string,
   grpcToken?: string,
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
-  let routes = request.routes;
+  const routes = request.routes;
 
   let routerDescriptor: RouterDescriptor = getDescriptor(request.protoFile);
   //this can break everything change it
@@ -109,7 +109,7 @@ function createHandlerForRoute(
   moduleName?: string,
 ) {
   const handler = (req: ConduitRouteParameters) => {
-    let request = {
+    const request = {
       params: req.params ? JSON.stringify(req.params) : null,
       path: req.path,
       headers: JSON.stringify(req.headers),
@@ -129,17 +129,17 @@ function createHandlerForRoute(
     });
   };
 
-  let options: Indexable = route.options;
-  for (let k in options) {
+  const options: Indexable = route.options;
+  for (const k in options) {
     if (!options.hasOwnProperty(k) || options[k].length === 0) continue;
     try {
       options[k] = JSON.parse(options[k]);
     } catch (e) {}
   }
 
-  let returns = route.returns;
+  const returns = route.returns;
   if (returns) {
-    for (let k in returns) {
+    for (const k in returns) {
       if (!returns.hasOwnProperty(k) || returns[k].length === 0) continue;
       try {
         returns[k] = JSON.parse(returns[k]);
@@ -185,11 +185,11 @@ function createHandlerForSocket(
   metadata: Metadata,
   moduleName?: string,
 ) {
-  let eventHandlers = new Map<string, ConduitSocketEvent>();
+  const eventHandlers = new Map<string, ConduitSocketEvent>();
   const events = JSON.parse(socket.events);
   for (const event in events) {
-    let handler = (req: ConduitSocketParameters) => {
-      let request = {
+    const handler = (req: ConduitSocketParameters) => {
+      const request = {
         event: req.event,
         socketId: req.socketId,
         params: req.params ? JSON.stringify(req.params) : null,

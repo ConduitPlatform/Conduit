@@ -112,9 +112,9 @@ export class RestController extends ConduitRouter {
   constructHandler(route: ConduitRoute): (req: Request, res: Response) => void {
     const self = this;
     return (req, res) => {
-      let context = extractRequestData(req);
+      const context = extractRequestData(req);
       let hashKey: string;
-      let { caching, cacheAge, scope } = extractCaching(
+      const { caching, cacheAge, scope } = extractCaching(
         route,
         req.headers['cache-control'],
       );

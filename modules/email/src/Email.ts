@@ -94,11 +94,11 @@ export default class Email extends ManagedModule<Config> {
   }
 
   private async initEmailProvider(newConfig?: Config) {
-    let emailConfig = !isNil(newConfig)
+    const emailConfig = !isNil(newConfig)
       ? newConfig
       : await this.grpcSdk.config.get('email');
 
-    let { transport, transportSettings } = emailConfig;
+    const { transport, transportSettings } = emailConfig;
 
     this.emailProvider = new EmailProvider(transport, transportSettings);
   }
@@ -136,7 +136,7 @@ export default class Email extends ManagedModule<Config> {
       replyTo: call.request.params!.replyTo,
       attachments: call.request.params!.attachments,
     };
-    let emailConfig: Config = await this.grpcSdk.config
+    const emailConfig: Config = await this.grpcSdk.config
       .get('email')
       .catch(() => console.log('failed to get sending domain'));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;

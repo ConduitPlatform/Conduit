@@ -60,18 +60,18 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   }
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let scopes = call.request.params?.scopes ?? this.defaultScopes;
-    let options: RedirectOptions = {
+    const scopes = call.request.params?.scopes ?? this.defaultScopes;
+    const options: RedirectOptions = {
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
       scope: this.constructScopes(scopes),
     };
-    let baseUrl = this.settings.authorizeUrl;
+    const baseUrl = this.settings.authorizeUrl;
     options['state'] = call.request.context.clientId + ',' + options.scope;
 
     const keys = Object.keys(options) as [keyof RedirectOptions];
-    let url = keys
+    const url = keys
       .map(k => {
         return k + '=' + options[k];
       })
@@ -93,26 +93,26 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       myParams['grant_type'] = this.settings.grantType;
     }
 
-    let providerOptions = this.makeRequest(myParams);
+    const providerOptions = this.makeRequest(myParams);
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
     );
-    let access_token = providerResponse.data.access_token;
+    const access_token = providerResponse.data.access_token;
     let state = params.state;
     state = {
       clientId: state[0],
       scopes: this.constructScopes(state.slice(1, state.length)),
     };
 
-    let clientId = state.clientId;
-    let payload = await this.connectWithProvider({
+    const clientId = state.clientId;
+    const payload = await this.connectWithProvider({
       accessToken: access_token,
       clientId,
       scope: state.scopes,
     });
-    let user = await this.createOrUpdateUser(payload);
+    const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
-    let tokens = await this.createTokens(user._id, clientId, config);
+    const tokens = await this.createTokens(user._id, clientId, config);
 
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
@@ -149,14 +149,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let payload = await this.connectWithProvider({
+    const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: call.request.params['clientId'],
       scope: call.request.params?.scope,
     });
-    let user = await this.createOrUpdateUser(payload);
+    const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
-    let tokens = await this.createTokens(
+    const tokens = await this.createTokens(
       user._id,
       call.request.params['clientId'],
       config,

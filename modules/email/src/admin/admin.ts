@@ -358,7 +358,7 @@ export class AdminHandlers {
         'ids is required and must be a non-empty array',
       );
     }
-    let totalCount = ids.length;
+    const totalCount = ids.length;
     const templateDocuments = await EmailTemplate.getInstance().findMany({
       _id: { $in: ids },
     });
@@ -367,7 +367,7 @@ export class AdminHandlers {
       throw new GrpcError(status.INVALID_ARGUMENT, 'ids array contains invalid ids');
     }
 
-    for (let template of templateDocuments) {
+    for (const template of templateDocuments) {
       if (template.externalManaged) {
         await this.emailService
           .deleteExternalTemplate(template.externalId!)
@@ -424,7 +424,7 @@ export class AdminHandlers {
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
-    let templateDocuments: any = [];
+    const templateDocuments: any = [];
     (externalTemplates as Template[]).forEach((element: Template) => {
       templateDocuments.push({
         _id: element.id,
@@ -445,9 +445,9 @@ export class AdminHandlers {
     let errorMessage: string | null = null;
     const externalTemplates: any = await this.emailService.getExternalTemplates();
 
-    let updated = [];
+    const updated = [];
     let totalCount = 0;
-    for (let element of externalTemplates) {
+    for (const element of externalTemplates) {
       const templateDocument = await EmailTemplate.getInstance().findOne({
         externalId: element.id,
       });
@@ -486,7 +486,7 @@ export class AdminHandlers {
     }
 
     if (sender.indexOf('@') === -1) {
-      let emailConfig: Config = await this.grpcSdk.config
+      const emailConfig: Config = await this.grpcSdk.config
         .get('email')
         .catch(() => console.log('failed to get sending domain'));
       sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;

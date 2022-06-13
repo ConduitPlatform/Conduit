@@ -7,7 +7,7 @@ import { Sequelize } from 'sequelize';
  */
 export function sqlSchemaConverter(sqlSchema: Indexable) {
   for (const fieldName of Object.keys(sqlSchema)) {
-    let field = sqlSchema[fieldName];
+    const field = sqlSchema[fieldName];
     field.type = extractType(field.type);
     extractProperties(field);
   }

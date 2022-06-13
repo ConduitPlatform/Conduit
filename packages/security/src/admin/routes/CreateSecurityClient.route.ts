@@ -39,9 +39,9 @@ export function getCreateSecurityClientRoute() {
       if (!Object.values(PlatformTypesEnum).includes(platform)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
       }
-      let clientId = randomBytes(15).toString('hex');
-      let clientSecret = randomBytes(64).toString('hex');
-      let hash = await bcrypt.hash(clientSecret, 10);
+      const clientId = randomBytes(15).toString('hex');
+      const clientSecret = randomBytes(64).toString('hex');
+      const hash = await bcrypt.hash(clientSecret, 10);
       if (platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
           throw new ConduitError(
@@ -66,7 +66,7 @@ export function getCreateSecurityClientRoute() {
         if (!domainPattern.test(comparedDomain) && domain !== '*')
           throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
       }
-      let client = await Client.getInstance().create({
+      const client = await Client.getInstance().create({
         clientId,
         clientSecret: hash,
         platform,

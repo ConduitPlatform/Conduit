@@ -36,7 +36,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async containerExists(name: string): Promise<boolean | Error> {
-    let exists = await this._storage.bucket(name).exists();
+    const exists = await this._storage.bucket(name).exists();
     return exists[0];
   }
 
@@ -44,7 +44,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     filename: string,
     newContainer: string,
   ): Promise<boolean | Error> {
-    let newBucketFile = this._storage.bucket(newContainer).file(filename);
+    const newBucketFile = this._storage.bucket(newContainer).file(filename);
     await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
     return true;
   }
@@ -54,7 +54,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     newFilename: string,
     newContainer: string,
   ): Promise<boolean | Error> {
-    let newBucketFile = this._storage.bucket(newContainer).file(newFilename);
+    const newBucketFile = this._storage.bucket(newContainer).file(newFilename);
     await this._storage
       .bucket(this._activeBucket)
       .file(currentFilename)
@@ -67,7 +67,7 @@ export class GoogleCloudStorage implements IStorageProvider {
    * @param name For the folder
    */
   async createFolder(name: string): Promise<boolean | Error> {
-    let bucket = await this._storage.bucket(this._activeBucket);
+    const bucket = await this._storage.bucket(this._activeBucket);
     let exists = await bucket.exists();
     if (!exists[0]) {
       await bucket.create();
@@ -82,7 +82,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async folderExists(name: string): Promise<boolean | Error> {
-    let bucket = await this._storage.bucket(this._activeBucket);
+    const bucket = await this._storage.bucket(this._activeBucket);
     let exists = await bucket.exists();
     if (!exists[0]) {
       return false;

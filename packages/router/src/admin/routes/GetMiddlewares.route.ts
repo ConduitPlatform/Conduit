@@ -13,7 +13,7 @@ export function getMiddlewares(router: ConduitDefaultRouter) {
       response: TYPE.JSON,
     }),
     async () => {
-      let response: string[] = [];
+      const response: string[] = [];
       const module = router.getGrpcRoutes();
       Object.keys(module).forEach((url: string) => {
         module[url].forEach((item: any) => {
@@ -27,7 +27,7 @@ export function getMiddlewares(router: ConduitDefaultRouter) {
         });
       });
       // @ts-ignore
-      let actualResponse = Array.from(new Set(response));
+      const actualResponse = Array.from(new Set(response));
       return { result: actualResponse }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );

@@ -19,7 +19,7 @@ export function extractCaching(
   let scope: string | undefined;
   if (route.input.cacheControl && route.input.cacheControl.indexOf(',') !== -1) {
     caching = true;
-    let cache: string[] = route.input.cacheControl.split(',');
+    const cache: string[] = route.input.cacheControl.split(',');
     scope = cache[0];
     cacheAge = cache[1].replace('max-age=', '');
     cacheAge = Number.parseInt(cacheAge);

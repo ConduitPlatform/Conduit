@@ -47,7 +47,7 @@ export class GraphQLController extends ConduitRouter {
       plugins: [cookiePlugin],
       context: ({ req, res }: Indexable) => {
         const context = req.conduit || {};
-        let headers = req.headers;
+        const headers = req.headers;
         return { context, headers, setCookie: [], removeCookie: [], res };
       },
     });
@@ -60,7 +60,7 @@ export class GraphQLController extends ConduitRouter {
       return;
     }
     const self = this;
-    let parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
+    const parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
     this.types += parseResult.typeString;
     parseResult.relationTypes.forEach((type: string) => {
       if (self._relationTypes.indexOf(type) === -1) {
@@ -76,12 +76,12 @@ export class GraphQLController extends ConduitRouter {
       this.resolvers['JSONObject'] = GraphQLJSONObject;
     }
 
-    for (let resolveGroup in parseResult.parentResolve) {
+    for (const resolveGroup in parseResult.parentResolve) {
       if (!parseResult.parentResolve.hasOwnProperty(resolveGroup)) continue;
       if (!self.resolvers[resolveGroup]) {
         self.resolvers[resolveGroup] = {};
       }
-      for (let resolverFunction in parseResult.parentResolve[resolveGroup]) {
+      for (const resolverFunction in parseResult.parentResolve[resolveGroup]) {
         if (!parseResult.parentResolve[resolveGroup].hasOwnProperty(resolverFunction))
           continue;
         if (!self.resolvers[resolveGroup][resolverFunction]) {
@@ -114,12 +114,12 @@ export class GraphQLController extends ConduitRouter {
     pathName.forEach(r => {
       uniqueName += r.slice(0, 1).toUpperCase() + r.slice(1);
     });
-    let name = input.name ? input.name : input.action.toLowerCase() + uniqueName;
+    const name = input.name ? input.name : input.action.toLowerCase() + uniqueName;
 
     let params = '';
     if (input.bodyParams || input.queryParams || input.urlParams) {
       if (input.bodyParams) {
-        let parseResult: ParseResult = this._parser.extractTypes(
+        const parseResult: ParseResult = this._parser.extractTypes(
           name + 'Request',
           input.bodyParams,
           true,
@@ -144,7 +144,7 @@ export class GraphQLController extends ConduitRouter {
       description = `""" ${input.description} """ `;
     }
 
-    let finalName = description + name + params + ':' + returnType;
+    const finalName = description + name + params + ':' + returnType;
     if (input.action === ConduitRouteActions.GET && !this.queries.includes(finalName)) {
       this.queries += ' ' + finalName;
     } else if (
@@ -177,10 +177,10 @@ export class GraphQLController extends ConduitRouter {
   }
 
   shouldPopulate(args: Indexable, info: Indexable) {
-    let resolveInfo = parseResolveInfo(info);
+    const resolveInfo = parseResolveInfo(info);
     let objs = resolveInfo.fieldsByTypeName;
     objs = objs[Object.keys(objs)[0]];
-    let result = findPopulation(objs, this._relationTypes);
+    const result = findPopulation(objs, this._relationTypes);
     if (result) {
       args['populate'] = result;
     }
@@ -302,7 +302,7 @@ export class GraphQLController extends ConduitRouter {
       context: any,
       info: Indexable,
     ) => {
-      let { caching, cacheAge, scope } = extractCachingGql(
+      const { caching, cacheAge, scope } = extractCachingGql(
         route,
         context.headers['Cache-Control'],
       );
@@ -316,7 +316,7 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
-          let params = Object.assign(args, args.params);
+          const params = Object.assign(args, args.params);
           delete params.params;
           if (caching) {
             hashKey = createHashKey(context.path, context.context, params);
@@ -380,7 +380,7 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
-          let params = Object.assign(args, args.params);
+          const params = Object.assign(args, args.params);
           delete params.params;
           return route.executeRequest.bind(route)({ ...context, params: args });
         })
@@ -408,7 +408,7 @@ export class GraphQLController extends ConduitRouter {
 
   private addConduitRoute(route: ConduitRoute) {
     this.generateType(route.returnTypeName, route.returnTypeFields);
-    let actionName = this.generateAction(route.input, route.returnTypeName);
+    const actionName = this.generateAction(route.input, route.returnTypeName);
     this.generateSchema();
 
     if (route.input.action === ConduitRouteActions.GET) {

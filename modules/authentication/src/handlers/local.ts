@@ -267,12 +267,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const url = serverConfig.url;
 
     if (this.sendEmail) {
-      let verificationToken: Token = await Token.getInstance().create({
+      const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
         token: uuid(),
       });
-      let result = { verificationToken, hostUrl: url };
+      const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
       if (this.sendEmail) {
         await this.emailModule.sendEmail('EmailVerification', {
@@ -413,7 +413,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user) || (config.local.verification.required && !user.isVerified))
       return 'Ok';
 
-    let oldToken: Token | null = await Token.getInstance().findOne({
+    const oldToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
       userId: user._id,
     });
@@ -425,7 +425,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       token: uuid(),
     });
 
-    let appUrl = config.local.forgot_password_redirect_uri;
+    const appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
     if (this.sendEmail) {
       await this.emailModule.sendEmail('ForgotPassword', {

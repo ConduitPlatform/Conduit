@@ -7,8 +7,8 @@ import { isBoolean } from 'lodash';
 import { ParsedQuery } from '../../interfaces';
 
 function arrayHandler(value: any) {
-  let newArray = [];
-  for (let val of value) {
+  const newArray = [];
+  for (const val of value) {
     newArray.push(parseQuery(val));
   }
   return newArray;
@@ -57,9 +57,9 @@ function matchOperation(operator: string, value: any) {
 }
 
 export function parseQuery(query: ParsedQuery) {
-  let parsed: Indexable = isArray(query) ? [] : {};
+  const parsed: Indexable = isArray(query) ? [] : {};
   if (isString(query) || isBoolean(query)) return query;
-  for (let key in query) {
+  for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
         [Op.or]: query[key].map((operation: ParsedQuery) => {
@@ -77,7 +77,7 @@ export function parseQuery(query: ParsedQuery) {
     } else if (key === '$options') {
       continue;
     } else {
-      let matched = matchOperation(key, parseQuery(query[key]));
+      const matched = matchOperation(key, parseQuery(query[key]));
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
       } else {
@@ -126,7 +126,7 @@ async function _createWithPopulations(
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
-        let val = document[key][i];
+        const val = document[key][i];
         if (!isObject(val)) {
           continue;
         }

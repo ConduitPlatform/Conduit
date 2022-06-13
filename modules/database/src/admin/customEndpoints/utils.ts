@@ -25,7 +25,7 @@ export function queryValidation(
     }
     query = query['OR'];
   } else if (query.hasOwnProperty('schemaField')) {
-    let error = _queryValidation(
+    const error = _queryValidation(
       findSchema,
       inputs,
       query.schemaField,
@@ -46,7 +46,7 @@ export function queryValidation(
 
   for (const q of query) {
     if (q.hasOwnProperty('schemaField')) {
-      let error = _queryValidation(
+      const error = _queryValidation(
         findSchema,
         inputs,
         q.schemaField,
@@ -57,7 +57,7 @@ export function queryValidation(
         return error;
       }
     } else if (q.hasOwnProperty('AND') || q.hasOwnProperty('OR')) {
-      let error = queryValidation(q, findSchema, inputs);
+      const error = queryValidation(q, findSchema, inputs);
       if (error !== true) {
         return error;
       }
@@ -104,7 +104,7 @@ function _queryValidation(
       return 'comparisonField value is not present in selected schema!';
     }
   } else if (comparisonField.type === 'Input') {
-    let inputNames = inputs.map((r: Indexable) => r.name);
+    const inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(comparisonField.value)) {
       return 'comparisonField value is not present in provided inputs!';
     }
@@ -198,7 +198,7 @@ export function assignmentValidation(
   }
 
   if (assignmentField.type === 'Input') {
-    let inputNames = inputs.map((r: Indexable) => r.name);
+    const inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(assignmentField.value)) {
       return 'assignmentField value is not present in provided inputs!';
     }

@@ -47,8 +47,8 @@ export namespace AuthUtils {
   }
 
   export function deleteUserTokens(sdk: ConduitGrpcSdk, query: Query) {
-    let promise1 = sdk.databaseProvider!.deleteMany('AccessToken', query);
-    let promise2 = sdk.databaseProvider!.deleteMany('RefreshToken', query);
+    const promise1 = sdk.databaseProvider!.deleteMany('AccessToken', query);
+    const promise2 = sdk.databaseProvider!.deleteMany('RefreshToken', query);
 
     return [promise1, promise2];
   }

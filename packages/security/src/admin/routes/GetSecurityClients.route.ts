@@ -12,7 +12,7 @@ export function getGetSecurityClientsRoute() {
       clients: [Client.getInstance().fields],
     }),
     async (params: ConduitRouteParameters) => {
-      let clients = await Client.getInstance().findMany({});
+      const clients = await Client.getInstance().findMany({});
       return { result: { clients } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );

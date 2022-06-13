@@ -8,7 +8,7 @@ import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  let copy = _.cloneDeep(jsonSchema) as any;
+  const copy = _.cloneDeep(jsonSchema) as any;
 
   if (copy.modelSchema.hasOwnProperty('_id')) {
     delete copy.modelSchema['_id'];
@@ -49,7 +49,7 @@ function extractArrayType(arrayField: any[]) {
 }
 
 function extractObjectType(objectField: any) {
-  let res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
+  const res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
     res.type = extractType(objectField.type);
@@ -94,7 +94,7 @@ function checkDefaultValue(type: string, value: string) {
       return '';
     case 'Number':
       if (isNumber(value)) return value;
-      let v = parseFloat(value);
+      const v = parseFloat(value);
       if (Number.isNaN(v)) return v;
       return 0;
     case 'Boolean':

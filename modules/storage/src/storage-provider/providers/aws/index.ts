@@ -144,11 +144,11 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async deleteFolder(name: string): Promise<boolean | Error> {
-    let exists = await this.folderExists(name);
+    const exists = await this.folderExists(name);
     if (!exists) return false;
 
     console.log('Getting files list...');
-    let files = await this.listFiles(name);
+    const files = await this.listFiles(name);
 
     let i = 0;
     console.log('Deleting files...');

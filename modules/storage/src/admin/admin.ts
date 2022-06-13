@@ -271,7 +271,7 @@ export class AdminRoutes {
   }
 
   async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let query: Query = {
+    const query: Query = {
       container: call.request.params.container,
     };
     if (!isNil(call.request.params.parent)) {
@@ -280,16 +280,16 @@ export class AdminRoutes {
         $options: 'i',
       };
     }
-    let folders = await _StorageFolder
+    const folders = await _StorageFolder
       .getInstance()
       .findMany(query, undefined, call.request.params.skip, call.request.params.limit);
-    let folderCount = await _StorageFolder.getInstance().countDocuments(query);
+    const folderCount = await _StorageFolder.getInstance().countDocuments(query);
     return { folders, folderCount };
   }
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, container, isPublic } = call.request.params;
-    let containerDocument = await _StorageContainer
+    const containerDocument = await _StorageContainer
       .getInstance()
       .findOne({ name: container });
     if (isNil(containerDocument)) {
@@ -308,7 +308,7 @@ export class AdminRoutes {
         container,
         isPublic,
       });
-      let exists = await this.fileHandlers.storage
+      const exists = await this.fileHandlers.storage
         .container(container)
         .folderExists(newName);
       if (!exists) {
@@ -323,7 +323,7 @@ export class AdminRoutes {
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
 
-    let folder = await _StorageFolder.getInstance().findOne({
+    const folder = await _StorageFolder.getInstance().findOne({
       _id: id,
     });
     if (isNil(folder)) {
@@ -345,10 +345,10 @@ export class AdminRoutes {
   }
 
   async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let containers = await _StorageContainer
+    const containers = await _StorageContainer
       .getInstance()
       .findMany({}, undefined, call.request.params.skip, call.request.params.limit);
-    let containersCount = await _StorageContainer.getInstance().countDocuments({});
+    const containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return { containers, containersCount };
   }
@@ -361,7 +361,7 @@ export class AdminRoutes {
   async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     try {
-      let container = await _StorageContainer.getInstance().findOne({
+      const container = await _StorageContainer.getInstance().findOne({
         _id: id,
       });
       if (isNil(container)) {
@@ -393,7 +393,7 @@ export class AdminRoutes {
         name,
       });
       if (isNil(container)) {
-        let exists = await this.fileHandlers.storage.containerExists(name);
+        const exists = await this.fileHandlers.storage.containerExists(name);
 
         if (!exists) {
           await this.fileHandlers.storage.createContainer(name);
