@@ -31,6 +31,8 @@ import {
 } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
+import { ConduitLogger } from './utilities/Logger';
+import winston from 'winston';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -57,6 +59,7 @@ export default class ConduitGrpcSdk {
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
+  private readonly _logger: ConduitLogger;
   private _initialized: boolean = false;
 
   constructor(
@@ -73,6 +76,7 @@ export default class ConduitGrpcSdk {
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    this._logger = new ConduitLogger();
     const grpcKey = process.env.GRPC_KEY;
     if (grpcKey) {
       const sign = createSigner({ key: grpcKey });
@@ -383,6 +387,9 @@ export default class ConduitGrpcSdk {
 
   get grpcToken() {
     return this._grpcToken;
+  }
+  get logger() {
+    return this._logger;
   }
 }
 
