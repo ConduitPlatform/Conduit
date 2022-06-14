@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
+import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
 import SecurityModule from '@conduitplatform/security';
 import { ConduitDefaultRouter } from '@conduitplatform/router';
@@ -13,8 +14,9 @@ import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
+import { HealthCheckRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/grpc_health_check';
 
-const CORE_SERVICES = ['Admin', 'Router'];
+const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;
