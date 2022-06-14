@@ -1,4 +1,4 @@
-import { Application, NextFunction, Request, Response, Router } from 'express';
+import express, { NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import {
   ConduitCommons,
@@ -8,9 +8,11 @@ import {
 } from '@conduitplatform/commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import { SocketPush } from '../interfaces';
+import { SocketPush } from '@conduitplatform/router/dist/interfaces';
 import { SwaggerRouterMetadata } from './Rest';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitLogger } from './utils/logger';
+import http from 'http';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -50,15 +52,18 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export class ConduitRoutingController {
-  private readonly _expressApp: Application;
   private readonly _commons: ConduitCommons;
   private _restRouter: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
+  private readonly logger: ConduitLogger;
+  readonly expressApp = express();
+  readonly server = http.createServer(this.expressApp);
 
-  constructor(commons: ConduitCommons, expressApp: Application) {
-    this._expressApp = expressApp;
+  constructor(private readonly port: number, commons: ConduitCommons) {
+    this.logger = new ConduitLogger();
+    this.start();
     this._commons = commons;
     this._restRouter = new RestController(this._commons, swaggerRouterMetadata);
     this._middlewareRouter = Router();
@@ -67,17 +72,17 @@ export class ConduitRoutingController {
     });
 
     const self = this;
-    this._expressApp.use((req, res, next) => {
+    this.expressApp.use((req, res, next) => {
       self._middlewareRouter(req, res, next);
     });
 
-    this._expressApp.use(
+    this.expressApp.use(
       (err: ConduitError, req: Request, res: Response, _: NextFunction) => {
         res.status(err?.status || 500).send(err.message);
       },
     );
 
-    this._expressApp.use((req, res, next) => {
+    this.expressApp.use((req, res, next) => {
       if (req.url.startsWith('/graphql') && this._graphQLRouter) {
         this._graphQLRouter.handleRequest(req, res, next);
       } else if (!req.url.startsWith('/graphql')) {
@@ -87,12 +92,18 @@ export class ConduitRoutingController {
     });
   }
 
+  start() {
+    this.server.listen(this.port);
+    this.server.on('error', this.onError.bind(this));
+    this.server.on('Listening', this.onListening.bind(this));
+  }
+
   initGraphQL() {
     this._graphQLRouter = new GraphQLController(this._commons);
   }
 
   initSockets() {
-    this._socketRouter = new SocketController(this._commons, this._expressApp);
+    this._socketRouter = new SocketController(this._commons, this.expressApp);
   }
 
   registerMiddleware(
@@ -163,5 +174,33 @@ export class ConduitRoutingController {
     });
     this._restRouter.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
+  }
+
+  onError(error: any) {
+    if (error.syscall !== 'listen') {
+      throw error;
+    }
+    const bind =
+      typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+      case 'EACCES':
+        console.error(bind + ' requires elevated privileges');
+        process.exit(1);
+        break;
+      case 'EADDRINUSE':
+        console.error(bind + ' is already in use');
+        process.exit(1);
+        break;
+      default:
+        throw error;
+    }
+  }
+
+  onListening() {
+    const address = this.server.address();
+    const bind =
+      typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
+    console.log('Listening on ' + bind);
   }
 }

@@ -12,7 +12,7 @@ import {
 } from '@conduitplatform/commons';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitRouter } from '../Router';
-import { SocketPush } from '../../interfaces';
+import { SocketPush } from '@conduitplatform/router/dist/interfaces';
 import { isNil } from 'lodash';
 
 export class SocketController extends ConduitRouter {

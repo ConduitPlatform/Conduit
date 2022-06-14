@@ -56,7 +56,8 @@ export function processParams(paramObj: any, sourceParams: string) {
           params += extractArrayParam(elementZero, typeZeroRequired, typeZero);
         } else {
           const typeZeroTwo = (elementZero as ConduitRouteOptionExtended).type;
-          const typeZeroTwoRequired = (elementZero as ConduitRouteOptionExtended).required;
+          const typeZeroTwoRequired = (elementZero as ConduitRouteOptionExtended)
+            .required;
           params += extractArrayParam(typeZeroTwo, typeZeroTwoRequired);
         }
       }
