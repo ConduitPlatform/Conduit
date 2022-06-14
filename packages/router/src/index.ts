@@ -1,4 +1,4 @@
-import { Application, NextFunction, Request, Response, Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { RouterBuilder } from './builders';
 import {
   ConduitCommons,
@@ -18,10 +18,9 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcServer,
 } from '@conduitplatform/grpc-sdk';
-import { SocketPush } from '../../conduit-router/src/interfaces';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
-import { ConduitRoutingController } from '@conduitplatform/hermes';
+import { ConduitRoutingController, SocketPush } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 
 export class ConduitDefaultRouter extends IConduitRouter {
@@ -36,18 +35,17 @@ export class ConduitDefaultRouter extends IConduitRouter {
   constructor(
     protected readonly commons: ConduitCommons,
     protected readonly grpcSdk: ConduitGrpcSdk,
-    protected readonly expressApp: Application,
   ) {
-    super(commons, grpcSdk, expressApp);
+    super(commons, grpcSdk);
     this._routes = [];
     this._globalMiddlewares = [];
-    this._internalRouter = new ConduitRoutingController(this.getHttpPort()!, commons);
+    this._internalRouter = new ConduitRoutingController(this.getHttpPort()!, '', commons);
     this._internalRouter.initGraphQL();
     this._internalRouter.initSockets();
   }
 
   getHttpPort() {
-    const value = process.env['PORT'] ?? '3000';
+    const value = (process.env['PORT'] || process.env['CLIENT_PORT']) ?? '3000';
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       console.error(`Invalid HTTP port value: ${port}`);
@@ -326,4 +324,3 @@ export class ConduitDefaultRouter extends IConduitRouter {
 }
 
 export * from './builders';
-export * from '../../conduit-router/src/Rest';

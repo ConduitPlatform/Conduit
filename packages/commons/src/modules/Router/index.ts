@@ -1,15 +1,14 @@
 import ConduitGrpcSdk, { GrpcServer } from '@conduitplatform/grpc-sdk';
-import { NextFunction, Router, Request, Response, Application } from 'express';
+import { NextFunction, Router, Request, Response } from 'express';
 import { ConduitRouterBuilder } from './index';
 import { ConduitCommons } from '../..';
 import { ConduitMiddleware } from '../../interfaces';
-import { ConduitRoute } from '../../classes/ConduitRoute';
+import { ConduitRoute } from '../../classes';
 
 export abstract class IConduitRouter {
   protected constructor(
     protected readonly commons: ConduitCommons,
     protected readonly grpcSdk: ConduitGrpcSdk,
-    protected readonly expressApp: Application,
   ) {}
 
   abstract initialize(server: GrpcServer): Promise<void>;

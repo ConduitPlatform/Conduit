@@ -24,6 +24,7 @@
     "@conduitplatform/config": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/router": "^1.0.0",
+    "@conduitplatform/hermes": "^1.0.0",
     "@conduitplatform/security": "^1.0.0",
     "@grpc/grpc-js": "^1.5.2",
     "@grpc/proto-loader": "^0.5.4",

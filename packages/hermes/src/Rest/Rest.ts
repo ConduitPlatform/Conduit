@@ -9,12 +9,13 @@ import {
 } from 'express';
 
 import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
-import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
+import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
 import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces/Cookie';
+import { Cookie } from '../interfaces';
+import { SwaggerRouterMetadata } from '../types';
 
 const swaggerUi = require('swagger-ui-express');
 

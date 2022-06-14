@@ -2,19 +2,7 @@ import { ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
-
-export type SwaggerRouterMetadata = {
-  readonly urlPrefix: string;
-  readonly securitySchemes: {
-    [field: string]: {
-      [field: string]: string;
-    };
-  };
-  readonly globalSecurityHeaders: {
-    [field: string]: [];
-  }[];
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void;
-};
+import { SwaggerRouterMetadata } from '../types';
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: Indexable;
