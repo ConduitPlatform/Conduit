@@ -8,13 +8,12 @@ import ConduitGrpcSdk, {
 import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
 import SecurityModule from '@conduitplatform/security';
-import { ConduitDefaultRouter } from '@conduitplatform/router';
 import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import { HealthCheckRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/grpc_health_check';
+import { ConduitDefaultRouter } from '@conduitplatform/router';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 
@@ -69,15 +68,8 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
     this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
-    this.commons.registerRouter(
-      new ConduitDefaultRouter(
-        this.commons,
-        grpcSdk,
-        Core.getInstance().httpServer.expressApp,
-      ),
-    );
+    this.commons.registerRouter(new ConduitDefaultRouter(this.commons, grpcSdk));
     Core.getInstance().httpServer.initialize();
-    Core.getInstance().httpServer.start();
     await this.commons.getConfigManager().registerAppConfig();
     let error;
     this.commons

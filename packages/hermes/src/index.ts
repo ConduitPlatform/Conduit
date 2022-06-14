@@ -8,11 +8,14 @@ import {
 } from '@conduitplatform/commons';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import { SocketPush } from '@conduitplatform/router/dist/interfaces';
-import { SwaggerRouterMetadata } from './Rest';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger } from './utils/logger';
 import http from 'http';
+import { SocketPush } from './interfaces';
+import { SwaggerRouterMetadata } from './types';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import path from 'path';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -44,7 +47,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
       clientSecret: [],
     },
   ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: any): void {
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     if (route.input.middlewares?.includes('authMiddleware')) {
       swaggerRouteDoc.security[0].userToken = [];
     }
@@ -61,31 +64,43 @@ export class ConduitRoutingController {
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
 
-  constructor(private readonly port: number, commons: ConduitCommons) {
+  constructor(
+    private readonly port: number,
+    private readonly baseUrl: string,
+    commons: ConduitCommons,
+    swaggerMetadata?: SwaggerRouterMetadata,
+  ) {
     this.logger = new ConduitLogger();
     this.start();
     this._commons = commons;
-    this._restRouter = new RestController(this._commons, swaggerRouterMetadata);
+    this._restRouter = new RestController(
+      this._commons,
+      swaggerMetadata ?? swaggerRouterMetadata,
+    );
     this._middlewareRouter = Router();
-    this._middlewareRouter.use((req: Request, res: Response, next: NextFunction) => {
-      next();
-    });
+    this._middlewareRouter.use(
+      baseUrl,
+      (req: Request, res: Response, next: NextFunction) => {
+        next();
+      },
+    );
 
     const self = this;
-    this.expressApp.use((req, res, next) => {
+    this.expressApp.use(baseUrl, (req, res, next) => {
       self._middlewareRouter(req, res, next);
     });
 
     this.expressApp.use(
+      baseUrl,
       (err: ConduitError, req: Request, res: Response, _: NextFunction) => {
         res.status(err?.status || 500).send(err.message);
       },
     );
 
-    this.expressApp.use((req, res, next) => {
-      if (req.url.startsWith('/graphql') && this._graphQLRouter) {
+    this.expressApp.use(baseUrl, (req, res, next) => {
+      if (req.url.startsWith(`${baseUrl}/graphql`) && this._graphQLRouter) {
         this._graphQLRouter.handleRequest(req, res, next);
-      } else if (!req.url.startsWith('/graphql')) {
+      } else if (!req.url.startsWith(`${baseUrl}/graphql`)) {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter.handleRequest(req, res, next);
       }
@@ -93,9 +108,10 @@ export class ConduitRoutingController {
   }
 
   start() {
+    this.server
+      .addListener('error', this.onError.bind(this))
+      .addListener('listening', this.onListening.bind(this));
     this.server.listen(this.port);
-    this.server.on('error', this.onError.bind(this));
-    this.server.on('Listening', this.onListening.bind(this));
   }
 
   initGraphQL() {
@@ -124,7 +140,10 @@ export class ConduitRoutingController {
 
   registerRoute(
     path: string,
-    router: Router | ((req: Request, res: Response, next: NextFunction) => void),
+    router:
+      | Router
+      | ((req: Request, res: Response, next: NextFunction) => void)
+      | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
     this._restRouter.registerRoute(path, router);
   }
@@ -201,6 +220,30 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log('Listening on ' + bind);
+    console.log(this.baseUrl + 'Listening on ' + bind);
+  }
+
+  private registerGlobalMiddleware() {
+    this.registerMiddleware(cors(), false);
+    this.registerMiddleware(this.logger.middleware, false);
+    this.registerMiddleware(express.json({ limit: '50mb' }), false);
+    this.registerMiddleware(
+      express.urlencoded({ limit: '50mb', extended: false }),
+      false,
+    );
+    this.registerMiddleware(cookieParser(), false);
+    this.registerMiddleware(express.static(path.join(__dirname, 'public')), false);
+
+    // this.registerMiddleware(
+    //   (error: any, req: Request, res: Response, _: NextFunction) => {
+    //     let status = error.status;
+    //     if (status === null || status === undefined) status = 500;
+    //     res.status(status).json({ error: error.message });
+    //   },
+    //   false
+    // );
   }
 }
+
+export * from './interfaces';
+export * from './types';

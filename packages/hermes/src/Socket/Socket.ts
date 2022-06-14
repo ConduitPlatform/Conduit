@@ -12,8 +12,8 @@ import {
 } from '@conduitplatform/commons';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitRouter } from '../Router';
-import { SocketPush } from '@conduitplatform/router/dist/interfaces';
 import { isNil } from 'lodash';
+import { SocketPush } from '../interfaces';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
