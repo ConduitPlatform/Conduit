@@ -5,7 +5,7 @@ echo "Generating typescript code"
 protoc \
   --plugin=./node_modules/.bin/protoc-gen-ts_proto\
   --ts_proto_out=./src/protoTypes\
-  --ts_proto_opt=onlyTypes=true\
+  --ts_proto_opt=onlyTypes=true,outputServices=generic-definitions,useExactTypes=false\
   ./src/email.proto
 
 echo "Cleaning up folders"
