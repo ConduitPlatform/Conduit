@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.1...v0.13.0-rc.2) (2022-06-14)
+
+
+### Bug Fixes
+
+* rxjs operators required on runtime ([#205](https://github.com/ConduitPlatform/Conduit/issues/205)) ([85ec429](https://github.com/ConduitPlatform/Conduit/commit/85ec42940d4e7f5610b9da5c5d7c0c039b1da46c))
+
 ## [0.13.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc0...v0.13.0-rc.1) (2022-06-13)
 
 
