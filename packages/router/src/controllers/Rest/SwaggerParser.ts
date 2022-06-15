@@ -55,6 +55,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
   protected getType(conduitType: TYPE) {
     const res: {
       type?: string;
+      $ref?: string;
       format?: string;
       properties?: object;
     } = {};
@@ -72,8 +73,13 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         res.type = 'string';
         res.format = 'uuid';
         break;
-      default:
+      case 'String':
+      case 'Number':
+      case 'Boolean':
         res.type = conduitType.toLowerCase();
+        break;
+      default:
+        res.$ref = `#/components/schemas/${conduitType}`;
     }
     return res;
   }
