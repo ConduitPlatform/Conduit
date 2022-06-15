@@ -25,6 +25,7 @@
   "dependencies": {
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/router": "^1.0.1",
     "@grpc/grpc-js": "^1.5.2",
     "bcrypt": "^5.0.1",
     "helmet": "^4.3.1",

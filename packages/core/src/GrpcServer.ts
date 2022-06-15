@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
-import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
 import SecurityModule from '@conduitplatform/security';
 import { Core } from './Core';
@@ -14,6 +13,7 @@ import path from 'path';
 import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import { ConduitDefaultRouter } from '@conduitplatform/router';
+import ConfigManager from './config-manager';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
 
