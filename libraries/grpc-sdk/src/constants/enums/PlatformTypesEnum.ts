@@ -6,4 +6,5 @@ export enum PlatformTypesEnum {
   WINDOWS = 'WINDOWS',
   MACOS = 'MACOS',
   LINUX = 'LINUX',
+  CLI = 'CLI',
 }

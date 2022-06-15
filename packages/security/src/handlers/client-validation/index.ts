@@ -34,8 +34,12 @@ export class ClientValidator {
     if (isNil((req as ConduitModelOptions).conduit))
       (req as ConduitModelOptions).conduit = {};
     const { clientid, clientsecret } = req.headers;
-    // if incoming call is a webhook or an admin call
-    if (req.path.indexOf('/hook') === 0 || req.path.indexOf('/admin') === 0) {
+    // Exclude webhooks, admin calls and http pings
+    if (
+      req.path.indexOf('/hook') === 0 ||
+      req.path.indexOf('/admin') === 0 ||
+      ['/', '/health'].includes(req.path)
+    ) {
       return next();
     }
 
