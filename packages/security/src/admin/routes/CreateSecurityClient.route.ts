@@ -25,19 +25,19 @@ export function getCreateSecurityClientRoute() {
         notes: ConduitString.Optional,
       },
     },
-    new ConduitRouteReturnDefinition('CreateSecurityClient', {
-      id: ConduitString.Required,
-      clientId: ConduitString.Required,
-      clientSecret: ConduitString.Required,
-      platform: ConduitString.Required,
-      domain: ConduitString.Optional,
-      alias: ConduitString.Optional,
-      notes: ConduitString.Optional,
-    }),
+    new ConduitRouteReturnDefinition('CreateSecurityClient', Client.getInstance().fields),
     async (params: ConduitRouteParameters) => {
-      const { platform, domain, alias, notes } = params.params!;
+      const { platform, domain, notes } = params.params!;
+      let { alias } = params.params!;
       if (!Object.values(PlatformTypesEnum).includes(platform)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
+      }
+      if (alias === '') {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Non-null alias field should not be an empty string',
+        );
       }
       if (alias) {
         const existingClient = await Client.getInstance().findOne({ alias });
@@ -49,16 +49,6 @@ export function getCreateSecurityClientRoute() {
           );
         }
       }
-      if (alias === '') {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Non-null alias field should not be an empty string',
-        );
-      }
-      const clientId = randomBytes(15).toString('hex');
-      const clientSecret = randomBytes(64).toString('hex');
-      const hash = await bcrypt.hash(clientSecret, 10);
       if (platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
           throw new ConduitError(
@@ -83,6 +73,14 @@ export function getCreateSecurityClientRoute() {
         if (!domainPattern.test(comparedDomain) && domain !== '*')
           throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
       }
+      const clientId = randomBytes(15).toString('hex');
+      const clientSecret = randomBytes(64).toString('hex');
+      const hash = await bcrypt.hash(clientSecret, 10);
+      if (!alias) {
+        alias = `${platform.toLowerCase()}:${
+          platform === 'WEB' ? `${domain}:${clientId}` : clientId
+        }`;
+      }
       const client = await Client.getInstance().create({
         clientId,
         clientSecret: hash,
@@ -92,15 +90,7 @@ export function getCreateSecurityClientRoute() {
         notes,
       });
       return {
-        result: {
-          id: client._id,
-          clientId,
-          clientSecret,
-          platform,
-          domain,
-          alias,
-          notes,
-        },
+        result: client,
       }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );

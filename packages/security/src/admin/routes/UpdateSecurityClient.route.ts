@@ -8,7 +8,6 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
-  RouteOptionType,
 } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { isNil } from 'lodash';
@@ -27,14 +26,7 @@ export function getUpdateSecurityClientRoute() {
         notes: ConduitString.Optional,
       },
     },
-    new ConduitRouteReturnDefinition('UpdateSecurityClient', {
-      id: ConduitString.Required,
-      clientId: ConduitString.Required,
-      platform: ConduitString.Optional,
-      domain: ConduitString.Optional,
-      alias: ConduitString.Optional,
-      notes: ConduitString.Optional,
-    }),
+    new ConduitRouteReturnDefinition('UpdateSecurityClient', Client.getInstance().fields),
     async (params: ConduitRouteParameters) => {
       const { domain, alias, notes } = params.params!;
       let client = await Client.getInstance().findOne({
@@ -43,7 +35,14 @@ export function getUpdateSecurityClientRoute() {
       if (isNil(client)) {
         throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
       }
-      if (alias) {
+      if (alias === '') {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Non-null alias field should not be an empty string',
+        );
+      }
+      if (alias && alias !== client.alias) {
         const existingClient = await Client.getInstance().findOne({ alias });
         if (existingClient) {
           throw new ConduitError(
@@ -52,13 +51,6 @@ export function getUpdateSecurityClientRoute() {
             `A security client with an alias of '${alias}' already exists`,
           );
         }
-      }
-      if (alias === '') {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          'Non-null alias field should not be an empty string',
-        );
       }
       if (client.platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
@@ -84,21 +76,14 @@ export function getUpdateSecurityClientRoute() {
         if (!domainPattern.test(comparedDomain) && domain !== '*')
           throw new ConduitError('INVALID_ARGUMENTS', 400, 'Invalid domain argument');
       }
-
       client = await Client.getInstance().findByIdAndUpdate(client._id, {
         domain: client.platform === PlatformTypesEnum.WEB ? domain : undefined,
         alias,
         notes,
       });
       return {
-        result: {
-          id: client!._id,
-          clientId: client!.clientId,
-          domain: client!.platform === PlatformTypesEnum.WEB ? domain : undefined,
-          alias,
-          notes,
-        },
-      };
+        result: client,
+      }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );
 }
