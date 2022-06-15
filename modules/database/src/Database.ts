@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   GrpcRequest,
@@ -163,7 +163,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   publishSchema(schema: any) {
     const sendingSchema = JSON.stringify(schema);
     this.grpcSdk.bus!.publish('database', sendingSchema);
-    console.log('Updated state');
+    ConduitGrpcSdk.Logger.log('Updated state');
   }
 
   // gRPC Service

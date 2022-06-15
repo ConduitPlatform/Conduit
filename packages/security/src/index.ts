@@ -114,9 +114,9 @@ class SecurityModule extends IConduitSecurity {
       this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
       this.commons.getAdmin().registerRoute(adminRoutes.getUpdateSecurityClientRoute());
-      console.log('Client validation enabled');
+      ConduitGrpcSdk.Logger.log('Client validation enabled');
     } else {
-      console.warn('Client validation disabled');
+      ConduitGrpcSdk.Logger.warn('Client validation disabled');
     }
   }
 

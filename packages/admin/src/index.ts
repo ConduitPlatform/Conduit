@@ -177,7 +177,7 @@ export default class AdminModule extends IConduitAdmin {
           console.error(err);
         }
       }, this);
-      console.log('Recovered routes');
+      ConduitGrpcSdk.Logger.log('Recovered routes');
     }
     this.cleanupRoutes();
 
@@ -226,7 +226,7 @@ export default class AdminModule extends IConduitAdmin {
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
         console.log('Failed to update state');
@@ -285,7 +285,8 @@ export default class AdminModule extends IConduitAdmin {
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
-    )[] = grpcToConduitRoute( // can go
+    )[] = grpcToConduitRoute(
+      // can go
       'Admin',
       {
         protoFile: protofile,
@@ -298,13 +299,8 @@ export default class AdminModule extends IConduitAdmin {
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {
-        console.log(
-          'New admin route registered: ' +
-            r.input.action +
-            ' ' +
-            r.input.path +
-            ' handler url: ' +
-            url,
+        ConduitGrpcSdk.Logger.http(
+          `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._restRouter.registerConduitRoute(r);
       }

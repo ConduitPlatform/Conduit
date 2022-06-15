@@ -72,7 +72,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
           console.error(err);
         }
       });
-      console.log('Recovered routes');
+      ConduitGrpcSdk.Logger.log('Recovered routes');
     }
 
     this.commons.getBus().subscribe('router', (message: string) => {
@@ -119,7 +119,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
         console.log('Failed to update state');

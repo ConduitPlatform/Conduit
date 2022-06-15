@@ -5,28 +5,43 @@ export class ConduitLogger {
 
   constructor() {
     this._winston = winston.createLogger({
-      level: 'info',
-      format: format.combine(format.cli(), format.prettyPrint(), format.timestamp()),
+      level: 'debug',
+      format: format.combine(
+        format.prettyPrint(),
+        format.timestamp({
+          format: 'YYYY-MM-DD HH:mm:ss',
+        }),
+        format.printf(({ level, message, label, timestamp }) => {
+          return `[${timestamp}] [${level.toUpperCase()}]: ${message}`;
+        }),
+        format.colorize({
+          all: true,
+        }),
+      ),
       transports: [new transports.Console()],
     });
   }
 
-  get winston(): winston.Logger {
-    return this._winston;
-  }
-
-  log(level: string, message: string, cb?: LogCallback): Logger {
+  log(message: string, level: string = 'info', cb?: LogCallback): Logger {
     return this._winston.log(level, message, cb);
   }
-  // log(options: LogEntry) {
-  //   return this._winston.log(options);
-  // }
+
   info(message: string, cb?: LogCallback): Logger {
     return this._winston.info(message, cb);
   }
+
+  warn(message: string, cb?: LogCallback): Logger {
+    return this._winston.warn(message, cb);
+  }
+
   error(message: string, cb?: LogCallback): Logger {
     return this._winston.error(message, cb);
   }
+
+  http(message: string, cb?: LogCallback): Logger {
+    return this._winston.http(message, cb);
+  }
+
   verbose(message: string, cb?: LogCallback): Logger {
     return this._winston.verbose(message, cb);
   }

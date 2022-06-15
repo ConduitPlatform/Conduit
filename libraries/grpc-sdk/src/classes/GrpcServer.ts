@@ -1,5 +1,6 @@
 import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
+import ConduitGrpcSdk from '../index';
 
 export class GrpcServer {
   private grpcServer?: Server;
@@ -51,7 +52,7 @@ export class GrpcServer {
       this._services.push({ protoFilePath, protoDescription, functions });
       this._serviceNames.push(protoDescription);
       if (this.started) {
-        console.log('Server already started, scheduling refresh..');
+        ConduitGrpcSdk.Logger.log('Server already started, scheduling refresh..');
         this.scheduleRefresh();
         return this;
       } else {
@@ -100,9 +101,9 @@ export class GrpcServer {
     }
     const self = this;
     this.scheduledRestart = setTimeout(async () => {
-      console.log('Begin refresh');
+      ConduitGrpcSdk.Logger.log('Begin refresh');
       await self.refresh();
-      console.log('Refresh complete');
+      ConduitGrpcSdk.Logger.log('Refresh complete');
     }, 2000);
   }
 

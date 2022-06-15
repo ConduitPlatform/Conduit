@@ -59,7 +59,7 @@ export default class ConduitGrpcSdk {
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
-  private readonly _logger: ConduitLogger;
+  static Logger: ConduitLogger;
   private _initialized: boolean = false;
 
   constructor(
@@ -76,8 +76,10 @@ export default class ConduitGrpcSdk {
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
-    this._logger = new ConduitLogger();
     const grpcKey = process.env.GRPC_KEY;
+    if (!ConduitGrpcSdk.Logger) {
+      ConduitGrpcSdk.Logger = new ConduitLogger();
+    }
     if (grpcKey) {
       const sign = createSigner({ key: grpcKey });
       this._grpcToken = sign({
@@ -91,7 +93,7 @@ export default class ConduitGrpcSdk {
       this._initialize();
     } else {
       (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
-      console.log('Waiting for Core...');
+      ConduitGrpcSdk.Logger.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
         try {
@@ -100,7 +102,7 @@ export default class ConduitGrpcSdk {
             this.name === 'database' ||
             ((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING
           ) {
-            console.log('Core connection established');
+            ConduitGrpcSdk.Logger.log('Core connection established');
             this._initialize();
             break;
           }
@@ -387,9 +389,6 @@ export default class ConduitGrpcSdk {
 
   get grpcToken() {
     return this._grpcToken;
-  }
-  get logger() {
-    return this._logger;
   }
 }
 

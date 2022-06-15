@@ -34,7 +34,7 @@ export class CustomEndpointController {
       .model.findMany({ enabled: true })
       .then((r: ICustomEndpoint[]) => {
         if (!r || r.length == 0) {
-          return console.log('No custom endpoints to register');
+          ConduitGrpcSdk.Logger.log('No custom endpoints to register');
         }
         const routes: any[] = [];
         r.forEach((schema: ICustomEndpoint) => {

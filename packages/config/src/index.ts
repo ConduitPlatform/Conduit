@@ -115,7 +115,7 @@ export default class ConfigManager implements IConfigManager {
       .getState()
       .setKey('config', JSON.stringify(state))
       .then(() => {
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
         console.error('Failed to recover state');
@@ -142,7 +142,7 @@ export default class ConfigManager implements IConfigManager {
         return this.sdk.getState().setKey('config', JSON.stringify(state));
       })
       .then(() => {
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
         console.error('Failed to recover state');
