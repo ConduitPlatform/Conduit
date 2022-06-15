@@ -52,7 +52,9 @@ export class Client extends ConduitActiveSchema<Client> {
   _id!: string;
   clientId!: string;
   clientSecret!: string;
-  domain!: string;
+  alias?: string;
+  notes?: string;
+  domain?: string;
   platform!: string;
   createdAt!: Date;
   updatedAt!: Date;
