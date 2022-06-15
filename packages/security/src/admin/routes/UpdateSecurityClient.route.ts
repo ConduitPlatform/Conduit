@@ -13,6 +13,7 @@ import { Client } from '../../models';
 import { isNil } from 'lodash';
 
 export function getUpdateSecurityClientRoute() {
+  const { clientSecret, ...returnTypeFields } = Client.getInstance().fields;
   return new ConduitRoute(
     {
       path: '/security/client/:id',
@@ -26,7 +27,7 @@ export function getUpdateSecurityClientRoute() {
         notes: ConduitString.Optional,
       },
     },
-    new ConduitRouteReturnDefinition('UpdateSecurityClient', Client.getInstance().fields),
+    new ConduitRouteReturnDefinition('UpdateSecurityClient', returnTypeFields),
     async (params: ConduitRouteParameters) => {
       const { domain, alias, notes } = params.params!;
       let client = await Client.getInstance().findOne({

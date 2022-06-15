@@ -90,7 +90,7 @@ export function getCreateSecurityClientRoute() {
         notes,
       });
       return {
-        result: client,
+        result: { ...client, clientSecret },
       }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );
