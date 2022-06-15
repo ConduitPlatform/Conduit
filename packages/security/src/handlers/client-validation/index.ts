@@ -6,7 +6,6 @@ import {
   DatabaseProvider,
   ConduitError,
   ConduitModelOptions,
-  ConduitModel,
 } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';
 import { validateClient } from '../../utils/security';
@@ -35,11 +34,7 @@ export class ClientValidator {
       (req as ConduitModelOptions).conduit = {};
     const { clientid, clientsecret } = req.headers;
     // Exclude webhooks, admin calls and http pings
-    if (
-      req.path.indexOf('/hook') === 0 ||
-      req.path.indexOf('/admin') === 0 ||
-      ['/', '/health'].includes(req.path)
-    ) {
+    if (req.path.indexOf('/hook') === 0 || ['/', '/health'].includes(req.path)) {
       return next();
     }
 
