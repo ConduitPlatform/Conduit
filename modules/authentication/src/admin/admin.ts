@@ -88,7 +88,7 @@ export class AdminHandlers {
             password: ConduitString.Required,
           },
         },
-        new ConduitRouteReturnDefinition('CreateUser', userFields),
+        new ConduitRouteReturnDefinition('User', userFields),
         'createUser',
       ),
       constructConduitRoute(

@@ -70,7 +70,7 @@ export class AdminHandlers {
             participants: { type: [TYPE.String], required: true }, // handler array check is still required
           },
         },
-        new ConduitRouteReturnDefinition('CreateRoom', ChatRoom.getInstance().fields),
+        new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
         'createRoom',
       ),
       constructConduitRoute(
