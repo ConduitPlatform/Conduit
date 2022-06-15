@@ -15,6 +15,7 @@ const schema = {
   },
   alias: {
     type: TYPE.String,
+    unique: true,
     required: false,
   },
   notes: {

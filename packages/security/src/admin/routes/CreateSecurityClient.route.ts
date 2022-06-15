@@ -39,6 +39,23 @@ export function getCreateSecurityClientRoute() {
       if (!Object.values(PlatformTypesEnum).includes(platform)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Platform not supported');
       }
+      if (alias) {
+        const existingClient = await Client.getInstance().findOne({ alias });
+        if (existingClient) {
+          throw new ConduitError(
+            'ALREADY_EXISTS',
+            409,
+            `A security client with an alias of '${alias}' already exists`,
+          );
+        }
+      }
+      if (alias === '') {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Non-null alias field should not be an empty string',
+        );
+      }
       const clientId = randomBytes(15).toString('hex');
       const clientSecret = randomBytes(64).toString('hex');
       const hash = await bcrypt.hash(clientSecret, 10);

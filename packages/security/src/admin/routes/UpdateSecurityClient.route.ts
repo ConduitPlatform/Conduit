@@ -43,6 +43,23 @@ export function getUpdateSecurityClientRoute() {
       if (isNil(client)) {
         throw new ConduitError('INVALID_PARAMS', 400, 'Security client not found');
       }
+      if (alias) {
+        const existingClient = await Client.getInstance().findOne({ alias });
+        if (existingClient) {
+          throw new ConduitError(
+            'ALREADY_EXISTS',
+            409,
+            `A security client with an alias of '${alias}' already exists`,
+          );
+        }
+      }
+      if (alias === '') {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Non-null alias field should not be an empty string',
+        );
+      }
       if (client.platform === PlatformTypesEnum.WEB) {
         if (!domain || domain === '')
           throw new ConduitError(
