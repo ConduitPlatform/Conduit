@@ -65,6 +65,7 @@ export class SwaggerGenerator {
       parameters: [],
       responses: {
         200: {
+          description: 'Successful Operation',
           content: {
             'application/json': {
               schema: {},
@@ -80,33 +81,11 @@ export class SwaggerGenerator {
       ((route.input.urlParams as unknown) as string) !== ''
     ) {
       for (const name in route.input.urlParams) {
-        let type = '';
-        if (typeof route.input.urlParams[name] === 'object') {
-          // @ts-ignore
-          if (
-            route.input.urlParams[name] &&
-            // @ts-ignore
-            route.input.urlParams[name].type &&
-            // @ts-ignore
-            typeof route.input.urlParams[name].type !== 'object'
-          ) {
-            // @ts-ignore
-            type = route.input.urlParams[name].type.toLowerCase();
-          } else {
-            type = 'object';
-          }
-
-          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
-            type = 'string';
-          }
-        } else {
-          type = route.input.urlParams[name].toString().toLowerCase();
-        }
         routeDoc.parameters.push({
           name,
           in: 'path',
           required: true,
-          type: route.input.urlParams[name],
+          schema: this._parser.extractTypes('url', route.input.urlParams, true),
         });
       }
     }
@@ -116,32 +95,10 @@ export class SwaggerGenerator {
       ((route.input.queryParams as unknown) as string) !== ''
     ) {
       for (const name in route.input.queryParams) {
-        let type = '';
-        if (typeof route.input.queryParams[name] === 'object') {
-          // @ts-ignore
-          if (
-            route.input.queryParams[name] &&
-            // @ts-ignore
-            route.input.queryParams[name].type &&
-            // @ts-ignore
-            typeof route.input.queryParams[name].type !== 'object'
-          ) {
-            // @ts-ignore
-            type = route.input.queryParams[name].type.toLowerCase();
-          } else {
-            type = 'object';
-          }
-
-          if (!['string', 'number', 'boolean', 'array', 'object'].includes(type)) {
-            type = 'string';
-          }
-        } else {
-          type = route.input.queryParams[name].toString().toLowerCase();
-        }
         routeDoc.parameters.push({
           name,
           in: 'query',
-          type: type,
+          schema: this._parser.extractTypes('query', route.input.queryParams, true),
         });
       }
     }
@@ -182,7 +139,6 @@ export class SwaggerGenerator {
       this._swaggerDoc.paths[path] = {};
       this._swaggerDoc.paths[path][method] = routeDoc;
     }
-    this._swaggerDoc.paths[path] = { ...this._swaggerDoc.paths[path], method };
   }
 
   private _extractMethod(action: string) {

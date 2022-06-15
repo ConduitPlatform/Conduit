@@ -22,6 +22,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     | string
     | {
         type?: string;
+        $ref?: string;
         format?: string;
         properties?: object;
       };

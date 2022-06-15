@@ -77,7 +77,7 @@ export class AdminHandlers {
             enabled: ConduitBoolean.Required,
           },
         },
-        new ConduitRouteReturnDefinition('CreateForm', 'String'),
+        new ConduitRouteReturnDefinition('Forms', 'String'),
         'createForm',
       ),
       constructConduitRoute(

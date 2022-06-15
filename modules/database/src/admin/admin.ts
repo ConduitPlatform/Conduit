@@ -247,7 +247,8 @@ export class AdminHandlers {
           path: '/schemas',
           action: ConduitRouteActions.DELETE,
           queryParams: {
-            ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
+            ids: [ConduitJson.Required], // handler array check is still required
+            deleteData: ConduitBoolean.Required,
           },
         },
         new ConduitRouteReturnDefinition('DeleteSchemas', 'String'),
@@ -260,7 +261,7 @@ export class AdminHandlers {
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
-          bodyParams: {
+          queryParams: {
             deleteData: ConduitBoolean.Required,
           },
         },
