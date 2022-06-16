@@ -13,7 +13,7 @@ import {
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitRouter } from '../Router';
 import { isNil } from 'lodash';
-import { SocketPush } from '../interfaces/index';
+import { SocketPush } from '../interfaces';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;

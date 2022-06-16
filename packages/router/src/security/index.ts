@@ -1,4 +1,4 @@
-import { ConduitCommons, IConduitSecurity } from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
@@ -9,9 +9,11 @@ import * as models from './models';
 import convict, { Config } from './config';
 import { NextFunction, Request, Response } from 'express';
 
-class SecurityModule extends IConduitSecurity {
-  constructor(commons: ConduitCommons, private readonly grpcSdk: ConduitGrpcSdk) {
-    super(commons);
+class SecurityModule {
+  constructor(
+    private readonly commons: ConduitCommons,
+    private readonly grpcSdk: ConduitGrpcSdk,
+  ) {
     this.initialize()
       .then(() => {
         console.log('Security: Initialized');
@@ -88,7 +90,6 @@ class SecurityModule extends IConduitSecurity {
     } catch (e) {
       throw new Error(e);
     }
-    super.setConfig(moduleConfig);
   }
 
   async registerConfig() {

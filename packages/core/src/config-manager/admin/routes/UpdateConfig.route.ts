@@ -97,9 +97,6 @@ export function getUpdateConfigRoute(
         case 'admin':
           updatedConfig = await conduit.getConfigManager().set('admin', newConfig);
           break;
-        case 'security':
-          updatedConfig = await conduit.getConfigManager().set('security', newConfig);
-          break;
         default:
           throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }

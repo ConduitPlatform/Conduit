@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
-import SecurityModule from '@conduitplatform/security';
 import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
@@ -89,7 +88,6 @@ export class GrpcServer {
     await this.commons.getRouter().initialize(this.server);
     this.server.refresh().then();
     this.commons.getConfigManager().initConfigAdminRoutes();
-    this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;

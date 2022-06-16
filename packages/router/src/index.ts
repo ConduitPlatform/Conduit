@@ -20,11 +20,13 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
-import { ConduitRoutingController, SocketPush } from '../../../libraries/hermes';
+import { ConduitRoutingController, SocketPush } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
+import SecurityModule from './security';
 
 export class ConduitDefaultRouter extends IConduitRouter {
   private _internalRouter: ConduitRoutingController;
+  private _security: SecurityModule;
   private readonly _globalMiddlewares: string[];
   private readonly _routes: string[];
   private _grpcRoutes: {
@@ -42,6 +44,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     this._internalRouter = new ConduitRoutingController(this.getHttpPort()!, '', commons);
     this._internalRouter.initGraphQL();
     this._internalRouter.initSockets();
+    this._security = new SecurityModule(this.commons, this.grpcSdk);
   }
 
   getHttpPort() {
@@ -319,7 +322,9 @@ export class ConduitDefaultRouter extends IConduitRouter {
   }
 
   setConfig(moduleConfig: any) {
+    this._security.setConfig(moduleConfig);
     this.commons.getBus().publish('config:update:router', JSON.stringify(moduleConfig));
+    this.commons.getBus().publish('config:update:security', JSON.stringify(moduleConfig));
   }
 }
 

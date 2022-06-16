@@ -1,4 +1,4 @@
-import { IConduitCore, IConduitAdmin, IConduitRouter, IConduitSecurity } from './modules';
+import { IConduitCore, IConduitAdmin, IConduitRouter } from './modules';
 import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
@@ -10,7 +10,6 @@ export class ConduitCommons {
   private _core?: IConduitCore;
   private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
-  private _security?: IConduitSecurity;
   private _configManager?: IConfigManager;
   private readonly _eventBus: EventBus;
   private readonly _stateManager: StateManager;
@@ -67,16 +66,6 @@ export class ConduitCommons {
   getAdmin(): IConduitAdmin {
     if (this._admin) return this._admin;
     throw new Error('Admin not assigned yet!');
-  }
-
-  registerSecurity(security: IConduitSecurity) {
-    if (this._security) throw new Error('Cannot register a second security module');
-    this._security = security;
-  }
-
-  getSecurity(): IConduitSecurity {
-    if (this._security) return this._security;
-    throw new Error('Security module not assigned yet');
   }
 
   registerConfigManager(configManager: IConfigManager) {
