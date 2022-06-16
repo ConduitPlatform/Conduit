@@ -7,7 +7,7 @@ import {
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
 import { AdminHandlers } from './admin';
-import { FormsRoutes } from './routes/routes';
+import { FormsRoutes } from './routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';

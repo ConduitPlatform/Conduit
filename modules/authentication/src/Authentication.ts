@@ -12,7 +12,7 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
-import { AuthenticationRoutes } from './routes/routes';
+import { AuthenticationRoutes } from './routes';
 import * as models from './models';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';

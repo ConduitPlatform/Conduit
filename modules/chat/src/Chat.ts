@@ -10,7 +10,7 @@ import {
 
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
-import { ChatRoutes } from './routes/routes';
+import { ChatRoutes } from './routes';
 import * as models from './models';
 import { validateUsersInput } from './utils';
 import { ChatMessage, ChatRoom } from './models';

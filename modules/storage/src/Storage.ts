@@ -9,7 +9,7 @@ import {
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
 import { FileHandlers } from './handlers/file';
-import { StorageRoutes } from './routes/routes';
+import { StorageRoutes } from './routes';
 import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
