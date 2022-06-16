@@ -20,7 +20,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import * as adminRoutes from './admin/routes';
 import path from 'path';
-import { ConduitRoutingController, SocketPush } from '@conduitplatform/hermes';
+import { ConduitRoutingController, SocketPush } from '../../../libraries/hermes';
 import { isNaN } from 'lodash';
 
 export class ConduitDefaultRouter extends IConduitRouter {

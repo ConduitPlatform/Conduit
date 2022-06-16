@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
+    "build": "node_modules/.bin/rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",

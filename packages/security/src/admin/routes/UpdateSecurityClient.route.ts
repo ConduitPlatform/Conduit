@@ -1,13 +1,10 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  PlatformTypesEnum,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
+  PlatformTypesEnum,
   RouteOptionType,
 } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../models';

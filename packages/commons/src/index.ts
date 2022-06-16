@@ -19,7 +19,10 @@ export class ConduitCommons {
   private constructor(name: string) {
     this.name = name;
     if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
-      const redisManager = new RedisManager(process.env.REDIS_HOST, process.env.REDIS_PORT);
+      const redisManager = new RedisManager(
+        process.env.REDIS_HOST,
+        process.env.REDIS_PORT,
+      );
       this._eventBus = new EventBus(redisManager);
       this._stateManager = new StateManager(redisManager, this.name);
     } else {
@@ -123,6 +126,5 @@ export class ConduitCommons {
 export * from './interfaces';
 export * from './classes';
 export * from './modules';
-export * from './constants';
 export * from './utilities';
 export * from './protoTypes/core';

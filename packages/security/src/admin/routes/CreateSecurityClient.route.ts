@@ -1,8 +1,4 @@
-import {
-  PlatformTypesEnum,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import { Client } from '../../models';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -11,6 +7,7 @@ import {
   ConduitRouteParameters,
   ConduitString,
   ConduitError,
+  PlatformTypesEnum,
 } from '@conduitplatform/grpc-sdk';
 
 export function getCreateSecurityClientRoute() {

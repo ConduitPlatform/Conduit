@@ -1,6 +1,6 @@
 import { Request } from 'express';
-import { PlatformTypesEnum } from '@conduitplatform/commons';
 import * as bcrypt from 'bcrypt';
+import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 
 export async function validateClient(
   req: Request,

@@ -24,8 +24,8 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import path from 'path';
-import { ConduitRoutingController } from '@conduitplatform/hermes';
-import { SwaggerRouterMetadata } from '@conduitplatform/hermes';
+import { ConduitRoutingController } from '../../../libraries/hermes';
+import { SwaggerRouterMetadata } from '../../../libraries/hermes';
 import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {

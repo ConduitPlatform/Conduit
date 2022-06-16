@@ -1,5 +1,5 @@
 import express, { NextFunction, Request, Response, Router } from 'express';
-import { RestController } from './Rest';
+import { RestController } from './Rest/index';
 import {
   ConduitCommons,
   ConduitRoute,
@@ -11,8 +11,8 @@ import { SocketController } from './Socket/Socket';
 import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger } from './utils/logger';
 import http from 'http';
-import { SocketPush } from './interfaces';
-import { SwaggerRouterMetadata } from './types';
+import { SocketPush } from './interfaces/index';
+import { SwaggerRouterMetadata } from './types/index';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -245,5 +245,5 @@ export class ConduitRoutingController {
   }
 }
 
-export * from './interfaces';
-export * from './types';
+export * from './interfaces/index';
+export * from './types/index';

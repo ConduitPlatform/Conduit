@@ -14,8 +14,8 @@ import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
 import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces';
-import { SwaggerRouterMetadata } from '../types';
+import { Cookie } from '../interfaces/index';
+import { SwaggerRouterMetadata } from '../types/index';
 
 const swaggerUi = require('swagger-ui-express');
 

@@ -2,7 +2,7 @@ import { ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
 import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
-import { SwaggerRouterMetadata } from '../types';
+import { SwaggerRouterMetadata } from '../types/index';
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: Indexable;
