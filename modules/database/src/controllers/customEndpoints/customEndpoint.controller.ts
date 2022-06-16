@@ -1,7 +1,7 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
 import { ICustomEndpoint } from '../../interfaces';
-import { DatabaseRoutes } from '../../routes/routes';
+import { DatabaseRoutes } from '../../routes';
 import { createCustomEndpointRoute } from './utils';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';

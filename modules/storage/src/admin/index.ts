@@ -71,9 +71,10 @@ export class AdminRoutes {
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
+            sort: ConduitString.Optional,
+            search: ConduitString.Optional,
             folder: ConduitString.Optional,
             container: ConduitString.Required,
-            search: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('Files', {
@@ -166,6 +167,7 @@ export class AdminRoutes {
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
+            sort: ConduitString.Optional,
             container: ConduitString.Optional,
             parent: ConduitString.Optional,
           },
@@ -210,6 +212,7 @@ export class AdminRoutes {
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
+            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetContainers', {
@@ -251,7 +254,7 @@ export class AdminRoutes {
   }
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, folder, search } = call.request.params;
+    const { skip, limit, sort, folder, search } = call.request.params;
     const query: Query = {
       container: call.request.params.container,
     };
@@ -264,13 +267,16 @@ export class AdminRoutes {
       query.name = { $regex: `.*${search}.*`, $options: 'i' };
     }
 
-    const files = await File.getInstance().findMany(query, undefined, skip, limit);
+    const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
     const filesCount = await File.getInstance().countDocuments(query);
 
     return { files, filesCount };
   }
 
   async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const query: Query = {
       container: call.request.params.container,
     };
@@ -282,7 +288,7 @@ export class AdminRoutes {
     }
     const folders = await _StorageFolder
       .getInstance()
-      .findMany(query, undefined, call.request.params.skip, call.request.params.limit);
+      .findMany(query, undefined, skip, limit, sort);
     const folderCount = await _StorageFolder.getInstance().countDocuments(query);
     return { folders, folderCount };
   }
@@ -345,9 +351,12 @@ export class AdminRoutes {
   }
 
   async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const containers = await _StorageContainer
       .getInstance()
-      .findMany({}, undefined, call.request.params.skip, call.request.params.limit);
+      .findMany({}, undefined, skip, limit, sort);
     const containersCount = await _StorageContainer.getInstance().countDocuments({});
 
     return { containers, containersCount };

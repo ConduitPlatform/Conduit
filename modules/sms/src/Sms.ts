@@ -6,7 +6,7 @@ import {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { ISmsProvider } from './interfaces/ISmsProvider';
 import { TwilioProvider } from './providers/twilio';
 import path from 'path';

@@ -49,7 +49,9 @@ export class AuthenticationRoutes {
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
-    const phoneActive = await this.phoneHandlers.validate().catch(e => (errorMessage = e));
+    const phoneActive = await this.phoneHandlers
+      .validate()
+      .catch(e => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes(this._routingManager);

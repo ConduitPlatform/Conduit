@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { Forms } from '../models';
-import { FormsRoutes } from '../routes/routes';
+import { FormsRoutes } from '../routes';
 
 export class FormsController {
   constructor(

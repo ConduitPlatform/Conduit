@@ -69,6 +69,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             search: ConduitString.Optional,
           },
         },
@@ -197,6 +198,7 @@ export class AdminHandlers {
   }
 
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: Query = {};
@@ -215,6 +217,7 @@ export class AdminHandlers {
       undefined,
       skip,
       limit,
+      sort,
     );
     const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
     const [templateDocuments, totalCount] = await Promise.all([
