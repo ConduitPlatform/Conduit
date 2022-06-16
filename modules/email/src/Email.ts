@@ -8,7 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema from './config';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { EmailService } from './services/email.service';
 import { EmailProvider } from './email-provider';
 import * as models from './models';

@@ -7,7 +7,7 @@ import {
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
-import { AdminRoutes } from './admin/admin';
+import { AdminRoutes } from './admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes/routes';
 import { createStorageProvider, IStorageProvider } from './storage-provider';

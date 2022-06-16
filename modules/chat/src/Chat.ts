@@ -9,7 +9,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { ChatRoutes } from './routes/routes';
 import * as models from './models';
 import { validateUsersInput } from './utils';

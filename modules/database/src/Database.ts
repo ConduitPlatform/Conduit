@@ -6,7 +6,7 @@ import {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes/routes';
 import * as models from './models';
 import {

@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { FormsRoutes } from './routes/routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
