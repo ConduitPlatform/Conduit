@@ -3,6 +3,7 @@ FROM conduit-builder:latest
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/router /app/modules/router
+COPY --from=conduit-base:latest /app/libraries/hermes /app/libraries/hermes
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \

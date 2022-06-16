@@ -3,7 +3,7 @@ on:
     branches:
       - main
     paths:
-      - "packages/**"
+      - "modules/router/**"
       - "libraries/grpc-sdk/**"
       - "libraries/hermes/**"
 
@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    name: Build core
+    name: Build router
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,6 +26,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build conduit core
+      - name: Build conduit router
         run: |
-          DEV=TRUE make conduit
+          DEV=TRUE make modules/router

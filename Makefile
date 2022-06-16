@@ -38,6 +38,7 @@ modules/database: conduit-builder
 modules/email: conduit-builder
 modules/chat: conduit-builder
 modules/forms: conduit-builder
+modules/router: conduit-builder
 modules/sms: conduit-builder
 modules/storage: conduit-builder
 modules/push-notifications: conduit-builder
