@@ -56,6 +56,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             search: ConduitString.Optional,
           },
         },
@@ -122,6 +123,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetFormReplies', {
@@ -134,6 +136,7 @@ export class AdminHandlers {
   }
 
   async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query = {};
@@ -142,7 +145,13 @@ export class AdminHandlers {
       identifier = escapeStringRegexp(call.request.params.search);
       query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
     }
-    const formsPromise = Forms.getInstance().findMany(query, undefined, skip, limit);
+    const formsPromise = Forms.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+    );
     const countPromise = Forms.getInstance().countDocuments({});
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
@@ -235,6 +244,7 @@ export class AdminHandlers {
   }
 
   async getFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const repliesPromise = FormReplies.getInstance().findMany(
@@ -242,6 +252,7 @@ export class AdminHandlers {
       undefined,
       skip,
       limit,
+      sort,
     );
     const countPromise = FormReplies.getInstance().countDocuments({
       form: call.request.params.formId,

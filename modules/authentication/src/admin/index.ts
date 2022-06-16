@@ -62,10 +62,10 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
+            search: ConduitString.Optional,
             isActive: ConduitBoolean.Optional,
             provider: ConduitString.Optional,
-            search: ConduitString.Optional,
-            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetUsers', {
@@ -167,6 +167,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
           },
           name: 'GetServices',
           description: 'Returns registered services',

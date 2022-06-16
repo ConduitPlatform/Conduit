@@ -52,6 +52,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             search: ConduitString.Optional,
           },
         },
@@ -91,10 +92,10 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             senderUser: ConduitString.Optional,
             roomId: ConduitString.Optional,
             search: ConduitString.Optional,
-            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetMessages', {
@@ -135,7 +136,7 @@ export class AdminHandlers {
   }
 
   async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, populate } = call.request.params;
+    const { sort, search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: Query = {},
@@ -154,7 +155,7 @@ export class AdminHandlers {
       undefined,
       skip,
       limit,
-      undefined,
+      sort,
       populates,
     );
     const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
@@ -212,7 +213,7 @@ export class AdminHandlers {
   }
 
   async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { senderUser, roomId, populate } = call.request.params;
+    const { senderUser, roomId, populate, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query = {};
@@ -240,7 +241,7 @@ export class AdminHandlers {
       undefined,
       skip,
       limit,
-      undefined,
+      sort,
       populates,
     );
     const countPromise = ChatMessage.getInstance().countDocuments(query);

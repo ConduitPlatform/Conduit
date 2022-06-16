@@ -12,6 +12,7 @@ export class ServiceAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async getServices(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const services: Service[] = await Service.getInstance().findMany(
@@ -19,6 +20,7 @@ export class ServiceAdmin {
       undefined,
       skip,
       limit,
+      sort,
     );
     const count: number = await Service.getInstance().countDocuments({});
     return { services, count };

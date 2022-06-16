@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitModelOptions,
   ConduitSchema as ConduitSchema,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseRoutes } from '../../routes/routes';
+import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
