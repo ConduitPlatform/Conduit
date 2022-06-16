@@ -248,9 +248,6 @@ export default class ConfigManager implements IConfigManager {
         case 'admin':
           this.sdk.getAdmin().setConfig(moduleConfig);
           break;
-        case 'router':
-          this.sdk.getRouter().setConfig(moduleConfig);
-          break;
         default:
           break;
       }

@@ -1,4 +1,4 @@
-import { IConduitCore, IConduitAdmin, IConduitRouter } from './modules';
+import { IConduitCore, IConduitAdmin } from './modules';
 import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
@@ -8,7 +8,6 @@ import { StateManager, RedisManager, EventBus } from './utilities';
 export class ConduitCommons {
   private static _instance: ConduitCommons;
   private _core?: IConduitCore;
-  private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
   private _configManager?: IConfigManager;
   private readonly _eventBus: EventBus;
@@ -40,22 +39,12 @@ export class ConduitCommons {
     throw new Error('Core not assigned yet!');
   }
 
-  registerRouter(router: IConduitRouter) {
-    if (this._router) throw new Error('Cannot register a second router!');
-    this._router = router;
-  }
-
   getBus(): EventBus {
     return this._eventBus;
   }
 
   getState(): StateManager {
     return this._stateManager;
-  }
-
-  getRouter(): IConduitRouter {
-    if (this._router) return this._router;
-    throw new Error('Router not assigned yet!');
   }
 
   registerAdmin(admin: IConduitAdmin) {

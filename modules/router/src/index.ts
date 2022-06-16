@@ -6,7 +6,6 @@ import {
   ConduitRoute,
   ConduitSocket,
   grpcToConduitRoute,
-  IConduitRouter,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   RouteT,
@@ -24,7 +23,7 @@ import { ConduitRoutingController, SocketPush } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import SecurityModule from './security';
 
-export class ConduitDefaultRouter extends IConduitRouter {
+export class ConduitDefaultRouter {
   private _internalRouter: ConduitRoutingController;
   private _security: SecurityModule;
   private readonly _globalMiddlewares: string[];
@@ -38,13 +37,12 @@ export class ConduitDefaultRouter extends IConduitRouter {
     protected readonly commons: ConduitCommons,
     protected readonly grpcSdk: ConduitGrpcSdk,
   ) {
-    super(commons, grpcSdk);
     this._routes = [];
     this._globalMiddlewares = [];
     this._internalRouter = new ConduitRoutingController(this.getHttpPort()!, '', commons);
     this._internalRouter.initGraphQL();
     this._internalRouter.initSockets();
-    this._security = new SecurityModule(this.commons, this.grpcSdk);
+    this._security = new SecurityModule(this.commons, this.grpcSdk, this);
   }
 
   getHttpPort() {

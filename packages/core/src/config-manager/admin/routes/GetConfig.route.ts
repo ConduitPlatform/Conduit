@@ -80,11 +80,13 @@ export function getGetConfigRoute(
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           finalConfig = dbConfig.moduleConfigs.pushNotifications;
           break;
+        case 'router':
+          if (!registeredModules.has(module))
+            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
+          finalConfig = dbConfig.moduleConfigs.router;
+          break;
         case 'core':
           finalConfig = dbConfig.moduleConfigs.core;
-          break;
-        case 'router':
-          finalConfig = dbConfig.moduleConfigs.router;
           break;
         case 'admin':
           finalConfig = dbConfig.moduleConfigs.admin;

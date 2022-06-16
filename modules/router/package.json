@@ -8,12 +8,11 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "rimraf dist && tsc",
+    "build": "node_modules/.bin/rimraf dist && tsc",
     "publish": "npm publish"
   },
   "license": "ISC",
   "dependencies": {
-    "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/hermes": "^1.0.1",
     "@grpc/grpc-js": "^1.5.2",

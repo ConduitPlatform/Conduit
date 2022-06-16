@@ -8,11 +8,13 @@ import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import convict, { Config } from './config';
 import { NextFunction, Request, Response } from 'express';
+import { ConduitDefaultRouter } from '../index';
 
 class SecurityModule {
   constructor(
     private readonly commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly router: ConduitDefaultRouter,
   ) {
     this.initialize()
       .then(() => {
@@ -47,13 +49,12 @@ class SecurityModule {
   }
 
   setupMiddlewares() {
-    const router = this.commons.getRouter();
     const clientValidator: ClientValidator = new ClientValidator(
       this.grpcSdk.database!,
       this.commons,
     );
 
-    router.registerGlobalMiddleware(
+    this.router.registerGlobalMiddleware(
       'rateLimiter',
       new RateLimiter(
         process.env.REDIS_HOST as string,
@@ -61,8 +62,8 @@ class SecurityModule {
       ).limiter,
       true,
     );
-    router.registerGlobalMiddleware('helmetMiddleware', helmet());
-    router.registerGlobalMiddleware(
+    this.router.registerGlobalMiddleware('helmetMiddleware', helmet());
+    this.router.registerGlobalMiddleware(
       'helmetGqlFix',
       (req: Request, res: Response, next: NextFunction) => {
         if (
@@ -76,7 +77,7 @@ class SecurityModule {
         next();
       },
     );
-    router.registerGlobalMiddleware(
+    this.router.registerGlobalMiddleware(
       'clientMiddleware',
       clientValidator.middleware.bind(clientValidator),
       true,

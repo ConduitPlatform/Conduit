@@ -11,7 +11,6 @@ import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import { ConduitDefaultRouter } from '@conduitplatform/router';
 import ConfigManager from './config-manager';
 
 const CORE_SERVICES = ['Config', 'Admin', 'Router'];
@@ -67,7 +66,6 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
     this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
-    this.commons.registerRouter(new ConduitDefaultRouter(this.commons, grpcSdk));
     Core.getInstance().httpServer.initialize();
     await this.commons.getConfigManager().registerAppConfig();
     let error;
@@ -85,7 +83,6 @@ export class GrpcServer {
         .addFieldsToModule('core', convict.getProperties());
     }
     await this.commons.getAdmin().initialize(this.server);
-    await this.commons.getRouter().initialize(this.server);
     this.server.refresh().then();
     this.commons.getConfigManager().initConfigAdminRoutes();
 

@@ -2,14 +2,13 @@ import {
   ConduitRoute,
   ConduitRouteReturnDefinition as ReturnDefinition,
   ConduitCommons,
-  IConduitRouter,
 } from '@conduitplatform/commons';
 import { ConduitRouteActions as Actions } from '@conduitplatform/grpc-sdk';
 import { Core } from '../Core';
 import { ConduitLogger } from '../utils/logger';
 
 export class HttpServer {
-  private router: IConduitRouter;
+  private router: any;
   private readonly logger: ConduitLogger;
 
   constructor(private readonly commons: ConduitCommons) {
@@ -17,7 +16,7 @@ export class HttpServer {
   }
 
   initialize() {
-    this.router = this.commons.getRouter();
+    // this.router = this.commons.getRouter();
     this.registerRoutes();
   }
 

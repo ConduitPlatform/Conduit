@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { ConduitRouteBuilder } from '@conduitplatform/commons';
 import { ConduitRouteOptions } from '@conduitplatform/grpc-sdk';
 
-export class RouteBuilder extends ConduitRouteBuilder {
+export class RouteBuilder {
   private _path: string;
   private _routes: {
     get: any;
@@ -13,7 +12,6 @@ export class RouteBuilder extends ConduitRouteBuilder {
   };
 
   constructor(routePath: string) {
-    super(routePath);
     this._path = routePath;
     this._routes = {
       get: null,
