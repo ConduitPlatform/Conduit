@@ -1,58 +1,20 @@
-import { ConduitCommons } from '@conduitplatform/commons';
-import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
-import { runMigrations } from './migrations';
-import * as adminRoutes from './admin/routes';
-import * as models from './models';
-import convict, { Config } from './config';
 import { NextFunction, Request, Response } from 'express';
-import { ConduitDefaultRouter } from '../index';
+import ConduitDefaultRouter from '../Router';
 
-class SecurityModule {
+export default class SecurityModule {
   constructor(
-    private readonly commons: ConduitCommons,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly router: ConduitDefaultRouter,
   ) {
-    this.initialize()
-      .then(() => {
-        console.log('Security: Initialized');
-      })
-      .catch(err => {
-        console.error('Security: Failed to initialize');
-        console.error(err);
-      });
-  }
-
-  async initialize() {
-    await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
-    await this.registerConfig();
-
-    await this.registerAdminRoutes(
-      ConfigController.getInstance().config.clientValidation.enabled,
-    );
     this.setupMiddlewares();
-
-    this.commons.getBus()?.subscribe('config:update:security', message => {
-      try {
-        ConfigController.getInstance().config = JSON.parse(message);
-        this.registerAdminRoutes(
-          ConfigController.getInstance().config.clientValidation.enabled,
-        );
-      } catch (e) {
-        throw new Error(e);
-      }
-    });
   }
 
   setupMiddlewares() {
-    const clientValidator: ClientValidator = new ClientValidator(
-      this.grpcSdk.database!,
-      this.commons,
-    );
+    const clientValidator: ClientValidator = new ClientValidator(this.grpcSdk);
 
     this.router.registerGlobalMiddleware(
       'rateLimiter',
@@ -83,52 +45,4 @@ class SecurityModule {
       true,
     );
   }
-
-  setConfig(moduleConfig: Config) {
-    try {
-      ConfigController.getInstance().config = moduleConfig;
-      this.registerAdminRoutes(moduleConfig.clientValidation.enabled);
-    } catch (e) {
-      throw new Error(e);
-    }
-  }
-
-  async registerConfig() {
-    let error;
-    let config = await this.commons
-      .getConfigManager()
-      .get('security')
-      .catch((e: Error) => {
-        error = e;
-      });
-    if (error) {
-      await this.commons
-        .getConfigManager()
-        .registerModulesConfig('security', convict.getProperties());
-      config = await this.commons.getConfigManager().get('security'); // fetch it again cause config is now declared
-    }
-    ConfigController.getInstance().config = config;
-  }
-
-  registerAdminRoutes(clientValidation: boolean) {
-    if (clientValidation) {
-      this.commons.getAdmin().registerRoute(adminRoutes.getGetSecurityClientsRoute());
-      this.commons.getAdmin().registerRoute(adminRoutes.getCreateSecurityClientRoute());
-      this.commons.getAdmin().registerRoute(adminRoutes.getDeleteSecurityClientRoute());
-      this.commons.getAdmin().registerRoute(adminRoutes.getUpdateSecurityClientRoute());
-      console.log('Client validation enabled');
-    } else {
-      console.warn('Client validation disabled');
-    }
-  }
-
-  private registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.grpcSdk.database!);
-      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
-    });
-    return Promise.all(promises);
-  }
 }
-
-export = SecurityModule;

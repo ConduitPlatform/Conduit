@@ -1,32 +1,27 @@
 import { NextFunction, Request, Response } from 'express';
 import { isNil } from 'lodash';
-import { ConduitCommons } from '@conduitplatform/commons';
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   ConduitError,
   ConduitModelOptions,
 } from '@conduitplatform/grpc-sdk';
-import { Client } from '../../models';
-import { validateClient } from '../../utils/security';
+import { Client } from '../../../models';
+import { validateClient } from '../../utils';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';
 
 export class ClientValidator {
   prod = false;
+  database: DatabaseProvider;
 
-  constructor(
-    private readonly database: DatabaseProvider,
-    private readonly sdk: ConduitCommons,
-  ) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
+    this.database = this.grpcSdk.database!;
     const self = this;
-    sdk
-      .getConfigManager()
-      .get('core')
-      .then(res => {
-        if (res.env === 'production') {
-          self.prod = true;
-        }
-      });
+    this.grpcSdk.config.get('core').then(res => {
+      if (res.env === 'production') {
+        self.prod = true;
+      }
+    });
   }
 
   async middleware(req: Request, res: Response, next: NextFunction) {
@@ -60,7 +55,7 @@ export class ClientValidator {
       return next(ConduitError.unauthorized());
     }
 
-    const key = await this.sdk.getState().getKey(clientid as string);
+    const key = await this.grpcSdk.state!.getKey(clientid as string);
     if (key) {
       const [_clientsecret, _platform, _domain] = key.split(',');
       const validPlatform = await validateClient(
@@ -99,13 +94,11 @@ export class ClientValidator {
         delete req.headers.clientsecret;
         (req as ConduitModelOptions).conduit!.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
-        this.sdk
-          .getState()
-          .setKey(
-            `${clientid}`,
-            `${clientsecret},${valid.client!.platform},${valid.client!.domain}`,
-            100000,
-          );
+        this.grpcSdk.state!.setKey(
+          `${clientid}`,
+          `${clientsecret},${valid.client!.platform},${valid.client!.domain}`,
+          100000,
+        );
         next();
       })
       .catch(() => {

@@ -6,7 +6,7 @@ protoc \
   --plugin=./node_modules/.bin/protoc-gen-ts_proto\
   --ts_proto_out=./src/protoTypes\
   --ts_proto_opt=onlyTypes=true,outputServices=generic-definitions,useExactTypes=false\
-  ./src/core.proto
+  ./src/router.proto
 
 echo "Cleaning up folders"
 cp ./src/protoTypes/src/*.ts ./src/protoTypes

@@ -4,162 +4,120 @@ package conduit.core;
 service Core {}
 
 service Config {
-    rpc Get (GetConfigRequest) returns (GetConfigResponse);
-    rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
-    rpc AddFieldsToConfig(UpdateRequest) returns (UpdateResponse);
-    rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
-    rpc ModuleList (Empty) returns (ModuleListResponse);
-    rpc WatchModules (Empty) returns (stream ModuleListResponse);
-    rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
-    rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
-    rpc GetServerConfig (Empty) returns (GetConfigResponse);
-    rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
-    rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
+  rpc Get (GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
+  rpc AddFieldsToConfig(UpdateRequest) returns (UpdateResponse);
+  rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
+  rpc ModuleList (Empty) returns (ModuleListResponse);
+  rpc WatchModules (Empty) returns (stream ModuleListResponse);
+  rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+  rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
+  rpc GetServerConfig (Empty) returns (GetConfigResponse);
+  rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
+  rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
 }
 
 service Admin {
-    rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+  rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
 }
 
-service Router {
-    rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
-    rpc SocketPush (SocketData) returns (Empty);
-}
-
-message SocketData {
-    string event = 1;
-    string data = 2;
-    repeated string receivers = 3;
-    repeated string rooms = 4;
-}
 
 message RegisterAdminRouteRequest {
-    repeated PathDefinition routes = 1;
-    string protoFile = 2;
-    optional string routerUrl = 3;
+  repeated PathDefinition routes = 1;
+  string protoFile = 2;
+  optional string routerUrl = 3;
 
-    message PathDefinition {
-        ConduitRouteOptions options = 1;
-        optional ConduitRouteReturnDefinition returns = 2;
-        optional string grpcFunction = 3;
-        optional bool isMiddleware = 4;
-        optional string events = 5;
-    }
+  message PathDefinition {
+    ConduitRouteOptions options = 1;
+    optional ConduitRouteReturnDefinition returns = 2;
+    optional string grpcFunction = 3;
+    optional bool isMiddleware = 4;
+    optional string events = 5;
+  }
 
-    message ConduitRouteOptions {
-        optional string queryParams = 1;
-        optional string bodyParams = 2;
-        optional string urlParams = 3;
-        optional string action = 4;
-        string path = 5;
-        optional string name = 6;
-        optional string description = 7;
-        repeated string middlewares = 8;
-        optional string cacheControl = 9;
-    }
+  message ConduitRouteOptions {
+    optional string queryParams = 1;
+    optional string bodyParams = 2;
+    optional string urlParams = 3;
+    optional string action = 4;
+    string path = 5;
+    optional string name = 6;
+    optional string description = 7;
+    repeated string middlewares = 8;
+    optional string cacheControl = 9;
+  }
 
-    message ConduitRouteReturnDefinition {
-        string name = 1;
-        string fields = 2;
-    }
-}
-
-message RegisterConduitRouteRequest {
-    repeated PathDefinition routes = 1;
-    string protoFile = 2;
-    optional string routerUrl = 3;
-
-    message PathDefinition {
-        ConduitRouteOptions options = 1;
-        optional ConduitRouteReturnDefinition returns = 2;
-        optional string grpcFunction = 3;
-        optional bool isMiddleware = 4;
-        optional string events = 5;
-    }
-
-    message ConduitRouteOptions {
-        optional string queryParams = 1;
-        optional string bodyParams = 2;
-        optional string urlParams = 3;
-        optional string action = 4;
-        string path = 5;
-        optional string name = 6;
-        optional string description = 7;
-        repeated string middlewares = 8;
-        optional string cacheControl = 9;
-    }
-
-    message ConduitRouteReturnDefinition {
-        string name = 1;
-        string fields = 2;
-    }
+  message ConduitRouteReturnDefinition {
+    string name = 1;
+    string fields = 2;
+  }
 }
 
 message Empty {
 }
 
 message ModuleHealthRequest {
-    string moduleName = 1;
-    string url = 2;
-    int32 status = 3; // [0, 1, 2]
+  string moduleName = 1;
+  string url = 2;
+  int32 status = 3; // [0, 1, 2]
 }
 
 message ModuleByNameRequest {
-    string name = 1;
+  string name = 1;
 }
 
 message ModuleByNameResponse {
-    string moduleUrl = 1;
+  string moduleUrl = 1;
 }
 
 message RegisterModuleRequest {
-    string moduleName = 1;
-    string url = 2;
-    int32 healthStatus = 3; // [0, 1, 2]
+  string moduleName = 1;
+  string url = 2;
+  int32 healthStatus = 3; // [0, 1, 2]
 }
 
 message RegisterModuleResponse {
-    bool result = 1;
+  bool result = 1;
 }
 
 message ModuleListResponse {
-    repeated ModuleResponse modules = 1;
-    message ModuleResponse {
-        string moduleName = 1;
-        string url = 2;
-        bool serving = 3;
-    }
+  repeated ModuleResponse modules = 1;
+  message ModuleResponse {
+    string moduleName = 1;
+    string url = 2;
+    bool serving = 3;
+  }
 }
 
 message ModuleExistsRequest {
-    string moduleName = 1;
+  string moduleName = 1;
 }
 
 message ModuleExistsResponse {
-    string url = 1;
+  string url = 1;
 }
 
 message GetConfigRequest {
-    string key = 1;
+  string key = 1;
 }
 
 message GetRedisDetailsResponse {
-    string redisHost = 1;
-    int32 redisPort = 2;
+  string redisHost = 1;
+  int32 redisPort = 2;
 }
 
 message GetConfigResponse {
-    string data = 1;
+  string data = 1;
 }
 message UpdateRequest {
-    string config = 1;
-    string moduleName = 2;
+  string config = 1;
+  string moduleName = 2;
 }
 message UpdateResponse {
-    string result = 1;
+  string result = 1;
 }
 
 message RegisterModulesConfigRequest {
-    string moduleName = 1;
-    string newModulesConfigSchema = 2;
+  string moduleName = 1;
+  string newModulesConfigSchema = 2;
 }
