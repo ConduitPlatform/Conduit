@@ -1,4 +1,6 @@
 import winston, { LogCallback, LogEntry, Logger, transports, format } from 'winston';
+import { Indexable } from '../interfaces';
+import { isEmpty, isNil } from 'lodash';
 
 export class ConduitLogger {
   private readonly _winston: winston.Logger;
@@ -11,8 +13,10 @@ export class ConduitLogger {
         format.timestamp({
           format: 'YYYY-MM-DD HH:mm:ss',
         }),
-        format.printf(({ level, message, label, timestamp }) => {
-          return `[${timestamp}] [${level.toUpperCase()}]: ${message}`;
+        format.printf(({ level, message, label, timestamp, ...meta }) => {
+          return `[${timestamp}] [${level.toUpperCase()}]: ${message} ${
+            !isEmpty(meta) ? '\n' + JSON.stringify(meta, null, 2) : ''
+          }`;
         }),
         format.colorize({
           all: true,
@@ -24,6 +28,15 @@ export class ConduitLogger {
 
   log(message: string, level: string = 'info', cb?: LogCallback): Logger {
     return this._winston.log(level, message, cb);
+  }
+
+  logObject(
+    object: Indexable,
+    message: string,
+    level: string = 'info',
+    cb?: LogCallback,
+  ): Logger {
+    return this._winston.log(level, message, object, cb);
   }
 
   info(message: string, cb?: LogCallback): Logger {
