@@ -3,13 +3,14 @@ import { Client } from '../../models';
 import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 export function getGetSecurityClientsRoute() {
+  const { clientSecret, ...returnTypeFields } = Client.getInstance().fields;
   return new ConduitRoute(
     {
       path: '/security/client',
       action: ConduitRouteActions.GET,
     },
     new ConduitRouteReturnDefinition('GetSecurityClient', {
-      clients: [Client.getInstance().fields],
+      clients: [returnTypeFields],
     }),
     async (params: ConduitRouteParameters) => {
       const clients = await Client.getInstance().findMany({});
