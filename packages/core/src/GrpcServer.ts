@@ -55,6 +55,7 @@ export class GrpcServer {
           await this.commons.getConfigManager().initialize(this.server);
           this.server.start();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
+          ConduitGrpcSdk.Logger.error(new Error('wololo'));
         });
       })
       .then(() => {

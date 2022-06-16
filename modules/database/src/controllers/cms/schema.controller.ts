@@ -66,8 +66,8 @@ export class SchemaController {
     const createdSchema = await this.database
       .createCustomSchemaFromAdapter(schema)
       .catch(err => {
-        console.log('Failed to create custom schema');
-        console.log(err);
+        ConduitGrpcSdk.Logger.log('Failed to create custom schema');
+        ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
     this.grpcSdk.bus?.publish(

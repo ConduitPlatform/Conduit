@@ -90,7 +90,7 @@ export default class AdminModule extends IConduitAdmin {
     await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
-    await this.handleDatabase().catch(console.log);
+    await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     this._sdkRoutes = [
       adminRoutes.getLoginRoute(this.commons),
       adminRoutes.getModulesRoute(this.commons),
@@ -106,7 +106,7 @@ export default class AdminModule extends IConduitAdmin {
     }, this);
     this.attachRouter();
     this.highAvailability().catch(() => {
-      console.log('Failed to recover state');
+      ConduitGrpcSdk.Logger.log('Failed to recover state');
     });
   }
 
@@ -229,7 +229,7 @@ export default class AdminModule extends IConduitAdmin {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.log('Failed to update state');
+        ConduitGrpcSdk.Logger.log('Failed to update state');
       });
   }
 
@@ -272,7 +272,7 @@ export default class AdminModule extends IConduitAdmin {
           });
         }
       })
-      .catch(console.log);
+      .catch(ConduitGrpcSdk.Logger.log);
   }
 
   private internalRegisterRoute(

@@ -17,7 +17,7 @@ export class CustomEndpointController {
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
     this.refreshRoutes().catch(err => {
-      console.log(err);
+      ConduitGrpcSdk.Logger.error(err);
     });
     this.initializeState();
   }
@@ -56,7 +56,7 @@ export class CustomEndpointController {
   refreshEndpoints(): void {
     this.grpcSdk.bus?.publish('database:customEndpoints:refresh', '');
     this.refreshRoutes().then((r: any) => {
-      console.log('Refreshed routes');
+      ConduitGrpcSdk.Logger.log('Refreshed routes');
     });
   }
 }

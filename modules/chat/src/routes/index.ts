@@ -44,7 +44,7 @@ export class ChatRoutes {
         return Promise.all(promises);
       })
       .then(() => {
-        console.log('Email templates registered');
+        ConduitGrpcSdk.Logger.log('Email templates registered');
       })
       .catch((e: Error) => {
         console.error('Internal error while registering email templates');

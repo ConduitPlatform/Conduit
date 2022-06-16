@@ -142,12 +142,14 @@ export class ConduitRoutingController {
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
+        ConduitGrpcSdk.Logger.log(
+          'New socket registered: ' + r.input.path + ' handler url: ' + url,
+        );
         this.registerConduitSocket(r);
       } else {
         ConduitGrpcSdk.Logger.http(

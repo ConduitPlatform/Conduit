@@ -40,7 +40,7 @@ export class GrpcServer {
       functions = wrapGrpcFunctions(functions);
     }
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
-      console.log('Service already exists, performing replace');
+      ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
         protoFilePath,
         protoDescription,

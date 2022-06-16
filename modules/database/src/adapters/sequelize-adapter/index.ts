@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import {
+import ConduitGrpcSdk, {
   ConduitModel,
   ConduitSchema,
   GrpcError,
@@ -105,7 +105,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       const originalName = tableName.split('.')[1];
       const schema = await this.introspectSchema(table, originalName);
       introspectedSchemas.push(schema);
-      console.log(`Introspected schema ${originalName}`);
+      ConduitGrpcSdk.Logger.log(`Introspected schema ${originalName}`);
     }
     return introspectedSchemas;
   }
@@ -258,7 +258,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return this.sequelize
       .authenticate()
       .then(() => {
-        console.log('Sequelize connection established successfully');
+        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
       })
       .catch(err => {

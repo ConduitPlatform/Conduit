@@ -2,6 +2,24 @@ import winston, { LogCallback, LogEntry, Logger, transports, format } from 'wins
 import { Indexable } from '../interfaces';
 import { isEmpty, isNil } from 'lodash';
 
+const Format = format.printf(info => {
+  // This will customize the Error Message
+  if (info.stack) {
+    return `[${info.timestamp}] [${info.level.toUpperCase()}]: ${info.message} ${
+      info.stack
+    }`;
+  }
+  return `[${info.timestamp}] [${info.level.toUpperCase()}]: ${info.message} ${
+    !isEmpty(info.meta)
+      ? info.meta.reduce(
+          (message: string, meta: Indexable) =>
+            `${message} \n  ${JSON.stringify(meta, null, 2)}`,
+          '',
+        )
+      : ''
+  }`;
+});
+
 export class ConduitLogger {
   private readonly _winston: winston.Logger;
 
@@ -10,14 +28,11 @@ export class ConduitLogger {
       level: 'debug',
       format: format.combine(
         format.prettyPrint(),
+        format.errors({ stack: true }),
         format.timestamp({
           format: 'YYYY-MM-DD HH:mm:ss',
         }),
-        format.printf(({ level, message, label, timestamp, ...meta }) => {
-          return `[${timestamp}] [${level.toUpperCase()}]: ${message} ${
-            !isEmpty(meta) ? '\n' + JSON.stringify(meta, null, 2) : ''
-          }`;
-        }),
+        Format,
         format.colorize({
           all: true,
         }),
@@ -32,7 +47,7 @@ export class ConduitLogger {
 
   logObject(
     object: Indexable,
-    message: string,
+    message: string = '',
     level: string = 'info',
     cb?: LogCallback,
   ): Logger {
@@ -47,7 +62,10 @@ export class ConduitLogger {
     return this._winston.warn(message, cb);
   }
 
-  error(message: string, cb?: LogCallback): Logger {
+  error(message: string | Error, cb?: LogCallback): Logger {
+    if (typeof message === 'object') {
+      return this._winston.error(message);
+    }
     return this._winston.error(message, cb);
   }
 

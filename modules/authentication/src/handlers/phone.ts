@@ -35,7 +35,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       this.sms = this.grpcSdk.sms!;
       return (this.initialized = true);
     } else {
-      console.log('sms phone authentication not active');
+      ConduitGrpcSdk.Logger.log('sms phone authentication not active');
       return (this.initialized = false);
     }
   }

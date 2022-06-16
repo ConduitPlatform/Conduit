@@ -14,7 +14,7 @@ class SecurityModule extends IConduitSecurity {
     super(commons);
     this.initialize()
       .then(() => {
-        console.log('Security: Initialized');
+        ConduitGrpcSdk.Logger.log('Security: Initialized');
       })
       .catch(err => {
         console.error('Security: Failed to initialize');

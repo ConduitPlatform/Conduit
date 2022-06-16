@@ -56,7 +56,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     );
     this.registerAdminRoutes();
     this.highAvailability().catch(() => {
-      console.log('Failed to recover state');
+      ConduitGrpcSdk.Logger.log('Failed to recover state');
     });
   }
 
@@ -122,7 +122,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.log('Failed to update state');
+        ConduitGrpcSdk.Logger.log('Failed to update state');
       });
   }
 

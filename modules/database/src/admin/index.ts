@@ -100,7 +100,7 @@ export class AdminHandlers {
         ),
       })
       .catch((err: Error) => {
-        console.log('Failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
         console.error(err);
       });
   }

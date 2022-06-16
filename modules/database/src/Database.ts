@@ -115,7 +115,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
-            console.log('Failed to create/update schema');
+            ConduitGrpcSdk.Logger.log('Failed to create/update schema');
           });
         }
       } catch (err) {

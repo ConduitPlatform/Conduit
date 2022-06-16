@@ -24,7 +24,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
       console.error('Service not active');
       return (this.initialized = false);
     }
-    console.log('Service is active');
+    ConduitGrpcSdk.Logger.log('Service is active');
     return (this.initialized = true);
   }
 
