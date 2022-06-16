@@ -109,10 +109,10 @@ export class GrpcServer {
 
   start(): void {
     if (this.started) {
-      console.error('gRPC server is already running!');
+      ConduitGrpcSdk.Logger.error('gRPC server is already running!');
       return;
     } else if (!this.started && this.startedOnce) {
-      console.error('gRPC server is down for refresh!');
+      ConduitGrpcSdk.Logger.error('gRPC server is down for refresh!');
     }
     this.started = true;
     this.startedOnce = true;

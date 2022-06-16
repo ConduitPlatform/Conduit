@@ -236,7 +236,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         await this.initDbAndEmail();
         ConduitGrpcSdk.Logger.log('Local is active');
       } catch (err) {
-        console.error(err.message);
+        ConduitGrpcSdk.Logger.error(err.message);
         ConduitGrpcSdk.Logger.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
@@ -348,7 +348,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userId: user._id,
           type: TokenType.TWO_FA_VERIFICATION_TOKEN,
         })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
 
       await Token.getInstance().create({
         userId: user._id,
@@ -546,7 +548,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
         })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
 
       await Token.getInstance().create({
         userId: dbUser._id,
@@ -585,7 +589,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     await Token.getInstance()
       .deleteMany({ userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await User.getInstance().findByIdAndUpdate(user._id, {
       hashedPassword: token.data.password,
@@ -675,7 +681,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await Token.getInstance().create({
       userId: context.user._id,
@@ -718,7 +726,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       phoneNumber: verificationRecord.data.phoneNumber,
@@ -795,7 +805,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         ConduitGrpcSdk.Logger.log('Email templates registered');
       })
       .catch(() => {
-        console.error('Internal error while registering email templates');
+        ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
       });
   }
 }

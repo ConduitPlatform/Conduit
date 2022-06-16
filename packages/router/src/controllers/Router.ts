@@ -4,7 +4,7 @@ import {
   ConduitRoute,
 } from '@conduitplatform/commons';
 import { NextFunction, Request, Response, Router } from 'express';
-import {
+import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteParameters,
   Indexable,
@@ -94,7 +94,7 @@ export abstract class ConduitRouter {
       try {
         this._refreshRouter();
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this._refreshTimeout = null;
     }, 3000);

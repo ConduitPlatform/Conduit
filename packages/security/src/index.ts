@@ -17,8 +17,8 @@ class SecurityModule extends IConduitSecurity {
         ConduitGrpcSdk.Logger.log('Security: Initialized');
       })
       .catch(err => {
-        console.error('Security: Failed to initialize');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Security: Failed to initialize');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

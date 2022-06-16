@@ -65,7 +65,7 @@ export class DatabaseRoutes {
       try {
         this._refreshRoutes();
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this._scheduledTimeout = null;
     }, 3000);
@@ -77,7 +77,7 @@ export class DatabaseRoutes {
       this._routingManager.route(route.input, route.returnType, route.handler);
     });
     this._routingManager.registerRoutes().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.log('Failed to register routes for module');
+      ConduitGrpcSdk.Logger.error('failed to register routes for module');
       ConduitGrpcSdk.Logger.error(err);
     });
   }

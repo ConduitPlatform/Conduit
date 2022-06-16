@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   ConfigController,
   HealthCheckStatus,
@@ -76,7 +76,7 @@ export default class Sms extends ManagedModule<Config> {
     if (name === 'twilio') {
       this._provider = new TwilioProvider(settings);
     } else {
-      console.error('SMS provider not supported');
+      ConduitGrpcSdk.Logger.error('SMS provider not supported');
       process.exit(-1);
     }
   }

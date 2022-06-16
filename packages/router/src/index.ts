@@ -56,7 +56,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
     );
     this.registerAdminRoutes();
     this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.log('Failed to recover state');
+      ConduitGrpcSdk.Logger.error('failed to recover state');
     });
   }
 
@@ -69,7 +69,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       });
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -84,7 +84,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
           messageParsed.url,
         );
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
     });
   }
@@ -122,7 +122,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.log('Failed to update state');
+        ConduitGrpcSdk.Logger.error('failed to update state');
       });
   }
 
@@ -172,7 +172,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
         call.request.routerUrl,
       );
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 
@@ -217,7 +217,7 @@ export class ConduitDefaultRouter extends IConduitRouter {
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 

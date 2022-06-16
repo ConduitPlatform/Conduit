@@ -42,8 +42,8 @@ export class AdminHandlers {
         getFormReplies: this.getFormReplies.bind(this),
       })
       .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

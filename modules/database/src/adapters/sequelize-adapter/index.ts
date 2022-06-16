@@ -262,7 +262,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         return;
       })
       .catch(err => {
-        console.error('Unable to connect to the database: ', err);
+        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
         throw err;
       });
   }

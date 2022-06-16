@@ -106,7 +106,7 @@ export default class AdminModule extends IConduitAdmin {
     }, this);
     this.attachRouter();
     this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.log('Failed to recover state');
+      ConduitGrpcSdk.Logger.error('failed to recover state');
     });
   }
 
@@ -141,7 +141,7 @@ export default class AdminModule extends IConduitAdmin {
         call.request.routerUrl,
       );
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({
         code: status.INTERNAL,
         message: 'Error when registering routes',
@@ -174,7 +174,7 @@ export default class AdminModule extends IConduitAdmin {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       }, this);
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -190,7 +190,7 @@ export default class AdminModule extends IConduitAdmin {
           messageParsed.url,
         );
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this.cleanupRoutes();
     });
@@ -229,7 +229,7 @@ export default class AdminModule extends IConduitAdmin {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.log('Failed to update state');
+        ConduitGrpcSdk.Logger.error('failed to update state');
       });
   }
 

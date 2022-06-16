@@ -48,8 +48,10 @@ export class CustomEndpointController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading custom endpoints to the router');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(
+          'Something went wrong when loading custom endpoints to the router',
+        );
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

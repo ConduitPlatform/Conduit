@@ -51,12 +51,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
 
       db.on('error', err => {
-        console.error('MongoDB: Connection error:', err.message);
+        ConduitGrpcSdk.Logger.error('MongoDB: Connection error:', err.message);
         reject();
       });
 
       db.once('open', function callback() {
-        console.info('MongoDB: Connection open!');
+        ConduitGrpcSdk.Logger.info('MongoDB: Connection open!');
         resolve();
       });
 
@@ -66,7 +66,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
 
       db.on('disconnected', function () {
-        ConduitGrpcSdk.Logger.log('MongoDB: Database Disconnected');
+        ConduitGrpcSdk.Logger.warn('MongoDB: Database Disconnected');
         reject();
       });
     });

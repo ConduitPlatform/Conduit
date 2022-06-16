@@ -7,6 +7,7 @@ import {
 } from '../interfaces/ISendNotification';
 import { isNil, keyBy } from 'lodash';
 import { NotificationToken } from '../models';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class FirebaseProvider implements IPushNotificationsProvider {
   private readonly fcm: firebase.messaging.Messaging;
@@ -81,7 +82,9 @@ export class FirebaseProvider implements IPushNotificationsProvider {
         token: token.token,
       };
 
-      await this.fcm.send(message).catch(console.error);
+      await this.fcm.send(message).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
     });
     return Promise.all(promises);
   }

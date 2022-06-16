@@ -146,7 +146,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       AuthUtils.deleteUserTokens(this.grpcSdk, {
         userId: user._id,
       }),
-    ).catch(e => ConduitGrpcSdk.Logger.log('Failed to delete all access tokens'));
+    ).catch(e => ConduitGrpcSdk.Logger.error('failed to delete all access tokens'));
     return 'Done';
   }
 

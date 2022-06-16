@@ -115,11 +115,11 @@ export default class DatabaseModule extends ManagedModule<void> {
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
-            ConduitGrpcSdk.Logger.log('Failed to create/update schema');
+            ConduitGrpcSdk.Logger.error('failed to create/update schema');
           });
         }
       } catch (err) {
-        console.error('Something was wrong with the message');
+        ConduitGrpcSdk.Logger.error('Something was wrong with the message');
       }
     });
     const coreHealth = ((await this.grpcSdk.core.check()) as unknown) as HealthCheckStatus;

@@ -16,7 +16,7 @@ import {
 } from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 
@@ -249,20 +249,24 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     if (parsedQuery.hasOwnProperty('$inc')) {
-      await this.model
-        .increment(parsedQuery['$inc'], { where: { _id: id } })
-        .catch(console.error);
+      await this.model.increment(parsedQuery['$inc'], { where: { _id: id } }).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       delete parsedQuery['$inc'];
     }
 
     if (updateProvidedOnly) {
-      const record = await this.model.findByPk(id, { raw: true }).catch(console.error);
+      const record = await this.model.findByPk(id, { raw: true }).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       if (!isNil(record)) {
         parsedQuery = { ...record, ...parsedQuery };
       }
     } else if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
-      const record = await this.model.findByPk(id, { raw: true }).catch(console.error);
+      const record = await this.model.findByPk(id, { raw: true }).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       if (!isNil(record)) {
         parsedQuery = { ...record, ...parsedQuery };
       }
@@ -281,20 +285,26 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
             },
             { where: { _id: id } },
           )
-          .catch(console.error);
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
       }
       delete parsedQuery['$push'];
     }
 
     if (parsedQuery.hasOwnProperty('$pull')) {
-      const dbDocument = await this.model.findByPk(id).catch(console.error);
+      const dbDocument = await this.model.findByPk(id).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       for (const key in parsedQuery['$push']) {
         const ind = dbDocument[key].indexOf(parsedQuery['$push'][key]);
         if (ind > -1) {
           dbDocument[key].splice(ind, 1);
         }
       }
-      await this.model.update(parsedQuery, { where: { _id: id } }).catch(console.error);
+      await this.model.update(parsedQuery, { where: { _id: id } }).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       delete parsedQuery['$pull'];
     }
 
@@ -343,7 +353,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       await this.model
         // @ts-ignore
         .increment(parsedQuery['$inc'] as any, { where: parsedFilter })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       delete parsedQuery['$inc'];
     }
 
@@ -351,7 +363,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       const record = await this.model
         // @ts-ignore
         .findOne({ where: parsedFilter, raw: true })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       if (!isNil(record)) {
         parsedQuery = _.mergeWith(record, parsedQuery);
       }
@@ -371,13 +385,17 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
             // @ts-ignore
             { where: parsedFilter },
           )
-          .catch(console.error);
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
       }
       delete parsedQuery['$push'];
     }
 
     if (parsedQuery.hasOwnProperty('$pull')) {
-      const documents = await this.findMany(filterQuery).catch(console.error);
+      const documents = await this.findMany(filterQuery).catch(
+        ConduitGrpcSdk.Logger.error,
+      );
       for (const document of documents) {
         for (const key in parsedQuery['$push']) {
           const ind = document[key].indexOf(parsedQuery['$push'][key]);
@@ -386,7 +404,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           }
         }
         // @ts-ignore
-        await this.model.update(document, { where: parsedFilter }).catch(console.error);
+        await this.model.update(document, { where: parsedFilter }).catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       }
       delete parsedQuery['$pull'];
     }

@@ -183,7 +183,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           userId: user._id,
           type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
 
       const verificationToken = await Token.getInstance().create({
         userId: user._id,

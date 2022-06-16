@@ -108,7 +108,7 @@ export default class ConduitGrpcSdk {
           }
         } catch (err) {
           if (err.code === status.PERMISSION_DENIED) {
-            console.error(err);
+            ConduitGrpcSdk.Logger.error(err);
             process.exit(-1);
           }
           await sleep(delay);
@@ -303,7 +303,7 @@ export default class ConduitGrpcSdk {
         return this._eventBus;
       })
       .catch((err: Error) => {
-        console.error('Failed to initialize event bus');
+        ConduitGrpcSdk.Logger.error('Failed to initialize event bus');
         throw err;
       });
   }
@@ -323,7 +323,7 @@ export default class ConduitGrpcSdk {
       })
       .catch(err => {
         if (err.code !== 5) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       });
   }

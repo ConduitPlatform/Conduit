@@ -10,7 +10,7 @@ import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
-import {
+import ConduitGrpcSdk, {
   ConduitModel,
   ConduitRouteActions,
   ConduitRouteOption,
@@ -427,7 +427,7 @@ export class GraphQLController extends ConduitRouter {
       try {
         this.refreshGQLServer();
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this._apolloRefreshTimeout = null;
     }, 3000);

@@ -116,11 +116,11 @@ export class HttpServer {
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
-        console.error(bind + ' requires elevated privileges');
+        ConduitGrpcSdk.Logger.error(bind + ' requires elevated privileges');
         process.exit(1);
         break;
       case 'EADDRINUSE':
-        console.error(bind + ' is already in use');
+        ConduitGrpcSdk.Logger.error(bind + ' is already in use');
         process.exit(1);
         break;
       default:
