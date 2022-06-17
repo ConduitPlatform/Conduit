@@ -6,16 +6,12 @@ import ConduitGrpcSdk, {
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { Core } from '../Core';
-import { ConduitLogger } from '../utils/logger';
 import { Status } from '@grpc/grpc-js/build/src/constants';
 
 export class HttpServer {
   private _routingManager: RoutingManager;
-  private readonly logger: ConduitLogger;
 
-  constructor() {
-    this.logger = new ConduitLogger();
-  }
+  constructor() {}
 
   initialize(grpcSdk: ConduitGrpcSdk, server: ConduitGrpcServer) {
     this._routingManager = new RoutingManager(grpcSdk.router!, server);

@@ -98,6 +98,7 @@ export class ConduitRoutingController {
         self._restRouter?.handleRequest(req, res, next);
       }
     });
+    this.registerGlobalMiddleware();
   }
 
   start() {
