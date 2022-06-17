@@ -10,7 +10,7 @@ import {
   isInstanceOfEventResponse,
   JoinRoomResponse,
 } from '@conduitplatform/commons';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitRouter } from '../Router';
 import { SocketPush } from '../../interfaces';
 import { isNil } from 'lodash';
@@ -31,7 +31,7 @@ export class SocketController extends ConduitRouter {
   constructor(commons: ConduitCommons, expressApp: Application) {
     super(commons);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
-      console.error('Redis IP not defined');
+      ConduitGrpcSdk.Logger.error('Redis IP not defined');
       process.exit(-1);
     }
 

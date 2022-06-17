@@ -31,6 +31,9 @@ import {
 } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
+import { ConduitLogger } from './utilities/Logger';
+import winston from 'winston';
+import path from 'path';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -57,6 +60,7 @@ export default class ConduitGrpcSdk {
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
+  static Logger: ConduitLogger;
   private _initialized: boolean = false;
 
   constructor(
@@ -74,6 +78,18 @@ export default class ConduitGrpcSdk {
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
     const grpcKey = process.env.GRPC_KEY;
+    if (!ConduitGrpcSdk.Logger) {
+      ConduitGrpcSdk.Logger = new ConduitLogger([
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/combined.log'),
+          level: 'info',
+        }),
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/errors.log'),
+          level: 'error',
+        }),
+      ]);
+    }
     if (grpcKey) {
       const sign = createSigner({ key: grpcKey });
       this._grpcToken = sign({
@@ -87,7 +103,7 @@ export default class ConduitGrpcSdk {
       this._initialize();
     } else {
       (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
-      console.log('Waiting for Core...');
+      ConduitGrpcSdk.Logger.log('Waiting for Core...');
       const delay = this.name === 'database' ? 250 : 1000;
       while (true) {
         try {
@@ -96,13 +112,13 @@ export default class ConduitGrpcSdk {
             this.name === 'database' ||
             ((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING
           ) {
-            console.log('Core connection established');
+            ConduitGrpcSdk.Logger.log('Core connection established');
             this._initialize();
             break;
           }
         } catch (err) {
           if (err.code === status.PERMISSION_DENIED) {
-            console.error(err);
+            ConduitGrpcSdk.Logger.error(err);
             process.exit(-1);
           }
           await sleep(delay);
@@ -297,7 +313,7 @@ export default class ConduitGrpcSdk {
         return this._eventBus;
       })
       .catch((err: Error) => {
-        console.error('Failed to initialize event bus');
+        ConduitGrpcSdk.Logger.error('Failed to initialize event bus');
         throw err;
       });
   }
@@ -317,7 +333,7 @@ export default class ConduitGrpcSdk {
       })
       .catch(err => {
         if (err.code !== 5) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       });
   }

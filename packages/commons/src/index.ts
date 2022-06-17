@@ -4,6 +4,7 @@ import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
 import { IConfigManager } from './modules';
 import { StateManager, RedisManager, EventBus } from './utilities';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class ConduitCommons {
   private static _instance: ConduitCommons;
@@ -19,11 +20,14 @@ export class ConduitCommons {
   private constructor(name: string) {
     this.name = name;
     if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
-      const redisManager = new RedisManager(process.env.REDIS_HOST, process.env.REDIS_PORT);
+      const redisManager = new RedisManager(
+        process.env.REDIS_HOST,
+        process.env.REDIS_PORT,
+      );
       this._eventBus = new EventBus(redisManager);
       this._stateManager = new StateManager(redisManager, this.name);
     } else {
-      console.error('Redis IP not defined');
+      ConduitGrpcSdk.Logger.error('Redis IP not defined');
       process.exit(-1);
     }
   }

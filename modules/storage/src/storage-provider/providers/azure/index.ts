@@ -7,6 +7,7 @@ import {
 } from '@azure/storage-blob';
 import fs from 'fs';
 import { streamToBuffer } from '../../utils/utils';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -26,11 +27,11 @@ export class AzureStorage implements IStorageProvider {
   async deleteFolder(name: string): Promise<boolean | Error> {
     const exists = await this.folderExists(name);
     if (!exists) return false;
-    console.log('Folder found');
+    ConduitGrpcSdk.Logger.log('Folder found');
 
-    console.log('Getting blobs list..');
+    ConduitGrpcSdk.Logger.log('Getting blobs list..');
     const containerClient = await this._storage.getContainerClient(this._activeContainer);
-    console.log('Deleting blobs...');
+    ConduitGrpcSdk.Logger.log('Deleting blobs...');
     let i = 0;
     for await (const blob of containerClient.listBlobsFlat()) {
       if (
@@ -41,7 +42,7 @@ export class AzureStorage implements IStorageProvider {
         await containerClient.deleteBlob(blob.name);
       }
     }
-    console.log(`${i} blobs deleted.`);
+    ConduitGrpcSdk.Logger.log(`${i} blobs deleted.`);
     return true;
   }
 

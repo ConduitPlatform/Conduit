@@ -38,8 +38,8 @@ export class AdminHandlers {
         deleteMessages: this.deleteMessages.bind(this),
       })
       .catch((err: Error) => {
-        console.log('Failed to register admin routes for module!');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

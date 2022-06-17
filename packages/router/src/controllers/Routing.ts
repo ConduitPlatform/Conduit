@@ -10,7 +10,7 @@ import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import { SocketPush } from '../interfaces';
 import { SwaggerRouterMetadata } from './Rest';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -142,21 +142,18 @@ export class ConduitRoutingController {
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
+        ConduitGrpcSdk.Logger.log(
+          'New socket registered: ' + r.input.path + ' handler url: ' + url,
+        );
         this.registerConduitSocket(r);
       } else {
-        console.log(
-          'New route registered: ' +
-            r.input.action +
-            ' ' +
-            r.input.path +
-            ' handler url: ' +
-            url,
+        ConduitGrpcSdk.Logger.http(
+          `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this.registerConduitRoute(r);
       }

@@ -16,7 +16,7 @@ import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { ConfigController } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
@@ -147,17 +147,17 @@ export class AWSS3Storage implements IStorageProvider {
     const exists = await this.folderExists(name);
     if (!exists) return false;
 
-    console.log('Getting files list...');
+    ConduitGrpcSdk.Logger.log('Getting files list...');
     const files = await this.listFiles(name);
 
     let i = 0;
-    console.log('Deleting files...');
+    ConduitGrpcSdk.Logger.log('Deleting files...');
     for (const file of files) {
       i++;
       await this.delete(file.Key!);
-      console.log(file.Key!);
+      ConduitGrpcSdk.Logger.log(file.Key!);
     }
-    console.log(`${i} files deleted.`);
+    ConduitGrpcSdk.Logger.log(`${i} files deleted.`);
     return true;
   }
 

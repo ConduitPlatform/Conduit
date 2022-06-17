@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
@@ -62,10 +62,10 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
       this.onConfig()
         .then(() => {
-          console.log('Updated authentication configuration');
+          ConduitGrpcSdk.Logger.log('Updated authentication configuration');
         })
         .catch(() => {
-          console.log('Failed to update authentication config');
+          ConduitGrpcSdk.Logger.error('Failed to update authentication config');
         });
     });
   }

@@ -8,6 +8,7 @@ import {
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
 import { Indexable } from '../interfaces';
+import ConduitGrpcSdk from '../index';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
@@ -42,7 +43,7 @@ function generateLog(
   }
   log += ` ${status ?? '200'} ${Date.now() - requestReceive}`;
 
-  console.log(log);
+  ConduitGrpcSdk.Logger.log(log);
 }
 
 function parseRequestData(data: string) {
@@ -69,7 +70,7 @@ export function wrapRouterGrpcFunction(
       }
     } catch (e) {
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
-      console.log(e.message ?? 'Something went wrong');
+      ConduitGrpcSdk.Logger.error(e.message ?? 'Something went wrong');
       return callback({
         code: status.INTERNAL,
         message: e.message ?? 'Something went wrong',
@@ -108,7 +109,7 @@ export function wrapRouterGrpcFunction(
       })
       .catch(error => {
         generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
-        console.log(error.message ?? 'Something went wrong');
+        ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({
           code: error.code ?? status.INTERNAL,
           message: error.message ?? 'Something went wrong',

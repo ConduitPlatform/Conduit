@@ -24,7 +24,8 @@
     "ioredis": "^4.28.3",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.0.6",
-    "protobufjs": "^6.11.2"
+    "protobufjs": "^6.11.2",
+    "winston": "^3.7.2"
   },
   "directories": {
     "lib": "dist",

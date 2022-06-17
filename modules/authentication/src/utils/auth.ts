@@ -85,7 +85,9 @@ export namespace AuthUtils {
         userId: user._id,
         type: tokenType,
       })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     const config = ConfigController.getInstance().config;
 

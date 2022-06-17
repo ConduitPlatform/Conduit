@@ -146,7 +146,7 @@ socket.emit('message', 'room1', 'hi from socket 1');
 
 socket.on('message', (args) => {
     // prints { sender: 'userId2', message: 'hi from socket 2', room: 'room1' }
-    console.log(args);
+    ConduitGrpcSdk.Logger.log(args);
 });
 
 // client 2
@@ -154,7 +154,7 @@ socket.emit('message', 'room1', 'hi from socket 2');
 
 socket.on('message', (args) => {
     // prints: { sender: 'userId1', message: 'hi from socket 1', room: 'room1' }
-    console.log(args);
+    ConduitGrpcSdk.Logger.log(args);
 });
 ```
 
@@ -176,13 +176,13 @@ socket.emit('message', 'room1', 'hi from socket 1');
 
 socket.on('messagesRead', (args) => {
     // prints: { room: 'room1', readBy: 'userId2' }
-    console.log(args);
+    ConduitGrpcSdk.Logger.log(args);
 });
 
 
 // client 2
 socket.on('message', (args) => {
-    console.log(args);
+    ConduitGrpcSdk.Logger.log(args);
     socket.emit('messagesRead', args.room)
 });
 ```

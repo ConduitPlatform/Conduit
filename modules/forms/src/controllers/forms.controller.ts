@@ -33,8 +33,10 @@ export class FormsController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading forms for forms module');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(
+          'Something went wrong when loading forms for forms module',
+        );
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
@@ -50,10 +50,10 @@ export default class Forms extends ManagedModule<Config> {
       if (message === 'active') {
         this.onConfig()
           .then(() => {
-            console.log('Updated forms configuration');
+            ConduitGrpcSdk.Logger.log('Updated forms configuration');
           })
           .catch(() => {
-            console.log('Failed to update forms config');
+            ConduitGrpcSdk.Logger.error('Failed to update forms config');
           });
       }
     });

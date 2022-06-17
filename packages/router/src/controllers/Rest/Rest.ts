@@ -13,7 +13,11 @@ import { SwaggerGenerator, SwaggerRouterMetadata } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  ConduitRouteActions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces/Cookie';
 
 const swaggerUi = require('swagger-ui-express');
@@ -202,7 +206,7 @@ export class RestController extends ConduitRouter {
 
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
-      console.log(err);
+      ConduitGrpcSdk.Logger.error(err);
       if (err.hasOwnProperty('status')) {
         return res.status((err as ConduitError).status).json({
           name: err.name,

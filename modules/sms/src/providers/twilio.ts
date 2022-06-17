@@ -1,5 +1,6 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import twilio from 'twilio';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class TwilioProvider implements ISmsProvider {
   private readonly phoneNumber: string;
@@ -40,7 +41,9 @@ export class TwilioProvider implements ISmsProvider {
     const verification = await this.client.verify
       .services(this.serviceSid)
       .verifications.create({ to, channel: 'sms' })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     if (!verification) {
       return Promise.reject(Error('could not send verication code'));
@@ -56,7 +59,9 @@ export class TwilioProvider implements ISmsProvider {
     const verificationCheck = await this.client.verify
       .services(this.serviceSid)
       .verificationChecks.create({ verificationSid, code })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     if (!verificationCheck) {
       return Promise.reject(Error('could not verify code'));

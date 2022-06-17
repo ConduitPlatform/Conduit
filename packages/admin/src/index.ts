@@ -90,7 +90,7 @@ export default class AdminModule extends IConduitAdmin {
     await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
-    await this.handleDatabase().catch(console.log);
+    await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     this._sdkRoutes = [
       adminRoutes.getLoginRoute(this.commons),
       adminRoutes.getModulesRoute(this.commons),
@@ -106,7 +106,7 @@ export default class AdminModule extends IConduitAdmin {
     }, this);
     this.attachRouter();
     this.highAvailability().catch(() => {
-      console.log('Failed to recover state');
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
     });
   }
 
@@ -141,7 +141,7 @@ export default class AdminModule extends IConduitAdmin {
         call.request.routerUrl,
       );
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({
         code: status.INTERNAL,
         message: 'Error when registering routes',
@@ -174,10 +174,10 @@ export default class AdminModule extends IConduitAdmin {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       }, this);
-      console.log('Recovered routes');
+      ConduitGrpcSdk.Logger.log('Recovered routes');
     }
     this.cleanupRoutes();
 
@@ -190,7 +190,7 @@ export default class AdminModule extends IConduitAdmin {
           messageParsed.url,
         );
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this.cleanupRoutes();
     });
@@ -226,10 +226,10 @@ export default class AdminModule extends IConduitAdmin {
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.log('Failed to update state');
+        ConduitGrpcSdk.Logger.error('Failed to update state');
       });
   }
 
@@ -272,7 +272,7 @@ export default class AdminModule extends IConduitAdmin {
           });
         }
       })
-      .catch(console.log);
+      .catch(ConduitGrpcSdk.Logger.log);
   }
 
   private internalRegisterRoute(
@@ -285,7 +285,8 @@ export default class AdminModule extends IConduitAdmin {
       | ConduitRoute
       | ConduitMiddleware
       | ConduitSocket
-    )[] = grpcToConduitRoute( // can go
+    )[] = grpcToConduitRoute(
+      // can go
       'Admin',
       {
         protoFile: protofile,
@@ -298,13 +299,8 @@ export default class AdminModule extends IConduitAdmin {
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {
-        console.log(
-          'New admin route registered: ' +
-            r.input.action +
-            ' ' +
-            r.input.path +
-            ' handler url: ' +
-            url,
+        ConduitGrpcSdk.Logger.http(
+          `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._restRouter.registerConduitRoute(r);
       }

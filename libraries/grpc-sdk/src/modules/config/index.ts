@@ -7,6 +7,7 @@ import {
   ModuleHealthRequest,
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
+import ConduitGrpcSdk from '../../index';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
@@ -121,17 +122,17 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     this.client!.moduleHealthProbe(request)
       .then(res => {
         if (!res && self.coreLive) {
-          console.log('Core unhealthy');
+          ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;
         } else if (res && !self.coreLive) {
-          console.log('Core is live');
+          ConduitGrpcSdk.Logger.log('Core is live');
           self.coreLive = true;
           self.watchModules();
         }
       })
       .catch(e => {
         if (self.coreLive) {
-          console.log('Core unhealthy');
+          ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;
         }
       });
@@ -150,7 +151,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      console.error('Connection to gRPC server closed');
+      ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
     }
   }
 }

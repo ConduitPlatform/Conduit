@@ -1,7 +1,7 @@
 import { ConnectionOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
-import {
+import ConduitGrpcSdk, {
   ConduitModelOptions,
   ConduitSchema,
   GrpcError,
@@ -46,27 +46,27 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return new Promise<void>((resolve, reject) => {
       const db = this.mongoose.connection;
       db.on('connected', () => {
-        console.log('MongoDB: Database is connected');
+        ConduitGrpcSdk.Logger.log('MongoDB: Database is connected');
         resolve();
       });
 
       db.on('error', err => {
-        console.error('MongoDB: Connection error:', err.message);
+        ConduitGrpcSdk.Logger.error('MongoDB: Connection error:', err.message);
         reject();
       });
 
       db.once('open', function callback() {
-        console.info('MongoDB: Connection open!');
+        ConduitGrpcSdk.Logger.info('MongoDB: Connection open!');
         resolve();
       });
 
       db.on('reconnected', function () {
-        console.log('MongoDB: Database reconnected!');
+        ConduitGrpcSdk.Logger.log('MongoDB: Database reconnected!');
         resolve();
       });
 
       db.on('disconnected', function () {
-        console.log('MongoDB: Database Disconnected');
+        ConduitGrpcSdk.Logger.warn('MongoDB: Database Disconnected');
         reject();
       });
     });
@@ -80,7 +80,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         deepPopulate = deepPopulate(this.mongoose);
       })
       .catch(err => {
-        console.log(err);
+        ConduitGrpcSdk.Logger.error(err);
         throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
       });
   }
@@ -185,7 +185,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             );
             schema.ownerModule = 'database';
             introspectedSchemas.push(schema);
-            console.log(`Introspected schema ${collectionName}`);
+            ConduitGrpcSdk.Logger.log(`Introspected schema ${collectionName}`);
           },
         );
       }),

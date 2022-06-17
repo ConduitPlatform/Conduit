@@ -17,7 +17,7 @@ export class CustomEndpointController {
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
     this.refreshRoutes().catch(err => {
-      console.log(err);
+      ConduitGrpcSdk.Logger.error(err);
     });
     this.initializeState();
   }
@@ -34,7 +34,7 @@ export class CustomEndpointController {
       .model.findMany({ enabled: true })
       .then((r: ICustomEndpoint[]) => {
         if (!r || r.length == 0) {
-          return console.log('No custom endpoints to register');
+          ConduitGrpcSdk.Logger.log('No custom endpoints to register');
         }
         const routes: any[] = [];
         r.forEach((schema: ICustomEndpoint) => {
@@ -48,15 +48,17 @@ export class CustomEndpointController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading custom endpoints to the router');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(
+          'Something went wrong when loading custom endpoints to the router',
+        );
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 
   refreshEndpoints(): void {
     this.grpcSdk.bus?.publish('database:customEndpoints:refresh', '');
     this.refreshRoutes().then((r: any) => {
-      console.log('Refreshed routes');
+      ConduitGrpcSdk.Logger.log('Refreshed routes');
     });
   }
 }

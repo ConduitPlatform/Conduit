@@ -4,7 +4,9 @@ import {
   ConduitCommons,
   IConduitRouter,
 } from '@conduitplatform/commons';
-import { ConduitRouteActions as Actions } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions as Actions,
+} from '@conduitplatform/grpc-sdk';
 import { Core } from './Core';
 import path from 'path';
 import cors from 'cors';
@@ -114,11 +116,11 @@ export class HttpServer {
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
-        console.error(bind + ' requires elevated privileges');
+        ConduitGrpcSdk.Logger.error(bind + ' requires elevated privileges');
         process.exit(1);
         break;
       case 'EADDRINUSE':
-        console.error(bind + ' is already in use');
+        ConduitGrpcSdk.Logger.error(bind + ' is already in use');
         process.exit(1);
         break;
       default:
@@ -130,6 +132,6 @@ export class HttpServer {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log('Listening on ' + bind);
+    ConduitGrpcSdk.Logger.log('Listening on ' + bind);
   }
 }
