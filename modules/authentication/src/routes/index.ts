@@ -124,7 +124,7 @@ export class AuthenticationRoutes {
       );
     }
     return this._routingManager.registerRoutes().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.error('failed to register routes for module');
+      ConduitGrpcSdk.Logger.error('Failed to register routes for module');
       ConduitGrpcSdk.Logger.error(err);
     });
   }

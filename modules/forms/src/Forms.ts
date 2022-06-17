@@ -53,7 +53,7 @@ export default class Forms extends ManagedModule<Config> {
             ConduitGrpcSdk.Logger.log('Updated forms configuration');
           })
           .catch(() => {
-            ConduitGrpcSdk.Logger.error('failed to update forms config');
+            ConduitGrpcSdk.Logger.error('Failed to update forms config');
           });
       }
     });

@@ -44,12 +44,12 @@ export class ModuleManager<T> {
         this.module.healthState,
       );
     } catch (err) {
-      ConduitGrpcSdk.Logger.error('failed to initialize server');
+      ConduitGrpcSdk.Logger.error('Failed to initialize server');
       ConduitGrpcSdk.Logger.error(err);
       process.exit(-1);
     }
     await this.postRegisterLifecycle().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.error('failed to activate module');
+      ConduitGrpcSdk.Logger.error('Failed to activate module');
       ConduitGrpcSdk.Logger.error(err);
     });
   }

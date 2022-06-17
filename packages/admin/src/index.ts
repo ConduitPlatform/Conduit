@@ -106,7 +106,7 @@ export default class AdminModule extends IConduitAdmin {
     }, this);
     this.attachRouter();
     this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.error('failed to recover state');
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
     });
   }
 
@@ -229,7 +229,7 @@ export default class AdminModule extends IConduitAdmin {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.error('failed to update state');
+        ConduitGrpcSdk.Logger.error('Failed to update state');
       });
   }
 

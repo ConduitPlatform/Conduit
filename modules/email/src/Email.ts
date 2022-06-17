@@ -138,7 +138,7 @@ export default class Email extends ManagedModule<Config> {
     };
     const emailConfig: Config = await this.grpcSdk.config
       .get('email')
-      .catch(() => ConduitGrpcSdk.Logger.error('failed to get sending domain'));
+      .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
     let errorMessage: string | null = null;
     const sentMessageInfo = await this.emailService

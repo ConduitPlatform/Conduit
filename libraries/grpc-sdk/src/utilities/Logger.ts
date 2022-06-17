@@ -1,6 +1,6 @@
-import winston, { LogCallback, LogEntry, Logger, transports, format } from 'winston';
+import winston, { format, LogCallback, Logger } from 'winston';
 import { Indexable } from '../interfaces';
-import { isEmpty, isNil } from 'lodash';
+import { isEmpty } from 'lodash';
 
 const Format = format.combine(
   format.printf(info => {

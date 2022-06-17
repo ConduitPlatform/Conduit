@@ -65,7 +65,7 @@ export default class Authentication extends ManagedModule<Config> {
           ConduitGrpcSdk.Logger.log('Updated authentication configuration');
         })
         .catch(() => {
-          ConduitGrpcSdk.Logger.error('failed to update authentication config');
+          ConduitGrpcSdk.Logger.error('Failed to update authentication config');
         });
     });
   }
