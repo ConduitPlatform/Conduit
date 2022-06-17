@@ -51,7 +51,6 @@ export class GraphQLController extends ConduitRouter {
         return { context, headers, setCookie: [], removeCookie: [], res };
       },
     });
-
     this._apollo = server.getMiddleware();
   }
 
@@ -208,6 +207,7 @@ export class GraphQLController extends ConduitRouter {
   }
 
   private initialize() {
+    this.createRouter();
     this.resolvers = {
       Date: new GraphQLScalarType({
         name: 'Date',
@@ -273,7 +273,7 @@ export class GraphQLController extends ConduitRouter {
     this.mutations = '';
     const self = this;
 
-    this._expressRouter.use('/', (req: Request, res: Response, next: NextFunction) => {
+    this._expressRouter!.use('/', (req: Request, res: Response, next: NextFunction) => {
       if (self._apollo) {
         self._apollo(req, res, next);
       } else {
@@ -431,5 +431,13 @@ export class GraphQLController extends ConduitRouter {
       }
       this._apolloRefreshTimeout = null;
     }, 3000);
+  }
+
+  shutDown() {
+    super.shutDown();
+    if (this._apolloRefreshTimeout) {
+      clearTimeout(this._apolloRefreshTimeout);
+    }
+    delete this._apollo;
   }
 }

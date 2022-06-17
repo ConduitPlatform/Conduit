@@ -129,18 +129,21 @@ export class ConduitRoutingController {
   }
 
   stopRest() {
-    // TODO implement
-    throw new Error('Not Implemented yet!');
+    if (!this._restRouter) return;
+    this._restRouter.shutDown();
+    delete this._restRouter;
   }
 
   stopGraphQL() {
-    // TODO implement
-    throw new Error('Not Implemented yet!');
+    if (!this._graphQLRouter) return;
+    this._graphQLRouter.shutDown();
+    delete this._graphQLRouter;
   }
 
   stopSockets() {
-    // TODO implement
-    throw new Error('Not Implemented yet!');
+    if (!this._socketRouter) return;
+    this._socketRouter.shutDown();
+    delete this._socketRouter;
   }
 
   registerMiddleware(

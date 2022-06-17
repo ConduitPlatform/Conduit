@@ -24,7 +24,7 @@ const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
-  private _swagger: SwaggerGenerator;
+  private _swagger?: SwaggerGenerator;
 
   constructor(grpcSdk: ConduitGrpcSdk, swaggerRouterMetadata: SwaggerRouterMetadata) {
     super(grpcSdk);
@@ -75,7 +75,7 @@ export class RestController extends ConduitRouter {
       | ((req: Request, res: Response, next: NextFunction) => void)
       | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
-    this._expressRouter.use(path, router);
+    this._expressRouter!.use(path, router);
   }
 
   private addConduitRoute(route: ConduitRoute) {
@@ -84,33 +84,33 @@ export class RestController extends ConduitRouter {
 
     switch (route.input.action) {
       case ConduitRouteActions.GET: {
-        routerMethod = this._expressRouter.get.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.get.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.POST: {
-        routerMethod = this._expressRouter.post.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.post.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.DELETE: {
-        routerMethod = this._expressRouter.delete.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.delete.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.UPDATE: {
-        routerMethod = this._expressRouter.put.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.put.bind(this._expressRouter);
         break;
       }
       case ConduitRouteActions.PATCH: {
-        routerMethod = this._expressRouter.patch.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.patch.bind(this._expressRouter);
         break;
       }
       default: {
-        routerMethod = this._expressRouter.get.bind(this._expressRouter);
+        routerMethod = this._expressRouter!.get.bind(this._expressRouter);
       }
     }
 
     routerMethod(route.input.path, this.constructHandler(route));
 
-    this._swagger.addRouteSwaggerDocumentation(route);
+    this._swagger!.addRouteSwaggerDocumentation(route);
   }
 
   constructHandler(route: ConduitRoute): (req: Request, res: Response) => void {
@@ -265,17 +265,23 @@ export class RestController extends ConduitRouter {
   }
 
   private initializeRouter() {
-    this._expressRouter = Router();
+    this.createRouter();
     const self = this;
-    this._expressRouter.use('/swagger', swaggerUi.serve);
-    this._expressRouter.get('/swagger', (req, res, next) =>
-      swaggerUi.setup(self._swagger.swaggerDoc)(req, res, next),
+    this._expressRouter!.use('/swagger', swaggerUi.serve);
+    this._expressRouter!.get('/swagger', (req, res, next) =>
+      swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
     );
-    this._expressRouter.get('/swagger.json', (req, res) => {
-      res.send(JSON.stringify(this._swagger.swaggerDoc));
+    this._expressRouter!.get('/swagger.json', (req, res) => {
+      res.send(JSON.stringify(this._swagger!.swaggerDoc));
     });
-    this._expressRouter.use((req: Request, res: Response, next: NextFunction) => {
+    this._expressRouter!.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });
+  }
+
+  shutDown() {
+    super.shutDown();
+    this._registeredLocalRoutes.clear();
+    delete this._swagger;
   }
 }

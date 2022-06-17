@@ -72,10 +72,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
     this._security = new SecurityModule(this.grpcSdk, this);
-    this.highAvailability().catch(() => {
-      console.log('Failed to recover state');
-    });
-    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   protected registerSchemas() {
@@ -116,8 +112,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
     if (atLeastOne) {
       this._security.setupMiddlewares();
-      await this.recoverFromState();
     }
+    await this.highAvailability();
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   getHttpPort() {

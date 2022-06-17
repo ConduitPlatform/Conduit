@@ -181,4 +181,12 @@ export class SocketController extends ConduitRouter {
     ns.removeAllListeners();
     this.io._nsps.delete(namespace);
   }
+
+  shutDown() {
+    super.shutDown();
+    this.io.close();
+    this.httpServer.close();
+    this.pubClient.end(false);
+    this.subClient.end(false);
+  }
 }

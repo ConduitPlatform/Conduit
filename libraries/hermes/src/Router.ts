@@ -7,14 +7,30 @@ import { ConduitMiddleware } from './interfaces';
 import { ConduitRoute } from './classes';
 
 export abstract class ConduitRouter {
-  protected _expressRouter: Router;
+  protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this._expressRouter = Router();
     this._registeredRoutes = new Map();
+  }
+
+  createRouter() {
+    this._expressRouter = Router();
+  }
+
+  shutDown() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+    }
+    if (this._expressRouter) {
+      delete this._expressRouter;
+    }
+    if (this._middlewares) {
+      delete this._middlewares;
+    }
+    this._registeredRoutes.clear();
   }
 
   protected abstract _refreshRouter(): void;
@@ -38,7 +54,7 @@ export abstract class ConduitRouter {
   }
 
   handleRequest(req: Request, res: Response, next: NextFunction): void {
-    this._expressRouter(req, res, next);
+    this._expressRouter!(req, res, next);
   }
 
   protected findInCache(hashKey: string) {
