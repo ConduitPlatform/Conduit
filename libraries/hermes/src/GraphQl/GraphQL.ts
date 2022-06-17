@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { GraphQlParser, ParseResult } from './GraphQlParser';
 import { findPopulation } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
@@ -10,7 +9,7 @@ import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
-import {
+import ConduitGrpcSdk, {
   ConduitModel,
   ConduitRouteActions,
   ConduitRouteOption,
@@ -18,6 +17,7 @@ import {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from '../classes';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
@@ -34,8 +34,8 @@ export class GraphQLController extends ConduitRouter {
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private _parser: GraphQlParser;
 
-  constructor(commons: ConduitCommons) {
-    super(commons);
+  constructor(grpcSdk: ConduitGrpcSdk) {
+    super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
   }

@@ -102,7 +102,6 @@ export class ConduitCommons {
 }
 
 export * from './interfaces';
-export * from './classes';
 export * from './modules';
 export * from './utilities';
 export * from './protoTypes/core';

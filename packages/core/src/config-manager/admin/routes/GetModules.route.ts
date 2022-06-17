@@ -1,13 +1,10 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  RegisteredModule,
-} from '@conduitplatform/commons';
+import { RegisteredModule } from '@conduitplatform/commons';
 import {
   ConduitRouteActions,
   ConduitError,
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(

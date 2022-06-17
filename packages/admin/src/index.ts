@@ -9,13 +9,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
-  ConduitRoute,
-  ConduitMiddleware,
-  ConduitSocket,
   IConduitAdmin,
-  grpcToConduitRoute,
   RegisterAdminRouteRequest,
-  RouteT,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -24,8 +19,15 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import path from 'path';
-import { ConduitRoutingController } from '../../../libraries/hermes';
-import { SwaggerRouterMetadata } from '../../../libraries/hermes';
+import {
+  ConduitMiddleware,
+  ConduitRoute,
+  ConduitRoutingController,
+  ConduitSocket,
+  grpcToConduitRoute,
+  RouteT,
+  SwaggerRouterMetadata,
+} from '@conduitplatform/hermes';
 import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
@@ -72,7 +74,7 @@ export default class AdminModule extends IConduitAdmin {
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       '/admin',
-      this.commons,
+      this.grpcSdk,
       swaggerRouterMetadata,
     );
 
@@ -97,6 +99,7 @@ export default class AdminModule extends IConduitAdmin {
       return port;
     }
   }
+
   async initialize(server: GrpcServer) {
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),

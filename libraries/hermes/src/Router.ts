@@ -1,14 +1,10 @@
-import {
-  ConduitCommons,
-  ConduitMiddleware,
-  ConduitRoute,
-} from '@conduitplatform/commons';
 import { NextFunction, Request, Response, Router } from 'express';
-import {
-  ConduitRouteActions,
+import ConduitGrpcSdk, {
   ConduitRouteParameters,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitMiddleware } from './interfaces';
+import { ConduitRoute } from './classes';
 
 export abstract class ConduitRouter {
   protected _expressRouter: Router;
@@ -16,7 +12,7 @@ export abstract class ConduitRouter {
   protected _registeredRoutes: Map<string, ConduitRoute>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
-  protected constructor(protected readonly commons: ConduitCommons) {
+  protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._expressRouter = Router();
     this._registeredRoutes = new Map();
   }
@@ -46,12 +42,12 @@ export abstract class ConduitRouter {
   }
 
   protected findInCache(hashKey: string) {
-    return this.commons.getState().getKey('hash-' + hashKey);
+    return this.grpcSdk.state!.getKey('hash-' + hashKey);
   }
 
   // age is in seconds
   protected storeInCache(hashKey: string, data: Indexable, age: number) {
-    this.commons.getState().setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
+    this.grpcSdk.state!.setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
 
   registerMiddleware(middleware: ConduitMiddleware) {

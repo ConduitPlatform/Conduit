@@ -17,7 +17,7 @@ export class StorageRoutes {
     private readonly fileHandlers: FileHandlers,
     private readonly enableAuthRoutes: boolean,
   ) {
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
   async registerRoutes() {

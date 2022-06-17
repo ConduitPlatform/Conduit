@@ -30,7 +30,7 @@ export class ChatRoutes {
     private readonly sendEmail: boolean,
     private readonly sendPushNotification: boolean,
   ) {
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.invitationRoutes = new InvitationRoutes(this.grpcSdk, this._routingManager);
   }
 

@@ -1,9 +1,4 @@
-import {
-  ConduitCommons,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  RegisteredModule,
-} from '@conduitplatform/commons';
+import { ConduitCommons, RegisteredModule } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
@@ -13,6 +8,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import * as models from '../../models';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function getUpdateConfigRoute(
   grpcSdk: ConduitGrpcSdk,

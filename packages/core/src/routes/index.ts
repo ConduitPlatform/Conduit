@@ -1,11 +1,8 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition as ReturnDefinition,
-  ConduitCommons,
-} from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import { ConduitRouteActions as Actions } from '@conduitplatform/grpc-sdk';
 import { Core } from '../Core';
 import { ConduitLogger } from '../utils/logger';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export class HttpServer {
   private router: any;
@@ -27,7 +24,7 @@ export class HttpServer {
           path: '/',
           action: Actions.GET,
         },
-        new ReturnDefinition('HelloResult', 'String'),
+        new ConduitRouteReturnDefinition('HelloResult', 'String'),
         async () => {
           return 'Hello there!';
         },
@@ -43,7 +40,7 @@ export class HttpServer {
             shouldCheck: 'String',
           },
         },
-        new ReturnDefinition('HealthResult', 'String'),
+        new ConduitRouteReturnDefinition('HealthResult', 'String'),
         () => {
           return new Promise(resolve => {
             if (Core.getInstance().initialized) {

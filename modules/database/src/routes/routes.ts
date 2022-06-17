@@ -31,7 +31,7 @@ export class DatabaseRoutes {
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
     this.handlers = new CmsHandlers(grpcSdk, database);
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
   addRoutes(

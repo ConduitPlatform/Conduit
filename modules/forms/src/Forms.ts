@@ -66,7 +66,11 @@ export default class Forms extends ManagedModule<Config> {
       if (!this.isRunning) {
         await this.registerSchemas();
         await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-        this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+        const self = this;
+        this.grpcSdk.on('router', () => {
+          self.userRouter = new FormsRoutes(self.grpcServer, self.grpcSdk);
+        });
+
         this.formController = new FormsController(
           this.grpcSdk,
           this.userRouter,

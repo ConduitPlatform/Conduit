@@ -7,15 +7,18 @@ import {
   Response,
   Router,
 } from 'express';
-
-import { ConduitCommons, ConduitRoute } from '@conduitplatform/commons';
 import { SwaggerGenerator } from './Swagger';
 import { extractRequestData, validateParams } from './util';
 import { createHashKey, extractCaching } from '../cache.utils';
 import { ConduitRouter } from '../Router';
-import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
-import { Cookie } from '../interfaces/index';
-import { SwaggerRouterMetadata } from '../types/index';
+import ConduitGrpcSdk, {
+  ConduitError,
+  ConduitRouteActions,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import { Cookie } from '../interfaces';
+import { SwaggerRouterMetadata } from '../types';
+import { ConduitRoute } from '../classes';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -23,8 +26,8 @@ export class RestController extends ConduitRouter {
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger: SwaggerGenerator;
 
-  constructor(commons: ConduitCommons, swaggerRouterMetadata: SwaggerRouterMetadata) {
-    super(commons);
+  constructor(grpcSdk: ConduitGrpcSdk, swaggerRouterMetadata: SwaggerRouterMetadata) {
+    super(grpcSdk);
     this._registeredLocalRoutes = new Map();
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();

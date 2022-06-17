@@ -73,7 +73,11 @@ export default class PushNotifications extends ManagedModule<Config> {
     if (!this.isRunning) {
       await this.initProvider();
       await this.registerSchemas();
-      this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+      const self = this;
+      this.grpcSdk.on('router', () => {
+        self.userRouter = new PushNotificationsRoutes(self.grpcServer, self.grpcSdk);
+      });
+
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
         this.grpcSdk,

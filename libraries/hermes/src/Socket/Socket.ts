@@ -3,17 +3,16 @@ import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitRouter } from '../Router';
+import { isNil } from 'lodash';
 import {
-  ConduitCommons,
   ConduitSocket,
   EventResponse,
   isInstanceOfEventResponse,
   JoinRoomResponse,
-} from '@conduitplatform/commons';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
-import { ConduitRouter } from '../Router';
-import { isNil } from 'lodash';
-import { SocketPush } from '../interfaces';
+  SocketPush,
+} from '../interfaces';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -28,8 +27,8 @@ export class SocketController extends ConduitRouter {
     next: NextFunction,
   ) => void)[];
 
-  constructor(commons: ConduitCommons, expressApp: Application) {
-    super(commons);
+  constructor(grpcSdk: ConduitGrpcSdk, expressApp: Application) {
+    super(grpcSdk);
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
       console.error('Redis IP not defined');
       process.exit(-1);

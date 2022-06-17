@@ -1,6 +1,6 @@
 import { GrpcServer } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '../../index';
-import { ConduitRoute } from '../../classes/ConduitRoute';
+import { ConduitRoute } from '@conduitplatform/hermes';
 
 export abstract class IConduitAdmin {
   protected constructor(protected readonly commons: ConduitCommons) {}

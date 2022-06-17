@@ -19,7 +19,6 @@ import { AccessToken, User } from '../models';
 import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
-import { Payload } from '../handlers/oauth2/interfaces/Payload';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 
 type OAuthHandler = typeof oauth2;
@@ -36,7 +35,7 @@ export class AuthenticationRoutes {
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly emailServing: boolean,
   ) {
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.localHandlers = new LocalHandlers(grpcSdk, emailServing);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
@@ -49,7 +48,9 @@ export class AuthenticationRoutes {
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
-    const phoneActive = await this.phoneHandlers.validate().catch(e => (errorMessage = e));
+    const phoneActive = await this.phoneHandlers
+      .validate()
+      .catch(e => (errorMessage = e));
 
     if (phoneActive && !errorMessage) {
       await this.phoneHandlers.declareRoutes(this._routingManager);

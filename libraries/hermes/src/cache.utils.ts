@@ -1,6 +1,6 @@
-import { ConduitRoute } from '@conduitplatform/commons';
 import { CacheScope } from 'apollo-cache-control';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from './classes';
 
 const crypto = require('crypto');
 

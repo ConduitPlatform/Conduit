@@ -104,11 +104,18 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    this.userRouter = new AuthenticationRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this.sendEmail,
-    );
+    if (!this.userRouter) {
+      const self = this;
+      this.grpcSdk.on('router', async () => {
+        self.userRouter = new AuthenticationRoutes(
+          self.grpcServer,
+          self.grpcSdk,
+          self.sendEmail,
+        );
+        await this.userRouter.registerRoutes();
+      });
+      return;
+    }
     await this.userRouter.registerRoutes();
   }
 

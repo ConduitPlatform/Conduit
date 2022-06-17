@@ -14,7 +14,7 @@ export class PushNotificationsRoutes {
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this.handlers = new NotificationTokensHandler();
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.registeredRoutes();
   }
 

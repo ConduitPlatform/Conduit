@@ -15,7 +15,7 @@ export class FormsRoutes {
   private forms: any[] = [];
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
   }
 
   async submitForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

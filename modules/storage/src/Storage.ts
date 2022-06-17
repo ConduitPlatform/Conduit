@@ -99,13 +99,16 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    this.userRouter = new StorageRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this._fileHandlers,
-      this.enableAuthRoutes,
-    );
-    await this.userRouter.registerRoutes();
+    const self = this;
+    this.grpcSdk.on('router', async () => {
+      self.userRouter = new StorageRoutes(
+        self.grpcServer,
+        self.grpcSdk,
+        self._fileHandlers,
+        self.enableAuthRoutes,
+      );
+      await self.userRouter.registerRoutes();
+    });
   }
 
   protected registerSchemas() {

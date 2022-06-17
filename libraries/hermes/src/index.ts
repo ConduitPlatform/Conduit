@@ -1,21 +1,16 @@
 import express, { NextFunction, Request, Response, Router } from 'express';
-import { RestController } from './Rest/index';
-import {
-  ConduitCommons,
-  ConduitRoute,
-  ConduitMiddleware,
-  ConduitSocket,
-} from '@conduitplatform/commons';
+import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger } from './utils/logger';
 import http from 'http';
-import { SocketPush } from './interfaces/index';
-import { SwaggerRouterMetadata } from './types/index';
+import { ConduitMiddleware, ConduitSocket, SocketPush } from './interfaces';
+import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import { ConduitRoute } from './classes';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -55,7 +50,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export class ConduitRoutingController {
-  private readonly _commons: ConduitCommons;
+  private readonly _grpcSdk: ConduitGrpcSdk;
   private _restRouter: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
@@ -67,14 +62,13 @@ export class ConduitRoutingController {
   constructor(
     private readonly port: number,
     private readonly baseUrl: string,
-    commons: ConduitCommons,
+    grpcSdk: ConduitGrpcSdk,
     swaggerMetadata?: SwaggerRouterMetadata,
   ) {
     this.logger = new ConduitLogger();
     this.start();
-    this._commons = commons;
     this._restRouter = new RestController(
-      this._commons,
+      this._grpcSdk,
       swaggerMetadata ?? swaggerRouterMetadata,
     );
     this._middlewareRouter = Router();
@@ -115,11 +109,11 @@ export class ConduitRoutingController {
   }
 
   initGraphQL() {
-    this._graphQLRouter = new GraphQLController(this._commons);
+    this._graphQLRouter = new GraphQLController(this._grpcSdk);
   }
 
   initSockets() {
-    this._socketRouter = new SocketController(this._commons, this.expressApp);
+    this._socketRouter = new SocketController(this._grpcSdk, this.expressApp);
   }
 
   registerMiddleware(
@@ -245,5 +239,7 @@ export class ConduitRoutingController {
   }
 }
 
-export * from './interfaces/index';
-export * from './types/index';
+export * from './interfaces';
+export * from './types';
+export * from './classes';
+export * from './utils/GrpcConverter';

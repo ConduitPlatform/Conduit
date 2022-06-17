@@ -9,23 +9,24 @@ import {
   Client,
 } from '@grpc/grpc-js';
 import {
-  ConduitSocket,
-  ConduitMiddleware,
-  ConduitSocketEvent,
-  ConduitSocketParameters,
-  EventResponse,
-  JoinRoomResponse,
-  SocketProtoDescription,
-  instanceOfSocketProtoDescription,
-  RouteT,
-} from '../interfaces';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '../classes';
-import {
   ConduitRouteOptions,
   ConduitRouteParameters,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { RouterDescriptor } from '../interfaces/RouterDescriptor';
+import {
+  ConduitMiddleware,
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  ConduitSocket,
+  ConduitSocketEvent,
+  ConduitSocketParameters,
+  EventResponse,
+  instanceOfSocketProtoDescription,
+  JoinRoomResponse,
+  RouterDescriptor,
+  RouteT,
+  SocketProtoDescription,
+} from '@conduitplatform/hermes';
 
 const protoLoader = require('@grpc/proto-loader');
 

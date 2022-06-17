@@ -38,9 +38,9 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private readonly _router?: Router;
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
+    router: Router,
     database: DatabaseProvider,
     storage: Storage,
     email: Email,
@@ -121,7 +121,6 @@ export default class ConduitGrpcSdk {
       this._grpcToken,
     );
     (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    (this._router as unknown) = new Router(this.name, this.serverUrl, this._grpcToken);
     this.initializeModules().then();
     if (this._watchModules) {
       this.watchModules();
@@ -159,8 +158,13 @@ export default class ConduitGrpcSdk {
     return this._admin!;
   }
 
-  get router(): Router {
-    return this._router!;
+  get router(): Router | null {
+    if (this._modules['router']) {
+      return this._modules['router'] as Router;
+    } else {
+      console.warn('Router not up yet!');
+      return null;
+    }
   }
 
   get database(): DatabaseProvider | null {
@@ -361,6 +365,14 @@ export default class ConduitGrpcSdk {
 
   isAvailable(moduleName: string) {
     return !!(this._modules[moduleName] && this._modules[moduleName].active);
+  }
+
+  on(module: string, cb: () => void) {
+    this.waitForExistence(module)
+      .then(() => {
+        cb();
+      })
+      .catch();
   }
 
   async waitForExistence(moduleName: string) {

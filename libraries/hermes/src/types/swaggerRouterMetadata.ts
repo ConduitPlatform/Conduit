@@ -1,5 +1,5 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute } from '@conduitplatform/commons';
+import { ConduitRoute } from '../classes';
 
 export type SwaggerRouterMetadata = {
   readonly urlPrefix: string;

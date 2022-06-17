@@ -1,9 +1,4 @@
-import {
-  ConduitCommons,
-  IConfigManager,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
@@ -13,6 +8,7 @@ import {
   ConduitRouteParameters,
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function getLoginRoute(conduit: ConduitCommons) {
   return new ConduitRoute(

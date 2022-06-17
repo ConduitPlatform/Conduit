@@ -1,32 +1,34 @@
 import { Router } from 'express';
-import {
-  ConduitMiddleware,
-  ConduitRoute,
-  ConduitSocket,
-  grpcToConduitRoute,
-  RegisterConduitRouteRequest,
-  RegisterConduitRouteRequest_PathDefinition,
-  RouteT,
-  SocketData,
-} from '@conduitplatform/commons';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, {
+import {
   ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
-  GrpcServer,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { ConduitRoutingController, SocketPush } from '@conduitplatform/hermes';
+import {
+  ConduitMiddleware,
+  ConduitRoute,
+  ConduitRoutingController,
+  ConduitSocket,
+  grpcToConduitRoute,
+  RouteT,
+  SocketPush,
+} from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin/admin';
+import {
+  RegisterConduitRouteRequest,
+  RegisterConduitRouteRequest_PathDefinition,
+  SocketData,
+} from './protoTypes/router';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   config = AppConfigSchema;
