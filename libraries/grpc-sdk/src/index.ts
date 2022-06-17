@@ -81,11 +81,11 @@ export default class ConduitGrpcSdk {
     if (!ConduitGrpcSdk.Logger) {
       ConduitGrpcSdk.Logger = new ConduitLogger([
         new winston.transports.File({
-          filename: path.join(__dirname, 'combined.log'),
+          filename: path.join(__dirname, '.logs/combined.log'),
           level: 'info',
         }),
         new winston.transports.File({
-          filename: path.join(__dirname, 'errors.log'),
+          filename: path.join(__dirname, '.logs/errors.log'),
           level: 'error',
         }),
       ]);
