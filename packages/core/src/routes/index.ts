@@ -1,56 +1,56 @@
-import { ConduitCommons } from '@conduitplatform/commons';
-import { ConduitRouteActions as Actions } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions as Actions,
+  ConduitRouteReturnDefinition,
+  GrpcError,
+  GrpcServer as ConduitGrpcServer,
+  RoutingManager,
+} from '@conduitplatform/grpc-sdk';
 import { Core } from '../Core';
 import { ConduitLogger } from '../utils/logger';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { Status } from '@grpc/grpc-js/build/src/constants';
 
 export class HttpServer {
-  private router: any;
+  private _routingManager: RoutingManager;
   private readonly logger: ConduitLogger;
 
-  constructor(private readonly commons: ConduitCommons) {
+  constructor() {
     this.logger = new ConduitLogger();
   }
 
-  initialize() {
-    // this.router = this.commons.getRouter();
+  initialize(grpcSdk: ConduitGrpcSdk, server: ConduitGrpcServer) {
+    this._routingManager = new RoutingManager(grpcSdk.router!, server);
     this.registerRoutes();
   }
 
   private registerRoutes() {
-    this.router.registerRoute(
-      new ConduitRoute(
-        {
-          path: '/',
-          action: Actions.GET,
-        },
-        new ConduitRouteReturnDefinition('HelloResult', 'String'),
-        async () => {
-          return 'Hello there!';
-        },
-      ),
+    this._routingManager.route(
+      {
+        path: '/',
+        action: Actions.GET,
+      },
+      new ConduitRouteReturnDefinition('HelloResult', 'String'),
+      async () => {
+        return 'Hello there!';
+      },
     );
 
-    this.router.registerRoute(
-      new ConduitRoute(
-        {
-          path: '/health',
-          action: Actions.GET,
-          queryParams: {
-            shouldCheck: 'String',
-          },
+    this._routingManager.route(
+      {
+        path: '/health',
+        action: Actions.GET,
+        queryParams: {
+          shouldCheck: 'String',
         },
-        new ConduitRouteReturnDefinition('HealthResult', 'String'),
-        () => {
-          return new Promise(resolve => {
-            if (Core.getInstance().initialized) {
-              resolve('Conduit is online!');
-            } else {
-              throw new Error('Conduit is not active yet!');
-            }
-          });
-        },
-      ),
+      },
+      new ConduitRouteReturnDefinition('HealthResult', 'String'),
+      async () => {
+        if (Core.getInstance().initialized) {
+          return 'Conduit is online!';
+        } else {
+          throw new GrpcError(Status.FAILED_PRECONDITION, 'Conduit is not active yet!');
+        }
+      },
     );
+    this._routingManager.registerRoutes().catch(() => {});
   }
 }

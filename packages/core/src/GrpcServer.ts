@@ -18,11 +18,20 @@ const CORE_SERVICES = ['Config', 'Admin'];
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;
   private readonly events: EventEmitter;
+  private _grpcSdk: ConduitGrpcSdk;
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
   private _initialized = false;
 
   get initialized() {
     return this._initialized;
+  }
+
+  get internalGrpc() {
+    return this.server;
+  }
+
+  get grpcSdk() {
+    return this._grpcSdk;
   }
 
   constructor(private readonly commons: ConduitCommons, private readonly port: number) {
@@ -33,7 +42,7 @@ export class GrpcServer {
       .createNewServer()
       .then(port => {
         const _url = '0.0.0.0:' + port.toString();
-        const grpcSdk = new ConduitGrpcSdk(
+        this._grpcSdk = new ConduitGrpcSdk(
           _url,
           () => {
             return this._serviceHealthState;
@@ -41,11 +50,11 @@ export class GrpcServer {
           'core',
           false,
         );
-        grpcSdk.initialize().then(async () => {
+        this._grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(
-            new ConfigManager(grpcSdk, this.commons, async () => {
+            new ConfigManager(this._grpcSdk, this.commons, async () => {
               if (!this._initialized) {
-                await this.bootstrapSdkComponents(grpcSdk);
+                await this.bootstrapSdkComponents();
               }
             }),
           );
@@ -64,10 +73,10 @@ export class GrpcServer {
       });
   }
 
-  private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
-    this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
-    grpcSdk.on('router', () => {
-      Core.getInstance().httpServer.initialize();
+  private async bootstrapSdkComponents() {
+    this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
+    this._grpcSdk.on('router', () => {
+      Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
     });
     await this.commons.getConfigManager().registerAppConfig();
     let error;

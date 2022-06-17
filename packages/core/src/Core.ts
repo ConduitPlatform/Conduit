@@ -11,9 +11,11 @@ export class Core extends IConduitCore {
   get httpServer() {
     return this._httpServer;
   }
+
   get grpcServer() {
     return this._grpcServer;
   }
+
   get initialized() {
     return this._grpcServer.initialized;
   }
@@ -22,7 +24,7 @@ export class Core extends IConduitCore {
     super(ConduitCommons.getInstance('core'));
     this.commons.registerCore(this);
     this._grpcServer = new GrpcServer(this.commons, grpcPort);
-    this._httpServer = new HttpServer(this.commons);
+    this._httpServer = new HttpServer();
   }
 
   static getInstance(grpcPort?: number): Core {
