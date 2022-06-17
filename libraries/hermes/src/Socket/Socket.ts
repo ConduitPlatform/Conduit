@@ -27,13 +27,12 @@ export class SocketController extends ConduitRouter {
     next: NextFunction,
   ) => void)[];
 
-  constructor(grpcSdk: ConduitGrpcSdk, expressApp: Application) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    expressApp: Application,
+    redisDetails: { host: string; port: number },
+  ) {
     super(grpcSdk);
-    if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
-      console.error('Redis IP not defined');
-      process.exit(-1);
-    }
-
     this.httpServer = createServer(expressApp);
     this.options = {
       path: '/realtime',
@@ -44,8 +43,8 @@ export class SocketController extends ConduitRouter {
     };
     this.io = new IOServer(this.httpServer, this.options);
     this.pubClient = new RedisClient({
-      host: process.env.REDIS_HOST,
-      port: Number(process.env.REDIS_PORT),
+      host: redisDetails.host,
+      port: redisDetails.port,
     });
     this.subClient = this.pubClient.duplicate();
     this.io.adapter(

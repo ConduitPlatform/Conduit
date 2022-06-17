@@ -112,8 +112,11 @@ export class ConduitRoutingController {
     this._graphQLRouter = new GraphQLController(this._grpcSdk);
   }
 
-  initSockets() {
-    this._socketRouter = new SocketController(this._grpcSdk, this.expressApp);
+  initSockets(redisHost: string, redisPort: number) {
+    this._socketRouter = new SocketController(this._grpcSdk, this.expressApp, {
+      host: redisHost,
+      port: redisPort,
+    });
   }
 
   registerMiddleware(
@@ -214,7 +217,7 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log(this.baseUrl + ' listening on ' + bind);
+    console.log(this.baseUrl.substr(1) + ' listening on ' + bind);
   }
 
   private registerGlobalMiddleware() {

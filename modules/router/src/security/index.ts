@@ -18,10 +18,8 @@ export default class SecurityModule {
 
     this.router.registerGlobalMiddleware(
       'rateLimiter',
-      new RateLimiter(
-        process.env.REDIS_HOST as string,
-        parseInt(process.env.REDIS_PORT as string),
-      ).limiter,
+      new RateLimiter(this.grpcSdk.redisDetails.host, this.grpcSdk.redisDetails.port)
+        .limiter,
       true,
     );
     this.router.registerGlobalMiddleware('helmetMiddleware', helmet());

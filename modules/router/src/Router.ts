@@ -67,24 +67,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.grpcSdk,
     );
     this._internalRouter.initGraphQL();
-    this._internalRouter.initSockets();
+    this._internalRouter.initSockets(
+      this.grpcSdk.redisDetails.host,
+      this.grpcSdk.redisDetails.port,
+    );
+    this.highAvailability().catch(() => {
+      console.log('Failed to recover state');
+    });
+    await this.registerSchemas();
     this._security = new SecurityModule(this.grpcSdk, this);
   }
 
   async onRegister() {
-    // this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
-    //   this.onConfig()
-    //     .then(() => {
-    //       console.log('Updated authentication configuration');
-    //     })
-    //     .catch(() => {
-    //       console.log('Failed to update authentication config');
-    //     });
-    // });
+    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   protected registerSchemas() {
-    // @ts-ignore
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
@@ -93,13 +92,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
-      this.updateHealth(HealthCheckStatus.NOT_SERVING);
-    } else {
-      await this.updateConfig();
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
-      this.updateHealth(HealthCheckStatus.SERVING);
-    }
+    await this.updateConfig();
   }
 
   getHttpPort() {
@@ -113,21 +106,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       return port;
     }
   }
-
-  // async initialize(server: GrpcServer) {
-  //   await server.addService(
-  //     path.resolve(__dirname, '../../core/src/core.proto'),
-  //     'conduit.core.Router',
-  //     {
-  //       registerConduitRoute: this.registerGrpcRoute.bind(this),
-  //       socketPush: this.socketPush.bind(this),
-  //     },
-  //   );
-  //   this.registerAdminRoutes();
-  //   this.highAvailability().catch(() => {
-  //     console.log('Failed to recover state');
-  //   });
-  // }
 
   async highAvailability() {
     const r = await this.grpcSdk.state!.getKey('router');

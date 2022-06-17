@@ -38,6 +38,7 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
+  private _redisDetails?: { host: string; port: number };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -243,6 +244,14 @@ export default class ConduitGrpcSdk {
     }
   }
 
+  get redisDetails(): { host: string; port: number } {
+    if (this._redisDetails) {
+      return this._redisDetails;
+    } else {
+      throw new Error('Redis not available');
+    }
+  }
+
   watchModules() {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
@@ -295,6 +304,7 @@ export default class ConduitGrpcSdk {
     return this.config
       .getRedisDetails()
       .then((r: GetRedisDetailsResponse) => {
+        this._redisDetails = { host: r.redisHost, port: r.redisPort };
         const redisManager = new RedisManager(r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);

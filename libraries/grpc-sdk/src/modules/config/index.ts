@@ -15,7 +15,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
 
   constructor(
     moduleName: string,
-    url: string,
+    readonly url: string,
     serviceHealthStatusGetter: Function,
     grpcToken?: string,
   ) {
@@ -32,6 +32,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getModuleUrlByName(name: string): Promise<{ url: string }> {
+    if (name === 'core') return Promise.resolve({ url: this.url });
     return this.client!.getModuleUrlByName({ name: name }).then(res => {
       return { url: res.moduleUrl };
     });
