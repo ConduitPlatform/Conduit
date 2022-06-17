@@ -74,9 +74,11 @@ export class AuthenticationRoutes {
           );
           return handler
             .validate()
-            .then(() => {
-              handler.declareRoutes(this._routingManager);
-              enabled = true;
+            .then((active: boolean) => {
+              if (active) {
+                handler.declareRoutes(this._routingManager);
+                enabled = true;
+              }
               return;
             })
             .catch(e => console.error(e));

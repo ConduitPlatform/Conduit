@@ -66,20 +66,15 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
     );
-    this._internalRouter.initGraphQL();
-    this._internalRouter.initSockets(
-      this.grpcSdk.redisDetails.host,
-      this.grpcSdk.redisDetails.port,
-    );
-    this.highAvailability().catch(() => {
-      console.log('Failed to recover state');
-    });
-    await this.registerSchemas();
-    this._security = new SecurityModule(this.grpcSdk, this);
   }
 
   async onRegister() {
+    await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
+    this._security = new SecurityModule(this.grpcSdk, this);
+    this.highAvailability().catch(() => {
+      console.log('Failed to recover state');
+    });
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -93,6 +88,36 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   async onConfig() {
     await this.updateConfig();
+    let atLeastOne = false;
+
+    if (ConfigController.getInstance().config.transports.graphql) {
+      this._internalRouter.initGraphQL();
+      atLeastOne = true;
+    } else {
+      this._internalRouter.stopGraphQL();
+    }
+
+    if (ConfigController.getInstance().config.transports.rest) {
+      this._internalRouter.initRest();
+      atLeastOne = true;
+    } else {
+      this._internalRouter.stopRest();
+    }
+
+    if (ConfigController.getInstance().config.transports.sockets) {
+      atLeastOne = true;
+      this._internalRouter.initSockets(
+        this.grpcSdk.redisDetails.host,
+        this.grpcSdk.redisDetails.port,
+      );
+    } else {
+      this._internalRouter.stopSockets();
+    }
+
+    if (atLeastOne) {
+      this._security.setupMiddlewares();
+      await this.recoverFromState();
+    }
   }
 
   getHttpPort() {
@@ -107,7 +132,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
   }
 
-  async highAvailability() {
+  private async recoverFromState() {
     const r = await this.grpcSdk.state!.getKey('router');
     if (!r || r.length === 0) return;
     const state = JSON.parse(r);
@@ -121,7 +146,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       });
       console.log('Recovered routes');
     }
+  }
 
+  async highAvailability() {
+    await this.recoverFromState();
     this.grpcSdk.bus!.subscribe('router', (message: string) => {
       const messageParsed = JSON.parse(message);
       try {

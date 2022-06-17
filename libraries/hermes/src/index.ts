@@ -51,7 +51,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export class ConduitRoutingController {
   private readonly _grpcSdk: ConduitGrpcSdk;
-  private _restRouter: RestController;
+  private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
@@ -62,15 +62,11 @@ export class ConduitRoutingController {
   constructor(
     private readonly port: number,
     private readonly baseUrl: string,
-    grpcSdk: ConduitGrpcSdk,
-    swaggerMetadata?: SwaggerRouterMetadata,
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly swaggerMetadata?: SwaggerRouterMetadata,
   ) {
     this.logger = new ConduitLogger();
     this.start();
-    this._restRouter = new RestController(
-      this._grpcSdk,
-      swaggerMetadata ?? swaggerRouterMetadata,
-    );
     this._middlewareRouter = Router();
     this._middlewareRouter.use(
       baseUrl,
@@ -93,10 +89,13 @@ export class ConduitRoutingController {
 
     this.expressApp.use(baseUrl, (req, res, next) => {
       if (req.url.startsWith(`${baseUrl}/graphql`) && this._graphQLRouter) {
-        this._graphQLRouter.handleRequest(req, res, next);
+        if (!this._graphQLRouter) {
+          res.status(500).json({ message: 'GraphQL is not enabled on this server!' });
+        }
+        this._graphQLRouter?.handleRequest(req, res, next);
       } else if (!req.url.startsWith(`${baseUrl}/graphql`)) {
         // this needs to be a function to hook on whatever the current router is
-        self._restRouter.handleRequest(req, res, next);
+        self._restRouter?.handleRequest(req, res, next);
       }
     });
   }
@@ -108,15 +107,40 @@ export class ConduitRoutingController {
     this.server.listen(this.port);
   }
 
+  initRest() {
+    if (this._restRouter) return;
+    this._restRouter = new RestController(
+      this._grpcSdk,
+      this.swaggerMetadata ?? swaggerRouterMetadata,
+    );
+  }
+
   initGraphQL() {
+    if (this._graphQLRouter) return;
     this._graphQLRouter = new GraphQLController(this._grpcSdk);
   }
 
   initSockets(redisHost: string, redisPort: number) {
+    if (this._socketRouter) return;
     this._socketRouter = new SocketController(this._grpcSdk, this.expressApp, {
       host: redisHost,
       port: redisPort,
     });
+  }
+
+  stopRest() {
+    // TODO implement
+    throw new Error('Not Implemented yet!');
+  }
+
+  stopGraphQL() {
+    // TODO implement
+    throw new Error('Not Implemented yet!');
+  }
+
+  stopSockets() {
+    // TODO implement
+    throw new Error('Not Implemented yet!');
   }
 
   registerMiddleware(
@@ -130,7 +154,7 @@ export class ConduitRoutingController {
   }
 
   registerRouteMiddleware(middleware: ConduitMiddleware) {
-    this._restRouter.registerMiddleware(middleware);
+    this._restRouter?.registerMiddleware(middleware);
     this._graphQLRouter?.registerMiddleware(middleware);
     this._socketRouter?.registerMiddleware(middleware);
   }
@@ -142,12 +166,12 @@ export class ConduitRoutingController {
       | ((req: Request, res: Response, next: NextFunction) => void)
       | ((req: Request, res: Response, next: NextFunction) => void)[],
   ) {
-    this._restRouter.registerRoute(path, router);
+    this._restRouter?.registerRoute(path, router);
   }
 
   registerConduitRoute(route: ConduitRoute) {
     this._graphQLRouter?.registerConduitRoute(route);
-    this._restRouter.registerConduitRoute(route);
+    this._restRouter?.registerConduitRoute(route);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -155,7 +179,7 @@ export class ConduitRoutingController {
   }
 
   cleanupRoutes(routes: any[]) {
-    this._restRouter.cleanupRoutes(routes);
+    this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
   }
 
@@ -188,7 +212,7 @@ export class ConduitRoutingController {
         this.registerConduitRoute(r);
       }
     });
-    this._restRouter.scheduleRouterRefresh();
+    this._restRouter?.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
   }
 

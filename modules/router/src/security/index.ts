@@ -9,9 +9,7 @@ export default class SecurityModule {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly router: ConduitDefaultRouter,
-  ) {
-    this.setupMiddlewares();
-  }
+  ) {}
 
   setupMiddlewares() {
     const clientValidator: ClientValidator = new ClientValidator(this.grpcSdk);

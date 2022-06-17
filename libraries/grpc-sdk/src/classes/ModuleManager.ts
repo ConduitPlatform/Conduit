@@ -51,6 +51,7 @@ export class ModuleManager<T> {
     await this.postRegisterLifecycle().catch((err: Error) => {
       console.log('Failed to activate module');
       console.error(err);
+      process.exit(-1);
     });
   }
 
