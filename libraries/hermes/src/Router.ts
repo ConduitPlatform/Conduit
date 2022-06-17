@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitMiddleware } from './interfaces';
 import { ConduitRoute } from './classes';
+import ObjectHash from 'object-hash';
 
 export abstract class ConduitRouter {
   protected _expressRouter?: Router;
@@ -110,5 +111,16 @@ export abstract class ConduitRouter {
       }
       this._refreshTimeout = null;
     }, 3000);
+  }
+
+  routeChanged(route: ConduitRoute) {
+    let routeKey = `${route.input.action}-${route.input.path}`;
+    if (this._registeredRoutes.has(routeKey)) {
+      return (
+        ObjectHash.sha1(route) !== ObjectHash.sha1(this._registeredRoutes.get(routeKey))
+      );
+    } else {
+      return true;
+    }
   }
 }

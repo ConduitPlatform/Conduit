@@ -13,6 +13,8 @@ import {
   JoinRoomResponse,
   SocketPush,
 } from '../interfaces';
+import { ConduitRoute } from '../classes';
+import ObjectHash from 'object-hash';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;
@@ -64,7 +66,14 @@ export class SocketController extends ConduitRouter {
   registerConduitSocket(conduitSocket: ConduitSocket) {
     const namespace = conduitSocket.input.path;
     if (this._registeredNamespaces.has(namespace)) {
-      this.removeNamespace(namespace);
+      if (
+        ObjectHash.sha1(conduitSocket) !==
+        ObjectHash.sha1(this._registeredRoutes.get(namespace))
+      ) {
+        this.removeNamespace(namespace);
+      } else {
+        return;
+      }
     }
 
     this._registeredNamespaces.set(namespace, conduitSocket);

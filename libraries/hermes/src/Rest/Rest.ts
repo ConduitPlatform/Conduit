@@ -51,6 +51,7 @@ export class RestController extends ConduitRouter {
   }
 
   registerConduitRoute(route: ConduitRoute) {
+    if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
     this._registeredRoutes.set(key, route);
