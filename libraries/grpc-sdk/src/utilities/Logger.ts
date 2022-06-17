@@ -2,30 +2,44 @@ import winston, { LogCallback, LogEntry, Logger, transports, format } from 'wins
 import { Indexable } from '../interfaces';
 import { isEmpty, isNil } from 'lodash';
 
-const Format = format.printf(info => {
-  // This will customize the Error Message
-  if (info.stack) {
+const Format = format.combine(
+  format.printf(info => {
+    // This will customize the Error Message
+    if (info.stack) {
+      return `[${info.timestamp}] [${info.level.toUpperCase()}]: ${info.message} ${
+        info.stack
+      }`;
+    }
     return `[${info.timestamp}] [${info.level.toUpperCase()}]: ${info.message} ${
-      info.stack
+      !isEmpty(info.meta)
+        ? info.meta.reduce(
+            (message: string, meta: Indexable) =>
+              `${message} \n  ${JSON.stringify(meta, null, 2)}`,
+            '',
+          )
+        : ''
     }`;
-  }
-  return `[${info.timestamp}] [${info.level.toUpperCase()}]: ${info.message} ${
-    !isEmpty(info.meta)
-      ? info.meta.reduce(
-          (message: string, meta: Indexable) =>
-            `${message} \n  ${JSON.stringify(meta, null, 2)}`,
-          '',
-        )
-      : ''
-  }`;
+  }),
+);
+const defaultTransport = new winston.transports.Console({
+  level: 'debug',
+  format: format.combine(
+    format.prettyPrint(),
+    format.errors({ stack: true }),
+    format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss',
+    }),
+    Format,
+    format.colorize({
+      all: true,
+    }),
+  ),
 });
 
 export class ConduitLogger {
   private readonly _winston: winston.Logger;
-
-  constructor() {
+  constructor(transports?: winston.transport[]) {
     this._winston = winston.createLogger({
-      level: 'debug',
       format: format.combine(
         format.prettyPrint(),
         format.errors({ stack: true }),
@@ -33,11 +47,8 @@ export class ConduitLogger {
           format: 'YYYY-MM-DD HH:mm:ss',
         }),
         Format,
-        format.colorize({
-          all: true,
-        }),
       ),
-      transports: [new transports.Console()],
+      transports: transports ? [...transports, defaultTransport] : [defaultTransport],
     });
   }
 

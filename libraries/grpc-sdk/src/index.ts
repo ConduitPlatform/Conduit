@@ -33,6 +33,7 @@ import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
+import path from 'path';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -78,7 +79,16 @@ export default class ConduitGrpcSdk {
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
     const grpcKey = process.env.GRPC_KEY;
     if (!ConduitGrpcSdk.Logger) {
-      ConduitGrpcSdk.Logger = new ConduitLogger();
+      ConduitGrpcSdk.Logger = new ConduitLogger([
+        new winston.transports.File({
+          filename: path.join(__dirname, 'combined.log'),
+          level: 'info',
+        }),
+        new winston.transports.File({
+          filename: path.join(__dirname, 'errors.log'),
+          level: 'error',
+        }),
+      ]);
     }
     if (grpcKey) {
       const sign = createSigner({ key: grpcKey });
