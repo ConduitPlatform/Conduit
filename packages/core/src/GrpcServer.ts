@@ -66,7 +66,9 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
     this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
-    Core.getInstance().httpServer.initialize();
+    grpcSdk.on('router', () => {
+      Core.getInstance().httpServer.initialize();
+    });
     await this.commons.getConfigManager().registerAppConfig();
     let error;
     this.commons

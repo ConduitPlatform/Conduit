@@ -33,7 +33,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly sendEmail: boolean,
   ) {
-    grpcSdk.config.get('security').then(config => {
+    grpcSdk.config.get('router').then(config => {
       this.clientValidation = config.clientValidation.enabled;
     });
   }

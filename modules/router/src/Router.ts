@@ -55,19 +55,20 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     super('router');
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     this._routes = [];
-    this._internalRouter = new ConduitRoutingController(
-      this.getHttpPort()!,
-      '',
-      {} as any,
-    );
-    this._internalRouter.initGraphQL();
-    this._internalRouter.initSockets();
-    this._security = new SecurityModule(this.grpcSdk, this);
+    this._globalMiddlewares = [];
   }
 
   async onServerStart() {
     this.database = this.grpcSdk.databaseProvider!;
     await runMigrations(this.grpcSdk);
+    this._internalRouter = new ConduitRoutingController(
+      this.getHttpPort()!,
+      '',
+      this.grpcSdk,
+    );
+    this._internalRouter.initGraphQL();
+    this._internalRouter.initSockets();
+    this._security = new SecurityModule(this.grpcSdk, this);
   }
 
   async onRegister() {
