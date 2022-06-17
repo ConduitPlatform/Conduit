@@ -13,7 +13,7 @@ import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
 
-const CORE_SERVICES = ['Config', 'Admin', 'Router'];
+const CORE_SERVICES = ['Config', 'Admin'];
 
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;

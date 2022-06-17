@@ -214,7 +214,7 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log(this.baseUrl + 'Listening on ' + bind);
+    console.log(this.baseUrl + ' listening on ' + bind);
   }
 
   private registerGlobalMiddleware() {

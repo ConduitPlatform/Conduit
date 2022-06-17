@@ -49,7 +49,7 @@ export default class ConfigManager implements IConfigManager {
 
   async initialize(server: GrpcServer) {
     await server.addService(
-      path.resolve(__dirname, '../../core/src/core.proto'),
+      path.resolve(__dirname, '../../src/core.proto'),
       'conduit.core.Config',
       {
         get: this.getGrpc.bind(this),
