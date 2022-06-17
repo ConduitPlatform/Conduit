@@ -244,7 +244,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         routes: routes,
         routerUrl: url,
       },
-      moduleName,
+      moduleName === 'core' ? undefined : moduleName,
       this.grpcSdk.grpcToken,
     );
     this._grpcRoutes[url] = routes;
