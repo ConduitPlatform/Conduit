@@ -81,7 +81,8 @@ export class ModuleManager<T> {
       );
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
-      if (!config || config.active) await this.module.onConfig();
+      if (!config || config.active || !config.hasOwnProperty('active'))
+        await this.module.onConfig();
     }
   }
 }
