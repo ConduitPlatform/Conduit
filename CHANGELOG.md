@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.3...v0.13.0) (2022-06-17)
+
+
+### Features
+
+* **authentication,chat,database,email,forms,storage,security:** admin route sorting ([#211](https://github.com/ConduitPlatform/Conduit/issues/211)) ([b3427fb](https://github.com/ConduitPlatform/Conduit/commit/b3427fbc32c7c8765e211ebd0c35e58125dc8226))
+
 ## [0.13.0-rc.3](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.2...v0.13.0-rc.3) (2022-06-16)
 
 
