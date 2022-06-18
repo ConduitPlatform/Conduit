@@ -52,13 +52,10 @@ export class GrpcServer {
         );
         this._grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(
-            new ConfigManager(this._grpcSdk, this.commons, async () => {
-              if (!this._initialized) {
-                await this.bootstrapSdkComponents();
-              }
-            }),
+            new ConfigManager(this._grpcSdk, this.commons),
           );
           await this.commons.getConfigManager().initialize(this.server);
+          await this.bootstrapSdkComponents();
           this.server.start();
           console.log('gRPC server listening on:', _url);
         });
@@ -78,7 +75,10 @@ export class GrpcServer {
     this._grpcSdk.on('router', () => {
       Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
     });
-    await this.commons.getConfigManager().registerAppConfig();
+    this._grpcSdk.on('database', () => {
+      await this.commons.getConfigManager().registerAppConfig();
+    });
+
     let error;
     this.commons
       .getConfigManager()

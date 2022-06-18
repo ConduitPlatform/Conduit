@@ -30,11 +30,6 @@ export function getUpdateConfigRoute(
       config: TYPE.JSON,
     }),
     async (params: ConduitRouteParameters) => {
-      const dbConfig = await models.Config.getInstance().findOne({});
-      if (isNil(dbConfig)) {
-        throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-      }
-
       const newConfig = params.params!.config;
       const moduleName = params.params!.module;
       let updatedConfig: any;
@@ -42,53 +37,11 @@ export function getUpdateConfigRoute(
       if (newConfig.active === false) {
         throw new ConduitError('NOT_IMPLEMENTED', 501, 'Modules cannot be deactivated');
       }
-
-      await grpcSdk
-        .initializeModules()
-        .catch(() => console.log('Failed to refresh modules'));
       switch (moduleName) {
-        case undefined:
-          throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-        case 'authentication':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.authentication))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.authentication.setConfig(newConfig);
-          break;
-        case 'forms':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.forms))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.forms.setConfig(newConfig);
-          break;
-        case 'chat':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.chat))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.chat.setConfig(newConfig);
-          break;
         case 'email':
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.emailProvider))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           updatedConfig = await grpcSdk.emailProvider.setConfig(newConfig);
-          break;
-        case 'pushNotifications':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.pushNotifications))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.pushNotifications.setConfig(newConfig);
-          break;
-        case 'storage':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.storage))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.storage.setConfig(newConfig);
-          break;
-        case 'sms':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.sms))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = await grpcSdk.sms.setConfig(newConfig);
-          break;
-        case 'router':
-          if (!registeredModules.has(moduleName) || isNil(grpcSdk.sms))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          // todo implement
-          // updatedConfig = await grpcSdk.router.setConfig(newConfig);
           break;
         case 'core':
           updatedConfig = await conduit.getConfigManager().set('core', newConfig);
@@ -97,10 +50,11 @@ export function getUpdateConfigRoute(
           updatedConfig = await conduit.getConfigManager().set('admin', newConfig);
           break;
         default:
-          throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
+          if (!registeredModules.has(moduleName) || !grpcSdk.isAvailable(moduleName))
+            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
+          updatedConfig = await grpcSdk.getModule<any>(moduleName)!.setConfig(newConfig);
       }
-
-      return { result: { config: updatedConfig } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return { result: { config: updatedConfig } };
     },
   );
 }

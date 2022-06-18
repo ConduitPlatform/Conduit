@@ -111,7 +111,10 @@ export default class AdminModule extends IConduitAdmin {
     await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
-    await this.handleDatabase().catch(console.log);
+    this.grpcSdk.on('database', async () => {
+      await this.handleDatabase().catch(console.log);
+    });
+
     this._sdkRoutes = [
       adminRoutes.getLoginRoute(this.commons),
       adminRoutes.getModulesRoute(this.commons),

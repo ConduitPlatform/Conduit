@@ -2,8 +2,17 @@ syntax = "proto3";
 package router;
 
 service Router {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
+}
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
 }
 
 message SocketData {
