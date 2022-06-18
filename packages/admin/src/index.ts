@@ -128,6 +128,7 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes.forEach(route => {
       this._router.registerConduitRoute(route);
     }, this);
+
     this.highAvailability().catch(() => {
       console.log('Failed to recover state');
     });

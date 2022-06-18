@@ -172,6 +172,12 @@ export default class ConfigManager implements IConfigManager {
           moduleConfigs: configDoc.moduleConfigs,
         });
       }
+    } else {
+      Object.keys(configDoc.moduleConfigs).forEach(key => {
+        this.sdk
+          .getState()
+          .setKey(`moduleConfigs.${key}`, JSON.stringify(configDoc!.moduleConfigs[key]));
+      });
     }
     this.configDocId = (configDoc as any)._id;
   }
@@ -190,20 +196,18 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async get(moduleName: string) {
-    return this.sdk
+    let config: string | null = await this.sdk
       .getState()
-      .getKey(`moduleConfigs.${moduleName}`)
-      .then((config: string | null) => {
-        if (!config) {
-          throw new Error('Config not found in the database');
-        }
-        let configuration = models.Config.getInstance();
-        configuration.moduleConfigs = JSON.parse(config);
-        if (!configuration['moduleConfigs'][moduleName]) {
-          throw new Error(`Config for module "${moduleName}" not set`);
-        }
-        return configuration['moduleConfigs'][moduleName];
-      });
+      .getKey(`moduleConfigs.${moduleName}`);
+    if (!config) {
+      throw new Error('Config not found in the database');
+    }
+    let configuration: { moduleConfigs: any } = { moduleConfigs: {} };
+    configuration.moduleConfigs = JSON.parse(config);
+    if (!configuration['moduleConfigs'][moduleName]) {
+      throw new Error(`Config for module "${moduleName}" not set`);
+    }
+    return configuration['moduleConfigs'][moduleName];
   }
 
   async set(moduleName: string, moduleConfig: any) {

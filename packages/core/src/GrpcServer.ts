@@ -80,7 +80,7 @@ export class GrpcServer {
     });
 
     let error;
-    this.commons
+    await this.commons
       .getConfigManager()
       .get('core')
       .catch((err: Error) => (error = err));
