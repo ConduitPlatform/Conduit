@@ -75,7 +75,7 @@ export class GrpcServer {
     this._grpcSdk.on('router', () => {
       Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
     });
-    this._grpcSdk.on('database', () => {
+    this._grpcSdk.on('database', async () => {
       await this.commons.getConfigManager().registerAppConfig();
     });
 
