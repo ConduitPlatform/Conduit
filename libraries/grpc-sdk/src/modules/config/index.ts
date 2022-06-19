@@ -68,6 +68,16 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     });
   }
 
+  configure(config: any, name: string) {
+    const request = {
+      config: JSON.stringify(config),
+      moduleName: name,
+    };
+    return this.client!.configure(request).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
   moduleExists(name: string) {
     const request = {
       moduleName: name,

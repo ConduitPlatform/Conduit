@@ -45,6 +45,7 @@ export default class ConfigManager implements IConfigManager {
         getRedisDetails: this.getRedisDetails.bind(this),
         updateConfig: this.updateConfig.bind(this),
         addFieldsToConfig: this.addFieldsToConfig.bind(this),
+        configure: this.configureModule.bind(this),
         moduleExists: this.serviceDiscovery.moduleExists.bind(this.serviceDiscovery),
         registerModule: this.serviceDiscovery.registerModule.bind(this.serviceDiscovery),
         moduleList: this.serviceDiscovery.moduleList.bind(this.serviceDiscovery),
@@ -269,6 +270,20 @@ export default class ConfigManager implements IConfigManager {
 
   async registerModulesConfig(moduleName: string, moduleConfig: any) {
     return this.set(moduleName, moduleConfig);
+  }
+
+  async configureModule(
+    call: GrpcRequest<UpdateRequest>,
+    callback: GrpcCallback<UpdateResponse>,
+  ) {
+    let config = JSON.parse(call.request.config);
+    try {
+      await this.get(call.request.moduleName);
+    } catch (e) {
+      await this.set(call.request.moduleName, config);
+    }
+    config = await this.addFieldsToModule(call.request.moduleName, config);
+    return callback(null, { result: JSON.stringify(config) });
   }
 
   async addFieldsToModule(moduleName: string, moduleConfig: any) {

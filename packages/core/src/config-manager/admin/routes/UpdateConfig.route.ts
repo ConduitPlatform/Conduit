@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { cond, isNil } from 'lodash';
 import * as models from '../../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
@@ -42,6 +42,7 @@ export function getUpdateConfigRoute(
           if (!registeredModules.has(moduleName) || isNil(grpcSdk.emailProvider))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           updatedConfig = await grpcSdk.emailProvider.setConfig(newConfig);
+          await conduit.getConfigManager().set(moduleName, JSON.parse(updatedConfig));
           break;
         case 'core':
           updatedConfig = await conduit.getConfigManager().set('core', newConfig);
@@ -53,6 +54,7 @@ export function getUpdateConfigRoute(
           if (!registeredModules.has(moduleName) || !grpcSdk.isAvailable(moduleName))
             throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
           updatedConfig = await grpcSdk.getModule<any>(moduleName)!.setConfig(newConfig);
+          await conduit.getConfigManager().set(moduleName, JSON.parse(updatedConfig));
       }
       return { result: { config: updatedConfig } };
     },

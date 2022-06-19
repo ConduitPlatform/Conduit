@@ -7,6 +7,7 @@ service Config {
   rpc Get (GetConfigRequest) returns (GetConfigResponse);
   rpc UpdateConfig (UpdateRequest) returns (UpdateResponse);
   rpc AddFieldsToConfig(UpdateRequest) returns (UpdateResponse);
+  rpc Configure (UpdateRequest) returns (UpdateResponse);
   rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
   rpc ModuleList (Empty) returns (ModuleListResponse);
   rpc WatchModules (Empty) returns (stream ModuleListResponse);

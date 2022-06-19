@@ -117,14 +117,13 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
           message: 'Invalid configuration values',
         });
       }
-      const moduleConfig = await this.grpcSdk.config.updateConfig(config, this.name);
-      ConfigController.getInstance().config = moduleConfig;
+      ConfigController.getInstance().config = config;
       await this.onConfig();
       this.grpcSdk.bus?.publish(
         kebabCase(this.name) + ':config:update',
-        JSON.stringify(moduleConfig),
+        JSON.stringify(config),
       );
-      return callback(null, { updatedConfig: JSON.stringify(moduleConfig) });
+      return callback(null, { updatedConfig: JSON.stringify(config) });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: e.message });
     }
