@@ -123,7 +123,9 @@ export default class ConduitGrpcSdk {
       this._grpcToken,
     );
     (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    this.initializeModules().then();
+    if (this.name !== 'core') {
+      this.initializeModules().then();
+    }
     if (this._watchModules) {
       this.watchModules();
     }
