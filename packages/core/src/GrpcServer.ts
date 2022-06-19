@@ -94,7 +94,6 @@ export class GrpcServer {
         .addFieldsToModule('core', convict.getProperties());
     }
     await this.commons.getAdmin().initialize(this.server);
-    this.server.refresh().then();
     this.commons.getConfigManager().initConfigAdminRoutes();
 
     this._initialized = true;

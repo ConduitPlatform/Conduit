@@ -157,7 +157,17 @@ export default class ConfigManager implements IConfigManager {
     );
     if (!configDoc) {
       configDoc = await models.Config.getInstance().create({});
+      configDoc['moduleConfigs'] = {};
       for (const key in this.serviceDiscovery.registeredModules.keys()) {
+        let config: string | null = await this.sdk
+          .getState()
+          .getKey(`moduleConfigs.${key}`);
+        if (!config) {
+          continue;
+        }
+        configDoc.moduleConfigs[key] = JSON.parse(config);
+      }
+      for (const key of ['core', 'admin']) {
         let config: string | null = await this.sdk
           .getState()
           .getKey(`moduleConfigs.${key}`);
@@ -203,7 +213,7 @@ export default class ConfigManager implements IConfigManager {
       throw new Error('Config not found in the database');
     }
     let configuration: { moduleConfigs: any } = { moduleConfigs: {} };
-    configuration.moduleConfigs = JSON.parse(config);
+    configuration.moduleConfigs[moduleName] = JSON.parse(config);
     if (!configuration['moduleConfigs'][moduleName]) {
       throw new Error(`Config for module "${moduleName}" not set`);
     }
@@ -215,10 +225,13 @@ export default class ConfigManager implements IConfigManager {
       await this.sdk
         .getState()
         .setKey(`moduleConfigs.${moduleName}`, JSON.stringify(moduleConfig));
-      if (this.grpcSdk.isAvailable('database')) {
-        await models.Config.getInstance().findByIdAndUpdate(this.configDocId!, {
-          $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
-        });
+      if (this.grpcSdk.isAvailable('database') && this.configDocId) {
+        await models.Config.getInstance(this.grpcSdk.database!).findByIdAndUpdate(
+          this.configDocId!,
+          {
+            $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
+          },
+        );
       }
       switch (moduleName) {
         case 'core':
@@ -231,7 +244,7 @@ export default class ConfigManager implements IConfigManager {
           break;
       }
       return moduleConfig;
-    } catch {
+    } catch (e) {
       console.error(`Could not update "${moduleName}" configuration`);
     }
   }
@@ -263,9 +276,11 @@ export default class ConfigManager implements IConfigManager {
     if (!existingConfig) throw new Error('Config not found in the database');
     let parsedConfig = JSON.parse(existingConfig);
     parsedConfig = { ...moduleConfig, ...parsedConfig };
-    await this.sdk.getState().setKey(`moduleConfigs.${moduleName}`, parsedConfig);
+    await this.sdk
+      .getState()
+      .setKey(`moduleConfigs.${moduleName}`, JSON.stringify(parsedConfig));
     if (this.grpcSdk.isAvailable('database')) {
-      models.Config.getInstance()
+      models.Config.getInstance(this.grpcSdk.database!)
         .findOne({})
         .then(dbConfig => {
           if (isNil(dbConfig)) throw new Error('Config not found in the database');
