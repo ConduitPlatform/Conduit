@@ -161,7 +161,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      console.error('Connection to gRPC server closed');
+      // uncomment for debug when needed
+      // currently is misleading if left on
+      // console.error('Connection to gRPC server closed');
     }
   }
 }
