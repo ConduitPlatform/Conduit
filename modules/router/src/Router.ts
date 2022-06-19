@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { status } from '@grpc/grpc-js';
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   GrpcCallback,

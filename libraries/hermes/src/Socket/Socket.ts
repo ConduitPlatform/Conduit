@@ -3,7 +3,6 @@ import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
 import { RedisClient } from 'redis';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitRouter } from '../Router';
 import { isNil } from 'lodash';
 import {
@@ -13,7 +12,6 @@ import {
   JoinRoomResponse,
   SocketPush,
 } from '../interfaces';
-import { ConduitRoute } from '../classes';
 import ObjectHash from 'object-hash';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
