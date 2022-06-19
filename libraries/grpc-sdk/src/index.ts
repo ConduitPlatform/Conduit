@@ -31,6 +31,7 @@ import {
 } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
+import { checkModuleHealth } from './classes/HealthCheck';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -357,6 +358,10 @@ export default class ConduitGrpcSdk {
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
     }
+  }
+
+  isModuleUp(moduleName: string, moduleUrl: string, service: string = '') {
+    return checkModuleHealth(moduleName, moduleUrl, service, this._grpcToken);
   }
 
   moduleClient(name: string, type: CompatServiceDefinition): void {

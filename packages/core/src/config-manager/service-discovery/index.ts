@@ -210,13 +210,15 @@ export class ServiceDiscovery {
       throw new Error('No module health status provided');
     }
     if (!fromGrpc) {
-      if (!this.grpcSdk.getModule(moduleName)) {
-        await this.grpcSdk.createModuleClient(moduleName, moduleUrl);
-      }
-      const healthClient = await this.grpcSdk.getHealthClient(moduleName)!;
-      const healthResponse = await healthClient.check({ service: '' }).catch(() => {
+      let healthResponse;
+      try {
+        if (!this.grpcSdk.getModule(moduleName)) {
+          healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
+          this.grpcSdk.createModuleClient(moduleName, moduleUrl);
+        }
+      } catch (e) {
         throw new Error('Failed to register unresponsive module');
-      });
+      }
       healthStatus = (healthResponse.status as unknown) as HealthCheckStatus;
     }
     this.registeredModules.set(moduleName, {
