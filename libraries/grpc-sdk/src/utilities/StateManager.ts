@@ -5,7 +5,7 @@ export class StateManager {
   private readonly redisClient: IORedis.Redis;
 
   constructor(redisManager: RedisManager, name: string) {
-    this.redisClient = redisManager.getClient({ keyPrefix: name });
+    this.redisClient = redisManager.getClient({ keyPrefix: name + '_' });
   }
 
   setState(stateObj: any) {

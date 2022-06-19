@@ -115,7 +115,7 @@ export default class ConfigManager implements IConfigManager {
   getServerConfig(call: GrpcRequest<null>, callback: GrpcCallback<GetConfigResponse>) {
     this.sdk
       .getState()
-      .getKey('moduleConfigs')
+      .getKey('moduleConfigs.core')
       .then((config: string | null) => {
         if (!config) {
           return callback({
@@ -123,7 +123,7 @@ export default class ConfigManager implements IConfigManager {
             message: 'Server config not found!',
           });
         }
-        config = JSON.parse(config).core;
+        config = JSON.parse(config);
         callback(null, {
           data: JSON.stringify({
             url: ((config! as unknown) as { hostUrl: string }).hostUrl,
