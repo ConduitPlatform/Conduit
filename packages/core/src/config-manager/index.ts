@@ -1,9 +1,9 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
-  GrpcServer,
+  GrpcCallback,
   GrpcRequest,
   GrpcResponse,
-  GrpcCallback,
+  GrpcServer,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import {
@@ -19,16 +19,19 @@ import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
+import { ConfigStorage } from './config-storage';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
   private configDocId: string | null = null;
   private readonly serviceDiscovery: ServiceDiscovery;
   private _isPrimary = true;
+  private _configStorage: ConfigStorage;
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitCommons) {
     this.grpcSdk = grpcSdk;
     this.serviceDiscovery = new ServiceDiscovery(grpcSdk, sdk);
+    this._configStorage = new ConfigStorage(sdk, grpcSdk, this.serviceDiscovery);
   }
 
   getModuleUrlByName(moduleName: string): string | undefined {
@@ -113,22 +116,20 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getServerConfig(call: GrpcRequest<null>, callback: GrpcCallback<GetConfigResponse>) {
-    this.sdk
-      .getState()
-      .getKey('moduleConfigs.core')
-      .then((config: string | null) => {
-        if (!config) {
-          return callback({
-            code: status.NOT_FOUND,
-            message: 'Server config not found!',
-          });
-        }
-        config = JSON.parse(config);
+    this._configStorage
+      .getConfig('core')
+      .then(config => {
         callback(null, {
           data: JSON.stringify({
             url: ((config! as unknown) as { hostUrl: string }).hostUrl,
             env: ((config! as unknown) as { env: string })!.env,
           }),
+        });
+      })
+      .catch(e => {
+        return callback({
+          code: status.NOT_FOUND,
+          message: 'Server config not found!',
         });
       });
   }
@@ -152,45 +153,7 @@ export default class ConfigManager implements IConfigManager {
       models.Config.getInstance(this.grpcSdk.database!),
     );
     await runMigrations(this.grpcSdk);
-    let configDoc: models.Config | null = await this.grpcSdk.database!.findOne(
-      'Config',
-      {},
-    );
-    if (!configDoc) {
-      configDoc = await models.Config.getInstance().create({});
-      configDoc['moduleConfigs'] = {};
-      for (const key in this.serviceDiscovery.registeredModules.keys()) {
-        let config: string | null = await this.sdk
-          .getState()
-          .getKey(`moduleConfigs.${key}`);
-        if (!config) {
-          continue;
-        }
-        configDoc.moduleConfigs[key] = JSON.parse(config);
-      }
-      for (const key of ['core', 'admin']) {
-        let config: string | null = await this.sdk
-          .getState()
-          .getKey(`moduleConfigs.${key}`);
-        if (!config) {
-          continue;
-        }
-        configDoc.moduleConfigs[key] = JSON.parse(config);
-      }
-      // flush redis stored configuration to the database
-      if (Object.keys(configDoc.moduleConfigs).length > 0) {
-        await models.Config.getInstance().findByIdAndUpdate(configDoc._id, {
-          moduleConfigs: configDoc.moduleConfigs,
-        });
-      }
-    } else {
-      Object.keys(configDoc.moduleConfigs).forEach(key => {
-        this.sdk
-          .getState()
-          .setKey(`moduleConfigs.${key}`, JSON.stringify(configDoc!.moduleConfigs[key]));
-      });
-    }
-    this.configDocId = (configDoc as any)._id;
+    this._configStorage.onDatabaseAvailable();
   }
 
   getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
@@ -207,33 +170,12 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async get(moduleName: string) {
-    let config: string | null = await this.sdk
-      .getState()
-      .getKey(`moduleConfigs.${moduleName}`);
-    if (!config) {
-      throw new Error('Config not found in the database');
-    }
-    let configuration: { moduleConfigs: any } = { moduleConfigs: {} };
-    configuration.moduleConfigs[moduleName] = JSON.parse(config);
-    if (!configuration['moduleConfigs'][moduleName]) {
-      throw new Error(`Config for module "${moduleName}" not set`);
-    }
-    return configuration['moduleConfigs'][moduleName];
+    return this._configStorage.getConfig(moduleName);
   }
 
   async set(moduleName: string, moduleConfig: any) {
     try {
-      await this.sdk
-        .getState()
-        .setKey(`moduleConfigs.${moduleName}`, JSON.stringify(moduleConfig));
-      if (this.grpcSdk.isAvailable('database') && this.configDocId) {
-        await models.Config.getInstance(this.grpcSdk.database!).findByIdAndUpdate(
-          this.configDocId!,
-          {
-            $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
-          },
-        );
-      }
+      await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
       switch (moduleName) {
         case 'core':
           this.sdk.getCore().setConfig(moduleConfig);
@@ -287,38 +229,10 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async addFieldsToModule(moduleName: string, moduleConfig: any) {
-    let existingConfig = await this.sdk.getState().getKey(`moduleConfigs.${moduleName}`);
-    if (!existingConfig) throw new Error('Config not found in the database');
-    let parsedConfig = JSON.parse(existingConfig);
-    parsedConfig = { ...moduleConfig, ...parsedConfig };
-    await this.sdk
-      .getState()
-      .setKey(`moduleConfigs.${moduleName}`, JSON.stringify(parsedConfig));
-    if (this.grpcSdk.isAvailable('database')) {
-      models.Config.getInstance(this.grpcSdk.database!)
-        .findOne({})
-        .then(dbConfig => {
-          if (isNil(dbConfig)) throw new Error('Config not found in the database');
-          if (!dbConfig['moduleConfigs']) {
-            dbConfig['moduleConfigs'] = {};
-          }
-          const existing = dbConfig.moduleConfigs[moduleName];
-          moduleConfig = { ...moduleConfig, ...existing };
-
-          return models.Config.getInstance()
-            .findByIdAndUpdate(dbConfig._id, {
-              $set: { [`moduleConfigs.${moduleName}`]: moduleConfig },
-            })
-            .catch(() => {
-              console.error(`Could not add fields to "${moduleName}" configuration`);
-            });
-        })
-        .then(() => {
-          return moduleConfig;
-        });
-    }
-
-    return parsedConfig;
+    let existingConfig = this._configStorage.getConfig(moduleName);
+    existingConfig = { ...moduleConfig, ...existingConfig };
+    await this._configStorage.setConfig(moduleName, JSON.stringify(existingConfig));
+    return existingConfig;
   }
 
   addFieldsToConfig(
