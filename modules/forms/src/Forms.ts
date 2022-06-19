@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
@@ -6,8 +6,8 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
-import { AdminHandlers } from './admin/admin';
-import { FormsRoutes } from './routes/routes';
+import { AdminHandlers } from './admin';
+import { FormsRoutes } from './routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
@@ -50,10 +50,10 @@ export default class Forms extends ManagedModule<Config> {
       if (message === 'active') {
         this.onConfig()
           .then(() => {
-            console.log('Updated forms configuration');
+            ConduitGrpcSdk.Logger.log('Updated forms configuration');
           })
           .catch(() => {
-            console.log('Failed to update forms config');
+            ConduitGrpcSdk.Logger.error('Failed to update forms config');
           });
       }
     });

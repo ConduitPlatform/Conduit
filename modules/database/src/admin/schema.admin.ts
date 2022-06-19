@@ -77,7 +77,7 @@ export class SchemaAdmin {
 
     const schemasPromise = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany(query, skip, limit, sort);
+      .model.findMany(query, skip, limit, undefined, sort);
     const documentsCountPromise = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
@@ -88,6 +88,7 @@ export class SchemaAdmin {
   }
 
   async getSchemasExtensions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query = '{}';
@@ -97,7 +98,7 @@ export class SchemaAdmin {
       skip,
       limit,
       'name extensions',
-      undefined,
+      sort,
     );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
@@ -494,10 +495,11 @@ export class SchemaAdmin {
   }
 
   async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const modules: string[] = [];
     const schemas = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({}, undefined, undefined, 'ownerModule');
+      .model.findMany({}, undefined, undefined, 'ownerModule', sort);
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });

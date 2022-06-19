@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.3...v0.13.0) (2022-06-17)
+
+
+### Features
+
+* **authentication,chat,database,email,forms,storage,security:** admin route sorting ([#211](https://github.com/ConduitPlatform/Conduit/issues/211)) ([b3427fb](https://github.com/ConduitPlatform/Conduit/commit/b3427fbc32c7c8765e211ebd0c35e58125dc8226))
+
+## [0.13.0-rc.3](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.2...v0.13.0-rc.3) (2022-06-16)
+
+
+### Features
+
+* **grpc-sdk,commons,security:** cli security client platform, ping route security middleware exceptions ([#207](https://github.com/ConduitPlatform/Conduit/issues/207)) ([11b7ceb](https://github.com/ConduitPlatform/Conduit/commit/11b7ceb1cb365f61449d1772c59a753eeb179c8e))
+
+
+### Bug Fixes
+
+* **router,grpc-sdk:** swagger generation ([#206](https://github.com/ConduitPlatform/Conduit/issues/206)) ([6cd7ce0](https://github.com/ConduitPlatform/Conduit/commit/6cd7ce05f02c7917728743380ad8d040488189ed))
+* **security:** security client aliases are not unique ([#208](https://github.com/ConduitPlatform/Conduit/issues/208)) ([90b4545](https://github.com/ConduitPlatform/Conduit/commit/90b4545f3c057f6115d8919535e41c961492203e))
+
 ## [0.13.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.1...v0.13.0-rc.2) (2022-06-14)
 
 

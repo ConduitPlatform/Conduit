@@ -53,7 +53,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
         next();
       })
       .catch((error: Error) => {
-        console.log(error);
+        ConduitGrpcSdk.Logger.error(error);
         res.status(500).json({ error: 'Something went wrong' });
       });
   };

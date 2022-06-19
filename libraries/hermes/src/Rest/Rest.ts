@@ -207,7 +207,7 @@ export class RestController extends ConduitRouter {
 
   handleError(res: Response): (err: Error | ConduitError) => void {
     return (err: Error | ConduitError | any) => {
-      console.log(err);
+      ConduitGrpcSdk.Logger.error(err);
       if (err.hasOwnProperty('status')) {
         return res.status((err as ConduitError).status).json({
           name: err.name,

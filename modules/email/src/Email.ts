@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
@@ -8,7 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema from './config';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import { EmailService } from './services/email.service';
 import { EmailProvider } from './email-provider';
 import * as models from './models';
@@ -138,7 +138,7 @@ export default class Email extends ManagedModule<Config> {
     };
     const emailConfig: Config = await this.grpcSdk.config
       .get('email')
-      .catch(() => console.log('failed to get sending domain'));
+      .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
     params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
     let errorMessage: string | null = null;
     const sentMessageInfo = await this.emailService

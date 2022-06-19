@@ -138,10 +138,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          console.error(err);
+          ConduitGrpcSdk.Logger.error(err);
         }
       });
-      console.log('Recovered routes');
+      ConduitGrpcSdk.Logger.log('Recovered routes');
     }
   }
 
@@ -156,7 +156,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           messageParsed.url,
         );
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
     });
   }
@@ -190,10 +190,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url);
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.log('Failed to update state');
+        ConduitGrpcSdk.Logger.error('Failed to update state');
       });
   }
 
@@ -243,7 +243,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routerUrl,
       );
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 
@@ -288,7 +288,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
-      console.error(err);
+      ConduitGrpcSdk.Logger.error(err);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 

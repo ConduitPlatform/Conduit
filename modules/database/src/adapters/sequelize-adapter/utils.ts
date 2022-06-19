@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import _, { isArray, isObject, isString } from 'lodash';
-import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
 import { isBoolean } from 'lodash';
@@ -85,7 +85,7 @@ export function parseQuery(query: ParsedQuery) {
       }
     }
   }
-  console.log('Sequelize Parse Debug: ', parsed);
+  ConduitGrpcSdk.Logger.log('Sequelize Parse Debug: ' + parsed);
   return parsed;
 }
 

@@ -55,8 +55,8 @@ export class AdminHandlers {
         sendEmail: this.sendEmail.bind(this),
       })
       .catch((err: Error) => {
-        console.log('Failed to register admin routes for module!');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 
@@ -69,6 +69,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             search: ConduitString.Optional,
           },
         },
@@ -197,6 +198,7 @@ export class AdminHandlers {
   }
 
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: Query = {};
@@ -215,6 +217,7 @@ export class AdminHandlers {
       undefined,
       skip,
       limit,
+      sort,
     );
     const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
     const [templateDocuments, totalCount] = await Promise.all([
@@ -488,7 +491,7 @@ export class AdminHandlers {
     if (sender.indexOf('@') === -1) {
       const emailConfig: Config = await this.grpcSdk.config
         .get('email')
-        .catch(() => console.log('failed to get sending domain'));
+        .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
       sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
     }
 
@@ -501,7 +504,9 @@ export class AdminHandlers {
         sender: sender ? sender : 'conduit',
       })
       .catch((e: Error) => {
-        console.log(e);
+        {
+          ConduitGrpcSdk.Logger.error(e);
+        }
         throw new GrpcError(status.INTERNAL, e.message);
       });
 

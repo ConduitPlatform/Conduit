@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   ConfigController,
   DatabaseProvider,
@@ -11,8 +11,8 @@ import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin/admin';
-import { AuthenticationRoutes } from './routes/routes';
+import { AdminHandlers } from './admin';
+import { AuthenticationRoutes } from './routes';
 import * as models from './models';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
@@ -62,10 +62,10 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
       this.onConfig()
         .then(() => {
-          console.log('Updated authentication configuration');
+          ConduitGrpcSdk.Logger.log('Updated authentication configuration');
         })
         .catch(() => {
-          console.log('Failed to update authentication config');
+          ConduitGrpcSdk.Logger.error('Failed to update authentication config');
         });
     });
   }

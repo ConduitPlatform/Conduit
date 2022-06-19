@@ -1,6 +1,7 @@
 import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
+import ConduitGrpcSdk from '../index';
 
 export class GrpcServer {
   private grpcServer?: Server;
@@ -44,7 +45,7 @@ export class GrpcServer {
       functions = wrapGrpcFunctions(functions);
     }
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
-      console.log('Service already exists, performing replace');
+      ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
         protoFilePath,
         protoDescription,
@@ -56,7 +57,7 @@ export class GrpcServer {
       this._services.push({ protoFilePath, protoDescription, functions });
       this._serviceNames.push(protoDescription);
       if (this.started) {
-        console.log('Server already started, scheduling refresh..');
+        ConduitGrpcSdk.Logger.log('Server already started, scheduling refresh..');
         this.scheduleRefresh();
         return this;
       } else {
@@ -109,18 +110,18 @@ export class GrpcServer {
     }
     const self = this;
     this.scheduledRestart = setTimeout(async () => {
-      console.log('Begin refresh');
+      ConduitGrpcSdk.Logger.log('Begin refresh');
       await self.refresh();
-      console.log('Refresh complete');
+      ConduitGrpcSdk.Logger.log('Refresh complete');
     }, 2000);
   }
 
   start(): void {
     if (this.started) {
-      console.error('gRPC server is already running!');
+      ConduitGrpcSdk.Logger.error('gRPC server is already running!');
       return;
     } else if (!this.started && this.startedOnce) {
-      console.error('gRPC server is down for refresh!');
+      ConduitGrpcSdk.Logger.error('gRPC server is down for refresh!');
     }
     this.started = true;
     this.startedOnce = true;

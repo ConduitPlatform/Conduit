@@ -219,21 +219,25 @@ export class LocalHandlers implements IAuthenticationStrategy {
       try {
         emailConfig = await this.grpcSdk.config.get('email');
       } catch (e) {
-        console.log('Cannot use email verification without Email module being enabled');
+        ConduitGrpcSdk.Logger.log(
+          'Cannot use email verification without Email module being enabled',
+        );
         return (this.initialized = false);
       }
       if (!emailConfig.active) {
-        console.log('Cannot use email verification without Email module being enabled');
+        ConduitGrpcSdk.Logger.log(
+          'Cannot use email verification without Email module being enabled',
+        );
         return (this.initialized = false);
       }
     }
     if (!this.initialized) {
       try {
         await this.initDbAndEmail();
-        console.log('Local is active');
+        ConduitGrpcSdk.Logger.log('Local is active');
       } catch (err) {
-        console.error(err.message);
-        console.log('Local not active');
+        ConduitGrpcSdk.Logger.error(err.message);
+        ConduitGrpcSdk.Logger.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
         throw err;
@@ -344,7 +348,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userId: user._id,
           type: TokenType.TWO_FA_VERIFICATION_TOKEN,
         })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
 
       await Token.getInstance().create({
         userId: user._id,
@@ -542,7 +548,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
         })
-        .catch(console.error);
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
 
       await Token.getInstance().create({
         userId: dbUser._id,
@@ -581,7 +589,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     await Token.getInstance()
       .deleteMany({ userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await User.getInstance().findByIdAndUpdate(user._id, {
       hashedPassword: token.data.password,
@@ -671,7 +681,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await Token.getInstance().create({
       userId: context.user._id,
@@ -714,7 +726,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: context.user._id,
         type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
-      .catch(console.error);
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
 
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       phoneNumber: verificationRecord.data.phoneNumber,
@@ -765,7 +779,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       await this.grpcSdk.waitForExistence('sms');
       this.smsModule = this.grpcSdk.sms!;
     } else {
-      console.log('sms 2fa not active');
+      ConduitGrpcSdk.Logger.log('sms 2fa not active');
     }
 
     if (config.phoneAuthentication.enabled && !errorMessage) {
@@ -773,7 +787,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       await this.grpcSdk.waitForExistence('sms');
       this.smsModule = this.grpcSdk.sms!;
     } else {
-      console.log('phone authentication not active');
+      ConduitGrpcSdk.Logger.log('phone authentication not active');
     }
 
     if (this.sendEmail) {
@@ -788,10 +802,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
     Promise.all(promises)
       .then(() => {
-        console.log('Email templates registered');
+        ConduitGrpcSdk.Logger.log('Email templates registered');
       })
       .catch(() => {
-        console.error('Internal error while registering email templates');
+        ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
       });
   }
 }

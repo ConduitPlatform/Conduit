@@ -42,7 +42,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
       )
       .then(res => res.data)
       .catch(error => {
-        console.error(`Failed to fetch user`);
+        ConduitGrpcSdk.Logger.error(`Failed to fetch user`);
         throw new Error(error.message);
       });
 

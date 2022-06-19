@@ -14,6 +14,7 @@ import {
   rmSync,
 } from 'fs';
 import { resolve } from 'path';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class LocalStorage implements IStorageProvider {
   _rootStoragePath: string;
@@ -27,12 +28,12 @@ export class LocalStorage implements IStorageProvider {
     if (this._storagePath !== '') {
       try {
         accessSync(this._storagePath, constants.R_OK | constants.W_OK);
-        console.log('Can read/write in ' + this._storagePath);
+        ConduitGrpcSdk.Logger.log('Can read/write in ' + this._storagePath);
       } catch (err) {
-        console.log('Can not  read/write in ' + this._storagePath);
-        console.log('Changing permissions..');
+        ConduitGrpcSdk.Logger.log('Can not  read/write in ' + this._storagePath);
+        ConduitGrpcSdk.Logger.log('Changing permissions..');
         chmod(this._storagePath, 0o600, () => {
-          console.log('Permissions changed');
+          ConduitGrpcSdk.Logger.log('Permissions changed');
         });
       }
     }

@@ -1,6 +1,7 @@
 import { RedisManager } from './RedisManager';
 import { Redis } from 'ioredis';
 import crypto from 'crypto';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class EventBus {
   private _clientSubscriber: Redis;
@@ -13,7 +14,7 @@ export class EventBus {
     this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');
     this._clientSubscriber.on('ready', () => {
-      console.log('The Bus is in the station...hehe');
+      ConduitGrpcSdk.Logger.log('The Bus is in the station...hehe');
     });
   }
 

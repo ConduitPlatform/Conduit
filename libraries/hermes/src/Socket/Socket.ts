@@ -15,6 +15,7 @@ import {
 } from '../interfaces';
 import { ConduitRoute } from '../classes';
 import ObjectHash from 'object-hash';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
 export class SocketController extends ConduitRouter {
   private readonly httpServer: httpServer;

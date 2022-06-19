@@ -107,7 +107,7 @@ export abstract class ConduitRouter {
       try {
         this._refreshRouter();
       } catch (err) {
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(err);
       }
       this._refreshTimeout = null;
     }, 3000);

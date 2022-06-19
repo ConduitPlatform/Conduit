@@ -6,7 +6,7 @@ export async function validateClient(
   req: Request,
   client: {
     platform: string;
-    domain: string;
+    domain?: string;
     clientSecret: string;
   },
   fromRedis: boolean,

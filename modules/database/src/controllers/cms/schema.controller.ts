@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitModelOptions,
   ConduitSchema as ConduitSchema,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseRoutes } from '../../routes/routes';
+import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
@@ -52,13 +52,13 @@ export class SchemaController {
           this._registerRoutes(routeSchemas);
           this.router.requestRefresh();
         } else {
-          console.error('Something went wrong while loading custom schema');
-          console.error('No schemas emitted');
+          ConduitGrpcSdk.Logger.error('Something went wrong while loading custom schema');
+          ConduitGrpcSdk.Logger.error('No schemas emitted');
         }
       })
       .catch((err: Error) => {
-        console.error('Something went wrong while loading custom schema');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Something went wrong while loading custom schema');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 
@@ -66,8 +66,8 @@ export class SchemaController {
     const createdSchema = await this.database
       .createCustomSchemaFromAdapter(schema)
       .catch(err => {
-        console.log('Failed to create custom schema');
-        console.log(err);
+        ConduitGrpcSdk.Logger.error('Failed to create custom schema');
+        ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
     this.grpcSdk.bus?.publish(
@@ -109,8 +109,8 @@ export class SchemaController {
         }
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading schema for cms');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Something went wrong when loading schema for cms');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

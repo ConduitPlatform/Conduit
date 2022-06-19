@@ -32,7 +32,7 @@ export class CustomEndpointsAdmin {
   ) {}
 
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { schemaName } = call.request.params;
+    const { schemaName, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let identifier,
@@ -51,7 +51,7 @@ export class CustomEndpointsAdmin {
     }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany(query, skip, limit);
+      .model.findMany(query, skip, limit, undefined, sort);
     const count: number = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments(query);
@@ -394,11 +394,14 @@ export class CustomEndpointsAdmin {
   async getSchemasWithCustomEndpoints(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const schemaIds: string[] = [];
     const schemaNames: string[] = [];
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({}, undefined, undefined, 'selectedSchema selectedSchemaName');
+      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', sort);
     customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());

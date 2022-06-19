@@ -3,6 +3,7 @@ import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
+import ConduitGrpcSdk from '../index';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   active: boolean = false;
@@ -86,7 +87,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     } catch (error) {
       // uncomment for debug when needed
       // currently is misleading if left on
-      // console.error('Connection to gRPC server closed');
+      // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
     }
   }
 }

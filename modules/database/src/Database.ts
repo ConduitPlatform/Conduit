@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   GrpcRequest,
@@ -6,8 +6,8 @@ import {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import { AdminHandlers } from './admin/admin';
-import { DatabaseRoutes } from './routes/routes';
+import { AdminHandlers } from './admin';
+import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
   CreateSchemaRequest,
@@ -115,11 +115,11 @@ export default class DatabaseModule extends ManagedModule<void> {
           );
           schema.ownerModule = receivedSchema.ownerModule;
           self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
-            console.log('Failed to create/update schema');
+            ConduitGrpcSdk.Logger.error('Failed to create/update schema');
           });
         }
       } catch (err) {
-        console.error('Something was wrong with the message');
+        ConduitGrpcSdk.Logger.error('Something was wrong with the message');
       }
     });
     const coreHealth = ((await this.grpcSdk.core.check()) as unknown) as HealthCheckStatus;
@@ -166,7 +166,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   publishSchema(schema: any) {
     const sendingSchema = JSON.stringify(schema);
     this.grpcSdk.bus!.publish('database', sendingSchema);
-    console.log('Updated state');
+    ConduitGrpcSdk.Logger.log('Updated state');
   }
 
   // gRPC Service

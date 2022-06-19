@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { Forms } from '../models';
-import { FormsRoutes } from '../routes/routes';
+import { FormsRoutes } from '../routes';
 
 export class FormsController {
   constructor(
@@ -33,8 +33,10 @@ export class FormsController {
         this.router.requestRefresh();
       })
       .catch((err: Error) => {
-        console.error('Something went wrong when loading forms for forms module');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error(
+          'Something went wrong when loading forms for forms module',
+        );
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

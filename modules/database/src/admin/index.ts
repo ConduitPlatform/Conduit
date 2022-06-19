@@ -100,8 +100,8 @@ export class AdminHandlers {
         ),
       })
       .catch((err: Error) => {
-        console.log('Failed to register admin routes for module!');
-        console.error(err);
+        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 
@@ -112,6 +112,9 @@ export class AdminHandlers {
         {
           path: '/schemas/owners',
           action: ConduitRouteActions.GET,
+          queryParams: {
+            sort: ConduitString.Optional,
+          },
         },
         new ConduitRouteReturnDefinition('GetSchemaOwners', {
           modules: [ConduitString.Required],
@@ -125,6 +128,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetSchemasExtensions', {
@@ -151,8 +155,8 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
-            search: ConduitString.Optional,
             sort: ConduitString.Optional,
+            search: ConduitString.Optional,
             enabled: ConduitBoolean.Optional,
             owner: [ConduitString.Optional],
           },
@@ -499,6 +503,11 @@ export class AdminHandlers {
         {
           path: '/customEndpoints/schemas',
           action: ConduitRouteActions.GET,
+          queryParams: {
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
+          },
         },
         new ConduitRouteReturnDefinition('GetSchemasWithCustomEndpoints', {
           schemaNames: [ConduitString.Required],
@@ -513,6 +522,7 @@ export class AdminHandlers {
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
             search: ConduitString.Optional,
             operation: ConduitString.Optional,
             schemaName: [ConduitString.Optional],

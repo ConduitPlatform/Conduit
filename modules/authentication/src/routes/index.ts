@@ -81,7 +81,9 @@ export class AuthenticationRoutes {
               }
               return;
             })
-            .catch(e => console.error(e));
+            .catch(e => {
+              ConduitGrpcSdk.Logger.error(e);
+            });
         },
       ),
     );
@@ -123,8 +125,8 @@ export class AuthenticationRoutes {
       );
     }
     return this._routingManager.registerRoutes().catch((err: Error) => {
-      console.log('Failed to register routes for module');
-      console.log(err);
+      ConduitGrpcSdk.Logger.error('Failed to register routes for module');
+      ConduitGrpcSdk.Logger.error(err);
     });
   }
 
