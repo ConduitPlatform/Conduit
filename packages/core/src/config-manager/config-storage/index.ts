@@ -97,6 +97,8 @@ export class ConfigStorage {
       if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
         this.reconcile();
       }
+      // add a random extra amount to mitigate race-conditions,
+      // between core instances
     }, 1500 + Math.floor(Math.random() * 300));
 
     process.on('exit', () => {
