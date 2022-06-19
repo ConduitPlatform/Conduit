@@ -39,7 +39,7 @@ export class GrpcServer {
     this.events.setMaxListeners(150);
     this.server = new ConduitGrpcServer(this.port.toString());
     this.server
-      .createNewServer()
+      .createNewServer(true)
       .then(port => {
         const _url = '0.0.0.0:' + port.toString();
         this._grpcSdk = new ConduitGrpcSdk(

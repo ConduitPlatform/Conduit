@@ -1,5 +1,6 @@
 import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
 
 export class GrpcServer {
   private grpcServer?: Server;
@@ -7,6 +8,7 @@ export class GrpcServer {
   private startedOnce: boolean = false;
   private _serviceNames: string[] = [];
   private scheduledRestart: any;
+  private _useForce?: boolean;
   private _services: {
     protoFilePath: string;
     protoDescription: string;
@@ -23,7 +25,10 @@ export class GrpcServer {
     return this._url;
   }
 
-  async createNewServer(): Promise<number> {
+  async createNewServer(useForce: boolean = false): Promise<number> {
+    if (isNil(this._useForce)) {
+      this._useForce = useForce;
+    }
     const serverResult = await createServer(this._url);
     this.grpcServer = serverResult.server;
     this._url = this._url.split(':')[0] + ':' + serverResult.port.toString();
@@ -76,8 +81,12 @@ export class GrpcServer {
   async refresh(): Promise<void> {
     if (this.started) {
       this.started = false;
-      //gracefully shutdown so that there are no service disruption
-      await new Promise<void>(resolve => this.grpcServer!.tryShutdown(() => resolve()));
+      if (this._useForce) {
+        this.grpcServer!.forceShutdown();
+      } else {
+        //gracefully shutdown so that there are no service disruption
+        await new Promise<void>(resolve => this.grpcServer!.tryShutdown(() => resolve()));
+      }
     }
     await this.createNewServer();
     this._services.forEach(service => {
