@@ -7,7 +7,6 @@ import { ServiceDiscovery } from '../service-discovery';
 export class ConfigStorage {
   reconcileTimeout: NodeJS.Timeout | null;
   toBeReconciled: string[] = [];
-  scheduledToReconcile: string[] = [];
   reconciling: boolean = false;
   private configDocId: string | null = null;
 
@@ -98,7 +97,7 @@ export class ConfigStorage {
       if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
         this.reconcile();
       }
-    }, 2000);
+    }, 1500 + Math.floor(Math.random() * 300));
 
     process.on('exit', () => {
       this.clearReconcile();
@@ -131,7 +130,7 @@ export class ConfigStorage {
   async waitForReconcile() {
     while (this.reconciling) {
       await new Promise(resolve => {
-        setTimeout(resolve, 1000);
+        setTimeout(resolve, 200);
       });
     }
   }

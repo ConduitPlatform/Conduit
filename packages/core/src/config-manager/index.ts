@@ -23,9 +23,7 @@ import { ConfigStorage } from './config-storage';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
-  private configDocId: string | null = null;
   private readonly serviceDiscovery: ServiceDiscovery;
-  private _isPrimary = true;
   private _configStorage: ConfigStorage;
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitCommons) {
@@ -61,7 +59,7 @@ export default class ConfigManager implements IConfigManager {
         ),
       },
     );
-    this.highAvailability();
+    await this.highAvailability();
     this.serviceDiscovery.beginMonitors();
   }
 
@@ -94,7 +92,6 @@ export default class ConfigManager implements IConfigManager {
           state.modules = success;
           this.setState(state);
         }
-        return this.grpcSdk.initializeModules();
       } else {
         return Promise.resolve();
       }
