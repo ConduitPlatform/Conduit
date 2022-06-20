@@ -13,12 +13,12 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, MicrosoftSettings> 
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { microsoft: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'microsoft',
-      new MicrosoftSettings(serverConfig.url, config.microsoft, microsoftParameters),
+      new MicrosoftSettings(serverConfig.hostUrl, config.microsoft, microsoftParameters),
     );
     this.defaultScopes = ['openid'];
   }

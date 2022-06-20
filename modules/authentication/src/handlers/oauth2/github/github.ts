@@ -12,12 +12,12 @@ export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { github: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'github',
-      new OAuth2Settings(serverConfig.url, config.github, githubParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.github, githubParameters),
     );
     this.defaultScopes = ['read:user', 'repo'];
   }

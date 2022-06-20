@@ -267,8 +267,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
-    const serverConfig = await this.grpcSdk.config.getServerConfig();
-    const url = serverConfig.url;
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
 
     if (this.sendEmail) {
       const verificationToken: Token = await Token.getInstance().create({

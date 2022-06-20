@@ -12,12 +12,12 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { twitch: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'twitch',
-      new OAuth2Settings(serverConfig.url, config.twitch, twitchParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.twitch, twitchParameters),
     );
   }
 

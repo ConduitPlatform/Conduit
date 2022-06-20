@@ -81,7 +81,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
-    const conduitUrl = (await this.grpcSdk.config.getServerConfig()).url;
+    const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,

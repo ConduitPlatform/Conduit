@@ -63,7 +63,7 @@ export class AuthenticationRoutes {
     }
     errorMessage = null;
 
-    serverConfig = await this.grpcSdk.config.getServerConfig();
+    serverConfig = await this.grpcSdk.config.get('router');
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map(
         (key: keyof OAuthHandler, value) => {

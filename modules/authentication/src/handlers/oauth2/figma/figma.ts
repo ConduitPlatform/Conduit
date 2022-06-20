@@ -14,12 +14,12 @@ export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { figma: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'figma',
-      new OAuth2Settings(serverConfig.url, config.figma, figmaParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.figma, figmaParameters),
     );
     this.defaultScopes = ['users:profile:read'];
   }
