@@ -30,6 +30,7 @@ import {
   SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
 import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
+import { Response, NextFunction } from 'express';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -80,16 +81,18 @@ export default class AdminModule extends IConduitAdmin {
     );
     this._router.initRest();
     // Register Middleware
-    // todo switch to global
-    this._router.registerRoute('*', [
-      (req, res, next) => {
-        (req as ConduitRequest)['conduit'] = {};
+    this._router.registerMiddleware(
+      (req: ConduitRequest, res: Response, next: NextFunction) => {
+        req['conduit'] = {};
         next();
       },
-      middleware.getAdminMiddleware(this.commons),
+      true,
+    );
+    this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
+    this._router.registerMiddleware(
       middleware.getAuthMiddleware(this.grpcSdk, this.commons),
-    ]);
-
+      true,
+    );
     this._grpcRoutes = {};
   }
 

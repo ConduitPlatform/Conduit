@@ -5,7 +5,12 @@ import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger } from './utils/logger';
 import http from 'http';
-import { ConduitMiddleware, ConduitSocket, SocketPush } from './interfaces';
+import {
+  ConduitRequest,
+  ConduitMiddleware,
+  ConduitSocket,
+  SocketPush,
+} from './interfaces';
 import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -148,7 +153,7 @@ export class ConduitRoutingController {
   }
 
   registerMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void,
+    middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
   ) {
     this._middlewareRouter.use(middleware);

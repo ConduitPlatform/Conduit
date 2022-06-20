@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConfigController,
@@ -67,12 +67,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
     );
-    this._internalRouter.registerRoute('*', [
-      (req, res, next) => {
-        (req as ConduitRequest)['conduit'] = {};
+    this.registerGlobalMiddleware(
+      'conduitRequestMiddleware',
+      (req: ConduitRequest, res: Response, next: NextFunction) => {
+        req['conduit'] = {};
         next();
       },
-    ]);
+      true,
+    );
   }
 
   async onRegister() {
