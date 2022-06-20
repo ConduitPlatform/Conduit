@@ -77,7 +77,7 @@ export default class AdminModule extends IConduitAdmin {
       this.grpcSdk,
       swaggerRouterMetadata,
     );
-
+    this._router.initRest();
     // Register Middleware
     // todo switch to global
     this._router.registerRoute('*', [
