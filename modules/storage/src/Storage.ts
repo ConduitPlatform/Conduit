@@ -48,6 +48,7 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   async onServerStart() {
+    await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     await runMigrations(this.grpcSdk);
     this.storageProvider = createStorageProvider('local', {} as Config);

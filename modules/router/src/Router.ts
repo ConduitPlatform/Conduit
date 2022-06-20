@@ -60,7 +60,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    if (!this.grpcSdk.database) {
+      await this.grpcSdk.waitForExistence('database');
+      this.database = this.grpcSdk.databaseProvider!;
+    }
     await runMigrations(this.grpcSdk);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
