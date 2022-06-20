@@ -5,7 +5,6 @@ import * as models from '../models';
 import { ServiceDiscovery } from '../service-discovery';
 
 export class ConfigStorage {
-  reconcileTimeout: NodeJS.Timeout | null;
   toBeReconciled: string[] = [];
   reconciling: boolean = false;
   private configDocId: string | null = null;
@@ -42,6 +41,7 @@ export class ConfigStorage {
   }
 
   changeState(reconciling: boolean) {
+    this.reconciling = reconciling;
     this.commons
       .getBus()
       .publish('config', reconciling ? 'reconciling' : 'reconcile-done');
@@ -84,12 +84,7 @@ export class ConfigStorage {
         moduleConfigs: configDoc.moduleConfigs,
       });
     }
-    this.configDocId = (configDoc as any)._id;
-  }
-
-  clearReconcile() {
-    clearTimeout(this.reconcileTimeout!);
-    this.reconcileTimeout = null;
+    this.configDocId = configDoc._id;
   }
 
   reconcileMonitor() {
@@ -102,7 +97,6 @@ export class ConfigStorage {
     }, 1500 + Math.floor(Math.random() * 300));
 
     process.on('exit', () => {
-      this.clearReconcile();
       clearInterval(reconciliationInterval);
     });
   }
@@ -154,7 +148,7 @@ export class ConfigStorage {
       await this.waitForReconcile();
     }
     await this.commons.getState().setKey(`moduleConfigs.${moduleName}`, config);
-    if (!this.toBeReconciled.includes(moduleName)) {
+    if (!this.toBeReconciled.includes(moduleName) && waitReconcile) {
       this.toBeReconciled.push(moduleName);
     }
   }
