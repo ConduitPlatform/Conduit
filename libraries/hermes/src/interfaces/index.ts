@@ -4,3 +4,4 @@ export * from './ConduitRoute';
 export * from './Middleware';
 export * from './RouterDescriptor';
 export * from './Socket';
+export * from './ConduitRequest';

@@ -21,6 +21,7 @@ import * as models from './models';
 import path from 'path';
 import {
   ConduitMiddleware,
+  ConduitRequest,
   ConduitRoute,
   ConduitRoutingController,
   ConduitSocket,
@@ -81,6 +82,10 @@ export default class AdminModule extends IConduitAdmin {
     // Register Middleware
     // todo switch to global
     this._router.registerRoute('*', [
+      (req, res, next) => {
+        (req as ConduitRequest)['conduit'] = {};
+        next();
+      },
       middleware.getAdminMiddleware(this.commons),
       middleware.getAuthMiddleware(this.grpcSdk, this.commons),
     ]);

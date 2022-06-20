@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
 import path from 'path';
 import {
   ConduitMiddleware,
+  ConduitRequest,
   ConduitRoute,
   ConduitRoutingController,
   ConduitSocket,
@@ -66,6 +67,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
     );
+    this._internalRouter.registerRoute('*', [
+      (req, res, next) => {
+        (req as ConduitRequest)['conduit'] = {};
+        next();
+      },
+    ]);
   }
 
   async onRegister() {

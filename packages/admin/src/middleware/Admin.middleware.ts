@@ -1,10 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { isDev } from '../utils/middleware';
+import { ConduitRequest } from '@conduitplatform/hermes';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
-  return async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  return async function adminMiddleware(
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
     if (
       // Excluded routes
       req.originalUrl.indexOf('/admin/swagger') === 0 &&

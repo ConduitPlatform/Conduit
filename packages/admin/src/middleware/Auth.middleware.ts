@@ -1,13 +1,18 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitModelOptions } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
+import { ConduitRequest } from '@conduitplatform/hermes';
 
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
-  return async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  return async function authMiddleware(
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
     if (
       // Excluded routes
       req.originalUrl.indexOf('/admin/login') === 0 ||
@@ -49,7 +54,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }
-        (req as ConduitModelOptions).conduit!.admin = admin;
+        req.conduit!.admin = admin;
         next();
       })
       .catch((error: Error) => {

@@ -1,14 +1,14 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   ConduitError,
-  ConduitModelOptions,
 } from '@conduitplatform/grpc-sdk';
 import { Client } from '../../../models';
 import { validateClient } from '../../utils';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';
+import { ConduitRequest } from '@conduitplatform/hermes';
 
 export class ClientValidator {
   prod = false;
@@ -24,9 +24,7 @@ export class ClientValidator {
     });
   }
 
-  async middleware(req: Request, res: Response, next: NextFunction) {
-    if (isNil((req as ConduitModelOptions).conduit))
-      (req as ConduitModelOptions).conduit = {};
+  async middleware(req: ConduitRequest, res: Response, next: NextFunction) {
     const { clientid, clientsecret } = req.headers;
     // Exclude webhooks, admin calls and http pings
     if (req.path.indexOf('/hook') === 0 || ['/', '/health'].includes(req.path)) {
@@ -45,7 +43,7 @@ export class ClientValidator {
 
     const securityConfig = ConfigController.getInstance().config.security;
     if (!securityConfig.clientValidation.enabled) {
-      (req as ConduitModelOptions).conduit!.clientId = 'anonymous-client';
+      req.conduit!.clientId = 'anonymous-client';
       delete req.headers.clientsecret;
       delete req.headers.clientid;
       return next();
@@ -68,7 +66,7 @@ export class ClientValidator {
         true,
       );
       if (validPlatform) {
-        (req as ConduitModelOptions).conduit!.clientId = clientid;
+        req.conduit!.clientId = clientid;
         return next();
       }
       // if not valid allow the execution to continue,
@@ -92,7 +90,7 @@ export class ClientValidator {
           throw ConduitError.unauthorized();
         }
         delete req.headers.clientsecret;
-        (req as ConduitModelOptions).conduit!.clientId = clientid;
+        req.conduit!.clientId = clientid;
         // expiry to force key refresh in redis so that keys can be revoked without redis restart
         this.grpcSdk.state!.setKey(
           `${clientid}`,
