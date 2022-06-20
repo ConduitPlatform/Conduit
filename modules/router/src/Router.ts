@@ -24,7 +24,7 @@ import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import {
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
