@@ -19,10 +19,8 @@ export default {
   },
   security: {
     clientValidation: {
-      enabled: {
-        format: 'Boolean',
-        default: false,
-      },
+      format: 'Boolean',
+      default: false,
     },
   },
 };
