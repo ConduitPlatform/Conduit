@@ -66,7 +66,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _router: ConduitRoutingController;
-  private _sdkRoutes: ConduitRoute[];
+  private _sdkRoutes: ConduitRoute[] = [];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -126,7 +126,12 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk.on('database', async () => {
       await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     });
+    this.highAvailability().catch(() => {
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
+    });
+  }
 
+  private registerAdminRoutes() {
     this._sdkRoutes = [
       adminRoutes.getLoginRoute(this.commons),
       adminRoutes.getModulesRoute(this.commons),
@@ -135,15 +140,9 @@ export default class AdminModule extends IConduitAdmin {
       adminRoutes.deleteAdminUserRoute(),
       adminRoutes.changePasswordRoute(this.commons),
     ];
-
-    // Register Routes
     this._sdkRoutes.forEach(route => {
       this._router.registerConduitRoute(route);
     }, this);
-
-    this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.error('Failed to recover state');
-    });
   }
 
   // grpc
@@ -302,6 +301,7 @@ export default class AdminModule extends IConduitAdmin {
         }
       })
       .catch(ConduitGrpcSdk.Logger.log);
+    this.registerAdminRoutes();
   }
 
   private internalRegisterRoute(
