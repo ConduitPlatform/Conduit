@@ -44,7 +44,7 @@ export class AuthenticationRoutes {
 
   async registerRoutes() {
     const config = ConfigController.getInstance().config;
-    let serverConfig: { url: string };
+    let serverConfig: { hostUrl: string };
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -69,7 +69,7 @@ export class AuthenticationRoutes {
         const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
           this.grpcSdk,
           config,
-          { hostUrl: serverConfig.url },
+          serverConfig,
         );
         return handler
           .validate()
