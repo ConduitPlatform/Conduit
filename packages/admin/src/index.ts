@@ -312,7 +312,6 @@ export default class AdminModule extends IConduitAdmin {
       | ConduitMiddleware
       | ConduitSocket
     )[] = grpcToConduitRoute(
-      // can go
       'Admin',
       {
         protoFile: protofile,

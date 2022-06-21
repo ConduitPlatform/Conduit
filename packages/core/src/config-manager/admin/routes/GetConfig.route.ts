@@ -32,7 +32,7 @@ export function getGetConfigRoute(
         if (!registeredModules.has(module))
           throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }
-      finalConfig = grpcSdk.state!.getKey(`moduleConfigs.${module}`);
+      finalConfig = await grpcSdk.state!.getKey(`moduleConfigs.${module}`);
       if (!finalConfig) {
         finalConfig = {};
       } else {

@@ -57,6 +57,7 @@ export class GrpcServer {
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
+          await this._grpcSdk.initializeEventBus();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
       })

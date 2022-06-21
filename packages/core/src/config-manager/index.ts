@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   GrpcServer,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
 import {
   ConduitCommons,
   GetConfigResponse,
