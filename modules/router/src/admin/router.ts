@@ -28,7 +28,7 @@ export class RouterAdmin {
   async getRoutes(): Promise<UnparsedRouterResponse> {
     const response: any[] = [];
     const module = this.router.getGrpcRoutes();
-    console.log(module);
+    ConduitGrpcSdk.Logger.logObject(module);
     Object.keys(module).forEach((url: string) => {
       module[url].forEach((item: any) => {
         response.push({

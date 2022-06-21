@@ -39,8 +39,8 @@ export class AdminHandlers {
         updateSecurityClient: this.securityAdmin.updateSecurityClient.bind(this),
       })
       .catch((err: Error) => {
-        console.log('Failed to register admin routes for module!');
-        console.error(err);
+        ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
+        ConduitGrpcSdk.Logger.error(err);
       });
   }
 

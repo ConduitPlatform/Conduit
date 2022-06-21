@@ -302,10 +302,10 @@ export class ServiceDiscovery {
         return this.sdk.getState().setKey('config', JSON.stringify(state));
       })
       .then(() => {
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.error('Failed to recover state');
+        ConduitGrpcSdk.Logger.error('Failed to recover state');
       });
   }
 }

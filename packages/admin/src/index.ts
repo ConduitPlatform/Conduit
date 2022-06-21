@@ -100,7 +100,7 @@ export default class AdminModule extends IConduitAdmin {
     const value = (process.env['PORT'] || process.env['ADMIN_PORT']) ?? '3030';
     const port = parseInt(value, 10);
     if (isNaN(port)) {
-      console.error(`Invalid HTTP port value: ${port}`);
+      ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
       process.exit(-1);
     }
     if (port >= 0) {
@@ -120,7 +120,7 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     this.grpcSdk.on('database', async () => {
-      await this.handleDatabase().catch(console.log);
+      await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     });
 
     this._sdkRoutes = [

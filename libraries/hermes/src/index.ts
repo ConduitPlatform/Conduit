@@ -202,15 +202,17 @@ export class ConduitRoutingController {
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
+        ConduitGrpcSdk.Logger.log(
+          'New socket registered: ' + r.input.path + ' handler url: ' + url,
+        );
         this.registerConduitSocket(r);
       } else {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
             r.input.action +
             ' ' +
@@ -234,11 +236,11 @@ export class ConduitRoutingController {
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
-        console.error(bind + ' requires elevated privileges');
+        ConduitGrpcSdk.Logger.error(bind + ' requires elevated privileges');
         process.exit(1);
         break;
       case 'EADDRINUSE':
-        console.error(bind + ' is already in use');
+        ConduitGrpcSdk.Logger.error(bind + ' is already in use');
         process.exit(1);
         break;
       default:
@@ -250,7 +252,7 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log(this.baseUrl.substr(1) + ' listening on ' + bind);
+    ConduitGrpcSdk.Logger.log(this.baseUrl.substr(1) + ' listening on ' + bind);
   }
 
   private registerGlobalMiddleware() {

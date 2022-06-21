@@ -20,13 +20,13 @@ export class ConfigStorage {
   onDatabaseAvailable() {
     this.firstSync()
       .then(() => {
-        console.log('Reconciliation with db successful');
+        ConduitGrpcSdk.Logger.log('Reconciliation with db successful');
         this.changeState(false);
         this.reconcileMonitor();
       })
       .catch(err => {
         this.changeState(false);
-        console.error('Reconciliation with db failed!');
+        ConduitGrpcSdk.Logger.error('Reconciliation with db failed!');
       });
   }
 
@@ -112,13 +112,13 @@ export class ConfigStorage {
     });
     Promise.all(promises)
       .then(() => {
-        console.log('Module configurations reconciled!');
+        ConduitGrpcSdk.Logger.log('Module configurations reconciled!');
         this.toBeReconciled = [];
         this.changeState(false);
       })
       .catch(e => {
-        console.error('Module configurations failed to reconcile!');
-        console.error(e);
+        ConduitGrpcSdk.Logger.error('Module configurations failed to reconcile!');
+        ConduitGrpcSdk.Logger.error(e);
         this.changeState(false);
       });
   }
