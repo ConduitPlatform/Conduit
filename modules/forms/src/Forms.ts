@@ -65,6 +65,7 @@ export default class Forms extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       if (!this.isRunning) {
+        if (!this.grpcSdk.isAvailable('email')) return;
         await this.registerSchemas();
         await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
         const self = this;
