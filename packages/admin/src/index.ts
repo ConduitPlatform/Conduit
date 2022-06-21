@@ -112,7 +112,7 @@ export default class AdminModule extends IConduitAdmin {
   async initialize(server: GrpcServer) {
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
-      .get('admin');
+      .configurePackage('admin', AdminConfigSchema.getProperties());
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -120,9 +120,6 @@ export default class AdminModule extends IConduitAdmin {
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
-    ConfigController.getInstance().config = await this.commons
-      .getConfigManager()
-      .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     this.grpcSdk.on('database', async () => {
       await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     });

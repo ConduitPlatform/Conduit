@@ -225,6 +225,14 @@ export default class ConfigManager implements IConfigManager {
     return callback(null, { result: JSON.stringify(config) });
   }
 
+  async configurePackage(moduleName: string, config: any) {
+    const existingConfig = await this.get(moduleName);
+    if (!existingConfig) {
+      await this.set(moduleName, config);
+    }
+    return await this.addFieldsToModule(moduleName, config);
+  }
+
   async addFieldsToModule(moduleName: string, moduleConfig: any) {
     let existingConfig = this._configStorage.getConfig(moduleName);
     existingConfig = { ...moduleConfig, ...existingConfig };

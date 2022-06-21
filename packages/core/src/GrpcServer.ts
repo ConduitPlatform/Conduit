@@ -81,16 +81,10 @@ export class GrpcServer {
       await this.commons.getConfigManager().registerAppConfig();
     });
 
-    const config = await this.commons.getConfigManager().get('core');
-    if (!config) {
-      await this.commons
-        .getConfigManager()
-        .registerModulesConfig('core', convict.getProperties());
-    } else {
-      await this.commons
-        .getConfigManager()
-        .addFieldsToModule('core', convict.getProperties());
-    }
+    await this.commons
+      .getConfigManager()
+      .configurePackage('core', convict.getProperties());
+
     await this.commons.getAdmin().initialize(this.server);
     this.commons.getConfigManager().initConfigAdminRoutes();
 
