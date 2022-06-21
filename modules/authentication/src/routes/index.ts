@@ -65,27 +65,25 @@ export class AuthenticationRoutes {
 
     serverConfig = await this.grpcSdk.config.get('router');
     await Promise.all(
-      (Object.keys(oauth2) as (keyof OAuthHandler)[]).map(
-        (key: keyof OAuthHandler, value) => {
-          const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
-            this.grpcSdk,
-            config,
-            serverConfig,
-          );
-          return handler
-            .validate()
-            .then((active: boolean) => {
-              if (active) {
-                handler.declareRoutes(this._routingManager);
-                enabled = true;
-              }
-              return;
-            })
-            .catch(e => {
-              ConduitGrpcSdk.Logger.error(e);
-            });
-        },
-      ),
+      (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
+        const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
+          this.grpcSdk,
+          config,
+          { hostUrl: serverConfig.url },
+        );
+        return handler
+          .validate()
+          .then((active: boolean) => {
+            if (active) {
+              handler.declareRoutes(this._routingManager);
+              enabled = true;
+            }
+            return;
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+      }),
     );
 
     errorMessage = null;
