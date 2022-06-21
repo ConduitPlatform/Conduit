@@ -166,7 +166,10 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async get(moduleName: string) {
-    return this._configStorage.getConfig(moduleName);
+    return this._configStorage
+      .getConfig(moduleName)
+      .then(config => config)
+      .catch(() => null);
   }
 
   async set(moduleName: string, moduleConfig: any) {
@@ -215,9 +218,8 @@ export default class ConfigManager implements IConfigManager {
     callback: GrpcCallback<UpdateResponse>,
   ) {
     let config = JSON.parse(call.request.config);
-    try {
-      await this.get(call.request.moduleName);
-    } catch (e) {
+    const existingConfig = await this.get(call.request.moduleName);
+    if (!existingConfig) {
       await this.set(call.request.moduleName, config);
     }
     config = await this.addFieldsToModule(call.request.moduleName, config);
@@ -229,6 +231,19 @@ export default class ConfigManager implements IConfigManager {
     existingConfig = { ...moduleConfig, ...existingConfig };
     await this._configStorage.setConfig(moduleName, JSON.stringify(existingConfig));
     return existingConfig;
+  }
+
+  async isModuleUp(moduleName: string) {
+    if (!this.serviceDiscovery.registeredModules.has(moduleName)) return false;
+    try {
+      await this.grpcSdk.isModuleUp(
+        moduleName,
+        this.serviceDiscovery.registeredModules.get(moduleName)!.address[0],
+      );
+    } catch (e) {
+      return false;
+    }
+    return true;
   }
 
   addFieldsToConfig(

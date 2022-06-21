@@ -76,16 +76,13 @@ export class GrpcServer {
     this._grpcSdk.on('router', () => {
       Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
     });
+
     this._grpcSdk.on('database', async () => {
       await this.commons.getConfigManager().registerAppConfig();
     });
 
-    let error;
-    await this.commons
-      .getConfigManager()
-      .get('core')
-      .catch((err: Error) => (error = err));
-    if (error) {
+    const config = await this.commons.getConfigManager().get('core');
+    if (!config) {
       await this.commons
         .getConfigManager()
         .registerModulesConfig('core', convict.getProperties());

@@ -12,6 +12,7 @@ import {
   ConduitCommons,
   IConduitAdmin,
   RegisterAdminRouteRequest,
+  RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -30,7 +31,6 @@ import {
   RouteT,
   SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
-import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
 import { Response, NextFunction } from 'express';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
@@ -120,7 +120,7 @@ export default class AdminModule extends IConduitAdmin {
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
-    await this.commons
+    ConfigController.getInstance().config = await this.commons
       .getConfigManager()
       .registerModulesConfig('admin', AdminConfigSchema.getProperties());
     this.grpcSdk.on('database', async () => {
@@ -174,6 +174,7 @@ export default class AdminModule extends IConduitAdmin {
         call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
+        moduleName as string,
       );
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err);
@@ -199,14 +200,30 @@ export default class AdminModule extends IConduitAdmin {
     }
     const state = JSON.parse(r);
     if (state.routes) {
-      state.routes.forEach((r: Indexable) => {
+      let promises = state.routes.map((r: Indexable) => {
         try {
-          this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          if (r.moduleName) {
+            return this.commons
+              .getConfigManager()
+              .isModuleUp(r.moduleName)
+              .then(isUp => {
+                if (isUp) {
+                  return this.internalRegisterRoute(
+                    r.protofile,
+                    r.routes,
+                    r.url,
+                    r.moduleName,
+                  );
+                }
+              });
+          }
+          return this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
           ConduitGrpcSdk.Logger.error(err);
         }
       }, this);
       ConduitGrpcSdk.Logger.log('Recovered routes');
+      await Promise.all(promises);
     }
     this.cleanupRoutes();
 
@@ -229,6 +246,7 @@ export default class AdminModule extends IConduitAdmin {
     protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
+    moduleName?: string,
   ) {
     this.commons
       .getState()
@@ -243,18 +261,19 @@ export default class AdminModule extends IConduitAdmin {
           }
         });
         if (index) {
-          state.routes[index] = { protofile, routes, url };
+          state.routes[index] = { protofile, routes, url, moduleName };
         } else {
           state.routes.push({
             protofile,
             routes,
             url,
+            moduleName,
           });
         }
         return this.commons.getState().setKey('admin', JSON.stringify(state));
       })
       .then(() => {
-        this.publishAdminRouteData(protofile, routes, url);
+        this.publishAdminRouteData(protofile, routes, url, moduleName);
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
@@ -266,6 +285,7 @@ export default class AdminModule extends IConduitAdmin {
     protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
+    moduleName?: string,
   ) {
     this.commons.getBus().publish(
       'admin',
@@ -273,14 +293,12 @@ export default class AdminModule extends IConduitAdmin {
         protofile,
         routes,
         url,
+        moduleName,
       }),
     );
   }
 
   private async handleDatabase() {
-    if (!this.grpcSdk.database) {
-      await this.grpcSdk.waitForExistence('database');
-    }
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
@@ -300,7 +318,7 @@ export default class AdminModule extends IConduitAdmin {
           });
         }
       })
-      .catch(ConduitGrpcSdk.Logger.log);
+      .catch(e => ConduitGrpcSdk.Logger.log(e));
     this.registerAdminRoutes();
   }
 
