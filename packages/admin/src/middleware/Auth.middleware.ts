@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
@@ -21,7 +21,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     ) {
       return next();
     }
-    const adminConfig = await conduit.getConfigManager().get('admin');
+    const adminConfig = ConfigController.getInstance().config;
 
     const tokenHeader = req.headers.authorization;
     if (isNil(tokenHeader)) {

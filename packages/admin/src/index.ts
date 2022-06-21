@@ -2,9 +2,10 @@ import { isNaN, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
+  GrpcServer,
+  ConfigController,
   GrpcCallback,
   GrpcRequest,
-  GrpcServer,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -109,6 +110,9 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
+    ConfigController.getInstance().config = await this.commons
+      .getConfigManager()
+      .get('admin');
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -284,8 +288,7 @@ export default class AdminModule extends IConduitAdmin {
       .findOne({ username: 'admin' })
       .then(async existing => {
         if (isNil(existing)) {
-          const adminConfig = await this.commons.getConfigManager().get('admin');
-          const hashRounds = adminConfig.auth.hashRounds;
+          const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
           return hashPassword('admin', hashRounds);
         }
         return Promise.resolve(null);
