@@ -153,16 +153,15 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
-    this.get(call.request.key)
-      .then(r => {
-        callback(null, { data: JSON.stringify(r) });
-      })
-      .catch(err => {
-        callback({
+    this.get(call.request.key).then(r => {
+      if (!r) {
+        return callback({
           code: status.INTERNAL,
-          message: err.message ? err.message : err,
+          message: 'Config for module not set!',
         });
-      });
+      }
+      callback(null, { data: JSON.stringify(r) });
+    });
   }
 
   async get(moduleName: string) {
