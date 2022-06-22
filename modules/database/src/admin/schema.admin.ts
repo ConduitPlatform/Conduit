@@ -513,9 +513,12 @@ export class SchemaAdmin {
     let foreignSchemas = Array.from(this.database.foreignSchemaCollections);
     const pendingSchemas = (
       await this.database.getSchemaModel('_PendingSchemas').model.findMany({})
-    ).map((schema: any) => schema.collectionName ?? schema.name);
+    ).map(
+      (schema: { name: string; collectionName?: string }) =>
+        schema.collectionName ?? schema.name,
+    );
     foreignSchemas = foreignSchemas.filter(foreign => {
-      return !pendingSchemas.find((pending: any) => {
+      return !pendingSchemas.find((pending: string) => {
         return pending === foreign;
       });
     });
