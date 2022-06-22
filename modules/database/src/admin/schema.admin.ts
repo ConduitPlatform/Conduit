@@ -17,6 +17,7 @@ import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { ParsedQuery } from '../interfaces';
+
 const escapeStringRegexp = require('escape-string-regexp');
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
@@ -509,7 +510,15 @@ export class SchemaAdmin {
   async getIntrospectionStatus(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const foreignSchemas = Array.from(this.database.foreignSchemaCollections);
+    let foreignSchemas = Array.from(this.database.foreignSchemaCollections);
+    const pendingSchemas = (
+      await this.database.getSchemaModel('_PendingSchemas').model.findMany({})
+    ).map((schema: any) => schema.collectionName ?? schema.name);
+    foreignSchemas = foreignSchemas.filter(foreign => {
+      return !pendingSchemas.find((pending: any) => {
+        return pending === foreign;
+      });
+    });
     const importedSchemas: string[] = (
       await this.database
         .getSchemaModel('_DeclaredSchema')
@@ -518,6 +527,8 @@ export class SchemaAdmin {
     return {
       foreignSchemas,
       foreignSchemaCount: foreignSchemas.length,
+      pendingSchemas,
+      pendingSchemasCount: pendingSchemas.length,
       importedSchemas,
       importedSchemaCount: importedSchemas.length,
     };

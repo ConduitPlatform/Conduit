@@ -340,6 +340,8 @@ export class AdminHandlers {
         new ConduitRouteReturnDefinition('GetIntrospectionStatus', {
           foreignSchemas: [ConduitString.Required],
           foreignSchemaCount: ConduitNumber.Required,
+          pendingSchemas: [ConduitString.Required],
+          pendingSchemasCount: ConduitNumber.Required,
           importedSchemas: [ConduitString.Required],
           importedSchemaCount: ConduitNumber.Required,
         }),
