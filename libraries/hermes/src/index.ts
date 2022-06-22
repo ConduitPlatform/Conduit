@@ -94,12 +94,14 @@ export class ConduitRoutingController {
     );
 
     this.expressApp.use(baseUrl, (req, res, next) => {
-      if (req.url.startsWith(`${baseUrl}/graphql`) && this._graphQLRouter) {
+      if (req.url.startsWith('/graphql')) {
         if (!this._graphQLRouter) {
-          res.status(500).json({ message: 'GraphQL is not enabled on this server!' });
+          return res
+            .status(500)
+            .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (!req.url.startsWith(`${baseUrl}/graphql`)) {
+      } else if (!req.url.startsWith('/graphql')) {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
       }
