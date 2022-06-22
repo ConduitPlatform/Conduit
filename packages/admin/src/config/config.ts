@@ -18,6 +18,10 @@ export default {
     default: 'http://localhost:3030',
   },
   transports: {
+    rest: {
+      type: 'Boolean',
+      default: true,
+    },
     graphql: {
       type: 'Boolean',
       default: false,

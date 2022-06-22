@@ -66,7 +66,14 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _router: ConduitRoutingController;
-  private _sdkRoutes: ConduitRoute[] = [];
+  private _sdkRoutes: ConduitRoute[] = [
+    adminRoutes.getLoginRoute(this.commons),
+    adminRoutes.getModulesRoute(this.commons),
+    adminRoutes.getCreateAdminRoute(this.commons),
+    adminRoutes.getAdminUsersRoute(),
+    adminRoutes.deleteAdminUserRoute(),
+    adminRoutes.changePasswordRoute(this.commons),
+  ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -80,20 +87,6 @@ export default class AdminModule extends IConduitAdmin {
       '/admin',
       this.grpcSdk,
       swaggerRouterMetadata,
-    );
-    this._router.initRest();
-    // Register Middleware
-    this._router.registerMiddleware(
-      (req: ConduitRequest, res: Response, next: NextFunction) => {
-        req['conduit'] = {};
-        next();
-      },
-      true,
-    );
-    this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
-    this._router.registerMiddleware(
-      middleware.getAuthMiddleware(this.grpcSdk, this.commons),
-      true,
     );
     this._grpcRoutes = {};
   }
@@ -142,19 +135,65 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private registerAdminRoutes() {
-    this._sdkRoutes.push(
-      ...[
-        adminRoutes.getLoginRoute(this.commons),
-        adminRoutes.getModulesRoute(this.commons),
-        adminRoutes.getCreateAdminRoute(this.commons),
-        adminRoutes.getAdminUsersRoute(),
-        adminRoutes.deleteAdminUserRoute(),
-        adminRoutes.changePasswordRoute(this.commons),
-      ],
-    );
     this._sdkRoutes.forEach(route => {
       this._router.registerConduitRoute(route);
     }, this);
+  }
+
+  async subscribeToBusEvents() {
+    this.grpcSdk.bus!.subscribe('config:update:admin', (config: string) => {
+      config = JSON.parse(config);
+      ConfigController.getInstance().config = config;
+      this.onConfig();
+    });
+    ConfigController.getInstance().config = await this.commons
+      .getConfigManager()
+      .get('admin');
+    this.onConfig();
+    // Register Middleware
+    this._router.registerMiddleware(
+      (req: ConduitRequest, res: Response, next: NextFunction) => {
+        req['conduit'] = {};
+        next();
+      },
+      true,
+    );
+    this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
+    this._router.registerMiddleware(
+      middleware.getAuthMiddleware(this.grpcSdk, this.commons),
+      true,
+    );
+  }
+
+  protected onConfig() {
+    let restEnabled = ConfigController.getInstance().config.transports.rest;
+    const graphqlEnabled = ConfigController.getInstance().config.transports.graphql;
+    if (!restEnabled && !graphqlEnabled) {
+      ConduitGrpcSdk.Logger.warn(
+        'Cannot disable both REST and GraphQL admin transport APIs. Falling back to REST...',
+      );
+      restEnabled = true;
+    }
+    if (restEnabled) {
+      // this._router.stopRest();
+      this._router.initRest();
+    } else {
+      this._router.stopRest();
+    }
+    if (graphqlEnabled) {
+      this._router.initGraphQL();
+    } else {
+      this._router.stopGraphQL();
+    }
+    if (ConfigController.getInstance().config.transports.sockets) {
+      this._router.initSockets(
+        this.grpcSdk.redisDetails.host,
+        this.grpcSdk.redisDetails.port,
+      );
+    } else {
+      this._router.stopSockets();
+    }
+    this.highAvailability();
   }
 
   // grpc
