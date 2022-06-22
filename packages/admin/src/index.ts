@@ -142,14 +142,16 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private registerAdminRoutes() {
-    this._sdkRoutes = [
-      adminRoutes.getLoginRoute(this.commons),
-      adminRoutes.getModulesRoute(this.commons),
-      adminRoutes.getCreateAdminRoute(this.commons),
-      adminRoutes.getAdminUsersRoute(),
-      adminRoutes.deleteAdminUserRoute(),
-      adminRoutes.changePasswordRoute(this.commons),
-    ];
+    this._sdkRoutes.push(
+      ...[
+        adminRoutes.getLoginRoute(this.commons),
+        adminRoutes.getModulesRoute(this.commons),
+        adminRoutes.getCreateAdminRoute(this.commons),
+        adminRoutes.getAdminUsersRoute(),
+        adminRoutes.deleteAdminUserRoute(),
+        adminRoutes.changePasswordRoute(this.commons),
+      ],
+    );
     this._sdkRoutes.forEach(route => {
       this._router.registerConduitRoute(route);
     }, this);

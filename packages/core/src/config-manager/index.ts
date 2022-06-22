@@ -245,7 +245,7 @@ export default class ConfigManager implements IConfigManager {
     try {
       await this.grpcSdk.isModuleUp(
         moduleName,
-        this.serviceDiscovery.registeredModules.get(moduleName)!.address[0],
+        this.serviceDiscovery.registeredModules.get(moduleName)!.address,
       );
     } catch (e) {
       return false;
