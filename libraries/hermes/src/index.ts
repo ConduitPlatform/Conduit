@@ -65,7 +65,8 @@ export class ConduitRoutingController {
   readonly server = http.createServer(this.expressApp);
 
   constructor(
-    private readonly port: number,
+    private readonly httpPort: number,
+    private readonly socketPort: number,
     private readonly baseUrl: string,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
@@ -110,7 +111,7 @@ export class ConduitRoutingController {
     this.server
       .addListener('error', this.onError.bind(this))
       .addListener('listening', this.onListening.bind(this));
-    this.server.listen(this.port);
+    this.server.listen(this.httpPort);
   }
 
   initRest() {
@@ -128,10 +129,15 @@ export class ConduitRoutingController {
 
   initSockets(redisHost: string, redisPort: number) {
     if (this._socketRouter) return;
-    this._socketRouter = new SocketController(this._grpcSdk, this.expressApp, {
-      host: redisHost,
-      port: redisPort,
-    });
+    this._socketRouter = new SocketController(
+      this.socketPort,
+      this._grpcSdk,
+      this.expressApp,
+      {
+        host: redisHost,
+        port: redisPort,
+      },
+    );
   }
 
   stopRest() {
@@ -232,7 +238,9 @@ export class ConduitRoutingController {
       throw error;
     }
     const bind =
-      typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
+      typeof this.httpPort === 'string'
+        ? 'Pipe ' + this.httpPort
+        : 'Port ' + this.httpPort;
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':

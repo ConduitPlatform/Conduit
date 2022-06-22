@@ -76,6 +76,7 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk = grpcSdk;
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
+      this.getSocketPort()!,
       '/admin',
       this.grpcSdk,
       swaggerRouterMetadata,
@@ -97,11 +98,23 @@ export default class AdminModule extends IConduitAdmin {
     this._grpcRoutes = {};
   }
 
-  getHttpPort() {
-    const value = (process.env['PORT'] || process.env['ADMIN_PORT']) ?? '3030';
+  private getHttpPort() {
+    const value = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private getSocketPort() {
+    const value = process.env['ADMIN_SOCKET_PORT'] ?? '3031';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
       process.exit(-1);
     }
     if (port >= 0) {

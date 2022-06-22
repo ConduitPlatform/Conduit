@@ -67,6 +67,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await runMigrations(this.grpcSdk);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
+      this.getSocketPort()!,
       '',
       this.grpcSdk,
     );
@@ -129,11 +130,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
-  getHttpPort() {
-    const value = (process.env['PORT'] || process.env['CLIENT_PORT']) ?? '3000';
+  private getHttpPort() {
+    const value = (process.env['CLIENT_HTTP_PORT'] || process.env['PORT']) ?? '3000'; // <=v13 compat (PORT)
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private getSocketPort() {
+    const value = process.env['CLIENT_SOCKET_PORT'] ?? '3001';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
       process.exit(-1);
     }
     if (port >= 0) {

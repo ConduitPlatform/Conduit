@@ -29,6 +29,7 @@ export class SocketController extends ConduitRouter {
   ) => void)[];
 
   constructor(
+    private readonly port: number,
     grpcSdk: ConduitGrpcSdk,
     expressApp: Application,
     redisDetails: { host: string; port: number },
@@ -51,7 +52,7 @@ export class SocketController extends ConduitRouter {
     this.io.adapter(
       createAdapter({ pubClient: this.pubClient, subClient: this.subClient }),
     );
-    this.httpServer.listen(process.env.SOCKET_PORT || 3001);
+    this.httpServer.listen(process.env.SOCKET_PORT || this.port);
     this._registeredNamespaces = new Map();
     this.globalMiddlewares = [];
   }
