@@ -129,9 +129,6 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk.on('database', async () => {
       await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     });
-    this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.error('Failed to recover state');
-    });
   }
 
   private registerAdminRoutes() {
@@ -175,7 +172,6 @@ export default class AdminModule extends IConduitAdmin {
       restEnabled = true;
     }
     if (restEnabled) {
-      // this._router.stopRest();
       this._router.initRest();
     } else {
       this._router.stopRest();
@@ -193,7 +189,6 @@ export default class AdminModule extends IConduitAdmin {
     } else {
       this._router.stopSockets();
     }
-    this.highAvailability();
   }
 
   // grpc
@@ -251,7 +246,7 @@ export default class AdminModule extends IConduitAdmin {
     }
     const state = JSON.parse(r);
     if (state.routes) {
-      let promises = state.routes.map((r: Indexable) => {
+      const promises = state.routes.map((r: Indexable) => {
         try {
           if (r.moduleName) {
             return this.commons
@@ -276,7 +271,6 @@ export default class AdminModule extends IConduitAdmin {
       ConduitGrpcSdk.Logger.log('Recovered routes');
       await Promise.all(promises);
     }
-    this.cleanupRoutes();
 
     this.commons.getBus().subscribe('admin', (message: string) => {
       const messageParsed = JSON.parse(message);
@@ -371,6 +365,9 @@ export default class AdminModule extends IConduitAdmin {
       })
       .catch(e => ConduitGrpcSdk.Logger.log(e));
     this.registerAdminRoutes();
+    this.highAvailability().catch(() => {
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
+    });
   }
 
   private internalRegisterRoute(
