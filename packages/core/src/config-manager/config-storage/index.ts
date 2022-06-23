@@ -58,12 +58,12 @@ export class ConfigStorage {
       configDoc['moduleConfigs'] = {};
       for (const key in this.serviceDiscovery.registeredModules.keys()) {
         try {
-          configDoc.moduleConfigs[key] = this.getConfig(key, false);
+          configDoc.moduleConfigs[key] = await this.getConfig(key, false);
         } catch {}
       }
       for (const key of ['core', 'admin']) {
         try {
-          configDoc.moduleConfigs[key] = this.getConfig(key, false);
+          configDoc.moduleConfigs[key] = await this.getConfig(key, false);
         } catch {}
       }
       // flush redis stored configuration to the database
@@ -74,17 +74,17 @@ export class ConfigStorage {
       }
     } else {
       // patch database with new config keys
-      Object.keys(configDoc.moduleConfigs).forEach(key => {
+      for (const key of Object.keys(configDoc.moduleConfigs)) {
         let redisConfig;
         try {
-          redisConfig = this.getConfig(key, false);
+          redisConfig = await this.getConfig(key, false);
           redisConfig = { ...redisConfig, ...configDoc!.moduleConfigs[key] };
           configDoc!.moduleConfigs[key] = redisConfig;
         } catch (e) {
           redisConfig = configDoc!.moduleConfigs[key];
         }
-        this.setConfig(key, JSON.stringify(redisConfig), false);
-      });
+        await this.setConfig(key, JSON.stringify(redisConfig), false);
+      }
       await models.Config.getInstance().findByIdAndUpdate(configDoc._id, {
         moduleConfigs: configDoc.moduleConfigs,
       });
@@ -144,7 +144,9 @@ export class ConfigStorage {
     let config: string | null = await this.commons
       .getState()
       .getKey(`moduleConfigs.${moduleName}`);
-    if (!config) throw new Error('Config not found for ' + moduleName);
+    if (!config) {
+      throw new Error('Config not found for ' + moduleName);
+    }
     return JSON.parse(config);
   }
 
