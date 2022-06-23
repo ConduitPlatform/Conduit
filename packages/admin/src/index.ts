@@ -86,6 +86,7 @@ export default class AdminModule extends IConduitAdmin {
       this.getSocketPort()!,
       '/admin',
       this.grpcSdk,
+      3000,
       swaggerRouterMetadata,
     );
     this._grpcRoutes = {};

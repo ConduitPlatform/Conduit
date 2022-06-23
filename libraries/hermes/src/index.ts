@@ -61,6 +61,8 @@ export class ConduitRoutingController {
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
   private readonly logger: ConduitLogger;
+  private readonly _cleanupTimeoutMs: number;
+  private _cleanupTimeout: NodeJS.Timeout | null = null;
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
 
@@ -69,8 +71,10 @@ export class ConduitRoutingController {
     private readonly socketPort: number,
     private readonly baseUrl: string,
     private readonly grpcSdk: ConduitGrpcSdk,
+    cleanupTimeoutMs: number = 0,
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
   ) {
+    this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
     this.logger = new ConduitLogger();
     this.start();
     this._middlewareRouter = Router();
@@ -196,6 +200,25 @@ export class ConduitRoutingController {
   }
 
   cleanupRoutes(routes: any[]) {
+    if (this._cleanupTimeoutMs === 0) {
+      this._cleanupRoutes(routes);
+    } else {
+      if (this._cleanupTimeout) {
+        clearTimeout(this._cleanupTimeout);
+        this._cleanupTimeout = null;
+      }
+      this._cleanupTimeout = setTimeout(() => {
+        try {
+          this._cleanupRoutes(routes);
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(err);
+        }
+        this._cleanupTimeout = null;
+      }, this._cleanupTimeoutMs);
+    }
+  }
+
+  private _cleanupRoutes(routes: any[]) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
   }
