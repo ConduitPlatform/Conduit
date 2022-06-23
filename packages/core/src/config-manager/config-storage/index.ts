@@ -75,9 +75,14 @@ export class ConfigStorage {
     } else {
       // patch database with new config keys
       Object.keys(configDoc.moduleConfigs).forEach(key => {
-        let redisConfig = this.getConfig(key, false);
-        redisConfig = { ...redisConfig, ...configDoc!.moduleConfigs[key] };
-        configDoc!.moduleConfigs[key] = redisConfig;
+        let redisConfig;
+        try {
+          redisConfig = this.getConfig(key, false);
+          redisConfig = { ...redisConfig, ...configDoc!.moduleConfigs[key] };
+          configDoc!.moduleConfigs[key] = redisConfig;
+        } catch (e) {
+          redisConfig = configDoc!.moduleConfigs[key];
+        }
         this.setConfig(key, JSON.stringify(redisConfig), false);
       });
       await models.Config.getInstance().findByIdAndUpdate(configDoc._id, {
