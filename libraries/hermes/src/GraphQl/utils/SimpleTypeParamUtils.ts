@@ -17,7 +17,7 @@ function extractArrayParam(
   required: boolean = false,
   originalParam?: any,
 ) {
-  if (GQL_PRIMITIVES.indexOf(param)) {
+  if (GQL_PRIMITIVES.indexOf(param) !== -1) {
     return `[${param}]` + (required ? '!' : '');
   } else if (param === 'ObjectId') {
     return '[ID]' + (required ? '!' : '');

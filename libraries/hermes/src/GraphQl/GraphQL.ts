@@ -41,6 +41,7 @@ export class GraphQLController extends ConduitRouter {
   }
 
   refreshGQLServer() {
+    if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -348,7 +349,10 @@ export class GraphQLController extends ConduitRouter {
           }
 
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            result = JSON.parse(result);
+            if (typeof r.result === 'string') {
+              // only grpc route data is stringified
+              result = JSON.parse(result);
+            }
           } else {
             result = {
               result: self.extractResult(route.returnTypeFields as string, result),
