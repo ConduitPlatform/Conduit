@@ -70,7 +70,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.getSocketPort()!,
       '',
       this.grpcSdk,
-      3000,
+      1000,
     );
     this.registerGlobalMiddleware(
       'conduitRequestMiddleware',
