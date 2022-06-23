@@ -10,8 +10,8 @@ export class EventBus {
   private _signature: string;
   constructor(redisManager: RedisManager) {
     this._subscribedChannels = {};
-    this._clientSubscriber = redisManager.getClient({ keyPrefix: '_bus' });
-    this._clientPublisher = redisManager.getClient({ keyPrefix: '_bus' });
+    this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });
+    this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');
     this._clientSubscriber.on('ready', () => {
       ConduitGrpcSdk.Logger.log('The Bus is in the station...hehe');

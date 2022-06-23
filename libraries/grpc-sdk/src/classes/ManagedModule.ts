@@ -22,22 +22,60 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     return this._moduleName;
   }
 
+  /**
+   * This is the first function triggered on module spin up.
+   * @param grpcSdk
+   */
   initialize(grpcSdk: ConduitGrpcSdk) {
     this.grpcSdk = grpcSdk;
   }
 
+  /**
+   * This is triggered before spinning up the Grpc Server
+   * of the module. On this stage, the redis bus and state have
+   * not yet been initialized, and only communications with Conduit core
+   * have been established.
+   */
   async preServerStart() {}
 
+  /**
+   * This is triggered right after Grpc Server start.
+   * At this stage the core module will communicate with your service
+   * for health checks, and the Bus and State management mechanics
+   * are online and available.
+   */
   async onServerStart() {}
 
+  /**
+   * Triggers right before registering the module with Conduit Core.
+   */
   async preRegister() {}
 
+  /**
+   * Triggers when module has been registered with Conduit Core
+   * This is the step where you should initialize your
+   * module's general routing (admin or client) and any other operation,
+   * that would require other modules being able to reach you
+   */
   async onRegister() {}
 
+  /**
+   * This is triggered when the module receives new configuration.
+   * At this step the configuration has not been checked yet,
+   * and has only been parsed.
+   * @param config
+   */
   async preConfig(config: T) {
     return config;
   }
 
+  /**
+   * This is triggered when new configuration has been applied.
+   * This happens either when changes are being made on the configuration,
+   * or on module start up, where the config is recovered from the database.
+   * In either case the configuration is now available through the
+   * Config Controller of the sdk.
+   */
   async onConfig() {}
 
   async createGrpcServer(servicePort?: string) {
@@ -79,14 +117,13 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
           message: 'Invalid configuration values',
         });
       }
-      const moduleConfig = await this.grpcSdk.config.updateConfig(config, this.name);
-      ConfigController.getInstance().config = moduleConfig;
+      ConfigController.getInstance().config = config;
       await this.onConfig();
       this.grpcSdk.bus?.publish(
         kebabCase(this.name) + ':config:update',
-        JSON.stringify(moduleConfig),
+        JSON.stringify(config),
       );
-      return callback(null, { updatedConfig: JSON.stringify(moduleConfig) });
+      return callback(null, { updatedConfig: JSON.stringify(config) });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: e.message });
     }

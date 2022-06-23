@@ -16,7 +16,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
 
   constructor(
     moduleName: string,
-    url: string,
+    readonly url: string,
     serviceHealthStatusGetter: Function,
     grpcToken?: string,
   ) {
@@ -33,6 +33,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getModuleUrlByName(name: string): Promise<{ url: string }> {
+    if (name === 'core') return Promise.resolve({ url: this.url });
     return this.client!.getModuleUrlByName({ name: name }).then(res => {
       return { url: res.moduleUrl };
     });
@@ -64,6 +65,16 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       moduleName: name,
     };
     return this.client!.addFieldsToConfig(request).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  configure(config: any, name: string) {
+    const request = {
+      config: JSON.stringify(config),
+      moduleName: name,
+    };
+    return this.client!.configure(request).then(res => {
       return JSON.parse(res.result);
     });
   }
@@ -151,7 +162,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
+      // uncomment for debug when needed
+      // currently is misleading if left on
+      // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
     }
   }
 }

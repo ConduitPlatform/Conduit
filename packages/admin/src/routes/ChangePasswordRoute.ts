@@ -1,8 +1,4 @@
-import {
-  ConduitCommons,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import {
   ConduitError,
   ConduitRouteActions,
@@ -12,6 +8,7 @@ import {
 import { compare, hash } from 'bcrypt';
 import { isNil } from 'lodash';
 import { Admin } from '../models';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function changePasswordRoute(conduit: ConduitCommons) {
   return new ConduitRoute(

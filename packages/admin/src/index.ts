@@ -1,22 +1,18 @@
-import { isNil } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
+  GrpcServer,
+  ConfigController,
   GrpcCallback,
   GrpcRequest,
-  GrpcServer,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { RestController, SwaggerRouterMetadata } from '@conduitplatform/router';
 import {
   ConduitCommons,
-  ConduitRoute,
-  ConduitMiddleware,
-  ConduitSocket,
   IConduitAdmin,
-  grpcToConduitRoute,
   RegisterAdminRouteRequest,
-  RouteT,
+  RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -25,7 +21,17 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import path from 'path';
-import { RegisterAdminRouteRequest_PathDefinition } from '@conduitplatform/grpc-sdk/dist/protoUtils/core';
+import {
+  ConduitMiddleware,
+  ConduitRequest,
+  ConduitRoute,
+  ConduitRoutingController,
+  ConduitSocket,
+  grpcToConduitRoute,
+  RouteT,
+  SwaggerRouterMetadata,
+} from '@conduitplatform/hermes';
+import { Response, NextFunction } from 'express';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -59,27 +65,61 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
-  private _restRouter: RestController;
-  private _sdkRoutes: ConduitRoute[];
+  private _router: ConduitRoutingController;
+  private _sdkRoutes: ConduitRoute[] = [
+    adminRoutes.getLoginRoute(this.commons),
+    adminRoutes.getModulesRoute(this.commons),
+    adminRoutes.getCreateAdminRoute(this.commons),
+    adminRoutes.getAdminUsersRoute(),
+    adminRoutes.deleteAdminUserRoute(),
+    adminRoutes.changePasswordRoute(this.commons),
+  ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
 
-  constructor(commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
+  constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
     this.grpcSdk = grpcSdk;
-    this._restRouter = new RestController(this.commons, swaggerRouterMetadata);
-
-    // Register Middleware
-    this._restRouter.registerRoute('*', [
-      middleware.getAdminMiddleware(this.commons),
-      middleware.getAuthMiddleware(this.grpcSdk, this.commons),
-    ]);
-
+    this._router = new ConduitRoutingController(
+      this.getHttpPort()!,
+      this.getSocketPort()!,
+      '/admin',
+      this.grpcSdk,
+      1000,
+      swaggerRouterMetadata,
+    );
     this._grpcRoutes = {};
   }
 
+  private getHttpPort() {
+    const value = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private getSocketPort() {
+    const value = process.env['ADMIN_SOCKET_PORT'] ?? '3031';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
   async initialize(server: GrpcServer) {
+    ConfigController.getInstance().config = await this.commons
+      .getConfigManager()
+      .configurePackage('admin', AdminConfigSchema.getProperties());
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -87,27 +127,69 @@ export default class AdminModule extends IConduitAdmin {
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
-    await this.commons
-      .getConfigManager()
-      .registerModulesConfig('admin', AdminConfigSchema.getProperties());
-    await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
-    this._sdkRoutes = [
-      adminRoutes.getLoginRoute(this.commons),
-      adminRoutes.getModulesRoute(this.commons),
-      adminRoutes.getCreateAdminRoute(this.commons),
-      adminRoutes.getAdminUsersRoute(),
-      adminRoutes.deleteAdminUserRoute(),
-      adminRoutes.changePasswordRoute(this.commons),
-    ];
-
-    // Register Routes
-    this._sdkRoutes.forEach(route => {
-      this._restRouter.registerConduitRoute(route);
-    }, this);
-    this.attachRouter();
-    this.highAvailability().catch(() => {
-      ConduitGrpcSdk.Logger.error('Failed to recover state');
+    this.grpcSdk.on('database', async () => {
+      await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
     });
+  }
+
+  private registerAdminRoutes() {
+    this._sdkRoutes.forEach(route => {
+      this._router.registerConduitRoute(route);
+    }, this);
+  }
+
+  async subscribeToBusEvents() {
+    this.grpcSdk.bus!.subscribe('config:update:admin', (config: string) => {
+      config = JSON.parse(config);
+      ConfigController.getInstance().config = config;
+      this.onConfig();
+    });
+    ConfigController.getInstance().config = await this.commons
+      .getConfigManager()
+      .get('admin');
+    this.onConfig();
+    // Register Middleware
+    this._router.registerMiddleware(
+      (req: ConduitRequest, res: Response, next: NextFunction) => {
+        req['conduit'] = {};
+        next();
+      },
+      true,
+    );
+    this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
+    this._router.registerMiddleware(
+      middleware.getAuthMiddleware(this.grpcSdk, this.commons),
+      true,
+    );
+  }
+
+  protected onConfig() {
+    let restEnabled = ConfigController.getInstance().config.transports.rest;
+    const graphqlEnabled = ConfigController.getInstance().config.transports.graphql;
+    if (!restEnabled && !graphqlEnabled) {
+      ConduitGrpcSdk.Logger.warn(
+        'Cannot disable both REST and GraphQL admin transport APIs. Falling back to REST...',
+      );
+      restEnabled = true;
+    }
+    if (restEnabled) {
+      this._router.initRest();
+    } else {
+      this._router.stopRest();
+    }
+    if (graphqlEnabled) {
+      this._router.initGraphQL();
+    } else {
+      this._router.stopGraphQL();
+    }
+    if (ConfigController.getInstance().config.transports.sockets) {
+      this._router.initSockets(
+        this.grpcSdk.redisDetails.host,
+        this.grpcSdk.redisDetails.port,
+      );
+    } else {
+      this._router.stopSockets();
+    }
   }
 
   // grpc
@@ -139,6 +221,7 @@ export default class AdminModule extends IConduitAdmin {
         call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
+        moduleName as string,
       );
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err);
@@ -152,14 +235,8 @@ export default class AdminModule extends IConduitAdmin {
 
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push(route);
-    this._restRouter.registerConduitRoute(route);
+    this._router.registerConduitRoute(route);
     this.cleanupRoutes();
-  }
-
-  private attachRouter() {
-    this.commons.getRouter().registerExpressRouter('/admin', (req, res, next) => {
-      this._restRouter.handleRequest(req, res, next);
-    });
   }
 
   private async highAvailability() {
@@ -170,16 +247,31 @@ export default class AdminModule extends IConduitAdmin {
     }
     const state = JSON.parse(r);
     if (state.routes) {
-      state.routes.forEach((r: Indexable) => {
+      const promises = state.routes.map((r: Indexable) => {
         try {
-          this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          if (r.moduleName) {
+            return this.commons
+              .getConfigManager()
+              .isModuleUp(r.moduleName)
+              .then(isUp => {
+                if (isUp) {
+                  return this.internalRegisterRoute(
+                    r.protofile,
+                    r.routes,
+                    r.url,
+                    r.moduleName,
+                  );
+                }
+              });
+          }
+          return this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
           ConduitGrpcSdk.Logger.error(err);
         }
       }, this);
       ConduitGrpcSdk.Logger.log('Recovered routes');
+      await Promise.all(promises);
     }
-    this.cleanupRoutes();
 
     this.commons.getBus().subscribe('admin', (message: string) => {
       const messageParsed = JSON.parse(message);
@@ -200,11 +292,12 @@ export default class AdminModule extends IConduitAdmin {
     protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
+    moduleName?: string,
   ) {
     this.commons
       .getState()
       .getKey('admin')
-      .then(r => {
+      .then((r: any) => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
@@ -214,18 +307,19 @@ export default class AdminModule extends IConduitAdmin {
           }
         });
         if (index) {
-          state.routes[index] = { protofile, routes, url };
+          state.routes[index] = { protofile, routes, url, moduleName };
         } else {
           state.routes.push({
             protofile,
             routes,
             url,
+            moduleName,
           });
         }
         return this.commons.getState().setKey('admin', JSON.stringify(state));
       })
       .then(() => {
-        this.publishAdminRouteData(protofile, routes, url);
+        this.publishAdminRouteData(protofile, routes, url, moduleName);
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
@@ -237,6 +331,7 @@ export default class AdminModule extends IConduitAdmin {
     protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
+    moduleName?: string,
   ) {
     this.commons.getBus().publish(
       'admin',
@@ -244,22 +339,19 @@ export default class AdminModule extends IConduitAdmin {
         protofile,
         routes,
         url,
+        moduleName,
       }),
     );
   }
 
   private async handleDatabase() {
-    if (!this.grpcSdk.database) {
-      await this.grpcSdk.waitForExistence('database');
-    }
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async existing => {
         if (isNil(existing)) {
-          const adminConfig = await this.commons.getConfigManager().get('admin');
-          const hashRounds = adminConfig.auth.hashRounds;
+          const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
           return hashPassword('admin', hashRounds);
         }
         return Promise.resolve(null);
@@ -272,7 +364,11 @@ export default class AdminModule extends IConduitAdmin {
           });
         }
       })
-      .catch(ConduitGrpcSdk.Logger.log);
+      .catch(e => ConduitGrpcSdk.Logger.log(e));
+    this.registerAdminRoutes();
+    this.highAvailability().catch(() => {
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
+    });
   }
 
   private internalRegisterRoute(
@@ -286,7 +382,6 @@ export default class AdminModule extends IConduitAdmin {
       | ConduitMiddleware
       | ConduitSocket
     )[] = grpcToConduitRoute(
-      // can go
       'Admin',
       {
         protoFile: protofile,
@@ -302,7 +397,7 @@ export default class AdminModule extends IConduitAdmin {
         ConduitGrpcSdk.Logger.http(
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
-        this._restRouter.registerConduitRoute(r);
+        this._router.registerConduitRoute(r);
       }
     });
     this._grpcRoutes[url] = routes;
@@ -329,7 +424,7 @@ export default class AdminModule extends IConduitAdmin {
         }),
       );
     });
-    this._restRouter.cleanupRoutes(routes);
+    this._router.cleanupRoutes(routes);
   }
 
   private registerSchemas() {

@@ -1,20 +1,30 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { isDev } from '../utils/middleware';
+import { ConduitRequest } from '@conduitplatform/hermes';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export function getAdminMiddleware(conduit: ConduitCommons) {
-  return async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  return async function adminMiddleware(
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    const graphQlCheck =
+      req.originalUrl.indexOf('/admin/graphql') === 0 && req.method === 'GET';
     if (
       // Excluded routes
-      req.originalUrl.indexOf('/admin/swagger') === 0 &&
+      (req.originalUrl.indexOf('/admin/swagger') === 0 || graphQlCheck) &&
       (await isDev(conduit))
     ) {
       return next();
     }
     const masterKey = req.headers.masterkey;
     if (!process.env.masterkey || process.env.masterkey.length === 0) {
-      console.warn('!Security issue!: Master key not set, defaulting to insecure string');
+      ConduitGrpcSdk.Logger.warn(
+        '!Security issue!: Master key not set, defaulting to insecure string',
+      );
     }
     const master = process.env.MASTER_KEY ?? process.env.masterkey ?? 'M4ST3RK3Y'; // Compat (<=0.12.2): masterkey
     if (isNil(masterKey) || masterKey !== master)

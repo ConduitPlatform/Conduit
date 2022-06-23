@@ -59,7 +59,8 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
       this.updateHealth(
@@ -105,12 +106,20 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    this.userRouter = new ChatRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this.sendEmail,
-      this.sendPushNotification,
-    );
+    if (!this.userRouter) {
+      const self = this;
+      this.grpcSdk.on('router', async () => {
+        self.userRouter = new ChatRoutes(
+          self.grpcServer,
+          self.grpcSdk,
+          self.sendEmail,
+          self.sendPushNotification,
+        );
+        await self.userRouter.registerRoutes();
+      });
+
+      return;
+    }
     await this.userRouter.registerRoutes();
   }
 
@@ -196,7 +205,7 @@ export default class Chat extends ManagedModule<Config> {
         readBy: [userId],
       })
       .then(() => {
-        return this.grpcSdk.router.socketPush({
+        return this.grpcSdk.router?.socketPush({
           event: 'message',
           receivers: [roomId],
           rooms: [],

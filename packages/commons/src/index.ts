@@ -1,4 +1,4 @@
-import { IConduitCore, IConduitAdmin, IConduitRouter, IConduitSecurity } from './modules';
+import { IConduitCore, IConduitAdmin } from './modules';
 import { isNil, isPlainObject } from 'lodash';
 import validator from 'validator';
 import isNaturalNumber from 'is-natural-number';
@@ -9,9 +9,7 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 export class ConduitCommons {
   private static _instance: ConduitCommons;
   private _core?: IConduitCore;
-  private _router?: IConduitRouter;
   private _admin?: IConduitAdmin;
-  private _security?: IConduitSecurity;
   private _configManager?: IConfigManager;
   private readonly _eventBus: EventBus;
   private readonly _stateManager: StateManager;
@@ -42,22 +40,12 @@ export class ConduitCommons {
     throw new Error('Core not assigned yet!');
   }
 
-  registerRouter(router: IConduitRouter) {
-    if (this._router) throw new Error('Cannot register a second router!');
-    this._router = router;
-  }
-
   getBus(): EventBus {
     return this._eventBus;
   }
 
   getState(): StateManager {
     return this._stateManager;
-  }
-
-  getRouter(): IConduitRouter {
-    if (this._router) return this._router;
-    throw new Error('Router not assigned yet!');
   }
 
   registerAdmin(admin: IConduitAdmin) {
@@ -68,16 +56,6 @@ export class ConduitCommons {
   getAdmin(): IConduitAdmin {
     if (this._admin) return this._admin;
     throw new Error('Admin not assigned yet!');
-  }
-
-  registerSecurity(security: IConduitSecurity) {
-    if (this._security) throw new Error('Cannot register a second security module');
-    this._security = security;
-  }
-
-  getSecurity(): IConduitSecurity {
-    if (this._security) return this._security;
-    throw new Error('Security module not assigned yet');
   }
 
   registerConfigManager(configManager: IConfigManager) {
@@ -125,8 +103,6 @@ export class ConduitCommons {
 }
 
 export * from './interfaces';
-export * from './classes';
 export * from './modules';
-export * from './constants';
 export * from './utilities';
 export * from './protoTypes/core';

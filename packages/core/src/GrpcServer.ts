@@ -5,22 +5,20 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
-import ConfigManager from '@conduitplatform/config';
 import AdminModule from '@conduitplatform/admin';
-import SecurityModule from '@conduitplatform/security';
-import { ConduitDefaultRouter } from '@conduitplatform/router';
 import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import { HealthCheckRequest } from '@conduitplatform/grpc-sdk/dist/protoUtils/grpc_health_check';
+import ConfigManager from './config-manager';
 
-const CORE_SERVICES = ['Config', 'Admin', 'Router'];
+const CORE_SERVICES = ['Config', 'Admin'];
 
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;
   private readonly events: EventEmitter;
+  private _grpcSdk: ConduitGrpcSdk;
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
   private _initialized = false;
 
@@ -28,15 +26,23 @@ export class GrpcServer {
     return this._initialized;
   }
 
+  get internalGrpc() {
+    return this.server;
+  }
+
+  get grpcSdk() {
+    return this._grpcSdk;
+  }
+
   constructor(private readonly commons: ConduitCommons, private readonly port: number) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
     this.server = new ConduitGrpcServer(this.port.toString());
     this.server
-      .createNewServer()
+      .createNewServer(true)
       .then(port => {
         const _url = '0.0.0.0:' + port.toString();
-        const grpcSdk = new ConduitGrpcSdk(
+        this._grpcSdk = new ConduitGrpcSdk(
           _url,
           () => {
             return this._serviceHealthState;
@@ -44,16 +50,15 @@ export class GrpcServer {
           'core',
           false,
         );
-        grpcSdk.initialize().then(async () => {
+        this._grpcSdk.initialize().then(async () => {
           this.commons.registerConfigManager(
-            new ConfigManager(grpcSdk, this.commons, async () => {
-              if (!this._initialized) {
-                await this.bootstrapSdkComponents(grpcSdk);
-              }
-            }),
+            new ConfigManager(this._grpcSdk, this.commons),
           );
           await this.commons.getConfigManager().initialize(this.server);
+          await this.bootstrapSdkComponents();
           this.server.start();
+          await this._grpcSdk.initializeEventBus();
+          await this.commons.getAdmin().subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
       })
@@ -67,37 +72,22 @@ export class GrpcServer {
       });
   }
 
-  private async bootstrapSdkComponents(grpcSdk: ConduitGrpcSdk) {
-    this.commons.registerAdmin(new AdminModule(this.commons, grpcSdk));
-    this.commons.registerRouter(
-      new ConduitDefaultRouter(
-        this.commons,
-        grpcSdk,
-        Core.getInstance().httpServer.expressApp,
-      ),
-    );
-    Core.getInstance().httpServer.initialize();
-    Core.getInstance().httpServer.start();
-    await this.commons.getConfigManager().registerAppConfig();
-    let error;
-    this.commons
+  private async bootstrapSdkComponents() {
+    this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
+    this._grpcSdk.on('router', () => {
+      Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
+    });
+
+    this._grpcSdk.on('database', async () => {
+      await this.commons.getConfigManager().registerAppConfig();
+    });
+
+    await this.commons
       .getConfigManager()
-      .get('core')
-      .catch((err: Error) => (error = err));
-    if (error) {
-      await this.commons
-        .getConfigManager()
-        .registerModulesConfig('core', convict.getProperties());
-    } else {
-      await this.commons
-        .getConfigManager()
-        .addFieldsToModule('core', convict.getProperties());
-    }
+      .configurePackage('core', convict.getProperties());
+
     await this.commons.getAdmin().initialize(this.server);
-    await this.commons.getRouter().initialize(this.server);
-    this.server.refresh().then();
     this.commons.getConfigManager().initConfigAdminRoutes();
-    this.commons.registerSecurity(new SecurityModule(this.commons, grpcSdk));
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;

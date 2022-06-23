@@ -130,28 +130,31 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
-      this.userRouter = new DatabaseRoutes(
-        this.grpcServer,
-        this._activeAdapter,
-        this.grpcSdk,
-      );
-      const schemaController = new SchemaController(
-        this.grpcSdk,
-        this._activeAdapter,
-        this.userRouter,
-      );
-      const customEndpointController = new CustomEndpointController(
-        this.grpcSdk,
-        this._activeAdapter,
-        this.userRouter,
-      );
-      this.adminRouter = new AdminHandlers(
-        this.grpcServer,
-        this.grpcSdk,
-        this._activeAdapter,
-        schemaController,
-        customEndpointController,
-      );
+      const self = this;
+      this.grpcSdk.on('router', () => {
+        self.userRouter = new DatabaseRoutes(
+          self.grpcServer,
+          self._activeAdapter,
+          self.grpcSdk,
+        );
+        const schemaController = new SchemaController(
+          self.grpcSdk,
+          self._activeAdapter,
+          self.userRouter,
+        );
+        const customEndpointController = new CustomEndpointController(
+          self.grpcSdk,
+          self._activeAdapter,
+          self.userRouter,
+        );
+        self.adminRouter = new AdminHandlers(
+          self.grpcServer,
+          self.grpcSdk,
+          self._activeAdapter,
+          schemaController,
+          customEndpointController,
+        );
+      });
     } else {
       this.grpcSdk.core.healthCheckWatcher.once(
         'grpc-health-change:Core',

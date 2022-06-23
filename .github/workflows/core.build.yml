@@ -5,6 +5,7 @@ on:
     paths:
       - "packages/**"
       - "libraries/grpc-sdk/**"
+      - "libraries/hermes/**"
 
 env:
   REGISTRY: ghcr.io

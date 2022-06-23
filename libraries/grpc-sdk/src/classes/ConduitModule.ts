@@ -85,7 +85,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
         self.healthCheckEmitter.emit(`grpc-health-change:${serviceName}`, data.status);
       }
     } catch (error) {
-      ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
+      // uncomment for debug when needed
+      // currently is misleading if left on
+      // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
     }
   }
 }

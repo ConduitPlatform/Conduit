@@ -1,17 +1,15 @@
-import {
-  ConduitCommons,
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-} from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { hashPassword } from '../utils/auth';
 import {
   ConduitError,
   ConduitRouteActions,
+  ConfigController,
   ConduitRouteParameters,
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function getCreateAdminRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
@@ -40,7 +38,7 @@ export function getCreateAdminRoute(conduit: ConduitCommons) {
       if (!isNil(admin)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
       }
-      const adminConfig = await conduit.getConfigManager().get('admin');
+      const adminConfig = ConfigController.getInstance().config;
       const hashRounds = adminConfig.auth.hashRounds;
       const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });

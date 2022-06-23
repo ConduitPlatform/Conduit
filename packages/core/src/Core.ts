@@ -1,5 +1,5 @@
 import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
-import { HttpServer } from './HttpServer';
+import { HttpServer } from './routes';
 import { GrpcServer } from './GrpcServer';
 import { isNil } from 'lodash';
 
@@ -11,26 +11,28 @@ export class Core extends IConduitCore {
   get httpServer() {
     return this._httpServer;
   }
+
   get grpcServer() {
     return this._grpcServer;
   }
+
   get initialized() {
-    return this._httpServer.initialized && this._grpcServer.initialized;
+    return this._grpcServer.initialized;
   }
 
-  private constructor(httpPort: number | string, grpcPort: number) {
+  private constructor(grpcPort: number) {
     super(ConduitCommons.getInstance('core'));
     this.commons.registerCore(this);
     this._grpcServer = new GrpcServer(this.commons, grpcPort);
-    this._httpServer = new HttpServer(this.commons, httpPort);
+    this._httpServer = new HttpServer();
   }
 
-  static getInstance(httpPort?: number | string, grpcPort?: number): Core {
+  static getInstance(grpcPort?: number): Core {
     if (!Core._instance) {
-      if (isNil(httpPort) || isNil(grpcPort)) {
-        throw new Error('Cannot initialize Core without httpPort and grpcPort');
+      if (isNil(grpcPort)) {
+        throw new Error('Cannot initialize Core without grpcPort');
       }
-      Core._instance = new Core(httpPort, grpcPort);
+      Core._instance = new Core(grpcPort);
     }
     return Core._instance;
   }

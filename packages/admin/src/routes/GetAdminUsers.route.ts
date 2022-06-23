@@ -1,11 +1,12 @@
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import {
   ConduitNumber,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function getAdminUsersRoute() {
   return new ConduitRoute(
@@ -19,7 +20,23 @@ export function getAdminUsersRoute() {
       },
     },
     new ConduitRouteReturnDefinition('GetAdminUsers', {
-      admins: [Admin.getInstance().fields],
+      // DO NOT REMOVE THIS.
+      // The database instance is not initialized when this route is registered
+      admins: [
+        {
+          _id: TYPE.ObjectId,
+          username: {
+            type: TYPE.String,
+            required: true,
+          },
+          password: {
+            type: TYPE.String,
+            required: true,
+          },
+          createdAt: TYPE.Date,
+          updatedAt: TYPE.Date,
+        },
+      ],
       count: ConduitNumber.Required,
     }),
     async (params: ConduitRouteParameters) => {

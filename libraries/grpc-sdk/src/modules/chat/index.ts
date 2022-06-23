@@ -7,12 +7,6 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
     this.initializeClient(ChatDefinition);
   }
 
-  setConfig(newConfig: any) {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
-  }
-
   sendMessage(messageData: SendMessageRequest): Promise<any> {
     return this.client!.sendMessage(messageData);
   }

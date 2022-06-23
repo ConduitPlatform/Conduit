@@ -6,21 +6,8 @@ import { isNaN } from 'lodash';
 bootstrap();
 
 function bootstrap() {
-  const httpPort = getHttpPort();
   const grpcPort = getGrpcPort();
-  Core.getInstance(httpPort, grpcPort);
-}
-
-function getHttpPort() {
-  const value = process.env['PORT'] ?? '3000';
-  const port = parseInt(value, 10);
-  if (isNaN(port)) {
-    return value; // named pipe
-  }
-  if (port >= 0) {
-    return port;
-  }
-  throw new Error(`Invalid HTTP port value: ${port}`);
+  Core.getInstance(grpcPort);
 }
 
 function getGrpcPort() {

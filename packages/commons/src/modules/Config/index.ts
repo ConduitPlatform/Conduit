@@ -9,4 +9,6 @@ export abstract class IConfigManager {
   abstract set(moduleName: string, moduleConfig: any): Promise<any>;
   abstract addFieldsToModule(moduleName: string, moduleConfig: any): Promise<any>;
   abstract getModuleUrlByName(moduleName: string): string | undefined;
+  abstract isModuleUp(moduleName: string): Promise<boolean>;
+  abstract configurePackage(moduleName: string, config: any): Promise<any>;
 }

@@ -1,22 +1,30 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { ConduitModelOptions } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
+import { ConduitRequest } from '@conduitplatform/hermes';
 
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
-  return async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  return async function authMiddleware(
+    req: ConduitRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    const graphQlCheck =
+      req.originalUrl.indexOf('/admin/graphql') === 0 && req.method === 'GET';
     if (
       // Excluded routes
       req.originalUrl.indexOf('/admin/login') === 0 ||
       req.originalUrl.indexOf('/admin/modules') === 0 ||
-      (req.originalUrl.indexOf('/admin/swagger') === 0 && (await isDev(conduit)))
+      ((req.originalUrl.indexOf('/admin/swagger') === 0 || graphQlCheck) &&
+        (await isDev(conduit)))
     ) {
       return next();
     }
-    const adminConfig = await conduit.getConfigManager().get('admin');
+    const adminConfig = ConfigController.getInstance().config;
 
     const tokenHeader = req.headers.authorization;
     if (isNil(tokenHeader)) {
@@ -49,7 +57,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }
-        (req as ConduitModelOptions).conduit!.admin = admin;
+        req.conduit!.admin = admin;
         next();
       })
       .catch((error: Error) => {

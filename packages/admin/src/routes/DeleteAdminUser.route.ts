@@ -1,4 +1,3 @@
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/commons';
 import {
   ConduitError,
   ConduitRouteActions,
@@ -7,6 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { Admin } from '../models';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
 export function deleteAdminUserRoute() {
   return new ConduitRoute(

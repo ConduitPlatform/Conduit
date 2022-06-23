@@ -1,5 +1,5 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { RouterDefinition, SocketData } from '../../protoUtils/core';
+import { RouterDefinition, SocketData } from '../../protoUtils/router';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {

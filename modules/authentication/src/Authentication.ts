@@ -54,7 +54,8 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
   }
 
@@ -104,11 +105,18 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    this.userRouter = new AuthenticationRoutes(
-      this.grpcServer,
-      this.grpcSdk,
-      this.sendEmail,
-    );
+    if (!this.userRouter) {
+      const self = this;
+      this.grpcSdk.on('router', async () => {
+        self.userRouter = new AuthenticationRoutes(
+          self.grpcServer,
+          self.grpcSdk,
+          self.sendEmail,
+        );
+        await this.userRouter.registerRoutes();
+      });
+      return;
+    }
     await this.userRouter.registerRoutes();
   }
 
@@ -195,8 +203,8 @@ export default class Authentication extends ManagedModule<Config> {
       });
 
       if (verify && this.sendEmail) {
-        const serverConfig = await this.grpcSdk.config.getServerConfig();
-        const url = serverConfig.url;
+        const serverConfig = await this.grpcSdk.config.get('router');
+        const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
           type: TokenType.VERIFICATION_TOKEN,
           userId: user._id,

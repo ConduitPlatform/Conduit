@@ -1,5 +1,5 @@
 {
-  "name": "@conduit/storage",
+  "name": "@conduitplatform/storage",
   "version": "1.0.1",
   "description": "This will provide a consistent storage mechanism",
   "main": "dist/index.js",

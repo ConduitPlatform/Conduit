@@ -7,12 +7,6 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     this.initializeClient(PushNotificationsDefinition);
   }
 
-  setConfig(newConfig: any) {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
-  }
-
   sendNotificationToken(token: string, platform: string, userId: string) {
     return this.client!.setNotificationToken({
       token,

@@ -19,7 +19,6 @@ import { AccessToken, User } from '../models';
 import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
-import { Payload } from '../handlers/oauth2/interfaces/Payload';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 
 type OAuthHandler = typeof oauth2;
@@ -36,7 +35,7 @@ export class AuthenticationRoutes {
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly emailServing: boolean,
   ) {
-    this._routingManager = new RoutingManager(this.grpcSdk.router, server);
+    this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.localHandlers = new LocalHandlers(grpcSdk, emailServing);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
@@ -45,7 +44,7 @@ export class AuthenticationRoutes {
 
   async registerRoutes() {
     const config = ConfigController.getInstance().config;
-    let serverConfig: { url: string };
+    let serverConfig: { hostUrl: string };
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -64,27 +63,27 @@ export class AuthenticationRoutes {
     }
     errorMessage = null;
 
-    serverConfig = await this.grpcSdk.config.getServerConfig();
+    serverConfig = await this.grpcSdk.config.get('router');
     await Promise.all(
-      (Object.keys(oauth2) as (keyof OAuthHandler)[]).map(
-        (key: keyof OAuthHandler, value) => {
-          const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
-            this.grpcSdk,
-            config,
-            serverConfig,
-          );
-          return handler
-            .validate()
-            .then(() => {
+      (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
+        const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
+          this.grpcSdk,
+          config,
+          serverConfig,
+        );
+        return handler
+          .validate()
+          .then((active: boolean) => {
+            if (active) {
               handler.declareRoutes(this._routingManager);
               enabled = true;
-              return;
-            })
-            .catch(e => {
-              ConduitGrpcSdk.Logger.error(e);
-            });
-        },
-      ),
+            }
+            return;
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+      }),
     );
 
     errorMessage = null;

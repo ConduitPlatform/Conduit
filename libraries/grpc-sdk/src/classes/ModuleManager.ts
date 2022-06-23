@@ -51,6 +51,7 @@ export class ModuleManager<T> {
     await this.postRegisterLifecycle().catch((err: Error) => {
       ConduitGrpcSdk.Logger.error('Failed to activate module');
       ConduitGrpcSdk.Logger.error(err);
+      process.exit(-1);
     });
   }
 
@@ -66,22 +67,14 @@ export class ModuleManager<T> {
   private async postRegisterLifecycle(): Promise<void> {
     await this.module.onRegister();
     if (this.module.config) {
-      let config;
-      try {
-        await this.grpcSdk.config.get(this.module.name);
-      } catch (e) {
-        await this.grpcSdk.config.updateConfig(
-          this.module.config.getProperties(),
-          this.module.name,
-        );
-      }
-      config = await this.grpcSdk.config.addFieldsToConfig(
+      let config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
         this.module.name,
       );
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
-      if (!config || config.active) await this.module.onConfig();
+      if (!config || config.active || !config.hasOwnProperty('active'))
+        await this.module.onConfig();
     }
   }
 }

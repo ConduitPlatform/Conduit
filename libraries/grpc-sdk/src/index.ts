@@ -31,6 +31,7 @@ import {
 } from './protoUtils/core';
 import { HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
+import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
@@ -41,9 +42,10 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private readonly _router?: Router;
+  private _redisDetails?: { host: string; port: number };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
+    router: Router,
     database: DatabaseProvider,
     storage: Storage,
     email: Email,
@@ -137,8 +139,9 @@ export default class ConduitGrpcSdk {
       this._grpcToken,
     );
     (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    (this._router as unknown) = new Router(this.name, this.serverUrl, this._grpcToken);
-    this.initializeModules().then();
+    if (this.name !== 'core') {
+      this.initializeModules().then();
+    }
     if (this._watchModules) {
       this.watchModules();
     }
@@ -149,7 +152,7 @@ export default class ConduitGrpcSdk {
     if (this._eventBus) {
       return this._eventBus;
     } else {
-      console.warn('Event bus not initialized');
+      ConduitGrpcSdk.Logger.warn('Event bus not initialized');
       return null;
     }
   }
@@ -158,7 +161,7 @@ export default class ConduitGrpcSdk {
     if (this._stateManager) {
       return this._stateManager;
     } else {
-      console.warn('State Manager not initialized');
+      ConduitGrpcSdk.Logger.warn('State Manager not initialized');
       return null;
     }
   }
@@ -175,15 +178,20 @@ export default class ConduitGrpcSdk {
     return this._admin!;
   }
 
-  get router(): Router {
-    return this._router!;
+  get router(): Router | null {
+    if (this._modules['router']) {
+      return this._modules['router'] as Router;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Router not up yet!');
+      return null;
+    }
   }
 
   get database(): DatabaseProvider | null {
     if (this._modules['database']) {
       return this._modules['database'] as DatabaseProvider;
     } else {
-      console.warn('Database provider not up yet!');
+      ConduitGrpcSdk.Logger.warn('Database provider not up yet!');
       return null;
     }
   }
@@ -196,7 +204,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['storage']) {
       return this._modules['storage'] as Storage;
     } else {
-      console.warn('Storage module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Storage module not up yet!');
       return null;
     }
   }
@@ -205,7 +213,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['forms']) {
       return this._modules['forms'] as Forms;
     } else {
-      console.warn('Forms module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Forms module not up yet!');
       return null;
     }
   }
@@ -214,7 +222,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['email']) {
       return this._modules['email'] as Email;
     } else {
-      console.warn('Email provider not up yet!');
+      ConduitGrpcSdk.Logger.warn('Email provider not up yet!');
       return null;
     }
   }
@@ -223,7 +231,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['pushNotifications']) {
       return this._modules['pushNotifications'] as PushNotifications;
     } else {
-      console.warn('Push notifications module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Push notifications module not up yet!');
       return null;
     }
   }
@@ -232,7 +240,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['authentication']) {
       return this._modules['authentication'] as Authentication;
     } else {
-      console.warn('Authentication module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Authentication module not up yet!');
       return null;
     }
   }
@@ -241,7 +249,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['sms']) {
       return this._modules['sms'] as SMS;
     } else {
-      console.warn('SMS module not up yet!');
+      ConduitGrpcSdk.Logger.warn('SMS module not up yet!');
       return null;
     }
   }
@@ -250,8 +258,16 @@ export default class ConduitGrpcSdk {
     if (this._modules['chat']) {
       return this._modules['chat'] as Chat;
     } else {
-      console.warn('Chat module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Chat module not up yet!');
       return null;
+    }
+  }
+
+  get redisDetails(): { host: string; port: number } {
+    if (this._redisDetails) {
+      return this._redisDetails;
+    } else {
+      throw new Error('Redis not available');
     }
   }
 
@@ -307,6 +323,7 @@ export default class ConduitGrpcSdk {
     return this.config
       .getRedisDetails()
       .then((r: GetRedisDetailsResponse) => {
+        this._redisDetails = { host: r.redisHost, port: r.redisPort };
         const redisManager = new RedisManager(r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
@@ -361,6 +378,10 @@ export default class ConduitGrpcSdk {
     }
   }
 
+  isModuleUp(moduleName: string, moduleUrl: string, service: string = '') {
+    return checkModuleHealth(moduleName, moduleUrl, service, this._grpcToken);
+  }
+
   moduleClient(name: string, type: CompatServiceDefinition): void {
     this._dynamicModules[name] = type;
   }
@@ -377,6 +398,14 @@ export default class ConduitGrpcSdk {
 
   isAvailable(moduleName: string) {
     return !!(this._modules[moduleName] && this._modules[moduleName].active);
+  }
+
+  on(module: string, cb: () => void) {
+    this.waitForExistence(module)
+      .then(() => {
+        cb();
+      })
+      .catch();
   }
 
   async waitForExistence(moduleName: string) {

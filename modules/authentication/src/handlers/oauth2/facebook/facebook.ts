@@ -20,12 +20,12 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { facebook: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'facebook',
-      new OAuth2Settings(serverConfig.url, config.facebook, facebookParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.facebook, facebookParameters),
     );
     this.mapScopes = {
       email: 'email',
