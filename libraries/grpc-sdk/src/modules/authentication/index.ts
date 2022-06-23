@@ -1,7 +1,6 @@
 import { ConduitModule } from '../../classes/ConduitModule';
 import {
   AuthenticationDefinition,
-  SetConfigResponse,
   UserCreateResponse,
   UserDeleteResponse,
   UserLoginResponse,
@@ -11,12 +10,6 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'authentication', url, grpcToken);
     this.initializeClient(AuthenticationDefinition);
-  }
-
-  setConfig(newConfig: any): Promise<SetConfigResponse> {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
   }
 
   userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {

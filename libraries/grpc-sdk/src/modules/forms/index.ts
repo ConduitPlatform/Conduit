@@ -6,10 +6,4 @@ export class Forms extends ConduitModule<typeof FormsDefinition> {
     super(moduleName, 'forms', url, grpcToken);
     this.initializeClient(FormsDefinition);
   }
-
-  setConfig(newConfig: any) {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
-  }
 }
