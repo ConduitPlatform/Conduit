@@ -25,9 +25,7 @@ export default class SecurityModule {
       'helmetGqlFix',
       (req: Request, res: Response, next: NextFunction) => {
         if (
-          (req.url === '/graphql' ||
-            req.url.startsWith('/swagger') ||
-            req.url.startsWith('/admin/swagger')) &&
+          (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
           req.method === 'GET'
         ) {
           res.removeHeader('Content-Security-Policy');
