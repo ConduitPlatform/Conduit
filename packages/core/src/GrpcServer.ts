@@ -57,6 +57,8 @@ export class GrpcServer {
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
+          await this._grpcSdk.initializeEventBus();
+          await this.commons.getAdmin().subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
       })
@@ -75,24 +77,15 @@ export class GrpcServer {
     this._grpcSdk.on('router', () => {
       Core.getInstance().httpServer.initialize(this.grpcSdk, this.server);
     });
+
     this._grpcSdk.on('database', async () => {
       await this.commons.getConfigManager().registerAppConfig();
     });
 
-    let error;
     await this.commons
       .getConfigManager()
-      .get('core')
-      .catch((err: Error) => (error = err));
-    if (error) {
-      await this.commons
-        .getConfigManager()
-        .registerModulesConfig('core', convict.getProperties());
-    } else {
-      await this.commons
-        .getConfigManager()
-        .addFieldsToModule('core', convict.getProperties());
-    }
+      .configurePackage('core', convict.getProperties());
+
     await this.commons.getAdmin().initialize(this.server);
     this.commons.getConfigManager().initConfigAdminRoutes();
 

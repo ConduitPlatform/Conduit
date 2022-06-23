@@ -5,6 +5,7 @@ import { hashPassword } from '../utils/auth';
 import {
   ConduitError,
   ConduitRouteActions,
+  ConfigController,
   ConduitRouteParameters,
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
@@ -37,7 +38,7 @@ export function getCreateAdminRoute(conduit: ConduitCommons) {
       if (!isNil(admin)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
       }
-      const adminConfig = await conduit.getConfigManager().get('admin');
+      const adminConfig = ConfigController.getInstance().config;
       const hashRounds = adminConfig.auth.hashRounds;
       const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });

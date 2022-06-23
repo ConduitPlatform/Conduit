@@ -5,7 +5,12 @@ import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitLogger } from './utils/logger';
 import http from 'http';
-import { ConduitMiddleware, ConduitSocket, SocketPush } from './interfaces';
+import {
+  ConduitRequest,
+  ConduitMiddleware,
+  ConduitSocket,
+  SocketPush,
+} from './interfaces';
 import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -56,15 +61,20 @@ export class ConduitRoutingController {
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
   private readonly logger: ConduitLogger;
+  private readonly _cleanupTimeoutMs: number;
+  private _cleanupTimeout: NodeJS.Timeout | null = null;
   readonly expressApp = express();
   readonly server = http.createServer(this.expressApp);
 
   constructor(
-    private readonly port: number,
+    private readonly httpPort: number,
+    private readonly socketPort: number,
     private readonly baseUrl: string,
     private readonly grpcSdk: ConduitGrpcSdk,
+    cleanupTimeoutMs: number = 0,
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
   ) {
+    this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
     this.logger = new ConduitLogger();
     this.start();
     this._middlewareRouter = Router();
@@ -88,12 +98,14 @@ export class ConduitRoutingController {
     );
 
     this.expressApp.use(baseUrl, (req, res, next) => {
-      if (req.url.startsWith(`${baseUrl}/graphql`) && this._graphQLRouter) {
+      if (req.url.startsWith('/graphql')) {
         if (!this._graphQLRouter) {
-          res.status(500).json({ message: 'GraphQL is not enabled on this server!' });
+          return res
+            .status(500)
+            .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (!req.url.startsWith(`${baseUrl}/graphql`)) {
+      } else if (!req.url.startsWith('/graphql')) {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
       }
@@ -105,7 +117,7 @@ export class ConduitRoutingController {
     this.server
       .addListener('error', this.onError.bind(this))
       .addListener('listening', this.onListening.bind(this));
-    this.server.listen(this.port);
+    this.server.listen(this.httpPort);
   }
 
   initRest() {
@@ -123,10 +135,15 @@ export class ConduitRoutingController {
 
   initSockets(redisHost: string, redisPort: number) {
     if (this._socketRouter) return;
-    this._socketRouter = new SocketController(this._grpcSdk, this.expressApp, {
-      host: redisHost,
-      port: redisPort,
-    });
+    this._socketRouter = new SocketController(
+      this.socketPort,
+      this._grpcSdk,
+      this.expressApp,
+      {
+        host: redisHost,
+        port: redisPort,
+      },
+    );
   }
 
   stopRest() {
@@ -148,7 +165,7 @@ export class ConduitRoutingController {
   }
 
   registerMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void,
+    middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
   ) {
     this._middlewareRouter.use(middleware);
@@ -183,6 +200,25 @@ export class ConduitRoutingController {
   }
 
   cleanupRoutes(routes: any[]) {
+    if (this._cleanupTimeoutMs === 0) {
+      this._cleanupRoutes(routes);
+    } else {
+      if (this._cleanupTimeout) {
+        clearTimeout(this._cleanupTimeout);
+        this._cleanupTimeout = null;
+      }
+      this._cleanupTimeout = setTimeout(() => {
+        try {
+          this._cleanupRoutes(routes);
+        } catch (err) {
+          ConduitGrpcSdk.Logger.error(err);
+        }
+        this._cleanupTimeout = null;
+      }, this._cleanupTimeoutMs);
+    }
+  }
+
+  private _cleanupRoutes(routes: any[]) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
   }
@@ -197,15 +233,17 @@ export class ConduitRoutingController {
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerRouteMiddleware(r);
       } else if (r instanceof ConduitSocket) {
-        console.log('New socket registered: ' + r.input.path + ' handler url: ' + url);
+        ConduitGrpcSdk.Logger.log(
+          'New socket registered: ' + r.input.path + ' handler url: ' + url,
+        );
         this.registerConduitSocket(r);
       } else {
-        console.log(
+        ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
             r.input.action +
             ' ' +
@@ -225,15 +263,17 @@ export class ConduitRoutingController {
       throw error;
     }
     const bind =
-      typeof this.port === 'string' ? 'Pipe ' + this.port : 'Port ' + this.port;
+      typeof this.httpPort === 'string'
+        ? 'Pipe ' + this.httpPort
+        : 'Port ' + this.httpPort;
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case 'EACCES':
-        console.error(bind + ' requires elevated privileges');
+        ConduitGrpcSdk.Logger.error(bind + ' requires elevated privileges');
         process.exit(1);
         break;
       case 'EADDRINUSE':
-        console.error(bind + ' is already in use');
+        ConduitGrpcSdk.Logger.error(bind + ' is already in use');
         process.exit(1);
         break;
       default:
@@ -245,7 +285,7 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    console.log(this.baseUrl.substr(1) + ' listening on ' + bind);
+    ConduitGrpcSdk.Logger.log(this.baseUrl.substr(1) + ' listening on ' + bind);
   }
 
   private registerGlobalMiddleware() {

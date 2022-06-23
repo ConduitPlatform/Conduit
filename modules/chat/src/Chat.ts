@@ -59,7 +59,8 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
       this.updateHealth(

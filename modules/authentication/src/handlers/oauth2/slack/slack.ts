@@ -15,12 +15,12 @@ export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { slack: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'slack',
-      new OAuth2Settings(serverConfig.url, config.slack, slackParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.slack, slackParameters),
     );
     this.defaultScopes = ['users:read'];
   }

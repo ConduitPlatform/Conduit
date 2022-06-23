@@ -12,12 +12,6 @@ export class SMS extends ConduitModule<typeof SmsDefinition> {
     this.initializeClient(SmsDefinition);
   }
 
-  setConfig(newConfig: any): Promise<any> {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
-  }
-
   sendSms(to: string, message: string): Promise<SendSmsResponse> {
     return this.client!.sendSms({ to, message });
   }

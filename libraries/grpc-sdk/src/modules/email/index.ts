@@ -7,12 +7,6 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     this.initializeClient(EmailDefinition);
   }
 
-  setConfig(newConfig: any) {
-    return this.client!.setConfig({ newConfig: JSON.stringify(newConfig) }).then(res => {
-      return JSON.parse(res.updatedConfig);
-    });
-  }
-
   registerTemplate(template: {
     name: string;
     subject: string;

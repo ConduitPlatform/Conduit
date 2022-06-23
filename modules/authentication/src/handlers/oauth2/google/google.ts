@@ -19,12 +19,12 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
   constructor(
     grpcSdk: ConduitGrpcSdk,
     config: { google: ProviderConfig },
-    serverConfig: { url: string },
+    serverConfig: { hostUrl: string },
   ) {
     super(
       grpcSdk,
       'google',
-      new OAuth2Settings(serverConfig.url, config.google, googleParameters),
+      new OAuth2Settings(serverConfig.hostUrl, config.google, googleParameters),
     );
     this.defaultScopes = [
       'https://www.googleapis.com/auth/userinfo.email',

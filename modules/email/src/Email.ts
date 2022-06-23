@@ -46,7 +46,8 @@ export default class Email extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
   }
 

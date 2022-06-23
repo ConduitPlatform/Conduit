@@ -152,7 +152,7 @@ export default class ConduitGrpcSdk {
     if (this._eventBus) {
       return this._eventBus;
     } else {
-      console.warn('Event bus not initialized');
+      ConduitGrpcSdk.Logger.warn('Event bus not initialized');
       return null;
     }
   }
@@ -161,7 +161,7 @@ export default class ConduitGrpcSdk {
     if (this._stateManager) {
       return this._stateManager;
     } else {
-      console.warn('State Manager not initialized');
+      ConduitGrpcSdk.Logger.warn('State Manager not initialized');
       return null;
     }
   }
@@ -182,7 +182,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['router']) {
       return this._modules['router'] as Router;
     } else {
-      console.warn('Router not up yet!');
+      ConduitGrpcSdk.Logger.warn('Router not up yet!');
       return null;
     }
   }
@@ -191,7 +191,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['database']) {
       return this._modules['database'] as DatabaseProvider;
     } else {
-      console.warn('Database provider not up yet!');
+      ConduitGrpcSdk.Logger.warn('Database provider not up yet!');
       return null;
     }
   }
@@ -204,7 +204,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['storage']) {
       return this._modules['storage'] as Storage;
     } else {
-      console.warn('Storage module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Storage module not up yet!');
       return null;
     }
   }
@@ -213,7 +213,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['forms']) {
       return this._modules['forms'] as Forms;
     } else {
-      console.warn('Forms module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Forms module not up yet!');
       return null;
     }
   }
@@ -222,7 +222,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['email']) {
       return this._modules['email'] as Email;
     } else {
-      console.warn('Email provider not up yet!');
+      ConduitGrpcSdk.Logger.warn('Email provider not up yet!');
       return null;
     }
   }
@@ -231,7 +231,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['pushNotifications']) {
       return this._modules['pushNotifications'] as PushNotifications;
     } else {
-      console.warn('Push notifications module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Push notifications module not up yet!');
       return null;
     }
   }
@@ -240,7 +240,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['authentication']) {
       return this._modules['authentication'] as Authentication;
     } else {
-      console.warn('Authentication module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Authentication module not up yet!');
       return null;
     }
   }
@@ -249,7 +249,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['sms']) {
       return this._modules['sms'] as SMS;
     } else {
-      console.warn('SMS module not up yet!');
+      ConduitGrpcSdk.Logger.warn('SMS module not up yet!');
       return null;
     }
   }
@@ -258,7 +258,7 @@ export default class ConduitGrpcSdk {
     if (this._modules['chat']) {
       return this._modules['chat'] as Chat;
     } else {
-      console.warn('Chat module not up yet!');
+      ConduitGrpcSdk.Logger.warn('Chat module not up yet!');
       return null;
     }
   }

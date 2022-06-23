@@ -42,7 +42,7 @@ export class ClientValidator {
     }
 
     const securityConfig = ConfigController.getInstance().config.security;
-    if (!securityConfig.clientValidation.enabled) {
+    if (!securityConfig.clientValidation) {
       req.conduit!.clientId = 'anonymous-client';
       delete req.headers.clientsecret;
       delete req.headers.clientid;

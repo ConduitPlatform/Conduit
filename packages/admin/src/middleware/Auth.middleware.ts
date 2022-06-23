@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
@@ -13,15 +13,18 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     res: Response,
     next: NextFunction,
   ) {
+    const graphQlCheck =
+      req.originalUrl.indexOf('/admin/graphql') === 0 && req.method === 'GET';
     if (
       // Excluded routes
       req.originalUrl.indexOf('/admin/login') === 0 ||
       req.originalUrl.indexOf('/admin/modules') === 0 ||
-      (req.originalUrl.indexOf('/admin/swagger') === 0 && (await isDev(conduit)))
+      ((req.originalUrl.indexOf('/admin/swagger') === 0 || graphQlCheck) &&
+        (await isDev(conduit)))
     ) {
       return next();
     }
-    const adminConfig = await conduit.getConfigManager().get('admin');
+    const adminConfig = ConfigController.getInstance().config;
 
     const tokenHeader = req.headers.authorization;
     if (isNil(tokenHeader)) {

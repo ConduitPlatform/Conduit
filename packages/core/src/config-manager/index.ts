@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   GrpcServer,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
 import {
   ConduitCommons,
   GetConfigResponse,
@@ -96,7 +95,7 @@ export default class ConfigManager implements IConfigManager {
         return Promise.resolve();
       }
     } catch {
-      console.error('Failed to recover state');
+      ConduitGrpcSdk.Logger.error('Failed to recover state');
     }
   }
 
@@ -105,10 +104,10 @@ export default class ConfigManager implements IConfigManager {
       .getState()
       .setKey('config', JSON.stringify(state))
       .then(() => {
-        console.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        console.error('Failed to recover state');
+        ConduitGrpcSdk.Logger.error('Failed to recover state');
       });
   }
 
@@ -154,20 +153,22 @@ export default class ConfigManager implements IConfigManager {
   }
 
   getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
-    this.get(call.request.key)
-      .then(r => {
-        callback(null, { data: JSON.stringify(r) });
-      })
-      .catch(err => {
-        callback({
+    this.get(call.request.key).then(r => {
+      if (!r) {
+        return callback({
           code: status.INTERNAL,
-          message: err.message ? err.message : err,
+          message: 'Config for module not set!',
         });
-      });
+      }
+      callback(null, { data: JSON.stringify(r) });
+    });
   }
 
   async get(moduleName: string) {
-    return this._configStorage.getConfig(moduleName);
+    return this._configStorage
+      .getConfig(moduleName)
+      .then(config => config)
+      .catch(() => null);
   }
 
   async set(moduleName: string, moduleConfig: any) {
@@ -185,7 +186,7 @@ export default class ConfigManager implements IConfigManager {
       }
       return moduleConfig;
     } catch (e) {
-      console.error(`Could not update "${moduleName}" configuration`);
+      ConduitGrpcSdk.Logger.error(`Could not update "${moduleName}" configuration`);
     }
   }
 
@@ -216,13 +217,20 @@ export default class ConfigManager implements IConfigManager {
     callback: GrpcCallback<UpdateResponse>,
   ) {
     let config = JSON.parse(call.request.config);
-    try {
-      await this.get(call.request.moduleName);
-    } catch (e) {
+    const existingConfig = await this.get(call.request.moduleName);
+    if (!existingConfig) {
       await this.set(call.request.moduleName, config);
     }
     config = await this.addFieldsToModule(call.request.moduleName, config);
     return callback(null, { result: JSON.stringify(config) });
+  }
+
+  async configurePackage(moduleName: string, config: any) {
+    const existingConfig = await this.get(moduleName);
+    if (!existingConfig) {
+      await this.set(moduleName, config);
+    }
+    return await this.addFieldsToModule(moduleName, config);
   }
 
   async addFieldsToModule(moduleName: string, moduleConfig: any) {
@@ -230,6 +238,19 @@ export default class ConfigManager implements IConfigManager {
     existingConfig = { ...moduleConfig, ...existingConfig };
     await this._configStorage.setConfig(moduleName, JSON.stringify(existingConfig));
     return existingConfig;
+  }
+
+  async isModuleUp(moduleName: string) {
+    if (!this.serviceDiscovery.registeredModules.has(moduleName)) return false;
+    try {
+      await this.grpcSdk.isModuleUp(
+        moduleName,
+        this.serviceDiscovery.registeredModules.get(moduleName)!.address,
+      );
+    } catch (e) {
+      return false;
+    }
+    return true;
   }
 
   addFieldsToConfig(

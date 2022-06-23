@@ -17,16 +17,10 @@ export default {
       default: true,
     },
   },
-  port: {
-    format: 'Number',
-    default: 8080,
-  },
   security: {
     clientValidation: {
-      enabled: {
-        format: 'Boolean',
-        default: false,
-      },
+      format: 'Boolean',
+      default: false,
     },
   },
 };

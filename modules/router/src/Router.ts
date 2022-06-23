@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConfigController,
@@ -24,7 +24,7 @@ import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
-import { AdminHandlers } from './admin/admin';
+import { AdminHandlers } from './admin';
 import {
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
@@ -60,19 +60,26 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    this.database = this.grpcSdk.databaseProvider!;
+    if (!this.grpcSdk.database) {
+      await this.grpcSdk.waitForExistence('database');
+      this.database = this.grpcSdk.databaseProvider!;
+    }
     await runMigrations(this.grpcSdk);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
+      this.getSocketPort()!,
       '',
       this.grpcSdk,
+      1000,
     );
-    this._internalRouter.registerRoute('*', [
-      (req, res, next) => {
-        (req as ConduitRequest)['conduit'] = {};
+    this.registerGlobalMiddleware(
+      'conduitRequestMiddleware',
+      (req: ConduitRequest, res: Response, next: NextFunction) => {
+        req['conduit'] = {};
         next();
       },
-    ]);
+      true,
+    );
   }
 
   async onRegister() {
@@ -124,11 +131,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
-  getHttpPort() {
-    const value = (process.env['PORT'] || process.env['CLIENT_PORT']) ?? '3000';
+  private getHttpPort() {
+    const value = (process.env['CLIENT_HTTP_PORT'] || process.env['PORT']) ?? '3000'; // <=v13 compat (PORT)
     const port = parseInt(value, 10);
     if (isNaN(port)) {
-      console.error(`Invalid HTTP port value: ${port}`);
+      ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private getSocketPort() {
+    const value = process.env['CLIENT_SOCKET_PORT'] ?? '3001';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
       process.exit(-1);
     }
     if (port >= 0) {
