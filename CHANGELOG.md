@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.1](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0...v0.13.1) (2022-06-23)
+
+
+### Features
+
+* **grpc-sdk:** add conduit logger for consistent logging ([#213](https://github.com/ConduitPlatform/Conduit/issues/213)) ([6af6bb8](https://github.com/ConduitPlatform/Conduit/commit/6af6bb8e462ccb2ae2b1a171ef9b550722d4d068))
+
+
+### Bug Fixes
+
+* **database:** wrong introspection counts ([#216](https://github.com/ConduitPlatform/Conduit/issues/216)) ([30316d4](https://github.com/ConduitPlatform/Conduit/commit/30316d4fa7a6bfa4052f5a8ab04faf194c511857))
+
 ## [0.13.0](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0-rc.3...v0.13.0) (2022-06-17)
 
 
