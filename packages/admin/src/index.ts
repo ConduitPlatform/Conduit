@@ -31,7 +31,8 @@ import {
   RouteT,
   SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
-import { Response, NextFunction } from 'express';
+import { Response, NextFunction, Request } from 'express';
+import helmet from 'helmet';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/admin',
@@ -161,6 +162,16 @@ export default class AdminModule extends IConduitAdmin {
       middleware.getAuthMiddleware(this.grpcSdk, this.commons),
       true,
     );
+    this._router.registerMiddleware(helmet(), false);
+    this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {
+      if (
+        (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
+        req.method === 'GET'
+      ) {
+        res.removeHeader('Content-Security-Policy');
+      }
+      next();
+    }, false);
   }
 
   protected onConfig() {
