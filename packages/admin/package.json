@@ -33,6 +33,7 @@
     "@grpc/proto-loader": "^0.5.4",
     "bcrypt": "^5.0.1",
     "convict": "^6.0.0",
+    "helmet": "^4.6.0",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15"
   },
