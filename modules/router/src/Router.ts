@@ -37,6 +37,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
     functions: {
+      setConfig: this.setConfig.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     },
