@@ -108,13 +108,17 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         });
       }
       let config = JSON.parse(call.request.newConfig);
+      config = { ...this.config.getProperties(), ...config };
       config = await this.preConfig(config);
+      const previousConfig = this.config.getProperties();
       try {
         this.config.load(config).validate();
+        config = this.config.getProperties();
       } catch (e) {
+        this.config.load(previousConfig);
         return callback({
           code: status.INVALID_ARGUMENT,
-          message: 'Invalid configuration values',
+          message: 'Invalid configuration values: ' + e.message,
         });
       }
       ConfigController.getInstance().config = config;

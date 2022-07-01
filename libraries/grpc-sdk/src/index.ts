@@ -296,14 +296,15 @@ export default class ConduitGrpcSdk {
     });
   }
 
-  async monitorModule(
+  monitorModule(
     moduleName: string,
     callback: (serving: boolean) => void,
     wait: boolean = true,
   ) {
-    if (wait) await this.waitForExistence(moduleName);
-    this._modules['chat']?.healthClient
-      ?.check({})
+    let waitPromise = Promise.resolve();
+    if (wait) waitPromise.then(() => this.waitForExistence(moduleName));
+    waitPromise
+      .then(() => this._modules['chat']?.healthClient?.check({}))
       .then(res => {
         callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
       })
