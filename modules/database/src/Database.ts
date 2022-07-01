@@ -76,7 +76,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async preServerStart() {
-    this._activeAdapter.connect();
+    await this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
   }
 

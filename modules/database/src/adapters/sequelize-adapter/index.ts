@@ -27,7 +27,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.connectionUri = connectionUri;
   }
 
-  connect() {
+  async connect() {
+    // TODO: Don't return until successful connect. ~5 attemps with delay, otherwise crash (?)
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
