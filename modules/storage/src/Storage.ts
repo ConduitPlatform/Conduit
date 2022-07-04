@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
@@ -100,16 +100,20 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    const self = this;
-    this.grpcSdk.on('router', async () => {
-      self.userRouter = new StorageRoutes(
-        self.grpcServer,
-        self.grpcSdk,
-        self._fileHandlers,
-        self.enableAuthRoutes,
-      );
-      await self.userRouter.registerRoutes();
-    });
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.userRouter = new StorageRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this._fileHandlers,
+          this.enableAuthRoutes,
+        );
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 
   protected registerSchemas() {

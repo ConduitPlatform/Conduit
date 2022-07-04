@@ -132,9 +132,12 @@ export default class AdminModule extends IConduitAdmin {
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
-    this.grpcSdk.on('database', async () => {
-      await this.handleDatabase().catch(ConduitGrpcSdk.Logger.log);
-    });
+    this.grpcSdk
+      .waitForExistence('database')
+      .then(() => this.handleDatabase())
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 
   private registerAdminRoutes() {

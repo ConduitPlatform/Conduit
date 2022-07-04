@@ -406,14 +406,6 @@ export default class ConduitGrpcSdk {
     return !!(this._modules[moduleName] && this._modules[moduleName].active);
   }
 
-  on(module: string, cb: () => void) {
-    this.waitForExistence(module)
-      .then(() => {
-        cb();
-      })
-      .catch();
-  }
-
   async waitForExistence(moduleName: string) {
     while (!this._modules[moduleName]) {
       await sleep(1000);

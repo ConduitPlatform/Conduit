@@ -105,19 +105,24 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    if (!this.userRouter) {
-      const self = this;
-      this.grpcSdk.on('router', async () => {
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes();
+      return;
+    }
+    const self = this;
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
         self.userRouter = new AuthenticationRoutes(
           self.grpcServer,
           self.grpcSdk,
           self.sendEmail,
         );
-        await this.userRouter.registerRoutes();
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
       });
-      return;
-    }
-    await this.userRouter.registerRoutes();
   }
 
   // gRPC Service
