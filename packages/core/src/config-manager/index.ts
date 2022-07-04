@@ -122,7 +122,7 @@ export default class ConfigManager implements IConfigManager {
           }),
         });
       })
-      .catch(e => {
+      .catch(() => {
         return callback({
           code: status.NOT_FOUND,
           message: 'Server config not found!',
@@ -173,15 +173,13 @@ export default class ConfigManager implements IConfigManager {
 
   async set(moduleName: string, moduleConfig: any) {
     try {
-      await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
       switch (moduleName) {
         case 'core':
-          this.sdk.getCore().setConfig(moduleConfig);
-          break;
         case 'admin':
-          this.sdk.getAdmin().setConfig(moduleConfig);
+          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
           break;
         default:
+          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
           break;
       }
       return moduleConfig;
@@ -194,7 +192,7 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
-    const moduleName = call.request.moduleName;
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const moduleConfig = JSON.parse(call.request.config);
     try {
       await this.set(moduleName, moduleConfig);
@@ -216,12 +214,13 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     let config = JSON.parse(call.request.config);
-    const existingConfig = await this.get(call.request.moduleName);
+    const existingConfig = await this.get(moduleName);
     if (!existingConfig) {
-      await this.set(call.request.moduleName, config);
+      await this.set(moduleName, config);
     }
-    config = await this.addFieldsToModule(call.request.moduleName, config);
+    config = await this.addFieldsToModule(moduleName, config);
     return callback(null, { result: JSON.stringify(config) });
   }
 
@@ -257,8 +256,9 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const newFields = JSON.parse(call.request.config);
-    this.addFieldsToModule(call.request.moduleName, newFields)
+    this.addFieldsToModule(moduleName, newFields)
       .then(r => {
         return callback(null, { result: JSON.stringify(r) });
       })

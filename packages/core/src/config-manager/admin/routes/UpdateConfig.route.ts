@@ -37,10 +37,20 @@ export function getUpdateConfigRoute(
       }
       switch (moduleName) {
         case 'core':
-          updatedConfig = await conduit.getConfigManager().set('core', newConfig);
+          updatedConfig = await conduit
+            .getCore()
+            .setConfig(newConfig)
+            .catch(e => {
+              throw new ConduitError(e.name, e.status, e.message);
+            });
           break;
         case 'admin':
-          updatedConfig = await conduit.getConfigManager().set('admin', newConfig);
+          updatedConfig = await conduit
+            .getAdmin()
+            .setConfig(newConfig)
+            .catch(e => {
+              throw new ConduitError(e.name, e.status, e.message);
+            });
           break;
         default:
           if (!registeredModules.has(moduleName) || !grpcSdk.isAvailable(moduleName))
@@ -54,8 +64,10 @@ export function getUpdateConfigRoute(
                 .setConfig({ newConfig: JSON.stringify(newConfig) })
             ).updatedConfig,
           );
-          await conduit.getConfigManager().set(moduleName, updatedConfig);
+          // await conduit.getConfigManager().set(moduleName, updatedConfig);
+          break;
       }
+      await conduit.getConfigManager().set(moduleName, updatedConfig);
       return { result: { config: updatedConfig } };
     },
   );

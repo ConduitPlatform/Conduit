@@ -22,7 +22,6 @@ service Admin {
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
 }
 
-
 message RegisterAdminRouteRequest {
   repeated PathDefinition routes = 1;
   string protoFile = 2;
@@ -110,15 +109,15 @@ message GetRedisDetailsResponse {
 message GetConfigResponse {
   string data = 1;
 }
+
 message UpdateRequest {
   string config = 1;
-  string moduleName = 2;
 }
+
 message UpdateResponse {
   string result = 1;
 }
 
 message RegisterModulesConfigRequest {
-  string moduleName = 1;
-  string newModulesConfigSchema = 2;
+  string newModulesConfigSchema = 1;
 }
