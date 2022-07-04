@@ -102,14 +102,10 @@ export default class ConduitGrpcSdk {
     }
     (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
     ConduitGrpcSdk.Logger.log('Waiting for Core...');
-    const delay = this.name === 'database' ? 250 : 1000;
     while (true) {
       try {
         const state = await this.core.check();
-        if (
-          this.name === 'database' ||
-          ((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING
-        ) {
+        if (((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
           this._initialize();
           break;
@@ -119,7 +115,7 @@ export default class ConduitGrpcSdk {
           ConduitGrpcSdk.Logger.error(err);
           process.exit(-1);
         }
-        await sleep(delay);
+        await sleep(1000);
       }
     }
   }
