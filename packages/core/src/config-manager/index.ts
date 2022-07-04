@@ -122,7 +122,7 @@ export default class ConfigManager implements IConfigManager {
           }),
         });
       })
-      .catch(e => {
+      .catch(() => {
         return callback({
           code: status.NOT_FOUND,
           message: 'Server config not found!',
@@ -173,15 +173,13 @@ export default class ConfigManager implements IConfigManager {
 
   async set(moduleName: string, moduleConfig: any) {
     try {
-      await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
       switch (moduleName) {
         case 'core':
-          this.sdk.getCore().setConfig(moduleConfig);
-          break;
         case 'admin':
-          this.sdk.getAdmin().setConfig(moduleConfig);
+          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
           break;
         default:
+          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
           break;
       }
       return moduleConfig;

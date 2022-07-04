@@ -1,12 +1,16 @@
+import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
 import { HttpServer } from './routes';
 import { GrpcServer } from './GrpcServer';
 import { isNil } from 'lodash';
+import AppConfigSchema, { Config as ConfigSchema } from './config';
+import convict from 'convict';
 
 export class Core extends IConduitCore {
   private static _instance: Core;
   private readonly _httpServer: HttpServer;
   private readonly _grpcServer: GrpcServer;
+  readonly config: convict.Config<ConfigSchema> = AppConfigSchema;
 
   get httpServer() {
     return this._httpServer;
@@ -35,5 +39,26 @@ export class Core extends IConduitCore {
       Core._instance = new Core(grpcPort);
     }
     return Core._instance;
+  }
+
+  async setConfig(moduleConfig: any): Promise<any> {
+    const previousConfig = await this.commons.getConfigManager().get('core');
+    let config = { ...previousConfig, ...moduleConfig };
+    try {
+      this.config.load(config).validate();
+      config = this.config.getProperties();
+    } catch (e) {
+      this.config.load(previousConfig);
+      config = { ...this.config.getProperties(), ...config };
+      try {
+        this.config.load(config).validate();
+        config = this.config.getProperties();
+      } catch (e) {
+        this.config.load(previousConfig);
+        throw new ConduitError('INVALID_ARGUMENT', 400, e.message);
+      }
+      this.commons.getBus().publish('core:config:update', JSON.stringify(config));
+    }
+    return config;
   }
 }

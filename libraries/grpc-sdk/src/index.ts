@@ -301,7 +301,7 @@ export default class ConduitGrpcSdk {
     callback: (serving: boolean) => void,
     wait: boolean = true,
   ) {
-    let waitPromise = Promise.resolve();
+    const waitPromise = Promise.resolve();
     if (wait) waitPromise.then(() => this.waitForExistence(moduleName));
     waitPromise
       .then(() => this._modules['chat']?.healthClient?.check({}))

@@ -1,6 +1,7 @@
 import { isNaN, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  ConduitError,
   ConduitRouteActions,
   GrpcServer,
   ConfigController,
@@ -31,6 +32,8 @@ import {
   RouteT,
   SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
+import AppConfigSchema, { Config as ConfigSchema } from './config';
+import convict from 'convict';
 import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 
@@ -78,6 +81,7 @@ export default class AdminModule extends IConduitAdmin {
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
+  readonly config: convict.Config<ConfigSchema> = AppConfigSchema;
 
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
@@ -444,5 +448,27 @@ export default class AdminModule extends IConduitAdmin {
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
+  }
+
+  async setConfig(moduleConfig: any): Promise<any> {
+    const previousConfig = await this.commons.getConfigManager().get('core');
+    let config = { ...previousConfig, ...moduleConfig };
+    try {
+      this.config.load(config).validate();
+      config = this.config.getProperties();
+    } catch (e) {
+      this.config.load(previousConfig);
+      config = { ...this.config.getProperties(), ...config };
+      try {
+        this.config.load(config).validate();
+        config = this.config.getProperties();
+      } catch (e) {
+        this.config.load(previousConfig);
+        throw new ConduitError('INVALID_ARGUMENT', 400, e.message);
+      }
+      this.commons.getBus().publish('core:config:update', JSON.stringify(config));
+    }
+    ConfigController.getInstance().config = config;
+    return config;
   }
 }
