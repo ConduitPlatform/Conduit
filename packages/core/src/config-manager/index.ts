@@ -63,7 +63,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async highAvailability() {
-    const loadedState = await this.sdk.getState().getKey('config');
+    const loadedState = await this.grpcSdk.state!.getKey('config');
     try {
       if (!loadedState || loadedState.length === 0) return;
       const state = JSON.parse(loadedState);
@@ -100,9 +100,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   setState(state: any) {
-    this.sdk
-      .getState()
-      .setKey('config', JSON.stringify(state))
+    this.grpcSdk
+      .state!.setKey('config', JSON.stringify(state))
       .then(() => {
         ConduitGrpcSdk.Logger.log('Updated state');
       })

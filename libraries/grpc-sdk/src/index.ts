@@ -312,11 +312,25 @@ export default class ConduitGrpcSdk {
   }
 
   initializeEventBus(): Promise<EventBus> {
-    return this.config
-      .getRedisDetails()
-      .then((r: GetRedisDetailsResponse) => {
-        this._redisDetails = { host: r.redisHost, port: r.redisPort };
-        const redisManager = new RedisManager(r.redisHost, r.redisPort);
+    let promise = Promise.resolve();
+    if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+      this._redisDetails = {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT, 10),
+      };
+    } else {
+      promise
+        .then(() => this.config.getRedisDetails())
+        .then((r: GetRedisDetailsResponse) => {
+          this._redisDetails = { host: r.redisHost, port: r.redisPort };
+        });
+    }
+    return promise
+      .then(() => {
+        const redisManager = new RedisManager(
+          this._redisDetails!.host,
+          this._redisDetails!.port,
+        );
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;

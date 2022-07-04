@@ -42,7 +42,7 @@ export class ServiceDiscovery {
   }
 
   publishModuleData(type: string, name: string, instance: string, url?: string) {
-    this.sdk.getBus().publish(
+    this.grpcSdk.bus!.publish(
       'config',
       JSON.stringify({
         type,
@@ -283,9 +283,8 @@ export class ServiceDiscovery {
   }
 
   updateState(name: string, url: string, instance: string) {
-    this.sdk
-      .getState()
-      .getKey('config')
+    this.grpcSdk
+      .state!.getKey('config')
       .then(r => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
@@ -299,7 +298,7 @@ export class ServiceDiscovery {
           instance,
           url,
         });
-        return this.sdk.getState().setKey('config', JSON.stringify(state));
+        return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
       })
       .then(() => {
         ConduitGrpcSdk.Logger.log('Updated state');

@@ -143,4 +143,8 @@ export class GrpcServer {
       });
     }
   }
+
+  get sdk() {
+    return this._grpcSdk;
+  }
 }
