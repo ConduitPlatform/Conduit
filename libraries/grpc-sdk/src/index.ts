@@ -319,7 +319,7 @@ export default class ConduitGrpcSdk {
         port: parseInt(process.env.REDIS_PORT, 10),
       };
     } else {
-      promise
+      promise = promise
         .then(() => this.config.getRedisDetails())
         .then((r: GetRedisDetailsResponse) => {
           this._redisDetails = { host: r.redisHost, port: r.redisPort };

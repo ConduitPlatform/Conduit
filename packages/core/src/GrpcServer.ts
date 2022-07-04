@@ -51,13 +51,13 @@ export class GrpcServer {
           false,
         );
         this._grpcSdk.initialize().then(async () => {
+          await this._grpcSdk.initializeEventBus();
           this.commons.registerConfigManager(
             new ConfigManager(this._grpcSdk, this.commons),
           );
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
-          await this._grpcSdk.initializeEventBus();
           await this.commons.getAdmin().subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
