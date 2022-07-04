@@ -192,7 +192,7 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
-    const moduleName = call.request.moduleName;
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const moduleConfig = JSON.parse(call.request.config);
     try {
       await this.set(moduleName, moduleConfig);
@@ -214,12 +214,13 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     let config = JSON.parse(call.request.config);
-    const existingConfig = await this.get(call.request.moduleName);
+    const existingConfig = await this.get(moduleName);
     if (!existingConfig) {
-      await this.set(call.request.moduleName, config);
+      await this.set(moduleName, config);
     }
-    config = await this.addFieldsToModule(call.request.moduleName, config);
+    config = await this.addFieldsToModule(moduleName, config);
     return callback(null, { result: JSON.stringify(config) });
   }
 
@@ -255,8 +256,9 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
     const newFields = JSON.parse(call.request.config);
-    this.addFieldsToModule(call.request.moduleName, newFields)
+    this.addFieldsToModule(moduleName, newFields)
       .then(r => {
         return callback(null, { result: JSON.stringify(r) });
       })
