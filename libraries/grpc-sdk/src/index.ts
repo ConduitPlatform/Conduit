@@ -62,8 +62,17 @@ export default class ConduitGrpcSdk {
   private readonly name: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
-  static Logger: ConduitLogger;
   private _initialized: boolean = false;
+  static readonly Logger: ConduitLogger = new ConduitLogger([
+    new winston.transports.File({
+      filename: path.join(__dirname, '.logs/combined.log'),
+      level: 'info',
+    }),
+    new winston.transports.File({
+      filename: path.join(__dirname, '.logs/errors.log'),
+      level: 'error',
+    }),
+  ]);
 
   constructor(
     serverUrl: string,
@@ -79,21 +88,8 @@ export default class ConduitGrpcSdk {
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
-    const grpcKey = process.env.GRPC_KEY;
-    if (!ConduitGrpcSdk.Logger) {
-      ConduitGrpcSdk.Logger = new ConduitLogger([
-        new winston.transports.File({
-          filename: path.join(__dirname, '.logs/combined.log'),
-          level: 'info',
-        }),
-        new winston.transports.File({
-          filename: path.join(__dirname, '.logs/errors.log'),
-          level: 'error',
-        }),
-      ]);
-    }
-    if (grpcKey) {
-      const sign = createSigner({ key: grpcKey });
+    if (process.env.GRPC_KEY) {
+      const sign = createSigner({ key: process.env.GRPC_KEY });
       this._grpcToken = sign({
         moduleName: this.name,
       });
@@ -102,29 +98,24 @@ export default class ConduitGrpcSdk {
 
   async initialize() {
     if (this.name === 'core') {
-      this._initialize();
-    } else {
-      (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
-      ConduitGrpcSdk.Logger.log('Waiting for Core...');
-      const delay = this.name === 'database' ? 250 : 1000;
-      while (true) {
-        try {
-          const state = await this.core.check();
-          if (
-            this.name === 'database' ||
-            ((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING
-          ) {
-            ConduitGrpcSdk.Logger.log('Core connection established');
-            this._initialize();
-            break;
-          }
-        } catch (err) {
-          if (err.code === status.PERMISSION_DENIED) {
-            ConduitGrpcSdk.Logger.error(err);
-            process.exit(-1);
-          }
-          await sleep(delay);
+      return this._initialize();
+    }
+    (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
+    ConduitGrpcSdk.Logger.log('Waiting for Core...');
+    while (true) {
+      try {
+        const state = await this.core.check();
+        if (((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+          ConduitGrpcSdk.Logger.log('Core connection established');
+          this._initialize();
+          break;
         }
+      } catch (err) {
+        if (err.code === status.PERMISSION_DENIED) {
+          ConduitGrpcSdk.Logger.error(err);
+          process.exit(-1);
+        }
+        await sleep(1000);
       }
     }
   }
@@ -321,11 +312,25 @@ export default class ConduitGrpcSdk {
   }
 
   initializeEventBus(): Promise<EventBus> {
-    return this.config
-      .getRedisDetails()
-      .then((r: GetRedisDetailsResponse) => {
-        this._redisDetails = { host: r.redisHost, port: r.redisPort };
-        const redisManager = new RedisManager(r.redisHost, r.redisPort);
+    let promise = Promise.resolve();
+    if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+      this._redisDetails = {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT, 10),
+      };
+    } else {
+      promise = promise
+        .then(() => this.config.getRedisDetails())
+        .then((r: GetRedisDetailsResponse) => {
+          this._redisDetails = { host: r.redisHost, port: r.redisPort };
+        });
+    }
+    return promise
+      .then(() => {
+        const redisManager = new RedisManager(
+          this._redisDetails!.host,
+          this._redisDetails!.port,
+        );
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;

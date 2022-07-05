@@ -16,12 +16,7 @@
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/hermes": "^1.0.0",
-    "@grpc/grpc-js": "^1.5.2",
-    "convict": "^6.2.3",
-    "ioredis": "^4.23.0",
-    "is-natural-number": "^4.0.1",
-    "lodash": "^4.17.15",
-    "validator": "^13.0.0"
+    "@grpc/grpc-js": "^1.5.2"
   },
   "directories": {
     "lib": "src"

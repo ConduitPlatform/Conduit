@@ -24,14 +24,14 @@ export class ConfigStorage {
         this.changeState(false);
         this.reconcileMonitor();
       })
-      .catch(err => {
+      .catch(() => {
         this.changeState(false);
         ConduitGrpcSdk.Logger.error('Reconciliation with db failed!');
       });
   }
 
   highAvailability() {
-    this.commons.getBus().subscribe('config', (message: string) => {
+    this.grpcSdk.bus!.subscribe('config', (message: string) => {
       if (message === 'reconciling') {
         this.reconciling = true;
       } else if (message === 'reconcile-done') {
@@ -42,9 +42,7 @@ export class ConfigStorage {
 
   changeState(reconciling: boolean) {
     this.reconciling = reconciling;
-    this.commons
-      .getBus()
-      .publish('config', reconciling ? 'reconciling' : 'reconcile-done');
+    this.grpcSdk.bus!.publish('config', reconciling ? 'reconciling' : 'reconcile-done');
   }
 
   async firstSync() {
@@ -141,9 +139,9 @@ export class ConfigStorage {
       await this.waitForReconcile();
     }
 
-    let config: string | null = await this.commons
-      .getState()
-      .getKey(`moduleConfigs.${moduleName}`);
+    const config: string | null = await this.grpcSdk.state!.getKey(
+      `moduleConfigs.${moduleName}`,
+    );
     if (!config) {
       throw new Error('Config not found for ' + moduleName);
     }
@@ -154,7 +152,7 @@ export class ConfigStorage {
     if (waitReconcile) {
       await this.waitForReconcile();
     }
-    await this.commons.getState().setKey(`moduleConfigs.${moduleName}`, config);
+    await this.grpcSdk.state!.setKey(`moduleConfigs.${moduleName}`, config);
     if (!this.toBeReconciled.includes(moduleName) && waitReconcile) {
       this.toBeReconciled.push(moduleName);
     }

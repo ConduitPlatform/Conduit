@@ -255,7 +255,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private async highAvailability() {
-    const r = await this.commons.getState().getKey('admin');
+    const r = await this.grpcSdk.state!.getKey('admin');
     if (!r || r.length === 0) {
       this.cleanupRoutes();
       return;
@@ -288,7 +288,7 @@ export default class AdminModule extends IConduitAdmin {
       await Promise.all(promises);
     }
 
-    this.commons.getBus().subscribe('admin', (message: string) => {
+    this.grpcSdk.bus!.subscribe('admin', (message: string) => {
       const messageParsed = JSON.parse(message);
       try {
         this.internalRegisterRoute(
@@ -309,9 +309,8 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    this.commons
-      .getState()
-      .getKey('admin')
+    this.grpcSdk
+      .state!.getKey('admin')
       .then((r: any) => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
@@ -331,7 +330,7 @@ export default class AdminModule extends IConduitAdmin {
             moduleName,
           });
         }
-        return this.commons.getState().setKey('admin', JSON.stringify(state));
+        return this.grpcSdk.state!.setKey('admin', JSON.stringify(state));
       })
       .then(() => {
         this.publishAdminRouteData(protofile, routes, url, moduleName);
@@ -348,7 +347,7 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    this.commons.getBus().publish(
+    this.grpcSdk.bus!.publish(
       'admin',
       JSON.stringify({
         protofile,
@@ -466,7 +465,7 @@ export default class AdminModule extends IConduitAdmin {
         this.config.load(previousConfig);
         throw new ConduitError('INVALID_ARGUMENT', 400, e.message);
       }
-      this.commons.getBus().publish('core:config:update', JSON.stringify(config));
+      this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     }
     ConfigController.getInstance().config = config;
     return config;
