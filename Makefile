@@ -7,15 +7,17 @@ all: conduit ${IMAGE_DIRS}
 
 conduit:
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t ghcr.io/conduitplatform/conduit:latest ./packages
-	docker push ghcr.io/conduitplatform/conduit:latest
-	docker tag ghcr.io/conduitplatform/conduit:latest conduitplatform/conduit:latest
-	docker push conduitplatform/conduit:latest
+	docker build --no-cache -t ghcr.io/conduitplatform/conduit:dev ./packages
+	docker push ghcr.io/conduitplatform/conduit:dev
 else
 	docker build --no-cache -t ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ./packages
-	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ghcr.io/conduitplatform/conduit:latest
 	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:latest
+	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
+	docker push ghcr.io/conduitplatform/conduit:latest
 	docker push conduitplatform/conduit:${IMAGE_TAG}
+	docker push conduitplatform/conduit:latest
 endif
 
 conduit-builder:
@@ -30,15 +32,17 @@ endif
 ${IMAGE_DIRS}:
 	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:latest $@
-	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest
-	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:latest conduitplatform/${IMAGE_NAME}:latest
-	docker push conduitplatform/${IMAGE_NAME}:latest
+	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:dev $@
+	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:dev
 else
 	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} ghcr.io/conduitplatform/${IMAGE_NAME}:latest
 	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:latest
+	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest
 	docker push conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker push conduitplatform/${IMAGE_NAME}:latest
 endif
 
 modules/authentication: conduit-builder
