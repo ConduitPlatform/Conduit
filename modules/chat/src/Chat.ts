@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
@@ -106,21 +106,24 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   private async refreshAppRoutes() {
-    if (!this.userRouter) {
-      const self = this;
-      this.grpcSdk.on('router', async () => {
-        self.userRouter = new ChatRoutes(
-          self.grpcServer,
-          self.grpcSdk,
-          self.sendEmail,
-          self.sendPushNotification,
-        );
-        await self.userRouter.registerRoutes();
-      });
-
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes();
       return;
     }
-    await this.userRouter.registerRoutes();
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.userRouter = new ChatRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this.sendEmail,
+          this.sendPushNotification,
+        );
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 
   protected registerSchemas() {

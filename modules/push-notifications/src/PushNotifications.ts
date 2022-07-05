@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ManagedModule,
   DatabaseProvider,
   ConfigController,
@@ -75,9 +75,14 @@ export default class PushNotifications extends ManagedModule<Config> {
       await this.initProvider();
       await this.registerSchemas();
       const self = this;
-      this.grpcSdk.on('router', () => {
-        self.userRouter = new PushNotificationsRoutes(self.grpcServer, self.grpcSdk);
-      });
+      this.grpcSdk
+        .waitForExistence('router')
+        .then(() => {
+          self.userRouter = new PushNotificationsRoutes(self.grpcServer, self.grpcSdk);
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e.message);
+        });
 
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
