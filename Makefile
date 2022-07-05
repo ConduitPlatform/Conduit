@@ -9,9 +9,13 @@ conduit:
 ifeq ($(DEV),TRUE)
 	docker build --no-cache -t ghcr.io/conduitplatform/conduit:latest ./packages
 	docker push ghcr.io/conduitplatform/conduit:latest
+	docker tag ghcr.io/conduitplatform/conduit:latest conduitplatform/conduit:latest
+	docker push conduitplatform/conduit:latest
 else
 	docker build --no-cache -t ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ./packages
 	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:${IMAGE_TAG}
+	docker push conduitplatform/conduit:${IMAGE_TAG}
 endif
 
 conduit-builder:
@@ -28,9 +32,13 @@ ${IMAGE_DIRS}:
 ifeq ($(DEV),TRUE)
 	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:latest $@
 	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest
+	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:latest conduitplatform/${IMAGE_NAME}:latest
+	docker push conduitplatform/${IMAGE_NAME}:latest
 else
 	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} $@
 	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
+	docker push conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
 endif
 
 modules/authentication: conduit-builder
