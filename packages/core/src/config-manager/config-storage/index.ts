@@ -24,7 +24,7 @@ export class ConfigStorage {
         this.changeState(false);
         this.reconcileMonitor();
       })
-      .catch(err => {
+      .catch(() => {
         this.changeState(false);
         ConduitGrpcSdk.Logger.error('Reconciliation with db failed!');
       });
@@ -139,7 +139,7 @@ export class ConfigStorage {
       await this.waitForReconcile();
     }
 
-    let config: string | null = await this.grpcSdk.state!.getKey(
+    const config: string | null = await this.grpcSdk.state!.getKey(
       `moduleConfigs.${moduleName}`,
     );
     if (!config) {
