@@ -267,21 +267,27 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', (modules: any) => {
       Object.keys(this._modules).forEach(r => {
-        const found = modules.filter(
-          (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
-        );
-        if ((!found || found.length === 0) && this._availableModules[r]) {
-          this._modules[r]?.closeConnection();
-          emitter.emit(`module-connection-update:${r}`, false);
+        if (r !== this.name) {
+          const found = modules.filter(
+            (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
+          );
+          if ((!found || found.length === 0) && this._modules[r]) {
+            this._modules[r]?.closeConnection();
+            emitter.emit(`module-connection-update:${r}`, false);
+          }
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
-        if (m.serving) {
-          if (this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName]?.openConnection();
+        if (m.moduleName !== this.name) {
+          const alreadyActive = this._modules[m.moduleName]?.active;
+          if (!alreadyActive && m.serving) {
+            if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
+              this._modules[m.moduleName].openConnection();
+            } else {
+              this.createModuleClient(m.moduleName, m.url);
+            }
+            emitter.emit(`module-connection-update:${m.moduleName}`, true);
           }
-          this.createModuleClient(m.moduleName, m.url);
-          emitter.emit(`module-connection-update:${m.moduleName}`, true);
         }
       });
     });
