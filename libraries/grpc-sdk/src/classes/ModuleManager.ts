@@ -67,15 +67,10 @@ export class ModuleManager<T> {
   private async postRegisterLifecycle(): Promise<void> {
     await this.module.onRegister();
     if (this.module.config) {
-      const config = await this.grpcSdk.config
-        .get(this.module.name)
-        .catch(() => {
-          return this.module.config!.getProperties();
-        })
-        .then(c => {
-          return this.grpcSdk.config.configure(c, this.module.name);
-        })
-        .then(c => c);
+      let config = await this.grpcSdk.config.configure(
+        this.module.config.getProperties(),
+        this.module.name,
+      );
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active || !config.hasOwnProperty('active'))
