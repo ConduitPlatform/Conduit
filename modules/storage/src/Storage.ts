@@ -54,14 +54,6 @@ export default class Storage extends ManagedModule<Config> {
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
-    await this.grpcSdk.monitorModule(
-      'authentication',
-      serving => {
-        this.enableAuthRoutes = serving;
-        this.refreshAppRoutes();
-      },
-      false,
-    );
   }
 
   async preConfig(config: Config) {
@@ -79,8 +71,22 @@ export default class Storage extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.updateConfig();
-      const storageConfig = ConfigController.getInstance().config;
-      const { provider, local, google, azure, aws, aliyun } = storageConfig;
+      await this.grpcSdk.monitorModule(
+        'authentication',
+        serving => {
+          this.enableAuthRoutes = serving;
+          this.refreshAppRoutes();
+        },
+        false,
+      );
+      const {
+        provider,
+        local,
+        google,
+        azure,
+        aws,
+        aliyun,
+      } = ConfigController.getInstance().config;
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,
