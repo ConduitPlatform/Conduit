@@ -14,6 +14,7 @@ import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
+import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -27,8 +28,23 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.connectionUri = connectionUri;
   }
 
-  connect() {
-    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  async connect() {
+    let error;
+    for (let i = 0; i < 10; i++) {
+      try {
+        console.log(`${i} attempts`);
+        return (this.sequelize = new Sequelize(this.connectionUri, { logging: false }));
+      } catch (err) {
+        await sleep(200);
+        error = err;
+        continue;
+      }
+      error = undefined;
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error(error);
+      throw new GrpcError(status.INTERNAL, 'Connection with DB not possible');
+    }
   }
 
   async retrieveForeignSchemas(): Promise<void> {

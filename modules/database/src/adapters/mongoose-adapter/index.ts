@@ -15,7 +15,7 @@ import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 
 const parseSchema = require('mongodb-schema');
-let deepPopulate = require('mongoose-deep-populate');
+const deepPopulate = require('mongoose-deep-populate');
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
@@ -72,17 +72,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
   }
 
-  connect() {
+  async connect() {
     this.mongoose = new Mongoose();
-    this.mongoose
-      .connect(this.connectionString, this.options)
-      .then(() => {
-        deepPopulate = deepPopulate(this.mongoose);
-      })
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
-        throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
-      });
+    try {
+      await this.mongoose.connect(this.connectionString, this.options);
+      deepPopulate(this.mongoose);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err);
+      throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
+    }
   }
 
   async retrieveForeignSchemas(): Promise<void> {
