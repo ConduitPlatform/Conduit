@@ -67,7 +67,7 @@ export class ModuleManager<T> {
   private async postRegisterLifecycle(): Promise<void> {
     await this.module.onRegister();
     if (this.module.config) {
-      let config = await this.grpcSdk.config.configure(
+      const config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
         this.module.name,
       );

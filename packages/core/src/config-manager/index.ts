@@ -232,7 +232,7 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async addFieldsToModule(moduleName: string, moduleConfig: any) {
-    let existingConfig = this._configStorage.getConfig(moduleName);
+    let existingConfig = await this._configStorage.getConfig(moduleName);
     existingConfig = { ...moduleConfig, ...existingConfig };
     await this._configStorage.setConfig(moduleName, JSON.stringify(existingConfig));
     return existingConfig;
