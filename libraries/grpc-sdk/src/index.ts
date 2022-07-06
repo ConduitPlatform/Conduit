@@ -295,7 +295,7 @@ export default class ConduitGrpcSdk {
     const waitPromise = Promise.resolve();
     if (wait) waitPromise.then(() => this.waitForExistence(moduleName));
     waitPromise
-      .then(() => this._modules['chat']?.healthClient?.check({}))
+      .then(() => this._modules[moduleName]?.healthClient?.check({}))
       .then(res => {
         callback(res?.status === HealthCheckResponse_ServingStatus.SERVING);
       })
