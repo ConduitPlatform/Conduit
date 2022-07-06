@@ -29,22 +29,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async connect() {
-    let error;
-    for (let i = 0; i < 10; i++) {
-      try {
-        console.log(`${i} attempts`);
-        return (this.sequelize = new Sequelize(this.connectionUri, { logging: false }));
-      } catch (err) {
-        await sleep(200);
-        error = err;
-        continue;
-      }
-      error = undefined;
-    }
-    if (error) {
-      ConduitGrpcSdk.Logger.error(error);
-      throw new GrpcError(status.INTERNAL, 'Connection with DB not possible');
-    }
+    return (this.sequelize = await new Sequelize(this.connectionUri, { logging: false }));
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -271,15 +256,24 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async ensureConnected() {
-    return this.sequelize
-      .authenticate()
-      .then(() => {
+    let error;
+    for (let i = 0; i < 10; i++) {
+      i === 0
+        ? ConduitGrpcSdk.Logger.log('Attempting to connect to database...')
+        : ConduitGrpcSdk.Logger.log(`Connection failed. Retrying...`);
+      try {
+        await this.sequelize.authenticate();
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
-      })
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
-        throw err;
-      });
+      } catch (err) {
+        error = err;
+        await sleep(2000);
+        continue;
+      }
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
+      throw error;
+    }
   }
 }
