@@ -29,7 +29,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async connect() {
-    return (this.sequelize = await new Sequelize(this.connectionUri, { logging: false }));
+    this.sequelize = await new Sequelize(this.connectionUri, { logging: false });
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -258,16 +258,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   async ensureConnected() {
     let error;
     for (let i = 0; i < 10; i++) {
-      i === 0
-        ? ConduitGrpcSdk.Logger.log('Attempting to connect to database...')
-        : ConduitGrpcSdk.Logger.log(`Connection failed. Retrying...`);
+      i === 0 && ConduitGrpcSdk.Logger.log('Connecting to database...');
       try {
         await this.sequelize.authenticate();
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
       } catch (err) {
         error = err;
-        await sleep(2000);
+        await sleep(200);
         continue;
       }
     }
