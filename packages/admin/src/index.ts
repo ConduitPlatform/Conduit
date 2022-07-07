@@ -242,7 +242,7 @@ export default class AdminModule extends IConduitAdmin {
         moduleName as string,
       );
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       return callback({
         code: status.INTERNAL,
         message: 'Error when registering routes',
@@ -284,7 +284,7 @@ export default class AdminModule extends IConduitAdmin {
           }
           return this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          ConduitGrpcSdk.Logger.error(err);
+          ConduitGrpcSdk.Logger.error(err as Error);
         }
       }, this);
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -300,7 +300,7 @@ export default class AdminModule extends IConduitAdmin {
           messageParsed.url,
         );
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
       this.cleanupRoutes();
     });
@@ -394,20 +394,17 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-    )[] = grpcToConduitRoute(
-      'Admin',
-      {
-        protoFile: protofile,
-        routes: routes as RouteT[],
-        routerUrl: url,
-      },
-      moduleName,
-      this.grpcSdk.grpcToken,
-    );
+    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
+      grpcToConduitRoute(
+        'Admin',
+        {
+          protoFile: protofile,
+          routes: routes as RouteT[],
+          routerUrl: url,
+        },
+        moduleName,
+        this.grpcSdk.grpcToken,
+      );
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {
@@ -466,7 +463,7 @@ export default class AdminModule extends IConduitAdmin {
         config = this.config.getProperties();
       } catch (e) {
         this.config.load(previousConfig);
-        throw new ConduitError('INVALID_ARGUMENT', 400, e.message);
+        throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
       }
       this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     }
