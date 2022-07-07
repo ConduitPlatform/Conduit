@@ -52,7 +52,7 @@
     "@types/uuid": "^7.0.2",
     "copyfiles": "^2.2.0",
     "rimraf": "^3.0.2",
-    "ts-proto": "^1.112.1",
+    "ts-proto": "^1.115.5",
     "typescript": "~4.2.0"
   }
 }
