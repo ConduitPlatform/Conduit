@@ -45,7 +45,7 @@ export class ModuleManager<T> {
       );
     } catch (err) {
       ConduitGrpcSdk.Logger.error('Failed to initialize server');
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       process.exit(-1);
     }
     await this.postRegisterLifecycle().catch((err: Error) => {

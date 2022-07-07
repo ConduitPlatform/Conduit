@@ -118,7 +118,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.config.load(previousConfig);
         return callback({
           code: status.INVALID_ARGUMENT,
-          message: 'Invalid configuration values: ' + e.message,
+          message: 'Invalid configuration values: ' + (e as Error).message,
         });
       }
       ConfigController.getInstance().config = config;
@@ -129,7 +129,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
       return callback(null, { updatedConfig: JSON.stringify(config) });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 

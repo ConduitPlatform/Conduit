@@ -14,18 +14,18 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@grpc/grpc-js": "^1.5.3",
-    "@grpc/proto-loader": "^0.6.9",
-    "@types/google-protobuf": "^3.15.5",
-    "@types/ioredis": "^4.28.7",
-    "@types/lodash": "^4.14.178",
+    "@grpc/grpc-js": "^1.6.7",
+    "@grpc/proto-loader": "^0.6.13",
+    "@types/google-protobuf": "^3.15.6",
+    "@types/ioredis": "^4.28.10",
+    "@types/lodash": "^4.14.182",
     "convict": "^6.2.3",
-    "fast-jwt": "^1.5.4",
-    "ioredis": "^4.28.3",
+    "fast-jwt": "^1.6.0",
+    "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
-    "nice-grpc": "^1.0.6",
-    "protobufjs": "^6.11.2",
-    "winston": "^3.7.2"
+    "nice-grpc": "^1.2.0",
+    "protobufjs": "^6.11.3",
+    "winston": "^3.8.1"
   },
   "directories": {
     "lib": "dist",
@@ -40,18 +40,18 @@
     "directory": "libraries/grpc-sdk"
   },
   "devDependencies": {
-    "@types/convict": "^4.2.1",
-    "@types/google-protobuf": "^3.15.5",
-    "@types/ioredis": "^4.28.7",
-    "@types/lodash": "^4.14.178",
+    "@types/convict": "^6.1.1",
+    "@types/google-protobuf": "^3.15.6",
+    "@types/ioredis": "^4.28.10",
+    "@types/lodash": "^4.14.182",
     "@types/node": "14.14.31",
-    "copyfiles": "^2.2.0",
+    "copyfiles": "^2.4.1",
     "rimraf": "^3.0.2",
-    "ts-proto": "^1.115.5",
-    "typescript": "~4.2.0"
+    "ts-proto": "^1.117.0",
+    "typescript": "~4.7.4"
   },
   "peerDependencies": {
     "@grpc/grpc-js": "^1.5.2",
-    "@grpc/proto-loader": "^0.6.9"
+    "@grpc/proto-loader": "^0.6.13"
   }
 }
