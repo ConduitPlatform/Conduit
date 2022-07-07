@@ -21,7 +21,6 @@
     "@conduitplatform/hermes": "^1.0.1",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
-    "@types/redis": "^4.0.11",
     "apollo-server-express": "^2.11.0",
     "bcrypt": "^5.0.1",
     "deep-object-diff": "^1.1.7",
@@ -31,10 +30,10 @@
     "graphql-tools": "^4.0.7",
     "graphql-type-json": "^0.3.1",
     "helmet": "^5.1.0",
+    "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "rate-limiter-flexible": "^2.3.7",
-    "redis": "^4.2.0",
     "swagger-ui-express": "4.4.0"
   },
   "directories": {

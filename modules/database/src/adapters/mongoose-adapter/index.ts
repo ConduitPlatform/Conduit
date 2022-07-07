@@ -33,7 +33,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   constructor(connectionString: string) {
     super();
-    this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
   }

@@ -23,7 +23,7 @@
     "bson": "^4.6.4",
     "deepdash": "^5.3.9",
     "deepdash-es": "^5.3.9",
-    "escape-string-regexp": "^5.0.0",
+    "escape-string-regexp": "^4.0.0",
     "lodash": "^4.17.21",
     "mariadb": "^3.0.0",
     "mongodb-extended-json": "^1.11.0",

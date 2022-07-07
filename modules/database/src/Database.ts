@@ -58,8 +58,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       countDocuments: this.countDocuments.bind(this),
     },
   };
-  private adminRouter: AdminHandlers;
-  private userRouter: DatabaseRoutes;
+  private adminRouter?: AdminHandlers;
+  private userRouter?: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
 
   constructor(dbType: string, dbUri: string) {

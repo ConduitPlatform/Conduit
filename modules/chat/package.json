@@ -29,7 +29,7 @@
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "convict": "^6.2.3",
-    "escape-string-regexp": "^5.0.0",
+    "escape-string-regexp": "^4.0.0",
     "lodash": "^4.17.21",
     "uuid": "^8.3.2"
   },

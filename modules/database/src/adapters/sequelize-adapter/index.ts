@@ -19,11 +19,10 @@ const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connectionUri: string;
-  sequelize: Sequelize;
+  sequelize!: Sequelize;
 
   constructor(connectionUri: string) {
     super();
-    this.registeredSchemas = new Map();
     this.connectionUri = connectionUri;
   }
 
@@ -40,8 +39,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         `select * from pg_tables where schemaname='${sqlSchemaName}';`,
       )
     )[0].map((t: any) => t.tablename);
-    const declaredSchemaTableName = this.models['_DeclaredSchema'].originalSchema
-      .collectionName;
+    const declaredSchemaTableName =
+      this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const table of tableNames) {
       if (table === declaredSchemaTableName) continue;
       const tableInDeclaredSchemas = declaredSchemas.some(
@@ -75,8 +74,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       {},
     );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema
-      .collectionName;
+    const pendingSchemaCollectionName =
+      this.models['_PendingSchemas'].originalSchema.collectionName;
     await this.getSchemaModel(pendingSchemaCollectionName).model.deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
