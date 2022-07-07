@@ -88,7 +88,7 @@ export abstract class ConduitRouter {
             params,
           ).then((p: any) => {
             if (p.result) {
-              Object.assign(r, JSON.parse(p.result));
+              Object.assign(r as {}, JSON.parse(p.result));
             }
             return r;
           });
@@ -107,7 +107,7 @@ export abstract class ConduitRouter {
       try {
         this._refreshRouter();
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
       this._refreshTimeout = null;
     }, 3000);

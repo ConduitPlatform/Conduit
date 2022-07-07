@@ -2,7 +2,7 @@ import { Application, NextFunction, Request, Response } from 'express';
 import { createServer, Server as httpServer } from 'http';
 import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from 'socket.io-redis';
-import { RedisClient } from 'redis';
+import { RedisClientType, createClient } from 'redis';
 import { ConduitRouter } from '../Router';
 import { isNil } from 'lodash';
 import {
@@ -20,8 +20,8 @@ export class SocketController extends ConduitRouter {
   private io: IOServer;
   private readonly options: Partial<ServerOptions>;
   private _registeredNamespaces: Map<string, ConduitSocket>;
-  private readonly pubClient: RedisClient;
-  private readonly subClient: RedisClient;
+  private readonly pubClient: RedisClientType;
+  private readonly subClient: RedisClientType;
   private globalMiddlewares: ((
     req: Request,
     res: Response,
@@ -44,9 +44,8 @@ export class SocketController extends ConduitRouter {
       },
     };
     this.io = new IOServer(this.httpServer, this.options);
-    this.pubClient = new RedisClient({
-      host: redisDetails.host,
-      port: redisDetails.port,
+    this.pubClient = createClient({
+      url: `redis://${redisDetails.host}:${redisDetails.port}`,
     });
     this.subClient = this.pubClient.duplicate();
     this.io.adapter(
@@ -195,7 +194,7 @@ export class SocketController extends ConduitRouter {
     super.shutDown();
     this.io.close();
     this.httpServer.close();
-    this.pubClient.end(false);
-    this.subClient.end(false);
+    this.pubClient.quit();
+    this.subClient.quit();
   }
 }
