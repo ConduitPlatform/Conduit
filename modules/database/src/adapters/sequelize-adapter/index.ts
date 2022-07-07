@@ -28,8 +28,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.connectionUri = connectionUri;
   }
 
-  async connect() {
-    this.sequelize = await new Sequelize(this.connectionUri, { logging: false });
+  connect() {
+    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
   }
 
   async retrieveForeignSchemas(): Promise<void> {

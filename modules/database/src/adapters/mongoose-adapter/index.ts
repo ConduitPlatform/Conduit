@@ -73,17 +73,21 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
   }
 
-  async connect() {
+  connect() {
     this.mongoose = new Mongoose();
     ConduitGrpcSdk.Logger.log('Connecting to database...');
-    try {
-      await this.mongoose.connect(this.connectionString, this.options);
-      deepPopulate = deepPopulate(this.mongoose);
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
-      throw new Error();
-    }
-    ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
+    this.mongoose
+      .connect(this.connectionString, this.options)
+      .then(() => {
+        deepPopulate = deepPopulate(this.mongoose);
+      })
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
+        throw new Error();
+      })
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
+      });
   }
 
   async retrieveForeignSchemas(): Promise<void> {

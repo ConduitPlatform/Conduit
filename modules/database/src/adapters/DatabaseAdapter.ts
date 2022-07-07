@@ -180,7 +180,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     await Promise.all(models);
   }
 
-  abstract connect(): Promise<void>;
+  abstract connect(): void;
 
   abstract ensureConnected(): Promise<void>;
 
