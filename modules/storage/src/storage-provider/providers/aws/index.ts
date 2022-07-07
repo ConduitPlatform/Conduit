@@ -103,7 +103,7 @@ export class AWSS3Storage implements IStorageProvider {
       ) {
         return false;
       }
-      throw Error(error as any);
+      throw error;
     }
   }
 
@@ -130,7 +130,7 @@ export class AWSS3Storage implements IStorageProvider {
       ) {
         return false;
       }
-      throw Error(error as any);
+      throw error;
     }
   }
 
@@ -188,7 +188,7 @@ export class AWSS3Storage implements IStorageProvider {
       ) {
         return false;
       }
-      throw Error(error as any);
+      throw error;
     }
   }
 
