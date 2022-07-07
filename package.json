@@ -19,18 +19,6 @@
     "admin/*",
     "modules/*"
   ],
-  "turbo": {
-    "pipeline": {
-      "build": {
-        "dependsOn": [
-          "^build"
-        ],
-        "outputs": [
-          ".dist/**"
-        ]
-      }
-    }
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
