@@ -41,9 +41,8 @@
     "copyfiles": "^2.2.0",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^7.0.4",
-    "lerna": "^3.13.1",
+    "lerna": "^5.1.7",
     "lint-staged": ">=10",
-    "pm2": "^4.4.0",
     "prettier": "^2.2.1",
     "standard-version": "^9.3.0",
     "turbo": "^1.0.6"
