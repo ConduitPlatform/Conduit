@@ -28,7 +28,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   options: ConnectionOptions = {
     keepAlive: true,
     poolSize: 10,
-    connectTimeoutMS: 30000,
+    connectTimeoutMS: this.maxConnTimeoutMs,
+    serverSelectionTimeoutMS: this.maxConnTimeoutMs,
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
@@ -74,13 +75,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async connect() {
     this.mongoose = new Mongoose();
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
     try {
       await this.mongoose.connect(this.connectionString, this.options);
       deepPopulate(this.mongoose);
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
-      throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
+      throw new Error();
     }
+    ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
   }
 
   async retrieveForeignSchemas(): Promise<void> {

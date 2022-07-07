@@ -258,8 +258,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   async ensureConnected() {
     let error;
     ConduitGrpcSdk.Logger.log('Connecting to database...');
-    for (let i = 0; i < 100; i++) {
-      // 20s
+    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
       try {
         await this.sequelize.authenticate();
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
@@ -271,7 +270,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
     if (error) {
       ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
-      throw error;
+      throw new Error();
     }
   }
 }
