@@ -88,7 +88,7 @@ export abstract class ConduitRouter {
             params,
           ).then((p: any) => {
             if (p.result) {
-              Object.assign(r as {}, JSON.parse(p.result));
+              Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
             }
             return r;
           });
