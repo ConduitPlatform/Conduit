@@ -165,7 +165,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          ConduitGrpcSdk.Logger.error(err);
+          ConduitGrpcSdk.Logger.error(err as Error);
         }
       });
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -183,7 +183,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           messageParsed.url,
         );
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
   }
@@ -270,7 +270,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routerUrl,
       );
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 
@@ -285,20 +285,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-    )[] = grpcToConduitRoute(
-      'Router',
-      {
-        protoFile: protofile,
-        routes: routes,
-        routerUrl: url,
-      },
-      moduleName === 'core' ? undefined : moduleName,
-      this.grpcSdk.grpcToken,
-    );
+    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
+      grpcToConduitRoute(
+        'Router',
+        {
+          protoFile: protofile,
+          routes: routes,
+          routerUrl: url,
+        },
+        moduleName === 'core' ? undefined : moduleName,
+        this.grpcSdk.grpcToken,
+      );
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
@@ -315,7 +312,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 

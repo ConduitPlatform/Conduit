@@ -37,7 +37,7 @@ export class CustomEndpointHandler {
           call.request.context,
         );
       } catch (e) {
-        throw new GrpcError(status.INTERNAL, e.message);
+        throw new GrpcError(status.INTERNAL, (e as Error).message);
       }
     }
 
