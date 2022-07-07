@@ -186,7 +186,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         type: call.request.type,
       };
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
     let errorMessage: string | null = null;
     await this._provider!.sendToDevice(params).catch(e => {

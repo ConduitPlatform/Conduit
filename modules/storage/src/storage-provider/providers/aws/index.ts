@@ -97,12 +97,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as any).$metadata.httpStatusCode === 403 ||
+        (error as any).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw Error(error as any);
     }
   }
 
@@ -124,12 +124,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as any).$metadata.httpStatusCode === 403 ||
+        (error as any).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw Error(error as any);
     }
   }
 
@@ -182,12 +182,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as any).$metadata.httpStatusCode === 403 ||
+        (error as any).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw Error(error as any);
     }
   }
 

@@ -28,18 +28,18 @@
   ],
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
-    "@grpc/grpc-js": "^1.5.2",
-    "@grpc/proto-loader": "^0.5.4",
-    "convict": "^6.0.0",
-    "firebase-admin": "^8.10.0",
-    "lodash": "^4.17.15"
+    "@grpc/grpc-js": "^1.6.7",
+    "@grpc/proto-loader": "^0.6.13",
+    "convict": "^6.2.3",
+    "firebase-admin": "^11.0.0",
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "@types/convict": "^4.2.1",
-    "@types/lodash": "^4.14.149",
+    "@types/convict": "^6.1.1",
+    "@types/lodash": "^4.14.182",
     "@types/node": "14.14.31",
-    "copyfiles": "^2.3.0",
+    "copyfiles": "^2.4.1",
     "rimraf": "^3.0.2",
-    "typescript": "~4.2.0"
+    "typescript": "~4.7.4"
   }
 }
