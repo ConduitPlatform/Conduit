@@ -15,7 +15,7 @@ import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 
 const parseSchema = require('mongodb-schema');
-const deepPopulate = require('mongoose-deep-populate');
+let deepPopulate = require('mongoose-deep-populate');
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
@@ -78,7 +78,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     ConduitGrpcSdk.Logger.log('Connecting to database...');
     try {
       await this.mongoose.connect(this.connectionString, this.options);
-      deepPopulate(this.mongoose);
+      deepPopulate = deepPopulate(this.mongoose);
     } catch (err) {
       ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
       throw new Error();
