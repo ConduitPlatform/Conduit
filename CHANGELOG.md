@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0-0](https://github.com/ConduitPlatform/Conduit/compare/v0.13.1...v0.14.0-0) (2022-07-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **router,config,core,admin,commons:** architecture change (#212)
+
+### Features
+
+* **admin:** helmet middleware ([#217](https://github.com/ConduitPlatform/Conduit/issues/217)) ([2d241fa](https://github.com/ConduitPlatform/Conduit/commit/2d241faf7105f21e1f83b6cd884e8deab098013f))
+
+
+### Bug Fixes
+
+* **core:** config crash when module configuration missing from redis on firstSync ([8b3484c](https://github.com/ConduitPlatform/Conduit/commit/8b3484cc0488d3d2c8e065d606b51a4b7f6ffcc5))
+* **core:** config firstSync not waiting for promises ([16bc12d](https://github.com/ConduitPlatform/Conduit/commit/16bc12d4a2cb2a16d6f00f4fec8b7b0040ac11ce))
+* **grpc-sdk,commons,core,admin:** config validation ([#219](https://github.com/ConduitPlatform/Conduit/issues/219)) ([7526220](https://github.com/ConduitPlatform/Conduit/commit/7526220a326c3f5fe5fb3c4d6941e6e86aa6d96a))
+* **grpc-sdk:** module configurations being reset on startup ([#225](https://github.com/ConduitPlatform/Conduit/issues/225)) ([6ea3fe6](https://github.com/ConduitPlatform/Conduit/commit/6ea3fe6e28e2410273277d5914ae67ea7cd9e7f7))
+* **grpc-sdk:** module connectivity reporting ([#222](https://github.com/ConduitPlatform/Conduit/issues/222)) ([59bdac5](https://github.com/ConduitPlatform/Conduit/commit/59bdac5223dc3df60b4093b6bedff8ef7bcac519))
+* **router:** not registering SetConfig rpc ([#218](https://github.com/ConduitPlatform/Conduit/issues/218)) ([245554a](https://github.com/ConduitPlatform/Conduit/commit/245554a9c8bd41607d9bbabc54495f0d20c9d309))
+* **storage:** registering routes while disabled ([#224](https://github.com/ConduitPlatform/Conduit/issues/224)) ([58897b1](https://github.com/ConduitPlatform/Conduit/commit/58897b188eb9e2fa2202a9b6619ecb45a22c19cd))
+
+
+* **router,config,core,admin,commons:** architecture change ([#212](https://github.com/ConduitPlatform/Conduit/issues/212)) ([bdde3cd](https://github.com/ConduitPlatform/Conduit/commit/bdde3cdfd644b028b6f7b3d2e1bcb5e25d1286c6))
+
 ### [0.13.1](https://github.com/ConduitPlatform/Conduit/compare/v0.13.0...v0.13.1) (2022-06-23)
 
 
