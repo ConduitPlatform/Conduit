@@ -4,7 +4,7 @@ mkdir ./src/protoTypes
 
 cp ./src/*.proto ./src/protoTypes
 
-cd ./src/protoTypes
+cd ./src/protoTypes || exit
 
 echo "Generating typescript code"
 protoc \
@@ -15,4 +15,4 @@ protoc \
   ./*.proto
 
 echo "Cleaning up folders"
-rm -rf *.proto
+rm -rf ./*.proto

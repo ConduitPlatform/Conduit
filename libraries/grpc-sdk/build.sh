@@ -6,7 +6,7 @@ copyfiles ../../**/src/*.proto -e ../../**/node_modules/**/*.proto -e ../../**/p
 copyfiles ./src/grpc_health_check.proto -f ./src/protoUtils
 
 echo "Generating typescript code"
-cd ./src/protoUtils
+cd ./src/protoUtils || exit
 protoc \
   --plugin=protoc-gen-ts_proto=../../node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_opt=esModuleInterop=true \
@@ -15,4 +15,4 @@ protoc \
   ./*.proto
 
 echo "Cleaning up protofiles"
-rm -rf *.proto
+rm -rf ./*.proto

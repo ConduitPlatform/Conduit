@@ -4,8 +4,7 @@ mkdir ./src/protoTypes
 
 cp ./src/*.proto ./src/protoTypes
 
-cd ./src/protoTypes
-
+cd ./src/protoTypes || exit
 echo "Generating typescript code"
 protoc \
   --plugin=../../node_modules/.bin/protoc-gen-ts_proto\
@@ -15,4 +14,4 @@ protoc \
   ./*.proto
 
 echo "Cleaning up folders"
-rm -rf *.proto
+rm -rf ./*.proto
