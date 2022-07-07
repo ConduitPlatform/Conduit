@@ -390,7 +390,7 @@ export class AdminRoutes {
       return container;
     } catch (e) {
       throw new GrpcError(
-        (e as any).status ?? status.INTERNAL,
+        status.INTERNAL,
         (e as Error).message ?? 'Something went wrong',
       );
     }
@@ -417,7 +417,7 @@ export class AdminRoutes {
       return container;
     } catch (e) {
       throw new GrpcError(
-        (e as any).status ?? status.INTERNAL,
+        status.INTERNAL,
         (e as Error).message ?? 'Something went wrong',
       );
     }
