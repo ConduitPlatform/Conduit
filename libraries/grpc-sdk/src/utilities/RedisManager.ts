@@ -10,7 +10,7 @@ export class RedisManager {
     };
   }
 
-  getClient(connectionOps?: any): Redis {
+  getClient(connectionOps?: RedisOptions): Redis {
     return new IORedis({ ...this.redisConnection, ...connectionOps });
   }
 }
