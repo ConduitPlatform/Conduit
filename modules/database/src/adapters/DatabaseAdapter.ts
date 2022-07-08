@@ -14,6 +14,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
 
+  protected constructor() {
+    this.registeredSchemas = new Map();
+  }
+
   /**
    * Introspects all schemas of current db connection, registers them to Conduit
    */

@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
+  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
@@ -115,7 +115,7 @@ export class FileHandlers {
           .getPublicUrl((newFolder ?? '') + name);
       }
 
-      const newFile = await File.getInstance().create({
+      return await File.getInstance().create({
         name,
         mimeType,
         folder: newFolder,
@@ -123,10 +123,11 @@ export class FileHandlers {
         isPublic,
         url: publicUrl,
       });
-
-      return newFile;
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong');
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
     }
   }
 
@@ -221,7 +222,10 @@ export class FileHandlers {
       found.container = newContainer;
       return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong!',
+      );
     }
   }
 
@@ -244,7 +248,10 @@ export class FileHandlers {
 
       return { success: true };
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong!',
+      );
     }
   }
 
@@ -266,7 +273,10 @@ export class FileHandlers {
       }
       return { redirect: url };
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong!',
+      );
     }
   }
 
@@ -291,7 +301,10 @@ export class FileHandlers {
 
       return { data: data.toString('base64') };
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message ?? 'Something went wrong!');
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong!',
+      );
     }
   }
 }

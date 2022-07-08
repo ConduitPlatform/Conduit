@@ -29,7 +29,7 @@ import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { HealthCheckStatus } from './types';
+import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
@@ -105,14 +105,14 @@ export default class ConduitGrpcSdk {
     while (true) {
       try {
         const state = await this.core.check();
-        if (((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+        if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
           this._initialize();
           break;
         }
       } catch (err) {
-        if (err.code === status.PERMISSION_DENIED) {
-          ConduitGrpcSdk.Logger.error(err);
+        if ((err as GrpcError).code === status.PERMISSION_DENIED) {
+          ConduitGrpcSdk.Logger.error(err as Error);
           process.exit(-1);
         }
         await sleep(1000);

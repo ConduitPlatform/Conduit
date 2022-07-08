@@ -1,4 +1,5 @@
-import { RedisClient } from 'redis';
+import IORedis, { Redis } from 'ioredis';
+
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 
@@ -6,10 +7,8 @@ export class RateLimiter {
   private _limiter: any;
 
   constructor(redisHost: string, redisPort: number) {
-    const redisClient: RedisClient = new RedisClient({
-      host: redisHost,
-      port: redisPort,
-      enable_offline_queue: false,
+    const redisClient: Redis = new IORedis(redisPort, redisHost, {
+      enableOfflineQueue: false,
     });
     this._limiter = new RateLimiterRedis({
       storeClient: redisClient,

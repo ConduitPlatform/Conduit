@@ -1,4 +1,4 @@
-import { ConnectionOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
@@ -25,19 +25,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
   mongoose: Mongoose;
   connectionString: string;
-  options: ConnectionOptions = {
+  options: ConnectOptions = {
     keepAlive: true,
-    poolSize: 10,
+    minPoolSize: 5,
     connectTimeoutMS: 30000,
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
-    useUnifiedTopology: true,
   };
 
   constructor(connectionString: string) {
     super();
-    this.registeredSchemas = new Map();
     this.connectionString = connectionString;
     this.mongoose = new Mongoose();
   }
@@ -93,19 +88,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     (await this.mongoose.connection.db.listCollections().toArray()).forEach(c =>
       collectionNames.push(c.name),
     );
-    const declaredSchemaCollectionName = this.models['_DeclaredSchema'].originalSchema
-      .collectionName;
+    const declaredSchemaCollectionName =
+      this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
-      const collectionInDeclaredSchemas = declaredSchemas.some(
-        (declaredSchema: ConduitSchema) => {
-          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
-            return declaredSchema.collectionName === collection;
-          } else {
-            return pluralize(declaredSchema.name) === collection;
-          }
-        },
-      );
+      const collectionInDeclaredSchemas = (
+        declaredSchemas as unknown as ConduitSchema[]
+      ).some((declaredSchema: ConduitSchema) => {
+        if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+          return declaredSchema.collectionName === collection;
+        } else {
+          return pluralize(declaredSchema.name) === collection;
+        }
+      });
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);
       }
@@ -153,14 +148,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       {},
     );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema
-      .collectionName;
+    const pendingSchemaCollectionName =
+      this.models['_PendingSchemas'].originalSchema.collectionName;
     await db.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
-    declaredSchemas.forEach((schema: ConduitSchema) => {
+    (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
       this.updateCollectionName(schema);
-      if (((schema as unknown) as _ConduitSchema).modelOptions.conduit!.imported) {
+      if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -217,7 +212,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         );
         // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
       }
-      delete this.mongoose.connection.models[schema.name];
+      this.mongoose.connection.deleteModel(schema.name);
     }
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
@@ -278,7 +273,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
 
     delete this.models[schemaName];
-    delete this.mongoose.connection.models[schemaName];
+    this.mongoose.connection.deleteModel(schemaName);
     return 'Schema deleted!';
   }
 }

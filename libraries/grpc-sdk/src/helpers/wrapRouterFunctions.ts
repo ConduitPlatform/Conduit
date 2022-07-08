@@ -70,10 +70,10 @@ export function wrapRouterGrpcFunction(
       }
     } catch (e) {
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
-      ConduitGrpcSdk.Logger.error(e.message ?? 'Something went wrong');
+      ConduitGrpcSdk.Logger.error((e as Error).message ?? 'Something went wrong');
       return callback({
         code: status.INTERNAL,
-        message: e.message ?? 'Something went wrong',
+        message: (e as Error).message ?? 'Something went wrong',
       });
     }
 

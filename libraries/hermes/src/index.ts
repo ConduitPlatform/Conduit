@@ -211,7 +211,7 @@ export class ConduitRoutingController {
         try {
           this._cleanupRoutes(routes);
         } catch (err) {
-          ConduitGrpcSdk.Logger.error(err);
+          ConduitGrpcSdk.Logger.error(err as Error);
         }
         this._cleanupTimeout = null;
       }, this._cleanupTimeoutMs);

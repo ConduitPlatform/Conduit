@@ -1,6 +1,5 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
-  CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
   DeleteObjectCommand,
@@ -8,7 +7,6 @@ import {
   HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsCommand,
-  PutObjectAclCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -17,6 +15,8 @@ import { streamToBuffer } from '../../utils/utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+
+type AwsError = { $metadata: { httpStatusCode: number } };
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
@@ -56,6 +56,7 @@ export class AWSS3Storage implements IStorageProvider {
     );
     return true;
   }
+
   async get(fileName: string, downloadPath?: string): Promise<any | Error> {
     const stream = await this._storage.send(
       new GetObjectCommand({
@@ -97,12 +98,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as AwsError).$metadata.httpStatusCode === 403 ||
+        (error as AwsError).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw error;
     }
   }
 
@@ -124,12 +125,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as AwsError).$metadata.httpStatusCode === 403 ||
+        (error as AwsError).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw error;
     }
   }
 
@@ -182,12 +183,12 @@ export class AWSS3Storage implements IStorageProvider {
       return true;
     } catch (error) {
       if (
-        error.$metadata.httpStatusCode === 403 ||
-        error.$metadata.httpStatusCode === 404
+        (error as AwsError).$metadata.httpStatusCode === 403 ||
+        (error as AwsError).$metadata.httpStatusCode === 404
       ) {
         return false;
       }
-      throw Error(error);
+      throw error;
     }
   }
 
@@ -196,8 +197,7 @@ export class AWSS3Storage implements IStorageProvider {
       Bucket: this._activeContainer,
       Key: fileName,
     });
-    const url = await awsGetSignedUrl(this._storage, command);
-    return url;
+    return await awsGetSignedUrl(this._storage, command);
   }
 
   async getPublicUrl(fileName: string) {

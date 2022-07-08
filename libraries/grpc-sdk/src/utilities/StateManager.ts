@@ -1,8 +1,8 @@
 import { RedisManager } from './RedisManager';
-import IORedis from 'ioredis';
+import { Redis } from 'ioredis';
 
 export class StateManager {
-  private readonly redisClient: IORedis.Redis;
+  private readonly redisClient: Redis;
 
   constructor(redisManager: RedisManager, name: string) {
     this.redisClient = redisManager.getClient({ keyPrefix: name + '_' });

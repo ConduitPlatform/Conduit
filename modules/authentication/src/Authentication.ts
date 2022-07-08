@@ -228,7 +228,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 
@@ -244,7 +244,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'ok',
       });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 
@@ -274,7 +274,7 @@ export default class Authentication extends ManagedModule<Config> {
 
       return callback(null, { password });
     } catch (e) {
-      return callback({ code: status.INTERNAL, message: e.message });
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 }
