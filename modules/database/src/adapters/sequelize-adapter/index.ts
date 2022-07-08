@@ -265,6 +265,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         return;
       } catch (err) {
         error = err;
+        if (error.original.code !== 'ECONNREFUSED') break;
         await sleep(200);
       }
     }
