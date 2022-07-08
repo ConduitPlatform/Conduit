@@ -446,8 +446,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { passwordResetToken: passwordResetTokenParam, password: newPassword } =
-      call.request.params;
+    const {
+      passwordResetToken: passwordResetTokenParam,
+      password: newPassword,
+    } = call.request.params;
 
     const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,

@@ -28,7 +28,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   options: ConnectOptions = {
     keepAlive: true,
     minPoolSize: 5,
-    connectTimeoutMS: 30000,
+    connectTimeoutMS: this.maxConnTimeoutMs,
+    serverSelectionTimeoutMS: this.maxConnTimeoutMs,
   };
 
   constructor(connectionString: string) {
@@ -69,14 +70,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   connect() {
     this.mongoose = new Mongoose();
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
     this.mongoose
       .connect(this.connectionString, this.options)
       .then(() => {
         deepPopulate = deepPopulate(this.mongoose);
       })
       .catch(err => {
-        ConduitGrpcSdk.Logger.error(err);
-        throw new GrpcError(status.INTERNAL, 'Connection with Mongo not possible');
+        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
+        throw new Error();
+      })
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
       });
   }
 
@@ -88,19 +93,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     (await this.mongoose.connection.db.listCollections().toArray()).forEach(c =>
       collectionNames.push(c.name),
     );
-    const declaredSchemaCollectionName =
-      this.models['_DeclaredSchema'].originalSchema.collectionName;
+    const declaredSchemaCollectionName = this.models['_DeclaredSchema'].originalSchema
+      .collectionName;
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
-      const collectionInDeclaredSchemas = (
-        declaredSchemas as unknown as ConduitSchema[]
-      ).some((declaredSchema: ConduitSchema) => {
-        if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
-          return declaredSchema.collectionName === collection;
-        } else {
-          return pluralize(declaredSchema.name) === collection;
-        }
-      });
+      const collectionInDeclaredSchemas = ((declaredSchemas as unknown) as ConduitSchema[]).some(
+        (declaredSchema: ConduitSchema) => {
+          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+            return declaredSchema.collectionName === collection;
+          } else {
+            return pluralize(declaredSchema.name) === collection;
+          }
+        },
+      );
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);
       }
@@ -148,14 +153,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       {},
     );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName =
-      this.models['_PendingSchemas'].originalSchema.collectionName;
+    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema
+      .collectionName;
     await db.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
-    (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
+    ((declaredSchemas as unknown) as ConduitSchema[]).forEach((schema: ConduitSchema) => {
       this.updateCollectionName(schema);
-      if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
+      if (((schema as unknown) as _ConduitSchema).modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });

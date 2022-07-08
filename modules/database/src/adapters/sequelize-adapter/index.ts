@@ -14,6 +14,7 @@ import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
+import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -254,15 +255,22 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async ensureConnected() {
-    return this.sequelize
-      .authenticate()
-      .then(() => {
+    let error;
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
+      try {
+        await this.sequelize.authenticate();
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
-      })
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
-        throw err;
-      });
+      } catch (err: any) {
+        error = err;
+        if (error.original.code !== 'ECONNREFUSED') break;
+        await sleep(200);
+      }
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
+      throw new Error();
+    }
   }
 }

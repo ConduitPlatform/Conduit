@@ -1,5 +1,5 @@
 import { ConduitModelOptions, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension, Schema, SchemaAdapter } from '../interfaces';
+import { DeclaredSchemaExtension, Schema } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -10,12 +10,18 @@ type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   extensions: DeclaredSchemaExtension[];
 };
 export abstract class DatabaseAdapter<T extends Schema> {
+  protected readonly maxConnTimeoutMs: number;
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
 
   protected constructor() {
     this.registeredSchemas = new Map();
+    this.maxConnTimeoutMs = parseInt(process.env.MAX_CONN_TIMEOUT_MS ?? '5000');
+    this.maxConnTimeoutMs =
+      isNaN(this.maxConnTimeoutMs) || this.maxConnTimeoutMs < 0
+        ? 5000
+        : this.maxConnTimeoutMs;
   }
 
   /**

@@ -285,17 +285,20 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
-      grpcToConduitRoute(
-        'Router',
-        {
-          protoFile: protofile,
-          routes: routes,
-          routerUrl: url,
-        },
-        moduleName === 'core' ? undefined : moduleName,
-        this.grpcSdk.grpcToken,
-      );
+    const processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+    )[] = grpcToConduitRoute(
+      'Router',
+      {
+        protoFile: protofile,
+        routes: routes,
+        routerUrl: url,
+      },
+      moduleName === 'core' ? undefined : moduleName,
+      this.grpcSdk.grpcToken,
+    );
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();

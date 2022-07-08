@@ -105,7 +105,7 @@ export default class ConduitGrpcSdk {
     while (true) {
       try {
         const state = await this.core.check();
-        if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+        if (((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
           this._initialize();
           break;
