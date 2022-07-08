@@ -64,7 +64,7 @@ export class ChatRoutes {
     try {
       usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message);
+      throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
     const roomExists = await ChatRoom.getInstance()
       .findOne({ name: roomName })
@@ -137,7 +137,7 @@ export class ChatRoutes {
     try {
       usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
-      throw new GrpcError(status.INTERNAL, e.message);
+      throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
 
     for (const user of usersToBeAdded) {

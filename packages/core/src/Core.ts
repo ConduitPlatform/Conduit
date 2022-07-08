@@ -55,7 +55,7 @@ export class Core extends IConduitCore {
         config = this.config.getProperties();
       } catch (e) {
         this.config.load(previousConfig);
-        throw new ConduitError('INVALID_ARGUMENT', 400, e.message);
+        throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
       }
       this.grpcServer.sdk.bus!.publish('core:config:update', JSON.stringify(config));
     }

@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcCallback,
   ConduitActiveSchema,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -155,7 +156,7 @@ export default class Chat extends ManagedModule<Config> {
     try {
       await validateUsersInput(this.grpcSdk, participants);
     } catch (e) {
-      return callback({ code: e.code, message: e.message });
+      return callback({ code: (e as GrpcError).code, message: (e as GrpcError).message });
     }
 
     const errorMessage: string | null = null;

@@ -1,5 +1,4 @@
 import ConduitGrpcSdk, {
-  ConduitSchema,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
@@ -9,11 +8,11 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { assignmentValidation, inputValidation, queryValidation } from './utils';
 import { isNil, isPlainObject } from 'lodash';
-import escapeStringRegexp from 'escape-string-regexp';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
+import escapeStringRegexp from 'escape-string-regexp';
 
 export const OperationsEnum = {
   // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.

@@ -65,7 +65,7 @@ export class DatabaseRoutes {
       try {
         this._refreshRoutes();
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
       this._scheduledTimeout = null;
     }, 3000);

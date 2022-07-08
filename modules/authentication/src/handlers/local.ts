@@ -236,7 +236,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         await this.initDbAndEmail();
         ConduitGrpcSdk.Logger.log('Local is active');
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err.message);
+        ConduitGrpcSdk.Logger.error((err as Error).message);
         ConduitGrpcSdk.Logger.log('Local not active');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;

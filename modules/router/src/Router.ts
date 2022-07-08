@@ -165,7 +165,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         try {
           this.internalRegisterRoute(r.protofile, r.routes, r.url);
         } catch (err) {
-          ConduitGrpcSdk.Logger.error(err);
+          ConduitGrpcSdk.Logger.error(err as Error);
         }
       });
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -183,7 +183,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           messageParsed.url,
         );
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
   }
@@ -270,7 +270,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routerUrl,
       );
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 
@@ -315,7 +315,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       };
       await this._internalRouter.socketPush(socketData);
     } catch (err) {
-      ConduitGrpcSdk.Logger.error(err);
+      ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
 

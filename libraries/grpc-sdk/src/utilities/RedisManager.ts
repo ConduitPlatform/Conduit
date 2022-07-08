@@ -1,7 +1,7 @@
-import IORedis from 'ioredis';
+import IORedis, { Redis, RedisOptions } from 'ioredis';
 
 export class RedisManager {
-  redisConnection: IORedis.RedisOptions;
+  redisConnection: RedisOptions;
 
   constructor(redisIp: string, redisPort: any) {
     this.redisConnection = {
@@ -10,7 +10,7 @@ export class RedisManager {
     };
   }
 
-  getClient(connectionOps?: any): IORedis.Redis {
+  getClient(connectionOps?: RedisOptions): Redis {
     return new IORedis({ ...this.redisConnection, ...connectionOps });
   }
 }

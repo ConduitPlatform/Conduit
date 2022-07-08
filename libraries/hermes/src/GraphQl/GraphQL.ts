@@ -432,7 +432,7 @@ export class GraphQLController extends ConduitRouter {
       try {
         this.refreshGQLServer();
       } catch (err) {
-        ConduitGrpcSdk.Logger.error(err);
+        ConduitGrpcSdk.Logger.error(err as Error);
       }
       this._apolloRefreshTimeout = null;
     }, 3000);
