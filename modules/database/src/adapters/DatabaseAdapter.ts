@@ -16,8 +16,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
 
   protected constructor() {
-    this.maxConnTimeoutMs = parseInt(process.env.MAX_CONN_TIMEOUT_MS ?? '20000');
-    this.maxConnTimeoutMs = isNaN(this.maxConnTimeoutMs) ? 20000 : this.maxConnTimeoutMs;
+    this.maxConnTimeoutMs = parseInt(process.env.MAX_CONN_TIMEOUT_MS ?? '5000');
+    this.maxConnTimeoutMs =
+      isNaN(this.maxConnTimeoutMs) || this.maxConnTimeoutMs < 0
+        ? 5000
+        : this.maxConnTimeoutMs;
   }
 
   /**
