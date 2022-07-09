@@ -68,27 +68,25 @@ export default class Forms extends ManagedModule<Config> {
         if (!this.grpcSdk.isAvailable('email')) return;
         await this.registerSchemas();
         await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
-        const self = this;
         this.grpcSdk
           .waitForExistence('router')
           .then(() => {
-            self.userRouter = new FormsRoutes(self.grpcServer, self.grpcSdk);
+            this.userRouter = new FormsRoutes(this.grpcServer, this.grpcSdk);
+            this.formController = new FormsController(
+              this.grpcSdk,
+              this.userRouter,
+              this.userRouter._routingManager,
+            );
+            this.adminRouter = new AdminHandlers(
+              this.grpcServer,
+              this.grpcSdk,
+              this.formController,
+            );
+            this.isRunning = true;
           })
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e.message);
           });
-
-        this.formController = new FormsController(
-          this.grpcSdk,
-          this.userRouter,
-          this.userRouter._routingManager,
-        );
-        this.adminRouter = new AdminHandlers(
-          this.grpcServer,
-          this.grpcSdk,
-          this.formController,
-        );
-        this.isRunning = true;
       }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
