@@ -2,53 +2,156 @@ version: "3.9"
 services:
   redis:
     image: redis
-
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+  mongo:
+    image: mongo
+    platform: linux/arm64/v8
+    depends_on:
+      - core
+    networks:
+      - conduit
   core:
     image: "ghcr.io/conduitplatform/conduit:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    healthcheck:
+      test: [ "CMD", "curl -o /dev/null -s -w '%{http_code}\n' http://localhost:55152" ]
+      interval: 5s
+      timeout: 10s
+      retries: 0
+      start_period: 5s
+    depends_on:
+      - redis
     ports:
       - "55152:55152"
       - "3000:3000"
       - "3001:3001"
-    links:
-      - redis
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      REGISTER_NAME: 'false'
 
   database-provider:
     image: "ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}"
-    ports:
-      - "55153:55153"
-    links:
-      - core
+    platform: linux/arm64/v8
+    networks:
+      - conduit
     depends_on:
+      core:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    environment:
+      databaseURL: "mongodb://mongo:27017/conduit"
+      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: core:55152
+
+  cms:
+    image: "ghcr.io/conduitplatform/conduit-cms:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - database-provider
       - core
     environment:
-      databaseURL: "${_MONGO_URL}"
-      SERVICE_URL: 0.0.0.0:55153
       REGISTER_NAME: 'true'
       CONDUIT_SERVER: core:55152
 
   authentication:
-    image: "ghcr.io/conduitplatform/conduit-authentication:${_IMAGE_TAG}"
-    ports:
-      - "5000:5000"
+    image: "ghcr.io/conduitplatform/conduit-authentication:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
     depends_on:
+      - core
       - database-provider
-    links:
+      - email-provider
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  storage:
+    image: "ghcr.io/conduitplatform/conduit-storage:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
       - core
     environment:
       CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
 
-  # admin:
-  #   image: ghcr.io/conduitplatform/conduit-admin:${__IMAGE_tAG}
-  #   links:
-  #     - core
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - authentication
-  #   environment:
-  #     CONDUIT_API: core:3000
-  #     CONDUIT_URL: admin:8080
-  #     MASTER_KEY: M4ST3RK3Y
+  email-provider:
+    image: "ghcr.io/conduitplatform/conduit-email:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - core
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  sms-provider:
+    image: "ghcr.io/conduitplatform/conduit-sms:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - core
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  forms:
+    image: "ghcr.io/conduitplatform/conduit-forms:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - core
+      - email-provider
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  chat:
+    image: "ghcr.io/conduitplatform/conduit-chat:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - core
+      - authentication
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  push-notifications:
+    image: "ghcr.io/conduitplatform/conduit-push-notifications:${IMAGE_TAG}"
+    platform: linux/arm64/v8
+    networks:
+      - conduit
+    depends_on:
+      - core
+      - authentication
+    environment:
+      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+
+  admin:
+    image: "ghcr.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}"
+    platform: linux/arm64/v8
+    ports:
+      - "8080:8080"
+    networks:
+      - conduit
+    environment:
+      CONDUIT_URL: http://localhost:3000
+      MASTER_KEY: M4ST3RK3Y
+networks:
+  conduit:
