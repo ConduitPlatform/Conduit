@@ -17,12 +17,6 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
-    healthcheck:
-      test: [ "CMD", "curl -o /dev/null -s -w '%{http_code}\n' http://localhost:55152" ]
-      interval: 5s
-      timeout: 10s
-      retries: 0
-      start_period: 5s
     depends_on:
       - redis
     ports:
@@ -37,13 +31,13 @@ services:
   database-provider:
     image: "ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}"
     platform: linux/arm64/v8
+    restart: on-failure
     networks:
       - conduit
+    command: "sh -c 'sleep 5 && yarn start'"
     depends_on:
-      core:
-        condition: service_healthy
-      mongo:
-        condition: service_started
+      - core
+      - mongo
     environment:
       databaseURL: "mongodb://mongo:27017/conduit"
       REGISTER_NAME: 'true'
@@ -54,9 +48,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
-      - core
     environment:
       REGISTER_NAME: 'true'
       CONDUIT_SERVER: core:55152
@@ -66,10 +60,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
       - database-provider
-      - email-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -79,8 +72,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -90,8 +84,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -101,8 +96,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -112,9 +108,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
-      - email-provider
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -124,9 +120,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
-      - authentication
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
@@ -136,9 +132,9 @@ services:
     platform: linux/arm64/v8
     networks:
       - conduit
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
-      - core
-      - authentication
+      - database-provider
     environment:
       CONDUIT_SERVER: core:55152
       REGISTER_NAME: 'true'
