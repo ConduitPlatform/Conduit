@@ -185,7 +185,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const declaredSchema = await this._activeAdapter.models['_DeclaredSchema'].findOne({
         name: schema.name,
       });
-      if (!declaredSchema.collectionName.startsWith('cnd_')) {
+      if (declaredSchema && !declaredSchema.collectionName.startsWith('cnd_')) {
         (schema.collectionName as any) = schema.collectionName.replace(
           'cnd_',
           schema.name.startsWith('_') ? '_' : '',
