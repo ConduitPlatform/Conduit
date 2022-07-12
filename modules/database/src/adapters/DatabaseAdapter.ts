@@ -35,6 +35,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract retrieveForeignSchemas(): Promise<void>;
 
   /**
+   * Checks if schema exists in declaredSchemas and removes prefix if it does
+   */
+  abstract registerDeclaredSchema(schema: ConduitSchema): Promise<Schema>;
+
+  /**
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema

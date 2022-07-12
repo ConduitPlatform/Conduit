@@ -81,13 +81,19 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    // await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    await this._activeAdapter.registerDeclaredSchema(models.DeclaredSchema);
     await this._activeAdapter.retrieveForeignSchemas();
     this.updateHealth(HealthCheckStatus.SERVING);
-    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (model.name === '_DeclaredSchema') return [];
-      return this._activeAdapter.createSchemaFromAdapter(model);
-    });
+    const modelPromises = await Promise.all(
+      Object.values(models).flatMap(async (model: ConduitSchema) => {
+        if (model.name === '_DeclaredSchema') return [];
+        // return this._activeAdapter.createSchemaFromAdapter(model);
+        this._activeAdapter.fixDatabaseSchemaOwnership(model);
+        await this.fixSchemaCollectionName(model);
+        return this._activeAdapter.createSchemaFromAdapter(model);
+      }),
+    );
 
     await Promise.all(modelPromises);
     await runMigrations(this._activeAdapter);
@@ -122,7 +128,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         ConduitGrpcSdk.Logger.error('Something was wrong with the message');
       }
     });
-    const coreHealth = ((await this.grpcSdk.core.check()) as unknown) as HealthCheckStatus;
+    const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
   }
@@ -173,6 +179,21 @@ export default class DatabaseModule extends ManagedModule<void> {
     ConduitGrpcSdk.Logger.log('Updated state');
   }
 
+  private async fixSchemaCollectionName(schema: ConduitSchema) {
+    if (schema.collectionName.startsWith('cnd_')) {
+      //Check if collectionName field in DeclaredSchemas does not include prefix (old naming form)
+      const declaredSchema = await this._activeAdapter.models['_DeclaredSchema'].findOne({
+        name: schema.name,
+      });
+      if (!declaredSchema.collectionName.startsWith('cnd_')) {
+        (schema.collectionName as any) = schema.collectionName.replace(
+          'cnd_',
+          schema.name.startsWith('_') ? '_' : '',
+        );
+      }
+    }
+  }
+
   // gRPC Service
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
@@ -189,6 +210,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       JSON.parse(call.request.schema!.modelOptions),
       call.request.schema!.collectionName,
     );
+    await this.fixSchemaCollectionName(schema);
+
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
         code: status.INVALID_ARGUMENT,
@@ -277,7 +300,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call.metadata!.get('module-name')![0] as string) as string,
+        call.metadata!.get('module-name')![0] as string as string,
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -296,7 +319,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = (call.metadata!.get('module-name')![0] as string) as string;
+      const extOwner = call.metadata!.get('module-name')![0] as string as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {

@@ -212,6 +212,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return this.models[schema.name];
   }
 
+  async registerDeclaredSchema(schema: ConduitSchema) {
+    if (schema.collectionName.startsWith('cnd_')) {
+      const nameWithoutPrefix = '_DeclaredSchema';
+      const oldNaming = (
+        await this.sequelize.query(`IF (OBJECT_ID(${nameWithoutPrefix}) IS NOT NULL )`)
+      )[0];
+      if (oldNaming) {
+        (schema.collectionName as any) = schema.collectionName.replace('cnd', '_');
+      }
+    }
+    return await this._createSchemaFromAdapter(schema);
+  }
+
   async deleteSchema(
     schemaName: string,
     deleteData: boolean,
