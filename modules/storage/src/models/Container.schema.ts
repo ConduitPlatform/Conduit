@@ -25,7 +25,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_containers';
 
 export class _StorageContainer extends ConduitActiveSchema<_StorageContainer> {
   private static _instance: _StorageContainer;

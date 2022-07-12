@@ -157,7 +157,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_users';
 
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;

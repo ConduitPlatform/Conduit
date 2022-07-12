@@ -29,7 +29,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_folders';
 
 export class _StorageFolder extends ConduitActiveSchema<_StorageFolder> {
   private static _instance: _StorageFolder;

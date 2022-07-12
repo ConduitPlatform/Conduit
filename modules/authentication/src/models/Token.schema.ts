@@ -33,7 +33,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_tokens';
 
 export class Token extends ConduitActiveSchema<Token> {
   private static _instance: Token;

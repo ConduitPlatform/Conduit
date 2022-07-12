@@ -37,7 +37,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_invitationtokens';
 
 export class InvitationToken extends ConduitActiveSchema<InvitationToken> {
   private static _instance: InvitationToken;

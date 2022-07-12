@@ -19,7 +19,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_configs';
 
 export class Config extends ConduitActiveSchema<Config> {
   private static _instance: Config;

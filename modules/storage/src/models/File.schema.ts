@@ -34,7 +34,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_files';
 
 export class File extends ConduitActiveSchema<File> {
   private static _instance: File;

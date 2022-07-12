@@ -39,7 +39,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_forms';
 
 export class Forms extends ConduitActiveSchema<Forms> {
   private static _instance: Forms;

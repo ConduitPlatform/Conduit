@@ -62,4 +62,5 @@ export const CustomEndpoints = new ConduitSchema(
       },
     },
   },
+  'cnd_customendpoints',
 );

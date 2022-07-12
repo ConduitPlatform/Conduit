@@ -36,7 +36,7 @@ const schemaOptions = {
     },
   },
 } as const;
-const collectionName = undefined;
+const collectionName = 'cnd_notificationtokens';
 
 export class NotificationToken extends ConduitActiveSchema<NotificationToken> {
   private static _instance: NotificationToken;
