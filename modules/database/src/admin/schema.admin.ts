@@ -164,14 +164,8 @@ export class SchemaAdmin {
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let {
-      id,
-      name,
-      fields,
-      modelOptions,
-      permissions,
-      crudOperations,
-    } = call.request.params;
+    let { id, name, fields, modelOptions, permissions, crudOperations } =
+      call.request.params;
 
     if (!isNil(name) && name !== '') {
       throw new GrpcError(
@@ -349,8 +343,8 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    requestedSchema.modelOptions.conduit.cms.enabled = !requestedSchema.modelOptions
-      .conduit.cms.enabled;
+    requestedSchema.modelOptions.conduit.cms.enabled =
+      !requestedSchema.modelOptions.conduit.cms.enabled;
 
     const updatedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -598,8 +592,11 @@ export class SchemaAdmin {
     const schemaNames = schemas.map(schema => schema.name);
     await Promise.all(
       schemas.map(async (schema: _ConduitSchema) => {
+        const importedName = schema.name.startsWith('_')
+          ? `imp${schema.name}`
+          : `imp_${schema.name}`;
         const recreatedSchema = new ConduitSchema(
-          schema.name,
+          importedName,
           schema.fields,
           schema.modelOptions,
         );
