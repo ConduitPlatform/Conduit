@@ -1,54 +1,141 @@
-version: "3.9"
+version: '3.9'
+networks:
+  default:
+    name: 'conduit-${IMAGE_TAG}'
 services:
-  redis:
-    image: redis
-
+  # Default Services
   core:
-    image: "ghcr.io/conduitplatform/conduit:${IMAGE_TAG}"
-    ports:
-      - "55152:55152"
-      - "3000:3000"
-      - "3001:3001"
-    links:
+    container_name: 'conduit-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit:${IMAGE_TAG}'
+    depends_on:
       - redis
+    ports:
+      - '${CORE_GRPC_PORT:-55152}:55152'
+      - '${CORE_HTTP_PORT:-3000}:3000'
+      - '${CORE_SOCKET_PORT:-3001}:3001'
     environment:
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
+      REDIS_HOST: 'conduit-redis-${IMAGE_TAG}'
+      REDIS_PORT: '6379'
+      REGISTER_NAME: 'false'
+      masterkey: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
 
   database-provider:
-    image: "ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}"
-    ports:
-      - "55153:55153"
-    links:
-      - core
+    container_name: 'conduit-database-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}'
+    restart: on-failure
+    command: "sh -c 'sleep 5 && yarn start'"
     depends_on:
       - core
+      - mongo
     environment:
-      databaseURL: "${_MONGO_URL}"
-      SERVICE_URL: 0.0.0.0:55153
+      databaseURL: '${DB_CONN_URI:-mongodb://conduit-mongo:27017/conduit}'
       REGISTER_NAME: 'true'
-      CONDUIT_SERVER: core:55152
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
 
-  authentication:
-    image: "ghcr.io/conduitplatform/conduit-authentication:${_IMAGE_TAG}"
-    ports:
-      - "5000:5000"
+  cms:
+    container_name: 'conduit-cms-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-cms:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
-    links:
-      - core
     environment:
-      CONDUIT_SERVER: core:55152
+      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
 
-  # admin:
-  #   image: ghcr.io/conduitplatform/conduit-admin:${__IMAGE_tAG}
-  #   links:
-  #     - core
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - authentication
-  #   environment:
-  #     CONDUIT_API: core:3000
-  #     CONDUIT_URL: admin:8080
-  #     MASTER_KEY: M4ST3RK3Y
+  authentication:
+    container_name: 'conduit-authentication-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-authentication:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+
+  email-provider:
+    container_name: 'conduit-email-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-email:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+
+  ui:
+    container_name: 'conduit-ui-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
+    ports:
+      - '8080:8080'
+    environment:
+      CONDUIT_URL: 'http://localhost:${CORE_HTTP_PORT:-3000}'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+
+  # Optional Services
+  storage:
+    container_name: 'conduit-storage-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-storage:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+    profiles: ['storage']
+
+  sms-provider:
+    container_name: 'conduit-sms-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-sms:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+    profiles: ['sms']
+
+  forms:
+    container_name: 'conduit-forms-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-forms:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+    profiles: ['forms']
+
+  chat:
+    container_name: 'conduit-chat-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-chat:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+    profiles: ['chat']
+
+  push-notifications:
+    container_name: 'conduit-push-notifications-${IMAGE_TAG}'
+    image: 'ghcr.io/conduitplatform/conduit-push-notifications:${IMAGE_TAG}'
+    command: "sh -c 'sleep 10 && yarn start'"
+    depends_on:
+      - database-provider
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+    profiles: ['push-notifications']
+
+  # Dependencies
+  redis:
+    container_name: 'conduit-redis-${IMAGE_TAG}'
+    image: 'docker.io/library/redis:7.0.2'
+
+  mongo:
+    container_name: 'conduit-mongo-${IMAGE_TAG}'
+    image: 'docker.io/library/mongo:4.4.15'
+    networks:
+      default:
+        aliases:
+          - conduit-mongo
