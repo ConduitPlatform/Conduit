@@ -158,7 +158,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return schema;
   }
 
-  protected getCollectionName(schema: ConduitSchema, setPrefix = false) {
+  getCollectionName(schema: ConduitSchema, setPrefix = false) {
     let collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
@@ -176,7 +176,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           schema,
         );
       }
-      delete this.sequelize.models[schema.name];
+      delete this.sequelize.models[schema.collectionName];
     }
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {

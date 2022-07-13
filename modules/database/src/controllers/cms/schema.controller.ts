@@ -91,7 +91,12 @@ export class SchemaController {
             if (typeof r.modelOptions === 'string') {
               r.modelOptions = JSON.parse(r.modelOptions);
             }
-            const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
+            const schema = new ConduitSchema(
+              r.name,
+              r.fields,
+              r.modelOptions,
+              r.collectionName,
+            );
             promise = promise.then(r => {
               return this.database.createCustomSchemaFromAdapter(schema);
             });

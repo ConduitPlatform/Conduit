@@ -54,9 +54,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
-      schema as any;
     } else {
-      let collectionName = this.getCollectionName(schema);
+      let collectionName =
+        schema.collectionName !== ''
+          ? schema.collectionName
+          : this.getCollectionName(schema);
       if (cndPrefix && !this.models['_DeclaredSchema']) {
         collectionName = collectionName.startsWith('_')
           ? `cnd${collectionName}`
@@ -78,7 +80,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
-  protected abstract getCollectionName(schema: ConduitSchema): string;
+  abstract getCollectionName(schema: ConduitSchema): string;
 
   async createCustomSchemaFromAdapter(schema: ConduitSchema) {
     schema.ownerModule = 'database';

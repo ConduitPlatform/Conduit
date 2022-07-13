@@ -192,7 +192,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return introspectedSchemas;
   }
 
-  protected getCollectionName(schema: ConduitSchema) {
+  getCollectionName(schema: ConduitSchema) {
     let collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName

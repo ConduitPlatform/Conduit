@@ -636,6 +636,9 @@ export class SchemaAdmin {
               : defaultPermissions,
           },
         );
+        (recreatedSchema as any).collectionName = this.database.getCollectionName(
+          schema as any,
+        ); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
       }),
     );
