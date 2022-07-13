@@ -207,8 +207,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
   async checkDeclaredSchemaExistance() {
     const declaredSchema = (
-      await this.sequelize.query(`IF (OBJECT_ID("_DeclaredSchema") IS NOT NULL )`)
-    )[0];
+      (
+        await this.sequelize.query(
+          `SELECT EXISTS (
+    SELECT FROM 
+        information_schema.tables 
+    WHERE 
+        table_schema LIKE '${sqlSchemaName}' AND 
+        table_type LIKE 'BASE TABLE' AND
+        table_name = '_DeclaredSchema'
+    );`,
+        )
+      )[0][0] as any
+    ).exists;
     if (declaredSchema) {
       return true;
     }
