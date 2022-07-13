@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.10](https://github.com/ConduitPlatform/Conduit/compare/v0.10.9...v0.10.10) (2022-07-13)
+
+
+### Bug Fixes
+
+* **chat:** missing error handling on grpc functions ([6858611](https://github.com/ConduitPlatform/Conduit/commit/6858611a6062362c982c587c194caacd2907e64c))
+
 ### [0.10.9](https://github.com/ConduitPlatform/Conduit/compare/v0.10.8...v0.10.9) (2022-04-04)
 
 
