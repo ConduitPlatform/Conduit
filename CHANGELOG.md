@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.11](https://github.com/ConduitPlatform/Conduit/compare/v0.10.10...v0.10.11) (2022-07-13)
+
+
+### Bug Fixes
+
+* **authentication:** build failure due to python in alpine ([0e4f528](https://github.com/ConduitPlatform/Conduit/commit/0e4f5285b52f93815a4b275207a71f27f15e27ae))
+
 ### [0.10.10](https://github.com/ConduitPlatform/Conduit/compare/v0.10.9...v0.10.10) (2022-07-13)
 
 
