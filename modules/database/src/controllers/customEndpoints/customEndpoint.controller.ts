@@ -13,12 +13,10 @@ export class CustomEndpointController {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-    private router: DatabaseRoutes,
+    private router: DatabaseRoutes | null,
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
-    this.refreshRoutes().catch(err => {
-      ConduitGrpcSdk.Logger.error(err);
-    });
+    this.refreshRoutes();
     this.initializeState();
   }
 
@@ -28,7 +26,15 @@ export class CustomEndpointController {
     });
   }
 
+  setRouter(router: DatabaseRoutes) {
+    this.router = router;
+    this.refreshRoutes();
+  }
+
   refreshRoutes() {
+    if (this.router === null) {
+      return ConduitGrpcSdk.Logger.warn("Router null/Can't refresh routes");
+    }
     return this.database
       .getSchemaModel('CustomEndpoints')
       .model.findMany({ enabled: true })
@@ -44,8 +50,11 @@ export class CustomEndpointController {
           CustomEndpointHandler.addNewCustomOperationControl(schema);
         });
 
-        this.router.addRoutes(routes, false);
-        this.router.requestRefresh();
+        this.router!.addRoutes(routes, false);
+        this.router!.requestRefresh();
+      })
+      .then((r: any) => {
+        ConduitGrpcSdk.Logger.log('Refreshed routes');
       })
       .catch((err: Error) => {
         ConduitGrpcSdk.Logger.error(
@@ -57,8 +66,6 @@ export class CustomEndpointController {
 
   refreshEndpoints(): void {
     this.grpcSdk.bus?.publish('database:customEndpoints:refresh', '');
-    this.refreshRoutes().then((r: any) => {
-      ConduitGrpcSdk.Logger.log('Refreshed routes');
-    });
+    this.refreshRoutes();
   }
 }

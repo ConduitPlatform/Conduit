@@ -135,6 +135,11 @@ export default class DatabaseModule extends ManagedModule<void> {
         this._activeAdapter,
         null,
       );
+      const customEndpointController = new CustomEndpointController(
+        this.grpcSdk,
+        this._activeAdapter,
+        null,
+      );
       this.grpcSdk
         .waitForExistence('router')
         .then(() => {
@@ -144,11 +149,7 @@ export default class DatabaseModule extends ManagedModule<void> {
             this.grpcSdk,
           );
           schemaController.setRouter(this.userRouter);
-          const customEndpointController = new CustomEndpointController(
-            this.grpcSdk,
-            this._activeAdapter,
-            this.userRouter,
-          );
+          customEndpointController.setRouter(this.userRouter);
           this.adminRouter = new AdminHandlers(
             this.grpcServer,
             this.grpcSdk,
