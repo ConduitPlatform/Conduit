@@ -159,7 +159,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
-      this.updateCollectionName(schema);
       if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
@@ -193,17 +192,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return introspectedSchemas;
   }
 
-  protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
+  protected getCollectionName(schema: ConduitSchema) {
     let collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
         : pluralize(schema.name);
-    if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
-      collectionName = collectionName.startsWith('_')
-        ? `cnd${collectionName}`
-        : `cnd_${collectionName}`;
-    }
-    (schema as any).collectionName = collectionName;
+    return collectionName;
   }
 
   protected async _createSchemaFromAdapter(

@@ -52,30 +52,31 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (!this.models) {
       this.models = {};
     }
-    this.updateCollectionName(schema, !imported);
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
     }
-    if (cndPrefix) {
-      //Check if collectionName field in DeclaredSchemas does not include prefix (old naming form)
+    let collectionName = this.getCollectionName(schema);
+    if (cndPrefix && !this.models['_DeclaredSchema']) {
+      collectionName = collectionName.startsWith('_')
+        ? `cnd${collectionName}`
+        : `cnd_${collectionName}`;
+    } else if (cndPrefix) {
       const declaredSchema = await this.models['_DeclaredSchema'].findOne({
         name: schema.name,
       });
       if (!declaredSchema) {
-        (schema as any).collectionName = schema.collectionName.startsWith('_')
-          ? `cnd${schema.collectionName}`
-          : `cnd_${schema.collectionName}`;
+        collectionName = collectionName.startsWith('_')
+          ? `cnd${collectionName}`
+          : `cnd_${collectionName}`;
       }
     }
+    (schema as any).collectionName = collectionName;
     return this._createSchemaFromAdapter(schema);
   }
 
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
-  protected abstract updateCollectionName(
-    schema: ConduitSchema,
-    setPrefix: boolean,
-  ): void;
+  protected abstract getCollectionName(schema: ConduitSchema): string;
 
   async createCustomSchemaFromAdapter(schema: ConduitSchema) {
     schema.ownerModule = 'database';

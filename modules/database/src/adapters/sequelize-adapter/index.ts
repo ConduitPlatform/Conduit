@@ -81,7 +81,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
-      this.updateCollectionName(schema);
       if ((schema as Indexable).modelOptions.conduit.imported) {
         importedSchemas.push(schema.collectionName);
       }
@@ -159,18 +158,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return schema;
   }
 
-  protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
+  protected getCollectionName(schema: ConduitSchema, setPrefix = false) {
     let collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
         : schema.name;
-    if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
-      collectionName = collectionName.startsWith('_')
-        ? `cnd${collectionName}`
-        : `cnd_${collectionName}`;
-    }
-    (schema as any).collectionName = collectionName;
-    (schema as any).name = collectionName;
+    return collectionName;
   }
 
   protected async _createSchemaFromAdapter(
