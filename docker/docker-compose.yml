@@ -1,54 +1,194 @@
-version: "3.9"
+version: '3.9'
+networks:
+  default:
+    name: 'conduit-${IMAGE_TAG}'
 services:
-  redis:
-    image: redis
-
+  # Default Services
   core:
-    image: "ghcr.io/conduitplatform/conduit:${IMAGE_TAG}"
+    container_name: 'conduit-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/conduit:${IMAGE_TAG}'
+    restart: unless-stopped
     ports:
-      - "55152:55152"
-      - "3000:3000"
-      - "3001:3001"
-    links:
-      - redis
+      - '${CORE_GRPC_PORT:-55152}:55152'
+      - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
+      - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
     environment:
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
+      REDIS_HOST: 'conduit-redis-${IMAGE_TAG}'
+      REDIS_PORT: '${REDIS_PORT:-6379}'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+      ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
+      ADMIN_SOCKET_PORT: '${ADMIN_SOCKET_PORT:-3031}'
+      GRPC_KEY: '${GRPC_KEY}'
+    depends_on:
+      - redis
 
-  database-provider:
-    image: "ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}"
+  ui:
+    container_name: 'conduit-ui-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
+    restart: unless-stopped
     ports:
-      - "55153:55153"
-    links:
-      - core
+      - '${UI_PORT:-8080}:8080'
+    environment:
+      CONDUIT_URL: 'http://localhost:${ADMIN_HTTP_PORT:-3030}'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+
+  database:
+    container_name: 'conduit-database-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/database:${IMAGE_TAG}'
+    restart: unless-stopped
     depends_on:
       - core
+      - ${DB_TYPE:-mongodb}
     environment:
-      databaseURL: "${_MONGO_URL}"
-      SERVICE_URL: 0.0.0.0:55153
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
-      CONDUIT_SERVER: core:55152
+      GRPC_KEY: '${GRPC_KEY}'
+      DB_TYPE: '${DB_TYPE:-mongodb}'
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}' # append '/conduit' db for PostgreSQL
+
+  router:
+    container_name: 'conduit-router-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/router:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    ports:
+      - '${CLIENT_HTTP_PORT:-3000}:3000'
+      - '${CLIENT_SOCKET_PORT:-3001}:3001'
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+      CLIENT_HTTP_PORT: '${CLIENT_HTTP_PORT:-3000}'
+      CLIENT_SOCKET_PORT: '${CLIENT_SOCKET_PORT:-3001}'
 
   authentication:
-    image: "ghcr.io/conduitplatform/conduit-authentication:${_IMAGE_TAG}"
-    ports:
-      - "5000:5000"
+    container_name: 'conduit-authentication-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/authentication:${IMAGE_TAG}'
+    restart: unless-stopped
     depends_on:
-      - database-provider
-    links:
       - core
+      - database
     environment:
-      CONDUIT_SERVER: core:55152
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
 
-  # admin:
-  #   image: ghcr.io/conduitplatform/conduit-admin:${__IMAGE_tAG}
-  #   links:
-  #     - core
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - authentication
-  #   environment:
-  #     CONDUIT_API: core:3000
-  #     CONDUIT_URL: admin:8080
-  #     MASTER_KEY: M4ST3RK3Y
+  # Optional Services
+  chat:
+    container_name: 'conduit-chat-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/chat:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['chat']
+
+  email:
+    container_name: 'conduit-email-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/email:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['email']
+
+  forms:
+    container_name: 'conduit-forms-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/forms:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['forms']
+
+  push-notifications:
+    container_name: 'conduit-push-notifications-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/push-notifications:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['push-notifications']
+
+  sms:
+    container_name: 'conduit-sms-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/sms:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['sms']
+
+  storage:
+    container_name: 'conduit-storage-${IMAGE_TAG}'
+    image: 'docker.io/conduitplatform/storage:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+    environment:
+      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      REGISTER_NAME: 'true'
+      GRPC_KEY: '${GRPC_KEY}'
+    profiles: ['storage']
+
+  # Dependencies
+  redis:
+    container_name: 'conduit-redis-${IMAGE_TAG}'
+    image: 'docker.io/library/redis:7.0.2'
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+
+  mongodb:
+    container_name: 'conduit-mongo-${IMAGE_TAG}'
+    image: 'docker.io/library/mongo:4.4.15'
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-27017}:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
+      MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
+    profiles: ['mongodb']
+    networks:
+      default:
+        aliases:
+          - conduit-mongo
+
+  postgres:
+    container_name: 'conduit-postgres-${IMAGE_TAG}'
+    image: 'docker.io/library/postgres:14.4'
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_DB: 'conduit'
+      POSTGRES_USER: '${DB_USER:-conduit}'
+      POSTGRES_PASSWORD: '${DB_PASS:-pass}'
+    profiles: ['postgres']
+    networks:
+      default:
+        aliases:
+          - conduit-postgres
