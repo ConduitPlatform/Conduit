@@ -30,6 +30,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
+   * Check Declared Schema Existance
+   */
+  abstract checkDeclaredSchemaExistance(): Promise<boolean>;
+
+  /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
    */
   abstract retrieveForeignSchemas(): Promise<void>;
@@ -42,6 +47,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
+    cndPrefix = true,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -49,6 +55,17 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.updateCollectionName(schema, !imported);
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
+    }
+    if (cndPrefix) {
+      //Check if collectionName field in DeclaredSchemas does not include prefix (old naming form)
+      const declaredSchema = await this.models['_DeclaredSchema'].findOne({
+        name: schema.name,
+      });
+      if (!declaredSchema) {
+        (schema as any).collectionName = schema.collectionName.startsWith('_')
+          ? `cnd${schema.collectionName}`
+          : `cnd_${schema.collectionName}`;
+      }
     }
     return this._createSchemaFromAdapter(schema);
   }

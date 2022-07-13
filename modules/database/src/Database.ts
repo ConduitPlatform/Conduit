@@ -81,12 +81,17 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.createSchemaFromAdapter(models.DeclaredSchema);
+    const declaredSchemaExists = await this._activeAdapter.checkDeclaredSchemaExistance();
+    await this._activeAdapter.createSchemaFromAdapter(
+      models.DeclaredSchema,
+      false,
+      !declaredSchemaExists,
+    );
     await this._activeAdapter.retrieveForeignSchemas();
     this.updateHealth(HealthCheckStatus.SERVING);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (model.name === '_DeclaredSchema') return [];
-      return this._activeAdapter.createSchemaFromAdapter(model);
+      return this._activeAdapter.createSchemaFromAdapter(model, false, true);
     });
 
     await Promise.all(modelPromises);
@@ -122,7 +127,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         ConduitGrpcSdk.Logger.error('Something was wrong with the message');
       }
     });
-    const coreHealth = ((await this.grpcSdk.core.check()) as unknown) as HealthCheckStatus;
+    const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
   }
@@ -197,7 +202,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
-      .createSchemaFromAdapter(schema)
+      .createSchemaFromAdapter(schema, false, true)
       .then((schemaAdapter: Schema) => {
         const originalSchema = {
           name: schemaAdapter.originalSchema.name,
@@ -277,7 +282,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = await this._activeAdapter.deleteSchema(
         call.request.schemaName,
         call.request.deleteData,
-        (call.metadata!.get('module-name')![0] as string) as string,
+        call.metadata!.get('module-name')![0] as string as string,
       );
       callback(null, { result: schemas });
     } catch (err) {
@@ -296,7 +301,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = (call.metadata!.get('module-name')![0] as string) as string;
+      const extOwner = call.metadata!.get('module-name')![0] as string as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {

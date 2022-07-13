@@ -93,19 +93,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     (await this.mongoose.connection.db.listCollections().toArray()).forEach(c =>
       collectionNames.push(c.name),
     );
-    const declaredSchemaCollectionName = this.models['_DeclaredSchema'].originalSchema
-      .collectionName;
+    const declaredSchemaCollectionName =
+      this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
-      const collectionInDeclaredSchemas = ((declaredSchemas as unknown) as ConduitSchema[]).some(
-        (declaredSchema: ConduitSchema) => {
-          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
-            return declaredSchema.collectionName === collection;
-          } else {
-            return pluralize(declaredSchema.name) === collection;
-          }
-        },
-      );
+      const collectionInDeclaredSchemas = (
+        declaredSchemas as unknown as ConduitSchema[]
+      ).some((declaredSchema: ConduitSchema) => {
+        if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+          return declaredSchema.collectionName === collection;
+        } else {
+          return pluralize(declaredSchema.name) === collection;
+        }
+      });
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);
       }
@@ -153,14 +153,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       {},
     );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName = this.models['_PendingSchemas'].originalSchema
-      .collectionName;
+    const pendingSchemaCollectionName =
+      this.models['_PendingSchemas'].originalSchema.collectionName;
     await db.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
-    ((declaredSchemas as unknown) as ConduitSchema[]).forEach((schema: ConduitSchema) => {
+    (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
       this.updateCollectionName(schema);
-      if (((schema as unknown) as _ConduitSchema).modelOptions.conduit!.imported) {
+      if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -248,6 +248,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return { model: this.models[schemaName], relations: null };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
+  }
+
+  async checkDeclaredSchemaExistance() {
+    const collections = await this.mongoose.connection.db.listCollections().toArray();
+    const declaredSchema = collections.find(c => c.name === '_declaredschemas');
+    if (declaredSchema) {
+      return true;
+    }
+    return false;
   }
 
   async deleteSchema(

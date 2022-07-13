@@ -212,6 +212,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return this.models[schema.name];
   }
 
+  async checkDeclaredSchemaExistance() {
+    const declaredSchema = (
+      await this.sequelize.query(`IF (OBJECT_ID("_DeclaredSchema") IS NOT NULL )`)
+    )[0];
+    if (declaredSchema) {
+      return true;
+    }
+    return false;
+  }
+
   async deleteSchema(
     schemaName: string,
     deleteData: boolean,
