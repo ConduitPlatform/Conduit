@@ -100,6 +100,7 @@ services:
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
+      - email-provider
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -111,6 +112,7 @@ services:
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
+      - authentication
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -122,6 +124,7 @@ services:
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
+      - authentication
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
