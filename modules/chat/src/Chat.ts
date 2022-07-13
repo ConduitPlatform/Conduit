@@ -49,81 +49,62 @@ export default class ChatModule extends ConduitServiceModule {
 
     try {
       await validateUsersInput(this.grpcSdk, participants);
-    } catch (e) {
-      return callback({ code: e.code, message: e.message });
-    }
-
-    let errorMessage: string | null = null;
-    const room = await models.ChatRoom.getInstance()
-      .create({
-        name: name,
-        participants: participants,
-      })
-      .catch((e: Error) => {
-        errorMessage = e.message;
+      const room = await models.ChatRoom.getInstance()
+        .create({
+          name: name,
+          participants: participants,
+        });
+      this.grpcSdk.bus?.publish(
+        'chat:create:ChatRoom',
+        JSON.stringify({
+          name: (room as models.ChatRoom).name,
+          participants: (room as models.ChatRoom).participants,
+        })
+      );
+      callback(null, {
+        result: JSON.stringify({
+          _id: (room as models.ChatRoom)._id,
+          name: (room as models.ChatRoom).name,
+          participants: (room as models.ChatRoom).participants,
+        }),
       });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    } catch (e) {
+      return callback({ code: e?.code ?? status.INTERNAL, message: e.message });
     }
-
-    this.grpcSdk.bus?.publish(
-      'chat:create:ChatRoom',
-      JSON.stringify({
-        name: (room as models.ChatRoom).name,
-        participants: (room as models.ChatRoom).participants,
-      })
-    );
-    callback(null, {
-      result: JSON.stringify({
-        _id: (room as models.ChatRoom)._id,
-        name: (room as models.ChatRoom).name,
-        participants: (room as models.ChatRoom).participants,
-      }),
-    });
   }
 
   async sendMessage(call: any, callback: any) {
     const userId = call.request.userId;
     const { roomId, message } = call.request;
+    try {
+      const room = await ChatRoom.getInstance().findOne({ _id: roomId });
 
-    let errorMessage: string | null = null;
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
+      if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
+        return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
+      }
 
-    if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
-      return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
-    }
-
-    ChatMessage.getInstance()
-      .create({
-        message,
-        senderUser: userId,
-        room: roomId,
-        readBy: [userId],
-      })
-      .then(() => {
-        return this.grpcSdk.router.socketPush({
-          event: 'message',
-          receivers: [roomId],
-          rooms: [],
-          data: JSON.stringify({ sender: userId, message, room: roomId }),
+      ChatMessage.getInstance()
+        .create({
+          message,
+          senderUser: userId,
+          room: roomId,
+          readBy: [userId],
+        })
+        .then(() => {
+          return this.grpcSdk.router.socketPush({
+            event: 'message',
+            receivers: [roomId],
+            rooms: [],
+            data: JSON.stringify({ sender: userId, message, room: roomId }),
+          });
+        })
+        .then(() => {
+          callback(null, null);
         });
-      })
-      .then(() => {
-        callback(null, null);
-      })
-      .catch((e: Error) => {
-        callback({
-          code: status.INTERNAL,
-          message: e.message,
-        });
-      });
+    }catch (e) {
+      return callback({ code: e?.code ?? status.INTERNAL, message: e.message });
+
+    }
   }
 
   async deleteRoom(call: any, callback: any) {
