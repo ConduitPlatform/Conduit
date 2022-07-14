@@ -23,6 +23,8 @@ const escapeStringRegexp = require('escape-string-regexp');
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   _id: string;
+} & {
+  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
 const SYSTEM_SCHEMAS = ['CustomEndpoints', '_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
@@ -164,14 +166,8 @@ export class SchemaAdmin {
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let {
-      id,
-      name,
-      fields,
-      modelOptions,
-      permissions,
-      crudOperations,
-    } = call.request.params;
+    const { id, name, fields, modelOptions, permissions } = call.request.params;
+    let { crudOperations } = call.request.params;
 
     if (!isNil(name) && name !== '') {
       throw new GrpcError(
@@ -349,8 +345,8 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    requestedSchema.modelOptions.conduit.cms.enabled = !requestedSchema.modelOptions
-      .conduit.cms.enabled;
+    requestedSchema.modelOptions.conduit.cms.enabled =
+      !requestedSchema.modelOptions.conduit.cms.enabled;
 
     const updatedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -598,8 +594,11 @@ export class SchemaAdmin {
     const schemaNames = schemas.map(schema => schema.name);
     await Promise.all(
       schemas.map(async (schema: _ConduitSchema) => {
+        const importedName = schema.name.startsWith('_')
+          ? `imp${schema.name}`
+          : `imp_${schema.name}`;
         const recreatedSchema = new ConduitSchema(
-          schema.name,
+          importedName,
           schema.fields,
           schema.modelOptions,
         );
@@ -639,6 +638,8 @@ export class SchemaAdmin {
               : defaultPermissions,
           },
         );
+        (recreatedSchema as _ConduitSchema).collectionName =
+          this.database.getCollectionName(schema as _ConduitSchema); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
       }),
     );
