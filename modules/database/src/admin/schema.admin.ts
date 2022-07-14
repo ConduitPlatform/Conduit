@@ -16,13 +16,15 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { ParsedQuery } from '../interfaces';
+import { DeclaredSchemaExtension, ParsedQuery } from '../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   _id: string;
+} & {
+  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
 const SYSTEM_SCHEMAS = ['CustomEndpoints', '_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
@@ -164,8 +166,8 @@ export class SchemaAdmin {
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { id, name, fields, modelOptions, permissions, crudOperations } =
-      call.request.params;
+    const { id, name, fields, modelOptions, permissions } = call.request.params;
+    let { crudOperations } = call.request.params;
 
     if (!isNil(name) && name !== '') {
       throw new GrpcError(
@@ -636,9 +638,8 @@ export class SchemaAdmin {
               : defaultPermissions,
           },
         );
-        (recreatedSchema as any).collectionName = this.database.getCollectionName(
-          schema as any,
-        ); //keep collection name without prefix
+        (recreatedSchema as _ConduitSchema).collectionName =
+          this.database.getCollectionName(schema as _ConduitSchema); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
       }),
     );

@@ -206,7 +206,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   async checkDeclaredSchemaExistance() {
-    const declaredSchema = (
+    return (
       (
         await this.sequelize.query(
           `SELECT EXISTS (
@@ -220,10 +220,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         )
       )[0][0] as any
     ).exists;
-    if (declaredSchema) {
-      return true;
-    }
-    return false;
   }
 
   async deleteSchema(

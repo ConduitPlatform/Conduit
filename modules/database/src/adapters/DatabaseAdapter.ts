@@ -8,6 +8,8 @@ import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   extensions: DeclaredSchemaExtension[];
+} & {
+  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -73,7 +75,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           collectionName = declaredSchema.collectionName;
         }
       }
-      (schema as any).collectionName = collectionName;
+      (schema as _ConduitSchema).collectionName = collectionName;
     }
     return this._createSchemaFromAdapter(schema);
   }

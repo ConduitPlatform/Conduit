@@ -243,12 +243,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   async checkDeclaredSchemaExistance() {
-    const collections = await this.mongoose.connection.db.listCollections().toArray();
-    const declaredSchema = collections.find(c => c.name === '_declaredschemas');
-    if (declaredSchema) {
-      return true;
-    }
-    return false;
+    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
+      c => c.name === '_declaredschemas',
+    );
   }
 
   async deleteSchema(
