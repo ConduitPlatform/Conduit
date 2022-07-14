@@ -38,7 +38,7 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '/admin',
+  urlPrefix: '/',
   securitySchemes: {
     masterKey: {
       name: 'masterkey',
@@ -51,8 +51,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
       type: 'http',
       scheme: 'bearer',
       bearerFormat: 'Bearer',
-      description:
-        'An admin authentication token, retrievable through [POST] /admin/login',
+      description: 'An admin authentication token, retrievable through [POST] /login',
     },
   },
   globalSecurityHeaders: [
@@ -89,7 +88,7 @@ export default class AdminModule extends IConduitAdmin {
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
-      '/admin',
+      '/',
       this.grpcSdk,
       1000,
       swaggerRouterMetadata,
@@ -394,20 +393,17 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-    )[] = grpcToConduitRoute(
-      'Admin',
-      {
-        protoFile: protofile,
-        routes: routes as RouteT[],
-        routerUrl: url,
-      },
-      moduleName,
-      this.grpcSdk.grpcToken,
-    );
+    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
+      grpcToConduitRoute(
+        'Admin',
+        {
+          protoFile: protofile,
+          routes: routes as RouteT[],
+          routerUrl: url,
+        },
+        moduleName,
+        this.grpcSdk.grpcToken,
+      );
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {

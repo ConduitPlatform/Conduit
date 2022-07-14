@@ -12,10 +12,10 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
     next: NextFunction,
   ) {
     const graphQlCheck =
-      req.originalUrl.indexOf('/admin/graphql') === 0 && req.method === 'GET';
+      req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
     if (
       // Excluded routes
-      (req.originalUrl.indexOf('/admin/swagger') === 0 || graphQlCheck) &&
+      (req.originalUrl.indexOf('/swagger') === 0 || graphQlCheck) &&
       (await isDev(conduit))
     ) {
       return next();
