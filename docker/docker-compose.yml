@@ -83,6 +83,7 @@ services:
     depends_on:
       - core
       - database
+      - router
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -109,6 +110,8 @@ services:
     depends_on:
       - core
       - database
+      - router
+      - email
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -122,6 +125,7 @@ services:
     depends_on:
       - core
       - database
+      - router
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -134,7 +138,7 @@ services:
     restart: unless-stopped
     depends_on:
       - core
-      - database
+      - database # not directly, but no point starting it otherwise
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
@@ -148,6 +152,7 @@ services:
     depends_on:
       - core
       - database
+      - router
     environment:
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
       REGISTER_NAME: 'true'
