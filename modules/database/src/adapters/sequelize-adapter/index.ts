@@ -158,7 +158,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return schema;
   }
 
-  getCollectionName(schema: ConduitSchema, setPrefix = false) {
+  getCollectionName(schema: ConduitSchema) {
     const collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
@@ -218,7 +218,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
         table_name = '_DeclaredSchema'
     );`,
         )
-      )[0][0] as any
+      )[0][0] as { exists: boolean }
     ).exists;
   }
 

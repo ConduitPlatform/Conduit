@@ -16,7 +16,7 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { DeclaredSchemaExtension, ParsedQuery } from '../interfaces';
+import { ParsedQuery } from '../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
