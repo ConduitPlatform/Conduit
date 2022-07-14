@@ -7,6 +7,7 @@ services:
   core:
     container_name: 'conduit-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit:${IMAGE_TAG}'
+    restart: unless-stopped
     depends_on:
       - redis
     ports:
@@ -22,19 +23,20 @@ services:
   database-provider:
     container_name: 'conduit-database-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-database:${IMAGE_TAG}'
-    restart: on-failure
+    restart: unless-stopped
     command: "sh -c 'sleep 5 && yarn start'"
     depends_on:
       - core
       - mongo
     environment:
-      databaseURL: '${DB_CONN_URI:-mongodb://conduit-mongo:27017/conduit}'
+      databaseURL: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}'
       REGISTER_NAME: 'true'
       CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
 
   cms:
     container_name: 'conduit-cms-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-cms:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -45,6 +47,7 @@ services:
   authentication:
     container_name: 'conduit-authentication-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-authentication:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -55,6 +58,7 @@ services:
   email-provider:
     container_name: 'conduit-email-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-email:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -65,6 +69,7 @@ services:
   ui:
     container_name: 'conduit-ui-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
+    restart: unless-stopped
     ports:
       - '8080:8080'
     environment:
@@ -75,6 +80,7 @@ services:
   storage:
     container_name: 'conduit-storage-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-storage:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -86,6 +92,7 @@ services:
   sms-provider:
     container_name: 'conduit-sms-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-sms:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -97,6 +104,7 @@ services:
   forms:
     container_name: 'conduit-forms-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-forms:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -109,6 +117,7 @@ services:
   chat:
     container_name: 'conduit-chat-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-chat:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -121,6 +130,7 @@ services:
   push-notifications:
     container_name: 'conduit-push-notifications-${IMAGE_TAG}'
     image: 'ghcr.io/conduitplatform/conduit-push-notifications:${IMAGE_TAG}'
+    restart: unless-stopped
     command: "sh -c 'sleep 10 && yarn start'"
     depends_on:
       - database-provider
@@ -134,10 +144,19 @@ services:
   redis:
     container_name: 'conduit-redis-${IMAGE_TAG}'
     image: 'docker.io/library/redis:7.0.2'
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
 
   mongo:
     container_name: 'conduit-mongo-${IMAGE_TAG}'
     image: 'docker.io/library/mongo:4.4.15'
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-27017}:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
+      MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
     networks:
       default:
         aliases:
