@@ -53,7 +53,7 @@ export class CustomEndpointController {
         this.router!.addRoutes(routes, false);
         this.router!.requestRefresh();
       })
-      .then((r: any) => {
+      .then(() => {
         ConduitGrpcSdk.Logger.log('Refreshed routes');
       })
       .catch((err: Error) => {
