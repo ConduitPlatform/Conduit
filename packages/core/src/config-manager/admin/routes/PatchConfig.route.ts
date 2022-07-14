@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getUpdateConfigRoute(
+export function getPatchConfigRoute(
   grpcSdk: ConduitGrpcSdk,
   conduit: ConduitCommons,
   registeredModules: Map<string, RegisteredModule>,
@@ -16,7 +16,7 @@ export function getUpdateConfigRoute(
   return new ConduitRoute(
     {
       path: '/config/:module',
-      action: ConduitRouteActions.UPDATE,
+      action: ConduitRouteActions.PATCH,
       urlParams: {
         module: { type: RouteOptionType.String, required: true },
       },
