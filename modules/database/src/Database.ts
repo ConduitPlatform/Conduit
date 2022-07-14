@@ -135,6 +135,18 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
+      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
+      const customEndpointController = new CustomEndpointController(
+        this.grpcSdk,
+        this._activeAdapter,
+      );
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        this._activeAdapter,
+        schemaController,
+        customEndpointController,
+      );
       this.grpcSdk
         .waitForExistence('router')
         .then(() => {
@@ -143,23 +155,8 @@ export default class DatabaseModule extends ManagedModule<void> {
             this._activeAdapter,
             this.grpcSdk,
           );
-          const schemaController = new SchemaController(
-            this.grpcSdk,
-            this._activeAdapter,
-            this.userRouter,
-          );
-          const customEndpointController = new CustomEndpointController(
-            this.grpcSdk,
-            this._activeAdapter,
-            this.userRouter,
-          );
-          this.adminRouter = new AdminHandlers(
-            this.grpcServer,
-            this.grpcSdk,
-            this._activeAdapter,
-            schemaController,
-            customEndpointController,
-          );
+          schemaController.setRouter(this.userRouter);
+          customEndpointController.setRouter(this.userRouter);
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e.message);
@@ -301,7 +298,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = call.metadata!.get('module-name')![0] as string as string;
+      const extOwner = call.metadata!.get('module-name')![0] as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
