@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0-0...v0.14.0-rc.1) (2022-07-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** convert update config to a patch route (#243)
+* **admin:** remove admin prefix from routes (#242)
+
+### Features
+
+* **database:** db engine connection attempts during startup ([#223](https://github.com/ConduitPlatform/Conduit/issues/223)) ([7c45ce7](https://github.com/ConduitPlatform/Conduit/commit/7c45ce7627561504906b4d7bfab64e812979cb74))
+
+
+### Bug Fixes
+
+* **forms:** not properly waiting for router ([207d6e2](https://github.com/ConduitPlatform/Conduit/commit/207d6e2d06c826abd38a1463dcc9be716d4f90c8))
+
+
+* **admin:** remove admin prefix from routes ([#242](https://github.com/ConduitPlatform/Conduit/issues/242)) ([55f1766](https://github.com/ConduitPlatform/Conduit/commit/55f176646151613117d1883fb35ab81a5336dadd))
+* **core:** convert update config to a patch route ([#243](https://github.com/ConduitPlatform/Conduit/issues/243)) ([f68e1c8](https://github.com/ConduitPlatform/Conduit/commit/f68e1c827bdc8e995508d3e266b7050d47fd7533))
+
 ## [0.14.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0-0...v0.14.0-rc.0) (2022-07-07)
 
 ## [0.14.0-0](https://github.com/ConduitPlatform/Conduit/compare/v0.13.1...v0.14.0-0) (2022-07-06)
