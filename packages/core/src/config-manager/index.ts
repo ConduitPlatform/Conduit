@@ -116,8 +116,8 @@ export default class ConfigManager implements IConfigManager {
       .then(config => {
         callback(null, {
           data: JSON.stringify({
-            url: ((config! as unknown) as { hostUrl: string }).hostUrl,
-            env: ((config! as unknown) as { env: string })!.env,
+            url: (config! as unknown as { hostUrl: string }).hostUrl,
+            env: (config! as unknown as { env: string })!.env,
           }),
         });
       })
@@ -286,7 +286,7 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        adminRoutes.getUpdateConfigRoute(
+        adminRoutes.getPatchConfigRoute(
           this.grpcSdk,
           this.sdk,
           this.serviceDiscovery.registeredModules,
