@@ -55,10 +55,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
     } else {
-      let collectionName =
-        schema.collectionName !== ''
-          ? schema.collectionName
-          : this.getCollectionName(schema);
+      let collectionName = this.getCollectionName(schema);
       if (cndPrefix && !this.models['_DeclaredSchema']) {
         collectionName = collectionName.startsWith('_')
           ? `cnd${collectionName}`
@@ -71,6 +68,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
           collectionName = collectionName.startsWith('_')
             ? `cnd${collectionName}`
             : `cnd_${collectionName}`;
+        } else {
+          //recover collection name from DeclaredSchema
+          collectionName = declaredSchema.collectionName;
         }
       }
       (schema as any).collectionName = collectionName;

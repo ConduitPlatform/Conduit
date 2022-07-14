@@ -193,11 +193,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   getCollectionName(schema: ConduitSchema) {
-    let collectionName =
-      schema.collectionName && schema.collectionName !== ''
-        ? schema.collectionName
-        : pluralize(schema.name);
-    return collectionName;
+    return schema.collectionName && schema.collectionName !== ''
+      ? schema.collectionName
+      : pluralize(schema.name);
   }
 
   protected async _createSchemaFromAdapter(
