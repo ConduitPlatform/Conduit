@@ -14,11 +14,13 @@ import { ParsedQuery } from '../../interfaces';
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
 };
+
 export class SchemaController {
+  private router: DatabaseRoutes;
+
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-    private router: DatabaseRoutes,
   ) {
     this.loadExistingSchemas();
     this.initializeState();
@@ -30,7 +32,15 @@ export class SchemaController {
     });
   }
 
+  setRouter(router: DatabaseRoutes) {
+    this.router = router;
+    this.refreshRoutes();
+  }
+
   refreshRoutes() {
+    if (!this.router) {
+      return;
+    }
     this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
@@ -50,7 +60,7 @@ export class SchemaController {
             }
           });
           this._registerRoutes(routeSchemas);
-          this.router.requestRefresh();
+          this.router!.requestRefresh();
         } else {
           ConduitGrpcSdk.Logger.error('Something went wrong while loading custom schema');
           ConduitGrpcSdk.Logger.error('No schemas emitted');
@@ -79,6 +89,9 @@ export class SchemaController {
   }
 
   private async loadExistingSchemas() {
+    if (!this.router) {
+      return;
+    }
     this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
@@ -91,7 +104,12 @@ export class SchemaController {
             if (typeof r.modelOptions === 'string') {
               r.modelOptions = JSON.parse(r.modelOptions);
             }
-            const schema = new ConduitSchema(r.name, r.fields, r.modelOptions);
+            const schema = new ConduitSchema(
+              r.name,
+              r.fields,
+              r.modelOptions,
+              r.collectionName,
+            );
             promise = promise.then(r => {
               return this.database.createCustomSchemaFromAdapter(schema);
             });
@@ -104,7 +122,7 @@ export class SchemaController {
               }
             });
             this._registerRoutes(routeSchemas);
-            this.router.requestRefresh();
+            this.router!.requestRefresh();
           });
         }
       })
@@ -116,7 +134,6 @@ export class SchemaController {
 
   private _registerRoutes(schemas: ParsedQuery) {
     const handlers = new CmsHandlers(this.grpcSdk, this.database);
-
-    this.router.addRoutes(sortAndConstructRoutes(schemas, handlers));
+    this.router!.addRoutes(sortAndConstructRoutes(schemas, handlers));
   }
 }

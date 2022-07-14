@@ -83,7 +83,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       };
     }
 
-    this.model = sequelize.define(schema.name, schema.modelSchema, {
+    this.model = sequelize.define(schema.collectionName, schema.modelSchema, {
       ...schema.modelOptions,
       freezeTableName: true,
     });
@@ -136,9 +136,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
-    options.attributes = ({
+    options.attributes = {
       exclude: [...this.excludedFields],
-    } as unknown) as FindAttributeOptions;
+    } as unknown as FindAttributeOptions;
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
@@ -176,9 +176,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
-    options.attributes = ({
+    options.attributes = {
       exclude: [...this.excludedFields],
-    } as unknown) as FindAttributeOptions;
+    } as unknown as FindAttributeOptions;
     if (!isNil(skip)) {
       options.offset = skip;
     }

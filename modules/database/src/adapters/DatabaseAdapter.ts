@@ -8,6 +8,8 @@ import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   extensions: DeclaredSchemaExtension[];
+} & {
+  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -30,6 +32,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
+   * Check Declared Schema Existance
+   */
+  abstract checkDeclaredSchemaExistance(): Promise<boolean>;
+
+  /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
    */
   abstract retrieveForeignSchemas(): Promise<void>;
@@ -42,23 +49,40 @@ export abstract class DatabaseAdapter<T extends Schema> {
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
+    cndPrefix = true,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
     }
-    this.updateCollectionName(schema, !imported);
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
+    } else {
+      let collectionName = this.getCollectionName(schema);
+      if (cndPrefix && !this.models['_DeclaredSchema']) {
+        collectionName = collectionName.startsWith('_')
+          ? `cnd${collectionName}`
+          : `cnd_${collectionName}`;
+      } else if (cndPrefix) {
+        const declaredSchema = await this.models['_DeclaredSchema'].findOne({
+          name: schema.name,
+        });
+        if (!declaredSchema) {
+          collectionName = collectionName.startsWith('_')
+            ? `cnd${collectionName}`
+            : `cnd_${collectionName}`;
+        } else {
+          //recover collection name from DeclaredSchema
+          collectionName = declaredSchema.collectionName;
+        }
+      }
+      (schema as _ConduitSchema).collectionName = collectionName;
     }
     return this._createSchemaFromAdapter(schema);
   }
 
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
-  protected abstract updateCollectionName(
-    schema: ConduitSchema,
-    setPrefix: boolean,
-  ): void;
+  abstract getCollectionName(schema: ConduitSchema): string;
 
   async createCustomSchemaFromAdapter(schema: ConduitSchema) {
     schema.ownerModule = 'database';

@@ -81,7 +81,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
-      this.updateCollectionName(schema);
       if ((schema as Indexable).modelOptions.conduit.imported) {
         importedSchemas.push(schema.collectionName);
       }
@@ -159,18 +158,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return schema;
   }
 
-  protected updateCollectionName(schema: ConduitSchema, setPrefix = false) {
-    let collectionName =
+  getCollectionName(schema: ConduitSchema) {
+    const collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
         : schema.name;
-    if (setPrefix && this.foreignSchemaCollections.has(collectionName)) {
-      collectionName = collectionName.startsWith('_')
-        ? `cnd${collectionName}`
-        : `cnd_${collectionName}`;
-    }
-    (schema as any).collectionName = collectionName;
-    (schema as any).name = collectionName;
+    return collectionName;
   }
 
   protected async _createSchemaFromAdapter(
@@ -183,7 +176,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           schema,
         );
       }
-      delete this.sequelize.models[schema.name];
+      delete this.sequelize.models[schema.collectionName];
     }
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
@@ -210,6 +203,23 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     await this.saveSchemaToDatabase(original);
 
     return this.models[schema.name];
+  }
+
+  async checkDeclaredSchemaExistance() {
+    return (
+      (
+        await this.sequelize.query(
+          `SELECT EXISTS (
+    SELECT FROM 
+        information_schema.tables 
+    WHERE 
+        table_schema LIKE '${sqlSchemaName}' AND 
+        table_type LIKE 'BASE TABLE' AND
+        table_name = '_DeclaredSchema'
+    );`,
+        )
+      )[0][0] as { exists: boolean }
+    ).exists;
   }
 
   async deleteSchema(
