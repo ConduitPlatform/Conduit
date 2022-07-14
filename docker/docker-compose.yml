@@ -16,8 +16,8 @@ services:
       REDIS_HOST: 'conduit-redis-${IMAGE_TAG}'
       REDIS_PORT: '${REDIS_PORT:-6379}'
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
-      CORE_HTTP_PORT: '${PORT:-3000}'
-      CORE_SOCKET_PORT: '${SOCKET_PORT:-3001}'
+      PORT: '${PORT:-3000}'
+      SOCKET_PORT: '${SOCKET_PORT:-3001}'
       GRPC_KEY: '${GRPC_KEY}'
     depends_on:
       - redis
