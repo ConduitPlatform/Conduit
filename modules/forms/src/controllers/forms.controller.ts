@@ -8,11 +8,10 @@ import { Forms } from '../models';
 import { FormsRoutes } from '../routes';
 
 export class FormsController {
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly router: FormsRoutes,
-    private readonly routingManager: RoutingManager,
-  ) {
+  private router: FormsRoutes;
+  private routingManager: RoutingManager;
+
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.refreshRoutes();
     this.initializeState();
   }
@@ -25,7 +24,16 @@ export class FormsController {
     });
   }
 
+  setRouter(router: FormsRoutes) {
+    this.router = router;
+    this.routingManager = router._routingManager;
+    this.refreshRoutes();
+  }
+
   refreshRoutes() {
+    if (!this.router) {
+      return;
+    }
     Forms.getInstance()
       .findMany({ enabled: true })
       .then((r: Forms[]) => {
