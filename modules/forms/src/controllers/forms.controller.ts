@@ -8,9 +8,10 @@ import { Forms } from '../models';
 import { FormsRoutes } from '../routes';
 
 export class FormsController {
+  private router: FormsRoutes;
+
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly router: FormsRoutes,
     private readonly routingManager: RoutingManager,
   ) {
     this.refreshRoutes();
@@ -25,7 +26,15 @@ export class FormsController {
     });
   }
 
+  setRouter(router: FormsRoutes) {
+    this.router = router;
+    this.refreshRoutes();
+  }
+
   refreshRoutes() {
+    if (!this.router) {
+      return;
+    }
     Forms.getInstance()
       .findMany({ enabled: true })
       .then((r: Forms[]) => {
