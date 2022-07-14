@@ -9,11 +9,9 @@ import { FormsRoutes } from '../routes';
 
 export class FormsController {
   private router: FormsRoutes;
+  private routingManager: RoutingManager;
 
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly routingManager: RoutingManager,
-  ) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.refreshRoutes();
     this.initializeState();
   }
@@ -28,6 +26,7 @@ export class FormsController {
 
   setRouter(router: FormsRoutes) {
     this.router = router;
+    this.routingManager = router._routingManager;
     this.refreshRoutes();
   }
 
