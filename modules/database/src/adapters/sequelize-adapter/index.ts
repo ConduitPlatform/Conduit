@@ -159,7 +159,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   getCollectionName(schema: ConduitSchema, setPrefix = false) {
-    let collectionName =
+    const collectionName =
       schema.collectionName && schema.collectionName !== ''
         ? schema.collectionName
         : schema.name;
