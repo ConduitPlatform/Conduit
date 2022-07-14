@@ -16,10 +16,11 @@ type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
 };
 
 export class SchemaController {
+  private router: DatabaseRoutes;
+
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-    private router: DatabaseRoutes | null,
   ) {
     this.loadExistingSchemas();
     this.initializeState();
@@ -37,8 +38,8 @@ export class SchemaController {
   }
 
   refreshRoutes() {
-    if (this.router === null) {
-      return ConduitGrpcSdk.Logger.warn("Router null/Can't refresh routes");
+    if (!this.router) {
+      return;
     }
     this.database
       .getSchemaModel('_DeclaredSchema')
@@ -88,8 +89,8 @@ export class SchemaController {
   }
 
   private async loadExistingSchemas() {
-    if (this.router === null) {
-      return ConduitGrpcSdk.Logger.warn("Router null/Can't load existing schemas");
+    if (!this.router) {
+      return;
     }
     this.database
       .getSchemaModel('_DeclaredSchema')

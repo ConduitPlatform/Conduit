@@ -9,11 +9,11 @@ import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchem
 
 export class CustomEndpointController {
   private handler: CustomEndpointHandler;
+  private router: DatabaseRoutes;
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-    private router: DatabaseRoutes | null,
   ) {
     this.handler = new CustomEndpointHandler(this.grpcSdk);
     this.refreshRoutes();
@@ -32,8 +32,8 @@ export class CustomEndpointController {
   }
 
   refreshRoutes() {
-    if (this.router === null) {
-      return ConduitGrpcSdk.Logger.warn("Router null/Can't refresh routes");
+    if (!this.router) {
+      return;
     }
     return this.database
       .getSchemaModel('CustomEndpoints')

@@ -130,15 +130,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
-      const schemaController = new SchemaController(
-        this.grpcSdk,
-        this._activeAdapter,
-        null,
-      );
+      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
       const customEndpointController = new CustomEndpointController(
         this.grpcSdk,
         this._activeAdapter,
-        null,
       );
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
@@ -298,7 +293,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
       const schemaName = call.request.extension.name;
-      const extOwner = call.metadata!.get('module-name')![0] as string as string;
+      const extOwner = call.metadata!.get('module-name')![0] as string;
       const extModel = JSON.parse(call.request.extension.modelSchema);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
