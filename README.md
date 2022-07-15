@@ -6,7 +6,7 @@
 </p>
 
 [![CodeFactor](https://www.codefactor.io/repository/github/conduitplatform/conduit/badge?style=for-the-badge)](https://www.codefactor.io/repository/github/conduitplatform/conduit)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/ConduitPlatform/Conduit?style=for-the-badge)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/ConduitPlatform/Conduit?color=green&sort=semver&style=for-the-badge)
 ![GitHub](https://img.shields.io/github/license/ConduitPlatform/Conduit?style=for-the-badge)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit?style=for-the-badge)
 
