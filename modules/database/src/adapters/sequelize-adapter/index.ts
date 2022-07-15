@@ -75,9 +75,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       {},
     );
     // Wipe Pending Schemas
-    const pendingSchemaCollectionName =
-      this.models['_PendingSchemas'].originalSchema.collectionName;
-    await this.getSchemaModel(pendingSchemaCollectionName).model.deleteMany({});
+    await this.getSchemaModel('_PendingSchemas').model.deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
