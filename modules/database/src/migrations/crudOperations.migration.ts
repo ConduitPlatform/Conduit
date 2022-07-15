@@ -1,17 +1,20 @@
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { ConduitModelOptions, ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { isBoolean } from 'lodash';
 
+type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+  modelOptions: ConduitModelOptions;
+};
 export async function migrateCrudOperations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
   const model = adapter.getSchemaModel('_DeclaredSchema').model;
-  const cmsSchemas = await model.findMany({
-    $or: [
-      { 'modelOptions.conduit.cms.crudOperations': true },
-      { 'modelOptions.conduit.cms.crudOperations': false },
-    ],
-  });
+  const declaredSchemas = await model.findMany({});
+  const cmsSchemas = declaredSchemas.filter((schema: _ConduitSchema) =>
+    isBoolean(schema.modelOptions.conduit?.cms),
+  );
   for (const schema of cmsSchemas) {
     const { crudOperations, authentication, enabled } = schema.modelOptions.conduit.cms;
     const cms = {
