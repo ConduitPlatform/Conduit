@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.12.7](https://github.com/ConduitPlatform/Conduit/compare/v0.12.6...v0.12.7) (2022-07-15)
+
+
+### Bug Fixes
+
+* **database:** createWithPopulations looking for wrong properties ([cb077d4](https://github.com/ConduitPlatform/Conduit/commit/cb077d4a39db2c9b79b3a95429c15d0e2080813b))
+
 ### [0.12.6](https://github.com/ConduitPlatform/Conduit/compare/v0.12.5...v0.12.6) (2022-04-13)
 
 ### [0.12.5](https://github.com/ConduitPlatform/Conduit/compare/v0.12.4...v0.12.5) (2022-04-04)
