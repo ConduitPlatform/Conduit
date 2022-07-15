@@ -1,4 +1,5 @@
 import { isNaN, isNil } from 'lodash';
+import * as crypto from 'crypto';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
@@ -453,6 +454,7 @@ export default class AdminModule extends IConduitAdmin {
     let config = { ...previousConfig, ...moduleConfig };
     try {
       this.config.load(config).validate();
+      await this.generateConfigDefaults(config);
       config = this.config.getProperties();
     } catch (e) {
       this.config.load(previousConfig);
@@ -467,6 +469,19 @@ export default class AdminModule extends IConduitAdmin {
       this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     }
     ConfigController.getInstance().config = config;
+    return config;
+  }
+
+  async generateConfigDefaults(config: ConfigSchema): Promise<ConfigSchema> {
+    const tokenSecretConfig = config.auth.tokenSecret;
+    const hostUrlConfig = config.hostUrl;
+    if (tokenSecretConfig === '') {
+      config.auth.tokenSecret = crypto.randomBytes(64).toString('base64');
+    }
+    if (hostUrlConfig === '') {
+      const portValue = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
+      config.hostUrl = `http://localhost:${portValue}`;
+    }
     return config;
   }
 }
