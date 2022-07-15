@@ -1,4 +1,4 @@
-import { ConduitModel } from '@conduitplatform/conduit-grpc-sdk';
+import { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from './index';
 import _, { isArray, isObject } from 'lodash';
 import { MongooseSchema } from './MongooseSchema';
