@@ -36,8 +36,7 @@ async function _createWithPopulations(
 
     if (!fields.hasOwnProperty(key)) continue;
     if (!isObject(fields[key])) continue;
-    if (fields[key].type?.schemaName === 'Mixed') continue;
-    if (fields[key].schemaName === 'Mixed') continue;
+    if (fields[key] === 'JSON' || fields[key].type === 'JSON') continue;
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
@@ -49,8 +48,8 @@ async function _createWithPopulations(
         if (!isArray(field) && field.type && isArray(field.type)) {
           field = field.type;
         }
-        if (field[0].hasOwnProperty('ref')) {
-          const { model } = adapter.getSchemaModel(field[0].ref);
+        if (field[0].hasOwnProperty('model')) {
+          const { model } = adapter.getSchemaModel(field[0].model);
           if (validate) {
             await model.model.validate(val);
           } else {
@@ -61,8 +60,8 @@ async function _createWithPopulations(
         }
       }
     } else if (isObject(document[key])) {
-      if (fields[key].hasOwnProperty('ref')) {
-        const { model } = adapter.getSchemaModel(fields[key].ref);
+      if (fields[key].hasOwnProperty('model')) {
+        const { model } = adapter.getSchemaModel(fields[key].model);
         if (validate) {
           await model.model.validate(document[key]);
         } else {
