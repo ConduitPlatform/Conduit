@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0-rc.1...v0.14.0) (2022-07-15)
+
+
+### Bug Fixes
+
+* **database:** createWithPopulations looking for wrong properties ([#245](https://github.com/ConduitPlatform/Conduit/issues/245)) ([b8c8c8c](https://github.com/ConduitPlatform/Conduit/commit/b8c8c8c7b24148db745399bd9aacc95da952963f))
+* **database:** fix cms schemas aggregation from declared ([#244](https://github.com/ConduitPlatform/Conduit/issues/244)) ([c852a5a](https://github.com/ConduitPlatform/Conduit/commit/c852a5a3fa252963245928521b8f7db4149b62ec))
+* **database:** get pending schema model based on collection name ([#246](https://github.com/ConduitPlatform/Conduit/issues/246)) ([46b8800](https://github.com/ConduitPlatform/Conduit/commit/46b880086ef65fea67d6e24212a989718a2344c7))
+
 ## [0.14.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0-0...v0.14.0-rc.1) (2022-07-14)
 
 
