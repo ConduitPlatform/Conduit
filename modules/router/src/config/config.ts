@@ -1,7 +1,7 @@
 export default {
   hostUrl: {
     format: 'String',
-    default: '',
+    default: '', //to be generated on initial configuration
   },
   transports: {
     rest: {

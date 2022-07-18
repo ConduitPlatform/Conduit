@@ -9,7 +9,6 @@ import {
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { generateConfigDefaults } from '../utils/config';
 
 export function getLoginRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
