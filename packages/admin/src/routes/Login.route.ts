@@ -9,6 +9,7 @@ import {
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { generateConfigDefaults } from '../utils/config';
 
 export function getLoginRoute(conduit: ConduitCommons) {
   return new ConduitRoute(
@@ -46,7 +47,6 @@ export function getLoginRoute(conduit: ConduitCommons) {
       let authConfig = await config.get('admin');
       authConfig = authConfig.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
-
       const token = signToken(
         { id: admin._id.toString() },
         tokenSecret,

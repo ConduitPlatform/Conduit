@@ -37,6 +37,7 @@ import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
 import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
+import { generateConfigDefaults } from './utils/config';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/',
@@ -122,9 +123,10 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
+    const adminSchema = await generateConfigDefaults(AdminConfigSchema.getProperties());
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
-      .configurePackage('admin', AdminConfigSchema.getProperties());
+      .configurePackage('admin', adminSchema);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -450,12 +452,11 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async setConfig(moduleConfig: any): Promise<any> {
-    const previousConfig = await this.commons.getConfigManager().get('core');
+    await generateConfigDefaults(moduleConfig);
+    const previousConfig = await this.commons.getConfigManager().get('admin');
     let config = { ...previousConfig, ...moduleConfig };
     try {
       this.config.load(config).validate();
-      await this.generateConfigDefaults(config);
-      config = this.config.getProperties();
     } catch (e) {
       this.config.load(previousConfig);
       config = { ...this.config.getProperties(), ...config };
@@ -469,19 +470,6 @@ export default class AdminModule extends IConduitAdmin {
       this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     }
     ConfigController.getInstance().config = config;
-    return config;
-  }
-
-  async generateConfigDefaults(config: ConfigSchema): Promise<ConfigSchema> {
-    const tokenSecretConfig = config.auth.tokenSecret;
-    const hostUrlConfig = config.hostUrl;
-    if (tokenSecretConfig === '') {
-      config.auth.tokenSecret = crypto.randomBytes(64).toString('base64');
-    }
-    if (hostUrlConfig === '') {
-      const portValue = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
-      config.hostUrl = `http://localhost:${portValue}`;
-    }
     return config;
   }
 }
