@@ -19,7 +19,7 @@ import {
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
@@ -97,7 +97,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     return Promise.all(promises);
   }
   async preConfig(config: Config) {
-    if (config.hostUrl === '') {
+    if (config.hostUrl === '' || isNil(config.hostUrl)) {
       config.hostUrl = `http://localhost:${process.env['CLIENT_HTTP_PORT'] ?? '3000'}`;
     }
     return config;
