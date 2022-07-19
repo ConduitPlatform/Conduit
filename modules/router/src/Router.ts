@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
+  Indexable,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
@@ -18,6 +19,7 @@ import {
   grpcToConduitRoute,
   RouteT,
   SocketPush,
+  SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
 import { isNaN, isNil } from 'lodash';
 import AppConfigSchema, { Config } from './config';
@@ -30,6 +32,43 @@ import {
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
 } from './protoTypes/router';
+
+const swaggerRouterMetadata: SwaggerRouterMetadata = {
+  urlPrefix: '',
+  securitySchemes: {
+    clientId: {
+      name: 'clientid',
+      type: 'apiKey',
+      in: 'header',
+      description: 'A security client id, retrievable through [POST] /security/client',
+    },
+    clientSecret: {
+      name: 'clientSecret',
+      type: 'apiKey',
+      in: 'header',
+      description:
+        'A security client secret, retrievable through [POST] /security/client',
+    },
+    userToken: {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'Bearer',
+      description:
+        'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
+    },
+  },
+  globalSecurityHeaders: [
+    {
+      clientId: [],
+      clientSecret: [],
+    },
+  ],
+  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
+    if (route.input.middlewares?.includes('authMiddleware')) {
+      swaggerRouteDoc.security[0].userToken = [];
+    }
+  },
+};
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   config = AppConfigSchema;
@@ -72,6 +111,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
       1000,
+      swaggerRouterMetadata,
     );
     this.registerGlobalMiddleware(
       'conduitRequestMiddleware',

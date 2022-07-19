@@ -39,7 +39,7 @@ import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '/',
+  urlPrefix: '',
   securitySchemes: {
     masterKey: {
       name: 'masterkey',

@@ -2,7 +2,7 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import ConduitGrpcSdk, { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
   ConduitRequest,
@@ -16,43 +16,6 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute } from './classes';
 import { createRouteMiddleware } from './utils/logger';
-
-const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '',
-  securitySchemes: {
-    clientId: {
-      name: 'clientid',
-      type: 'apiKey',
-      in: 'header',
-      description: 'A security client id, retrievable through [POST] /security/client',
-    },
-    clientSecret: {
-      name: 'clientSecret',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'A security client secret, retrievable through [POST] /security/client',
-    },
-    userToken: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'Bearer',
-      description:
-        'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
-    },
-  },
-  globalSecurityHeaders: [
-    {
-      clientId: [],
-      clientSecret: [],
-    },
-  ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      swaggerRouteDoc.security[0].userToken = [];
-    }
-  },
-};
 
 export class ConduitRoutingController {
   private _restRouter?: RestController;
@@ -119,10 +82,7 @@ export class ConduitRoutingController {
 
   initRest() {
     if (this._restRouter) return;
-    this._restRouter = new RestController(
-      this.grpcSdk,
-      this.swaggerMetadata ?? swaggerRouterMetadata,
-    );
+    this._restRouter = new RestController(this.grpcSdk, this.swaggerMetadata);
   }
 
   initGraphQL() {

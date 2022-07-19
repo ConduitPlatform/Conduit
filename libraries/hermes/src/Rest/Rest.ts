@@ -22,12 +22,25 @@ import { ConduitRoute } from '../classes';
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
+  private readonly _privateHeaders: string[];
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger?: SwaggerGenerator;
 
-  constructor(grpcSdk: ConduitGrpcSdk, swaggerRouterMetadata: SwaggerRouterMetadata) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    swaggerRouterMetadata: SwaggerRouterMetadata = {
+      urlPrefix: '',
+      securitySchemes: {},
+      globalSecurityHeaders: [],
+      setExtraRouteHeaders(): void {},
+    },
+  ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
+    this._privateHeaders =
+      swaggerRouterMetadata.globalSecurityHeaders.length > 0
+        ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0])
+        : [];
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
   }
@@ -157,9 +170,7 @@ export class RestController extends ConduitRouter {
         .then((r: any) => {
           if (r.redirect) {
             res.removeHeader('Authorization');
-            res.removeHeader('authorization');
-            res.removeHeader('clientid');
-            res.removeHeader('clientsecret');
+            this._privateHeaders.forEach(h => res.removeHeader(h));
             return res.redirect(r.redirect);
           } else {
             let result;
