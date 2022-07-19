@@ -24,7 +24,7 @@ import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 type OAuthHandler = typeof oauth2;
 
 export class AuthenticationRoutes {
-  private readonly localHandlers: LocalHandlers;
+  private localHandlers: LocalHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly phoneHandlers: PhoneHandlers;
@@ -33,13 +33,18 @@ export class AuthenticationRoutes {
   constructor(
     readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly emailServing: boolean,
+    private localSendVerificationEmail: boolean,
   ) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
-    this.localHandlers = new LocalHandlers(grpcSdk, emailServing);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
+    this.updateLocalHandlers(localSendVerificationEmail);
+  }
+
+  updateLocalHandlers(sendVerificationEmail: boolean) {
+    this.localSendVerificationEmail = sendVerificationEmail;
+    this.localHandlers = new LocalHandlers(this.grpcSdk, sendVerificationEmail);
   }
 
   async registerRoutes() {
