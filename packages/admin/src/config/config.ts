@@ -2,7 +2,7 @@ export default {
   auth: {
     tokenSecret: {
       type: 'String',
-      default: 'fjeinqgwenf',
+      default: '', // to be generated in set config
     },
     hashRounds: {
       type: 'Number',
@@ -15,7 +15,7 @@ export default {
   },
   hostUrl: {
     type: 'String',
-    default: 'http://localhost:3030',
+    default: '', // to be generated in set config
   },
   transports: {
     rest: {

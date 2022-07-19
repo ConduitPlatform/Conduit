@@ -19,7 +19,7 @@ import {
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
@@ -95,6 +95,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
+  }
+  async preConfig(config: Config) {
+    if (config.hostUrl === '' || isNil(config.hostUrl)) {
+      config.hostUrl = `http://localhost:${process.env['CLIENT_HTTP_PORT'] ?? '3000'}`;
+    }
+    return config;
   }
 
   async onConfig() {
@@ -285,20 +291,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (
-      | ConduitRoute
-      | ConduitMiddleware
-      | ConduitSocket
-    )[] = grpcToConduitRoute(
-      'Router',
-      {
-        protoFile: protofile,
-        routes: routes,
-        routerUrl: url,
-      },
-      moduleName === 'core' ? undefined : moduleName,
-      this.grpcSdk.grpcToken,
-    );
+    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
+      grpcToConduitRoute(
+        'Router',
+        {
+          protoFile: protofile,
+          routes: routes,
+          routerUrl: url,
+        },
+        moduleName === 'core' ? undefined : moduleName,
+        this.grpcSdk.grpcToken,
+      );
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();

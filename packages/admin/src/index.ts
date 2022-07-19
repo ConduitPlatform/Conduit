@@ -36,6 +36,7 @@ import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
 import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
+import { generateConfigDefaults } from './utils/config';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '/',
@@ -121,9 +122,10 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
+    const adminSchema = await generateConfigDefaults(AdminConfigSchema.getProperties());
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
-      .configurePackage('admin', AdminConfigSchema.getProperties());
+      .configurePackage('admin', adminSchema);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -449,11 +451,11 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async setConfig(moduleConfig: any): Promise<any> {
-    const previousConfig = await this.commons.getConfigManager().get('core');
+    await generateConfigDefaults(moduleConfig);
+    const previousConfig = await this.commons.getConfigManager().get('admin');
     let config = { ...previousConfig, ...moduleConfig };
     try {
       this.config.load(config).validate();
-      config = this.config.getProperties();
     } catch (e) {
       this.config.load(previousConfig);
       config = { ...this.config.getProperties(), ...config };

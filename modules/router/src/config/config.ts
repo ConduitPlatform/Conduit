@@ -1,7 +1,7 @@
 export default {
   hostUrl: {
     format: 'String',
-    default: 'http://localhost:3000',
+    default: '', //to be generated on initial configuration
   },
   transports: {
     rest: {
