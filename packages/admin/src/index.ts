@@ -92,6 +92,7 @@ export default class AdminModule extends IConduitAdmin {
       '/',
       this.grpcSdk,
       1000,
+      ['masterkey'],
       swaggerRouterMetadata,
     );
     this._grpcRoutes = {};
