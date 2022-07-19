@@ -89,6 +89,7 @@ export default class ConduitGrpcSdk {
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
         new LokiTransport({
+          level: 'debug',
           host: process.env.LOKI_URL,
           batching: false,
           replaceTimestamp: true,
