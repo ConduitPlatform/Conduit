@@ -111,7 +111,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
       1000,
-      ['clientid', 'clientsecret'],
       swaggerRouterMetadata,
     );
     this.registerGlobalMiddleware(

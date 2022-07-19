@@ -33,7 +33,6 @@ export class ConduitRoutingController {
     private readonly baseUrl: string,
     private readonly grpcSdk: ConduitGrpcSdk,
     cleanupTimeoutMs: number = 0,
-    private readonly privateHeaders: string[] = [],
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
   ) {
     this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
@@ -83,11 +82,7 @@ export class ConduitRoutingController {
 
   initRest() {
     if (this._restRouter) return;
-    this._restRouter = new RestController(
-      this.grpcSdk,
-      this.privateHeaders,
-      this.swaggerMetadata,
-    );
+    this._restRouter = new RestController(this.grpcSdk, this.swaggerMetadata);
   }
 
   initGraphQL() {

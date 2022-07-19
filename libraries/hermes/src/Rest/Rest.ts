@@ -28,7 +28,6 @@ export class RestController extends ConduitRouter {
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    privateHeaders: string[] = [],
     swaggerRouterMetadata: SwaggerRouterMetadata = {
       urlPrefix: '',
       securitySchemes: {},
@@ -38,7 +37,10 @@ export class RestController extends ConduitRouter {
   ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
-    this._privateHeaders = privateHeaders;
+    this._privateHeaders =
+      swaggerRouterMetadata.globalSecurityHeaders.length > 0
+        ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0])
+        : [];
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
   }
@@ -168,7 +170,6 @@ export class RestController extends ConduitRouter {
         .then((r: any) => {
           if (r.redirect) {
             res.removeHeader('Authorization');
-            res.removeHeader('authorization');
             this._privateHeaders.forEach(h => res.removeHeader(h));
             return res.redirect(r.redirect);
           } else {
