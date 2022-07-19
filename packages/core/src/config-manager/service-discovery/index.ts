@@ -219,7 +219,7 @@ export class ServiceDiscovery {
       } catch (e) {
         throw new Error('Failed to register unresponsive module');
       }
-      healthStatus = (healthResponse.status as unknown) as HealthCheckStatus;
+      healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     }
     this.registeredModules.set(moduleName, {
       address: moduleUrl,
@@ -234,7 +234,7 @@ export class ServiceDiscovery {
       moduleName,
       moduleUrl,
       instancePeer,
-      HealthCheckStatus.SERVING,
+      fromGrpc ? healthStatus! : HealthCheckStatus.SERVING,
       false,
     );
     this.moduleRegister.emit('serving-modules-update');
