@@ -78,16 +78,17 @@ export default class Authentication extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.SERVING);
       if (config.local.verification.send_email) {
         this.grpcSdk.monitorModule('email', async serving => {
+          const alreadyEnabled = this.localSendVerificationEmail;
+          this.localSendVerificationEmail = serving;
           if (serving) {
-            if (!this.localSendVerificationEmail) {
+            if (!alreadyEnabled) {
               await this.refreshAppRoutes();
             }
           } else {
-            ConduitGrpcSdk.Logger.error(
+            ConduitGrpcSdk.Logger.warn(
               'Failed to enable email verification for local authentication strategy. Email module not serving.',
             );
           }
-          this.localSendVerificationEmail = serving;
         });
       } else {
         this.localSendVerificationEmail = false;

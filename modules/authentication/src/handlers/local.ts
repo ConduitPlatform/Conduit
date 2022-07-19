@@ -212,23 +212,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (this.sendVerificationEmail) {
-      let emailConfig;
-      try {
-        emailConfig = await this.grpcSdk.config.get('email');
-      } catch (e) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-      if (!emailConfig.active) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-    }
     if (!this.initialized) {
       try {
         await this.initDbAndEmail();
