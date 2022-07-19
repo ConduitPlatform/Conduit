@@ -3,7 +3,6 @@ import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
-import { ConduitLogger } from './utils/logger';
 import http from 'http';
 import {
   ConduitRequest,
@@ -16,6 +15,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute } from './classes';
+import { createRouteMiddleware } from './utils/logger';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -55,12 +55,10 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export class ConduitRoutingController {
-  private readonly _grpcSdk: ConduitGrpcSdk;
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
   private _middlewareRouter: Router;
-  private readonly logger: ConduitLogger;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
   readonly expressApp = express();
@@ -75,7 +73,6 @@ export class ConduitRoutingController {
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
   ) {
     this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
-    this.logger = new ConduitLogger();
     this.start();
     this._middlewareRouter = Router();
     this._middlewareRouter.use(
@@ -123,21 +120,21 @@ export class ConduitRoutingController {
   initRest() {
     if (this._restRouter) return;
     this._restRouter = new RestController(
-      this._grpcSdk,
+      this.grpcSdk,
       this.swaggerMetadata ?? swaggerRouterMetadata,
     );
   }
 
   initGraphQL() {
     if (this._graphQLRouter) return;
-    this._graphQLRouter = new GraphQLController(this._grpcSdk);
+    this._graphQLRouter = new GraphQLController(this.grpcSdk);
   }
 
   initSockets(redisHost: string, redisPort: number) {
     if (this._socketRouter) return;
     this._socketRouter = new SocketController(
       this.socketPort,
-      this._grpcSdk,
+      this.grpcSdk,
       this.expressApp,
       {
         host: redisHost,
@@ -290,7 +287,7 @@ export class ConduitRoutingController {
 
   private registerGlobalMiddleware() {
     this.registerMiddleware(cors(), false);
-    this.registerMiddleware(this.logger.middleware, false);
+    this.registerMiddleware(createRouteMiddleware(ConduitGrpcSdk.Logger.winston), false);
     this.registerMiddleware(express.json({ limit: '50mb' }), false);
     this.registerMiddleware(
       express.urlencoded({ limit: '50mb', extended: false }),

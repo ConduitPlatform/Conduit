@@ -35,6 +35,7 @@ import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
+import LokiTransport from 'winston-loki';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -85,6 +86,20 @@ export default class ConduitGrpcSdk {
     } else {
       this.name = name;
     }
+    if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
+      ConduitGrpcSdk.Logger.addTransport(
+        new LokiTransport({
+          level: 'debug',
+          host: process.env.LOKI_URL,
+          batching: false,
+          replaceTimestamp: true,
+          labels: {
+            module: this.name,
+          },
+        }),
+      );
+    }
+
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
@@ -105,7 +120,7 @@ export default class ConduitGrpcSdk {
     while (true) {
       try {
         const state = await this.core.check();
-        if (((state as unknown) as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+        if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
           this._initialize();
           break;
