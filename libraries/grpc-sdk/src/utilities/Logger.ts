@@ -52,6 +52,10 @@ export class ConduitLogger {
     });
   }
 
+  addTransport(transport: winston.transport) {
+    this._winston.add(transport);
+  }
+
   log(message: string, level: string = 'info', cb?: LogCallback): Logger {
     return this._winston.log(level, message, cb);
   }
