@@ -51,7 +51,7 @@ export class AdminHandlers {
   }
 
   private getRegisteredRoutes(): ConduitRouteObject[] {
-    const userFields = User.getInstance().fields;
+    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
     delete userFields.hashedPassword;
     return [
       // User Routes
