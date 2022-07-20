@@ -39,8 +39,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
-    const fields = User.getInstance().fields;
-    delete fields.hashedPassword;
+    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
+    delete userFields.hashedPassword;
     routingManager.route(
       {
         path: '/local/new',
@@ -52,7 +52,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         },
         middlewares: [],
       },
-      new ConduitRouteReturnDefinition('RegisterResponse', fields),
+      new ConduitRouteReturnDefinition('RegisterResponse', userFields),
       this.register.bind(this),
     );
 
@@ -446,10 +446,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async resetPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
-      passwordResetToken: passwordResetTokenParam,
-      password: newPassword,
-    } = call.request.params;
+    const { passwordResetToken: passwordResetTokenParam, password: newPassword } =
+      call.request.params;
 
     const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
