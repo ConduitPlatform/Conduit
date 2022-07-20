@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.1](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0...v0.14.1) (2022-07-20)
+
+
+### Features
+
+* **grpc-sdk:** add support for logging to Grafana Loki ([#249](https://github.com/ConduitPlatform/Conduit/issues/249)) ([422b03e](https://github.com/ConduitPlatform/Conduit/commit/422b03eccc97baf04a7f1ba730b718d534fcfe74))
+
+
+### Bug Fixes
+
+* **authentication:** user model dropping hashedPassword due to object ref deletion ([#252](https://github.com/ConduitPlatform/Conduit/issues/252)) ([7502831](https://github.com/ConduitPlatform/Conduit/commit/75028310752d69155486550d42ceae7078b65866))
+* **core:** service discovery registering new modules as serving ([#250](https://github.com/ConduitPlatform/Conduit/issues/250)) ([4d3f7a4](https://github.com/ConduitPlatform/Conduit/commit/4d3f7a44b9d149dd2c7c9c98e46680c88cc5c42d))
+
 ## [0.14.0](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0-rc.1...v0.14.0) (2022-07-15)
 
 
