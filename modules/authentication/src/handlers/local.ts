@@ -3,18 +3,17 @@ import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
-
 import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   SMS,
   UnparsedRouterResponse,
+  ConfigController,
+  RoutingManager,
+  ConduitRouteActions,
+  ConduitString,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
 import { AccessToken, Token, User } from '../models';
@@ -30,7 +29,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sendEmail: boolean,
+    private readonly sendVerificationEmail: boolean,
   ) {
     grpcSdk.config.get('router').then(config => {
       this.clientValidation = config.security.clientValidation;
@@ -76,7 +75,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.authenticate.bind(this),
     );
 
-    if (this.emailModule) {
+    if (this.sendVerificationEmail) {
       routingManager.route(
         {
           path: '/forgot-password',
@@ -241,23 +240,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (this.sendEmail) {
-      let emailConfig;
-      try {
-        emailConfig = await this.grpcSdk.config.get('email');
-      } catch (e) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-      if (!emailConfig.active) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-    }
     if (!this.initialized) {
       try {
         await this.initDbAndEmail();
@@ -296,7 +278,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -304,19 +286,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      if (this.sendEmail) {
-        await this.emailModule
-          .sendEmail('EmailVerification', {
-            email: user.email,
-            sender: 'no-reply',
-            variables: {
-              link,
-            },
-          })
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-          });
-      }
+      await this.emailModule.sendEmail('EmailVerification', {
+        email: user.email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      });
     }
     delete user.hashedPassword;
     return { user };
@@ -463,7 +439,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
         sender: 'no-reply',
@@ -655,7 +631,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: newEmail,
         },
       });
-      if (this.sendEmail) {
+      if (this.sendVerificationEmail) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
@@ -906,7 +882,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       await this.grpcSdk.config.moduleExists('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
@@ -929,7 +905,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.log('phone authentication not active');
     }
 
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       this.registerTemplates();
     }
     this.initialized = true;

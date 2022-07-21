@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.2](https://github.com/ConduitPlatform/Conduit/compare/v0.14.1...v0.14.2) (2022-07-21)
+
+
+### Features
+
+* **database:** convert json type of postgres dbs to jsonb ([#253](https://github.com/ConduitPlatform/Conduit/issues/253)) ([4e13464](https://github.com/ConduitPlatform/Conduit/commit/4e134649c861e634eebece15e968935a07a31cb5))
+
 ### [0.14.1](https://github.com/ConduitPlatform/Conduit/compare/v0.14.0...v0.14.1) (2022-07-20)
 
 

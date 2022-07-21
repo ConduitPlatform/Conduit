@@ -44,7 +44,7 @@ local(username/password or email/password), oAuth(Facebook, Google, Twitch)
 # Requirements ⚡
 
 - NodeJS > 14 or Docker
-- MongoDB or SQL (PostgreSQL, MySQL, MariaDB, MSSQL)
+- MongoDB or PostgreSQL
 - Desire to create something awesome
 
 # Quickstart
