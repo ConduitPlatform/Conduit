@@ -46,6 +46,7 @@ export default class Authentication extends ManagedModule<Config> {
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
   private localSendVerificationEmail: boolean = false;
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     super('authentication');
@@ -59,7 +60,6 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    // @ts-ignore
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
@@ -99,8 +99,8 @@ export default class Authentication extends ManagedModule<Config> {
 
   private async refreshAppRoutes() {
     if (this.userRouter) {
-      await this.userRouter.updateLocalHandlers(this.localSendVerificationEmail);
-      await this.userRouter.registerRoutes();
+      this.userRouter.updateLocalHandlers(this.localSendVerificationEmail);
+      this.scheduleAppRouteRefresh();
       return;
     }
     const self = this;
@@ -112,11 +112,26 @@ export default class Authentication extends ManagedModule<Config> {
           self.grpcSdk,
           self.localSendVerificationEmail,
         );
-        return this.userRouter.registerRoutes();
+        this.scheduleAppRouteRefresh();
       })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
+  }
+
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.userRouter.registerRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
   }
 
   // gRPC Service
