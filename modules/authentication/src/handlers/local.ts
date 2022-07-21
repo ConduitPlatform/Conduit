@@ -243,8 +243,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    //this.sendEmail
-    if (true) {
+    if (this.sendEmail) {
       let emailConfig;
       try {
         emailConfig = await this.grpcSdk.config.get('email');
@@ -299,8 +298,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-    //this.sendEmail
-    if (true) {
+    if (this.sendEmail) {
       const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -308,8 +306,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      //this.sendEmail
-      if (true) {
+      if (this.sendEmail) {
         await this.emailModule
           .sendEmail('EmailVerification', {
             email: user.email,
@@ -660,8 +657,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: newEmail,
         },
       });
-      //this.sendEmail
-      if (true) {
+      if (this.sendEmail) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
