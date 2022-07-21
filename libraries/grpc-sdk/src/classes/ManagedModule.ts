@@ -112,7 +112,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       config = await this.preConfig(config);
       const previousConfig = this.config.getProperties();
       try {
-        this.config.load(config).validate();
+        this.config.load(config).validate({
+          allowed: 'strict',
+        });
         config = this.config.getProperties();
       } catch (e) {
         this.config.load(previousConfig);
