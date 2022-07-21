@@ -313,8 +313,7 @@ export default class ConduitGrpcSdk {
     callback: (serving: boolean) => void,
     wait: boolean = true,
   ) {
-    const waitPromise = Promise.resolve();
-    if (wait) waitPromise.then(() => this.waitForExistence(moduleName));
+    const waitPromise = wait ? this.waitForExistence(moduleName) : Promise.resolve();
     waitPromise
       .then(() => this._modules[moduleName]?.healthClient?.check({}))
       .then(res => {
@@ -322,9 +321,11 @@ export default class ConduitGrpcSdk {
       })
       .catch(() => {
         callback(false);
+      })
+      .then(() => {
+        const emitter = this.config.getModuleWatcher();
+        emitter.on(`module-connection-update:${moduleName}`, callback);
       });
-    const emitter = this.config.getModuleWatcher();
-    emitter.on(`module-connection-update:${moduleName}`, callback);
   }
 
   unmonitorModule(moduleName: string) {
