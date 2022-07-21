@@ -59,6 +59,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           this.relations[key] = parentValue[key].model;
         }
 
+        if (parentValue[key].hasOwnProperty('type') && parentValue[key].type === 'JSON') {
+          const dialect = sequelize.getDialect();
+          if (dialect === 'postgres') {
+            parentValue[key].type = DataTypes.JSONB;
+          }
+        }
+
         if (
           parentValue[key].hasOwnProperty('primaryKey') &&
           parentValue[key].primaryKey
