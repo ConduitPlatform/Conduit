@@ -662,7 +662,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
         await this.emailModule
           .sendEmail('EmailVerification', {
-            email: user.email,
+            email: user.newEmail,
             sender: 'no-reply',
             variables: {
               link,
@@ -753,6 +753,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
+    const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne({
       type: TokenType.CHANGE_EMAIL_TOKEN,
       token: verificationToken,
@@ -772,6 +773,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(token.userId as string, {
       email: token.data.email,
     });
+    if (config.verification.redirect_uri) {
+      return { redirect: config.verification.redirect_uri };
+    }
     return 'Email changed successfully';
   }
 
