@@ -5,6 +5,7 @@ import {
   ConfigDefinition,
   RegisterModuleRequest,
   ModuleHealthRequest,
+  ModuleListResponse_ModuleResponse,
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';
@@ -86,7 +87,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     return this.client!.moduleExists(request);
   }
 
-  moduleList(): Promise<any[]> {
+  moduleList(): Promise<ModuleListResponse_ModuleResponse[]> {
     const request = {};
     return this.client!.moduleList(request)
       .then(res => res.modules)
@@ -165,6 +166,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       // uncomment for debug when needed
       // currently is misleading if left on
       // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
+      this.watchModules();
     }
   }
 }
