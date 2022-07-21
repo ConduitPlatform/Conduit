@@ -36,6 +36,7 @@ import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
+import { ConduitMetrics } from './metrics';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -74,6 +75,7 @@ export default class ConduitGrpcSdk {
       level: 'error',
     }),
   ]);
+  static readonly Metrics: ConduitMetrics = new ConduitMetrics();
 
   constructor(
     serverUrl: string,
