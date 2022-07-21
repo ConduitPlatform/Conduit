@@ -12,7 +12,6 @@ import ConduitGrpcSdk, {
   Email,
   GrpcError,
   ParsedRouterRequest,
-  RouteOptionType,
   RoutingManager,
   SMS,
   UnparsedRouterResponse,
@@ -126,8 +125,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-email',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's email but requires password first.
-                      If 2FA is enabled then a message will be returned asking for token input.`,
+        description: `Changes the user's email but requires password first.`,
         bodyParams: {
           newEmail: ConduitString.Required,
           password: ConduitString.Required,
