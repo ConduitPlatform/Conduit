@@ -5,17 +5,17 @@ import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 
 import ConduitGrpcSdk, {
-  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
+  RouteOptionType,
+  RoutingManager,
   SMS,
   UnparsedRouterResponse,
-  ConfigController,
-  RoutingManager,
-  ConduitRouteActions,
-  ConduitString,
-  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
 import { AccessToken, Token, User } from '../models';
@@ -124,6 +124,22 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     routingManager.route(
       {
+        path: '/local/change-email',
+        action: ConduitRouteActions.POST,
+        description: `Changes the user's email but requires password first.
+                      If 2FA is enabled then a message will be returned asking for token input.`,
+        bodyParams: {
+          newEmail: ConduitString.Required,
+          password: ConduitString.Required,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
+      this.changeEmail.bind(this),
+    );
+
+    routingManager.route(
+      {
         path: '/hook/verify-email/:verificationToken',
         action: ConduitRouteActions.GET,
         description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
@@ -133,6 +149,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
       this.verifyEmail.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: '/hook/verify-change-email/:verificationToken',
+        action: ConduitRouteActions.GET,
+        description: `A webhook used to verify an email address change. This bypasses the need for clientid/secret`,
+        urlParams: {
+          verificationToken: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
+      this.verifyChangeEmail.bind(this),
     );
 
     if (config.twofa.enabled) {
@@ -214,7 +243,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (this.sendEmail) {
+    //this.sendEmail
+    if (true) {
       let emailConfig;
       try {
         emailConfig = await this.grpcSdk.config.get('email');
@@ -269,8 +299,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-
-    if (this.sendEmail) {
+    //this.sendEmail
+    if (true) {
       const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -278,14 +308,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      if (this.sendEmail) {
-        await this.emailModule.sendEmail('EmailVerification', {
-          email: user.email,
-          sender: 'no-reply',
-          variables: {
-            link,
-          },
-        });
+      //this.sendEmail
+      if (true) {
+        await this.emailModule
+          .sendEmail('EmailVerification', {
+            email: user.email,
+            sender: 'no-reply',
+            variables: {
+              link,
+            },
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
       }
     }
     delete user.hashedPassword;
@@ -566,6 +601,90 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Password changed successfully';
   }
 
+  async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { newEmail, password } = call.request.params;
+    const { user } = call.request.context;
+    const config = ConfigController.getInstance().config;
+
+    const validation = await this.validate();
+    if (!validation) {
+      throw new GrpcError(status.INTERNAL, 'Cannot use verification at this time');
+    }
+    if (user.email === newEmail) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'The new email can not be the same as the old email',
+      );
+    }
+    if (AuthUtils.invalidEmailAddress(newEmail)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    const dbUser: User | null = await User.getInstance().findOne(
+      { _id: user._id },
+      '+hashedPassword',
+    );
+    if (isNil(dbUser)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
+    }
+    if (isNil(dbUser.hashedPassword)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    }
+    const passwordsMatch = await AuthUtils.checkPassword(
+      password,
+      dbUser.hashedPassword!,
+    );
+    if (!passwordsMatch) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
+    }
+    const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
+    if (dupEmailUser) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
+    }
+    if (config.local.verification.required) {
+      await Token.getInstance()
+        .deleteMany({
+          userId: dbUser._id,
+          type: TokenType.CHANGE_EMAIL_TOKEN,
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
+      const verificationToken: Token = await Token.getInstance().create({
+        userId: dbUser._id,
+        type: TokenType.CHANGE_EMAIL_TOKEN,
+        token: uuid(),
+        data: {
+          email: newEmail,
+        },
+      });
+      //this.sendEmail
+      if (true) {
+        const serverConfig = await this.grpcSdk.config.get('router');
+        const url = serverConfig.hostUrl;
+        const result = { verificationToken, hostUrl: url };
+        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
+        await this.emailModule
+          .sendEmail('EmailVerification', {
+            email: user.email,
+            sender: 'no-reply',
+            variables: {
+              link,
+            },
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        return 'Verification code sent';
+      }
+      return 'Verification required';
+    }
+    await User.getInstance().findByIdAndUpdate(dbUser._id, { email: newEmail });
+    return 'Email changed successfully';
+  }
+
   async verifyChangePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { code } = call.request.params;
     const { user } = call.request.context;
@@ -576,7 +695,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(token)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Change password token not found');
+      throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
     }
 
     const verified = await this.smsModule.verify(token.token, code);
@@ -636,6 +755,30 @@ export class LocalHandlers implements IAuthenticationStrategy {
       return { redirect: config.verification.redirect_uri };
     }
     return 'Email verified';
+  }
+
+  async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { verificationToken } = call.request.params.verificationToken;
+    const token: Token | null = await Token.getInstance().findOne({
+      type: TokenType.CHANGE_EMAIL_TOKEN,
+      token: verificationToken,
+    });
+    if (isNil(token)) {
+      throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
+    }
+    const user: User | null = await User.getInstance().findOne({
+      _id: token.userId,
+    });
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    await Token.getInstance()
+      .deleteMany({ userId: token.userId, type: TokenType.CHANGE_EMAIL_TOKEN })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+    await User.getInstance().findByIdAndUpdate(token.userId as string, {
+      email: token.data.email,
+    });
+    return 'Email changed successfully';
   }
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
