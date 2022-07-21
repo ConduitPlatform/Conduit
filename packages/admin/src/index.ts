@@ -458,16 +458,9 @@ export default class AdminModule extends IConduitAdmin {
       this.config.load(config).validate();
     } catch (e) {
       this.config.load(previousConfig);
-      config = { ...this.config.getProperties(), ...config };
-      try {
-        this.config.load(config).validate();
-        config = this.config.getProperties();
-      } catch (e) {
-        this.config.load(previousConfig);
-        throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
-      }
-      this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
+      throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }
+    this.grpcSdk.bus!.publish('core:config:update', JSON.stringify(config));
     ConfigController.getInstance().config = config;
     return config;
   }
