@@ -638,7 +638,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
         await this.emailModule
           .sendEmail('EmailVerification', {
-            email: user.newEmail,
+            email: newEmail,
             sender: 'no-reply',
             variables: {
               link,
