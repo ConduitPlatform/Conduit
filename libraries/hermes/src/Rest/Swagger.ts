@@ -42,9 +42,13 @@ export class SwaggerGenerator {
   addRouteSwaggerDocumentation(route: ConduitRoute) {
     const method = this._extractMethod(route.input.action);
     let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
-    serviceName = serviceName.substr(0, serviceName.indexOf('/'));
-    if (serviceName.trim() === '') {
+    let prefix = serviceName.substring(0, serviceName.indexOf('/'));
+    if (serviceName.includes('admin')) {
+      serviceName = 'admin';
+    } else if (prefix.trim() === '') {
       serviceName = 'core';
+    } else {
+      serviceName = prefix;
     }
     const routeDoc: Indexable = {
       summary: route.input.name,
@@ -66,7 +70,7 @@ export class SwaggerGenerator {
 
     if (
       !isNil(route.input.urlParams) &&
-      ((route.input.urlParams as unknown) as string) !== ''
+      (route.input.urlParams as unknown as string) !== ''
     ) {
       for (const name in route.input.urlParams) {
         routeDoc.parameters.push({
@@ -80,7 +84,7 @@ export class SwaggerGenerator {
 
     if (
       !isNil(route.input.queryParams) &&
-      ((route.input.queryParams as unknown) as string) !== ''
+      (route.input.queryParams as unknown as string) !== ''
     ) {
       for (const name in route.input.queryParams) {
         routeDoc.parameters.push({
@@ -93,7 +97,7 @@ export class SwaggerGenerator {
 
     if (
       !isNil(route.input.bodyParams) &&
-      ((route.input.bodyParams as unknown) as string) !== ''
+      (route.input.bodyParams as unknown as string) !== ''
     ) {
       routeDoc['requestBody'] = {
         description: route.input.description,
