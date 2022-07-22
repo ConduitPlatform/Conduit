@@ -41,9 +41,11 @@ export class SwaggerGenerator {
 
   addRouteSwaggerDocumentation(route: ConduitRoute) {
     const method = this._extractMethod(route.input.action);
-    let serviceName = route.input.path.toString().replace('/hook', '').slice(1);
-    let prefix = serviceName.substring(0, serviceName.indexOf('/'));
-    if (serviceName.includes('admin')) {
+    const baseName = route.input.path.toString().replace('/hook', '').slice(1);
+    const prefix =
+      baseName.indexOf('/') !== -1 ? baseName.substring(0, baseName.indexOf('/')) : '';
+    let serviceName: string;
+    if (baseName.includes('admin')) {
       serviceName = 'admin';
     } else if (prefix.trim() === '') {
       serviceName = 'core';
