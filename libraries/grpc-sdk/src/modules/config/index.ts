@@ -165,9 +165,6 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     } catch (error) {
       self.coreLive = false;
       ConduitGrpcSdk.Logger.warn('Core unhealthy');
-      // uncomment for debug when needed
-      // currently is misleading if left on
-      // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
     }
   }
 }
