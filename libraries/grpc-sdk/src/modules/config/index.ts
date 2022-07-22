@@ -156,15 +156,15 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   async watchModules() {
     const self = this;
     this.emitter.setMaxListeners(150);
+    self.emitter.emit('serving-modules-update', await self.moduleList().catch());
     try {
       const call = this.client!.watchModules({});
       for await (const data of call) {
         self.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      // uncomment for debug when needed
-      // currently is misleading if left on
-      // ConduitGrpcSdk.Logger.warn('Connection to gRPC server closed');
+      self.coreLive = false;
+      ConduitGrpcSdk.Logger.warn('Core unhealthy');
     }
   }
 }
