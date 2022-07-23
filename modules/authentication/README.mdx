@@ -1,27 +1,37 @@
----
-name: Authentication
-route: /authentication
-menu: Modules
----
+# Authentication Module
 
-# Authentication Plugin for Conduit
+This module offers user authentication.<br />
+It supports logins with local credentials as well as popular identity providers.<br />
+TwoFactor authentication is also provided.
 
-Supports Local (Username/email: Password auth), Facebook and Google OAuth.
+## Features ✔️
 
-# Requirements:
-
-MongoDB database since currently only mongoose is supported.
-
-## Features:
-- Local authentication with email/password(requires email service) or username/password
-  - Optional email verification on email/password strategy
-  - Forgot password/Reset password
-- Facebook Login with client credentials (Stable)
-- Google Login with client credentials (Stable)
-- Kakao Talk login with redirect strategy (Stable)
-- Twitch login with redirect strategy (Stable)
-- Service account/ API key (WIP)
-- Optional 2FA supported on all strategies (requires SMS module) (stable)
+- Local authentication with email/password
+  - Optional email verification on local strategy
+  - Forgot password / Reset password
+- Phone authentication
+- Facebook login with client credentials
+- Google login with client credentials
+- Kakao Talk login with redirect strategy
+- Twitch login with redirect strategy
+- Figma
+- GitHub
+- Microsoft
+- Slack
+- Service account/ API key
+- Optional 2FA supported on all strategies (requires SMS module)
 - Optional Account linking supported when email is the same between providers
 
+## Requirements ⚡
 
+- [Database](../database) module
+- [Email](../email) module (optional: local authentication + email verification)
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |

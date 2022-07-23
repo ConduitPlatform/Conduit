@@ -1,15 +1,25 @@
----
-name: Forms
-route: /forms
-menu: Modules
----
+# Forms Module
 
-# Forms Plugin for Conduit
+This module supports creating and submitting forms.
 
-Simple form submission support. Mostly a glue for various conduit modules
-since we don't have a workflow creation tool.
+## Features ✔️
 
-#Requirements
+- Form creation
+- Form submission
+- File attachments
+- Spam detection
 
-- Email module
-- Database module
+## Requirements ⚡
+
+- [Database](../database) module
+- [Email](../email) module
+- [Storage](../storage) module (optional: attachments)
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
