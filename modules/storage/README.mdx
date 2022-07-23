@@ -1,9 +1,25 @@
----
-name: Storage
-route: /storage
-menu: Modules
----
+# Storage Module
 
-# Storage adapter
+This module provides persistent storage and facilitates the creation of hierarchical data structures.<br />
+Documents may have complex structures and subcollections and can be stored locally or on a cloud provider.
 
-This module provides a consistent storage mechanism.
+## Features ✔️
+
+- Local storage
+- Microsoft Azure
+- Google Cloud
+- AWS S3
+- Alibaba Cloud (Aliyun)
+
+## Requirements ⚡
+
+- [Database](../database) module
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |

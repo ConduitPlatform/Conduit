@@ -141,26 +141,19 @@ export class ServiceDiscovery {
   }
 
   moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {
-    if (this.registeredModules.size !== 0) {
-      const modules: {
-        moduleName: string;
-        url: string;
-        serving: boolean;
-      }[] = [];
-      this.registeredModules.forEach((value: RegisteredModule, key: string) => {
-        modules.push({
-          moduleName: key,
-          url: value.address,
-          serving: value.serving,
-        });
+    const modules: {
+      moduleName: string;
+      url: string;
+      serving: boolean;
+    }[] = [];
+    this.registeredModules.forEach((value: RegisteredModule, key: string) => {
+      modules.push({
+        moduleName: key,
+        url: value.address,
+        serving: value.serving,
       });
-      callback(null, { modules });
-    } else {
-      callback({
-        code: status.NOT_FOUND,
-        message: 'Modules not available',
-      });
-    }
+    });
+    callback(null, { modules });
   }
 
   watchModules(call: ServerWritableStream<void, ModuleListResponse>) {

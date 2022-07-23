@@ -1,16 +1,37 @@
----
-name: Conduit
-route: /core
-menu: Core
----
-
 # Conduit Core
 
-This is the core package of Conduit, which contains the server and common functionality.
+This is Conduit Core's entry point package.<br />
+It's responsible for exposing administrative APIs, module configuration and service discovery.
 
-## Features
+Check out [Admin](../admin), [Commons](../commons) and [gRPC-sdk](../../libraries/grpc-sdk)
+to find out more about Conduit's internals.
 
-- Module/Plugin management
+## Requirements ⚡
+
+- Redis
+- MongoDB or PostgreSQL database
+
+## Features ✔️
+
+- Module management
 - Configuration management
+- Service discovery
+- Administrative APIs
+    - REST (with Swagger)
+    - GraphQL
+    - WebSockets (via Socket.io)
 - Tracing
 - Logging and Errors
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable      | Description                                                | Required |   Example   |
+|:-------------------:|:-----------------------------------------------------------|:--------:|:-----------:|
+|     `REDIS_HOST`    | Redis Address                                              |   True   | `localhost` |
+|     `REDIS_PORT`    | Redis Port                                                 |   True   |    `6379`   |
+|  `ADMIN_HTTP_PORT`  | Port to be used by admin REST and GrahpQL APIs             |  False   |    `3030`   |
+| `ADMIN_SOCKET_PORT` | Port to be used by admin WebSockets API                    |  False   |    `3030`   |
+|   `SERVICE_PORT`    | Port to be used by the gRPC server                         |  False   |   `55152`   |
+|    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
+|     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
+| `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config  | False  | `true` |

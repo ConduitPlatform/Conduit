@@ -1,6 +1,6 @@
-# Database
+# Database Module
 
-This module is capable of working with both SQL and NoSQL databases, through Sequelize and Mongoose respectively.<br />
+This module is capable of working with both MongoDB and PostgreSQL databases, through Sequelize and Mongoose respectively.<br />
 These ORMs were chosen due to their similar functions and architectures, allowing for the creation of a very consistent API.
 
 In order to maintain a compatibility layer between the two ORMS, certain operations may not be supported.<br />
@@ -11,7 +11,39 @@ query objects that can be easily manipulated in JS.<br />
 This means that the database module will almost always have better support for Mongo operations than SQL ones, 
 since the latter need to go through parsers that are otherwise unnecessary for Mongo.
 
-# Supported Operators
+## Features ✔️
+
+- Supports MongoDB
+- Supports PostgreSQL
+- Consistent Query Language (based on MongoDB)
+- CMS
+- Creation of custom content types (schema)
+- Create db collections based on said types
+- Create db collection entries
+- Auto-generated CRUD routes
+- Create powerful custom endpoints
+- Expose content through GraphQL
+- Expose content through REST API
+- Pagination
+- Sorting
+- GraphQL-style 'populate' field for REST APIs
+
+## Requirements ⚡
+
+- MongoDB or PostgreSQL database
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       | Default  |
+|:--------------------:|:-----------------------------------------------------| :------: | :----------------: | :------: |
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |    -     |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |    -     |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |    -     |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` | - |
+|   `DB_CONN_URI`      | DB Connection URI  |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
+|     `DB_TYPE`        | DB Engine Type     |  False   |                    `postgres`                    | `mongodb`                   |
+
+## Supported Operators
 
 |  Operator  | Description                                                                                                              |
 | :--------: | :----------------------------------------------------------------------------------------------------------------------- |
@@ -31,27 +63,27 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 
 These operators have been tested thoroughly in varying levels of complexity.
 
-# Populations & Relations
+## Populations & Relations
 
 Relations have been implemented with MongoDB in mind.<br />
 This means that they do not really exist inside the databases (for now).<br />
 Every relation is logical, and relation data is retrieved using Mongoose's population functionality.<br />
 The same reasoning has been carried over to Sequelize, but is not currently as efficient.
 
-## Getting related fields
+### Getting related fields
 
 Each relation field can be filled (or populated) by supplying a relevant array, creating a join operation that gets all the objects.
 
-## Setting related fields
+### Setting related fields
 
 While we advise creating each document seperately and setting the relation inside a model after the "child" document 
 has been created, the database module supports "create with population" operations, where if you supply an entire object 
 instead of an id in the place of the relation field, then the module will automatically create the associated document and 
 add its id in place of the data.
 
-# Sequelize Caveats
+## Sequelize Caveats
 
-Currently the Sequelize implementation has the following limitations:
+Currently, the Sequelize implementation has the following limitations:
 - No index creation
 - Update queries only update provided fields without the option to replace entire rows, unless all columns are provided.
 - Like operations do not work

@@ -1,14 +1,25 @@
----
-name: E-mail
-route: /e-mail
-menu: Modules
----
+# Email Module
 
-# An e-mail provider
+Most web applications typically require a way to send e-mails to users.<br />
+The Email module serves this very purpose.
 
-It allows emails to be sent based on templates or not via any plugin or code.
+## Features ✔️
 
-## Features
+- Sending emails
+- Creating your own email templates
+- Uploading your email templates to your email provider account
+- Synchronizing remotely created email templates from email provider to local database
+- Email variables
 
-- Multiple providers available
-- Templates
+## Requirements ⚡
+
+- [Database](../database) module
+
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
