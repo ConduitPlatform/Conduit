@@ -21,7 +21,10 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
       return next();
     }
     const masterKey = req.headers.masterkey;
-    if (!process.env.masterkey || process.env.masterkey.length === 0) {
+    if (
+      (!process.env.MASTER_KEY || process.env.MASTER_KEY.length === 0) &&
+      (!process.env.masterkey || process.env.masterkey.length === 0)
+    ) {
       ConduitGrpcSdk.Logger.warn(
         '!Security issue!: Master key not set, defaulting to insecure string',
       );
