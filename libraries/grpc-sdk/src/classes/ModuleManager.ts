@@ -1,5 +1,4 @@
 import ConduitGrpcSdk, { ManagedModule, ConfigController, Indexable } from '..';
-const deepdash = require('deepdash/standalone');
 
 const convictConfigParser = (config: Indexable) => {
   if (typeof config === 'object') {

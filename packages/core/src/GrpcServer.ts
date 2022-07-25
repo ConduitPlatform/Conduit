@@ -10,6 +10,7 @@ import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
+import CoreConfigSchema from './config/config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
 
@@ -87,10 +88,9 @@ export class GrpcServer {
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
-
     await this.commons
       .getConfigManager()
-      .configurePackage('core', convict.getProperties());
+      .configurePackage('core', convict.getProperties(), CoreConfigSchema);
 
     await this.commons.getAdmin().initialize(this.server);
     this.commons.getConfigManager().initConfigAdminRoutes();

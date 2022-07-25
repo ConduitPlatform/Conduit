@@ -21,7 +21,7 @@ import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
 import { ConfigStorage } from './config-storage';
-import parseConfigSchema from './utils/utils';
+import parseConfigSchema from '../utils';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -249,11 +249,22 @@ export default class ConfigManager implements IConfigManager {
     return callback(null, { result: JSON.stringify(config) });
   }
 
-  async configurePackage(moduleName: string, config: any) {
+  async configurePackage(moduleName: string, config: any, schema: any) {
     const existingConfig = await this.get(moduleName);
     if (!existingConfig) {
       await this.set(moduleName, config);
     }
+    parseConfigSchema(schema);
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.GET),
+      );
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.PATCH),
+      );
     return await this.addFieldsToModule(moduleName, config);
   }
 

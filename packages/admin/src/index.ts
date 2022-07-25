@@ -18,6 +18,7 @@ import {
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
 import AdminConfigSchema from './config';
+import AdminConfigRawSchema from './config/config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
@@ -122,10 +123,10 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
-    const adminSchema = await generateConfigDefaults(AdminConfigSchema.getProperties());
+    const adminConfig = await generateConfigDefaults(AdminConfigSchema.getProperties());
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
-      .configurePackage('admin', adminSchema);
+      .configurePackage('admin', adminConfig, AdminConfigRawSchema);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',

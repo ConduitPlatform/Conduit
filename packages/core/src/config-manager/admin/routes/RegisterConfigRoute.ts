@@ -1,8 +1,6 @@
 import ConduitGrpcSdk, {
-  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
@@ -16,9 +14,11 @@ export function registerConfigRoute(
     {
       path: `/config/${moduleName}`,
       action: routeAction,
-      bodyParams: {
-        config: { type: configSchema, required: true },
-      },
+      ...(routeAction === ConduitRouteActions.PATCH && {
+        bodyParams: {
+          config: { type: configSchema, required: true },
+        },
+      }),
     },
     new ConduitRouteReturnDefinition(
       routeAction === ConduitRouteActions.GET ? 'GetConfigRoute' : 'SetConfigRoute',
