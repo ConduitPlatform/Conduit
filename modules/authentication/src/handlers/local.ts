@@ -161,18 +161,20 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.verifyChangeEmail.bind(this),
     );
 
-    routingManager.route(
-      {
-        path: '/local/resend-verification',
-        action: ConduitRouteActions.POST,
-        description: `Used to resend email verification after new user is created`,
-        bodyParams: {
-          email: ConduitString.Required,
+    if (this.sendVerificationEmail) {
+      routingManager.route(
+        {
+          path: '/local/resend-verification',
+          action: ConduitRouteActions.POST,
+          description: `Used to resend email verification after new user is created`,
+          bodyParams: {
+            email: ConduitString.Required,
+          },
         },
-      },
-      new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
-      this.resendVerificationEmail.bind(this),
-    );
+        new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
+        this.resendVerificationEmail.bind(this),
+      );
+    }
 
     if (config.twofa.enabled) {
       routingManager.route(
@@ -776,8 +778,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async resendVerificationEmail(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    if (!this.sendVerificationEmail) return 'Configuration not set to send email';
-
     let { email } = call.request.params;
     if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
@@ -799,7 +799,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const result = { verificationToken, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
     await this.emailModule
-      .sendEmail('ChangeEmailVerification', {
+      .sendEmail('EmailVerification', {
         email: email,
         sender: 'no-reply',
         variables: {
@@ -809,7 +809,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-    return 'Verification email resent';
+    return 'Verification code sent';
   }
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
