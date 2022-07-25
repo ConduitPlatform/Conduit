@@ -590,6 +590,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (AuthUtils.invalidEmailAddress(newEmail)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
+    const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
+    if (dupEmailUser) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
+    }
     const dbUser: User | null = await User.getInstance().findOne(
       { _id: user._id },
       '+hashedPassword',
@@ -610,10 +614,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (!passwordsMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
     }
-    const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
-    if (dupEmailUser) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
-    }
+
     if (config.local.verification.required) {
       await Token.getInstance()
         .deleteMany({
@@ -637,7 +638,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const result = { verificationToken, hostUrl: url };
         const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
         await this.emailModule
-          .sendEmail('EmailVerification', {
+          .sendEmail('ChangeEmailVerification', {
             email: newEmail,
             sender: 'no-reply',
             variables: {
