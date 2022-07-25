@@ -161,6 +161,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.verifyChangeEmail.bind(this),
     );
 
+    routingManager.route(
+      {
+        path: '/local/resend-verification',
+        action: ConduitRouteActions.POST,
+        description: `Used to resend email verification after new user is created`,
+        bodyParams: {
+          email: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
+      this.resendVerificationEmail.bind(this),
+    );
+
     if (config.twofa.enabled) {
       routingManager.route(
         {
@@ -286,13 +299,17 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      await this.emailModule.sendEmail('EmailVerification', {
-        email: user.email,
-        sender: 'no-reply',
-        variables: {
-          link,
-        },
-      });
+      await this.emailModule
+        .sendEmail('EmailVerification', {
+          email: user.email,
+          sender: 'no-reply',
+          variables: {
+            link,
+          },
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
     }
     delete user.hashedPassword;
     return { user };
@@ -754,6 +771,45 @@ export class LocalHandlers implements IAuthenticationStrategy {
       return { redirect: config.verification.redirect_uri };
     }
     return 'Email changed successfully';
+  }
+
+  async resendVerificationEmail(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    if (!this.sendVerificationEmail) return 'Configuration not set to send email';
+
+    let { email } = call.request.params;
+    if (AuthUtils.invalidEmailAddress(email)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    email = email.toLowerCase();
+    const user: User | null = await User.getInstance().findOne({
+      email: email,
+    });
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    const verificationToken: Token | null = await Token.getInstance().findOne({
+      type: TokenType.VERIFICATION_TOKEN,
+      userId: user._id,
+    });
+    if (isNil(verificationToken)) {
+      throw new GrpcError(status.NOT_FOUND, 'Verification email token does not exist');
+    }
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
+    const result = { verificationToken, hostUrl: url };
+    const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+    await this.emailModule
+      .sendEmail('ChangeEmailVerification', {
+        email: email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+    return 'Verification email resent';
   }
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
