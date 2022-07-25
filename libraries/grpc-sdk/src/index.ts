@@ -95,6 +95,9 @@ export default class ConduitGrpcSdk {
           replaceTimestamp: true,
           labels: {
             module: this.name,
+            instance: this.name.startsWith('module_')
+              ? this.name.substring(8)
+              : Crypto.randomBytes(16).toString('hex'),
           },
         }),
       );
