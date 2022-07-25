@@ -8,11 +8,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getPatchConfigRoute(
-  grpcSdk: ConduitGrpcSdk,
-  conduit: ConduitCommons,
-  registeredModules: Map<string, RegisteredModule>,
-) {
+export function getPatchConfigRoute(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
   return new ConduitRoute(
     {
       path: '/config/:module',
@@ -53,17 +49,7 @@ export function getPatchConfigRoute(
             });
           break;
         default:
-          if (!registeredModules.has(moduleName) || !grpcSdk.isAvailable(moduleName))
-            throw new ConduitError('INVALID_PARAMS', 400, 'Module not available');
-          updatedConfig = JSON.parse(
-            // @ts-ignore
-            (
-              await grpcSdk
-                .getModule<any>(moduleName)!
-                // @ts-ignore
-                .setConfig({ newConfig: JSON.stringify(newConfig) })
-            ).updatedConfig,
-          );
+          throw new ConduitError('WRONG_MODULE_NAME', 501, 'Modules cannot be updated');
           // await conduit.getConfigManager().set(moduleName, updatedConfig);
           break;
       }

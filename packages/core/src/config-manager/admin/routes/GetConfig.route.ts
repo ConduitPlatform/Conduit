@@ -6,14 +6,9 @@ import ConduitGrpcSdk, {
   RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
-import * as models from '../../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getGetConfigRoute(
-  grpcSdk: ConduitGrpcSdk,
-  registeredModules: Map<string, RegisteredModule>,
-) {
+export function getGetConfigRoute(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(
     {
       path: '/config/:module',
@@ -29,8 +24,7 @@ export function getGetConfigRoute(
       let finalConfig: any;
       const module = params.params?.module;
       if (!['core', 'admin'].includes(module)) {
-        if (!registeredModules.has(module))
-          throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
+        throw new ConduitError('NOT_FOUND', 404, 'Resource not found');
       }
       finalConfig = await grpcSdk.state!.getKey(`moduleConfigs.${module}`);
       if (!finalConfig) {

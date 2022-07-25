@@ -112,6 +112,7 @@ message GetConfigResponse {
 
 message UpdateRequest {
   string config = 1;
+  string schema = 2;
 }
 
 message UpdateResponse {
