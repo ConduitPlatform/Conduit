@@ -312,9 +312,5 @@ export default class ConfigManager implements IConfigManager {
       .registerRoute(
         adminRoutes.getModulesRoute(this.serviceDiscovery.registeredModules),
       );
-    // this.sdk.getAdmin().registerRoute(adminRoutes.getGetConfigRoute(this.grpcSdk));
-    // this.sdk
-    //   .getAdmin()
-    //   .registerRoute(adminRoutes.getPatchConfigRoute(this.grpcSdk, this.sdk));
   }
 }

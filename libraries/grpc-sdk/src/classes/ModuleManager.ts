@@ -80,7 +80,7 @@ export class ModuleManager<T> {
   private async postRegisterLifecycle(): Promise<void> {
     await this.module.onRegister();
     if (this.module.config) {
-      let configSchema = this.module.config.getSchema();
+      const configSchema = this.module.config.getSchema();
       const config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
         convictConfigParser(configSchema),
