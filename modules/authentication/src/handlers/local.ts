@@ -804,11 +804,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
           ' minutes to try again'
         );
       }
-      await Token.getInstance()
-        .deleteMany({ userId: user._id, type: TokenType.VERIFICATION_TOKEN })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
+      await Token.getInstance().deleteMany({
+        userId: user._id,
+        type: TokenType.VERIFICATION_TOKEN,
+      });
     }
 
     verificationToken = await Token.getInstance().create({
