@@ -102,6 +102,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
         new ConduitRouteReturnDefinition('ResetPasswordResponse', 'String'),
         this.resetPassword.bind(this),
       );
+
+      routingManager.route(
+        {
+          path: '/local/resend-verification',
+          action: ConduitRouteActions.POST,
+          description: `Used to resend email verification after new user is created`,
+          bodyParams: {
+            email: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
+        this.resendVerificationEmail.bind(this),
+      );
     }
 
     routingManager.route(
@@ -160,21 +173,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
       this.verifyChangeEmail.bind(this),
     );
-
-    if (this.sendVerificationEmail) {
-      routingManager.route(
-        {
-          path: '/local/resend-verification',
-          action: ConduitRouteActions.POST,
-          description: `Used to resend email verification after new user is created`,
-          bodyParams: {
-            email: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('ResendVerificationEmailResponse', 'String'),
-        this.resendVerificationEmail.bind(this),
-      );
-    }
 
     if (config.twofa.enabled) {
       routingManager.route(
@@ -787,7 +785,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       email: email,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (user.isVerified) return 'User is already verified';
+    if (user.isVerified)
+      throw new GrpcError(status.FAILED_PRECONDITION, 'User already exists');
     let verificationToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
       userId: user._id,
@@ -795,7 +794,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(verificationToken)) {
       throw new GrpcError(status.NOT_FOUND, 'Verification email token does not exist');
     }
-    const diffInMilliSec = new Date(verificationToken.createdAt).getTime() - Date.now();
+    const diffInMilliSec = Math.abs(
+      new Date(verificationToken.createdAt).getTime() - Date.now(),
+    );
     if (diffInMilliSec > 600000) {
       await Token.getInstance()
         .deleteMany({ userId: user._id, type: TokenType.VERIFICATION_TOKEN })
