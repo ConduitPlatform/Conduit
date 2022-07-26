@@ -172,14 +172,10 @@ export default class ConfigManager implements IConfigManager {
 
   async set(moduleName: string, moduleConfig: any) {
     try {
-      switch (moduleName) {
-        case 'core':
-        case 'admin':
-          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
-          break;
-        default:
-          await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
-          break;
+      await this._configStorage.setConfig(moduleName, JSON.stringify(moduleConfig));
+      if (moduleName === 'admin') {
+        this.grpcSdk.bus!.publish('config:update:admin', JSON.stringify(moduleConfig));
+        this.sdk.getAdmin().handleConfigUpdate(moduleConfig);
       }
       return moduleConfig;
     } catch (e) {

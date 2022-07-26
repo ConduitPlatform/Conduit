@@ -149,9 +149,8 @@ export default class AdminModule extends IConduitAdmin {
 
   async subscribeToBusEvents() {
     this.grpcSdk.bus!.subscribe('config:update:admin', (config: string) => {
-      config = JSON.parse(config);
-      ConfigController.getInstance().config = config;
-      this.onConfig();
+      const cfg: convict.Config<any> = JSON.parse(config);
+      this.handleConfigUpdate(cfg);
     });
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
@@ -180,6 +179,12 @@ export default class AdminModule extends IConduitAdmin {
       }
       next();
     }, false);
+  }
+
+  /** Used to proc onConfig() via ConfigManager on the same Core instance (Redis broadcast limitation). */
+  handleConfigUpdate(config: convict.Config<any>) {
+    ConfigController.getInstance().config = config;
+    this.onConfig();
   }
 
   protected onConfig() {
