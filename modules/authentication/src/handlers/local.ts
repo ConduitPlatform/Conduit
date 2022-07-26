@@ -792,17 +792,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       userId: user._id,
     });
     if (isNil(verificationToken)) {
-      throw new GrpcError(status.NOT_FOUND, 'Verification email token does not exist');
-    }
-    const diffInMilliSec = Math.abs(
-      new Date(verificationToken.createdAt).getTime() - Date.now(),
-    );
-    if (diffInMilliSec > 600000) {
-      await Token.getInstance()
-        .deleteMany({ userId: user._id, type: TokenType.VERIFICATION_TOKEN })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
       verificationToken = await Token.getInstance().create({
         userId: user._id,
         type: TokenType.VERIFICATION_TOKEN,
@@ -811,23 +800,65 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: email,
         },
       });
+      const serverConfig = await this.grpcSdk.config.get('router');
+      const url = serverConfig.hostUrl;
+      const result = { verificationToken, hostUrl: url };
+      const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+      await this.emailModule
+        .sendEmail('EmailVerification', {
+          email: email,
+          sender: 'no-reply',
+          variables: {
+            link,
+          },
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
+      return 'Verification code sent';
+    } else {
+      const diffInMilliSec = Math.abs(
+        new Date(verificationToken.createdAt).getTime() - Date.now(),
+      );
+      if (diffInMilliSec >= 600000) {
+        await Token.getInstance()
+          .deleteMany({ userId: user._id, type: TokenType.VERIFICATION_TOKEN })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        verificationToken = await Token.getInstance().create({
+          userId: user._id,
+          type: TokenType.VERIFICATION_TOKEN,
+          token: uuid(),
+          data: {
+            email: email,
+          },
+        });
+        const serverConfig = await this.grpcSdk.config.get('router');
+        const url = serverConfig.hostUrl;
+        const result = { verificationToken, hostUrl: url };
+        const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
+        await this.emailModule
+          .sendEmail('EmailVerification', {
+            email: email,
+            sender: 'no-reply',
+            variables: {
+              link,
+            },
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        return 'Verification code sent';
+      } else {
+        const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
+        return (
+          'Verification code not sent. You have to wait ' +
+          remainTime +
+          ' minutes to try again'
+        );
+      }
     }
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
-    const result = { verificationToken, hostUrl: url };
-    const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-    await this.emailModule
-      .sendEmail('EmailVerification', {
-        email: email,
-        sender: 'no-reply',
-        variables: {
-          link,
-        },
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-    return 'Verification code sent';
   }
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
