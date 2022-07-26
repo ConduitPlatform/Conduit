@@ -88,9 +88,8 @@ export class ConfigStorage {
       });
     }
     this.configDocId = configDoc._id;
-    // Update Core, Admin and all active modules
+    // Update Admin and all active modules
     this.commons.getAdmin().handleConfigUpdate(configDoc.moduleConfigs.admin);
-    // TODO: Core
     const registeredModules = Array.from(this.serviceDiscovery.registeredModules.keys());
     for (const [module, config] of Object.entries(configDoc.moduleConfigs)) {
       if (module === 'core' || module === 'admin') continue;
