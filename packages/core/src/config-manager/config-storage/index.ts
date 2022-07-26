@@ -88,6 +88,15 @@ export class ConfigStorage {
       });
     }
     this.configDocId = configDoc._id;
+    // Update Admin and all active modules
+    this.commons.getAdmin().handleConfigUpdate(configDoc.moduleConfigs.admin);
+    const registeredModules = Array.from(this.serviceDiscovery.registeredModules.keys());
+    for (const [module, config] of Object.entries(configDoc.moduleConfigs)) {
+      if (module === 'core' || module === 'admin') continue;
+      if (registeredModules.includes(module)) {
+        this.grpcSdk.bus!.publish(`${module}:config:update`, JSON.stringify(config));
+      }
+    }
   }
 
   reconcileMonitor() {

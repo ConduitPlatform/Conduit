@@ -5,6 +5,7 @@ import { comparePasswords, signToken } from '../utils/auth';
 import {
   ConduitError,
   ConduitRouteActions,
+  ConfigController,
   ConduitRouteParameters,
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
@@ -43,8 +44,7 @@ export function getLoginRoute(conduit: ConduitCommons) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
 
-      let authConfig = await config.get('admin');
-      authConfig = authConfig.auth;
+      const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
       const token = signToken(
         { id: admin._id.toString() },
