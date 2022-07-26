@@ -786,7 +786,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isVerified)
-      throw new GrpcError(status.FAILED_PRECONDITION, 'User already exists');
+      throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
 
     let verificationToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
@@ -798,10 +798,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
       if (diffInMilliSec < 600000) {
         const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
-        return (
+        throw new GrpcError(
+          status.RESOURCE_EXHAUSTED,
           'Verification code not sent. You have to wait ' +
-          remainTime +
-          ' minutes to try again'
+            remainTime +
+            ' minutes to try again',
         );
       }
       await Token.getInstance().deleteMany({
