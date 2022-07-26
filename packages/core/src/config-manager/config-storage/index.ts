@@ -91,7 +91,13 @@ export class ConfigStorage {
     // Update Core, Admin and all active modules
     this.commons.getAdmin().handleConfigUpdate(configDoc.moduleConfigs.admin);
     // TODO: Core
-    // TODO: Modules (preConfig)
+    const registeredModules = Array.from(this.serviceDiscovery.registeredModules.keys());
+    for (const [module, config] of Object.entries(configDoc.moduleConfigs)) {
+      if (module === 'core' || module === 'admin') continue;
+      if (registeredModules.includes(module)) {
+        this.grpcSdk.bus!.publish(`${module}:config:update`, JSON.stringify(config));
+      }
+    }
   }
 
   reconcileMonitor() {
