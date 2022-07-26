@@ -787,12 +787,29 @@ export class LocalHandlers implements IAuthenticationStrategy {
       email: email,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    const verificationToken: Token | null = await Token.getInstance().findOne({
+    if (user.isVerified) return 'User is already verified';
+    let verificationToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
       userId: user._id,
     });
     if (isNil(verificationToken)) {
       throw new GrpcError(status.NOT_FOUND, 'Verification email token does not exist');
+    }
+    const diffInMilliSec = new Date(verificationToken.createdAt).getTime() - Date.now();
+    if (diffInMilliSec > 600000) {
+      await Token.getInstance()
+        .deleteMany({ userId: user._id, type: TokenType.VERIFICATION_TOKEN })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
+      verificationToken = await Token.getInstance().create({
+        userId: user._id,
+        type: TokenType.VERIFICATION_TOKEN,
+        token: uuid(),
+        data: {
+          email: email,
+        },
+      });
     }
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
