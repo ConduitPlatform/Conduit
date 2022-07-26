@@ -4,6 +4,7 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { compare, hash } from 'bcrypt';
 import { isNil } from 'lodash';
@@ -33,7 +34,7 @@ export function changePasswordRoute(conduit: ConduitCommons) {
           'Both old and new password must be provided',
         );
       }
-      const hashRounds = (await conduit.getConfigManager().get('admin')).auth.hashRounds;
+      const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
       const passwordsMatch = await compare(oldPassword, admin.password);
 
       if (!passwordsMatch) {

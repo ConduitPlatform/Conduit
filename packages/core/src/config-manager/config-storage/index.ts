@@ -88,6 +88,10 @@ export class ConfigStorage {
       });
     }
     this.configDocId = configDoc._id;
+    // Update Core, Admin and all active modules
+    this.commons.getAdmin().handleConfigUpdate(configDoc.moduleConfigs.admin);
+    // TODO: Core
+    // TODO: Modules (preConfig)
   }
 
   reconcileMonitor() {
