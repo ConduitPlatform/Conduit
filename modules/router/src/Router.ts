@@ -144,7 +144,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onConfig() {
-    await this.updateConfig();
     let atLeastOne = false;
 
     if (ConfigController.getInstance().config.transports.graphql) {

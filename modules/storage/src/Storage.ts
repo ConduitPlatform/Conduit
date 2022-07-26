@@ -70,7 +70,6 @@ export default class Storage extends ManagedModule<Config> {
     if (!ConfigController.getInstance().config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.updateConfig();
       await this.grpcSdk.monitorModule(
         'authentication',
         serving => {
@@ -79,14 +78,8 @@ export default class Storage extends ManagedModule<Config> {
         },
         false,
       );
-      const {
-        provider,
-        local,
-        google,
-        azure,
-        aws,
-        aliyun,
-      } = ConfigController.getInstance().config;
+      const { provider, local, google, azure, aws, aliyun } =
+        ConfigController.getInstance().config;
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,

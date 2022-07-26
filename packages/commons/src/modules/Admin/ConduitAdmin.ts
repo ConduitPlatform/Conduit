@@ -1,6 +1,7 @@
 import { GrpcServer } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { ConduitCommons } from '../../index';
+import convict from 'convict';
 
 export abstract class IConduitAdmin {
   protected constructor(protected readonly commons: ConduitCommons) {}
@@ -9,6 +10,6 @@ export abstract class IConduitAdmin {
   abstract subscribeToBusEvents(): Promise<void>;
   abstract registerRoute(route: ConduitRoute): void;
   abstract setConfig(moduleConfig: any): Promise<any>;
-
+  abstract handleConfigUpdate(config: convict.Config<any>): void;
   protected abstract onConfig(): void;
 }
