@@ -137,6 +137,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   /** Used to update the module's configuration on initial Redis/DB reconciliation. */
   async handleConfigSyncUpdate() {
+    if (!this.config) return;
     this.grpcSdk.bus!.subscribe(`${this.name}:config:update`, async message => {
       ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
       await this.onConfig();
