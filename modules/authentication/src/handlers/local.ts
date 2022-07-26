@@ -3,9 +3,7 @@ import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
-
 import ConduitGrpcSdk, {
-  ConduitError,
   Email,
   GrpcError,
   ParsedRouterRequest,
@@ -31,7 +29,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sendEmail: boolean,
+    private readonly sendVerificationEmail: boolean,
   ) {
     grpcSdk.config.get('router').then(config => {
       this.clientValidation = config.security.clientValidation;
@@ -77,7 +75,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.authenticate.bind(this),
     );
 
-    if (this.emailModule) {
+    if (this.sendVerificationEmail) {
       routingManager.route(
         {
           path: '/forgot-password',
@@ -124,6 +122,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     routingManager.route(
       {
+        path: '/local/change-email',
+        action: ConduitRouteActions.POST,
+        description: `Changes the user's email but requires password first.`,
+        bodyParams: {
+          newEmail: ConduitString.Required,
+          password: ConduitString.Required,
+        },
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('ChangeEmailResponse', 'String'),
+      this.changeEmail.bind(this),
+    );
+
+    routingManager.route(
+      {
         path: '/hook/verify-email/:verificationToken',
         action: ConduitRouteActions.GET,
         description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
@@ -133,6 +146,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
       this.verifyEmail.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: '/hook/verify-change-email/:verificationToken',
+        action: ConduitRouteActions.GET,
+        description: `A webhook used to verify an email address change. This bypasses the need for clientid/secret`,
+        urlParams: {
+          verificationToken: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
+      this.verifyChangeEmail.bind(this),
     );
 
     if (config.twofa.enabled) {
@@ -214,23 +240,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (this.sendEmail) {
-      let emailConfig;
-      try {
-        emailConfig = await this.grpcSdk.config.get('email');
-      } catch (e) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-      if (!emailConfig.active) {
-        ConduitGrpcSdk.Logger.log(
-          'Cannot use email verification without Email module being enabled',
-        );
-        return (this.initialized = false);
-      }
-    }
     if (!this.initialized) {
       try {
         await this.initDbAndEmail();
@@ -269,8 +278,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
         userId: user._id,
@@ -278,15 +286,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
-      if (this.sendEmail) {
-        await this.emailModule.sendEmail('EmailVerification', {
-          email: user.email,
-          sender: 'no-reply',
-          variables: {
-            link,
-          },
-        });
-      }
+      await this.emailModule.sendEmail('EmailVerification', {
+        email: user.email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      });
     }
     delete user.hashedPassword;
     return { user };
@@ -433,7 +439,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
         sender: 'no-reply',
@@ -566,6 +572,90 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Password changed successfully';
   }
 
+  async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { newEmail, password } = call.request.params;
+    const { user } = call.request.context;
+    const config = ConfigController.getInstance().config;
+
+    const validation = await this.validate();
+    if (!validation) {
+      throw new GrpcError(status.INTERNAL, 'Cannot use verification at this time');
+    }
+    if (user.email === newEmail) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'The new email can not be the same as the old email',
+      );
+    }
+    if (AuthUtils.invalidEmailAddress(newEmail)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
+    }
+    const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
+    if (dupEmailUser) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
+    }
+    const dbUser: User | null = await User.getInstance().findOne(
+      { _id: user._id },
+      '+hashedPassword',
+    );
+    if (isNil(dbUser)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
+    }
+    if (isNil(dbUser.hashedPassword)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    }
+    const passwordsMatch = await AuthUtils.checkPassword(
+      password,
+      dbUser.hashedPassword!,
+    );
+    if (!passwordsMatch) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
+    }
+
+    if (config.local.verification.required) {
+      await Token.getInstance()
+        .deleteMany({
+          userId: dbUser._id,
+          type: TokenType.CHANGE_EMAIL_TOKEN,
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
+      const verificationToken: Token = await Token.getInstance().create({
+        userId: dbUser._id,
+        type: TokenType.CHANGE_EMAIL_TOKEN,
+        token: uuid(),
+        data: {
+          email: newEmail,
+        },
+      });
+      if (this.sendVerificationEmail) {
+        const serverConfig = await this.grpcSdk.config.get('router');
+        const url = serverConfig.hostUrl;
+        const result = { verificationToken, hostUrl: url };
+        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
+        await this.emailModule
+          .sendEmail('ChangeEmailVerification', {
+            email: newEmail,
+            sender: 'no-reply',
+            variables: {
+              link,
+            },
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        return 'Verification code sent';
+      }
+      return 'Verification required';
+    }
+    await User.getInstance().findByIdAndUpdate(dbUser._id, { email: newEmail });
+    return 'Email changed successfully';
+  }
+
   async verifyChangePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { code } = call.request.params;
     const { user } = call.request.context;
@@ -576,7 +666,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(token)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Change password token not found');
+      throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
     }
 
     const verified = await this.smsModule.verify(token.token, code);
@@ -636,6 +726,34 @@ export class LocalHandlers implements IAuthenticationStrategy {
       return { redirect: config.verification.redirect_uri };
     }
     return 'Email verified';
+  }
+
+  async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { verificationToken } = call.request.params.verificationToken;
+    const config = ConfigController.getInstance().config;
+    const token: Token | null = await Token.getInstance().findOne({
+      type: TokenType.CHANGE_EMAIL_TOKEN,
+      token: verificationToken,
+    });
+    if (isNil(token)) {
+      throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
+    }
+    const user: User | null = await User.getInstance().findOne({
+      _id: token.userId,
+    });
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    await Token.getInstance()
+      .deleteMany({ userId: token.userId, type: TokenType.CHANGE_EMAIL_TOKEN })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+    await User.getInstance().findByIdAndUpdate(token.userId as string, {
+      email: token.data.email,
+    });
+    if (config.verification.redirect_uri) {
+      return { redirect: config.verification.redirect_uri };
+    }
+    return 'Email changed successfully';
   }
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -765,7 +883,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       await this.grpcSdk.config.moduleExists('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
@@ -788,7 +906,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.log('phone authentication not active');
     }
 
-    if (this.sendEmail) {
+    if (this.sendVerificationEmail) {
       this.registerTemplates();
     }
     this.initialized = true;

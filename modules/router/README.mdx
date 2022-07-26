@@ -1,31 +1,32 @@
----
-name: Router
-route: /router
-menu: Core
----
+# Router Module
 
-# Router package
+This module utilizes [Hermes](../../libraries/hermes) so as to expose application-level APIs and
+provide a way for Conduit modules to register application routes.
 
-This module should provide a way to generate routes both for REST and GraphQL APIs, along with documentation.
+## Features ✔️
 
-## Features [WIP]
+- REST (with Swagger)
+- GraphQL
+- WebSockets (via Socket.io)
 
-- Generate REST endpoints
-- Generate GraphQL endpoints
-- Generate documentation for REST with OpenAPI & Swagger
-- Generate documentation for GraphQL with the built in "description" functionality
+## Requirements ⚡
 
-### TODO
+- [Database](../database) module
 
-- Find a way to generate routes as files (if that makes sense)
-- Before doing that the structure and features should be finalized
-- Add validations for requests based on the supplied parameters
-- Generate the swagger .json file so that route documentation is available
-- Add GraphQL support
+## Environment Variables 📃 <a name="env-vars"></a>
+
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
+|  `CLIENT_HTTP_PORT`  | Port to be used by application REST and GrahpQL APIs |  False   |  `3000` |
+| `CLIENT_SOCKET_PORT` | DPort to be used by application WebSockets API       |  False   |  `3001` |
 
 ## Usage
 
-The router, as all module in conduit, communicates through the grpc sdk.
+The router, as all modules in Conduit, communicates through the [gRPC-sdk](../../libraries/grpc-sdk).
 
 For every route that you declare you have the following parameters:
 

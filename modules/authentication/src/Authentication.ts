@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -46,7 +45,8 @@ export default class Authentication extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
-  private sendEmail: boolean = false;
+  private localSendVerificationEmail: boolean = false;
+  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     super('authentication');
@@ -59,20 +59,7 @@ export default class Authentication extends ManagedModule<Config> {
     await runMigrations(this.grpcSdk);
   }
 
-  async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:onConfig', () => {
-      this.onConfig()
-        .then(() => {
-          ConduitGrpcSdk.Logger.log('Updated authentication configuration');
-        })
-        .catch(() => {
-          ConduitGrpcSdk.Logger.error('Failed to update authentication config');
-        });
-    });
-  }
-
   protected registerSchemas() {
-    // @ts-ignore
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
@@ -85,28 +72,35 @@ export default class Authentication extends ManagedModule<Config> {
     if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      let refreshedOnce = false;
       await this.registerSchemas();
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      await this.refreshAppRoutes();
+      this.updateHealth(HealthCheckStatus.SERVING);
       if (config.local.verification.send_email) {
-        this.grpcSdk.monitorModule('email', serving => {
-          this.sendEmail = serving;
-          this.refreshAppRoutes();
-          refreshedOnce = true;
+        this.grpcSdk.monitorModule('email', async serving => {
+          const alreadyEnabled = this.localSendVerificationEmail;
+          this.localSendVerificationEmail = serving;
+          if (serving) {
+            if (!alreadyEnabled) {
+              await this.refreshAppRoutes();
+            }
+          } else {
+            ConduitGrpcSdk.Logger.warn(
+              'Failed to enable email verification for local authentication strategy. Email module not serving.',
+            );
+          }
         });
       } else {
+        this.localSendVerificationEmail = false;
         this.grpcSdk.unmonitorModule('email');
       }
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      if (!refreshedOnce) {
-        await this.refreshAppRoutes();
-      }
-      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
   private async refreshAppRoutes() {
     if (this.userRouter) {
-      await this.userRouter.registerRoutes();
+      this.userRouter.updateLocalHandlers(this.localSendVerificationEmail);
+      this.scheduleAppRouteRefresh();
       return;
     }
     const self = this;
@@ -116,13 +110,28 @@ export default class Authentication extends ManagedModule<Config> {
         self.userRouter = new AuthenticationRoutes(
           self.grpcServer,
           self.grpcSdk,
-          self.sendEmail,
+          self.localSendVerificationEmail,
         );
-        return this.userRouter.registerRoutes();
+        this.scheduleAppRouteRefresh();
       })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
+  }
+
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.userRouter.registerRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
   }
 
   // gRPC Service
@@ -207,7 +216,7 @@ export default class Authentication extends ManagedModule<Config> {
         isVerified: !verify,
       });
 
-      if (verify && this.sendEmail) {
+      if (verify && this.localSendVerificationEmail) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({

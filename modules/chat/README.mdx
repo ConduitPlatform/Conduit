@@ -1,125 +1,37 @@
----
-name: Chat
-route: /chat
-menu: Modules
----
+# Chat Module
 
-# Routes
+This module provides support for creating chat rooms, adding participants and sending messages.
 
-## New Chat Room
+## Features ✔️
 
-|   route   | method | requires authentication |
-| :-------: | :----: | :---------------------: |
-| /chat/new |  POST  |          true           |
+- Chat rooms
+- Chat messages
+- Message read status
 
-Create a new chat room with other users. Duplicate user ids will be removed.
+## Requirements ⚡
 
-### Body parameters
+- [Database](../database) module
+- [Authentication](../authentication) module
 
-- roomName (string)
-- users ([string]): An array of user id's that will be in this room (excluding the authenticated user).
+## Environment Variables 📃 <a name="env-vars"></a>
 
-### Returns
+|       Variable       | Description                                          | Required |      Example       |
+|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
+|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
+|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
+|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
 
-- roomId (string)
+## Sockets
 
-## Invite Users To Chat Room
-
-|       route       | method | requires authentication |
-| :---------------: | :----: | :---------------------: |
-| /chat/add/:roomId |  PUT   |          true           |
-
-### URL parameters
-
-- roomId (string)
-
-### Body parameters
-
-- users (string[])
-
-## Leave Chat Room
-
-|        route        | method | requires authentication |
-| :-----------------: | :----: | :---------------------: |
-| /chat/leave/:roomId |  PUT   |          true           |
-
-### URL parameters
-
-- roomId (string)
-
-## Get Messages
-
-|     route      | method | requires authentication |
-| :------------: | :----: | :---------------------: |
-| /chat/messages |  GET   |          true           |
-
-Get messages from a specific room or for all rooms the user is in.
-
-### Query parameters
-
-- roomId (string): If roomId is missing then the response will contain messages from all rooms the user is in.
-- skip (number)
-- limit (number)
-
-### Returns
-
-An array of messages sorted by creation date (newest first).
-
-Example:
-
-```json
-{
-    "messages": [
-        {
-            "_id": "string",
-            "message": "string",
-            "senderUser": "string",
-            "room": "string",
-            "readBy": ["string"],
-            "createdAt": "date",
-            "updatedAt": "date",
-        }
-    ]
-}
-```
-
-## Delete Message
-
-|           route           | method | requires authentication |
-| :-----------------------: | :----: | :---------------------: |
-| /chat/messages/:messageId | DELETE |          true           |
-
-This route is enabled only if the `allowMessageDelete` flag is set to true in the config.
-
-### URL parameters
-
-- messageId (string)
-
-## Edit Message
-
-|           route           | method | requires authentication |
-| :-----------------------: | :----: | :---------------------: |
-| /chat/messages/:messageId |  PUT   |          true           |
-
-This route is enabled only if the `allowMessageEdit` flag is set to true in the config.
-
-### URL parameters
-
-- messageId (string)
-
-### Body parameters
-
-- newMessage (string)
-
-# Sockets
-
-Sockets listen to /realtime as the "handshake" path and port 3001
+Sockets listen to `/realtime` as the "handshake" path.<br />
+Make sure you specify [Router](../router)'s active `CLIENT_SOCKET_PORT` (default: `3001`)
 
 |       namespace           | requires authentication |
 | :-----------------------: | :---------------------: |
 |         /chat/            |          true           |
 
-## Events
+### Events
 
 ### Connect
 
