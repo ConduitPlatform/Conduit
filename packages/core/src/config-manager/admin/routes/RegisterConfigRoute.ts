@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { ConduitCommons } from '@conduitplatform/commons';
-import { update } from 'lodash';
 
 export function registerConfigRoute(
   grpcSdk: ConduitGrpcSdk,
