@@ -45,7 +45,9 @@ export class Core extends IConduitCore {
     const previousConfig = await this.commons.getConfigManager().get('core');
     let config = { ...previousConfig, ...moduleConfig };
     try {
-      this.config.load(config).validate();
+      this.config.load(config).validate({
+        allowed: 'strict',
+      });
       config = this.config.getProperties();
     } catch (e) {
       this.config.load(previousConfig);

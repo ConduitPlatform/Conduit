@@ -7,10 +7,12 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { Core } from '../Core';
 import { Status } from '@grpc/grpc-js/build/src/constants';
+import { ConduitCommons } from '@conduitplatform/commons';
 
 export class HttpServer {
   private _routingManager: RoutingManager;
-
+  private grpcSdk: ConduitGrpcSdk;
+  private conduit: ConduitCommons;
   constructor() {}
 
   initialize(grpcSdk: ConduitGrpcSdk, server: ConduitGrpcServer) {

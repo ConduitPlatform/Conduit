@@ -1,5 +1,6 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
@@ -15,10 +16,12 @@ import {
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
+import { registerConfigRoute } from './admin/routes';
 import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
 import { ConfigStorage } from './config-storage';
+import parseConfigSchema from '../utils';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -211,19 +214,53 @@ export default class ConfigManager implements IConfigManager {
   ) {
     const moduleName = call.metadata!.get('module-name')![0] as string;
     let config = JSON.parse(call.request.config);
+    const configSchema = JSON.parse(call.request.schema);
+    parseConfigSchema(configSchema);
     const existingConfig = await this.get(moduleName);
     if (!existingConfig) {
       await this.set(moduleName, config);
     }
     config = await this.addFieldsToModule(moduleName, config);
+
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(
+          this.grpcSdk,
+          moduleName,
+          configSchema,
+          ConduitRouteActions.GET,
+        ),
+      );
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(
+          this.grpcSdk,
+          moduleName,
+          configSchema,
+          ConduitRouteActions.PATCH,
+        ),
+      );
     return callback(null, { result: JSON.stringify(config) });
   }
 
-  async configurePackage(moduleName: string, config: any) {
+  async configurePackage(moduleName: string, config: any, schema: any) {
     const existingConfig = await this.get(moduleName);
     if (!existingConfig) {
       await this.set(moduleName, config);
     }
+    parseConfigSchema(schema);
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.GET),
+      );
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.PATCH),
+      );
     return await this.addFieldsToModule(moduleName, config);
   }
 
@@ -270,23 +307,6 @@ export default class ConfigManager implements IConfigManager {
       .getAdmin()
       .registerRoute(
         adminRoutes.getModulesRoute(this.serviceDiscovery.registeredModules),
-      );
-    this.sdk
-      .getAdmin()
-      .registerRoute(
-        adminRoutes.getGetConfigRoute(
-          this.grpcSdk,
-          this.serviceDiscovery.registeredModules,
-        ),
-      );
-    this.sdk
-      .getAdmin()
-      .registerRoute(
-        adminRoutes.getPatchConfigRoute(
-          this.grpcSdk,
-          this.sdk,
-          this.serviceDiscovery.registeredModules,
-        ),
       );
   }
 }

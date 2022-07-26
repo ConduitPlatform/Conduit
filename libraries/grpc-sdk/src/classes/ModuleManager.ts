@@ -1,4 +1,17 @@
-import ConduitGrpcSdk, { ManagedModule, ConfigController } from '..';
+import ConduitGrpcSdk, { ManagedModule, ConfigController, Indexable } from '..';
+
+const convictConfigParser = (config: Indexable) => {
+  if (typeof config === 'object') {
+    Object.keys(config).forEach(key => {
+      if (key === '_cvtProperties') {
+        config = convictConfigParser(config._cvtProperties);
+      } else {
+        config[key] = convictConfigParser(config[key]);
+      }
+    });
+  }
+  return config;
+};
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
@@ -67,10 +80,12 @@ export class ModuleManager<T> {
   private async postRegisterLifecycle(): Promise<void> {
     await this.module.onRegister();
     if (this.module.config) {
+      const configSchema = this.module.config.getSchema();
       const config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
-        this.module.name,
+        convictConfigParser(configSchema),
       );
+
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active || !config.hasOwnProperty('active'))
