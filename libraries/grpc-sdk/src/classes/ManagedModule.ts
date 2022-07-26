@@ -116,6 +116,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
           allowed: 'strict',
         });
         config = this.config.getProperties();
+        callback(null, { updatedConfig: JSON.stringify(config) });
       } catch (e) {
         this.config.load(previousConfig);
         return callback({
@@ -129,7 +130,6 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         kebabCase(this.name) + ':config:update',
         JSON.stringify(config),
       );
-      return callback(null, { updatedConfig: JSON.stringify(config) });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
