@@ -5,6 +5,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { ConduitCommons } from '@conduitplatform/commons';
+import getConfigRouteHandler from './GetConfigRouteHandler';
+import setConfigRouteHandler from './SetConfigRouteHandler';
 
 export function registerConfigRoute(
   grpcSdk: ConduitGrpcSdk,
@@ -24,54 +26,24 @@ export function registerConfigRoute(
       }),
     },
     new ConduitRouteReturnDefinition(
-      routeAction === ConduitRouteActions.GET ? 'GetConfigRoute' : 'SetConfigRoute',
+      routeAction === ConduitRouteActions.GET
+        ? `Get${moduleName}ConfigRoute`
+        : `Set${moduleName}ConfigRoute`,
       {
         config: configSchema,
       },
     ),
     async (params: ConduitRouteParameters) => {
-      if (routeAction === ConduitRouteActions.GET) {
-        let finalConfig;
-        finalConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);
-        if (!finalConfig) {
-          finalConfig = {};
-        } else {
-          finalConfig = JSON.parse(finalConfig);
-        }
-        return { result: { config: finalConfig } };
-      } else {
-        const newConfig = params.params!.config;
-        let updatedConfig;
-        switch (moduleName) {
-          case 'core':
-            updatedConfig = await conduit
-              .getCore()
-              .setConfig(newConfig)
-              .catch(e => {
-                throw new ConduitError(e.name, e.status ?? 500, e.message);
-              });
-            break;
-          case 'admin':
-            updatedConfig = await conduit
-              .getAdmin()
-              .setConfig(newConfig)
-              .catch(e => {
-                throw new ConduitError(e.name, e.status ?? 500, e.message);
-              });
-            break;
-          default:
-            updatedConfig = JSON.parse(
-              // @ts-ignore
-              (
-                await grpcSdk
-                  .getModule<any>(moduleName)!
-                  // @ts-ignore
-                  .setConfig({ newConfig: JSON.stringify(newConfig) })
-              ).updatedConfig,
-            );
-        }
-        return { result: { config: updatedConfig } };
-      }
+      let response;
+      routeAction === ConduitRouteActions.GET
+        ? (response = await getConfigRouteHandler(grpcSdk, moduleName))
+        : (response = await setConfigRouteHandler(
+            params.params!.config,
+            moduleName,
+            grpcSdk,
+            conduit,
+          ));
+      return response;
     },
   );
 }
