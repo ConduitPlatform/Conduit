@@ -31,7 +31,7 @@ export default {
       },
       proxy: {
         doc: 'The email proxy',
-        format: '*',
+        format: 'String',
         default: '',
       },
     },
