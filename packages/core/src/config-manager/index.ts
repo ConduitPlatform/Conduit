@@ -227,6 +227,7 @@ export default class ConfigManager implements IConfigManager {
       .registerRoute(
         registerConfigRoute(
           this.grpcSdk,
+          this.sdk,
           moduleName,
           configSchema,
           ConduitRouteActions.GET,
@@ -237,6 +238,7 @@ export default class ConfigManager implements IConfigManager {
       .registerRoute(
         registerConfigRoute(
           this.grpcSdk,
+          this.sdk,
           moduleName,
           configSchema,
           ConduitRouteActions.PATCH,
@@ -254,12 +256,24 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.GET),
+        registerConfigRoute(
+          this.grpcSdk,
+          this.sdk,
+          moduleName,
+          schema,
+          ConduitRouteActions.GET,
+        ),
       );
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(this.grpcSdk, moduleName, schema, ConduitRouteActions.PATCH),
+        registerConfigRoute(
+          this.grpcSdk,
+          this.sdk,
+          moduleName,
+          schema,
+          ConduitRouteActions.PATCH,
+        ),
       );
     return await this.addFieldsToModule(moduleName, config);
   }

@@ -1,43 +1,18 @@
-import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteParameters,
-} from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import { ConduitCommons } from '@conduitplatform/commons';
+import getConfigRoute from './GetConfigRoute';
+import setConfigRoute from './SetConfigRoute';
 
 export function registerConfigRoute(
   grpcSdk: ConduitGrpcSdk,
+  conduit: ConduitCommons,
   moduleName: string,
   configSchema: any,
   routeAction: ConduitRouteActions.GET | ConduitRouteActions.PATCH,
 ) {
-  return new ConduitRoute(
-    {
-      path: `/config/${moduleName}`,
-      action: routeAction,
-      ...(routeAction === ConduitRouteActions.PATCH && {
-        bodyParams: {
-          config: { type: configSchema, required: true },
-        },
-      }),
-    },
-    new ConduitRouteReturnDefinition(
-      routeAction === ConduitRouteActions.GET ? 'GetConfigRoute' : 'SetConfigRoute',
-      {
-        config: configSchema,
-      },
-    ),
-    async (params: ConduitRouteParameters) => {
-      const newConfig = params.params!.config;
-      const updatedConfig = JSON.parse(
-        // @ts-ignore
-        (
-          await grpcSdk
-            .getModule<any>(moduleName)!
-            // @ts-ignore
-            .setConfig({ newConfig: JSON.stringify(newConfig) })
-        ).updatedConfig,
-      );
-      return { result: { config: updatedConfig } };
-    },
-  );
+  let response;
+  routeAction === ConduitRouteActions.GET
+    ? (response = getConfigRoute(grpcSdk, moduleName, configSchema))
+    : (response = setConfigRoute(moduleName, grpcSdk, conduit, configSchema));
+  return response;
 }
