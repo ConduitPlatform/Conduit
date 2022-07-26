@@ -142,18 +142,4 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       await this.onConfig();
     });
   }
-
-  protected async updateConfig(config?: T) {
-    if (!this.config) {
-      throw new Error('Module is not configurable');
-    }
-    if (config) {
-      ConfigController.getInstance().config = config;
-      return Promise.resolve();
-    } else {
-      return this.grpcSdk.config.get(this.name).then((config: T) => {
-        ConfigController.getInstance().config = config;
-      });
-    }
-  }
 }
