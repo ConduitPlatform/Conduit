@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.4](https://github.com/ConduitPlatform/Conduit/compare/v0.14.3...v0.14.4) (2022-07-27)
+
+
+### Features
+
+* **core:** recover module config routes ([#271](https://github.com/ConduitPlatform/Conduit/issues/271)) ([b22b932](https://github.com/ConduitPlatform/Conduit/commit/b22b932cd2e9e9e1c7675117b94df6e957e4fc86))
+
+
+### Bug Fixes
+
+* **core:** config set not working ([#270](https://github.com/ConduitPlatform/Conduit/issues/270)) ([d73fd09](https://github.com/ConduitPlatform/Conduit/commit/d73fd09a627e7dd952f9b8c6ba3af9005994b3a1))
+* **core:** config set not working (again) ([3575f1f](https://github.com/ConduitPlatform/Conduit/commit/3575f1f5fddfcdf84b55b00237642d3aefcd4158))
+
 ### [0.14.3](https://github.com/ConduitPlatform/Conduit/compare/v0.14.2...v0.14.3) (2022-07-27)
 
 
