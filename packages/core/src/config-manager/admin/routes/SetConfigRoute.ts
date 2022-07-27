@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 import { ConduitCommons } from '@conduitplatform/commons';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-type SetConfig = (config: { newConfig: string }) => { updatedConfig: string };
+type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;
 type GetModuleResponse = { setConfig: SetConfig };
 
 export default function setConfigRoute(
@@ -28,12 +28,11 @@ export default function setConfigRoute(
     }),
     async (params: ConduitRouteParameters) => {
       let updatedConfig = params.params!.config;
-      let newConfig;
       switch (moduleName) {
         case 'core':
           updatedConfig = await conduit
             .getCore()
-            .setConfig(newConfig)
+            .setConfig(updatedConfig)
             .catch(e => {
               throw new ConduitError(e.name, e.status ?? 500, e.message);
             });
@@ -41,18 +40,24 @@ export default function setConfigRoute(
         case 'admin':
           updatedConfig = await conduit
             .getAdmin()
-            .setConfig(newConfig)
+            .setConfig(updatedConfig)
             .catch(e => {
               throw new ConduitError(e.name, e.status ?? 500, e.message);
             });
           break;
         default:
-          updatedConfig = ((await grpcSdk.getModule<any>(
+          const moduleClient = grpcSdk.getModule<any>(
             moduleName,
-          )) as unknown as GetModuleResponse)!.setConfig({
-            newConfig: JSON.stringify(newConfig),
-          }).updatedConfig;
-          updatedConfig = JSON.parse(updatedConfig);
+          ) as unknown as GetModuleResponse;
+
+          updatedConfig = await moduleClient
+            .setConfig({
+              newConfig: JSON.stringify(updatedConfig),
+            })
+            .catch(e => {
+              throw new ConduitError(e.name, e.status ?? 500, e.message);
+            });
+          updatedConfig = JSON.parse(updatedConfig.updatedConfig);
       }
       return { result: { config: updatedConfig } };
     },

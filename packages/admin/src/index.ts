@@ -73,7 +73,6 @@ export default class AdminModule extends IConduitAdmin {
   private _router: ConduitRoutingController;
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(this.commons),
-    adminRoutes.getModulesRoute(this.commons),
     adminRoutes.getCreateAdminRoute(this.commons),
     adminRoutes.getAdminUsersRoute(),
     adminRoutes.deleteAdminUserRoute(),
@@ -182,7 +181,7 @@ export default class AdminModule extends IConduitAdmin {
     }, false);
   }
 
-  /** Used to proc onConfig() via ConfigManager on the same Core instance (Redis broadcast limitation). */
+  /** Used to update the configuration on the same Core instance (Redis broadcast limitation). */
   handleConfigUpdate(config: convict.Config<any>) {
     ConfigController.getInstance().config = config;
     this.onConfig();

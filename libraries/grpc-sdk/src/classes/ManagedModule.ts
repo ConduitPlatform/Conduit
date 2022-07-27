@@ -116,6 +116,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
           allowed: 'strict',
         });
         config = this.config.getProperties();
+        callback(null, { updatedConfig: JSON.stringify(config) });
       } catch (e) {
         this.config.load(previousConfig);
         return callback({
@@ -129,23 +130,17 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         kebabCase(this.name) + ':config:update',
         JSON.stringify(config),
       );
-      return callback(null, { updatedConfig: JSON.stringify(config) });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 
-  protected async updateConfig(config?: T) {
-    if (!this.config) {
-      throw new Error('Module is not configurable');
-    }
-    if (config) {
-      ConfigController.getInstance().config = config;
-      return Promise.resolve();
-    } else {
-      return this.grpcSdk.config.get(this.name).then((config: T) => {
-        ConfigController.getInstance().config = config;
-      });
-    }
+  /** Used to update the module's configuration on initial Redis/DB reconciliation. */
+  async handleConfigSyncUpdate() {
+    if (!this.config) return;
+    this.grpcSdk.bus!.subscribe(`${this.name}:config:update`, async message => {
+      ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
+      await this.onConfig();
+    });
   }
 }
