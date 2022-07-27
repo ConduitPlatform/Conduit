@@ -23,6 +23,7 @@ import { ServiceDiscovery } from './service-discovery';
 import { ConfigStorage } from './config-storage';
 import parseConfigSchema from '../utils';
 import { IModuleConfig } from '../interfaces/IModuleConfig';
+import convict from 'convict';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -303,7 +304,7 @@ export default class ConfigManager implements IConfigManager {
       );
   }
 
-  private registerConfigRoutes(moduleName: string, configSchema: any) {
+  private registerConfigRoutes(moduleName: string, configSchema: convict.Config<any>) {
     this.sdk
       .getAdmin()
       .registerRoute(
@@ -328,7 +329,7 @@ export default class ConfigManager implements IConfigManager {
       );
   }
 
-  private updateState(name: string, configSchema: any) {
+  private updateState(name: string, configSchema: convict.Config<any>) {
     this.grpcSdk
       .state!.getKey('config')
       .then(r => {
