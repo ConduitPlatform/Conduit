@@ -59,6 +59,7 @@ export default function setConfigRoute(
             });
           updatedConfig = JSON.parse(updatedConfig.updatedConfig);
       }
+      await conduit.getConfigManager().set(moduleName, updatedConfig);
       return { result: { config: updatedConfig } };
     },
   );
