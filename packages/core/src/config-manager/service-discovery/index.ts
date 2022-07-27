@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
+import { IModuleConfig } from '../../interfaces/IModuleConfig';
 
 export class ServiceDiscovery {
   registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
@@ -281,16 +282,20 @@ export class ServiceDiscovery {
       .then(r => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.modules) state.modules = [];
-        state.modules = state.modules.filter(
-          (module: { name: string; instance: string; url: string }) => {
-            return module.url !== url;
-          },
-        );
-        state.modules.push({
-          name,
-          instance,
-          url,
+        const module = state.modules.find((module: IModuleConfig) => {
+          return module.url === url;
         });
+
+        state.modules = [
+          ...state.modules.filter((module: IModuleConfig) => module.name !== name),
+          {
+            ...module, //persist the module config schema
+            name,
+            instance,
+            url,
+          },
+        ];
+
         return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
       })
       .then(() => {
