@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.3](https://github.com/ConduitPlatform/Conduit/compare/v0.14.2...v0.14.3) (2022-07-27)
+
+
+### Features
+
+* add strict option to convict validation & specific config endpoints ([#266](https://github.com/ConduitPlatform/Conduit/issues/266)) ([e35edbd](https://github.com/ConduitPlatform/Conduit/commit/e35edbd31a67e2ec8c57830675744532e4876d5b))
+* **authentication:** implement change email ([#255](https://github.com/ConduitPlatform/Conduit/issues/255)) ([9ef6663](https://github.com/ConduitPlatform/Conduit/commit/9ef66631720033e45b0c385b281411f5cf983f8b))
+* **authentication:** resend verification email  ([#264](https://github.com/ConduitPlatform/Conduit/issues/264)) ([2235d26](https://github.com/ConduitPlatform/Conduit/commit/2235d26c4d70f0c7e16bf342615da3134d8e396c))
+* **grpc-sdk:** add module instance id to loki logger ([#263](https://github.com/ConduitPlatform/Conduit/issues/263)) ([cf38f85](https://github.com/ConduitPlatform/Conduit/commit/cf38f8555cc78485bc6232fdf603051d58f9283a))
+
+
+### Bug Fixes
+
+* **admin,commons,core,grpc-sdk,router,storage:** config updates ([#267](https://github.com/ConduitPlatform/Conduit/issues/267)) ([4fbad08](https://github.com/ConduitPlatform/Conduit/commit/4fbad08a5e76ad6e09db6ae323592cbd8f60d251))
+* **admin,core,grpc-sdk:** initial config sync ([#269](https://github.com/ConduitPlatform/Conduit/issues/269)) ([ff23852](https://github.com/ConduitPlatform/Conduit/commit/ff238528ab86f537fb3bfb29dcfe7907c553669e))
+* **admin,core:** config not falling-back properly ([ecc8e8c](https://github.com/ConduitPlatform/Conduit/commit/ecc8e8cc8d27e28cd8c9fd8667a9c221dbc5bf6c))
+* **admin,router:** helmet blocking slash-suffixed graphql endpoints ([#265](https://github.com/ConduitPlatform/Conduit/issues/265)) ([d532dcb](https://github.com/ConduitPlatform/Conduit/commit/d532dcb66947be94a32680deb6d59633cd6d5218))
+* **admin:** outdated master key warning check ([#262](https://github.com/ConduitPlatform/Conduit/issues/262)) ([15af18e](https://github.com/ConduitPlatform/Conduit/commit/15af18eff83f6b6b0c167e66e78d00d51cb6c61d))
+* **authentication:** email dependent app route registration ([#257](https://github.com/ConduitPlatform/Conduit/issues/257)) ([ae78612](https://github.com/ConduitPlatform/Conduit/commit/ae786122903e9d23d536fb2bea847fdd06bc353f))
+* **core:** fix get config routes not working ([#268](https://github.com/ConduitPlatform/Conduit/issues/268)) ([33abce6](https://github.com/ConduitPlatform/Conduit/commit/33abce606a4edf023178014ff3c23c86b30895f2))
+* **grpc-sdk:** module inconsistency on momentary core unavailability ([#258](https://github.com/ConduitPlatform/Conduit/issues/258)) ([d8c753c](https://github.com/ConduitPlatform/Conduit/commit/d8c753c3c63cc2609bea0ad5d123d2f388dc7664))
+* **grpc-sdk:** monitorModule() not awaiting module before first callback call ([#256](https://github.com/ConduitPlatform/Conduit/issues/256)) ([f638d5f](https://github.com/ConduitPlatform/Conduit/commit/f638d5f89994f49241132c890ad48c44f7f3f982))
+* **hermes:** Swagger route tags ([#259](https://github.com/ConduitPlatform/Conduit/issues/259)) ([04549b0](https://github.com/ConduitPlatform/Conduit/commit/04549b0a4e00d2ad7d08e875792db2de48668092))
+
 ### [0.14.2](https://github.com/ConduitPlatform/Conduit/compare/v0.14.1...v0.14.2) (2022-07-21)
 
 
