@@ -72,11 +72,7 @@ export default class ConfigManager implements IConfigManager {
     try {
       if (!loadedState || loadedState.length === 0) return;
       const state = JSON.parse(loadedState);
-      const success: {
-        name: string;
-        url: string;
-        instance: string;
-      }[] = [];
+      const success: IModuleConfig[] = [];
       if (state.modules) {
         for (const module of state.modules) {
           try {
@@ -89,6 +85,7 @@ export default class ConfigManager implements IConfigManager {
               name: module.name,
               url: module.url,
               instance: module.instance,
+              ...(module.configSchema && { configSchema: module.configSchema }),
             });
           } catch {}
         }
