@@ -297,6 +297,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: user._id,
         token: uuid(),
       });
+      await this.grpcSdk.state!.setKey(
+        'hash-' + verificationToken.token,
+        '{}',
+        10 * 60 * 60 * 1000,
+      );
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
       await this.emailModule
@@ -716,10 +721,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(verificationTokenDoc)) {
-      if (config.local.verification.redirect_uri) {
-        return { redirect: config.verification.redirect_uri };
-      } else {
+      const redisToken = await this.grpcSdk.state!.getKey(
+        'hash-' + verificationTokenParam,
+      );
+      if (redisToken) {
+        if (config.local.verification.redirect_uri)
+          return { redirect: config.verification.redirect_uri };
+
         return 'Email verified';
+      } else {
+        throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
       }
     }
 
