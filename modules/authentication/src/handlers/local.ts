@@ -716,7 +716,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(verificationTokenDoc)) {
-      const redisToken = await this.grpcSdk.state!.getKey(verificationTokenParam);
+      const redisToken = await this.grpcSdk.state!.getKey(
+        'verifiedToken_' + verificationTokenParam,
+      );
       if (redisToken) {
         if (config.local.verification.redirect_uri)
           return { redirect: config.verification.redirect_uri };
@@ -739,7 +741,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
     await this.grpcSdk.state!.setKey(
-      verificationTokenDoc.token,
+      'verifiedToken_' + verificationTokenDoc.token,
       '{}',
       10 * 60 * 60 * 1000,
     );
