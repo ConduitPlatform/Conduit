@@ -716,10 +716,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(verificationTokenDoc)) {
-      if (config.local.verification.redirect_uri) {
-        return { redirect: config.verification.redirect_uri };
-      } else {
+      const redisToken = await this.grpcSdk.state!.getKey(
+        'verifiedToken_' + verificationTokenParam,
+      );
+      if (redisToken) {
+        if (config.local.verification.redirect_uri)
+          return { redirect: config.verification.redirect_uri };
+
         return 'Email verified';
+      } else {
+        throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
       }
     }
 
@@ -734,13 +740,18 @@ export class LocalHandlers implements IAuthenticationStrategy {
       user,
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
+    await this.grpcSdk.state!.setKey(
+      'verifiedToken_' + verificationTokenDoc.token,
+      '{}',
+      10 * 60 * 60 * 1000,
+    );
 
     await Promise.all([userPromise, tokenPromise]);
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.verification.redirect_uri) {
-      return { redirect: config.verification.redirect_uri };
+    if (config.local.verification.redirect_uri) {
+      return { redirect: config.local.verification.redirect_uri };
     }
     return 'Email verified';
   }
@@ -767,8 +778,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(token.userId as string, {
       email: token.data.email,
     });
-    if (config.verification.redirect_uri) {
-      return { redirect: config.verification.redirect_uri };
+    if (config.local.verification.redirect_uri) {
+      return { redirect: config.local.verification.redirect_uri };
     }
     return 'Email changed successfully';
   }
