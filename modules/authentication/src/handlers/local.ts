@@ -297,11 +297,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
         userId: user._id,
         token: uuid(),
       });
-      await this.grpcSdk.state!.setKey(
-        'hash-' + verificationToken.token,
-        '{}',
-        10 * 60 * 60 * 1000,
-      );
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
       await this.emailModule
@@ -721,9 +716,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (isNil(verificationTokenDoc)) {
-      const redisToken = await this.grpcSdk.state!.getKey(
-        'hash-' + verificationTokenParam,
-      );
+      const redisToken = await this.grpcSdk.state!.getKey(verificationTokenParam);
       if (redisToken) {
         if (config.local.verification.redirect_uri)
           return { redirect: config.verification.redirect_uri };
@@ -745,13 +738,18 @@ export class LocalHandlers implements IAuthenticationStrategy {
       user,
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
+    await this.grpcSdk.state!.setKey(
+      verificationTokenDoc.token,
+      '{}',
+      10 * 60 * 60 * 1000,
+    );
 
     await Promise.all([userPromise, tokenPromise]);
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.verification.redirect_uri) {
-      return { redirect: config.verification.redirect_uri };
+    if (config.local.verification.redirect_uri) {
+      return { redirect: config.local.verification.redirect_uri };
     }
     return 'Email verified';
   }
