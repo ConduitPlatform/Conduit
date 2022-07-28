@@ -36,6 +36,7 @@ import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
+import { ConduitMetrics } from './metrics';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -64,6 +65,7 @@ export default class ConduitGrpcSdk {
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
+  static Metrics: ConduitMetrics;
   static readonly Logger: ConduitLogger = new ConduitLogger([
     new winston.transports.File({
       filename: path.join(__dirname, '.logs/combined.log'),
@@ -86,6 +88,10 @@ export default class ConduitGrpcSdk {
     } else {
       this.name = name;
     }
+    const instance = this.name.startsWith('module_')
+      ? this.name.substring(8)
+      : Crypto.randomBytes(16).toString('hex');
+    ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, instance);
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
         new LokiTransport({
@@ -95,9 +101,7 @@ export default class ConduitGrpcSdk {
           replaceTimestamp: true,
           labels: {
             module: this.name,
-            instance: this.name.startsWith('module_')
-              ? this.name.substring(8)
-              : Crypto.randomBytes(16).toString('hex'),
+            instance,
           },
         }),
       );
