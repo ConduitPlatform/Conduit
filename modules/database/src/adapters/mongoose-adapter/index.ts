@@ -242,7 +242,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  async checkDeclaredSchemaExistance() {
+  async checkDeclaredSchemaExistence() {
     return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
       c => c.name === '_declaredschemas',
     );
