@@ -776,8 +776,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(token.userId as string, {
       email: token.data.email,
     });
-    if (config.verification.redirect_uri) {
-      return { redirect: config.verification.redirect_uri };
+    if (config.local.verification.redirect_uri) {
+      return { redirect: config.local.verification.redirect_uri };
     }
     return 'Email changed successfully';
   }
