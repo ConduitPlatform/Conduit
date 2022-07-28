@@ -712,46 +712,36 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const verificationTokenParam = call.request.params.verificationToken;
-
     const config = ConfigController.getInstance().config;
-
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
       token: verificationTokenParam,
     });
 
-    if (isNil(verificationTokenDoc)) {
+    if (verificationTokenDoc) {
+      const user: User | null = await User.getInstance().findOne({
+        _id: verificationTokenDoc.userId,
+      });
+      if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+
+      user.isVerified = true;
+      const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
+        user._id,
+        user,
+      );
+      const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
+      await Promise.all([userPromise, tokenPromise]);
+      this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
+    } else {
       const redisToken = await this.grpcSdk.state!.getKey(
         'hash-' + verificationTokenParam,
       );
-      if (redisToken) {
-        if (config.local.verification.redirect_uri)
-          return { redirect: config.verification.redirect_uri };
-
-        return 'Email verified';
-      } else {
+      if (!redisToken)
         throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
-      }
     }
 
-    const user: User | null = await User.getInstance().findOne({
-      _id: verificationTokenDoc.userId,
-    });
-    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-
-    user.isVerified = true;
-    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
-      user._id,
-      user,
-    );
-    const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
-
-    await Promise.all([userPromise, tokenPromise]);
-
-    this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
-
-    if (config.verification.redirect_uri) {
-      return { redirect: config.verification.redirect_uri };
+    if (config.local.verification.redirect_uri) {
+      return { redirect: config.local.verification.redirect_uri };
     }
     return 'Email verified';
   }
