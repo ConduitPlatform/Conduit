@@ -27,7 +27,7 @@ export default {
     config: {
       name: 'health_state',
       help: 'Tracks the health state of the module',
-      buckets: ['Healthy', 'Unhealthy'],
+      buckets: [0, 1],
     },
   },
   grpcRequestLatency: {

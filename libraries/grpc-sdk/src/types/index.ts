@@ -1,6 +1,11 @@
 import { Metadata, status } from '@grpc/grpc-js';
 import { Context, Params, Headers, Indexable } from '../interfaces';
-import { MetricType } from 'prom-client';
+import {
+  CounterConfiguration,
+  GaugeConfiguration,
+  HistogramConfiguration,
+  SummaryConfiguration,
+} from 'prom-client';
 
 export type GrpcRequest<T> = { request: T; metadata?: Metadata };
 export type GrpcResponse<T> = (
@@ -67,10 +72,15 @@ export enum HealthCheckStatus {
   SERVICE_UNKNOWN,
 }
 
-export {
-  MetricType,
-  CounterConfiguration,
-  GaugeConfiguration,
-  SummaryConfiguration,
-  HistogramConfiguration,
-} from 'prom-client';
+export type MetricConfiguration =
+  | CounterConfiguration<any>
+  | SummaryConfiguration<any>
+  | HistogramConfiguration<any>
+  | GaugeConfiguration<any>;
+
+export enum MetricType {
+  Counter,
+  Gauge,
+  Histogram,
+  Summary,
+}

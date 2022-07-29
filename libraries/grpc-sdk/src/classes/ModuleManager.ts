@@ -95,10 +95,10 @@ export class ModuleManager<T> {
     }
   }
 
-  private async initializeMetrics() {
-    if (process.env['METRICS_ENABLED'] === 'true') {
+  private initializeMetrics() {
+    if (process.env['METRICS_PORT']) {
       this.grpcSdk.initializeDefaultMetrics();
-      await this.module.initializeMetrics();
+      this.module.initializeMetrics();
     }
   }
 }

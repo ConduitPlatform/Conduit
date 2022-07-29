@@ -29,7 +29,7 @@ import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { GrpcError, HealthCheckStatus } from './types';
+import { GrpcError, HealthCheckStatus, MetricConfiguration, MetricType } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
@@ -37,6 +37,14 @@ import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
+import defaultMetrics from './metrics/config/defaults';
+import { Indexable } from './interfaces';
+import {
+  CounterConfiguration,
+  GaugeConfiguration,
+  HistogramConfiguration,
+  SummaryConfiguration,
+} from 'prom-client';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -62,6 +70,7 @@ export default class ConduitGrpcSdk {
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly name: string;
+  private readonly instance: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
@@ -88,12 +97,12 @@ export default class ConduitGrpcSdk {
     } else {
       this.name = name;
     }
-    const instance = this.name.startsWith('module_')
+    this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
       : Crypto.randomBytes(16).toString('hex');
 
-    if (process.env.METRICS_ENABLED === 'true') {
-      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, instance);
+    if (process.env.METRICS_PORT) {
+      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
     }
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
@@ -104,7 +113,7 @@ export default class ConduitGrpcSdk {
           replaceTimestamp: true,
           labels: {
             module: this.name,
-            instance,
+            instance: this.instance,
           },
         }),
       );
@@ -393,7 +402,31 @@ export default class ConduitGrpcSdk {
       });
   }
 
-  initializeDefaultMetrics() {}
+  initializeDefaultMetrics() {
+    for (const metric of Object.values(defaultMetrics)) {
+      (metric.config as Indexable).labels = {
+        instance: this.instance,
+      };
+      this.registerMetric(metric.type, metric.config);
+    }
+  }
+
+  registerMetric(type: MetricType, config: MetricConfiguration) {
+    switch (type) {
+      case MetricType.Counter:
+        ConduitGrpcSdk.Metrics.createCounter(config as CounterConfiguration<any>);
+        break;
+      case MetricType.Gauge:
+        ConduitGrpcSdk.Metrics.createGauge(config as GaugeConfiguration<any>);
+        break;
+      case MetricType.Histogram:
+        ConduitGrpcSdk.Metrics.createHistogram(config as HistogramConfiguration<any>);
+        break;
+      case MetricType.Summary:
+        ConduitGrpcSdk.Metrics.createSummary(config as SummaryConfiguration<any>);
+        break;
+    }
+  }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
     if (

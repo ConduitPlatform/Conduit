@@ -1,5 +1,4 @@
 import * as client from 'prom-client';
-import { MetricType } from '../types';
 import {
   CounterConfiguration,
   GaugeConfiguration,
@@ -17,7 +16,7 @@ export class ConduitMetrics {
   constructor(moduleName: string, instance: string) {
     this.moduleName = moduleName;
     this.instance = instance;
-    this.Registry = client.register; //global registry
+    this.Registry = new client.Registry(); //global registry
     this._httpServer = new MetricsServer(moduleName, instance, this.Registry);
     this._httpServer.initialize();
     this.collectDefaultMetrics();
@@ -38,15 +37,48 @@ export class ConduitMetrics {
   }
 
   createCounter(config: CounterConfiguration<any>) {
-    return new client.Counter(config);
+    return new client.Counter({ ...config, registers: [this.Registry] });
   }
   createSummary(config: SummaryConfiguration<any>) {
-    return new client.Summary(config);
+    return new client.Summary({ ...config, registers: [this.Registry] });
   }
   createHistogram(config: HistogramConfiguration<any>) {
-    return new client.Histogram(config);
+    return new client.Histogram({ ...config, registers: [this.Registry] });
   }
   createGauge(config: GaugeConfiguration<any>) {
-    return new client.Gauge(config);
+    return new client.Gauge({ ...config, registers: [this.Registry] });
+  }
+  getMetric(name: string) {
+    return this.Registry.getSingleMetric(name);
+  }
+
+  increment(metric: string, increment: number = 1) {
+    const metricInstance = this.Registry.getSingleMetric(metric);
+    if (
+      !(metricInstance instanceof client.Counter) &&
+      !(metricInstance instanceof client.Gauge)
+    ) {
+      throw new Error(`Metric ${metric} is not an incrementable metric`);
+    }
+    return metricInstance.inc(increment);
+  }
+
+  decrement(metric: string, decrement: number = 1) {
+    const metricInstance = this.Registry.getSingleMetric(metric);
+    if (!(metricInstance instanceof client.Gauge)) {
+      throw new Error(`Metric ${metric} is not a decrementable metric`);
+    }
+    return metricInstance.dec(decrement);
+  }
+
+  observe(metric: string, value: number) {
+    const metricInstance = this.Registry.getSingleMetric(metric);
+    if (
+      !(metricInstance instanceof client.Histogram) &&
+      !(metricInstance instanceof client.Summary)
+    ) {
+      throw new Error(`Metric ${metric} is not a Histogram`);
+    }
+    return metricInstance.observe(value);
   }
 }

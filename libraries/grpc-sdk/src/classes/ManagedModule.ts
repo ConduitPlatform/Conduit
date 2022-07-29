@@ -86,7 +86,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * This is triggered when a module needs to initialize its own custom metric
    * types and configuration by using the sdk's ConduitMetrics.
    */
-  async initializeMetrics() {}
+  initializeMetrics() {}
 
   async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

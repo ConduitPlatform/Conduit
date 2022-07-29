@@ -59,6 +59,7 @@ export class GrpcServer {
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
+          this.initializeMetrics();
           await this.commons.getAdmin().subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
@@ -95,6 +96,12 @@ export class GrpcServer {
 
     this._initialized = true;
     this.serviceHealthState = HealthCheckStatus.SERVING;
+  }
+
+  private initializeMetrics() {
+    if (process.env['METRICS_PORT']) {
+      this.grpcSdk.initializeDefaultMetrics();
+    }
   }
 
   private getServiceHealthState(service: string) {

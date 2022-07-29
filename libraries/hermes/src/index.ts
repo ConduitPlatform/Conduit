@@ -242,7 +242,7 @@ export class ConduitRoutingController {
     const address = this.server.address();
     const bind =
       typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
-    ConduitGrpcSdk.Logger.log(this.baseUrl.substr(1) + ' listening on ' + bind);
+    ConduitGrpcSdk.Logger.log('HTTP server listening on ' + bind);
   }
 
   private registerGlobalMiddleware() {

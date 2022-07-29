@@ -8,6 +8,7 @@ import {
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';
+import { ConduitMetrics } from '../../metrics';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
@@ -133,9 +134,11 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     this.client!.moduleHealthProbe(request)
       .then(res => {
         if (!res && self.coreLive) {
+          ConduitGrpcSdk.Metrics.observe('health_state', 0);
           ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;
         } else if (res && !self.coreLive) {
+          ConduitGrpcSdk.Metrics.observe('health_state', 1);
           ConduitGrpcSdk.Logger.log('Core is live');
           self.coreLive = true;
           self.watchModules();
@@ -143,6 +146,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       })
       .catch(e => {
         if (self.coreLive) {
+          ConduitGrpcSdk.Metrics.observe('health_state', 0);
           ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;
         }
