@@ -37,16 +37,16 @@ export class ConduitMetrics {
     });
   }
 
-  createCounter(metric: MetricType.Counter, config: CounterConfiguration<any>) {
+  createCounter(config: CounterConfiguration<any>) {
     return new client.Counter(config);
   }
-  createSummary(metric: MetricType.Summary, config: SummaryConfiguration<any>) {
+  createSummary(config: SummaryConfiguration<any>) {
     return new client.Summary(config);
   }
-  createHistogram(metric: MetricType.Histogram, config: HistogramConfiguration<any>) {
+  createHistogram(config: HistogramConfiguration<any>) {
     return new client.Histogram(config);
   }
-  createGauge(metric: MetricType.Gauge, config: GaugeConfiguration<any>) {
+  createGauge(config: GaugeConfiguration<any>) {
     return new client.Gauge(config);
   }
 }

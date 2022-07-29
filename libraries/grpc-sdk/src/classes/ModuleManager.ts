@@ -76,6 +76,7 @@ export class ModuleManager<T> {
     await this.module.startGrpcServer();
     await this.module.onServerStart();
     await this.module.preRegister();
+    await this.initializeMetrics();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
@@ -91,6 +92,13 @@ export class ModuleManager<T> {
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.module.onConfig();
+    }
+  }
+
+  private async initializeMetrics() {
+    if (process.env['METRICS_ENABLED'] === 'true') {
+      this.grpcSdk.initializeDefaultMetrics();
+      await this.module.initializeMetrics();
     }
   }
 }

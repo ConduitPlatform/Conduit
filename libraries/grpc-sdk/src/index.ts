@@ -91,7 +91,10 @@ export default class ConduitGrpcSdk {
     const instance = this.name.startsWith('module_')
       ? this.name.substring(8)
       : Crypto.randomBytes(16).toString('hex');
-    ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, instance);
+
+    if (process.env.METRICS_ENABLED === 'true') {
+      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, instance);
+    }
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
         new LokiTransport({
@@ -389,6 +392,8 @@ export default class ConduitGrpcSdk {
         }
       });
   }
+
+  initializeDefaultMetrics() {}
 
   createModuleClient(moduleName: string, moduleUrl: string) {
     if (
