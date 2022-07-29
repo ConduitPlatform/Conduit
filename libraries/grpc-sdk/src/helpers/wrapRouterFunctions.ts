@@ -56,10 +56,12 @@ function parseRequestData(data: string) {
 
 export function wrapRouterGrpcFunction(
   fun: RequestHandlers,
+  routerType: string,
 ): (call: Indexable, callback: any) => void {
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
     let routerRequest = true;
+    ConduitGrpcSdk.Metrics.increment(`${routerType}_http_requests`);
     try {
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);

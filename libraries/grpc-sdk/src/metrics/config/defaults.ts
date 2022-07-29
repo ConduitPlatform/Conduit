@@ -15,11 +15,18 @@ export default {
       help: 'Tracks the number of grpc requests per minute',
     },
   },
-  httpRequests: {
+  clientHttpRequests: {
     type: MetricType.Counter,
     config: {
-      name: 'http_requests',
-      help: 'Tracks the number of http requests',
+      name: 'client_http_requests',
+      help: 'Tracks the number of the client http requests',
+    },
+  },
+  adminHttpRequests: {
+    type: MetricType.Counter,
+    config: {
+      name: 'admin_http_requests',
+      help: 'Tracks the number of the admin http requests',
     },
   },
   healthState: {

@@ -168,7 +168,6 @@ export class RestController extends ConduitRouter {
           }
         })
         .then((r: any) => {
-          ConduitGrpcSdk.Metrics.increment('http_requests');
           if (r.redirect) {
             res.removeHeader('Authorization');
             this._privateHeaders.forEach(h => res.removeHeader(h));

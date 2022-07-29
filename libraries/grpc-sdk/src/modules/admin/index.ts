@@ -45,7 +45,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
   ): Promise<any> {
     const modifiedFunctions: { [name: string]: Function } = {};
     Object.keys(functions).forEach(key => {
-      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key]);
+      modifiedFunctions[key] = wrapRouterGrpcFunction(functions[key], 'admin');
     });
     let protoFunctions = '';
     paths.forEach(r => {
