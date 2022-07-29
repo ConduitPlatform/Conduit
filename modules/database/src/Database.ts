@@ -81,7 +81,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    const declaredSchemaExists = await this._activeAdapter.checkDeclaredSchemaExistance();
+    const declaredSchemaExists = await this._activeAdapter.checkDeclaredSchemaExistence();
     await this._activeAdapter.createSchemaFromAdapter(
       models.DeclaredSchema,
       false,

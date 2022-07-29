@@ -32,9 +32,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
-   * Check Declared Schema Existance
+   * Check Declared Schema Existence
    */
-  abstract checkDeclaredSchemaExistance(): Promise<boolean>;
+  abstract checkDeclaredSchemaExistence(): Promise<boolean>;
 
   /**
    * Retrieves all schemas not related to Conduit and stores them in adapter

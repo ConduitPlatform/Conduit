@@ -203,7 +203,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return this.models[schema.name];
   }
 
-  async checkDeclaredSchemaExistance() {
+  async checkDeclaredSchemaExistence() {
     return (
       (
         await this.sequelize.query(
