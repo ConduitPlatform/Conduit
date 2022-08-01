@@ -41,9 +41,7 @@ export class GrpcServer {
     protoDescription: string,
     functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
-    if (process.env.GRPC_KEY) {
-      functions = wrapGrpcFunctions(functions);
-    }
+    functions = wrapGrpcFunctions(functions);
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
