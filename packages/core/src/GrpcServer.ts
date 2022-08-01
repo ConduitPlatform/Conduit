@@ -59,7 +59,6 @@ export class GrpcServer {
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();
           this.server.start();
-          this.initializeMetrics();
           await this.commons.getAdmin().subscribeToBusEvents();
           ConduitGrpcSdk.Logger.log(`gRPC server listening on: ${_url}`);
         });
@@ -76,6 +75,13 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents() {
     this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
+    this.initializeMetrics();
+    this._grpcSdk
+      .waitForExistence('router')
+      .then(() => Core.getInstance().httpServer.initialize(this.grpcSdk, this.server))
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
 
     this._grpcSdk
       .waitForExistence('database')
@@ -122,6 +128,10 @@ export class GrpcServer {
       this.events.emit('grpc-health-change:Core', state);
     }
     this._serviceHealthState = state;
+    ConduitGrpcSdk.Metrics.set(
+      'health_state',
+      state === HealthCheckStatus.SERVING ? 1 : 0,
+    );
   }
 
   private addHealthService() {

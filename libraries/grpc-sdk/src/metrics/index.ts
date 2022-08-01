@@ -71,6 +71,14 @@ export class ConduitMetrics {
     return metricInstance.dec(decrement);
   }
 
+  set(metric: string, value: number) {
+    const metricInstance = this.Registry.getSingleMetric(metric);
+    if (!(metricInstance instanceof client.Gauge)) {
+      throw new Error(`Metric ${metric} is not a Gauge`);
+    }
+    return metricInstance.set(value);
+  }
+
   observe(metric: string, value: number) {
     const metricInstance = this.Registry.getSingleMetric(metric);
     if (

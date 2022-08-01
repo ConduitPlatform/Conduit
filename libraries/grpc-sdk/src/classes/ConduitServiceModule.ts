@@ -62,6 +62,12 @@ export abstract class ConduitServiceModule {
         `Cannot explicitly set gRPC health state to ${HealthCheckStatus[state]}`,
       );
     }
+    if (!init) {
+      ConduitGrpcSdk.Metrics.set(
+        'health_state',
+        state === HealthCheckStatus.SERVING ? 1 : 0,
+      );
+    }
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
       this.events.emit(`grpc-health-change:${this._serviceName}`, state);
@@ -75,12 +81,12 @@ export abstract class ConduitServiceModule {
     const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
     if (service && service !== this._serviceName) {
       callback(null, {
-        status: (HealthCheckStatus.SERVICE_UNKNOWN as unknown) as HealthCheckResponse_ServingStatus,
+        status:
+          HealthCheckStatus.SERVICE_UNKNOWN as unknown as HealthCheckResponse_ServingStatus,
       });
     } else {
       callback(null, {
-        status: (this
-          ._serviceHealthState as unknown) as HealthCheckResponse_ServingStatus,
+        status: this._serviceHealthState as unknown as HealthCheckResponse_ServingStatus,
       });
     }
   }
@@ -89,14 +95,15 @@ export abstract class ConduitServiceModule {
     const service = call.request.service.substring(call.request.service.indexOf('.') + 1);
     if (service && service !== this._serviceName) {
       call.write({
-        status: (HealthCheckStatus.SERVICE_UNKNOWN as unknown) as HealthCheckResponse_ServingStatus,
+        status:
+          HealthCheckStatus.SERVICE_UNKNOWN as unknown as HealthCheckResponse_ServingStatus,
       });
     } else {
       this.events.on(
         `grpc-health-change:${this._serviceName}`,
         (status: HealthCheckStatus) => {
           call.write({
-            status: (status as unknown) as HealthCheckResponse_ServingStatus,
+            status: status as unknown as HealthCheckResponse_ServingStatus,
           });
         },
       );

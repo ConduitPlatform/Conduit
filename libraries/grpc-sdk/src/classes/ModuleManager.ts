@@ -74,9 +74,9 @@ export class ModuleManager<T> {
     await this.grpcSdk.initializeEventBus();
     await this.module.handleConfigSyncUpdate();
     await this.module.startGrpcServer();
+    await this.initializeMetrics();
     await this.module.onServerStart();
     await this.module.preRegister();
-    await this.initializeMetrics();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
