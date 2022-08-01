@@ -36,14 +36,16 @@ function generateLog(
   status?: Status,
 ) {
   let log = '';
+  const latency = Date.now() - requestReceive;
   if (routerRequest) {
     log += `Request: ${call.request.path}`;
   } else {
     log += `Socket: ${call.request.event} socket: ${call.request.socket}`;
   }
-  log += ` ${status ?? '200'} ${Date.now() - requestReceive}`;
+  log += ` ${status ?? '200'} ${latency}`;
 
   ConduitGrpcSdk.Logger.log(log);
+  ConduitGrpcSdk.Metrics.set('request_latency', latency);
 }
 
 function parseRequestData(data: string) {
@@ -71,6 +73,7 @@ export function wrapRouterGrpcFunction(
         call.request.headers = parseRequestData(call.request.headers);
       }
     } catch (e) {
+      ConduitGrpcSdk.Metrics.increment(`${routerType}_http_errors`);
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
       ConduitGrpcSdk.Logger.error((e as Error).message ?? 'Something went wrong');
       return callback({
@@ -110,6 +113,7 @@ export function wrapRouterGrpcFunction(
         generateLog(routerRequest, requestReceive, call, undefined);
       })
       .catch(error => {
+        ConduitGrpcSdk.Metrics.increment(`${routerType}_http_errors`);
         generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
         ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({

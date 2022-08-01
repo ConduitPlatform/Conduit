@@ -3,6 +3,7 @@ import {
   CounterConfiguration,
   GaugeConfiguration,
   HistogramConfiguration,
+  LabelValues,
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
@@ -77,6 +78,14 @@ export class ConduitMetrics {
       throw new Error(`Metric ${metric} is not a Gauge`);
     }
     return metricInstance.set(value);
+  }
+
+  setOnLabel(metric: string, labels: LabelValues<any>, value: number) {
+    const metricInstance = this.Registry.getSingleMetric(metric);
+    if (!(metricInstance instanceof client.Gauge)) {
+      throw new Error(`Metric ${metric} is not a Gauge`);
+    }
+    return metricInstance.set(labels, value);
   }
 
   observe(metric: string, value: number) {

@@ -8,13 +8,6 @@ export default {
       help: 'Tracks the number of grpc requests',
     },
   },
-  grpcRequestsPerMinute: {
-    type: MetricType.Counter,
-    config: {
-      name: 'grpc_requests_per_minute',
-      help: 'Tracks the number of grpc requests per minute',
-    },
-  },
   clientHttpRequests: {
     type: MetricType.Counter,
     config: {
@@ -29,6 +22,20 @@ export default {
       help: 'Tracks the number of the admin http requests',
     },
   },
+  clientHttpErrors: {
+    type: MetricType.Counter,
+    config: {
+      name: 'client_http_errors',
+      help: 'Tracks the number of client http errors',
+    },
+  },
+  adminHttpErrors: {
+    type: MetricType.Counter,
+    config: {
+      name: 'admin_http_errors',
+      help: 'Tracks the number of admin http errors',
+    },
+  },
   healthState: {
     type: MetricType.Gauge,
     config: {
@@ -36,19 +43,11 @@ export default {
       help: 'Tracks the health state of the module',
     },
   },
-  grpcRequestLatency: {
-    type: MetricType.Histogram,
+  requestLatency: {
+    type: MetricType.Gauge,
     config: {
-      name: 'grpc_request_latency',
-      help: 'Tracks the latency of grpc requests',
-      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
-    },
-  },
-  httpErrors: {
-    type: MetricType.Counter,
-    config: {
-      name: 'http_errors',
-      help: 'Tracks the number of http errors',
+      name: 'request_latency',
+      help: 'Tracks the latency of http requests',
     },
   },
   httpErrorRate: {
