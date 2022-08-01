@@ -141,6 +141,7 @@ const schema = {
   hasTwoFA: {
     type: TYPE.Boolean,
     default: false,
+    mode: TYPE.String,
   },
   phoneNumber: TYPE.String,
   createdAt: TYPE.Date,
