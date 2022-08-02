@@ -63,7 +63,7 @@ export class SocketController extends ConduitRouter {
     if (this._registeredNamespaces.has(namespace)) {
       if (
         ObjectHash.sha1(conduitSocket) !==
-        ObjectHash.sha1(this._registeredRoutes.get(namespace))
+        ObjectHash.sha1(this._registeredNamespaces.get(namespace))
       ) {
         this.removeNamespace(namespace);
       } else {
