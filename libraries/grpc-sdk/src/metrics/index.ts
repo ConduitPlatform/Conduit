@@ -7,6 +7,7 @@ import {
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
+import ConduitGrpcSdk from '../index';
 
 export class ConduitMetrics {
   private readonly moduleName: string;
@@ -40,20 +41,24 @@ export class ConduitMetrics {
   createCounter(config: CounterConfiguration<any>) {
     return new client.Counter({ ...config, registers: [this.Registry] });
   }
+
   createSummary(config: SummaryConfiguration<any>) {
     return new client.Summary({ ...config, registers: [this.Registry] });
   }
+
   createHistogram(config: HistogramConfiguration<any>) {
     return new client.Histogram({ ...config, registers: [this.Registry] });
   }
+
   createGauge(config: GaugeConfiguration<any>) {
     return new client.Gauge({ ...config, registers: [this.Registry] });
   }
+
   getMetric(name: string) {
     return this.Registry.getSingleMetric(name);
   }
 
-  increment(metric: string, increment: number = 1) {
+  increment(metric: string, increment: number = 1, labels?: LabelValues<any>) {
     const metricInstance = this.Registry.getSingleMetric(metric);
     if (
       !(metricInstance instanceof client.Counter) &&
@@ -61,34 +66,26 @@ export class ConduitMetrics {
     ) {
       throw new Error(`Metric ${metric} is not an incrementable metric`);
     }
-    return metricInstance.inc(increment);
+    return metricInstance.labels({ ...labels }).inc(increment);
   }
 
-  decrement(metric: string, decrement: number = 1) {
+  decrement(metric: string, decrement: number = 1, labels?: LabelValues<any>) {
     const metricInstance = this.Registry.getSingleMetric(metric);
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a decrementable metric`);
     }
-    return metricInstance.dec(decrement);
+    return metricInstance.labels({ ...labels }).dec(decrement);
   }
 
-  set(metric: string, value: number) {
+  set(metric: string, value: number, labels?: LabelValues<any>) {
     const metricInstance = this.Registry.getSingleMetric(metric);
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a Gauge`);
     }
-    return metricInstance.set(value);
+    return metricInstance.labels({ ...labels }).set(value);
   }
 
-  setOnLabel(metric: string, labels: LabelValues<any>, value: number) {
-    const metricInstance = this.Registry.getSingleMetric(metric);
-    if (!(metricInstance instanceof client.Gauge)) {
-      throw new Error(`Metric ${metric} is not a Gauge`);
-    }
-    return metricInstance.set(labels, value);
-  }
-
-  observe(metric: string, value: number) {
+  observe(metric: string, value: number, labels?: LabelValues<any>) {
     const metricInstance = this.Registry.getSingleMetric(metric);
     if (
       !(metricInstance instanceof client.Histogram) &&
@@ -96,6 +93,6 @@ export class ConduitMetrics {
     ) {
       throw new Error(`Metric ${metric} is not a Histogram`);
     }
-    return metricInstance.observe(value);
+    return metricInstance.labels({ ...labels }).observe(value);
   }
 }

@@ -45,7 +45,9 @@ function generateLog(
   log += ` ${status ?? '200'} ${latency}`;
 
   ConduitGrpcSdk.Logger.log(log);
-  ConduitGrpcSdk.Metrics.set('request_latency', latency);
+  ConduitGrpcSdk.Metrics.set('request_latency', latency, {
+    status_code: status ?? '200',
+  });
 }
 
 function parseRequestData(data: string) {
@@ -63,7 +65,7 @@ export function wrapRouterGrpcFunction(
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
     let routerRequest = true;
-    ConduitGrpcSdk.Metrics.increment(`${routerType}_http_requests`);
+    ConduitGrpcSdk.Metrics.increment(`${routerType}_grpc_requests`);
     try {
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);
@@ -73,7 +75,7 @@ export function wrapRouterGrpcFunction(
         call.request.headers = parseRequestData(call.request.headers);
       }
     } catch (e) {
-      ConduitGrpcSdk.Metrics.increment(`${routerType}_http_errors`);
+      ConduitGrpcSdk.Metrics.increment(`${routerType}_grpc_errors`);
       generateLog(routerRequest, requestReceive, call, status.INTERNAL);
       ConduitGrpcSdk.Logger.error((e as Error).message ?? 'Something went wrong');
       return callback({
@@ -113,7 +115,7 @@ export function wrapRouterGrpcFunction(
         generateLog(routerRequest, requestReceive, call, undefined);
       })
       .catch(error => {
-        ConduitGrpcSdk.Metrics.increment(`${routerType}_http_errors`);
+        ConduitGrpcSdk.Metrics.increment(`${routerType}_grpc_errors`);
         generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
         ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({

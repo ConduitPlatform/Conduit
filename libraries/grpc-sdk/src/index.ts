@@ -103,6 +103,9 @@ export default class ConduitGrpcSdk {
 
     if (process.env.METRICS_PORT) {
       ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
+      ConduitGrpcSdk.Metrics.setDefaultLabels({
+        module_instance: this.instance,
+      });
     }
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
@@ -404,9 +407,12 @@ export default class ConduitGrpcSdk {
 
   initializeDefaultMetrics() {
     for (const metric of Object.values(defaultMetrics)) {
-      (metric.config as Indexable).labels = {
-        instance: this.instance,
-      };
+      (metric.config as Indexable).labelNames = [
+        'module_instance',
+        'status_code',
+        'incoming_path',
+        'outgoing_path',
+      ];
       this.registerMetric(metric.type, metric.config);
     }
   }

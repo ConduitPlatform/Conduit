@@ -33,7 +33,8 @@ export class MetricsServer {
         );
     });
     server.get('/metrics', async (req: express.Request, res: express.Response) => {
-      return res.status(200).send(await this.Registry.metrics());
+      const metrics = await this.Registry.metrics();
+      return res.status(200).send(metrics);
     });
     server.get('/metrics/:name', async (req: express.Request, res: express.Response) => {
       return res

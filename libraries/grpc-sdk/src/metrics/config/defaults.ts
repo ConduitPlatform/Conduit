@@ -1,60 +1,76 @@
 import { MetricType } from '../../types';
 
 export default {
-  grpcRequests: {
+  internalGrpcRequests: {
     type: MetricType.Counter,
     config: {
-      name: 'grpc_requests',
-      help: 'Tracks the number of grpc requests',
+      name: 'internal_grpc_requests_total',
+      help: "Tracks the total number of Conduit's internal gRPC requests",
     },
   },
-  clientHttpRequests: {
+  clientGrpcRequests: {
     type: MetricType.Counter,
     config: {
-      name: 'client_http_requests',
-      help: 'Tracks the number of the client http requests',
+      name: 'client_grpc_requests_total',
+      help: 'Tracks the total number of the client gRPC requests',
     },
   },
-  adminHttpRequests: {
+  adminGrpcRequests: {
     type: MetricType.Counter,
     config: {
-      name: 'admin_http_requests',
-      help: 'Tracks the number of the admin http requests',
+      name: 'admin_grpc_requests_total',
+      help: 'Tracks the total number of the admin gRPC requests',
     },
   },
-  clientHttpErrors: {
+  clientGrpcErrors: {
     type: MetricType.Counter,
     config: {
-      name: 'client_http_errors',
-      help: 'Tracks the number of client http errors',
+      name: 'client_grpc_errors_total',
+      help: 'Tracks the total number of client grpc errors',
     },
   },
-  adminHttpErrors: {
+  adminGrpcErrors: {
     type: MetricType.Counter,
     config: {
-      name: 'admin_http_errors',
-      help: 'Tracks the number of admin http errors',
+      name: 'admin_grpc_errors_total',
+      help: 'Tracks the total number of admin grpc errors',
     },
   },
   healthState: {
     type: MetricType.Gauge,
     config: {
-      name: 'health_state',
+      name: 'health_state_total',
       help: 'Tracks the health state of the module',
     },
   },
-  requestLatency: {
+  grpcRequestLatency: {
     type: MetricType.Gauge,
     config: {
-      name: 'request_latency',
-      help: 'Tracks the latency of http requests',
+      name: 'grpc_request_latency_total',
+      help: 'Tracks the latency of grpc requests',
     },
   },
-  httpErrorRate: {
+  adminHttpErrorRate: {
     type: MetricType.Summary,
     config: {
       name: 'http_error_rate',
       help: 'Tracks the error rate of http requests',
+      percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
+    },
+  },
+  clientHttpErrorRate: {
+    type: MetricType.Summary,
+    config: {
+      name: 'client_http_error_rate',
+      help: 'Tracks the error rate of client http requests',
+      percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
+    },
+  },
+  adminHTTPErrorRate: {
+    type: MetricType.Summary,
+    config: {
+      name: 'admin_http_error_rate',
+      help: 'Tracks the error rate of admin http requests',
       percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
     },
   },
