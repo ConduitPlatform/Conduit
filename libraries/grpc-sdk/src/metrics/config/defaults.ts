@@ -36,18 +36,26 @@ export default {
       help: 'Tracks the total number of admin grpc errors',
     },
   },
-  healthState: {
+  moduleHealthState: {
     type: MetricType.Gauge,
     config: {
-      name: 'health_state_total',
+      name: 'module_health_state',
       help: 'Tracks the health state of the module',
     },
   },
   grpcRequestLatency: {
     type: MetricType.Gauge,
     config: {
-      name: 'grpc_request_latency_total',
-      help: 'Tracks the latency of grpc requests',
+      name: 'grpc_request_latency_seconds',
+      help: 'Tracks the latency of grpc requests in seconds',
+    },
+  },
+  grpcResponseCode: {
+    type: MetricType.Counter,
+    config: {
+      name: 'grpc_response_codes_total',
+      help: 'Tracks the total number of grpc response codes',
+      labelNames: ['code'],
     },
   },
   adminHttpErrorRate: {

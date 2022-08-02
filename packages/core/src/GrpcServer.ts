@@ -129,7 +129,7 @@ export class GrpcServer {
     }
     this._serviceHealthState = state;
     ConduitGrpcSdk.Metrics.set(
-      'health_state',
+      'module_health_state',
       state === HealthCheckStatus.SERVING ? 1 : 0,
     );
   }

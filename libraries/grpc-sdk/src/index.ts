@@ -407,12 +407,6 @@ export default class ConduitGrpcSdk {
 
   initializeDefaultMetrics() {
     for (const metric of Object.values(defaultMetrics)) {
-      (metric.config as Indexable).labelNames = [
-        'module_instance',
-        'status_code',
-        'incoming_path',
-        'outgoing_path',
-      ];
       this.registerMetric(metric.type, metric.config);
     }
   }
