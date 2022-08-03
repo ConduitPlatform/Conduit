@@ -46,8 +46,10 @@ function generateLog(
 
   ConduitGrpcSdk.Logger.log(log);
   ConduitGrpcSdk.Metrics.set('grpc_request_latency_seconds', latency / 1000);
-  ConduitGrpcSdk.Metrics.increment('grpc_response_codes_total', 1, {
-    code: status ?? '200',
+
+  const successStatus = !status || status.toString().charAt(0) === '2';
+  ConduitGrpcSdk.Metrics.increment('grpc_response_statuses_total', 1, {
+    success: successStatus ? 'true' : 'false',
   });
 }
 

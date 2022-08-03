@@ -50,12 +50,12 @@ export default {
       help: 'Tracks the latency of grpc requests in seconds',
     },
   },
-  grpcResponseCode: {
+  grpcResponseStatuses: {
     type: MetricType.Counter,
     config: {
-      name: 'grpc_response_codes_total',
+      name: 'grpc_response_statuses_total',
       help: 'Tracks the total number of grpc response codes',
-      labelNames: ['code'],
+      labelNames: ['success'],
     },
   },
   adminHttpErrorRate: {
