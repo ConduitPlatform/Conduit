@@ -58,28 +58,4 @@ export default {
       labelNames: ['success'],
     },
   },
-  adminHttpErrorRate: {
-    type: MetricType.Summary,
-    config: {
-      name: 'http_error_rate',
-      help: 'Tracks the error rate of http requests',
-      percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
-    },
-  },
-  clientHttpErrorRate: {
-    type: MetricType.Summary,
-    config: {
-      name: 'client_http_error_rate',
-      help: 'Tracks the error rate of client http requests',
-      percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
-    },
-  },
-  adminHTTPErrorRate: {
-    type: MetricType.Summary,
-    config: {
-      name: 'admin_http_error_rate',
-      help: 'Tracks the error rate of admin http requests',
-      percentiles: [0.5, 0.75, 0.9, 0.95, 0.99, 0.999],
-    },
-  },
 };
