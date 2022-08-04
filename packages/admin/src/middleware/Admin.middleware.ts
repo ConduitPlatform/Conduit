@@ -11,13 +11,16 @@ export function getAdminMiddleware(conduit: ConduitCommons) {
     res: Response,
     next: NextFunction,
   ) {
+    // Excluded routes
     const graphQlCheck =
       req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
     if (
-      // Excluded routes
       (req.originalUrl.indexOf('/swagger') === 0 || graphQlCheck) &&
       (await isDev(conduit))
     ) {
+      return next();
+    }
+    if (req.originalUrl.indexOf('/ready') === 0) {
       return next();
     }
     const masterKey = req.headers.masterkey;

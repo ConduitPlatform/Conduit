@@ -32,6 +32,7 @@ import {
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
 } from './protoTypes/router';
+import * as adminRoutes from './admin/routes';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -172,6 +173,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
     if (atLeastOne) {
       this._security.setupMiddlewares();
+    }
+    if (!this._sdkRoutes.some(r => r.path === '/ready')) {
+      this.registerRoute(adminRoutes.getReadyRoute());
     }
     await this.highAvailability();
     this.updateHealth(HealthCheckStatus.SERVING);
@@ -376,9 +380,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         }),
       );
     });
-
     routes.push(...this._sdkRoutes);
-
     this._internalRouter.cleanupRoutes(routes);
   }
 

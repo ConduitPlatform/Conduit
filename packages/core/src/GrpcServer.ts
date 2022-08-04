@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
-import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
@@ -75,12 +74,6 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents() {
     this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
-    this._grpcSdk
-      .waitForExistence('router')
-      .then(() => Core.getInstance().httpServer.initialize(this.grpcSdk, this.server))
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
 
     this._grpcSdk
       .waitForExistence('database')

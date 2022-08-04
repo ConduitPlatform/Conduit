@@ -28,7 +28,7 @@ export class ClientValidator {
     if (isNil(req.conduit)) req.conduit = {};
     const { clientid, clientsecret } = req.headers;
     // Exclude webhooks, admin calls and http pings
-    if (req.path.indexOf('/hook') === 0 || ['/', '/health'].includes(req.path)) {
+    if (req.path.indexOf('/hook') === 0 || ['/', '/ready'].includes(req.path)) {
       return next();
     }
 

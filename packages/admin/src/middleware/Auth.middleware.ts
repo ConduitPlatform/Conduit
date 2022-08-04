@@ -13,14 +13,13 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
     res: Response,
     next: NextFunction,
   ) {
+    const excludedRoutes = ['/ready', '/login', '/modules'];
     const graphQlCheck =
       req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
+    const swaggerCheck = req.originalUrl.indexOf('/swagger') === 0;
     if (
-      // Excluded routes
-      req.originalUrl.indexOf('/login') === 0 ||
-      req.originalUrl.indexOf('/modules') === 0 ||
-      ((req.originalUrl.indexOf('/swagger') === 0 || graphQlCheck) &&
-        (await isDev(conduit)))
+      excludedRoutes.includes(req.path) ||
+      ((graphQlCheck || swaggerCheck) && (await isDev(conduit)))
     ) {
       return next();
     }

@@ -77,6 +77,7 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.getAdminUsersRoute(),
     adminRoutes.deleteAdminUserRoute(),
     adminRoutes.changePasswordRoute(this.commons),
+    adminRoutes.getReadyRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
