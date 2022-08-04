@@ -1,6 +1,5 @@
 import { ConduitError } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons, IConduitCore } from '@conduitplatform/commons';
-import { HttpServer } from './routes';
 import { GrpcServer } from './GrpcServer';
 import { isNil } from 'lodash';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
@@ -8,13 +7,8 @@ import convict from 'convict';
 
 export class Core extends IConduitCore {
   private static _instance: Core;
-  private readonly _httpServer: HttpServer;
   private readonly _grpcServer: GrpcServer;
   readonly config: convict.Config<ConfigSchema> = AppConfigSchema;
-
-  get httpServer() {
-    return this._httpServer;
-  }
 
   get grpcServer() {
     return this._grpcServer;
@@ -28,7 +22,6 @@ export class Core extends IConduitCore {
     super(ConduitCommons.getInstance('core'));
     this.commons.registerCore(this);
     this._grpcServer = new GrpcServer(this.commons, grpcPort);
-    this._httpServer = new HttpServer();
   }
 
   static getInstance(grpcPort?: number): Core {

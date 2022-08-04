@@ -75,12 +75,6 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents() {
     this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
-    this._grpcSdk
-      .waitForExistence('router')
-      .then(() => Core.getInstance().httpServer.initialize(this.grpcSdk, this.server))
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
 
     this._grpcSdk
       .waitForExistence('database')

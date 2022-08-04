@@ -9,7 +9,7 @@ export function getReadyRoute() {
     },
     new ConduitRouteReturnDefinition(`Ready`, {}),
     async () => {
-      return 'Conduit Admin is online!';
+      return 'Conduit Core is online!';
     },
   );
 }
