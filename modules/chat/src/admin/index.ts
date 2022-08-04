@@ -180,7 +180,7 @@ export class AdminHandlers {
       );
     }
     await this.validateUsersInput(participants);
-    return await ChatRoom.getInstance()
+    const chatRoom = await ChatRoom.getInstance()
       .create({
         name: call.request.params.name,
         participants: Array.from(new Set([...participants])),
@@ -188,6 +188,8 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
+    ConduitGrpcSdk.Metrics.increment('chat_rooms_total');
+    return chatRoom;
   }
 
   async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -209,6 +211,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
+    ConduitGrpcSdk.Metrics.decrement('chat_rooms_total');
     return 'Done';
   }
 

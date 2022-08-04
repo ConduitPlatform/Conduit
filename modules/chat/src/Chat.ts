@@ -25,6 +25,7 @@ import {
   Room,
   SendMessageRequest,
 } from './protoTypes/chat';
+import metricsConfig from './metrics';
 
 export default class Chat extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -103,6 +104,12 @@ export default class Chat extends ManagedModule<Config> {
         await this.refreshAppRoutes();
       }
       this.updateHealth(HealthCheckStatus.SERVING);
+    }
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 
@@ -209,6 +216,7 @@ export default class Chat extends ManagedModule<Config> {
         readBy: [userId],
       })
       .then(() => {
+        ConduitGrpcSdk.Metrics.increment('messages_sent_total');
         return this.grpcSdk.router?.socketPush({
           event: 'message',
           receivers: [roomId],
