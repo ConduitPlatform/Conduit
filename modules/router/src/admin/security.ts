@@ -75,7 +75,9 @@ export class SecurityAdmin {
       alias,
       notes,
     });
-    ConduitGrpcSdk.Metrics.increment('security_clients_total');
+    ConduitGrpcSdk.Metrics.increment('security_clients_total', 1, {
+      platform: platform.toLowerCase(),
+    });
     return { ...client, clientSecret };
   }
 

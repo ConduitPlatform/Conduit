@@ -13,6 +13,7 @@ export default {
     config: {
       name: 'security_clients_total',
       help: 'Tracks the total number of security clients',
+      labelNames: ['platform'],
     },
   },
 };
