@@ -17,6 +17,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
       req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
     if (
       // Excluded routes
+      req.originalUrl.indexOf('/ready') === 0 ||
       req.originalUrl.indexOf('/login') === 0 ||
       req.originalUrl.indexOf('/modules') === 0 ||
       ((req.originalUrl.indexOf('/swagger') === 0 || graphQlCheck) &&
