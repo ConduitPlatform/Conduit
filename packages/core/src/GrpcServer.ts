@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
-import { Core } from './Core';
 import { EventEmitter } from 'events';
 import path from 'path';
 import convict from './config';
