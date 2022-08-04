@@ -1,4 +1,8 @@
-import { ConduitModelOptions, ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitModelOptions,
+  ConduitSchema,
+  GrpcError,
+} from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension, Schema } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
@@ -77,7 +81,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
       }
       (schema as _ConduitSchema).collectionName = collectionName;
     }
-    return this._createSchemaFromAdapter(schema);
+    const createdSchema = this._createSchemaFromAdapter(schema);
+    if (!this.registeredSchemas.has(schema.name)) {
+      ConduitGrpcSdk.Metrics.increment('registered_schemas_total', 1, {
+        imported: imported ? 'true' : 'false',
+      });
+    }
+    return createdSchema;
   }
 
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
