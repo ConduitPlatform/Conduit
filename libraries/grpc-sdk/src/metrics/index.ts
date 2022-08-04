@@ -66,7 +66,9 @@ export class ConduitMetrics {
     ) {
       throw new Error(`Metric ${metric} is not an incrementable metric`);
     }
-    return metricInstance.labels({ ...labels }).inc(increment);
+    return labels
+      ? metricInstance.labels({ ...labels }).inc(increment)
+      : metricInstance.inc(increment);
   }
 
   decrement(metric: string, decrement: number = 1, labels?: LabelValues<any>) {
@@ -74,7 +76,9 @@ export class ConduitMetrics {
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a decrementable metric`);
     }
-    return metricInstance.labels({ ...labels }).dec(decrement);
+    return labels
+      ? metricInstance.labels({ ...labels }).dec(decrement)
+      : metricInstance.dec(decrement);
   }
 
   set(metric: string, value: number, labels?: LabelValues<any>) {
@@ -82,7 +86,9 @@ export class ConduitMetrics {
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a Gauge`);
     }
-    return metricInstance.labels({ ...labels }).set(value);
+    return labels
+      ? metricInstance.labels({ ...labels }).set(value)
+      : metricInstance.set(value);
   }
 
   observe(metric: string, value: number, labels?: LabelValues<any>) {
@@ -93,6 +99,8 @@ export class ConduitMetrics {
     ) {
       throw new Error(`Metric ${metric} is not a Histogram`);
     }
-    return metricInstance.labels({ ...labels }).observe(value);
+    return labels
+      ? metricInstance.labels({ ...labels }).observe(value)
+      : metricInstance.observe(value);
   }
 }

@@ -28,6 +28,7 @@ import {
   UserDeleteResponse,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
+import metricsConfig from './metrics';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -94,6 +95,12 @@ export default class Authentication extends ManagedModule<Config> {
         this.localSendVerificationEmail = false;
         this.grpcSdk.unmonitorModule('email');
       }
+    }
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 

@@ -25,7 +25,8 @@ import { Config } from '../../config';
 import { OAuthRequest } from './interfaces/MakeRequest';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
-  implements IAuthenticationStrategy {
+  implements IAuthenticationStrategy
+{
   grpcSdk: ConduitGrpcSdk;
   private providerName: string;
   protected settings: S;
@@ -149,6 +150,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    ConduitGrpcSdk.Metrics.increment('login_requests_total');
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: call.request.params['clientId'],
@@ -161,6 +163,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       call.request.params['clientId'],
       config,
     );
+    ConduitGrpcSdk.Metrics.increment('logged_in_users_total');
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
       const cookies: Cookie[] = [

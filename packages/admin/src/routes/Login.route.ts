@@ -2,7 +2,7 @@ import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
-import {
+import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
   ConfigController,
@@ -50,7 +50,6 @@ export function getLoginRoute() {
         tokenSecret,
         tokenExpirationTime,
       );
-
       return { result: { token } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
     },
   );
