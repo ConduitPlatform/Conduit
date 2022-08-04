@@ -45,7 +45,7 @@ export class SwaggerGenerator {
     const prefix =
       baseName.indexOf('/') !== -1 ? baseName.substring(0, baseName.indexOf('/')) : '';
     let serviceName: string;
-    if (baseName.includes('admin')) {
+    if (baseName.startsWith('admin')) {
       serviceName = 'admin';
     } else if (prefix.trim() === '') {
       serviceName = 'core';
