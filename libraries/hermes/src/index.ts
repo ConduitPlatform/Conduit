@@ -208,6 +208,7 @@ export class ConduitRoutingController {
             ' handler url: ' +
             url,
         );
+        ConduitGrpcSdk.Metrics.increment('registered_routes_total');
         this.registerConduitRoute(r);
       }
     });
