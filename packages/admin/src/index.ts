@@ -72,11 +72,11 @@ export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _router: ConduitRoutingController;
   private _sdkRoutes: ConduitRoute[] = [
-    adminRoutes.getLoginRoute(this.commons),
-    adminRoutes.getCreateAdminRoute(this.commons),
+    adminRoutes.getLoginRoute(),
+    adminRoutes.getCreateAdminRoute(),
     adminRoutes.getAdminUsersRoute(),
     adminRoutes.deleteAdminUserRoute(),
-    adminRoutes.changePasswordRoute(this.commons),
+    adminRoutes.changePasswordRoute(),
     adminRoutes.getReadyRoute(),
   ];
   private readonly _grpcRoutes: {

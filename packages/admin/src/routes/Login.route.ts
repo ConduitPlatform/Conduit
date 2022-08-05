@@ -1,4 +1,4 @@
-import { ConduitCommons, IConfigManager } from '@conduitplatform/commons';
+import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
@@ -11,7 +11,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getLoginRoute(conduit: ConduitCommons) {
+export function getLoginRoute() {
   return new ConduitRoute(
     {
       path: '/login',
@@ -25,7 +25,6 @@ export function getLoginRoute(conduit: ConduitCommons) {
       token: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      const config: IConfigManager = conduit.getConfigManager();
       const { username, password } = params.params!;
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(

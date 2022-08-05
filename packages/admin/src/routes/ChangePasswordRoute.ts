@@ -1,4 +1,3 @@
-import { ConduitCommons } from '@conduitplatform/commons';
 import {
   ConduitError,
   ConduitRouteActions,
@@ -11,7 +10,7 @@ import { isNil } from 'lodash';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function changePasswordRoute(conduit: ConduitCommons) {
+export function changePasswordRoute() {
   return new ConduitRoute(
     {
       path: '/change-password',

@@ -399,10 +399,13 @@ export class GraphQLController extends ConduitRouter {
           }
 
           if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            result = JSON.parse(result);
+            if (typeof r.result === 'string') {
+              // only grpc route data is stringified
+              result = JSON.parse(result);
+            }
           } else {
             result = {
-              result: self.extractResult(route.returnTypeFields as string, result),
+              result: this.extractResult(route.returnTypeFields as string, result),
             };
           }
           return result;
