@@ -14,9 +14,12 @@ export default function getConfigRoute(
       path: `/config/${moduleName}`,
       action: ConduitRouteActions.GET,
     },
-    new ConduitRouteReturnDefinition(`Get${moduleName}ConfigRoute`, {
-      config: configSchema,
-    }),
+    new ConduitRouteReturnDefinition(
+      `Get${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}ConfigRoute`,
+      {
+        config: configSchema,
+      },
+    ),
     async (params: ConduitRouteParameters) => {
       let finalConfig;
       finalConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);
