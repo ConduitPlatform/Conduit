@@ -23,9 +23,12 @@ export default function setConfigRoute(
         config: { type: configSchema, required: true },
       },
     },
-    new ConduitRouteReturnDefinition(`Set${moduleName}ConfigRoute`, {
-      config: configSchema,
-    }),
+    new ConduitRouteReturnDefinition(
+      `Set${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}ConfigRoute`,
+      {
+        config: configSchema,
+      },
+    ),
     async (params: ConduitRouteParameters) => {
       let updatedConfig = params.params!.config;
       switch (moduleName) {

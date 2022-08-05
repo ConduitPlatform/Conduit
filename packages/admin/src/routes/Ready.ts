@@ -7,7 +7,7 @@ export function getReadyRoute() {
       path: '/ready',
       action: ConduitRouteActions.GET,
     },
-    new ConduitRouteReturnDefinition(`Ready`, {}),
+    new ConduitRouteReturnDefinition('Ready', 'String'),
     async () => {
       return 'Conduit Core is online!';
     },
