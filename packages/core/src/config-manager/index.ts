@@ -241,7 +241,7 @@ export default class ConfigManager implements IConfigManager {
     }
     config = await this.addFieldsToModule(moduleName, config);
     this.registerConfigRoutes(moduleName, configSchema);
-    this.updateState(moduleName, configSchema);
+    this.updateState(moduleName, config);
     return callback(null, { result: JSON.stringify(config) });
   }
 
