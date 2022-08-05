@@ -1,4 +1,3 @@
-import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 import { hashPassword } from '../utils/auth';
@@ -11,7 +10,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getCreateAdminRoute(conduit: ConduitCommons) {
+export function getCreateAdminRoute() {
   return new ConduitRoute(
     {
       path: '/admins',
