@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.5](https://github.com/ConduitPlatform/Conduit/compare/v0.14.4...v0.14.5) (2022-08-05)
+
+
+### Features
+
+* **admin,core,router:** ping routes ([#275](https://github.com/ConduitPlatform/Conduit/issues/275)) ([df52f78](https://github.com/ConduitPlatform/Conduit/commit/df52f7855edc285a11b78572c6fe0f2c6aff27fb))
+
+
+### Bug Fixes
+
+* **core,admin,router:** router types ([#278](https://github.com/ConduitPlatform/Conduit/issues/278)) ([d960d53](https://github.com/ConduitPlatform/Conduit/commit/d960d53c1cecb176533ad82b3d41fc65ac86f91a))
+* **core:** fix configureModule not passing schema to register routes ([#277](https://github.com/ConduitPlatform/Conduit/issues/277)) ([bd780a3](https://github.com/ConduitPlatform/Conduit/commit/bd780a3ce0c9e5b08f704f7d9641c7400ed1d6f5))
+* **hermes,router:**  socket registration, security client validation ([#274](https://github.com/ConduitPlatform/Conduit/issues/274)) ([fe03197](https://github.com/ConduitPlatform/Conduit/commit/fe031976991d7fa055a8d8d86a2c35efa8a0a887))
+* **hermes:** swagger admin section includes admin config routes ([#276](https://github.com/ConduitPlatform/Conduit/issues/276)) ([5e4bdd9](https://github.com/ConduitPlatform/Conduit/commit/5e4bdd9c4769f289a53f4b97e88b365fb95755cb))
+
 ### [0.14.4](https://github.com/ConduitPlatform/Conduit/compare/v0.14.3...v0.14.4) (2022-07-27)
 
 
