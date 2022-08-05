@@ -7,22 +7,31 @@ import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
+const excludedRoutes = ['/ready', '/login', '/modules'];
+const excludedGqlQueries = ['getConfigModules', 'getReady'];
+const excludedGqlMutations = ['IntrospectionQuery', 'postLogin'];
+
+async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
+  if (await isDev(conduit)) {
+    if (req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET') return true;
+    if (req.originalUrl.indexOf('/swagger') === 0) return true;
+  }
+  // REST
+  if (excludedRoutes.includes(req.path)) return true;
+  // GraphQL
+  if (excludedGqlMutations.includes(req.body.operationName)) return true;
+  const queryName = req.body.query?.split('{\n')[1].split('\n}')[0].trim();
+  if (excludedGqlQueries.includes(queryName)) return true;
+  return false;
+}
+
 export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommons) {
   return async function authMiddleware(
     req: ConduitRequest,
     res: Response,
     next: NextFunction,
   ) {
-    const excludedRoutes = ['/ready', '/login', '/modules'];
-    const graphQlCheck =
-      req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET';
-    const swaggerCheck = req.originalUrl.indexOf('/swagger') === 0;
-    if (
-      excludedRoutes.includes(req.path) ||
-      ((graphQlCheck || swaggerCheck) && (await isDev(conduit)))
-    ) {
-      return next();
-    }
+    if (await requestExcluded(req, conduit)) return next();
     const adminConfig = ConfigController.getInstance().config;
 
     const tokenHeader = req.headers.authorization;
