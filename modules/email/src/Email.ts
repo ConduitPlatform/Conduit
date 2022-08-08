@@ -22,6 +22,7 @@ import {
   SendEmailRequest,
   SendEmailResponse,
 } from './protoTypes/email';
+import metricsConfig from './metrics';
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -57,6 +58,12 @@ export default class Email extends ManagedModule<Config> {
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   async preConfig(config: Config) {

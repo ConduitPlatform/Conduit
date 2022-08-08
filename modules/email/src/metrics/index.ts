@@ -8,4 +8,11 @@ export default {
       help: 'Tracks the total number of email templates',
     },
   },
+  emailsSent: {
+    type: MetricType.Counter,
+    config: {
+      name: 'emails_sent_total',
+      help: 'Tracks the total number of emails sent',
+    },
+  },
 };
