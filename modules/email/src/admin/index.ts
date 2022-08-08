@@ -384,7 +384,10 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
+    ConduitGrpcSdk.Metrics.decrement(
+      'email_templates_total',
+      deletedDocuments.deletedCount,
+    );
     return { deletedDocuments };
   }
 
