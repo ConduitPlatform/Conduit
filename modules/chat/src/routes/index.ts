@@ -390,6 +390,7 @@ export class ChatRoutes {
       room: roomId,
       readBy: [user._id],
     });
+    ConduitGrpcSdk.Metrics.increment('messages_sent_total');
     return {
       event: 'message',
       receivers: [roomId],

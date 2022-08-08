@@ -216,7 +216,6 @@ export default class Chat extends ManagedModule<Config> {
         readBy: [userId],
       })
       .then(() => {
-        ConduitGrpcSdk.Metrics.increment('messages_sent_total');
         return this.grpcSdk.router?.socketPush({
           event: 'message',
           receivers: [roomId],
