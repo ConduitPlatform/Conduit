@@ -54,6 +54,8 @@ export class AWSS3Storage implements IStorageProvider {
           : undefined,
       }),
     );
+    ConduitGrpcSdk.Metrics.increment('files_total');
+    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
@@ -84,6 +86,7 @@ export class AWSS3Storage implements IStorageProvider {
         Body: 'DO NOT DELETE',
       }),
     );
+    ConduitGrpcSdk.Metrics.increment('folders_total');
     return true;
   }
 
@@ -115,6 +118,7 @@ export class AWSS3Storage implements IStorageProvider {
       }),
     );
     this._activeContainer = name;
+    ConduitGrpcSdk.Metrics.increment('containers_total');
     return true;
   }
 
@@ -141,6 +145,7 @@ export class AWSS3Storage implements IStorageProvider {
         Bucket: name,
       }),
     );
+    ConduitGrpcSdk.Metrics.decrement('containers_total');
     return true;
   }
 
@@ -159,16 +164,31 @@ export class AWSS3Storage implements IStorageProvider {
       ConduitGrpcSdk.Logger.log(file.Key!);
     }
     ConduitGrpcSdk.Logger.log(`${i} files deleted.`);
+    ConduitGrpcSdk.Metrics.decrement('folders_total');
     return true;
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
+    let fileSize = 0;
+    try {
+      fileSize = (
+        (await this._storage.send(
+          new HeadObjectCommand({
+            Bucket: this._activeContainer,
+            Key: fileName,
+          }),
+        )) as any
+      ).ContentLength;
+      console.log(fileSize);
+    } catch (e) {}
     await this._storage.send(
       new DeleteObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
       }),
     );
+    ConduitGrpcSdk.Metrics.increment('files_total');
+    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', fileSize);
     return true;
   }
 

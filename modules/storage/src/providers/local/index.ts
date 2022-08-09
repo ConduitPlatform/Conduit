@@ -11,6 +11,7 @@ import {
   unlink,
   writeFile,
   rmSync,
+  statSync,
 } from 'fs';
 import { resolve } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
@@ -53,6 +54,8 @@ export class LocalStorage implements IStorageProvider {
     return new Promise(function (res, reject) {
       try {
         rmSync(resolve(path), { recursive: true });
+        ConduitGrpcSdk.Metrics.decrement('folders_total');
+        ConduitGrpcSdk.Metrics.decrement('containers_total');
         res(true);
       } catch (e) {
         reject(e);
@@ -90,7 +93,11 @@ export class LocalStorage implements IStorageProvider {
     return new Promise(function (res, reject) {
       writeFile(resolve(path), data, function (err) {
         if (err) reject(err);
-        else res(true);
+        else {
+          ConduitGrpcSdk.Metrics.increment('files_total');
+          ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', data.byteLength);
+          res(true);
+        }
       });
     });
   }
@@ -112,6 +119,8 @@ export class LocalStorage implements IStorageProvider {
           else res(true);
         });
       }
+      ConduitGrpcSdk.Metrics.increment('folders_total');
+      ConduitGrpcSdk.Metrics.increment('containers_total');
       res(true);
     });
   }
@@ -134,14 +143,18 @@ export class LocalStorage implements IStorageProvider {
   delete(fileName: string): Promise<boolean | Error> {
     const self = this;
     let path = self._storagePath + '/' + self._activeContainer + '/';
-
     if (fileName !== self._activeContainer) {
       path += fileName;
     }
+    let fileSize = statSync(path).size;
     return new Promise(function (res, reject) {
       unlink(resolve(path), function (err) {
         if (err) reject(err);
-        else res(true);
+        else {
+          ConduitGrpcSdk.Metrics.decrement('files_total');
+          ConduitGrpcSdk.Metrics.decrement('storage_size_bytes_total', fileSize);
+          res(true);
+        }
       });
     });
   }

@@ -10,6 +10,7 @@ import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes';
+import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
@@ -17,6 +18,9 @@ import { isNil } from 'lodash';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
 import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
+import metricsConfig from './metrics';
+
+type Callback = (arg1: { code: number; message: string }) => void;
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
@@ -53,6 +57,12 @@ export default class Storage extends ManagedModule<Config> {
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   async preConfig(config: Config) {

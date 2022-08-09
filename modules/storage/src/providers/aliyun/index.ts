@@ -2,6 +2,7 @@ import { IStorageProvider, StorageConfig } from '../../interfaces';
 import OSS from 'ali-oss';
 import fs from 'fs';
 import { basename } from 'path';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class AliyunStorage implements IStorageProvider {
   private _activeContainer: string = '';
@@ -36,6 +37,7 @@ export class AliyunStorage implements IStorageProvider {
   async createContainer(name: string): Promise<boolean | Error> {
     await this._ossClient.putBucket(name);
     this.container(name);
+    ConduitGrpcSdk.Metrics.increment('containers_total');
     return true;
   }
 
@@ -47,11 +49,13 @@ export class AliyunStorage implements IStorageProvider {
 
   async deleteContainer(name: string): Promise<boolean | Error> {
     await this._ossClient.deleteBucket(name);
+    ConduitGrpcSdk.Metrics.decrement('containers_total');
     return true;
   }
 
   async createFolder(name: string): Promise<boolean | Error> {
     await this._ossClient.put(name, Buffer.from(''));
+    ConduitGrpcSdk.Metrics.increment('folders_total');
     return true;
   }
 
@@ -79,7 +83,7 @@ export class AliyunStorage implements IStorageProvider {
         },
       );
     } while (mark);
-
+    ConduitGrpcSdk.Metrics.decrement('folders_total');
     return true;
   }
 
@@ -93,13 +97,15 @@ export class AliyunStorage implements IStorageProvider {
         'x-oss-object-acl': isPublic ? 'public-read' : 'private',
       },
     });
-
+    ConduitGrpcSdk.Metrics.increment('files_total');
+    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
     await this._ossClient.delete(fileName);
-
+    ConduitGrpcSdk.Metrics.decrement('files_total');
+    // ConduitGrpcSdk.Metrics.decrement('storage_size_bytes_total', fileSize); TODO: get file size from oss client
     return true;
   }
 

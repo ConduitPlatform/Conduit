@@ -1,5 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -26,6 +27,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     // Creates the new bucket
     await this._storage.createBucket(name);
     this._activeBucket = name;
+    ConduitGrpcSdk.Metrics.increment('containers_total');
     return true;
   }
 
@@ -77,6 +79,7 @@ export class GoogleCloudStorage implements IStorageProvider {
       return true;
     }
     await bucket.file(name + '/keep.txt').save(Buffer.from('DO NOT DELETE'));
+    ConduitGrpcSdk.Metrics.increment('folders_total');
     return true;
   }
 
@@ -93,7 +96,16 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
+    let fileSize = 0;
+    try {
+      fileSize = (
+        await this._storage.bucket(this._activeBucket).file(fileName).getMetadata()
+      )[0].size; //TODO: check if this is the correct way to get the file size
+      console.log(fileSize);
+    } catch (e) {}
     await this._storage.bucket(this._activeBucket).file(fileName).delete();
+    ConduitGrpcSdk.Metrics.decrement('files_total');
+    ConduitGrpcSdk.Metrics.decrement('storage_size_bytes_total', fileSize);
     return true;
   }
 
@@ -150,6 +162,8 @@ export class GoogleCloudStorage implements IStorageProvider {
     if (isPublic) {
       await this._storage.bucket(this._activeBucket).file(fileName).makePublic();
     }
+    ConduitGrpcSdk.Metrics.increment('files_total');
+    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
