@@ -36,10 +36,11 @@ export class MetricsServer {
       const metrics = await this.Registry.metrics();
       return res.status(200).send(metrics);
     });
-    server.get('/metrics/:name', async (req: express.Request, res: express.Response) => {
-      return res
-        .status(200)
-        .send(await this.Registry.getSingleMetricAsString(req.params.name));
+    server.get('/metrics/reset', async (req: express.Request, res: express.Response) => {
+      this.Registry.resetMetrics();
+      return res.status(200).send({
+        message: 'Metrics reset',
+      });
     });
     return server;
   }
