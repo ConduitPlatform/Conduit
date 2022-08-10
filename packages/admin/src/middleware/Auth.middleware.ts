@@ -20,8 +20,14 @@ async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
   if (excludedRoutes.includes(req.path)) return true;
   // GraphQL
   if (excludedGqlMutations.includes(req.body.operationName)) return true;
-  const queryName = req.body.query?.split('{\n')[1].split('\n}')[0].trim();
-  if (excludedGqlQueries.includes(queryName)) return true;
+  if (
+    req.body.query &&
+    typeof req.body.query === 'string' &&
+    req.body.query.startsWith('{\n')
+  ) {
+    const queryName = req.body.query?.split('{\n')[1].split('\n}')[0].trim();
+    if (excludedGqlQueries.includes(queryName)) return true;
+  }
   return false;
 }
 
