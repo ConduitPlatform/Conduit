@@ -33,7 +33,7 @@ export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
           return;
         }
       }
-      ConduitGrpcSdk.Metrics.increment('internal_grpc_requests_total');
+      ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
       functions[name](call, callback);
     };
   });

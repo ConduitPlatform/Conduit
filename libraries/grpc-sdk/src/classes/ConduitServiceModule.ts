@@ -63,7 +63,7 @@ export abstract class ConduitServiceModule {
       );
     }
     if (!init) {
-      ConduitGrpcSdk.Metrics.set(
+      ConduitGrpcSdk.Metrics?.set(
         'module_health_state',
         state === HealthCheckStatus.SERVING ? 1 : 0,
       );

@@ -351,7 +351,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    ConduitGrpcSdk.Metrics.increment('login_requests_total');
+    ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     let { email, password } = call.request.params;
     const context = call.request.context;
     if (isNil(context))
@@ -453,7 +453,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         setCookies: cookies,
       };
     }
-    ConduitGrpcSdk.Metrics.increment('logged_in_users_total');
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return {
       userId: user._id.toString(),
       accessToken: accessToken!.token,

@@ -194,7 +194,7 @@ export class AdminHandlers {
       });
 
     this.formsController.refreshRoutes();
-    ConduitGrpcSdk.Metrics.increment('forms_total');
+    ConduitGrpcSdk.Metrics?.increment('forms_total');
     return 'Ok';
   }
 
@@ -241,7 +241,7 @@ export class AdminHandlers {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     const totalCount = forms.deletedCount;
-    ConduitGrpcSdk.Metrics.decrement('forms_total', totalCount);
+    ConduitGrpcSdk.Metrics?.decrement('forms_total', totalCount);
     return { forms, totalCount };
   }
 

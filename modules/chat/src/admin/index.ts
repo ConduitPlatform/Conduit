@@ -188,7 +188,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    ConduitGrpcSdk.Metrics.increment('chat_rooms_total');
+    ConduitGrpcSdk.Metrics?.increment('chat_rooms_total');
     return chatRoom;
   }
 
@@ -211,7 +211,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    ConduitGrpcSdk.Metrics.decrement('chat_rooms_total');
+    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
     return 'Done';
   }
 

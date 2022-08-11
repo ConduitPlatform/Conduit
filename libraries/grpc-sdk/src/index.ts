@@ -414,16 +414,16 @@ export default class ConduitGrpcSdk {
   registerMetric(type: MetricType, config: MetricConfiguration) {
     switch (type) {
       case MetricType.Counter:
-        ConduitGrpcSdk.Metrics.createCounter(config as CounterConfiguration<any>);
+        ConduitGrpcSdk.Metrics?.createCounter(config as CounterConfiguration<any>);
         break;
       case MetricType.Gauge:
-        ConduitGrpcSdk.Metrics.createGauge(config as GaugeConfiguration<any>);
+        ConduitGrpcSdk.Metrics?.createGauge(config as GaugeConfiguration<any>);
         break;
       case MetricType.Histogram:
-        ConduitGrpcSdk.Metrics.createHistogram(config as HistogramConfiguration<any>);
+        ConduitGrpcSdk.Metrics?.createHistogram(config as HistogramConfiguration<any>);
         break;
       case MetricType.Summary:
-        ConduitGrpcSdk.Metrics.createSummary(config as SummaryConfiguration<any>);
+        ConduitGrpcSdk.Metrics?.createSummary(config as SummaryConfiguration<any>);
         break;
     }
   }

@@ -29,7 +29,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    ConduitGrpcSdk.Metrics.increment('login_requests_total');
+    ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { serviceName, token } = call.request.params;
 
     const context = call.request.context;
@@ -68,7 +68,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
         config,
       },
     );
-    ConduitGrpcSdk.Metrics.increment('logged_in_users_total');
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     if (config.setCookies.enabled) {
       const cookieOptions = config.setCookies.options;
       const cookies: Cookie[] = [

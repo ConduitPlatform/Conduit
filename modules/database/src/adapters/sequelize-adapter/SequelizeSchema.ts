@@ -256,9 +256,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     if (parsedQuery.hasOwnProperty('$inc')) {
-      await this.model.increment(parsedQuery['$inc'], { where: { _id: id } }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      await this.model
+        ?.increment(parsedQuery['$inc'], { where: { _id: id } })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       delete parsedQuery['$inc'];
     }
 
@@ -359,7 +361,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (query.hasOwnProperty('$inc')) {
       await this.model
         // @ts-ignore
-        .increment(parsedQuery['$inc'] as any, { where: parsedFilter })
+        ?.increment(parsedQuery['$inc'] as any, { where: parsedFilter })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });

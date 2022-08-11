@@ -21,7 +21,7 @@ export class AzureStorage implements IStorageProvider {
 
   async deleteContainer(name: string): Promise<boolean | Error> {
     const t = await this._storage.getContainerClient(name).deleteIfExists();
-    ConduitGrpcSdk.Metrics.decrement('containers_total');
+    ConduitGrpcSdk.Metrics?.decrement('containers_total');
     return t.succeeded;
   }
 
@@ -44,7 +44,7 @@ export class AzureStorage implements IStorageProvider {
       }
     }
     ConduitGrpcSdk.Logger.log(`${i} blobs deleted.`);
-    ConduitGrpcSdk.Metrics.increment('folders_total');
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
     return true;
   }
 
@@ -64,7 +64,7 @@ export class AzureStorage implements IStorageProvider {
     await containerClient
       .getBlockBlobClient(name + '.keep.txt')
       .uploadData(Buffer.from('DO NOT DELETE'));
-    ConduitGrpcSdk.Metrics.increment('folders_total');
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
     return true;
   }
 
@@ -102,8 +102,8 @@ export class AzureStorage implements IStorageProvider {
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .deleteIfExists();
-    ConduitGrpcSdk.Metrics.increment('files_total');
-    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', fileSize);
+    ConduitGrpcSdk.Metrics?.increment('files_total');
+    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSize);
     return true;
   }
 
@@ -164,8 +164,8 @@ export class AzureStorage implements IStorageProvider {
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .upload(data, Buffer.byteLength(data));
-    ConduitGrpcSdk.Metrics.increment('files_total');
-    ConduitGrpcSdk.Metrics.increment('storage_size_bytes_total', data.byteLength);
+    ConduitGrpcSdk.Metrics?.increment('files_total');
+    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
@@ -200,7 +200,7 @@ export class AzureStorage implements IStorageProvider {
   async createContainer(name: string): Promise<boolean | Error> {
     await this._storage.getContainerClient(name).createIfNotExists();
     this._activeContainer = name;
-    ConduitGrpcSdk.Metrics.increment('containers_total');
+    ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
   }
 

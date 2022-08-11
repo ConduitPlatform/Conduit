@@ -75,7 +75,7 @@ export class SecurityAdmin {
       alias,
       notes,
     });
-    ConduitGrpcSdk.Metrics.increment('security_clients_total', 1, {
+    ConduitGrpcSdk.Metrics?.increment('security_clients_total', 1, {
       platform: platform.toLowerCase(),
     });
     return { ...client, clientSecret };
@@ -85,7 +85,7 @@ export class SecurityAdmin {
     await Client.getInstance().deleteOne({
       _id: call.request.params!.id,
     });
-    ConduitGrpcSdk.Metrics.decrement('security_clients_total');
+    ConduitGrpcSdk.Metrics?.decrement('security_clients_total');
     return { message: 'Client deleted' };
   }
 

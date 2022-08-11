@@ -84,7 +84,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   /**
    * This is triggered when a module needs to initialize its own custom metric
-   * types and configuration by using the sdk's ConduitMetrics.
+   * types and configuration by using the sdk's ConduitMetrics?.
    */
   initializeMetrics() {}
 

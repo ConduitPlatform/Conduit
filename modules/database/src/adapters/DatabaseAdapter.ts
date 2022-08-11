@@ -83,7 +83,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     const createdSchema = this._createSchemaFromAdapter(schema);
     if (!this.registeredSchemas.has(schema.name)) {
-      ConduitGrpcSdk.Metrics.increment('registered_schemas_total', 1, {
+      ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
       });
     }

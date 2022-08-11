@@ -121,7 +121,7 @@ export class GrpcServer {
       this.events.emit('grpc-health-change:Core', state);
     }
     this._serviceHealthState = state;
-    ConduitGrpcSdk.Metrics.set(
+    ConduitGrpcSdk.Metrics?.set(
       'module_health_state',
       state === HealthCheckStatus.SERVING ? 1 : 0,
     );

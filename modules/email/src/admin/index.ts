@@ -271,7 +271,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    ConduitGrpcSdk.Metrics.increment('email_templates_total');
+    ConduitGrpcSdk.Metrics?.increment('email_templates_total');
     return { template: newTemplate };
   }
 
@@ -348,7 +348,7 @@ export class AdminHandlers {
           throw new GrpcError(status.INTERNAL, e.message);
         });
     }
-    ConduitGrpcSdk.Metrics.decrement('email_templates_total');
+    ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
     return { deleted };
   }
 
@@ -384,7 +384,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    ConduitGrpcSdk.Metrics.decrement(
+    ConduitGrpcSdk.Metrics?.decrement(
       'email_templates_total',
       deletedDocuments.deletedCount,
     );
@@ -510,7 +510,7 @@ export class AdminHandlers {
         }
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    ConduitGrpcSdk.Metrics.increment('emails_sent_total');
+    ConduitGrpcSdk.Metrics?.increment('emails_sent_total');
     return { message: 'Email sent' };
   }
 }

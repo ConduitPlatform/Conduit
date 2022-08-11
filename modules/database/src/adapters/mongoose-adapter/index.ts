@@ -84,7 +84,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
       });
     this.mongoose.set('debug', () => {
-      ConduitGrpcSdk.Metrics.increment('database_queries_total');
+      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
     });
   }
 

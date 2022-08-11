@@ -129,7 +129,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         ],
       };
     }
-    ConduitGrpcSdk.Metrics.decrement('logged_in_users_total');
+    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
     return 'LoggedOut';
   }
 
