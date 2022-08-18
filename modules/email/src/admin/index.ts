@@ -220,14 +220,14 @@ export class AdminHandlers {
       sort,
     );
     const totalCountPromise = EmailTemplate.getInstance().countDocuments(query);
-    const [templateDocuments, totalCount] = await Promise.all([
+    const [templateDocuments, count] = await Promise.all([
       templateDocumentsPromise,
       totalCountPromise,
     ]).catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { result: { templateDocuments, totalCount } };
+    return { result: { templateDocuments, count } };
   }
 
   async createTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -438,8 +438,8 @@ export class AdminHandlers {
         variables: element.versions[0].variables,
       });
     });
-    const totalCount = templateDocuments.length;
-    return { templateDocuments, totalCount };
+    const count = templateDocuments.length;
+    return { templateDocuments, count };
   }
 
   async syncExternalTemplates(
@@ -449,7 +449,6 @@ export class AdminHandlers {
     const externalTemplates: any = await this.emailService.getExternalTemplates();
 
     const updated = [];
-    let totalCount = 0;
     for (const element of externalTemplates) {
       const templateDocument = await EmailTemplate.getInstance().findOne({
         externalId: element.id,
@@ -475,8 +474,7 @@ export class AdminHandlers {
       updated.push(updatedTemplate);
     }
 
-    totalCount = updated.length;
-    return { updated, totalCount };
+    return { updated, count: updated.length };
   }
 
   async sendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

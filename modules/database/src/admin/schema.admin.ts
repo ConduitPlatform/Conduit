@@ -105,13 +105,13 @@ export class SchemaAdmin {
     );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
-    const [schemasExtensions, totalCount] = await Promise.all([
+    const [schemasExtensions, count] = await Promise.all([
       schemasExtensionsPromise,
       totalCountPromise,
     ]).catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-    return { schemasExtensions, totalCount };
+    return { schemasExtensions, count };
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

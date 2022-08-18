@@ -239,8 +239,7 @@ export class AdminHandlers {
       .catch(e => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    const totalCount = forms.deletedCount;
-    return { forms, totalCount };
+    return { forms, count: forms.deletedCount };
   }
 
   async getFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
