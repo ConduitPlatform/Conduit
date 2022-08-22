@@ -20,6 +20,9 @@ import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-
 
 const deepdash = require('deepdash/standalone');
 
+const incrementDBQueries = () =>
+  ConduitGrpcSdk.Metrics.increment('database_queries_total');
+
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
   originalSchema: ConduitSchema;
@@ -89,7 +92,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         },
       };
     }
-
+    incrementDBQueries();
     this.model = sequelize.define(schema.collectionName, schema.modelSchema, {
       ...schema.modelOptions,
       freezeTableName: true,
@@ -97,6 +100,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   }
 
   sync() {
+    incrementDBQueries();
     return this.model.sync({ alter: true });
   }
 
@@ -109,6 +113,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
+    incrementDBQueries();
     await this.createWithPopulations(parsedQuery);
     return this.model.create(parsedQuery, { raw: true });
   }
@@ -126,7 +131,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       doc.updatedAt = date;
       await this.createWithPopulations(doc);
     }
-
+    incrementDBQueries();
     return this.model.bulkCreate(parsedQuery);
   }
 
@@ -149,13 +154,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
-
+    incrementDBQueries();
     const document = await this.model.findOne(options);
 
     if (!isNil(populate) && !isNil(relations)) {
       for (const relation of populate) {
         if (this.relations.hasOwnProperty(relation)) {
           if (relations.hasOwnProperty(this.relations[relation])) {
+            incrementDBQueries();
             document[relation] = await relations[this.relations[relation]].findOne({
               _id: document[relation],
             });
@@ -208,6 +214,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           if (this.relations.hasOwnProperty(relation)) {
             if (relations.hasOwnProperty(this.relations[relation])) {
               if (!cache.hasOwnProperty(document[relation])) {
+                incrementDBQueries();
                 cache[document[relation]] = await relations[
                   this.relations[relation]
                 ].findOne({ _id: document[relation] });
@@ -229,6 +236,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
+    incrementDBQueries();
     return this.model.destroy({ where: parseQuery(parsedQuery), limit: 1 });
   }
 
@@ -239,6 +247,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
+    incrementDBQueries();
     return this.model.destroy({ where: parseQuery(parsedQuery) });
   }
 
@@ -256,6 +265,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = query;
     }
     if (parsedQuery.hasOwnProperty('$inc')) {
+      incrementDBQueries();
       await this.model
         ?.increment(parsedQuery['$inc'], { where: { _id: id } })
         .catch(e => {
@@ -273,6 +283,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       }
     } else if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
+      incrementDBQueries();
       const record = await this.model.findByPk(id, { raw: true }).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
@@ -283,6 +294,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (parsedQuery.hasOwnProperty('$push')) {
       for (const key in parsedQuery['$push']) {
+        incrementDBQueries();
         await this.model
           .update(
             {
@@ -311,6 +323,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
           dbDocument[key].splice(ind, 1);
         }
       }
+      incrementDBQueries();
       await this.model.update(parsedQuery, { where: { _id: id } }).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
@@ -318,6 +331,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     parsedQuery.updatedAt = new Date();
+    incrementDBQueries();
     await this.createWithPopulations(parsedQuery);
     const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
     if (!isNil(populate) && !isNil(relations)) {
@@ -326,6 +340,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         if (this.relations.hasOwnProperty(relation)) {
           if (relations.hasOwnProperty(this.relations[relation])) {
             if (!cache.hasOwnProperty(document[relation])) {
+              incrementDBQueries();
               cache[document[relation]] = await relations[
                 this.relations[relation]
               ].findOne({ _id: document[relation] });
@@ -358,6 +373,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     parsedFilter = parseQuery(parsedFilter);
+    incrementDBQueries();
     if (query.hasOwnProperty('$inc')) {
       await this.model
         // @ts-ignore
@@ -369,6 +385,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     if (updateProvidedOnly) {
+      incrementDBQueries();
       const record = await this.model
         // @ts-ignore
         .findOne({ where: parsedFilter, raw: true })
@@ -382,6 +399,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (parsedQuery.hasOwnProperty('$push')) {
       for (const key in parsedQuery['$push']) {
+        incrementDBQueries();
         await this.model
           .update(
             {
@@ -412,6 +430,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
             document[key].splice(ind, 1);
           }
         }
+        incrementDBQueries();
         // @ts-ignore
         await this.model.update(document, { where: parsedFilter }).catch(e => {
           ConduitGrpcSdk.Logger.error(e);
@@ -420,6 +439,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       delete parsedQuery['$pull'];
     }
 
+    incrementDBQueries();
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
     // @ts-ignore
@@ -433,10 +453,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
+    incrementDBQueries();
     return this.model.count({ where: parseQuery(parsedQuery) });
   }
 
   private async createWithPopulations(document: ParsedQuery) {
+    incrementDBQueries();
     return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 

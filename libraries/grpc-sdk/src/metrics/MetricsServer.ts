@@ -48,7 +48,7 @@ export class MetricsServer {
   getHttpPort() {
     const value = process.env['METRICS_PORT'];
     if (!value) {
-      ConduitGrpcSdk.Logger.error(`Metrics HTTP Port not set`);
+      ConduitGrpcSdk.Logger.error(`Metrics HTTP port not set`);
       process.exit(-1);
     }
     const port = parseInt(value, 10);
