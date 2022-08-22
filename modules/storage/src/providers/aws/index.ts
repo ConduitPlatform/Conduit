@@ -54,8 +54,6 @@ export class AWSS3Storage implements IStorageProvider {
           : undefined,
       }),
     );
-    ConduitGrpcSdk.Metrics?.increment('files_total');
-    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
@@ -169,26 +167,12 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
-    let fileSize = 0;
-    try {
-      fileSize = (
-        (await this._storage.send(
-          new HeadObjectCommand({
-            Bucket: this._activeContainer,
-            Key: fileName,
-          }),
-        )) as any
-      ).ContentLength;
-      console.log(fileSize);
-    } catch (e) {}
     await this._storage.send(
       new DeleteObjectCommand({
         Bucket: this._activeContainer,
         Key: fileName,
       }),
     );
-    ConduitGrpcSdk.Metrics?.increment('files_total');
-    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSize);
     return true;
   }
 

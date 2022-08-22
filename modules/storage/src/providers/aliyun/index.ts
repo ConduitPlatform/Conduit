@@ -97,15 +97,12 @@ export class AliyunStorage implements IStorageProvider {
         'x-oss-object-acl': isPublic ? 'public-read' : 'private',
       },
     });
-    ConduitGrpcSdk.Metrics?.increment('files_total');
-    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
     await this._ossClient.delete(fileName);
     ConduitGrpcSdk.Metrics?.decrement('files_total');
-    // ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSize); TODO: get file size from oss client
     return true;
   }
 

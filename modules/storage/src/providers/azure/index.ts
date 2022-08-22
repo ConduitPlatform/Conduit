@@ -89,21 +89,10 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async delete(fileName: string): Promise<boolean | Error> {
-    let fileSize = 0;
-    try {
-      fileSize = (
-        await this._storage
-          .getContainerClient(this._activeContainer)
-          .getBlockBlobClient(fileName)
-          .getProperties()
-      ).contentLength as number;
-    } catch (e) {}
     await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .deleteIfExists();
-    ConduitGrpcSdk.Metrics?.increment('files_total');
-    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSize);
     return true;
   }
 
@@ -164,8 +153,6 @@ export class AzureStorage implements IStorageProvider {
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)
       .upload(data, Buffer.byteLength(data));
-    ConduitGrpcSdk.Metrics?.increment('files_total');
-    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', data.byteLength);
     return true;
   }
 

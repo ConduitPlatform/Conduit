@@ -104,6 +104,7 @@ export class FileHandlers {
 
     try {
       const buffer = Buffer.from(data, 'base64');
+      const size = buffer.byteLength;
 
       await this.storageProvider
         .container(usedContainer)
@@ -114,12 +115,14 @@ export class FileHandlers {
           .container(usedContainer)
           .getPublicUrl((newFolder ?? '') + name);
       }
-
+      ConduitGrpcSdk.Metrics?.increment('files_total');
+      ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
       return await File.getInstance().create({
         name,
         mimeType,
         folder: newFolder,
         container: usedContainer,
+        size,
         isPublic,
         url: publicUrl,
       });
@@ -217,9 +220,14 @@ export class FileHandlers {
         .container(newContainer)
         .store((newFolder ?? '') + newName, fileData);
 
+      const fileSizeDiff = Math.abs(found.size - fileData.byteLength);
+      fileSizeDiff < 0
+        ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
+        : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
       found.name = newName;
       found.folder = newFolder;
       found.container = newContainer;
+      found.size = fileData.byteLength;
       return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
     } catch (e) {
       throw new GrpcError(
@@ -245,7 +253,8 @@ export class FileHandlers {
         throw new GrpcError(status.INTERNAL, 'File could not be deleted');
       }
       await File.getInstance().deleteOne({ _id: call.request.params.id });
-
+      ConduitGrpcSdk.Metrics?.decrement('files_total');
+      ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', found.size);
       return { success: true };
     } catch (e) {
       throw new GrpcError(
