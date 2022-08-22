@@ -141,8 +141,8 @@ const schema = {
   hasTwoFA: {
     type: TYPE.Boolean,
     default: false,
-    mode: TYPE.String,
   },
+  twoFAmethod: TYPE.String,
   phoneNumber: TYPE.String,
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -219,6 +219,7 @@ export class User extends ConduitActiveSchema<User> {
   active: boolean;
   isVerified: boolean;
   hasTwoFA: boolean;
+  twoFAmethod: string;
   phoneNumber?: string;
   createdAt: Date;
   updatedAt: Date;
