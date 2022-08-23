@@ -26,7 +26,7 @@ async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
   if (excludedRestRoutes.includes(req.path)) return true;
   // GraphQL
   if (
-    req.originalUrl.startsWith('/graphql/') &&
+    req.originalUrl.startsWith('/graphql') &&
     req.body.query &&
     typeof req.body.query === 'string'
   ) {
