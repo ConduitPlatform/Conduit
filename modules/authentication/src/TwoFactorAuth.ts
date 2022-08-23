@@ -1,12 +1,15 @@
 import * as twoFactor from 'node-2fa';
-import ConduitGrpcSdk, { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConfigController,
+  GrpcError,
+  UnparsedRouterResponse,
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, Token, TwoFactorSecret, User } from './models';
+import { AccessToken, RefreshToken, TwoFactorSecret, User } from './models';
 import { isNil } from 'lodash';
 import { AuthUtils } from './utils/auth';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import moment from 'moment';
-import { TokenType } from './constants/TokenType';
 
 export namespace TwoFactorAuth {
   export function generateSecret(options?: { name: string; account: string }) {
@@ -26,7 +29,7 @@ export namespace TwoFactorAuth {
     clientId: string,
     user: User,
     code: string,
-  ): Promise<any> {
+  ): Promise<{ userId: String; accessToken: String; refreshToken: String }> {
     const secret = await TwoFactorSecret.getInstance().findOne({
       userId: user._id,
     });
