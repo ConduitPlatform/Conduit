@@ -1,5 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
+import { gql } from 'apollo-server-core';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
@@ -7,9 +8,14 @@ import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
-const excludedRoutes = ['/ready', '/login', '/modules'];
-const excludedGqlQueries = ['getConfigModules', 'getReady'];
-const excludedGqlMutations = ['IntrospectionQuery', 'postLogin'];
+const excludedRestRoutes = ['/ready', '/login', '/modules'];
+const excludedGqlOperations = [
+  '__schema',
+  'IntrospectionQuery',
+  'getReady',
+  'postLogin',
+  'getConfigModules',
+];
 
 async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
   if (await isDev(conduit)) {
@@ -17,11 +23,19 @@ async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
     if (req.originalUrl.indexOf('/swagger') === 0) return true;
   }
   // REST
-  if (excludedRoutes.includes(req.path)) return true;
+  if (excludedRestRoutes.includes(req.path)) return true;
   // GraphQL
-  if (excludedGqlMutations.includes(req.body.operationName)) return true;
-  const queryName = req.body.query?.split('{\n')[1].split('\n}')[0].trim();
-  if (excludedGqlQueries.includes(queryName)) return true;
+  if (
+    req.originalUrl.startsWith('/graphql') &&
+    req.body.query &&
+    typeof req.body.query === 'string'
+  ) {
+    const operations: string[] = gql(
+      req.body.query,
+      // @ts-ignore
+    ).definitions[0].selectionSet.selections.map(sel => sel.name.value);
+    return !operations.some(op => !excludedGqlOperations.includes(op));
+  }
   return false;
 }
 
