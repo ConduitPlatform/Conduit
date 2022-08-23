@@ -1,9 +1,5 @@
 import * as twoFactor from 'node-2fa';
-import ConduitGrpcSdk, {
-  ConfigController,
-  GrpcError,
-  UnparsedRouterResponse,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, TwoFactorSecret, User } from './models';
 import { isNil } from 'lodash';
@@ -29,7 +25,7 @@ export namespace TwoFactorAuth {
     clientId: string,
     user: User,
     code: string,
-  ): Promise<{ userId: String; accessToken: String; refreshToken: String }> {
+  ): Promise<{ userId: string; accessToken: string; refreshToken: string }> {
     const secret = await TwoFactorSecret.getInstance().findOne({
       userId: user._id,
     });
