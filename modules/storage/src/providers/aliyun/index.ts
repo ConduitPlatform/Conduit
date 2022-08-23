@@ -1,9 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
-
 import OSS from 'ali-oss';
-
 import fs from 'fs';
-
 import { basename } from 'path';
 
 export class AliyunStorage implements IStorageProvider {

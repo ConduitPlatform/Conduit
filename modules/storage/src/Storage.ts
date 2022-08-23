@@ -10,15 +10,16 @@ import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes';
-import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { getAwsAccountId } from './storage-provider/utils/utils';
 import { isEmpty } from 'lodash';
 import { runMigrations } from './migrations';
 import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
+import { IStorageProvider } from './interfaces';
+import { createStorageProvider } from './providers';
+import { getAwsAccountId } from './utils';
 
 type Callback = (arg1: { code: number; message: string }) => void;
 

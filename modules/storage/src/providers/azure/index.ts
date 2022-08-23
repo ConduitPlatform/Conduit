@@ -6,8 +6,8 @@ import {
   SASProtocol,
 } from '@azure/storage-blob';
 import fs from 'fs';
-import { streamToBuffer } from '../../utils/utils';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { streamToBuffer } from '../../utils';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
