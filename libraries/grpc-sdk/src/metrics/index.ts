@@ -7,7 +7,7 @@ import {
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
-import ConduitGrpcSdk from '../index';
+import { registry as niceGrpcRegistry } from 'nice-grpc-prometheus';
 
 export class ConduitMetrics {
   private readonly moduleName: string;
@@ -18,7 +18,8 @@ export class ConduitMetrics {
   constructor(moduleName: string, instance: string) {
     this.moduleName = moduleName;
     this.instance = instance;
-    this.Registry = new client.Registry(); //global registry
+    const globalRegistry = new client.Registry();
+    this.Registry = client.Registry.merge([globalRegistry, niceGrpcRegistry]);
     this._httpServer = new MetricsServer(moduleName, instance, this.Registry);
     this._httpServer.initialize();
     this.collectDefaultMetrics();

@@ -1,6 +1,7 @@
-import { getModuleNameInterceptor, getGrpcSignedTokenInterceptor } from '../interceptors';
+import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../interceptors';
 import { createChannel, createClientFactory } from 'nice-grpc';
-import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
+import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health_check';
+import { prometheusClientMiddleware } from 'nice-grpc-prometheus';
 
 export async function checkModuleHealth(
   clientName: string,
@@ -12,12 +13,16 @@ export async function checkModuleHealth(
     'grpc.max_receive_message_length': 1024 * 1024 * 100,
     'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
-  const clientFactory = createClientFactory().use(
-    grpcToken
-      ? getGrpcSignedTokenInterceptor(grpcToken)
-      : getModuleNameInterceptor(clientName),
-  );
+  const clientFactory = createClientFactory()
+    //@ts-ignore
+    .use(prometheusClientMiddleware())
+    .use(
+      grpcToken
+        ? getGrpcSignedTokenInterceptor(grpcToken)
+        : getModuleNameInterceptor(clientName),
+    );
   let _healthClient = clientFactory.create(HealthDefinition, channel);
+
   let error;
   let status = await _healthClient
     .check({ service })

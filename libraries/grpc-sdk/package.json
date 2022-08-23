@@ -25,6 +25,7 @@
     "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.2.0",
+    "nice-grpc-prometheus": "^0.1.0",
     "prom-client": "^14.0.1",
     "protobufjs": "^6.11.3",
     "winston": "^3.8.1",
