@@ -149,7 +149,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async subscribeToBusEvents() {
-    this.grpcSdk.bus!.subscribe('config:update:admin', (config: string) => {
+    this.grpcSdk.bus!.subscribe('admin:config:update', (config: string) => {
       const cfg: convict.Config<any> = JSON.parse(config);
       this.handleConfigUpdate(cfg);
     });
