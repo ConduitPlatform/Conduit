@@ -11,7 +11,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import { streamToBuffer } from '../../utils/utils';
+import { streamToBuffer } from '../../utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';

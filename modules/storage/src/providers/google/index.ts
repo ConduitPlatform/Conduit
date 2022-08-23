@@ -1,5 +1,4 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
-
 import { Storage } from '@google-cloud/storage';
 
 /**

@@ -7,8 +7,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
-import { IStorageProvider } from '../storage-provider';
 import { _StorageContainer, _StorageFolder, File } from '../models';
+import { IStorageProvider } from '../interfaces';
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;

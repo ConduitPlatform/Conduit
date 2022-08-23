@@ -1,5 +1,4 @@
-import { IStorageProvider } from '../../interfaces';
-import { StorageConfig } from '../../interfaces';
+import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
   constants,
   chmod,
