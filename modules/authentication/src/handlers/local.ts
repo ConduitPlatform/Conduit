@@ -215,7 +215,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
       routingManager.route(
         {
-          path: '/local/verifyQRCode',
+          path: '/local/verify-qr-code',
           action: ConduitRouteActions.GET,
           description: `Verifies the code the user received from scanning the QR image`,
           middlewares: ['authMiddleware'],
@@ -224,7 +224,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           },
         },
         new ConduitRouteReturnDefinition('VerifyQRCodeResponse', 'String'),
-        this.verifyQRCode.bind(this),
+        this.verifyQrCode.bind(this),
       );
 
       routingManager.route(
@@ -374,7 +374,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await this._authenticateChecks(password, config, user);
 
     if (user.hasTwoFA) {
-      if (user.twoFAmethod === 'phone') {
+      if (user.twoFaMethod === 'phone') {
         const verificationSid = await AuthUtils.sendVerificationCode(
           this.smsModule,
           user.phoneNumber!,
@@ -401,31 +401,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
         return {
           message: 'Verification code sent',
         };
-      } else if (user.twoFAmethod === 'qrcode') {
+      } else if (user.twoFaMethod === 'qrcode') {
         const secret = await TwoFactorSecret.getInstance().findOne({
           userId: user._id,
         });
-
-        if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, '2FA secret not found');
-
-        await Token.getInstance()
-          .deleteMany({
-            userId: user._id,
-            type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-          })
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-          });
-
-        await Token.getInstance().create({
-          userId: user._id,
-          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-          token: uuid(),
-          data: {
-            secret: secret.secret,
-          },
-        });
-        return { message: 'QR image: ' + secret.qr.toString() };
+        if (isNil(secret))
+          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
+        return { message: 'OTP required' };
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
       }
@@ -610,7 +592,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           ConduitGrpcSdk.Logger.error(e);
         });
 
-      if (user.twoFAmethod === 'phone') {
+      if (user.twoFaMethod === 'phone') {
         const verificationSid = await AuthUtils.sendVerificationCode(
           this.smsModule,
           dbUser.phoneNumber!,
@@ -627,11 +609,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
           },
         });
         return 'Verification code sent';
-      } else if (user.twoFAmethod == 'qrcode') {
+      } else if (user.twoFaMethod == 'qrcode') {
         const secret = await TwoFactorSecret.getInstance().findOne({
           userId: user._id,
         });
-        if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Secret not found');
+        if (isNil(secret))
+          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
         await Token.getInstance().create({
           userId: dbUser._id,
@@ -639,10 +622,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           token: uuid(),
           data: {
             password: hashedPassword,
-            secret: secret.secret,
           },
         });
-        return 'QR image: ' + secret.qr.toString();
+        return 'OTP required';
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
       }
@@ -749,13 +731,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
     }
 
-    if (user.twoFAmethod === 'phone') {
+    if (user.twoFaMethod === 'phone') {
       const verified = await this.smsModule.verify(token.token, code);
       if (!verified.verified) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
       }
-    } else if (user.twoFAmethod === 'qrcode') {
-      const verification = TwoFactorAuth.verifyToken(token.data.secret, code);
+    } else if (user.twoFaMethod === 'qrcode') {
+      const secret = await TwoFactorSecret.getInstance().findOne({
+        userId: user._id,
+      });
+      if (isNil(secret))
+        throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+
+      const verification = TwoFactorAuth.verifyToken(secret.secret, code);
       if (isNil(verification))
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     } else {
@@ -925,7 +913,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
-    if (user.twoFAmethod == 'phone') {
+    if (user.twoFaMethod == 'phone') {
       return await AuthUtils.verifyCode(
         this.grpcSdk,
         clientId,
@@ -933,14 +921,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
         TokenType.TWO_FA_VERIFICATION_TOKEN,
         code,
       );
-    } else if (user.twoFAmethod == 'qrcode') {
-      return await TwoFactorAuth.verifyCode(
-        this.grpcSdk,
-        clientId,
-        user,
-        TokenType.TWO_FA_VERIFICATION_TOKEN,
-        code,
-      );
+    } else if (user.twoFaMethod == 'qrcode') {
+      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, code);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
@@ -952,6 +934,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
+    }
+    if (context.user.hasTwoFA) {
+      return '2FA already enabled';
     }
 
     if (method === 'phone') {
@@ -982,13 +967,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
       });
 
       await User.getInstance().findByIdAndUpdate(context.user._id, {
-        twoFAmethod: 'phone',
+        twoFaMethod: 'phone',
       });
 
       return 'Verification code sent';
     } else if (method === 'qrcode') {
       const secret = TwoFactorAuth.generateSecret({
-        name: '',
+        //to do: add logic for app name insertion
+        name: 'Conduit',
         account: context.user.email,
       });
 
@@ -1003,59 +989,34 @@ export class LocalHandlers implements IAuthenticationStrategy {
         qr: secret.qr,
       });
 
-      await Token.getInstance()
-        .deleteMany({
-          userId: context.user._id,
-          type: TokenType.VERIFY_QR_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-
-      await Token.getInstance().create({
-        userId: context.user._id,
-        type: TokenType.VERIFY_QR_TOKEN,
-        token: uuid(),
-        data: {
-          secret: secret.secret,
-        },
-      });
-
       await User.getInstance().findByIdAndUpdate(context.user._id, {
-        twoFAmethod: 'qrcode',
+        twoFaMethod: 'qrcode',
       });
-      return 'QR image: ' + secret.qr.toString();
+      return secret.qr.toString();
     }
     throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
   }
 
-  async verifyQRCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async verifyQrCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     const { code } = call.request.params;
 
     if (isNil(context) || isEmpty(context)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'User unauthenticated');
     }
+    if (context.user.hasTwoFA) {
+      return '2FA already enabled';
+    }
 
-    const verificationToken: Token | null = await Token.getInstance().findOne({
+    const secret = await TwoFactorSecret.getInstance().findOne({
       userId: context.user._id,
-      type: TokenType.VERIFY_QR_TOKEN,
     });
-    if (isNil(verificationToken))
-      throw new GrpcError(status.NOT_FOUND, 'Verification token does not exist');
+    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-    const verification = TwoFactorAuth.verifyToken(verificationToken.data.secret, code);
+    const verification = TwoFactorAuth.verifyToken(secret.secret, code);
     if (isNil(verification)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     }
-    await Token.getInstance()
-      .deleteMany({
-        userId: context.user._id,
-        type: TokenType.VERIFY_QR_TOKEN,
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
 
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       hasTwoFA: true,

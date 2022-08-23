@@ -1,11 +1,12 @@
 import * as twoFactor from 'node-2fa';
 import ConduitGrpcSdk, { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, Token, User } from './models';
+import { AccessToken, RefreshToken, Token, TwoFactorSecret, User } from './models';
 import { isNil } from 'lodash';
 import { AuthUtils } from './utils/auth';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import moment from 'moment';
+import { TokenType } from './constants/TokenType';
 
 export namespace TwoFactorAuth {
   export function generateSecret(options?: { name: string; account: string }) {
@@ -24,29 +25,17 @@ export namespace TwoFactorAuth {
     grpcSdk: ConduitGrpcSdk,
     clientId: string,
     user: User,
-    tokenType: string,
     code: string,
   ): Promise<any> {
-    const verificationToken: Token | null = await Token.getInstance().findOne({
+    const secret = await TwoFactorSecret.getInstance().findOne({
       userId: user._id,
-      type: tokenType,
     });
-    if (isNil(verificationToken))
-      throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
+    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-    const verification = verifyToken(verificationToken.data.secret, code);
+    const verification = verifyToken(secret.secret, code);
     if (isNil(verification)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     }
-
-    await Token.getInstance()
-      .deleteMany({
-        userId: user._id,
-        type: tokenType,
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
     await Promise.all(
       AuthUtils.deleteUserTokens(grpcSdk, {
         userId: user._id,
