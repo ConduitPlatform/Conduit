@@ -22,8 +22,8 @@ import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
 import {
-  HealthDefinition,
   HealthCheckResponse_ServingStatus,
+  HealthDefinition,
 } from './protoUtils/grpc_health_check';
 import {
   GetRedisDetailsResponse,
@@ -38,7 +38,6 @@ import path from 'path';
 import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
 import defaultMetrics from './metrics/config/defaults';
-import { Indexable } from './interfaces';
 import {
   CounterConfiguration,
   GaugeConfiguration,

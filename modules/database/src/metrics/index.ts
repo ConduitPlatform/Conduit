@@ -8,14 +8,14 @@ export default {
       help: 'Tracks the total number of database queries',
     },
   },
-  databaseQueryErrors: {
-    //TODO: create global query error handler to track this
-    type: MetricType.Counter,
-    config: {
-      name: 'database_query_errors_total',
-      help: 'Tracks the total number of database query errors',
-    },
-  },
+  // databaseQueryErrors: {
+  //   //TODO: create global query error handler to track this
+  //   type: MetricType.Counter,
+  //   config: {
+  //     name: 'database_query_errors_total',
+  //     help: 'Tracks the total number of database query errors',
+  //   },
+  // },
   registeredSchemas: {
     type: MetricType.Counter,
     config: {

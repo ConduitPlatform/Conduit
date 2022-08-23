@@ -3,12 +3,11 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { HealthCheckStatus } from '../../types';
 import {
   ConfigDefinition,
-  RegisterModuleRequest,
   ModuleHealthRequest,
+  RegisterModuleRequest,
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';
-import { ConduitMetrics } from '../../metrics';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();

@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ConduitError } from '../index';
+import ConduitGrpcSdk from '../index';
 import express from 'express';
 import * as client from 'prom-client';
 import { isNaN } from 'lodash';
