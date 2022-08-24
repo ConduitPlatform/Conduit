@@ -17,8 +17,7 @@ import {
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
-import AdminConfigSchema from './config';
-import AdminConfigRawSchema from './config/config';
+import AdminConfigRawSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
@@ -82,7 +81,7 @@ export default class AdminModule extends IConduitAdmin {
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
-  readonly config: convict.Config<ConfigSchema> = AppConfigSchema;
+  readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
 
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
@@ -123,7 +122,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
-    const adminConfig = await generateConfigDefaults(AdminConfigSchema.getProperties());
+    const adminConfig = await generateConfigDefaults(this.config.getProperties());
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
       .configurePackage('admin', adminConfig, AdminConfigRawSchema);
@@ -465,6 +464,7 @@ export default class AdminModule extends IConduitAdmin {
         allowed: 'strict',
       });
     } catch (e) {
+      (this.config as unknown) = convict(AppConfigSchema);
       this.config.load(previousConfig);
       throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }

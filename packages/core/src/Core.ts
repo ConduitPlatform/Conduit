@@ -8,7 +8,7 @@ import convict from 'convict';
 export class Core extends IConduitCore {
   private static _instance: Core;
   private readonly _grpcServer: GrpcServer;
-  readonly config: convict.Config<ConfigSchema> = AppConfigSchema;
+  readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
 
   get grpcServer() {
     return this._grpcServer;
@@ -43,6 +43,7 @@ export class Core extends IConduitCore {
       });
       config = this.config.getProperties();
     } catch (e) {
+      (this.config as unknown) = convict(AppConfigSchema);
       this.config.load(previousConfig);
       throw new ConduitError('INVALID_ARGUMENT', 400, (e as Error).message);
     }
