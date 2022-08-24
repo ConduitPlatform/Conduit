@@ -1,6 +1,7 @@
 import { ConduitError, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isArray, isEmpty, isObject, isString, merge } from 'lodash';
 import { Fields } from '../../interfaces';
+import { DataTypes } from 'sequelize';
 
 const deepdash = require('deepdash/standalone');
 
@@ -63,6 +64,7 @@ function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
       const newType =
         newSchemaFields[key] && newSchemaFields.type ? newSchemaFields[key].type : null;
       if (!newType) return;
+      if (oldType === DataTypes.JSONB && newType === 'JSON') return;
       if (isArray(oldType) && isArray(newType)) {
         if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
           throw ConduitError.forbidden('Invalid schema types');
