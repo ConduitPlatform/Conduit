@@ -11,7 +11,8 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
-  abstract readonly config?: convict.Config<T>;
+  abstract readonly configSchema?: object;
+  readonly config?: convict.Config<T>;
   service?: ConduitService;
 
   protected constructor(moduleName: string) {
@@ -28,6 +29,9 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    */
   initialize(grpcSdk: ConduitGrpcSdk) {
     this.grpcSdk = grpcSdk;
+    if (this.configSchema) {
+      (this.config as unknown) = convict(this.configSchema);
+    }
   }
 
   /**
@@ -118,6 +122,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         config = this.config.getProperties();
         callback(null, { updatedConfig: JSON.stringify(config) });
       } catch (e) {
+        (this.config as unknown) = convict(this.configSchema!);
         this.config.load(previousConfig);
         return callback({
           code: status.INVALID_ARGUMENT,

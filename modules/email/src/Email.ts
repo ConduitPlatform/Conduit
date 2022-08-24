@@ -24,7 +24,7 @@ import {
 } from './protoTypes/email';
 
 export default class Email extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
     protoDescription: 'email.Email',

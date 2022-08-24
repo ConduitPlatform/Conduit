@@ -21,10 +21,8 @@ import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
 
-type Callback = (arg1: { code: number; message: string }) => void;
-
 export default class Storage extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',

@@ -37,7 +37,7 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 
 export default class DatabaseModule extends ManagedModule<void> {
-  config = undefined;
+  configSchema = undefined;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',

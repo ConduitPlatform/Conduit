@@ -14,7 +14,7 @@ import path from 'path';
 import { runMigrations } from './migrations';
 
 export default class Forms extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'forms.proto'),
     protoDescription: 'forms.Forms',
