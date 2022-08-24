@@ -27,7 +27,7 @@ import {
 } from './protoTypes/chat';
 
 export default class Chat extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),
     protoDescription: 'chat.Chat',

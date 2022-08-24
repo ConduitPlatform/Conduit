@@ -26,7 +26,7 @@ import { ISendNotification } from './interfaces/ISendNotification';
 import { runMigrations } from './migrations';
 
 export default class PushNotifications extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',

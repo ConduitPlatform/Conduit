@@ -8,10 +8,11 @@ import ConduitGrpcSdk, {
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';
 import path from 'path';
-import convict from './config';
+import AppConfigSchema from './config';
 import CoreConfigSchema from './config/config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
+import convict from 'convict';
 
 const CORE_SERVICES = ['Config', 'Admin'];
 
@@ -83,7 +84,11 @@ export class GrpcServer {
       });
     await this.commons
       .getConfigManager()
-      .configurePackage('core', convict.getProperties(), CoreConfigSchema);
+      .configurePackage(
+        'core',
+        convict(AppConfigSchema).getProperties(),
+        CoreConfigSchema,
+      );
 
     await this.commons.getAdmin().initialize(this.server);
     this.commons.getConfigManager().initConfigAdminRoutes();

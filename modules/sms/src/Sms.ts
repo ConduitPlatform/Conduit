@@ -22,7 +22,7 @@ import {
 } from './protoTypes/sms';
 
 export default class Sms extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'sms.proto'),
     protoDescription: 'sms.Sms',

@@ -72,7 +72,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 };
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',

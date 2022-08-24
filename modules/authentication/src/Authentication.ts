@@ -30,7 +30,7 @@ import {
 import { runMigrations } from './migrations';
 
 export default class Authentication extends ManagedModule<Config> {
-  config = AppConfigSchema;
+  configSchema = AppConfigSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
