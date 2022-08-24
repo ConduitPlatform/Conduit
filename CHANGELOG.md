@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.6](https://github.com/ConduitPlatform/Conduit/compare/v0.14.5...v0.14.6) (2022-08-24)
+
+
+### Features
+
+* **authentication:** add qr code library for 2fa authentication ([#283](https://github.com/ConduitPlatform/Conduit/issues/283)) ([37a6fa9](https://github.com/ConduitPlatform/Conduit/commit/37a6fa9901266e8672f2a44b5ef6b5a65b979236))
+
+
+### Bug Fixes
+
+* **admin,hermes:** GraphQL middleware and return type fixes ([#279](https://github.com/ConduitPlatform/Conduit/issues/279)) ([d219d52](https://github.com/ConduitPlatform/Conduit/commit/d219d523a0265df59ec379c2292de9b41941b81b))
+* **admin:** auth middleware body query check ([#281](https://github.com/ConduitPlatform/Conduit/issues/281)) ([26d0a09](https://github.com/ConduitPlatform/Conduit/commit/26d0a09509abedf2c47d1f5c9d415392c2179688))
+* **core:** admin config update channel inconsistency ([#285](https://github.com/ConduitPlatform/Conduit/issues/285)) ([598a8e5](https://github.com/ConduitPlatform/Conduit/commit/598a8e5f66303005f5588be3dbb527358537e908))
+* **database,email,forms:** handler returned type not matching declared type ([#280](https://github.com/ConduitPlatform/Conduit/issues/280)) ([a537453](https://github.com/ConduitPlatform/Conduit/commit/a5374539c60b59df6cf38028a4ed00ec6b1bb050))
+* **database:** db schema validation not working for JSONB type ([#287](https://github.com/ConduitPlatform/Conduit/issues/287)) ([973cac2](https://github.com/ConduitPlatform/Conduit/commit/973cac2fb030dd50b408a6856017a76cf2d8f0cf))
+* invalid config updates polluting Convict config object ([#288](https://github.com/ConduitPlatform/Conduit/issues/288)) ([28a71eb](https://github.com/ConduitPlatform/Conduit/commit/28a71ebdcb831d5126dbae31cb858f7b997ac214))
+
 ### [0.14.5](https://github.com/ConduitPlatform/Conduit/compare/v0.14.4...v0.14.5) (2022-08-05)
 
 
