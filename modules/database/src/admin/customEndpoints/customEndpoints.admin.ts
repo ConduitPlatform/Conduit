@@ -126,7 +126,7 @@ export class CustomEndpointsAdmin {
         );
       }
       findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.fields = findSchema.modelSchema;
+      findSchema.compiledFields = findSchema.modelSchema;
     }
 
     if (isNil(findSchema)) {
@@ -274,7 +274,7 @@ export class CustomEndpointsAdmin {
         );
       }
       findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.fields = findSchema.modelSchema;
+      findSchema.compiledFields = findSchema.modelSchema;
     }
 
     if (isNil(findSchema)) {

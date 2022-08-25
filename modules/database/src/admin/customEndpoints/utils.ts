@@ -91,7 +91,7 @@ function _queryValidation(
     return 'comparisonField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(findSchema.fields).includes(schemaField)) {
+  if (!Object.keys(findSchema.compiledFields).includes(schemaField)) {
     return 'schemaField is not present in selected schema!';
   }
 
@@ -100,7 +100,7 @@ function _queryValidation(
   }
 
   if (comparisonField.type === 'Schema') {
-    if (!Object.keys(findSchema.fields).includes(comparisonField.value)) {
+    if (!Object.keys(findSchema.compiledFields).includes(comparisonField.value)) {
       return 'comparisonField value is not present in selected schema!';
     }
   } else if (comparisonField.type === 'Input') {
@@ -193,7 +193,7 @@ export function assignmentValidation(
     return 'assignmentField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(findSchema.fields).includes(schemaField)) {
+  if (!Object.keys(findSchema.compiledFields).includes(schemaField)) {
     return 'schemaField is not present in selected schema!';
   }
 
@@ -207,7 +207,7 @@ export function assignmentValidation(
   }
 
   if (action === 3 || action === 4) {
-    if (!Array.isArray(findSchema.fields[schemaField].type)) {
+    if (!Array.isArray(findSchema.compiledFields[schemaField].type)) {
       return 'append and remove actions are valid only for array schema fields';
     }
   }
