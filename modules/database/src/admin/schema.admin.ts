@@ -160,9 +160,10 @@ export class SchemaAdmin {
       : { ...modelOptions, conduit: { cms: { enabled, crudOperations } } };
     schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
-    return this.schemaController.createSchema(
+    await this.schemaController.createSchema(
       new ConduitSchema(name, fields, schemaOptions),
     );
+    return await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ name });
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
