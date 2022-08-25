@@ -51,6 +51,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * Should accept a JSON schema and output a .ts interface for the adapter
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
+   * @param {boolean} cndPrefix Whether to prefix the schema's collection name with 'cnd_'
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
