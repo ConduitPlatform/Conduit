@@ -1,4 +1,4 @@
-import { Schema, SchemaAdapter } from '../interfaces';
+import { Schema } from '../interfaces';
 
 export async function canCreate(moduleName: string, schema: Schema) {
   if (moduleName === 'database' && schema.originalSchema.name === '_DeclaredSchema')
