@@ -78,10 +78,10 @@ export class SchemaAdmin {
       };
     }
 
-    const schemasPromise = await this.database
+    const schemasPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(query, skip, limit, undefined, sort);
-    const documentsCountPromise = await this.database
+    const documentsCountPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
 

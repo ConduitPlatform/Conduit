@@ -142,7 +142,7 @@ export class DocumentsAdmin {
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    await await this.database.getSchemaModel(schemaName).model.deleteOne({ _id: id });
+    await this.database.getSchemaModel(schemaName).model.deleteOne({ _id: id });
     return 'Ok';
   }
 }
