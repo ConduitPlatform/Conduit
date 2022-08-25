@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitModel,
   ConduitModelOptions,
   ConduitSchema,
   GrpcError,
@@ -12,6 +13,7 @@ import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
   modelOptions: ConduitModelOptions;
   extensions: DeclaredSchemaExtension[];
+  compiledFields: ConduitModel;
 } & {
   -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
@@ -176,10 +178,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
+          extensions: (schema as ConduitDatabaseSchema).extensions,
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
         }),
         true,
       );
@@ -188,10 +191,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
+          extensions: (schema as ConduitDatabaseSchema).extensions,
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
           modelOptions: schema.schemaOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
         }),
       );
     }
@@ -209,6 +213,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         );
         schema.ownerModule = model.ownerModule;
         (schema as ConduitDatabaseSchema).extensions = model.extensions;
+        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields;
         return schema;
       })
       .map((model: ConduitSchema) => {

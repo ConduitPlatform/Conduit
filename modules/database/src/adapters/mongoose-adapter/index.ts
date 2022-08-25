@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';
@@ -220,8 +221,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    const original = JSON.parse(JSON.stringify(schema));
+    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
     stitchSchema(schema);
+    original.compiledFields = schema.fields;
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

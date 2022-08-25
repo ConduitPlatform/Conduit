@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';
@@ -157,11 +158,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   getCollectionName(schema: ConduitSchema) {
-    const collectionName =
-      schema.collectionName && schema.collectionName !== ''
-        ? schema.collectionName
-        : schema.name;
-    return collectionName;
+    return schema.collectionName && schema.collectionName !== ''
+      ? schema.collectionName
+      : schema.name;
   }
 
   protected async _createSchemaFromAdapter(
@@ -182,8 +181,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    const original: ConduitSchema = JSON.parse(JSON.stringify(schema));
+    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
     stitchSchema(schema);
+    original.compiledFields = schema.fields;
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

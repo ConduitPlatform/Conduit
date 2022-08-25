@@ -27,6 +27,10 @@ export const DeclaredSchema = new ConduitSchema(
         updatedAt: TYPE.Date,
       },
     ],
+    compiledFields: {
+      type: TYPE.JSON,
+      required: true,
+    },
     modelOptions: {
       type: TYPE.JSON,
       required: true,
