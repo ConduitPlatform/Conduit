@@ -14,6 +14,10 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
+  size: {
+    type: TYPE.Number,
+    required: true,
+  },
   isPublic: {
     type: TYPE.Boolean,
     default: false,
@@ -42,6 +46,7 @@ export class File extends ConduitActiveSchema<File> {
   name!: string;
   folder!: string;
   container!: string;
+  size!: number;
   isPublic?: boolean;
   url!: string;
   mimeType!: string;

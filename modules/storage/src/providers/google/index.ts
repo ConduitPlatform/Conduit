@@ -1,5 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -26,6 +27,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     // Creates the new bucket
     await this._storage.createBucket(name);
     this._activeBucket = name;
+    ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
   }
 
@@ -77,6 +79,7 @@ export class GoogleCloudStorage implements IStorageProvider {
       return true;
     }
     await bucket.file(name + '/keep.txt').save(Buffer.from('DO NOT DELETE'));
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
     return true;
   }
 

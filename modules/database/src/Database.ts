@@ -35,6 +35,7 @@ import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
+import metricsConfig from './metrics';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -130,6 +131,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   private onCoreHealthChange(state: HealthCheckStatus) {

@@ -83,6 +83,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       .then(() => {
         ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
       });
+    this.mongoose.set('debug', () => {
+      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
+    });
   }
 
   async retrieveForeignSchemas(): Promise<void> {

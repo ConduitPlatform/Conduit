@@ -194,6 +194,7 @@ export class AdminHandlers {
       });
 
     this.formsController.refreshRoutes();
+    ConduitGrpcSdk.Metrics?.increment('forms_total');
     return 'Ok';
   }
 
@@ -239,7 +240,9 @@ export class AdminHandlers {
       .catch(e => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    return { forms, count: forms.deletedCount };
+    const totalCount = forms.deletedCount;
+    ConduitGrpcSdk.Metrics?.decrement('forms_total', totalCount);
+    return { forms, totalCount };
   }
 
   async getFormReplies(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

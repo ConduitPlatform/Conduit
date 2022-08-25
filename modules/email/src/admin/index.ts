@@ -271,7 +271,7 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
+    ConduitGrpcSdk.Metrics?.increment('email_templates_total');
     return { template: newTemplate };
   }
 
@@ -331,7 +331,7 @@ export class AdminHandlers {
     const templateDocument = await EmailTemplate.getInstance().findOne({
       _id: call.request.params.id,
     });
-    if (!isNil(templateDocument)) {
+    if (isNil(templateDocument)) {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
 
@@ -348,7 +348,7 @@ export class AdminHandlers {
           throw new GrpcError(status.INTERNAL, e.message);
         });
     }
-
+    ConduitGrpcSdk.Metrics?.decrement('email_templates_total');
     return { deleted };
   }
 
@@ -384,7 +384,10 @@ export class AdminHandlers {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
+    ConduitGrpcSdk.Metrics?.decrement(
+      'email_templates_total',
+      deletedDocuments.deletedCount,
+    );
     return { deletedDocuments };
   }
 
@@ -507,7 +510,7 @@ export class AdminHandlers {
         }
         throw new GrpcError(status.INTERNAL, e.message);
       });
-
+    ConduitGrpcSdk.Metrics?.increment('emails_sent_total');
     return { message: 'Email sent' };
   }
 }

@@ -112,6 +112,9 @@ export class AdminHandlers {
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
+    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
+      devices_count: 1,
+    });
     return 'Ok';
   }
 
@@ -138,6 +141,9 @@ export class AdminHandlers {
     };
     await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
+    });
+    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
+      devices_count: call.request.params.userIds.length,
     });
     return 'Ok';
   }

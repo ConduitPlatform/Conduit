@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConduitRouteActions,
   RequestHandlers,
   RouteBuilder,
@@ -129,5 +129,6 @@ export function createCustomEndpointRoute(
     }
   }
   route.return(getOperation(endpoint.operation) + endpoint.name, returns);
+  ConduitGrpcSdk.Metrics?.increment('custom_endpoints_total');
   return route.build();
 }

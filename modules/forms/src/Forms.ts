@@ -12,6 +12,7 @@ import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
 import { runMigrations } from './migrations';
+import metricsConfig from './metrics';
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -44,6 +45,12 @@ export default class Forms extends ManagedModule<Config> {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);
       }
     });
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   async onRegister() {

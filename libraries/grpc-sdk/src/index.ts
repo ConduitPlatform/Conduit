@@ -22,20 +22,28 @@ import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
 import {
-  HealthDefinition,
   HealthCheckResponse_ServingStatus,
+  HealthDefinition,
 } from './protoUtils/grpc_health_check';
 import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { GrpcError, HealthCheckStatus } from './types';
+import { GrpcError, HealthCheckStatus, MetricConfiguration, MetricType } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
+import { ConduitMetrics } from './metrics';
+import defaultMetrics from './metrics/config/defaults';
+import {
+  CounterConfiguration,
+  GaugeConfiguration,
+  HistogramConfiguration,
+  SummaryConfiguration,
+} from 'prom-client';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -61,9 +69,11 @@ export default class ConduitGrpcSdk {
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly name: string;
+  private readonly instance: string;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
+  static Metrics: ConduitMetrics;
   static readonly Logger: ConduitLogger = new ConduitLogger([
     new winston.transports.File({
       filename: path.join(__dirname, '.logs/combined.log'),
@@ -86,6 +96,16 @@ export default class ConduitGrpcSdk {
     } else {
       this.name = name;
     }
+    this.instance = this.name.startsWith('module_')
+      ? this.name.substring(8)
+      : Crypto.randomBytes(16).toString('hex');
+
+    if (process.env.METRICS_PORT) {
+      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
+      ConduitGrpcSdk.Metrics.setDefaultLabels({
+        module_instance: this.instance,
+      });
+    }
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
         new LokiTransport({
@@ -95,9 +115,7 @@ export default class ConduitGrpcSdk {
           replaceTimestamp: true,
           labels: {
             module: this.name,
-            instance: this.name.startsWith('module_')
-              ? this.name.substring(8)
-              : Crypto.randomBytes(16).toString('hex'),
+            instance: this.instance,
           },
         }),
       );
@@ -384,6 +402,29 @@ export default class ConduitGrpcSdk {
           ConduitGrpcSdk.Logger.error(err);
         }
       });
+  }
+
+  initializeDefaultMetrics() {
+    for (const metric of Object.values(defaultMetrics)) {
+      this.registerMetric(metric.type, metric.config);
+    }
+  }
+
+  registerMetric(type: MetricType, config: MetricConfiguration) {
+    switch (type) {
+      case MetricType.Counter:
+        ConduitGrpcSdk.Metrics?.createCounter(config as CounterConfiguration<any>);
+        break;
+      case MetricType.Gauge:
+        ConduitGrpcSdk.Metrics?.createGauge(config as GaugeConfiguration<any>);
+        break;
+      case MetricType.Histogram:
+        ConduitGrpcSdk.Metrics?.createHistogram(config as HistogramConfiguration<any>);
+        break;
+      case MetricType.Summary:
+        ConduitGrpcSdk.Metrics?.createSummary(config as SummaryConfiguration<any>);
+        break;
+    }
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {

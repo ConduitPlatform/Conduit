@@ -3,8 +3,8 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { HealthCheckStatus } from '../../types';
 import {
   ConfigDefinition,
-  RegisterModuleRequest,
   ModuleHealthRequest,
+  RegisterModuleRequest,
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';

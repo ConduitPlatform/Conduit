@@ -1,6 +1,6 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
   ConduitService,
+  GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
 } from '..';
@@ -81,6 +81,12 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * Config Controller of the sdk.
    */
   async onConfig() {}
+
+  /**
+   * This is triggered when a module needs to initialize its own custom metric
+   * types and configuration by using the sdk's ConduitMetrics.
+   */
+  initializeMetrics() {}
 
   async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

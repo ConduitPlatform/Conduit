@@ -20,6 +20,7 @@ import {
   VerifyRequest,
   VerifyResponse,
 } from './protoTypes/sms';
+import metricsConfig from './metrics';
 
 export default class Sms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -44,6 +45,12 @@ export default class Sms extends ManagedModule<Config> {
 
   async onServerStart() {
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   async preConfig(config: any) {

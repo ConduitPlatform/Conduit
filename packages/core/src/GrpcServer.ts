@@ -75,7 +75,7 @@ export class GrpcServer {
 
   private async bootstrapSdkComponents() {
     this.commons.registerAdmin(new AdminModule(this.commons, this._grpcSdk));
-
+    this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
       .then(() => this.commons.getConfigManager().registerAppConfig())
@@ -97,6 +97,12 @@ export class GrpcServer {
     this.serviceHealthState = HealthCheckStatus.SERVING;
   }
 
+  private initializeMetrics() {
+    if (process.env['METRICS_PORT']) {
+      this.grpcSdk.initializeDefaultMetrics();
+    }
+  }
+
   private getServiceHealthState(service: string) {
     service = service.replace('conduit.core.', '');
     if (service && !CORE_SERVICES.includes(service)) {
@@ -115,6 +121,10 @@ export class GrpcServer {
       this.events.emit('grpc-health-change:Core', state);
     }
     this._serviceHealthState = state;
+    ConduitGrpcSdk.Metrics?.set(
+      'module_health_state',
+      state === HealthCheckStatus.SERVING ? 1 : 0,
+    );
   }
 
   private addHealthService() {

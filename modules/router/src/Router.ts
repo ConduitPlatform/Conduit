@@ -33,6 +33,7 @@ import {
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
+import metricsConfig from './metrics';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -128,6 +129,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
     this._security = new SecurityModule(this.grpcSdk, this);
+  }
+
+  initializeMetrics() {
+    for (const metric of Object.values(metricsConfig)) {
+      this.grpcSdk.registerMetric(metric.type, metric.config);
+    }
   }
 
   protected registerSchemas() {

@@ -387,6 +387,7 @@ export class CustomEndpointsAdmin {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     this.customEndpointController.refreshEndpoints();
+    ConduitGrpcSdk.Metrics?.decrement('custom_endpoints_total');
     return 'Custom Endpoint deleted';
   }
 

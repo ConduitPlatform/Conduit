@@ -96,6 +96,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { phone } = call.request.params;
     const context = call.request.context;
     const clientId = context.clientId;
@@ -141,6 +142,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
             .toDate(),
         });
       }
+      ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
       if (config.setCookies.enabled) {
         const cookieOptions = config.setCookies.options;
         const cookies: Cookie[] = [

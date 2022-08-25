@@ -21,6 +21,7 @@ export class AzureStorage implements IStorageProvider {
 
   async deleteContainer(name: string): Promise<boolean | Error> {
     const t = await this._storage.getContainerClient(name).deleteIfExists();
+    ConduitGrpcSdk.Metrics?.decrement('containers_total');
     return t.succeeded;
   }
 
@@ -43,6 +44,7 @@ export class AzureStorage implements IStorageProvider {
       }
     }
     ConduitGrpcSdk.Logger.log(`${i} blobs deleted.`);
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
     return true;
   }
 
@@ -62,6 +64,7 @@ export class AzureStorage implements IStorageProvider {
     await containerClient
       .getBlockBlobClient(name + '.keep.txt')
       .uploadData(Buffer.from('DO NOT DELETE'));
+    ConduitGrpcSdk.Metrics?.increment('folders_total');
     return true;
   }
 
@@ -184,6 +187,7 @@ export class AzureStorage implements IStorageProvider {
   async createContainer(name: string): Promise<boolean | Error> {
     await this._storage.getContainerClient(name).createIfNotExists();
     this._activeContainer = name;
+    ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
   }
 

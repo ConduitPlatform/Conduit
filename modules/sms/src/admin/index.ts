@@ -70,7 +70,7 @@ export class AdminHandlers {
     if (!isNil(errorMessage)) {
       throw new GrpcError(status.INTERNAL, errorMessage);
     }
-
+    ConduitGrpcSdk.Metrics?.increment('sms_sent_total');
     return 'SMS sent';
   }
 }
