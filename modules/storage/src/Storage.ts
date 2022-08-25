@@ -1,29 +1,27 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
-  DatabaseProvider,
   ConfigController,
-  HealthCheckStatus,
+  DatabaseProvider,
   GrpcCallback,
+  HealthCheckStatus,
+  ManagedModule,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
 import { FileHandlers } from './handlers/file';
 import { StorageRoutes } from './routes';
-import { createStorageProvider, IStorageProvider } from './storage-provider';
 import * as models from './models';
 import path from 'path';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { isEmpty } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { runMigrations } from './migrations';
 import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
 import metricsConfig from './metrics';
-
-type Callback = (arg1: { code: number; message: string }) => void;
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
+
+type Callback = (arg1: { code: number; message: string }) => void;
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
