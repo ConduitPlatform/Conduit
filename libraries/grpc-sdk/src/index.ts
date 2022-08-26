@@ -411,6 +411,7 @@ export default class ConduitGrpcSdk {
   }
 
   registerMetric(type: MetricType, config: MetricConfiguration) {
+    config.name = `conduit_${config.name}`;
     switch (type) {
       case MetricType.Counter:
         ConduitGrpcSdk.Metrics?.createCounter(config as CounterConfiguration<any>);

@@ -60,7 +60,7 @@ export class ConduitMetrics {
   }
 
   increment(metric: string, increment: number = 1, labels?: LabelValues<any>) {
-    const metricInstance = this.Registry.getSingleMetric(metric);
+    const metricInstance = this.Registry.getSingleMetric(this.addPrefix(metric));
     if (
       !(metricInstance instanceof client.Counter) &&
       !(metricInstance instanceof client.Gauge)
@@ -73,7 +73,7 @@ export class ConduitMetrics {
   }
 
   decrement(metric: string, decrement: number = 1, labels?: LabelValues<any>) {
-    const metricInstance = this.Registry.getSingleMetric(metric);
+    const metricInstance = this.Registry.getSingleMetric(this.addPrefix(metric));
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a decrementable metric`);
     }
@@ -83,7 +83,7 @@ export class ConduitMetrics {
   }
 
   set(metric: string, value: number, labels?: LabelValues<any>) {
-    const metricInstance = this.Registry.getSingleMetric(metric);
+    const metricInstance = this.Registry.getSingleMetric(this.addPrefix(metric));
     if (!(metricInstance instanceof client.Gauge)) {
       throw new Error(`Metric ${metric} is not a Gauge`);
     }
@@ -93,7 +93,7 @@ export class ConduitMetrics {
   }
 
   observe(metric: string, value: number, labels?: LabelValues<any>) {
-    const metricInstance = this.Registry.getSingleMetric(metric);
+    const metricInstance = this.Registry.getSingleMetric(this.addPrefix(metric));
     if (
       !(metricInstance instanceof client.Histogram) &&
       !(metricInstance instanceof client.Summary)
@@ -103,5 +103,9 @@ export class ConduitMetrics {
     return labels
       ? metricInstance.labels({ ...labels }).observe(value)
       : metricInstance.observe(value);
+  }
+
+  private addPrefix(metric: string) {
+    return `conduit_${metric}`;
   }
 }
