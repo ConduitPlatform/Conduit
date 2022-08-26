@@ -1,5 +1,7 @@
-import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { isNil, isPlainObject } from 'lodash';
+import { OperationsEnum } from './customEndpoints.admin';
+import { status } from '@grpc/grpc-js';
 
 /**
  * Query schema:
@@ -212,5 +214,57 @@ export function assignmentValidation(
     }
   }
 
+  return true;
+}
+
+export function paramValidation(params: Indexable): boolean | string {
+  const { name, operation, selectedSchema, selectedSchemaName, query, assignments } =
+    params;
+
+  if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
+    return 'Either selectedSchema or selectedSchemaName must be specified';
+  }
+  if (!isNil(selectedSchema) && selectedSchema.length === 0) {
+    return 'selectedSchema must not be empty';
+  }
+  if (isNil(selectedSchema) && selectedSchemaName.length === 0) {
+    return 'selectedSchemaName must not be empty';
+  }
+  if (name.length === 0) {
+    return 'name must not be empty';
+  }
+  if (operation < 0 || operation > 4) {
+    return 'operation is not valid';
+  }
+  if (operation !== OperationsEnum.POST && isNil(query)) {
+    return 'Specified operation requires that query field also be provided';
+  }
+  if (
+    (operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PATCH) &&
+    isNil(assignments)
+  ) {
+    return 'Specified operation requires that assignments field also be provided';
+  }
+  return true;
+}
+
+export function operationValidation(
+  operation: number,
+  query: Indexable,
+  assignments: Indexable,
+): boolean | string {
+  if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
+    return 'The query field must be an object';
+  }
+  if (
+    (operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PATCH) &&
+    (!Array.isArray(assignments) || assignments.length === 0)
+  ) {
+    return "Custom endpoint's target operation requires that assignments field be a non-empty array";
+  }
   return true;
 }
