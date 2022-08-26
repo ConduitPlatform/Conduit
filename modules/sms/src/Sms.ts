@@ -69,9 +69,6 @@ export default class Sms extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.initProvider();
-      this.adminRouter.updateProvider(this._provider!);
-      this.isRunning = true;
-      this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
 
@@ -81,11 +78,21 @@ export default class Sms extends ManagedModule<Config> {
     const settings = smsConfig[name];
 
     if (name === 'twilio') {
-      this._provider = new TwilioProvider(settings);
+      try {
+        this._provider = new TwilioProvider(settings);
+      } catch (e) {
+        this._provider = undefined;
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+        ConduitGrpcSdk.Logger.error(e as Error);
+        return;
+      }
     } else {
       ConduitGrpcSdk.Logger.error('SMS provider not supported');
-      process.exit(-1);
+      return;
     }
+    this.adminRouter.updateProvider(this._provider!);
+    this.isRunning = true;
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   // gRPC Service
