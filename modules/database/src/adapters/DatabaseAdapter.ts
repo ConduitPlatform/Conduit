@@ -84,6 +84,14 @@ export abstract class DatabaseAdapter<T extends Schema> {
       }
       (schema as _ConduitSchema).collectionName = collectionName;
     }
+    if (schema.name !== '_DeclaredSchema') {
+      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
+        name: schema.name,
+      });
+      if (schemaModel?.extensions?.length > 0) {
+        (schema as any).extensions = schemaModel.extensions;
+      }
+    }
     const createdSchema = this._createSchemaFromAdapter(schema);
     if (!this.registeredSchemas.has(schema.name)) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
