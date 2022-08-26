@@ -1,28 +1,12 @@
 syntax = 'proto3';
 package database;
 
-message CreateSchemaRequest {
-    Schema schema = 1;
-}
-
-message CreateSchemaResponse {
-    Schema schema = 1;
-}
-
 message SetSchemaExtensionRequest {
     SchemaExtension extension = 1;
 }
 
-message SetSchemaExtensionResponse {
-    Schema schema = 1;
-}
-
 message GetSchemaRequest {
     string schemaName = 1;
-}
-
-message GetSchemaResponse {
-    Schema schema = 1;
 }
 
 message GetSchemasRequest {
@@ -37,14 +21,14 @@ message DropCollectionResponse{
 
 message Schema {
     string name = 1;
-    string modelSchema = 2;
-    string modelOptions = 3;
+    string fields = 2;
+    string options = 3;
     string collectionName = 4;
 }
 
 message SchemaExtension {
     string name = 1;
-    string modelSchema = 2;
+    string fields = 2;
 }
 
 message FindOneRequest {
@@ -94,11 +78,11 @@ message DropCollectionRequest{
 }
 
 service DatabaseProvider {
-    rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (CreateSchemaResponse);
-    rpc GetSchema (GetSchemaRequest) returns (GetSchemaResponse);
+    rpc CreateSchemaFromAdapter(Schema) returns (Schema);
+    rpc GetSchema (GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
-    rpc SetSchemaExtension(SetSchemaExtensionRequest) returns (CreateSchemaResponse);
+    rpc SetSchemaExtension(SetSchemaExtensionRequest) returns (Schema);
     // Database queries
     rpc findOne (FindOneRequest) returns (QueryResponse);
     rpc findMany (FindRequest) returns (QueryResponse);

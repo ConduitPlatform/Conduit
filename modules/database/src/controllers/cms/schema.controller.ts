@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, {
-  ConduitModelOptions,
+  ConduitSchemaOptions,
   ConduitSchema as ConduitSchema,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes';
@@ -12,7 +12,7 @@ import { CmsHandlers } from '../../handlers/cms.handler';
 import { ParsedQuery } from '../../interfaces';
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
+  modelOptions: ConduitSchemaOptions;
 };
 
 export class SchemaController {

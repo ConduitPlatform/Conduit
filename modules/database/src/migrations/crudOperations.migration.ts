@@ -1,11 +1,11 @@
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitModelOptions, ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchemaOptions, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isBoolean } from 'lodash';
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
+  modelOptions: ConduitSchemaOptions;
 };
 export async function migrateCrudOperations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,

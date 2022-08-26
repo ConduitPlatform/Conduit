@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, {
-  ConduitModelOptions,
+  ConduitSchemaOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
   ConduitSchemaExtension,
@@ -21,7 +21,7 @@ import { ParsedQuery } from '../interfaces';
 const escapeStringRegexp = require('escape-string-regexp');
 
 type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
+  modelOptions: ConduitSchemaOptions;
   _id: string;
 } & {
   -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
@@ -223,7 +223,7 @@ export class SchemaAdmin {
         new ConduitSchema(
           updatedSchema.originalSchema.name,
           updatedSchema.originalSchema.fields,
-          updatedSchema.originalSchema.schemaOptions,
+          updatedSchema.originalSchema.options,
         ),
       );
     }
@@ -543,7 +543,7 @@ export class SchemaAdmin {
           JSON.stringify({
             name: schema.name,
             fields: schema.fields,
-            modelOptions: schema.schemaOptions,
+            modelOptions: schema.options,
             ownerModule: schema.ownerModule,
             extensions: (schema as any).extensions,
           }),
@@ -617,28 +617,22 @@ export class SchemaAdmin {
           canModify: 'Nothing',
           canDelete: false,
         };
-        recreatedSchema.schemaOptions.conduit = merge(
-          recreatedSchema.schemaOptions.conduit,
-          {
-            imported: true,
-            noSync: true,
-            cms: {
-              enabled: recreatedSchema.schemaOptions.conduit?.cms?.enabled ?? true,
-              crudOperations: recreatedSchema.schemaOptions.conduit?.cms?.crudOperations
-                ? merge(
-                    defaultCrudOperations,
-                    recreatedSchema.schemaOptions.conduit.cms.crudOperations,
-                  )
-                : defaultCrudOperations,
-            },
-            permissions: recreatedSchema.schemaOptions.conduit?.permissions
+        recreatedSchema.options.conduit = merge(recreatedSchema.options.conduit, {
+          imported: true,
+          noSync: true,
+          cms: {
+            enabled: recreatedSchema.options.conduit?.cms?.enabled ?? true,
+            crudOperations: recreatedSchema.options.conduit?.cms?.crudOperations
               ? merge(
-                  defaultPermissions,
-                  recreatedSchema.schemaOptions.conduit.permissions,
+                  defaultCrudOperations,
+                  recreatedSchema.options.conduit.cms.crudOperations,
                 )
-              : defaultPermissions,
+              : defaultCrudOperations,
           },
-        );
+          permissions: recreatedSchema.options.conduit?.permissions
+            ? merge(defaultPermissions, recreatedSchema.options.conduit.permissions)
+            : defaultPermissions,
+        });
         (recreatedSchema as _ConduitSchema).collectionName =
           this.database.getCollectionName(schema as _ConduitSchema); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
@@ -655,7 +649,7 @@ export class SchemaAdmin {
   private patchSchemaPerms(
     schema: _ConduitSchema,
     // @ts-ignore
-    perms: ConduitModelOptions['conduit']['permissions'],
+    perms: ConduitSchemaOptions['conduit']['permissions'],
   ) {
     if (
       perms!.canModify &&

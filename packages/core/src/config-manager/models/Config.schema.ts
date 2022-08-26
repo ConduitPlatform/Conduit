@@ -38,13 +38,4 @@ export class Config extends ConduitActiveSchema<Config> {
     Config._instance = new Config(database);
     return Config._instance;
   }
-
-  static getPlainSchema() {
-    return {
-      name: Config.getInstance().name,
-      fields: Config.getInstance().fields,
-      schemaOptions: Config.getInstance().schemaOptions,
-      collectionName: Config.getInstance().collectionName,
-    };
-  }
 }

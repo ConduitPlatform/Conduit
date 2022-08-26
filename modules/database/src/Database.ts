@@ -10,7 +10,7 @@ import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
-  CreateSchemaRequest,
+  Schema as SchemaDto,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -188,15 +188,12 @@ export default class DatabaseModule extends ManagedModule<void> {
    * @param call
    * @param callback
    */
-  async createSchemaFromAdapter(
-    call: GrpcRequest<CreateSchemaRequest>,
-    callback: SchemaResponse,
-  ) {
+  async createSchemaFromAdapter(call: GrpcRequest<SchemaDto>, callback: SchemaResponse) {
     const schema = new ConduitSchema(
-      call.request.schema!.name,
-      JSON.parse(call.request.schema!.modelSchema),
-      JSON.parse(call.request.schema!.modelOptions),
-      call.request.schema!.collectionName,
+      call.request.name,
+      JSON.parse(call.request.fields),
+      JSON.parse(call.request.options),
+      call.request.collectionName,
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -211,14 +208,14 @@ export default class DatabaseModule extends ManagedModule<void> {
         const originalSchema = {
           name: schemaAdapter.originalSchema.name,
           modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.options),
           collectionName: schemaAdapter.originalSchema.collectionName,
         };
         this.publishSchema({
-          name: call.request.schema!.name,
-          modelSchema: JSON.parse(call.request.schema!.modelSchema),
-          modelOptions: JSON.parse(call.request.schema!.modelOptions),
-          collectionName: call.request.schema!.collectionName,
+          name: call.request.name,
+          modelSchema: JSON.parse(call.request.options),
+          modelOptions: JSON.parse(call.request.options),
+          collectionName: call.request.collectionName,
           owner: schema.ownerModule,
         });
         callback(null, {
@@ -245,7 +242,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         schema: {
           name: schemaAdapter.name,
           modelSchema: JSON.stringify(schemaAdapter.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.schemaOptions),
+          modelOptions: JSON.stringify(schemaAdapter.options),
           collectionName: schemaAdapter.collectionName,
         },
       });
@@ -265,7 +262,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           return {
             name: schema.name,
             modelSchema: JSON.stringify(schema.modelSchema),
-            modelOptions: JSON.stringify(schema.schemaOptions),
+            modelOptions: JSON.stringify(schema.options),
             collectionName: schema.collectionName,
           };
         }),
@@ -317,13 +314,13 @@ export default class DatabaseModule extends ManagedModule<void> {
           const originalSchema = {
             name: schemaAdapter.originalSchema.name,
             modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-            modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
+            modelOptions: JSON.stringify(schemaAdapter.originalSchema.options),
             collectionName: schemaAdapter.originalSchema.collectionName,
           };
           this.publishSchema({
             name: call.request.extension.name,
             modelSchema: schemaAdapter.model,
-            modelOptions: schemaAdapter.originalSchema.schemaOptions,
+            modelOptions: schemaAdapter.originalSchema.options,
             collectionName: schemaAdapter.originalSchema.collectionName,
             owner: schemaAdapter.originalSchema.ownerModule,
           });

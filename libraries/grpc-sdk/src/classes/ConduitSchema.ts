@@ -1,21 +1,21 @@
-import { ConduitModel, ConduitModelOptions } from '../interfaces';
+import { ConduitModel, ConduitSchemaOptions } from '../interfaces';
 
 export class ConduitSchema {
   readonly name: string;
   readonly fields: ConduitModel;
   readonly collectionName: string | ''; // '' on implicit name, updated in createSchemaFromAdapter()
-  readonly schemaOptions: ConduitModelOptions;
+  readonly options: ConduitSchemaOptions;
   ownerModule: string = 'unknown';
 
   constructor(
     name: string,
     fields: ConduitModel,
-    schemaOptions?: ConduitModelOptions,
+    options?: ConduitSchemaOptions,
     collectionName?: string,
   ) {
     this.name = name;
     this.fields = fields;
-    this.schemaOptions = schemaOptions ?? {};
+    this.options = options ?? {};
     this.collectionName = collectionName && collectionName !== '' ? collectionName : '';
   }
 
