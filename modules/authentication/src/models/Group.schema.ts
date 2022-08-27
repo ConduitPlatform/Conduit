@@ -2,7 +2,6 @@ import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/gr
 
 const schema = {
   _id: TYPE.ObjectId,
-  // do not add unique again, since this will fail due to emails being null
   name: {
     type: TYPE.String,
     required: true,

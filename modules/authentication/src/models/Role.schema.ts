@@ -3,7 +3,6 @@ import { Group } from './Group.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  // do not add unique again, since this will fail due to emails being null
   name: {
     type: TYPE.String,
     required: true,
@@ -19,6 +18,10 @@ const schema = {
   },
   permissions: {
     canInvite: {
+      type: TYPE.Boolean,
+      default: false,
+    },
+    canEditRoles: {
       type: TYPE.Boolean,
       default: false,
     },

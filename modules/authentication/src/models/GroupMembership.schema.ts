@@ -5,7 +5,6 @@ import { Role } from './Role.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  // do not add unique again, since this will fail due to emails being null
   user: {
     type: TYPE.Relation,
     model: 'User',
