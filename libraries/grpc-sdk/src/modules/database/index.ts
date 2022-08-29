@@ -15,23 +15,23 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   getSchema(
     schemaName: string,
-  ): Promise<{ name: string; modelSchema: any; modelOptions: any }> {
+  ): Promise<{ name: string; fields: any; modelOptions: any }> {
     return this.client!.getSchema({ schemaName: schemaName }).then(res => {
       return {
         name: res.name,
-        modelSchema: JSON.parse(res.fields),
+        fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.options),
       };
     });
   }
 
-  getSchemas(): Promise<{ name: string; modelSchema: any; modelOptions: any }[]> {
+  getSchemas(): Promise<{ name: string; fields: any; modelOptions: any }[]> {
     return this.client!.getSchemas({}).then(res => {
       return res.schemas.map(
         (schema: { name: string; fields: string; options: string }) => {
           return {
             name: schema.name,
-            modelSchema: JSON.parse(schema.fields),
+            fields: JSON.parse(schema.fields),
             modelOptions: JSON.parse(schema.options),
           };
         },
@@ -63,7 +63,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.setSchemaExtension({
       extension: {
         name: extension.name,
-        fields: JSON.stringify(extension.fields ?? extension.modelSchema),
+        fields: JSON.stringify(extension.fields ?? extension.fields),
       },
     }).then(res => {
       return {

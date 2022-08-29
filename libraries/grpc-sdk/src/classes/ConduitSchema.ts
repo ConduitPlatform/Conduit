@@ -18,8 +18,4 @@ export class ConduitSchema {
     this.options = options ?? {};
     this.collectionName = collectionName && collectionName !== '' ? collectionName : '';
   }
-
-  get modelSchema(): ConduitModel {
-    return this.fields;
-  }
 }

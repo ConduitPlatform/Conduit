@@ -37,7 +37,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       (schema as Indexable).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.modelSchema, schema.options);
+    const mongooseSchema = new Schema(schema.fields, schema.options);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
@@ -148,7 +148,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         r = final.split('.');
         let controlBool = true;
         while (controlBool) {
-          if (this.originalSchema.modelSchema[r[0]]) {
+          if (this.originalSchema.fields[r[0]]) {
             controlBool = false;
           } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
             throw new Error("Failed populating '" + final + "'");
