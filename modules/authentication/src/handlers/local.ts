@@ -296,8 +296,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     email = email.toLowerCase();
 
     let user: User | null = await User.getInstance().findOne({ email });
-    const userExists = isNil(user);
-    if (!userExists) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
+    if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
 
     const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
@@ -358,8 +357,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     let email = call.request.params.email;
     const password = call.request.params.password;
     const context = call.request.context;
-    const contextIsNil = isNil(context);
-    if (contextIsNil) throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+    if (isNil(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
@@ -374,8 +373,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { email },
       '+hashedPassword',
     );
-    const userIsNil = isNil(user);
-    if (userIsNil)
+    if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await this._authenticateChecks(password, config, user);
 
@@ -411,8 +409,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const secret = await TwoFactorSecret.getInstance().findOne({
           userId: user._id,
         });
-        const secretIsNil = isNil(secret);
-        if (secretIsNil)
+        if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
         return { message: 'OTP required' };
       } else {
@@ -517,10 +514,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       { _id: passwordResetTokenDoc.userId },
       '+hashedPassword',
     );
-    const userIsNil = isNil(user);
-    const passwordIsNil = isNil(user?.hashedPassword);
-    if (userIsNil) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (passwordIsNil)
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user?.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not use password authentication',
@@ -611,8 +606,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const secret = await TwoFactorSecret.getInstance().findOne({
           userId: user._id,
         });
-        const secretIsNil = isNil(secret);
-        if (secretIsNil)
+        if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
         await Token.getInstance().create({
@@ -717,9 +711,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       userId: user._id,
       type: TokenType.CHANGE_PASSWORD_TOKEN,
     });
-
-    const tokenIsNil = isNil(token);
-    if (tokenIsNil) {
+    if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
     }
 
@@ -732,12 +724,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
       const secret = await TwoFactorSecret.getInstance().findOne({
         userId: user._id,
       });
-      const secretIsNil = isNil(secret);
-      if (secretIsNil) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+      if (isNil(secret))
+        throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
       const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-      const verificationIsNil = isNil(verification);
-      if (verificationIsNil)
+      if (isNil(verification))
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
@@ -765,8 +756,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       token: verificationTokenParam,
     });
-    const verificationTokenDocIsNil = isNil(verificationTokenDoc);
-    if (verificationTokenDocIsNil) {
+    if (isNil(verificationTokenDoc)) {
       const redisToken = await this.grpcSdk.state!.getKey(
         'verifiedToken_' + verificationTokenParam,
       );
@@ -783,8 +773,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User | null = await User.getInstance().findOne({
       _id: verificationTokenDoc.userId,
     });
-    const userIsNil = isNil(user);
-    if (userIsNil) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     user.isVerified = true;
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
@@ -815,15 +804,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.CHANGE_EMAIL_TOKEN,
       token: verificationToken,
     });
-    const tokenIsNil = isNil(token);
-    if (tokenIsNil) {
+    if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
     }
     const user: User | null = await User.getInstance().findOne({
       _id: token.userId,
     });
-    const userIsNil = isNil(token);
-    if (userIsNil) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     await Token.getInstance()
       .deleteMany({ userId: token.userId, type: TokenType.CHANGE_EMAIL_TOKEN })
       .catch(e => {
@@ -850,8 +837,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User | null = await User.getInstance().findOne({
       email: email,
     });
-    const userIsNil = isNil(user);
-    if (userIsNil) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isVerified)
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
 
@@ -859,8 +845,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       userId: user._id,
     });
-    const verificationTokenIsNil = isNil(verificationToken);
-    if (!verificationTokenIsNil) {
+    if (!isNil(verificationToken)) {
       const diffInMilliSec = Math.abs(
         new Date(verificationToken!.createdAt).getTime() - Date.now(),
       );
@@ -903,17 +888,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
-    const contextIsNil = isNil(context);
-    const contextIsEmpty = isEmpty(context);
 
-    if (contextIsNil || contextIsEmpty)
+    if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const clientId = context.clientId;
     const { email, code } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
-    const userIsNil = isNil(user);
-    if (userIsNil) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
+    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
     if (user.twoFaMethod == 'phone') {
       return await AuthUtils.verifyCode(
@@ -933,10 +915,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { method, phoneNumber } = call.request.params;
     const context = call.request.context;
-    const contextIsNil = isNil(context);
-    const userIsEmpty = isEmpty(context.user);
 
-    if (contextIsNil || userIsEmpty) {
+    if (isNil(context) || isEmpty(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
     if (context.user.hasTwoFA) {
@@ -1005,9 +985,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
     const { code } = call.request.params;
 
-    const contextIsNil = isNil(context);
-    const contextIsEmpty = isEmpty(context);
-    if (contextIsNil || contextIsEmpty) {
+    if (isNil(context) || isEmpty(context)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'User unauthenticated');
     }
     if (context.user.hasTwoFA) {
@@ -1017,12 +995,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const secret = await TwoFactorSecret.getInstance().findOne({
       userId: context.user._id,
     });
-    const secretIsNil = isNil(secret);
-    if (secretIsNil) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
+    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
     const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-    const verificationIsNil = isNil(verification);
-    if (verificationIsNil) {
+    if (isNil(verification)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     }
 
@@ -1041,9 +1017,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
     const { code } = call.request.params;
 
-    const contextIsNil = isNil(context);
-    const contextIsEmpty = isEmpty(context);
-    if (contextIsEmpty || contextIsNil) {
+    if (isNil(context) || isEmpty(context)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     }
 
@@ -1051,8 +1025,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       userId: context.user._id,
       type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
     });
-    const verificationRecordIsNil = isNil(verificationRecord);
-    if (verificationRecordIsNil)
+    if (isNil(verificationRecord))
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'No verification record for this user',
@@ -1092,9 +1065,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
 
-    const contextIsNil = isNil(context);
-    const userIsNil = isNil(context.user);
-    if (contextIsNil || userIsNil) {
+    if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
 
