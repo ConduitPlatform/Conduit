@@ -1,37 +1,25 @@
 import { GrpcRequest, GrpcResponse } from '@conduitplatform/grpc-sdk';
+import {
+  Schema as SchemaDto,
+  SchemaExtension as SchemaExtensionDto,
+} from './protoTypes/database';
 
-type Schema = {
-  name: string;
-  modelSchema: string;
-  modelOptions: string;
-  collectionName?: string;
-};
-
-type SchemaExtension = {
-  name: string;
-  modelSchema: string;
-};
-
-export type CreateSchemaRequest = GrpcRequest<{
-  schema: Schema;
-}>;
+export type CreateSchemaRequest = GrpcRequest<SchemaDto>;
 
 export type CreateSchemaExtensionRequest = GrpcRequest<{
-  extension: SchemaExtension;
+  extension: SchemaExtensionDto;
 }>;
 
 export type GetSchemaRequest = GrpcRequest<{
   schemaName: string;
 }>;
 
-export type SchemaResponse = GrpcResponse<{
-  schema: Schema;
-}>;
+export type SchemaResponse = GrpcResponse<SchemaDto>;
 
 export type GetSchemasRequest = GrpcRequest<{}>;
 
 export type SchemasResponse = GrpcResponse<{
-  schemas: Schema[];
+  schemas: SchemaDto[];
 }>;
 
 export type FindOneRequest = GrpcRequest<{

@@ -205,12 +205,6 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter
       .createSchemaFromAdapter(schema, false, true)
       .then((schemaAdapter: Schema) => {
-        const originalSchema = {
-          name: schemaAdapter.originalSchema.name,
-          modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.options),
-          collectionName: schemaAdapter.originalSchema.collectionName,
-        };
         this.publishSchema({
           name: call.request.name,
           modelSchema: JSON.parse(call.request.options),
@@ -219,7 +213,10 @@ export default class DatabaseModule extends ManagedModule<void> {
           owner: schema.ownerModule,
         });
         callback(null, {
-          schema: originalSchema,
+          name: schemaAdapter.originalSchema.name,
+          fields: JSON.stringify(schemaAdapter.originalSchema.fields),
+          options: JSON.stringify(schemaAdapter.originalSchema.options),
+          collectionName: schemaAdapter.originalSchema.collectionName,
         });
       })
       .catch(err => {
@@ -239,12 +236,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
       callback(null, {
-        schema: {
-          name: schemaAdapter.name,
-          modelSchema: JSON.stringify(schemaAdapter.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.options),
-          collectionName: schemaAdapter.collectionName,
-        },
+        name: schemaAdapter.name,
+        fields: JSON.stringify(schemaAdapter.fields),
+        options: JSON.stringify(schemaAdapter.options),
+        collectionName: schemaAdapter.collectionName,
       });
     } catch (err) {
       callback({
@@ -261,8 +256,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         schemas: schemas.map(schema => {
           return {
             name: schema.name,
-            modelSchema: JSON.stringify(schema.modelSchema),
-            modelOptions: JSON.stringify(schema.options),
+            fields: JSON.stringify(schema.fields),
+            options: JSON.stringify(schema.options),
             collectionName: schema.collectionName,
           };
         }),
@@ -303,7 +298,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemaName = call.request.extension.name;
       const extOwner = call.metadata!.get('module-name')![0] as string;
-      const extModel = JSON.parse(call.request.extension.modelSchema);
+      const extModel = JSON.parse(call.request.extension.fields);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -311,21 +306,18 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
-          const originalSchema = {
-            name: schemaAdapter.originalSchema.name,
-            modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-            modelOptions: JSON.stringify(schemaAdapter.originalSchema.options),
-            collectionName: schemaAdapter.originalSchema.collectionName,
-          };
           this.publishSchema({
             name: call.request.extension.name,
-            modelSchema: schemaAdapter.model,
-            modelOptions: schemaAdapter.originalSchema.options,
+            schema: schemaAdapter.model,
+            options: schemaAdapter.originalSchema.options,
             collectionName: schemaAdapter.originalSchema.collectionName,
             owner: schemaAdapter.originalSchema.ownerModule,
           });
           callback(null, {
-            schema: originalSchema,
+            name: schemaAdapter.originalSchema.name,
+            fields: JSON.stringify(schemaAdapter.originalSchema.fields),
+            options: JSON.stringify(schemaAdapter.originalSchema.options),
+            collectionName: schemaAdapter.originalSchema.collectionName,
           });
         })
         .catch(err => {
