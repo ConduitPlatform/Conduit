@@ -572,7 +572,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const passwordsMatch = await AuthUtils.checkPassword(
       oldPassword,
-      dbUser!.hashedPassword!,
+      dbUser.hashedPassword!,
     );
     if (!passwordsMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
@@ -580,10 +580,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    if (dbUser!.hasTwoFA) {
+    if (dbUser.hasTwoFA) {
       await Token.getInstance()
         .deleteMany({
-          userId: dbUser!._id,
+          userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
         })
         .catch(e => {
@@ -593,13 +593,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       if (user.twoFaMethod === 'phone') {
         const verificationSid = await AuthUtils.sendVerificationCode(
           this.smsModule,
-          dbUser!.phoneNumber!,
+          dbUser.phoneNumber!,
         );
         if (verificationSid === '') {
           throw new GrpcError(status.INTERNAL, 'Could not send verification code');
         }
         await Token.getInstance().create({
-          userId: dbUser!._id,
+          userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
           token: verificationSid,
           data: {
@@ -616,7 +616,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
         await Token.getInstance().create({
-          userId: dbUser!._id,
+          userId: dbUser._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
           token: uuid(),
           data: {
@@ -629,7 +629,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
     }
 
-    await User.getInstance().findByIdAndUpdate(dbUser!._id, { hashedPassword });
+    await User.getInstance().findByIdAndUpdate(dbUser._id, { hashedPassword });
     return 'Password changed successfully';
   }
 
