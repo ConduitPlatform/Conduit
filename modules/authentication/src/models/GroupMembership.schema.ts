@@ -48,7 +48,7 @@ export class GroupMembership extends ConduitActiveSchema<GroupMembership> {
   user: string | User;
   memberships: {
     group: string | Group;
-    role: string[] | Role[];
+    roles: string[] | Role[];
   }[];
   createdAt: Date;
   updatedAt: Date;

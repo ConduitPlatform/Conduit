@@ -13,10 +13,14 @@ import ConduitGrpcSdk, {
 import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
 import { User, Service } from '../models';
+import { GroupAdmin } from './groups';
+import { RoleAdmin } from './roles';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly serviceAdmin: ServiceAdmin;
+  private readonly groupAdmin: GroupAdmin;
+  private readonly roleAdmin: RoleAdmin;
 
   constructor(
     private readonly server: GrpcServer,
@@ -24,6 +28,8 @@ export class AdminHandlers {
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
+    this.groupAdmin = new GroupAdmin(this.grpcSdk);
+    this.roleAdmin = new RoleAdmin(this.grpcSdk);
     this.registerAdminRoutes();
   }
 
@@ -43,6 +49,17 @@ export class AdminHandlers {
         createService: this.serviceAdmin.createService.bind(this),
         deleteService: this.serviceAdmin.deleteService.bind(this),
         renewServiceToken: this.serviceAdmin.renewToken.bind(this),
+        getGroups: this.groupAdmin.getGroups.bind(this),
+        deleteGroup: this.groupAdmin.deleteGroup.bind(this),
+        createGroup: this.groupAdmin.createGroup.bind(this),
+        patchGroup: this.groupAdmin.patchGroup.bind(this),
+        getRoles: this.roleAdmin.getRoles.bind(this),
+        deleteRole: this.roleAdmin.deleteRole.bind(this),
+        createRole: this.roleAdmin.createRole.bind(this),
+        patchRole: this.roleAdmin.patchRole.bind(this),
+        addToGroup: this.groupAdmin.addToGroup.bind(this),
+        removeFromGroup: this.groupAdmin.removeFromGroup.bind(this),
+        modifyRole: this.groupAdmin.modifyRole.bind(this),
       })
       .catch((err: Error) => {
         ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
@@ -223,6 +240,9 @@ export class AdminHandlers {
         }),
         'renewServiceToken',
       ),
+      // Group Routes
+      ...this.groupAdmin.getRoutes(),
+      ...this.roleAdmin.getRoutes(),
     ];
   }
 }
