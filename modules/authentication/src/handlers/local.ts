@@ -566,25 +566,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
     }
 
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-    const dbUserIsNil = isNil(dbUser);
-    if (dbUserIsNil) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    const passwordIsNil = isNil(dbUser.hashedPassword);
-    if (passwordIsNil) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
+    const dbUser = await AuthUtils.dbUserChecks(user).catch(error => {
+      throw error;
+    });
 
     const passwordsMatch = await AuthUtils.checkPassword(
       oldPassword,
-      dbUser.hashedPassword!,
+      dbUser!.hashedPassword!,
     );
     if (!passwordsMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
@@ -592,10 +580,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    if (dbUser.hasTwoFA) {
+    if (dbUser!.hasTwoFA) {
       await Token.getInstance()
         .deleteMany({
-          userId: dbUser._id,
+          userId: dbUser!._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
         })
         .catch(e => {
@@ -605,13 +593,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       if (user.twoFaMethod === 'phone') {
         const verificationSid = await AuthUtils.sendVerificationCode(
           this.smsModule,
-          dbUser.phoneNumber!,
+          dbUser!.phoneNumber!,
         );
         if (verificationSid === '') {
           throw new GrpcError(status.INTERNAL, 'Could not send verification code');
         }
         await Token.getInstance().create({
-          userId: dbUser._id,
+          userId: dbUser!._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
           token: verificationSid,
           data: {
@@ -624,11 +612,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
           userId: user._id,
         });
         const secretIsNil = isNil(secret);
-        if (isNil(secret))
+        if (secretIsNil)
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
         await Token.getInstance().create({
-          userId: dbUser._id,
+          userId: dbUser!._id,
           type: TokenType.CHANGE_PASSWORD_TOKEN,
           token: uuid(),
           data: {
@@ -641,7 +629,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
     }
 
-    await User.getInstance().findByIdAndUpdate(dbUser._id, { hashedPassword });
+    await User.getInstance().findByIdAndUpdate(dbUser!._id, { hashedPassword });
     return 'Password changed successfully';
   }
 
@@ -668,21 +656,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-    const isNilDbUser = isNil(dbUser);
-    if (isNilDbUser) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    const isNilHashedPassword = isNil(dbUser?.hashedPassword);
-    if (isNilHashedPassword) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
+    const dbUser = await AuthUtils.dbUserChecks(user).catch(error => {
+      throw error;
+    });
+
     const passwordsMatch = await AuthUtils.checkPassword(
       password,
       dbUser.hashedPassword!,

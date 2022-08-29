@@ -19,6 +19,25 @@ export namespace AuthUtils {
     return crypto.randomBytes(size).toString('base64');
   }
 
+  export async function dbUserChecks(user: User) {
+    const dbUser: User | null = await User.getInstance().findOne(
+      { _id: user._id },
+      '+hashedPassword',
+    );
+    const isNilDbUser = isNil(dbUser);
+    if (isNilDbUser) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
+    }
+    const isNilHashedPassword = isNil(dbUser?.hashedPassword);
+    if (isNilHashedPassword) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    }
+    return dbUser;
+  }
+
   export function signToken(data: { [key: string]: any }, options: ISignTokenOptions) {
     const { secret, expiresIn } = options;
     return jwt.sign(data, secret, { expiresIn });
