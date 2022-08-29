@@ -115,8 +115,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         if (receivedSchema.name) {
           const schema = new ConduitSchema(
             receivedSchema.name,
-            receivedSchema.modelSchema,
-            receivedSchema.modelOptions,
+            receivedSchema.fields,
+            receivedSchema.options,
             receivedSchema.collectionName,
           );
           schema.ownerModule = receivedSchema.ownerModule;
@@ -207,8 +207,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       .then((schemaAdapter: Schema) => {
         this.publishSchema({
           name: call.request.name,
-          modelSchema: JSON.parse(call.request.options),
-          modelOptions: JSON.parse(call.request.options),
+          fields: JSON.parse(call.request.options),
+          options: JSON.parse(call.request.options),
           collectionName: call.request.collectionName,
           owner: schema.ownerModule,
         });
