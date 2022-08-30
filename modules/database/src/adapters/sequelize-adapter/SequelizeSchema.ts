@@ -21,7 +21,7 @@ import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-
 const deepdash = require('deepdash/standalone');
 
 const incrementDbQueries = () =>
-  ConduitGrpcSdk.Metrics.increment('database_queries_total');
+  ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
