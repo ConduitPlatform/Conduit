@@ -69,53 +69,18 @@ export class GroupHandlers implements IAuthenticationStrategy {
     }
     const userMembership = await GroupMembership.getInstance().findOne({
       group: groupId,
-      role: { $in: roles.map(role => role._id) },
+      roles: { $in: roles.map(role => role._id) },
       user: user._id,
     });
     if (isNil(userMembership)) {
       throw new GrpcError(status.PERMISSION_DENIED, 'User does not have invite access');
     }
-    const requestedRole = await Role.getInstance().findOne({
-      _id: inviteeRole,
-    });
-    if (isNil(requestedRole)) {
-      throw new GrpcError(status.NOT_FOUND, 'Role does not exist');
-    }
-    let permissions:
-      | {
-          canInvite: boolean;
-          canRemove: boolean;
-          canDeleteGroup: boolean;
-          canCreateGroup: boolean;
-        }
-      | any = {
-      canInvite: false,
-      canRemove: false,
-      canDeleteGroup: false,
-      canCreateGroup: false,
-    };
-    roles.forEach(role => {
-      Object.keys(role.permissions).forEach(permission => {
-        if (isNil(permissions[permission])) {
-          permissions[permission] = role.permissions[permission];
-        } else if (!permissions[permission] && role.permissions[permission]) {
-          permissions[permission] = role.permissions[permission];
-        }
-      });
-    });
-    let elevatedPermissions = false;
-    Object.keys(permissions).forEach(permission => {
-      if (!permissions[permission] && requestedRole.permissions[permission]) {
-        elevatedPermissions = true;
-      }
-    });
-    if (elevatedPermissions) {
+    if (!(userMembership.roles as string[]).includes(inviteeRole._id)) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'Cannot invite user with elevated permissions',
+        'Cannot assign role that current user does not have',
       );
     }
-
     await Token.getInstance().create({
       user: inviteeId,
       type: TokenType.GROUP_INVITE,
@@ -130,19 +95,161 @@ export class GroupHandlers implements IAuthenticationStrategy {
     return 'User invited!';
   }
 
-  async userInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+  async userInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const tokens = await Token.getInstance().findMany({
+      user: user._id,
+      type: TokenType.GROUP_INVITE,
+    });
+    return { tokens };
+  }
 
-  async inviteResponse(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+  async inviteResponse(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { inviteToken, response } = call.request.params;
+    const invitation = await Token.getInstance().findOne({
+      user: user._id,
+      type: TokenType.GROUP_INVITE,
+      token: inviteToken,
+    });
+    if (isNil(invitation)) {
+      throw new GrpcError(status.NOT_FOUND, 'Invitation not found');
+    }
+    if (!response) {
+      await Token.getInstance().deleteOne({
+        _id: invitation._id,
+      });
+      return { message: 'Invitation declined' };
+    }
 
-  async removeFromGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+    const group = await Group.getInstance().findOne({
+      _id: invitation.data.group,
+    });
+    if (isNil(group)) {
+      throw new GrpcError(status.NOT_FOUND, 'Group not found');
+    }
+    const role = await Role.getInstance().findOne({
+      _id: invitation.data.role,
+    });
+    if (isNil(role)) {
+      throw new GrpcError(status.NOT_FOUND, 'Role not found');
+    }
+    const groupMembership = await GroupMembership.getInstance().create({
+      group: group._id,
+      user: user._id,
+      roles: [role._id],
+    });
+    await Token.getInstance().deleteOne({
+      _id: invitation._id,
+    });
+    return { groupMembership };
+  }
 
-  async modifyUserRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+  async removeFromGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { groupId } = call.request.params;
+    let userId: string | null = call.request.params.userId;
+    if (isNil(userId)) {
+      await GroupMembership.getInstance().deleteOne({
+        group: groupId,
+        user: user._id,
+      });
+      return 'User removed from group';
+    }
 
-  async createGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+    let userToRemove = await User.getInstance().findOne({
+      _id: userId,
+    });
+    if (isNil(userToRemove)) {
+      throw new GrpcError(status.NOT_FOUND, 'User not found');
+    }
+    let removalRoles = await Role.getInstance().findMany({
+      group: groupId,
+      permissions: {
+        canRemove: true,
+      },
+    });
 
-  async editGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+    let userRole = await GroupMembership.getInstance().findOne({
+      group: groupId,
+      user: user._id,
+      roles: { $in: removalRoles.map(role => role._id) },
+    });
 
-  async deleteRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {}
+    if (isNil(userRole)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to remove',
+      );
+    }
+
+    await GroupMembership.getInstance().deleteOne({
+      group: groupId,
+      user: userToRemove._id,
+    });
+    return 'User removed from group!';
+  }
+
+  async modifyUserRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { groupId, userId, roles } = call.request.params;
+
+    const userToModify = await User.getInstance().findOne({
+      _id: userId,
+    });
+    if (isNil(userToModify)) {
+      throw new GrpcError(status.NOT_FOUND, 'User not found');
+    }
+    const groupCheck = await GroupMembership.getInstance().findOne({
+      group: groupId,
+      user: userToModify._id,
+    });
+    if (isNil(groupCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'User to modify is not in requested group');
+    }
+    const currentUserCheck = await GroupMembership.getInstance().findOne({
+      group: groupId,
+      user: user._id,
+    });
+    if (isNil(currentUserCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'Current user not in requested group');
+    }
+
+    const validRoles = (currentUserCheck.roles as string[]).filter((role: string) => {
+      return roles.includes(role);
+    });
+    if (validRoles.length !== roles.length) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Cannot assign roles you do not have',
+      );
+    }
+    await GroupMembership.getInstance().findByIdAndUpdate(
+      groupCheck._id,
+      {
+        roles,
+      },
+      true,
+    );
+
+    return 'User roles updated!';
+  }
+
+  async createGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return 'User invited!';
+  }
+
+  async editGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return 'User invited!';
+  }
+
+  async deleteRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return 'User invited!';
+  }
+
+  async createRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    return 'User invited!';
+  }
 
   declareRoutes(routingManager: RoutingManager, config: Config): void {
     routingManager.route(

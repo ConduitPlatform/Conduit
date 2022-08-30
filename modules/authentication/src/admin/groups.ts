@@ -229,30 +229,10 @@ export class GroupAdmin {
     let groupMemberships: GroupMembership | null =
       await GroupMembership.getInstance().findOne({
         user,
+        group: id,
       });
     if (!isNil(groupMemberships)) {
-      let isMember = false;
-      groupMemberships.memberships.forEach(membership => {
-        if (membership.group === id) {
-          isMember = true;
-        }
-      });
-      if (isMember) {
-        throw new GrpcError(status.NOT_FOUND, 'User already in group');
-      }
-      if (isNil(roles) || roles.length === 0) {
-        let role = await Role.getInstance().findOne({ group: id, isDefault: true });
-        if (isNil(role)) {
-          throw new GrpcError(
-            status.NOT_FOUND,
-            'Role not provided and no default role found',
-          );
-        }
-        roles = [role];
-      }
-      await GroupMembership.getInstance().findByIdAndUpdate(groupMemberships._id, {
-        memberships: [...groupMemberships.memberships, { group: id, roles }],
-      });
+      throw new GrpcError(status.NOT_FOUND, 'User already in group');
     } else {
       if (isNil(roles) || roles.length === 0) {
         let role = await Role.getInstance().findOne({ group: id, isDefault: true });
@@ -266,7 +246,8 @@ export class GroupAdmin {
       }
       groupMemberships = await GroupMembership.getInstance().create({
         user,
-        memberships: [{ group: id, roles }],
+        group: id,
+        roles,
       });
     }
     this.grpcSdk.bus?.publish(
@@ -285,26 +266,15 @@ export class GroupAdmin {
     let groupMemberships: GroupMembership | null =
       await GroupMembership.getInstance().findOne({
         user: id,
+        group,
       });
     if (isNil(groupMemberships)) {
       throw new GrpcError(status.NOT_FOUND, 'User is not in group');
     } else {
-      let isMember = false;
-      groupMemberships.memberships.forEach(membership => {
-        if (membership.group === group) {
-          isMember = true;
-        }
+      await GroupMembership.getInstance().deleteOne({
+        user: id,
+        group,
       });
-      if (!isMember) {
-        throw new GrpcError(status.NOT_FOUND, 'User is not in group');
-      }
-      groupMemberships.memberships = groupMemberships.memberships.filter(
-        membership => membership.group !== group,
-      );
-      await GroupMembership.getInstance().findByIdAndUpdate(
-        groupMemberships._id,
-        groupMemberships,
-      );
     }
     this.grpcSdk.bus?.publish(
       'authentication:remove:user:group',
@@ -323,25 +293,12 @@ export class GroupAdmin {
     let groupMemberships: GroupMembership | null =
       await GroupMembership.getInstance().findOne({
         user: id,
+        group,
       });
     if (isNil(groupMemberships)) {
       throw new GrpcError(status.NOT_FOUND, 'User is not in group');
     } else {
-      let isMember = false;
-      groupMemberships.memberships.forEach(membership => {
-        if (membership.group === group) {
-          isMember = true;
-        }
-      });
-      if (!isMember) {
-        throw new GrpcError(status.NOT_FOUND, 'User not in group');
-      }
-      groupMemberships.memberships = groupMemberships.memberships.map(membership => {
-        if (membership.group === group) {
-          membership.roles = roles;
-        }
-        return membership;
-      });
+      groupMemberships.roles = roles;
       await GroupMembership.getInstance().findByIdAndUpdate(
         groupMemberships._id,
         groupMemberships,
