@@ -561,17 +561,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
     }
 
-    const dbUser = await AuthUtils.dbUserChecks(user).catch(error => {
+    const dbUser = await AuthUtils.dbUserChecks(user, oldPassword).catch(error => {
       throw error;
     });
-
-    const passwordsMatch = await AuthUtils.checkPassword(
-      oldPassword,
-      dbUser.hashedPassword!,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
@@ -650,40 +642,23 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser = await AuthUtils.dbUserChecks(user).catch(error => {
+    const dbUser = await AuthUtils.dbUserChecks(user, password).catch(error => {
       throw error;
     });
 
-    const passwordsMatch = await AuthUtils.checkPassword(
-      password,
-      dbUser.hashedPassword!,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
-
     if (config.local.verification.required) {
-      await Token.getInstance()
-        .deleteMany({
-          userId: dbUser._id,
-          type: TokenType.CHANGE_EMAIL_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      const verificationToken: Token = await Token.getInstance().create({
-        userId: dbUser._id,
-        type: TokenType.CHANGE_EMAIL_TOKEN,
-        token: uuid(),
-        data: {
-          email: newEmail,
-        },
+      const verificationToken: Token | void = await AuthUtils.tokenRecreation(
+        dbUser._id,
+        { email: newEmail },
+        TokenType.CHANGE_EMAIL_TOKEN,
+      ).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
       });
       if (this.sendVerificationEmail) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
-        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
+        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken?.token}`;
         await this.emailModule
           .sendEmail('ChangeEmailVerification', {
             email: newEmail,
@@ -932,23 +907,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
 
-      await Token.getInstance()
-        .deleteMany({
-          userId: context.user._id,
-          type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-
-      await Token.getInstance().create({
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-        token: verificationSid,
-        data: {
-          phoneNumber,
-        },
-      });
+      await AuthUtils.tokenRecreation(
+        context.user._id,
+        { data: phoneNumber },
+        TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      ).catch(e => ConduitGrpcSdk.Logger.error(e));
 
       await User.getInstance().findByIdAndUpdate(context.user._id, {
         twoFaMethod: 'phone',
