@@ -345,7 +345,7 @@ export class CustomEndpointsAdmin {
     return { schemas };
   }
 
-  async findSchema(
+  private async findSchema(
     selectedSchema: string,
     selectedSchemaName: string,
     operation: number,
