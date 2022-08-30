@@ -63,6 +63,7 @@ export class Role extends ConduitActiveSchema<Role> {
   permissions: {
     canInvite: boolean;
     canRemove: boolean;
+    canEditRoles: boolean;
     canDeleteGroup: boolean;
     canCreateGroup: boolean;
   };

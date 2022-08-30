@@ -10,20 +10,16 @@ const schema = {
     model: 'User',
     required: true,
   },
-  memberships: [
+  group: {
+    type: TYPE.Relation,
+    model: 'Group',
+    required: true,
+  },
+  roles: [
     {
-      group: {
-        type: TYPE.Relation,
-        model: 'Group',
-        required: true,
-      },
-      roles: [
-        {
-          type: TYPE.Relation,
-          model: 'Role',
-          required: true,
-        },
-      ],
+      type: TYPE.Relation,
+      model: 'Role',
+      required: true,
     },
   ],
   createdAt: TYPE.Date,
@@ -46,10 +42,8 @@ export class GroupMembership extends ConduitActiveSchema<GroupMembership> {
   private static _instance: GroupMembership;
   _id: string;
   user: string | User;
-  memberships: {
-    group: string | Group;
-    roles: string[] | Role[];
-  }[];
+  group: string | Group;
+  roles: string[] | Role[];
   createdAt: Date;
   updatedAt: Date;
 
