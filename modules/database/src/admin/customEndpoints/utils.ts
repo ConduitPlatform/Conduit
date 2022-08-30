@@ -1,7 +1,6 @@
-import { GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil, isPlainObject } from 'lodash';
 import { OperationsEnum } from './customEndpoints.admin';
-import { status } from '@grpc/grpc-js';
 
 /**
  * Query schema:

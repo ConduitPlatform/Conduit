@@ -13,7 +13,7 @@ import {
   paramValidation,
   operationValidation,
 } from './utils';
-import { isNil, isPlainObject } from 'lodash';
+import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
