@@ -285,13 +285,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { email, password } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
+    const password = call.request.params.password;
 
-    if (AuthUtils.invalidEmailAddress(email)) {
+    const invalidAddress = AuthUtils.invalidEmailAddress(email);
+    if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
-
-    email = email.toLowerCase();
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
@@ -352,14 +352,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    let { email, password } = call.request.params;
+    let email = call.request.params.email;
+    const password = call.request.params.password;
     const context = call.request.context;
     if (isNil(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
-
-    if (AuthUtils.invalidEmailAddress(email)) {
+    const invalidAddress = AuthUtils.invalidEmailAddress(email);
+    if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
@@ -558,28 +559,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
     }
 
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-
-    if (isNil(dbUser)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    if (isNil(dbUser.hashedPassword)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
-
-    const passwordsMatch = await AuthUtils.checkPassword(
-      oldPassword,
-      dbUser.hashedPassword,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
+    const dbUser = await AuthUtils.dbUserChecks(user, oldPassword).catch(error => {
+      throw error;
+    });
 
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
@@ -650,56 +632,33 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'The new email can not be the same as the old email',
       );
     }
-    if (AuthUtils.invalidEmailAddress(newEmail)) {
+    const invalidAddress = AuthUtils.invalidEmailAddress(newEmail);
+    if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
     const dupEmailUser = await User.getInstance().findOne({ email: newEmail });
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-    if (isNil(dbUser)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    if (isNil(dbUser.hashedPassword)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
-    const passwordsMatch = await AuthUtils.checkPassword(
-      password,
-      dbUser.hashedPassword!,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
+    const dbUser = await AuthUtils.dbUserChecks(user, password).catch(error => {
+      throw error;
+    });
 
     if (config.local.verification.required) {
-      await Token.getInstance()
-        .deleteMany({
-          userId: dbUser._id,
-          type: TokenType.CHANGE_EMAIL_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      const verificationToken: Token = await Token.getInstance().create({
-        userId: dbUser._id,
-        type: TokenType.CHANGE_EMAIL_TOKEN,
-        token: uuid(),
-        data: {
-          email: newEmail,
-        },
+      const verificationToken: Token | void = await AuthUtils.createToken(
+        dbUser._id,
+        { email: newEmail },
+        TokenType.CHANGE_EMAIL_TOKEN,
+      ).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
       });
       if (this.sendVerificationEmail) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
-        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken.token}`;
+        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${
+          result.verificationToken!.token
+        }`;
         await this.emailModule
           .sendEmail('ChangeEmailVerification', {
             email: newEmail,
@@ -727,7 +686,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       userId: user._id,
       type: TokenType.CHANGE_PASSWORD_TOKEN,
     });
-
     if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
     }
@@ -773,7 +731,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       token: verificationTokenParam,
     });
-
     if (isNil(verificationTokenDoc)) {
       const redisToken = await this.grpcSdk.state!.getKey(
         'verifiedToken_' + verificationTokenParam,
@@ -847,7 +804,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     let { email } = call.request.params;
-    if (AuthUtils.invalidEmailAddress(email)) {
+    const invalidAddress = AuthUtils.invalidEmailAddress(email);
+    if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
     email = email.toLowerCase();
@@ -905,13 +863,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
+
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const clientId = context.clientId;
     const { email, code } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
-
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
 
     if (user.twoFaMethod == 'phone') {
@@ -949,23 +907,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
 
-      await Token.getInstance()
-        .deleteMany({
-          userId: context.user._id,
-          type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-
-      await Token.getInstance().create({
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-        token: verificationSid,
-        data: {
-          phoneNumber,
-        },
-      });
+      await AuthUtils.createToken(
+        context.user._id,
+        { data: phoneNumber },
+        TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      ).catch(e => ConduitGrpcSdk.Logger.error(e));
 
       await User.getInstance().findByIdAndUpdate(context.user._id, {
         twoFaMethod: 'phone',
@@ -1081,6 +1027,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
+
     if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
