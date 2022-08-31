@@ -68,7 +68,7 @@ export class CustomEndpointsAdmin {
     const {
       name,
       operation,
-      selectedSchema,
+      selectedSchema, // if changed, update utils.schemaValidation()
       selectedSchemaName,
       inputs,
       query,
@@ -82,7 +82,6 @@ export class CustomEndpointsAdmin {
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
     const findSchema: Indexable | null = await this.findSchema(
       selectedSchema,
       selectedSchemaName,
@@ -91,12 +90,10 @@ export class CustomEndpointsAdmin {
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-
     error = operationValidation(operation, query, assignments);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
     error = inputValidation(inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);

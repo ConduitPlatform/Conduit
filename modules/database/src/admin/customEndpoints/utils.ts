@@ -154,7 +154,7 @@ function _inputValidation(
   return true;
 }
 
-export function inputValidation(inputs: Indexable | null): boolean | string {
+export function inputValidation(inputs?: Indexable | null): boolean | string {
   if (!isNil(inputs) && inputs.length) {
     inputs.forEach((r: Indexable) => {
       const error = _inputValidation(r.name, r.type, r.location, r.array);
@@ -231,7 +231,7 @@ export function assignmentValidation(
 export function paramValidation(params: Indexable): boolean | string {
   const { name, operation, selectedSchema, selectedSchemaName, query, assignments } =
     params;
-  const error = _selectedSchemaValidation(selectedSchema, selectedSchemaName);
+  const error = selectedSchemaValidation(selectedSchema, selectedSchemaName);
   if (error !== true) {
     return error as string;
   }
@@ -255,7 +255,7 @@ export function paramValidation(params: Indexable): boolean | string {
   return true;
 }
 
-function _selectedSchemaValidation(
+function selectedSchemaValidation(
   selectedSchema: string,
   selectedSchemaName: string,
 ): boolean | string {
