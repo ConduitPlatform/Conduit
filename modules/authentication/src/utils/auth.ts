@@ -21,7 +21,7 @@ export namespace AuthUtils {
     return crypto.randomBytes(size).toString('base64');
   }
 
-  export async function tokenRecreation(
+  export async function createToken(
     dbUserId: string,
     data: Indexable,
     tokenType: string,

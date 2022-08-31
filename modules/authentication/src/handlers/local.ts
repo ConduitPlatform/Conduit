@@ -515,7 +515,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
-    if (isNil(user?.hashedPassword))
+    if (isNil(user.hashedPassword))
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not use password authentication',
@@ -647,7 +647,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
 
     if (config.local.verification.required) {
-      const verificationToken: Token | void = await AuthUtils.tokenRecreation(
+      const verificationToken: Token | void = await AuthUtils.createToken(
         dbUser._id,
         { email: newEmail },
         TokenType.CHANGE_EMAIL_TOKEN,
@@ -658,7 +658,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
-        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${result.verificationToken?.token}`;
+        const link = `${result.hostUrl}/hook/authentication/verify-change-email/${
+          result.verificationToken!.token
+        }`;
         await this.emailModule
           .sendEmail('ChangeEmailVerification', {
             email: newEmail,
@@ -822,7 +824,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
     if (!isNil(verificationToken)) {
       const diffInMilliSec = Math.abs(
-        new Date(verificationToken!.createdAt).getTime() - Date.now(),
+        new Date(verificationToken.createdAt).getTime() - Date.now(),
       );
       if (diffInMilliSec < 600000) {
         const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
@@ -891,7 +893,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const { method, phoneNumber } = call.request.params;
     const context = call.request.context;
 
-    if (isNil(context) || isEmpty(context.user)) {
+    if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
     if (context.user.hasTwoFA) {
@@ -907,7 +909,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         throw new GrpcError(status.INTERNAL, 'Could not send verification code');
       }
 
-      await AuthUtils.tokenRecreation(
+      await AuthUtils.createToken(
         context.user._id,
         { data: phoneNumber },
         TokenType.VERIFY_PHONE_NUMBER_TOKEN,
