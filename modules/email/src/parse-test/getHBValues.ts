@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-export function getHBValues(text: any) {
+export function getHandleBarsValues(text: any) {
   const re = /{{[{]?(.*?)[}]?}}/g;
   const tags = [];
   let matches;

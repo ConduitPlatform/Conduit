@@ -5,7 +5,7 @@ import { Mandrill } from 'mandrill-api';
 import { Template } from '../../interfaces/Template';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
 import { MandrillBuilder } from './mandrillBuilder';
-import { getHBValues } from '../../parse-test/getHBValues';
+import { getHandleBarsValues } from '../../utils';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
 import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate';
 
@@ -52,7 +52,7 @@ export class MandrillProvider extends EmailProviderClass {
           active: true,
           updatedAt: response.updated_at,
           body: response.code,
-          variables: Object.keys(getHBValues(response.code)),
+          variables: Object.keys(getHandleBarsValues(response.code)),
         },
       ],
       createdAt: response.created_at,
@@ -73,7 +73,7 @@ export class MandrillProvider extends EmailProviderClass {
       ),
     );
     const created = await this.getTemplateInfo(response.slug);
-    created.versions[0].variables = Object.keys(getHBValues(data.body));
+    created.versions[0].variables = Object.keys(getHandleBarsValues(data.body));
     return created;
   }
 
