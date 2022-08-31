@@ -1,10 +1,13 @@
 import ConduitGrpcSdk, {
+  ConduitBoolean,
+  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
   ParsedRouterRequest,
   RoutingManager,
+  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
@@ -100,7 +103,7 @@ export class GroupHandlers implements IAuthenticationStrategy {
       user: user._id,
       type: TokenType.GROUP_INVITE,
     });
-    return { tokens };
+    return { invites: tokens };
   }
 
   async inviteResponse(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -480,105 +483,179 @@ export class GroupHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition(
-        'GroupMembership',
-        GroupMembership.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('GroupMemberships', {
+        groupMemberships: ['GroupMembership'],
+      }),
       this.getGroups.bind(this),
     );
     routingManager.route(
       {
-        path: '/user',
-        description: `Deletes the authenticated user.`,
-        action: ConduitRouteActions.DELETE,
+        path: '/user/groups',
+        bodyParams: {
+          name: ConduitString.Required,
+          parentGroup: ConduitObjectId.Optional,
+          isDefault: ConduitBoolean.Optional,
+          isRealm: ConduitBoolean.Optional,
+        },
+        description: `Creates a new group`,
+        action: ConduitRouteActions.POST,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
+      new ConduitRouteReturnDefinition('Group', Group.getInstance().fields),
+      this.createGroup.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user/groups/invitations',
+        description: `Get current user's invitations to join a group.`,
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('UserInvitations', {
+        invites: [Token.getInstance().fields],
+      }),
+      this.userInvites.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user/groups/invitations/:inviteId/:action',
+        urlParams: {
+          inviteId: ConduitObjectId.Required,
+          action: ConduitBoolean.Required,
+        },
+        description: `Accepts or declines an invitation to join a group.`,
+        action: ConduitRouteActions.POST,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('InviteResponse', {
+        message: ConduitString.Optional,
+        groupMembership: { type: GroupMembership.getInstance().fields, required: false },
+      }),
+      this.inviteResponse.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user/groups/:groupId',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+        },
+        description: `Get current user's role in specific group.`,
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition(
+        'GroupMembership',
+        GroupMembership.getInstance().fields,
+      ),
       this.getGroupRole.bind(this),
     );
 
     routingManager.route(
       {
-        path: '/renew',
+        path: '/user/groups/:groupId',
         action: ConduitRouteActions.POST,
-        description: `Renews the access and refresh tokens 
-              when provided with a valid refresh token.`,
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+        },
+        description: `Invites a user to join a group.`,
         bodyParams: {
-          refreshToken: ConduitString.Required,
+          inviteeId: ConduitObjectId.Required,
+          inviteeRole: ConduitObjectId.Required,
         },
       },
-      new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
-        accessToken: ConduitString.Required,
-        refreshToken: ConduitString.Required,
-      }),
+      new ConduitRouteReturnDefinition('UserGroupInviteResponse', 'String'),
       this.inviteToGroup.bind(this),
     );
+    routingManager.route(
+      {
+        path: '/user/groups/:groupId/roles',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          name: ConduitString.Required,
+          permissions: {
+            canInvite: ConduitBoolean.Optional,
+            canEditRoles: ConduitBoolean.Optional,
+            canRemove: ConduitBoolean.Optional,
+            canDeleteGroup: ConduitBoolean.Optional,
+            canCreateGroup: ConduitBoolean.Optional,
+          },
+        },
+        description: `Creates a new role in a group.`,
+        action: ConduitRouteActions.POST,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('Role', Role.getInstance().fields),
+      this.createRole.bind(this),
+    );
 
     routingManager.route(
       {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
+        path: '/user/groups/:groupId/roles/:roleId',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+          roleId: ConduitObjectId.Required,
+        },
+        description: `Deletes a role from a group.`,
+        action: ConduitRouteActions.DELETE,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-      this.userInvites.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
-      },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-      this.inviteResponse.bind(this),
+      new ConduitRouteReturnDefinition('DeleteRoleResponse', 'String'),
+      this.deleteRole.bind(this),
     );
 
     routingManager.route(
       {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
+        path: '/user/groups/:groupId/:userId',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+          userId: ConduitObjectId.Required,
+        },
+        description: `Removes a user from a group.`,
+        action: ConduitRouteActions.DELETE,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+      new ConduitRouteReturnDefinition('RemoveFromGroupResponse', 'String'),
       this.removeFromGroup.bind(this),
     );
 
     routingManager.route(
       {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
+        path: '/user/groups/:groupId/:userId',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+          userId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          roles: [ConduitObjectId.Required],
+        },
+        description: `Modify a user's role in a group.`,
+        action: ConduitRouteActions.PATCH,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+      new ConduitRouteReturnDefinition('ModifyUserRolesResponse', 'String'),
       this.modifyUserRole.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
-      },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-      this.createGroup.bind(this),
     );
 
     routingManager.route(
       {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
+        path: '/user/groups/:groupId',
+        urlParams: {
+          groupId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          name: ConduitString.Optional,
+          parentGroup: ConduitObjectId.Optional,
+          isDefault: ConduitBoolean.Optional,
+          isRealm: ConduitBoolean.Optional,
+        },
+        description: `Edit a group's properties`,
+        action: ConduitRouteActions.PATCH,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
+      new ConduitRouteReturnDefinition('Group', Group.getInstance().fields),
       this.editGroup.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/logout',
-        action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
-      },
-      new ConduitRouteReturnDefinition('LogoutResponse', 'String'),
-      this.deleteRole.bind(this),
     );
   }
 
