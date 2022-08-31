@@ -18,7 +18,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
 import { isNil } from 'lodash';
-import { getHBValues } from '../parse-test/getHBValues';
+import { getHandleBarsValues } from '../email-provider/utils';
 import { EmailService } from '../services/email.service';
 import { EmailTemplate } from '../models';
 import { Config } from '../config';
@@ -234,8 +234,8 @@ export class AdminHandlers {
     const { _id, sender, externalManaged, name, subject, body } = call.request.params;
 
     let externalId = undefined;
-    const body_vars = getHBValues(body);
-    const subject_vars = getHBValues(subject);
+    const body_vars = getHandleBarsValues(body);
+    const subject_vars = getHandleBarsValues(subject);
 
     let variables = Object.keys(body_vars).concat(Object.keys(subject_vars));
     variables = variables.filter((value, index) => variables.indexOf(value) === index);
@@ -291,8 +291,8 @@ export class AdminHandlers {
     });
 
     templateDocument.variables = Object.keys(
-      getHBValues(call.request.params.body),
-    ).concat(Object.keys(getHBValues(call.request.params.subject)));
+      getHandleBarsValues(call.request.params.body),
+    ).concat(Object.keys(getHandleBarsValues(call.request.params.subject)));
     if (templateDocument.variables) {
       templateDocument.variables = templateDocument.variables.filter(
         (value, index) => templateDocument.variables!.indexOf(value) === index,

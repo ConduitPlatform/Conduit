@@ -5,7 +5,7 @@ import { Client } from '@sendgrid/client';
 import { Template } from '../../interfaces/Template';
 import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
 import { SendgridMailBuilder } from './sendgridMailBuilder';
-import { getHBValues } from '../../parse-test/getHBValues';
+import { getHandleBarsValues } from '../../utils';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
 import { SendgridTemplate } from '../../interfaces/sendgrid/SendgridTemplate';
 
@@ -55,7 +55,7 @@ export class SendgridProvider extends EmailProviderClass {
       name: version_res.body.name,
       active: version_res.body.active,
       updatedAt: '',
-      variables: Object.keys(getHBValues(version_res.body.html_content)),
+      variables: Object.keys(getHandleBarsValues(version_res.body.html_content)),
     });
 
     return info;
@@ -78,7 +78,7 @@ export class SendgridProvider extends EmailProviderClass {
         updatedAt: version.updated_at,
         active: version.active,
         body: version.html_content,
-        variables: Object.keys(getHBValues(version.html_content)),
+        variables: Object.keys(getHandleBarsValues(version.html_content)),
       });
     });
     return {
