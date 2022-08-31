@@ -37,7 +37,7 @@ export const ConduitModelOptionsPermModifyType = [
   'ExtensionOnly',
 ];
 
-export interface ConduitModelOptions {
+export interface ConduitSchemaOptions {
   timestamps?: boolean;
   _id?: boolean;
   conduit?: {

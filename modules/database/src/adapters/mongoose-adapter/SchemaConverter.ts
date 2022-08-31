@@ -9,11 +9,11 @@ const deepdash = require('deepdash/standalone');
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
   const copy = cloneDeep(jsonSchema);
-  if (copy.modelSchema.hasOwnProperty('_id')) {
-    delete copy.modelSchema['_id'];
+  if (copy.fields.hasOwnProperty('_id')) {
+    delete copy.fields['_id'];
   }
 
-  deepdash.eachDeep(copy.modelSchema, convert);
+  deepdash.eachDeep(copy.fields, convert);
 
   return copy;
 }
@@ -28,7 +28,7 @@ function convert(value: any, key: any, parentValue: any, context: any) {
       _id: false,
       timestamps: false,
     });
-    parentValue[key] = schemaConverter(typeSchema).modelSchema;
+    parentValue[key] = schemaConverter(typeSchema).fields;
     return true;
   }
 

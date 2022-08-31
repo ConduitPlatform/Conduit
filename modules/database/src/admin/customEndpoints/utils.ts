@@ -1,5 +1,6 @@
 import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil, isPlainObject } from 'lodash';
+import { OperationsEnum } from './customEndpoints.admin';
 
 /**
  * Query schema:
@@ -122,7 +123,7 @@ function _queryValidation(
  * location: String (Body, queryParams, url)
  * }
  */
-export function inputValidation(
+function _inputValidation(
   name: string,
   type: any,
   location: number,
@@ -150,6 +151,18 @@ export function inputValidation(
     return 'Url params cant have an array input';
   }
 
+  return true;
+}
+
+export function inputValidation(inputs?: Indexable | null): boolean | string {
+  if (!isNil(inputs) && inputs.length) {
+    inputs.forEach((r: Indexable) => {
+      const error = _inputValidation(r.name, r.type, r.location, r.array);
+      if (error !== true) {
+        return error as string;
+      }
+    });
+  }
   return true;
 }
 
@@ -212,5 +225,67 @@ export function assignmentValidation(
     }
   }
 
+  return true;
+}
+
+export function paramValidation(params: Indexable): boolean | string {
+  const { name, operation, selectedSchema, selectedSchemaName, query, assignments } =
+    params;
+  const error = selectedSchemaValidation(selectedSchema, selectedSchemaName);
+  if (error !== true) {
+    return error as string;
+  }
+  if (name.length === 0) {
+    return 'name must not be empty';
+  }
+  if (operation < 0 || operation > 4) {
+    return 'operation is not valid';
+  }
+  if (operation !== OperationsEnum.POST && isNil(query)) {
+    return 'Specified operation requires that query field also be provided';
+  }
+  if (
+    (operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PATCH) &&
+    isNil(assignments)
+  ) {
+    return 'Specified operation requires that assignments field also be provided';
+  }
+  return true;
+}
+
+function selectedSchemaValidation(
+  selectedSchema: string,
+  selectedSchemaName: string,
+): boolean | string {
+  if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
+    return 'Either selectedSchema or selectedSchemaName must be specified';
+  }
+  if (!isNil(selectedSchema) && selectedSchema.length === 0) {
+    return 'selectedSchema must not be empty';
+  }
+  if (isNil(selectedSchema) && selectedSchemaName.length === 0) {
+    return 'selectedSchemaName must not be empty';
+  }
+  return true;
+}
+
+export function operationValidation(
+  operation: number,
+  query: Indexable,
+  assignments: Indexable,
+): boolean | string {
+  if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
+    return 'The query field must be an object';
+  }
+  if (
+    (operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PATCH) &&
+    (!Array.isArray(assignments) || assignments.length === 0)
+  ) {
+    return "Custom endpoint's target operation requires that assignments field be a non-empty array";
+  }
   return true;
 }

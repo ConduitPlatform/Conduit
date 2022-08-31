@@ -7,16 +7,66 @@ import ConduitGrpcSdk, {
   SMS,
   ConfigController,
   Query,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config';
+import { v4 as uuid } from 'uuid';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
     return crypto.randomBytes(size).toString('base64');
+  }
+
+  export async function createToken(
+    dbUserId: string,
+    data: Indexable,
+    tokenType: string,
+  ) {
+    await Token.getInstance()
+      .deleteMany({
+        userId: dbUserId,
+        type: tokenType,
+      })
+      .catch(e => {
+        throw e;
+      });
+    return await Token.getInstance().create({
+      userId: dbUserId,
+      type: tokenType,
+      token: uuid(),
+      data: data,
+    });
+  }
+
+  export async function dbUserChecks(user: User, password: string) {
+    const dbUser: User | null = await User.getInstance().findOne(
+      { _id: user._id },
+      '+hashedPassword',
+    );
+    const isNilDbUser = isNil(dbUser);
+    if (isNilDbUser) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
+    }
+    const isNilHashedPassword = isNil(dbUser.hashedPassword);
+    if (isNilHashedPassword) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    }
+
+    const passwordsMatch = await AuthUtils.checkPassword(
+      password,
+      dbUser.hashedPassword!,
+    );
+    if (!passwordsMatch) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
+    }
+    return dbUser;
   }
 
   export function signToken(data: { [key: string]: any }, options: ISignTokenOptions) {

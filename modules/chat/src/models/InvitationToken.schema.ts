@@ -26,7 +26,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -50,7 +50,7 @@ export class InvitationToken extends ConduitActiveSchema<InvitationToken> {
   updatedAt: Date;
 
   constructor(database: DatabaseProvider) {
-    super(database, InvitationToken.name, schema, schemaOptions, collectionName);
+    super(database, InvitationToken.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

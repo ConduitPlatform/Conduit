@@ -34,7 +34,15 @@ export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
         }
       }
       ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
-      functions[name](call, callback);
+      try {
+        functions[name](call, callback);
+      } catch (error) {
+        ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_errors');
+        callback({
+          code: status.INTERNAL,
+          message: (error as Error).message,
+        });
+      }
     };
   });
   return wrappedFunctions;

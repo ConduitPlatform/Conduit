@@ -2,7 +2,6 @@ import { ConnectOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
-  ConduitModelOptions,
   ConduitSchema,
   GrpcError,
   Indexable,
@@ -17,10 +16,6 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
-
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
-};
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -119,7 +114,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async introspectDatabase(): Promise<ConduitSchema[]> {
     const introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
-    const schemaOptions = {
+    const modelOptions = {
       timestamps: true,
       conduit: {
         noSync: true,
@@ -163,7 +158,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
-      if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
+      if (schema.modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -183,7 +178,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             const schema = new ConduitSchema(
               collectionName,
               originalSchema,
-              schemaOptions,
+              modelOptions,
               collectionName,
             );
             schema.ownerModule = 'database';
