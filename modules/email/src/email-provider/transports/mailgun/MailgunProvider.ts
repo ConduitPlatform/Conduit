@@ -6,7 +6,7 @@ import { Template } from '../../interfaces/Template';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
 import { EmailBuilderClass } from '../../models/EmailBuilderClass';
 import { EmailProviderClass } from '../../models/EmailProviderClass';
-import { getHBValues } from '../../parse-test/getHBValues';
+import { getHandleBarsValues } from '../../utils';
 import { initialize as initializeMailgun } from './mailgun';
 import { MailgunConfig } from './mailgun.config';
 import { MailgunMailBuilder } from './mailgunMailBuilder';
@@ -54,7 +54,7 @@ export class MailgunProvider extends EmailProviderClass {
           body: response.template.version.template,
           active: true,
           updatedAt: '',
-          variables: Object.keys(getHBValues(response.template.version.template)),
+          variables: Object.keys(getHandleBarsValues(response.template.version.template)),
         },
       ],
     };
@@ -86,7 +86,7 @@ export class MailgunProvider extends EmailProviderClass {
           active: true,
           updatedAt: response.template.version.createdAt,
           body: response.template.version.template,
-          variables: Object.keys(getHBValues(mailgun_input.template)),
+          variables: Object.keys(getHandleBarsValues(mailgun_input.template)),
         },
       ],
     };
