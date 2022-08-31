@@ -1,12 +1,11 @@
 import ConduitGrpcSdk, {
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-  RoutingManager,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
   GrpcError,
-  Indexable,
+  ParsedRouterRequest,
+  RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
@@ -236,19 +235,241 @@ export class GroupHandlers implements IAuthenticationStrategy {
   }
 
   async createGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return 'User invited!';
+    const { user } = call.request.context;
+    const { name, parentGroup, isDefault, isRealm } = call.request.params;
+    if (!isNil(parentGroup)) {
+      const parentGroupCheck = await Group.getInstance().findOne({
+        _id: parentGroup,
+      });
+      if (isNil(parentGroupCheck)) {
+        throw new GrpcError(status.NOT_FOUND, 'Parent group not found');
+      }
+      // find role with permission to create group in parent group
+      const parentGroupRoles = await Role.getInstance().findMany({
+        group: parentGroup,
+        permissions: {
+          canCreateGroup: true,
+        },
+      });
+      // check if user role has permission to create group in parent group
+      const userRole = await GroupMembership.getInstance().findOne({
+        group: parentGroup,
+        user: user._id,
+        roles: { $in: parentGroupRoles },
+      });
+      if (isNil(userRole)) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'User does not have permission to create group in parent group',
+        );
+      }
+    }
+    const group = await Group.getInstance().create({
+      name,
+      parentGroup,
+      isDefault,
+      isRealm,
+    });
+    const role = await Role.getInstance().create({
+      group: group._id,
+      name: 'Admin',
+      permissions: {
+        canInvite: true,
+        canRemove: true,
+        canEditRoles: true,
+        canDeleteGroup: true,
+        canCreateGroup: true,
+      },
+    });
+    await GroupMembership.getInstance().create({
+      group: group._id,
+      user: user._id,
+      roles: [role._id],
+    });
+    return group;
   }
 
   async editGroup(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return 'User invited!';
+    const { user } = call.request.context;
+    const { groupId, name, parentGroup, isDefault, isRealm } = call.request.params;
+    if (!isNil(parentGroup)) {
+      const parentGroupCheck = await Group.getInstance().findOne({
+        _id: parentGroup,
+      });
+      if (isNil(parentGroupCheck)) {
+        throw new GrpcError(status.NOT_FOUND, 'Parent group not found');
+      }
+      // find role with permission to create group in parent group
+      const parentGroupRoles = await Role.getInstance().findMany({
+        group: parentGroup,
+        permissions: {
+          canCreateGroup: true,
+          canDeleteGroup: true,
+        },
+      });
+      if (isNil(parentGroupRoles) || parentGroupRoles.length === 0) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'User does not have permission to edit group in parent group',
+        );
+      }
+      // check if user role has permission to create group in parent group
+      const userRole = await GroupMembership.getInstance().findOne({
+        group: parentGroup,
+        user: user._id,
+        roles: { $in: parentGroupRoles },
+      });
+      if (isNil(userRole)) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'User does not have permission to edit group in parent group',
+        );
+      }
+    }
+
+    const currentGroupCheck = await Group.getInstance().findOne({
+      _id: groupId,
+    });
+    if (isNil(currentGroupCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'Group not found');
+    }
+    // find role with permission to create group in parent group
+    const currentGroupRoles = await Role.getInstance().findMany({
+      group: currentGroupCheck._id,
+      permissions: {
+        canCreateGroup: true,
+        canDeleteGroup: true,
+      },
+    });
+    if (isNil(currentGroupRoles) || currentGroupRoles.length === 0) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to edit group',
+      );
+    }
+    // check if user role has permission to create group in parent group
+    const userRole = await GroupMembership.getInstance().findOne({
+      group: parentGroup,
+      user: user._id,
+      roles: { $in: currentGroupRoles },
+    });
+    if (isNil(userRole)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to edit group',
+      );
+    }
+
+    const query: {
+      name?: string;
+      parentGroup?: string;
+      isDefault?: boolean;
+      isRealm?: boolean;
+    } = {};
+    if (!isNil(name)) {
+      query.name = name;
+    }
+    if (!isNil(parentGroup)) {
+      query.parentGroup = parentGroup;
+    }
+    if (!isNil(isDefault)) {
+      query.isDefault = isDefault;
+    }
+    if (!isNil(isRealm)) {
+      query.isRealm = isRealm;
+    }
+    let group = await Group.getInstance().findByIdAndUpdate(groupId, query, true);
+    return group!;
   }
 
   async deleteRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return 'User invited!';
+    const { user } = call.request.context;
+    const { groupId, roleId } = call.request.params;
+    const currentGroupCheck = await Group.getInstance().findOne({
+      _id: groupId,
+    });
+    if (isNil(currentGroupCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'Group not found');
+    }
+    // find role with permission to delete role in group
+    const currentGroupRoles = await Role.getInstance().findMany({
+      group: currentGroupCheck._id,
+      permissions: {
+        canDeleteRole: true,
+      },
+    });
+    if (isNil(currentGroupRoles) || currentGroupRoles.length === 0) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to delete role in group',
+      );
+    }
+    // check if user role has permission to delete role in group
+    const userRole = await GroupMembership.getInstance().findOne({
+      group: groupId,
+      user: user._id,
+      roles: { $in: currentGroupRoles },
+    });
+    if (isNil(userRole)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to delete role in group',
+      );
+    }
+    const roleCheck = await Role.getInstance().findOne({
+      _id: roleId,
+    });
+    if (isNil(roleCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'Role not found');
+    }
+    await Role.getInstance().deleteOne({ _id: roleId });
+    return 'Role deleted!';
   }
 
   async createRole(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    return 'User invited!';
+    const { user } = call.request.context;
+    const { groupId, name, permissions } = call.request.params;
+    const currentGroupCheck = await Group.getInstance().findOne({
+      _id: groupId,
+    });
+    if (isNil(currentGroupCheck)) {
+      throw new GrpcError(status.NOT_FOUND, 'Group not found');
+    }
+    // find role with permission to create role in group
+    const currentGroupRoles = await Role.getInstance().findMany({
+      group: currentGroupCheck._id,
+      permissions: {
+        canCreateRole: true,
+      },
+    });
+    if (isNil(currentGroupRoles) || currentGroupRoles.length === 0) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to create role in group',
+      );
+    }
+    // check if user role has permission to create role in group
+    const userRole = await GroupMembership.getInstance().findOne({
+      group: groupId,
+      user: user._id,
+      roles: { $in: currentGroupRoles },
+    });
+    if (isNil(userRole)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to create role in group',
+      );
+    }
+    const role = await Role.getInstance().create({
+      name,
+      group: groupId,
+      permissions,
+    });
+    // assign role to user
+    await GroupMembership.getInstance().findByIdAndUpdate(userRole._id, {
+      roles: [...userRole.roles, role._id],
+    });
+    return role!;
   }
 
   declareRoutes(routingManager: RoutingManager, config: Config): void {
