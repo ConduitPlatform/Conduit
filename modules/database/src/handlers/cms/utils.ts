@@ -1,4 +1,4 @@
-import { GrpcError, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
+import { GrpcError, Indexable, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
@@ -26,7 +26,7 @@ export async function findSchema(
 
 export async function getUpdatedDocument(
   schemaName: string,
-  params: any,
+  params: Indexable,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
   updateProvidedOnly: boolean,
 ) {
@@ -49,7 +49,7 @@ export async function getUpdatedDocument(
 
 export async function getUpdatedDocuments(
   schemaName: string,
-  params: any,
+  params: Indexable,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
   updateProvidedOnly: boolean,
 ) {
