@@ -10,7 +10,7 @@ import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
-  CreateSchemaRequest,
+  Schema as SchemaDto,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -115,7 +115,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         if (receivedSchema.name) {
           const schema = new ConduitSchema(
             receivedSchema.name,
-            receivedSchema.modelSchema,
+            receivedSchema.fields,
             receivedSchema.modelOptions,
             receivedSchema.collectionName,
           );
@@ -188,15 +188,12 @@ export default class DatabaseModule extends ManagedModule<void> {
    * @param call
    * @param callback
    */
-  async createSchemaFromAdapter(
-    call: GrpcRequest<CreateSchemaRequest>,
-    callback: SchemaResponse,
-  ) {
+  async createSchemaFromAdapter(call: GrpcRequest<SchemaDto>, callback: SchemaResponse) {
     const schema = new ConduitSchema(
-      call.request.schema!.name,
-      JSON.parse(call.request.schema!.modelSchema),
-      JSON.parse(call.request.schema!.modelOptions),
-      call.request.schema!.collectionName,
+      call.request.name,
+      JSON.parse(call.request.fields),
+      JSON.parse(call.request.modelOptions),
+      call.request.collectionName,
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
       return callback({
@@ -208,21 +205,18 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter
       .createSchemaFromAdapter(schema, false, true)
       .then((schemaAdapter: Schema) => {
-        const originalSchema = {
-          name: schemaAdapter.originalSchema.name,
-          modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
-          collectionName: schemaAdapter.originalSchema.collectionName,
-        };
         this.publishSchema({
-          name: call.request.schema!.name,
-          modelSchema: JSON.parse(call.request.schema!.modelSchema),
-          modelOptions: JSON.parse(call.request.schema!.modelOptions),
-          collectionName: call.request.schema!.collectionName,
+          name: call.request.name,
+          fields: JSON.parse(call.request.fields),
+          modelOptions: JSON.parse(call.request.modelOptions),
+          collectionName: call.request.collectionName,
           owner: schema.ownerModule,
         });
         callback(null, {
-          schema: originalSchema,
+          name: schemaAdapter.originalSchema.name,
+          fields: JSON.stringify(schemaAdapter.originalSchema.fields),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
+          collectionName: schemaAdapter.originalSchema.collectionName,
         });
       })
       .catch(err => {
@@ -242,12 +236,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
       callback(null, {
-        schema: {
-          name: schemaAdapter.name,
-          modelSchema: JSON.stringify(schemaAdapter.modelSchema),
-          modelOptions: JSON.stringify(schemaAdapter.schemaOptions),
-          collectionName: schemaAdapter.collectionName,
-        },
+        name: schemaAdapter.name,
+        fields: JSON.stringify(schemaAdapter.fields),
+        modelOptions: JSON.stringify(schemaAdapter.modelOptions),
+        collectionName: schemaAdapter.collectionName,
       });
     } catch (err) {
       callback({
@@ -264,8 +256,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         schemas: schemas.map(schema => {
           return {
             name: schema.name,
-            modelSchema: JSON.stringify(schema.modelSchema),
-            modelOptions: JSON.stringify(schema.schemaOptions),
+            fields: JSON.stringify(schema.fields),
+            modelOptions: JSON.stringify(schema.modelOptions),
             collectionName: schema.collectionName,
           };
         }),
@@ -306,7 +298,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemaName = call.request.extension.name;
       const extOwner = call.metadata!.get('module-name')![0] as string;
-      const extModel = JSON.parse(call.request.extension.modelSchema);
+      const extModel = JSON.parse(call.request.extension.fields);
       const schema = await this._activeAdapter.getBaseSchema(schemaName);
       if (!schema) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -314,21 +306,18 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter
         .setSchemaExtension(schema, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
-          const originalSchema = {
-            name: schemaAdapter.originalSchema.name,
-            modelSchema: JSON.stringify(schemaAdapter.originalSchema.modelSchema),
-            modelOptions: JSON.stringify(schemaAdapter.originalSchema.schemaOptions),
-            collectionName: schemaAdapter.originalSchema.collectionName,
-          };
           this.publishSchema({
             name: call.request.extension.name,
-            modelSchema: schemaAdapter.model,
-            modelOptions: schemaAdapter.originalSchema.schemaOptions,
+            schema: schemaAdapter.model,
+            modelOptions: schemaAdapter.originalSchema.modelOptions,
             collectionName: schemaAdapter.originalSchema.collectionName,
             owner: schemaAdapter.originalSchema.ownerModule,
           });
           callback(null, {
-            schema: originalSchema,
+            name: schemaAdapter.originalSchema.name,
+            fields: JSON.stringify(schemaAdapter.originalSchema.fields),
+            modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
+            collectionName: schemaAdapter.originalSchema.collectionName,
           });
         })
         .catch(err => {

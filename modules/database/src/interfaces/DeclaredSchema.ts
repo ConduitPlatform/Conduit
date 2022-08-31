@@ -1,4 +1,4 @@
-import { ConduitModelOptions } from '@conduitplatform/grpc-sdk';
+import { ConduitSchemaOptions } from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
 
 export interface IDeclaredSchema {
@@ -6,7 +6,7 @@ export interface IDeclaredSchema {
   name: string;
   fields: any;
   extensions: DeclaredSchemaExtension[];
-  modelOptions: ConduitModelOptions;
+  modelOptions: ConduitSchemaOptions;
   createdAt: Date;
   updatedAt: Date;
 }

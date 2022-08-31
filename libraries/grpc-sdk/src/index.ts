@@ -73,7 +73,7 @@ export default class ConduitGrpcSdk {
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
-  static Metrics: ConduitMetrics;
+  static Metrics?: ConduitMetrics;
   static readonly Logger: ConduitLogger = new ConduitLogger([
     new winston.transports.File({
       filename: path.join(__dirname, '.logs/combined.log'),

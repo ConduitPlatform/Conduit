@@ -21,7 +21,7 @@ import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-
 const deepdash = require('deepdash/standalone');
 
 const incrementDbQueries = () =>
-  ConduitGrpcSdk.Metrics.increment('database_queries_total');
+  ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
@@ -43,7 +43,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     let idField: string = '';
 
     deepdash.eachDeep(
-      this.originalSchema.modelSchema,
+      this.originalSchema.fields,
       (value: Indexable, key: string, parentValue: Indexable, context: Indexable) => {
         if (!parentValue?.hasOwnProperty(key!)) {
           return true;
@@ -79,13 +79,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       },
     );
     if (!primaryKeyExists) {
-      schema.modelSchema._id = {
+      schema.fields._id = {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       };
     } else {
-      schema.modelSchema._id = {
+      schema.fields._id = {
         type: DataTypes.VIRTUAL,
         get() {
           return `${this[idField]}`;
@@ -93,7 +93,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       };
     }
     incrementDbQueries();
-    this.model = sequelize.define(schema.collectionName, schema.modelSchema, {
+    this.model = sequelize.define(schema.collectionName, schema.fields, {
       ...schema.modelOptions,
       freezeTableName: true,
     });

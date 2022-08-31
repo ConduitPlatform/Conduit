@@ -1,7 +1,6 @@
 import {
   ConduitModel,
   ConduitModelField,
-  ConduitModelOptions,
   ConduitRouteActions,
   ConduitSchema,
   Indexable,
@@ -10,10 +9,6 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { CmsHandlers } from '../../handlers/cms.handler';
 import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
-
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
-};
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   const hasA = [];
@@ -30,8 +25,8 @@ export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): n
       hasB.push((fieldsB[k] as ConduitModelField).model);
     }
   }
-  const schemaAName = ((schemaA as unknown) as ConduitSchema).name;
-  const schemaBName = ((schemaB as unknown) as ConduitSchema).name;
+  const schemaAName = (schemaA as unknown as ConduitSchema).name;
+  const schemaBName = (schemaB as unknown as ConduitSchema).name;
 
   if (hasA.length === 0 && hasB.length === 0) {
     return 0;
@@ -79,14 +74,14 @@ function removeRequiredFields(fields: ConduitModel) {
 
 export function getOps(
   schemaName: string,
-  actualSchema: _ConduitSchema,
+  actualSchema: ConduitSchema,
   handlers: CmsHandlers,
 ) {
   const routesArray: ConduitBuiltRoute[] = [];
-  const authenticatedRead = actualSchema.modelOptions.conduit!.cms.crudOperations.read
-    .authenticated;
-  const readIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.read
-    .enabled;
+  const authenticatedRead =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.read.authenticated;
+  const readIsEnabled =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.read.enabled;
   if (readIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
@@ -116,10 +111,10 @@ export function getOps(
     if (authenticatedRead) route.middleware('authMiddleware');
     routesArray.push(route.build());
   }
-  const authenticatedCreate = actualSchema.modelOptions.conduit!.cms.crudOperations.create
-    .authenticated;
-  const createIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.create
-    .enabled;
+  const authenticatedCreate =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.create.authenticated;
+  const createIsEnabled =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.create.enabled;
 
   const assignableFields = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
@@ -149,10 +144,10 @@ export function getOps(
     routesArray.push(route.build());
   }
 
-  const authenticatedUpdate = actualSchema.modelOptions.conduit!.cms.crudOperations.update
-    .authenticated;
-  const updateIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.update
-    .enabled;
+  const authenticatedUpdate =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.update.authenticated;
+  const updateIsEnabled =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.update.enabled;
   if (updateIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/many`)
@@ -212,9 +207,9 @@ export function getOps(
         id: { type: TYPE.String, required: true },
       })
       .bodyParams(
-        (removeRequiredFields(
+        removeRequiredFields(
           Object.assign({}, assignableFields),
-        ) as unknown) as ConduitModel,
+        ) as unknown as ConduitModel,
       )
       .return(`patch${schemaName}`, actualSchema.fields)
       .handler(handlers.patchDocument.bind(handlers));
@@ -222,10 +217,10 @@ export function getOps(
 
     routesArray.push(route.build());
   }
-  const authenticatedDelete = actualSchema.modelOptions.conduit!.cms.crudOperations.delete
-    .authenticated;
-  const deleteIsEnabled = actualSchema.modelOptions.conduit!.cms.crudOperations.delete
-    .enabled;
+  const authenticatedDelete =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.delete.authenticated;
+  const deleteIsEnabled =
+    actualSchema.modelOptions.conduit!.cms.crudOperations.delete.enabled;
   if (deleteIsEnabled) {
     const route = new RouteBuilder()
       .path(`/${schemaName}/:id`)

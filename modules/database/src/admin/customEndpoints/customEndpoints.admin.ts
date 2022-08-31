@@ -6,8 +6,14 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { assignmentValidation, inputValidation, queryValidation } from './utils';
-import { isNil, isPlainObject } from 'lodash';
+import {
+  assignmentValidation,
+  inputValidation,
+  queryValidation,
+  paramValidation,
+  operationValidation,
+} from './utils';
+import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
@@ -62,8 +68,8 @@ export class CustomEndpointsAdmin {
     const {
       name,
       operation,
-      selectedSchema,
-      selectedSchemaName,
+      selectedSchema, // if changed, update utils.selectedSchemaValidation() throw message
+      selectedSchemaName, // ^
       inputs,
       query,
       authentication,
@@ -72,87 +78,25 @@ export class CustomEndpointsAdmin {
       paginated,
     } = call.request.params;
 
-    if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Either selectedSchema or selectedSchemaName must be specified',
-      );
+    let error = paramValidation(call.request.params);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    if (name.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'name must not be empty');
-    }
-    if (operation < 0 || operation > 4) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'operation is not valid');
-    }
-    if (operation !== OperationsEnum.POST && isNil(query)) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Specified operation requires that query field also be provided',
-      );
-    }
-    if (
-      (operation === OperationsEnum.POST ||
-        operation === OperationsEnum.PUT ||
-        operation === OperationsEnum.PATCH) &&
-      isNil(assignments)
-    ) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Specified operation requires that assignments field also be provided',
-      );
-    }
-
-    let findSchema: Indexable;
-    if (!isNil(selectedSchema)) {
-      // Find schema using selectedSchema
-      if (selectedSchema.length === 0) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'selectedSchema must not be empty');
-      }
-      findSchema = await this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ _id: selectedSchema });
-    } else {
-      // Find schema using selectedSchemaName
-      if (selectedSchemaName.length === 0) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'selectedSchemaName must not be empty',
-        );
-      }
-      if (operation !== OperationsEnum.GET) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Only get requests are allowed for schemas from other modules',
-        );
-      }
-      findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.compiledFields = findSchema.modelSchema;
-    }
-
+    const findSchema: Indexable | null = await this.findSchema(
+      selectedSchema,
+      selectedSchemaName,
+      operation,
+    );
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    if (operation !== OperationsEnum.POST && !isPlainObject(query)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'The query field must be an object');
+    error = operationValidation(operation, query, assignments);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    if (
-      (operation === OperationsEnum.POST ||
-        operation === OperationsEnum.PUT ||
-        operation === OperationsEnum.PATCH) &&
-      (!Array.isArray(assignments) || assignments.length === 0)
-    ) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Specified operation requires that assignments field be a non-empty array',
-      );
-    }
-    if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: Indexable) => {
-        const error = inputValidation(r.name, r.type, r.location, r.array);
-        if (error !== true) {
-          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-        }
-      });
+    error = inputValidation(inputs);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
     const endpoint = {
@@ -201,7 +145,7 @@ export class CustomEndpointsAdmin {
         (r: {
           schemaField: string;
           action: number;
-          assignmentField: { type: string; value: any };
+          assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
             findSchema,
@@ -256,51 +200,23 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let findSchema: any;
-    if (!isNil(selectedSchema)) {
-      // Find schema using selectedSchema
-      findSchema = await this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ _id: selectedSchema });
-      if (isNil(findSchema)) {
-        throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-      }
-    } else if (!isNil(selectedSchemaName)) {
-      // Find schema using selectedSchemaName
-      if (found.operation !== OperationsEnum.GET) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Only get requests are allowed for schemas from other modules',
-        );
-      }
-      findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.compiledFields = findSchema.modelSchema;
-    }
-
+    const findSchema: Indexable | null = await this.findSchema(
+      selectedSchema,
+      selectedSchemaName,
+      found.operation,
+    );
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    if (found.operation !== OperationsEnum.POST && !isPlainObject(query)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'The query field must be an object');
+
+    let error = operationValidation(found.operation, query, assignments);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    if (
-      (found.operation === OperationsEnum.POST ||
-        found.operation === OperationsEnum.PUT ||
-        found.operation === OperationsEnum.PATCH) &&
-      (!Array.isArray(assignments) || assignments.length === 0)
-    ) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        "Custom endpoint's target operation requires that assignments field be a non-empty array",
-      );
-    }
-    if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: Indexable) => {
-        const error = inputValidation(r.name, r.type, r.location, r.array);
-        if (error !== true) {
-          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-        }
-      });
+
+    error = inputValidation(inputs);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
     if (paginated && found.operation !== OperationsEnum.GET) {
@@ -331,7 +247,7 @@ export class CustomEndpointsAdmin {
         (r: {
           schemaField: string;
           action: number;
-          assignmentField: { type: string; value: any };
+          assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
             findSchema,
@@ -416,5 +332,30 @@ export class CustomEndpointsAdmin {
       });
     }
     return { schemas };
+  }
+
+  private async findSchema(
+    selectedSchema: string,
+    selectedSchemaName: string,
+    operation: number,
+  ): Promise<Indexable | null> {
+    let findSchema: Indexable | null;
+    if (!isNil(selectedSchema)) {
+      // Find schema using selectedSchema
+      findSchema = await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findOne({ _id: selectedSchema });
+    } else {
+      // Find schema using selectedSchemaName
+      if (operation !== OperationsEnum.GET) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Only get requests are allowed for schemas from other modules',
+        );
+      }
+      findSchema = await this.database.getSchema(selectedSchemaName);
+      findSchema.compiledFields = findSchema.modelSchema;
+    }
+    return findSchema;
   }
 }

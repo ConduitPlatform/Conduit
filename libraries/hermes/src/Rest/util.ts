@@ -4,12 +4,12 @@ import {
   TYPE,
   Indexable,
   Params,
-  ConduitModelOptions,
+  ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 export function extractRequestData(req: Request) {
-  const context = (req as ConduitModelOptions).conduit || {};
+  const context = (req as ConduitSchemaOptions).conduit || {};
   const params: any = {};
   const headers = req.headers;
   if (req.query) {
