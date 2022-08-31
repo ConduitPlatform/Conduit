@@ -2,7 +2,6 @@ import { ConnectOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
-  ConduitSchemaOptions,
   ConduitSchema,
   GrpcError,
   Indexable,
@@ -17,10 +16,6 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
-
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-};
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;

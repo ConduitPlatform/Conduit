@@ -1,7 +1,6 @@
 import {
   ConduitModel,
   ConduitModelField,
-  ConduitSchemaOptions,
   ConduitRouteActions,
   ConduitSchema,
   Indexable,
@@ -10,10 +9,6 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { CmsHandlers } from '../../handlers/cms.handler';
 import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
-
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-};
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   const hasA = [];
@@ -79,7 +74,7 @@ function removeRequiredFields(fields: ConduitModel) {
 
 export function getOps(
   schemaName: string,
-  actualSchema: _ConduitSchema,
+  actualSchema: ConduitSchema,
   handlers: CmsHandlers,
 ) {
   const routesArray: ConduitBuiltRoute[] = [];

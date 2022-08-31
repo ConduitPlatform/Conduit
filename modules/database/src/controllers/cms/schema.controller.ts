@@ -1,7 +1,4 @@
-import ConduitGrpcSdk, {
-  ConduitSchemaOptions,
-  ConduitSchema as ConduitSchema,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
 import { isNil } from 'lodash';
@@ -10,10 +7,6 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import { CmsHandlers } from '../../handlers/cms.handler';
 import { ParsedQuery } from '../../interfaces';
-
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-};
 
 export class SchemaController {
   private router: DatabaseRoutes;
@@ -27,7 +20,7 @@ export class SchemaController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe('database:customSchema:create', (message: string) => {
+    this.grpcSdk.bus?.subscribe('database:customSchema:create', () => {
       this.refreshRoutes();
     });
   }
@@ -47,9 +40,9 @@ export class SchemaController {
       .then(r => {
         if (r) {
           const routeSchemas: any = {};
-          r.forEach((schema: _ConduitSchema) => {
+          r.forEach((schema: ConduitSchema) => {
             if (typeof schema.modelOptions === 'string') {
-              schema.modelOptions = JSON.parse(schema.modelOptions);
+              (schema as any).modelOptions = JSON.parse(schema.modelOptions);
             }
             if (
               schema.name !== '_DeclaredSchemas' &&
@@ -96,13 +89,13 @@ export class SchemaController {
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then(r => {
-        let promise = new Promise((resolve, reject) => {
+        let promise = new Promise(resolve => {
           resolve('ok');
         });
         if (r) {
-          r.forEach((r: _ConduitSchema) => {
+          r.forEach((r: ConduitSchema) => {
             if (typeof r.modelOptions === 'string') {
-              r.modelOptions = JSON.parse(r.modelOptions);
+              (r as any).modelOptions = JSON.parse(r.modelOptions);
             }
             const schema = new ConduitSchema(
               r.name,
@@ -110,13 +103,13 @@ export class SchemaController {
               r.modelOptions,
               r.collectionName,
             );
-            promise = promise.then(r => {
+            promise = promise.then(() => {
               return this.database.createCustomSchemaFromAdapter(schema);
             });
           });
-          promise.then(p => {
+          promise.then(() => {
             const routeSchemas: any = {};
-            r.forEach((schema: _ConduitSchema) => {
+            r.forEach((schema: ConduitSchema) => {
               if (schema.modelOptions.conduit?.cms?.crudOperations) {
                 routeSchemas[schema.name] = schema;
               }
