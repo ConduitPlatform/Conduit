@@ -51,7 +51,7 @@ export namespace AuthUtils {
     if (isNilDbUser) {
       throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
     }
-    const isNilHashedPassword = isNil(dbUser?.hashedPassword);
+    const isNilHashedPassword = isNil(dbUser.hashedPassword);
     if (isNilHashedPassword) {
       throw new GrpcError(
         status.PERMISSION_DENIED,

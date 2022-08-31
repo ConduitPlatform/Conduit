@@ -1,7 +1,6 @@
 import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, {
-  ConduitError,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
