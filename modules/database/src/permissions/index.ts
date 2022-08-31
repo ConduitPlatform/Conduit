@@ -5,7 +5,7 @@ export async function canCreate(moduleName: string, schema: Schema) {
     return true;
   return (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.schemaOptions.conduit!.permissions!.extendable
+    schema.originalSchema.modelOptions.conduit!.permissions!.extendable
   );
 }
 
@@ -14,7 +14,7 @@ export async function canModify(moduleName: string, schema: Schema) {
     return true;
   return (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.schemaOptions.conduit!.permissions!.canModify === 'Everything'
+    schema.originalSchema.modelOptions.conduit!.permissions!.canModify === 'Everything'
     // TODO: Handle 'ExtensionOnly' once we get extensions
   );
 }
@@ -24,6 +24,6 @@ export async function canDelete(moduleName: string, schema: Schema) {
     return true;
   return (
     schema.originalSchema.ownerModule === moduleName ||
-    schema.originalSchema.schemaOptions.conduit!.permissions!.canDelete
+    schema.originalSchema.modelOptions.conduit!.permissions!.canDelete
   );
 }

@@ -80,7 +80,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     declaredSchemas.forEach((schema: ConduitSchema) => {
-      if ((schema as Indexable).modelOptions.conduit.imported) {
+      if (schema.modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
@@ -194,7 +194,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       this,
     );
 
-    const noSync = this.models[schema.name].originalSchema.schemaOptions.conduit!.noSync;
+    const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }

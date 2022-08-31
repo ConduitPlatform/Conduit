@@ -24,7 +24,7 @@ const schema = {
   updatedAt: TYPE.Date,
 };
 
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -48,7 +48,7 @@ export class TwoFactorSecret extends ConduitActiveSchema<TwoFactorSecret> {
   updatedAt: Date;
 
   constructor(database: DatabaseProvider) {
-    super(database, TwoFactorSecret.name, schema, schemaOptions, collectionName);
+    super(database, TwoFactorSecret.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

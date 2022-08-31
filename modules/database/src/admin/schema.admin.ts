@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, {
-  ConduitModelOptions,
+  ConduitSchemaOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
   ConduitSchemaExtension,
@@ -20,8 +20,8 @@ import { ParsedQuery } from '../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
-  modelOptions: ConduitModelOptions;
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
+  modelOptions: ConduitSchemaOptions;
   _id: string;
 } & {
   -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
@@ -115,9 +115,16 @@ export class SchemaAdmin {
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, fields, modelOptions, permissions } = call.request.params;
+    const { name, fields, permissions } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
     const crudOperations = call.request.params.crudOperations;
+    const modelOptions = isNil(call.request.params.modelOptions)
+      ? { conduit: { cms: { enabled, crudOperations } } }
+      : {
+          ...call.request.params.modelOptions,
+          conduit: { cms: { enabled, crudOperations } },
+        };
+    modelOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
     if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
       throw new GrpcError(
@@ -155,13 +162,8 @@ export class SchemaAdmin {
       updatedAt: TYPE.Date,
     });
 
-    const schemaOptions = isNil(modelOptions)
-      ? { conduit: { cms: { enabled, crudOperations } } }
-      : { ...modelOptions, conduit: { cms: { enabled, crudOperations } } };
-    schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
-
     await this.schemaController.createSchema(
-      new ConduitSchema(name, fields, schemaOptions),
+      new ConduitSchema(name, fields, modelOptions),
     );
     return await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ name });
   }
@@ -223,7 +225,7 @@ export class SchemaAdmin {
         new ConduitSchema(
           updatedSchema.originalSchema.name,
           updatedSchema.originalSchema.fields,
-          updatedSchema.originalSchema.schemaOptions,
+          updatedSchema.originalSchema.modelOptions,
         ),
       );
     }
@@ -454,7 +456,7 @@ export class SchemaAdmin {
     );
     const base = await this.database.getBaseSchema(requestedSchema.name);
     await this.database
-      .setSchemaExtension(base, 'database', extension.modelSchema)
+      .setSchemaExtension(base, 'database', extension.fields)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -543,7 +545,7 @@ export class SchemaAdmin {
           JSON.stringify({
             name: schema.name,
             fields: schema.fields,
-            modelOptions: schema.schemaOptions,
+            modelOptions: schema.modelOptions,
             ownerModule: schema.ownerModule,
             extensions: (schema as any).extensions,
           }),
@@ -617,24 +619,24 @@ export class SchemaAdmin {
           canModify: 'Nothing',
           canDelete: false,
         };
-        recreatedSchema.schemaOptions.conduit = merge(
-          recreatedSchema.schemaOptions.conduit,
+        recreatedSchema.modelOptions.conduit = merge(
+          recreatedSchema.modelOptions.conduit,
           {
             imported: true,
             noSync: true,
             cms: {
-              enabled: recreatedSchema.schemaOptions.conduit?.cms?.enabled ?? true,
-              crudOperations: recreatedSchema.schemaOptions.conduit?.cms?.crudOperations
+              enabled: recreatedSchema.modelOptions.conduit?.cms?.enabled ?? true,
+              crudOperations: recreatedSchema.modelOptions.conduit?.cms?.crudOperations
                 ? merge(
                     defaultCrudOperations,
-                    recreatedSchema.schemaOptions.conduit.cms.crudOperations,
+                    recreatedSchema.modelOptions.conduit.cms.crudOperations,
                   )
                 : defaultCrudOperations,
             },
-            permissions: recreatedSchema.schemaOptions.conduit?.permissions
+            permissions: recreatedSchema.modelOptions.conduit?.permissions
               ? merge(
                   defaultPermissions,
-                  recreatedSchema.schemaOptions.conduit.permissions,
+                  recreatedSchema.modelOptions.conduit.permissions,
                 )
               : defaultPermissions,
           },
@@ -655,7 +657,7 @@ export class SchemaAdmin {
   private patchSchemaPerms(
     schema: _ConduitSchema,
     // @ts-ignore
-    perms: ConduitModelOptions['conduit']['permissions'],
+    perms: ConduitSchemaOptions['conduit']['permissions'],
   ) {
     if (
       perms!.canModify &&

@@ -17,7 +17,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -39,7 +39,7 @@ export class ChatRoom extends ConduitActiveSchema<ChatRoom> {
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, ChatRoom.name, schema, schemaOptions, collectionName);
+    super(database, ChatRoom.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

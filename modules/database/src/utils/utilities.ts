@@ -10,7 +10,7 @@ import {
 } from 'lodash';
 import {
   ConduitModel,
-  ConduitModelOptions,
+  ConduitSchemaOptions,
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
@@ -42,7 +42,7 @@ export function wrongFields(schemaFields: string[], updateFields: string[]): boo
 export function validateSchemaInput(
   name: string,
   fields: ConduitModel,
-  modelOptions: ConduitModelOptions,
+  modelOptions: ConduitSchemaOptions,
   enabled?: boolean,
 ) {
   if (!isNil(enabled) && !isBoolean(enabled)) {
