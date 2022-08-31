@@ -77,6 +77,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async preServerStart() {
+    this._activeAdapter.setGrpcSdk(this.grpcSdk);
     this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
   }

@@ -45,6 +45,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean,
   ): ParseResult {
+    if (!isInput) this.knownTypes.add(name);
     this.isInput = isInput;
     this.result = this.getInitializedResult();
     // @ts-ignore
@@ -79,6 +80,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         res.type = conduitType.toLowerCase();
         break;
       default:
+        this.requestedTypes.add(conduitType);
         res.$ref = `#/components/schemas/${conduitType}`;
     }
     return res;

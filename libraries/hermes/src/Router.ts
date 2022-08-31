@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitMiddleware } from './interfaces';
-import { ConduitRoute } from './classes';
+import { ConduitRoute, TypeRegistry } from './classes';
 import ObjectHash from 'object-hash';
 
 export abstract class ConduitRouter {
@@ -15,6 +15,7 @@ export abstract class ConduitRouter {
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
+    TypeRegistry.getInstance(this.grpcSdk);
   }
 
   createRouter() {

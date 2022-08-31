@@ -33,6 +33,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean,
   ): ParseResult {
+    if (!isInput) this.knownTypes.add(name);
     this.isInput = isInput;
     this.result = this.getInitializedResult();
     this.result.typeString = super.extractTypesInternal(name, fields).finalString;
@@ -73,6 +74,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
       case 'JSON':
         return 'JSONObject';
       default:
+        this.requestedTypes.add(conduitType);
         return conduitType;
     }
   }

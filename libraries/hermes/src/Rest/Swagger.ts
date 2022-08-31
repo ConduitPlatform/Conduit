@@ -3,12 +3,13 @@ import { isNil } from 'lodash';
 import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
+import { validateRelationTypes } from '../utils/types';
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: Indexable;
   private readonly _routerMetadata: SwaggerRouterMetadata;
   private readonly _stringifiedGlobalSecurityHeaders: string;
-  private _parser: SwaggerParser;
+  private readonly _parser: SwaggerParser;
 
   constructor(routerMetadata: SwaggerRouterMetadata) {
     this._swaggerDoc = {
@@ -156,5 +157,15 @@ export class SwaggerGenerator {
         return 'get';
       }
     }
+  }
+
+  validateRelationTypes() {
+    validateRelationTypes(this._parser, (typeName, typeFields) => {
+      this._swaggerDoc.components.schemas[typeName] = this._parser.extractTypes(
+        typeName,
+        typeFields,
+        false,
+      );
+    });
   }
 }

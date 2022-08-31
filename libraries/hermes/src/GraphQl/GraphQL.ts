@@ -7,6 +7,7 @@ import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
+import { validateRelationTypes } from '../utils/types';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 import ConduitGrpcSdk, {
@@ -32,7 +33,7 @@ export class GraphQLController extends ConduitRouter {
   private _apollo?: express.Router;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
-  private _parser: GraphQlParser;
+  private readonly _parser: GraphQlParser;
 
   constructor(grpcSdk: ConduitGrpcSdk) {
     super(grpcSdk);
@@ -42,6 +43,7 @@ export class GraphQLController extends ConduitRouter {
 
   refreshGQLServer() {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
+    this.validateRelationTypes();
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -447,5 +449,12 @@ export class GraphQLController extends ConduitRouter {
       clearTimeout(this._apolloRefreshTimeout);
     }
     delete this._apollo;
+  }
+
+  private validateRelationTypes() {
+    validateRelationTypes(this._parser, (typeName, typeFields) => {
+      this.generateType(typeName, typeFields);
+      this.generateSchema();
+    });
   }
 }

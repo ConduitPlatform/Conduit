@@ -9,6 +9,8 @@ import {
 export abstract class ConduitParser<ParseResult, ProcessingObject> {
   result!: ParseResult;
   isInput!: boolean;
+  readonly knownTypes: Set<string> = new Set();
+  readonly requestedTypes: Set<string> = new Set();
 
   abstract extractTypes(
     name: string,
@@ -16,9 +18,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isInput: boolean,
   ): ParseResult;
 
-  protected abstract getType(
-    conduitType: TYPE,
-  ):
+  protected abstract getType(conduitType: TYPE):
     | string
     | {
         type?: string;

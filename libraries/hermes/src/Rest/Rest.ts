@@ -273,6 +273,7 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.forEach(route => {
       this.addConduitRoute(route);
     });
+    this._swagger?.validateRelationTypes();
   }
 
   private initializeRouter() {

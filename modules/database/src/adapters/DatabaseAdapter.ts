@@ -17,8 +17,10 @@ type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
 } & {
   -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
 };
+
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
+  protected grpcSdk: ConduitGrpcSdk;
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
@@ -47,11 +49,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
    */
   abstract retrieveForeignSchemas(): Promise<void>;
 
-  /**
-   * Should accept a JSON schema and output a .ts interface for the adapter
+  /**-
+   * Registers a schema, creates its collection in the database and updates routing types
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
-   * @param {boolean} cndPrefix Whether to prefix the schema's collection name with 'cnd_'
+   * @param {boolean} cndPrefix Whether to prefix the collection name with a Conduit system schema identifier (cnd_)
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
@@ -98,6 +100,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         imported: imported ? 'true' : 'false',
       });
     }
+    this.grpcSdk.bus!.publish('database:dataTypes:registration', schema.name);
     return createdSchema;
   }
 
@@ -177,7 +180,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
-
     const model = await this.models['_DeclaredSchema'].findOne(
       JSON.stringify({ name: schema.name }),
     );
@@ -235,6 +237,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract connect(): void;
 
   abstract ensureConnected(): Promise<void>;
+
+  setGrpcSdk(grpcSdk: ConduitGrpcSdk) {
+    this.grpcSdk = grpcSdk;
+  }
 
   setSchemaExtension(
     schema: ConduitSchema,
