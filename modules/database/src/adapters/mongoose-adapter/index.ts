@@ -163,7 +163,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
     (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
-      if ((schema as unknown as _ConduitSchema).modelOptions.conduit!.imported) {
+      if (schema.modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
     });
