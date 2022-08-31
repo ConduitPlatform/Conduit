@@ -1,6 +1,6 @@
 import { createVerifier } from 'fast-jwt';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '../index';
+import ConduitGrpcSdk, { GrpcError } from '../index';
 
 interface JWT {
   moduleName: string;
@@ -34,7 +34,15 @@ export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
         }
       }
       ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
-      functions[name](call, callback);
+      try {
+        functions[name](call, callback);
+      } catch (error) {
+        ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_errors');
+        callback({
+          code: status.INTERNAL,
+          message: (error as Error).message,
+        });
+      }
     };
   });
   return wrappedFunctions;
