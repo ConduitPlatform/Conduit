@@ -123,7 +123,7 @@ function _queryValidation(
  * location: String (Body, queryParams, url)
  * }
  */
-export function inputValidation(
+function _inputValidation(
   name: string,
   type: any,
   location: number,
@@ -151,6 +151,18 @@ export function inputValidation(
     return 'Url params cant have an array input';
   }
 
+  return true;
+}
+
+export function inputValidation(inputs: Indexable | null): boolean | string {
+  if (!isNil(inputs) && inputs.length) {
+    inputs.forEach((r: Indexable) => {
+      const error = _inputValidation(r.name, r.type, r.location, r.array);
+      if (error !== true) {
+        return error as string;
+      }
+    });
+  }
   return true;
 }
 

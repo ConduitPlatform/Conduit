@@ -97,13 +97,9 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
-    if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: Indexable) => {
-        const error = inputValidation(r.name, r.type, r.location, r.array);
-        if (error !== true) {
-          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-        }
-      });
+    error = inputValidation(inputs);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
     const endpoint = {
@@ -216,18 +212,14 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    const error = operationValidation(found.operation, query, assignments);
+    let error = operationValidation(found.operation, query, assignments);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
-    if (!isNil(inputs) && inputs.length > 0) {
-      inputs.forEach((r: Indexable) => {
-        const error = inputValidation(r.name, r.type, r.location, r.array);
-        if (error !== true) {
-          throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-        }
-      });
+    error = inputValidation(inputs);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
     if (paginated && found.operation !== OperationsEnum.GET) {
