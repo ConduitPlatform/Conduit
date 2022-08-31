@@ -143,7 +143,9 @@ export class CmsHandlers {
   }
 
   async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const res = await findSchema(call, this.database);
+    const res = await findSchema(call, this.database).catch((e: Error) => {
+      throw e;
+    });
     await this.database
       .getSchemaModel(res.schemaName)
       .model?.deleteOne({ _id: res.id })
