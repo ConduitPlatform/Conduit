@@ -10,7 +10,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
   extensions: DeclaredSchemaExtension[];
   compiledFields: ConduitModel;
@@ -189,7 +189,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           fields: schema.fields,
           extensions: (schema as ConduitDatabaseSchema).extensions,
           compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
-          modelOptions: schema.options,
+          modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
         }),
@@ -202,7 +202,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           fields: schema.fields,
           extensions: (schema as ConduitDatabaseSchema).extensions,
           compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
-          modelOptions: schema.options,
+          modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
         }),
@@ -242,9 +242,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
     extFields: ConduitSchema['fields'],
   ): Promise<Schema> {
     if (
-      !schema.options.conduit ||
-      !schema.options.conduit.permissions ||
-      !schema.options.conduit.permissions.extendable
+      !schema.modelOptions.conduit ||
+      !schema.modelOptions.conduit.permissions ||
+      !schema.modelOptions.conduit.permissions.extendable
     ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
     }
@@ -289,14 +289,14 @@ export abstract class DatabaseAdapter<T extends Schema> {
       canModify: 'Everything',
       canDelete: true,
     } as const;
-    if (isNil(schema.options.conduit)) schema.options.conduit = {};
-    if (isNil(schema.options.conduit.permissions)) {
-      schema.options.conduit!.permissions = defaultPermissions;
+    if (isNil(schema.modelOptions.conduit)) schema.modelOptions.conduit = {};
+    if (isNil(schema.modelOptions.conduit.permissions)) {
+      schema.modelOptions.conduit!.permissions = defaultPermissions;
     } else {
       Object.keys(defaultPermissions).forEach(perm => {
-        if (!schema.options.conduit!.permissions!.hasOwnProperty(perm)) {
+        if (!schema.modelOptions.conduit!.permissions!.hasOwnProperty(perm)) {
           // @ts-ignore
-          schema.schemaOptions.conduit!.permissions![perm] =
+          schema.modelOptions.conduit!.permissions![perm] =
             defaultPermissions[perm as keyof typeof defaultPermissions];
         }
       });

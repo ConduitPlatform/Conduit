@@ -20,7 +20,7 @@ import { ParsedQuery } from '../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
   _id: string;
 } & {
@@ -115,9 +115,16 @@ export class SchemaAdmin {
   }
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, fields, modelOptions, permissions } = call.request.params;
+    const { name, fields, permissions } = call.request.params;
     const enabled = call.request.params.enabled ?? true;
     const crudOperations = call.request.params.crudOperations;
+    const modelOptions = isNil(call.request.params.modelOptions)
+      ? { conduit: { cms: { enabled, crudOperations } } }
+      : {
+          ...call.request.params.modelOptions,
+          conduit: { cms: { enabled, crudOperations } },
+        };
+    modelOptions.conduit.permissions = permissions; // database sets missing perms to defaults
 
     if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
       throw new GrpcError(
@@ -155,13 +162,8 @@ export class SchemaAdmin {
       updatedAt: TYPE.Date,
     });
 
-    const schemaOptions = isNil(modelOptions)
-      ? { conduit: { cms: { enabled, crudOperations } } }
-      : { ...modelOptions, conduit: { cms: { enabled, crudOperations } } };
-    schemaOptions.conduit.permissions = permissions; // database sets missing perms to defaults
-
     await this.schemaController.createSchema(
-      new ConduitSchema(name, fields, schemaOptions),
+      new ConduitSchema(name, fields, modelOptions),
     );
     return await this.database.getSchemaModel('_DeclaredSchema').model.findOne({ name });
   }
@@ -223,7 +225,7 @@ export class SchemaAdmin {
         new ConduitSchema(
           updatedSchema.originalSchema.name,
           updatedSchema.originalSchema.fields,
-          updatedSchema.originalSchema.options,
+          updatedSchema.originalSchema.modelOptions,
         ),
       );
     }
@@ -543,7 +545,7 @@ export class SchemaAdmin {
           JSON.stringify({
             name: schema.name,
             fields: schema.fields,
-            modelOptions: schema.options,
+            modelOptions: schema.modelOptions,
             ownerModule: schema.ownerModule,
             extensions: (schema as any).extensions,
           }),
@@ -617,22 +619,28 @@ export class SchemaAdmin {
           canModify: 'Nothing',
           canDelete: false,
         };
-        recreatedSchema.options.conduit = merge(recreatedSchema.options.conduit, {
-          imported: true,
-          noSync: true,
-          cms: {
-            enabled: recreatedSchema.options.conduit?.cms?.enabled ?? true,
-            crudOperations: recreatedSchema.options.conduit?.cms?.crudOperations
+        recreatedSchema.modelOptions.conduit = merge(
+          recreatedSchema.modelOptions.conduit,
+          {
+            imported: true,
+            noSync: true,
+            cms: {
+              enabled: recreatedSchema.modelOptions.conduit?.cms?.enabled ?? true,
+              crudOperations: recreatedSchema.modelOptions.conduit?.cms?.crudOperations
+                ? merge(
+                    defaultCrudOperations,
+                    recreatedSchema.modelOptions.conduit.cms.crudOperations,
+                  )
+                : defaultCrudOperations,
+            },
+            permissions: recreatedSchema.modelOptions.conduit?.permissions
               ? merge(
-                  defaultCrudOperations,
-                  recreatedSchema.options.conduit.cms.crudOperations,
+                  defaultPermissions,
+                  recreatedSchema.modelOptions.conduit.permissions,
                 )
-              : defaultCrudOperations,
+              : defaultPermissions,
           },
-          permissions: recreatedSchema.options.conduit?.permissions
-            ? merge(defaultPermissions, recreatedSchema.options.conduit.permissions)
-            : defaultPermissions,
-        });
+        );
         (recreatedSchema as _ConduitSchema).collectionName =
           this.database.getCollectionName(schema as _ConduitSchema); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);

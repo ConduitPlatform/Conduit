@@ -4,18 +4,18 @@ export class ConduitSchema {
   readonly name: string;
   readonly fields: ConduitModel;
   readonly collectionName: string | ''; // '' on implicit name, updated in createSchemaFromAdapter()
-  readonly options: ConduitSchemaOptions;
+  readonly modelOptions: ConduitSchemaOptions;
   ownerModule: string = 'unknown';
 
   constructor(
     name: string,
     fields: ConduitModel,
-    options?: ConduitSchemaOptions,
+    modelOptions?: ConduitSchemaOptions,
     collectionName?: string,
   ) {
     this.name = name;
     this.fields = fields;
-    this.options = options ?? {};
+    this.modelOptions = modelOptions ?? {};
     this.collectionName = collectionName && collectionName !== '' ? collectionName : '';
   }
 }

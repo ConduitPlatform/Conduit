@@ -11,7 +11,7 @@ import {
 import { CmsHandlers } from '../../handlers/cms.handler';
 import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
 };
 

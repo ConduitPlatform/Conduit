@@ -33,11 +33,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.originalSchema = originalSchema;
 
     if (!isNil(schema.collectionName)) {
-      (schema.options as _ConduitSchemaOptions).collection = schema.collectionName;
+      (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName;
     } else {
       (schema as Indexable).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.fields, schema.options);
+    const mongooseSchema = new Schema(schema.fields, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }

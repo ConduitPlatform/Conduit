@@ -20,7 +20,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
-        modelOptions: JSON.parse(res.options),
+        modelOptions: JSON.parse(res.modelOptions),
       };
     });
   }
@@ -28,11 +28,11 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   getSchemas(): Promise<{ name: string; fields: any; modelOptions: any }[]> {
     return this.client!.getSchemas({}).then(res => {
       return res.schemas.map(
-        (schema: { name: string; fields: string; options: string }) => {
+        (schema: { name: string; fields: string; modelOptions: string }) => {
           return {
             name: schema.name,
             fields: JSON.parse(schema.fields),
-            modelOptions: JSON.parse(schema.options),
+            modelOptions: JSON.parse(schema.modelOptions),
           };
         },
       );
@@ -47,13 +47,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.createSchemaFromAdapter({
       name: schema.name,
       fields: JSON.stringify(schema.fields),
-      options: JSON.stringify(schema.options),
+      modelOptions: JSON.stringify(schema.modelOptions),
       collectionName: schema.collectionName,
     }).then(res => {
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
-        options: JSON.parse(res.options),
+        modelOptions: JSON.parse(res.modelOptions),
         collectionName: res.collectionName,
       };
     });
@@ -69,7 +69,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
-        options: JSON.parse(res.options),
+        modelOptions: JSON.parse(res.modelOptions),
         collectionName: res.collectionName,
       };
     });

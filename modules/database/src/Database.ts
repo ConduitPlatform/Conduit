@@ -116,7 +116,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           const schema = new ConduitSchema(
             receivedSchema.name,
             receivedSchema.fields,
-            receivedSchema.options,
+            receivedSchema.modelOptions,
             receivedSchema.collectionName,
           );
           schema.ownerModule = receivedSchema.ownerModule;
@@ -192,7 +192,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     const schema = new ConduitSchema(
       call.request.name,
       JSON.parse(call.request.fields),
-      JSON.parse(call.request.options),
+      JSON.parse(call.request.modelOptions),
       call.request.collectionName,
     );
     if (schema.name.indexOf('-') >= 0 || schema.name.indexOf(' ') >= 0) {
@@ -207,15 +207,15 @@ export default class DatabaseModule extends ManagedModule<void> {
       .then((schemaAdapter: Schema) => {
         this.publishSchema({
           name: call.request.name,
-          fields: JSON.parse(call.request.options),
-          options: JSON.parse(call.request.options),
+          fields: JSON.parse(call.request.fields),
+          modelOptions: JSON.parse(call.request.modelOptions),
           collectionName: call.request.collectionName,
           owner: schema.ownerModule,
         });
         callback(null, {
           name: schemaAdapter.originalSchema.name,
           fields: JSON.stringify(schemaAdapter.originalSchema.fields),
-          options: JSON.stringify(schemaAdapter.originalSchema.options),
+          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
           collectionName: schemaAdapter.originalSchema.collectionName,
         });
       })
@@ -238,7 +238,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       callback(null, {
         name: schemaAdapter.name,
         fields: JSON.stringify(schemaAdapter.fields),
-        options: JSON.stringify(schemaAdapter.options),
+        modelOptions: JSON.stringify(schemaAdapter.modelOptions),
         collectionName: schemaAdapter.collectionName,
       });
     } catch (err) {
@@ -257,7 +257,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           return {
             name: schema.name,
             fields: JSON.stringify(schema.fields),
-            options: JSON.stringify(schema.options),
+            modelOptions: JSON.stringify(schema.modelOptions),
             collectionName: schema.collectionName,
           };
         }),
@@ -309,14 +309,14 @@ export default class DatabaseModule extends ManagedModule<void> {
           this.publishSchema({
             name: call.request.extension.name,
             schema: schemaAdapter.model,
-            options: schemaAdapter.originalSchema.options,
+            modelOptions: schemaAdapter.originalSchema.modelOptions,
             collectionName: schemaAdapter.originalSchema.collectionName,
             owner: schemaAdapter.originalSchema.ownerModule,
           });
           callback(null, {
             name: schemaAdapter.originalSchema.name,
             fields: JSON.stringify(schemaAdapter.originalSchema.fields),
-            options: JSON.stringify(schemaAdapter.originalSchema.options),
+            modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
             collectionName: schemaAdapter.originalSchema.collectionName,
           });
         })

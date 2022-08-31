@@ -18,7 +18,7 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
 };
 
@@ -119,7 +119,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async introspectDatabase(): Promise<ConduitSchema[]> {
     const introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;
-    const schemaOptions = {
+    const modelOptions = {
       timestamps: true,
       conduit: {
         noSync: true,
@@ -183,7 +183,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             const schema = new ConduitSchema(
               collectionName,
               originalSchema,
-              schemaOptions,
+              modelOptions,
               collectionName,
             );
             schema.ownerModule = 'database';

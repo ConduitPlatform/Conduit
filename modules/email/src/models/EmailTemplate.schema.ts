@@ -29,7 +29,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -56,7 +56,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, EmailTemplate.name, schema, schemaOptions, collectionName);
+    super(database, EmailTemplate.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

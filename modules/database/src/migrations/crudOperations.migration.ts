@@ -4,7 +4,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { ConduitSchemaOptions, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isBoolean } from 'lodash';
 
-type _ConduitSchema = Omit<ConduitSchema, 'schemaOptions'> & {
+type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
 };
 export async function migrateCrudOperations(
