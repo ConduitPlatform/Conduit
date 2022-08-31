@@ -231,15 +231,9 @@ export function assignmentValidation(
 export function paramValidation(params: Indexable): boolean | string {
   const { name, operation, selectedSchema, selectedSchemaName, query, assignments } =
     params;
-
-  if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
-    return 'Either selectedSchema or selectedSchemaName must be specified';
-  }
-  if (!isNil(selectedSchema) && selectedSchema.length === 0) {
-    return 'selectedSchema must not be empty';
-  }
-  if (isNil(selectedSchema) && selectedSchemaName.length === 0) {
-    return 'selectedSchemaName must not be empty';
+  const error = _selectedSchemaValidation(selectedSchema, selectedSchemaName);
+  if (error !== true) {
+    return error as string;
   }
   if (name.length === 0) {
     return 'name must not be empty';
@@ -257,6 +251,22 @@ export function paramValidation(params: Indexable): boolean | string {
     isNil(assignments)
   ) {
     return 'Specified operation requires that assignments field also be provided';
+  }
+  return true;
+}
+
+function _selectedSchemaValidation(
+  selectedSchema: string,
+  selectedSchemaName: string,
+): boolean | string {
+  if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
+    return 'Either selectedSchema or selectedSchemaName must be specified';
+  }
+  if (!isNil(selectedSchema) && selectedSchema.length === 0) {
+    return 'selectedSchema must not be empty';
+  }
+  if (isNil(selectedSchema) && selectedSchemaName.length === 0) {
+    return 'selectedSchemaName must not be empty';
   }
   return true;
 }
