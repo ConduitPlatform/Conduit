@@ -285,15 +285,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let email = call.request.params.email;
+    const email = call.request.params.email.toLowerCase();
     const password = call.request.params.password;
 
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
-
-    email = email.toLowerCase();
 
     let user: User | null = await User.getInstance().findOne({ email });
     if (!isNil(user)) throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
