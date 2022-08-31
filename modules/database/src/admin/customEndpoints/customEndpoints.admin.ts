@@ -68,8 +68,8 @@ export class CustomEndpointsAdmin {
     const {
       name,
       operation,
-      selectedSchema, // if changed, update utils.schemaValidation()
-      selectedSchemaName,
+      selectedSchema, // if changed, update utils.selectedSchemaValidation() throw message
+      selectedSchemaName, // ^
       inputs,
       query,
       authentication,
