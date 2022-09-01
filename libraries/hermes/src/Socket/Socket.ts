@@ -111,6 +111,7 @@ export class SocketController extends ConduitRouter {
           this.handleResponse(res, socket);
         })
         .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
           socket.emit('conduit_error', e);
         });
 
@@ -127,6 +128,7 @@ export class SocketController extends ConduitRouter {
             this.handleResponse(res, socket);
           })
           .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
           });
       });
@@ -143,6 +145,7 @@ export class SocketController extends ConduitRouter {
             this.handleResponse(res, socket);
           })
           .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
           });
       });
