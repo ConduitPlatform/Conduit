@@ -78,13 +78,12 @@ export abstract class ConduitRouter {
     let primaryPromise = new Promise(resolve => {
       resolve({});
     });
-    const self = this;
-    if (this._middlewares && middlewares) {
-      middlewares.forEach(m => {
-        if (!this._middlewares?.hasOwnProperty(m))
-          primaryPromise = Promise.reject('Middleware does not exist');
+    middlewares?.forEach(m => {
+      if (!this._middlewares?.hasOwnProperty(m)) {
+        primaryPromise = Promise.reject('Middleware does not exist');
+      } else {
         primaryPromise = primaryPromise.then(r => {
-          return this._middlewares![m].executeRequest.bind(self._middlewares![m])(
+          return this._middlewares![m].executeRequest.bind(this._middlewares![m])(
             params,
           ).then((p: any) => {
             if (p.result) {
@@ -93,8 +92,8 @@ export abstract class ConduitRouter {
             return r;
           });
         });
-      });
-    }
+      }
+    });
     return primaryPromise;
   }
 
