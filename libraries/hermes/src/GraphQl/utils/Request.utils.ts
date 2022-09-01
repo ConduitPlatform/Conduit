@@ -1,7 +1,8 @@
 import { ApolloError } from 'apollo-server-express';
-import { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
 export const errorHandler = (err: Error | ConduitError | any) => {
+  ConduitGrpcSdk.Logger.error(err);
   if (err.hasOwnProperty('status')) {
     throw new ApolloError(err.message, (err as ConduitError).status.toString(), err);
   } else if (err.hasOwnProperty('code')) {
