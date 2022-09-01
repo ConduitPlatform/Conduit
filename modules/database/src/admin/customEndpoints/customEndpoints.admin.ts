@@ -354,7 +354,7 @@ export class CustomEndpointsAdmin {
         );
       }
       findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.compiledFields = findSchema.modelSchema;
+      findSchema.compiledFields = findSchema.fields;
     }
     return findSchema;
   }
