@@ -57,11 +57,12 @@ export function validateSchemaInput(
       optionsValidationError = 'Model options must be an object';
     }
     Object.keys(modelOptions).forEach(key => {
-      if (key === 'timestamps' && !isBoolean(modelOptions[key])) {
+      if (key !== 'conduit' && key !== 'timestamps') {
+        optionsValidationError = "Only 'conduit' and 'timestamps' options allowed";
+      } else if (key === 'timestamps' && !isBoolean(modelOptions[key])) {
         optionsValidationError = "Option 'timestamps' must be of type Boolean";
-      }
-      if (key !== 'timestamps') {
-        optionsValidationError = "Only 'timestamps' option is allowed";
+      } else if (key === 'conduit' && !isObject(modelOptions[key])) {
+        optionsValidationError = "Option 'conduit' must be of type Object";
       }
     });
     if (!isNil(optionsValidationError)) return optionsValidationError;
