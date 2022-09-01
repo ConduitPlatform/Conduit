@@ -189,7 +189,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   private getHttpPort() {
-    const value = (process.env['CLIENT_HTTP_PORT'] || process.env['PORT']) ?? '3000'; // <=v13 compat (PORT)
+    const value = process.env['CLIENT_HTTP_PORT'] ?? '3000';
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
