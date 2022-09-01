@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file. See [standa
 * **database:** DeclaredSchema compiledFields extension field and custom endpoint generation ([#290](https://github.com/ConduitPlatform/Conduit/issues/290)) ([6b7eb84](https://github.com/ConduitPlatform/Conduit/commit/6b7eb84ea298bf59fea41d9afd5f77f019f52049))
 * **database:** gRPC schema registration removing schema extensions from adapter models ([#293](https://github.com/ConduitPlatform/Conduit/issues/293)) ([47bf1c9](https://github.com/ConduitPlatform/Conduit/commit/47bf1c9b9ea0cbeeb2accbb909a73b6e67d4a9b7))
 * **grpc-sdk,database:** crash on unconditional Sequelize metrics ([#295](https://github.com/ConduitPlatform/Conduit/issues/295)) ([86666e0](https://github.com/ConduitPlatform/Conduit/commit/86666e00875475a119716b7a749db92cef50e4c9))
+* **grpc-sdk:** npm build crashing ([bce9618](https://github.com/ConduitPlatform/Conduit/commit/bce9618af06c6149f38612f1369c6b74551b042b))
 * **sms:** not starting up with invalid config ([#294](https://github.com/ConduitPlatform/Conduit/issues/294)) ([eb57231](https://github.com/ConduitPlatform/Conduit/commit/eb57231877649630ff85e038ca8135e0756e094b))
 
 ### [0.14.6](https://github.com/ConduitPlatform/Conduit/compare/v0.14.5...v0.14.6) (2022-08-24)

@@ -13,7 +13,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -35,7 +35,7 @@ export class Admin extends ConduitActiveSchema<Admin> {
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, Admin.name, schema, schemaOptions, collectionName);
+    super(database, Admin.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

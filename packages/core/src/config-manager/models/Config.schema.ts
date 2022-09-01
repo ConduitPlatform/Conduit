@@ -8,7 +8,7 @@ const schema = {
     required: true,
   },
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -27,7 +27,7 @@ export class Config extends ConduitActiveSchema<Config> {
   moduleConfigs!: any;
 
   private constructor(database: DatabaseProvider) {
-    super(database, Config.name, schema, schemaOptions, collectionName);
+    super(database, Config.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
@@ -37,14 +37,5 @@ export class Config extends ConduitActiveSchema<Config> {
     }
     Config._instance = new Config(database);
     return Config._instance;
-  }
-
-  static getPlainSchema() {
-    return {
-      name: Config.getInstance().name,
-      fields: Config.getInstance().fields,
-      schemaOptions: Config.getInstance().schemaOptions,
-      collectionName: Config.getInstance().collectionName,
-    };
   }
 }

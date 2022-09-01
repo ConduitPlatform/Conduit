@@ -27,7 +27,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const schemaOptions = {
+const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
@@ -55,7 +55,7 @@ export class RefreshToken extends ConduitActiveSchema<RefreshToken> {
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, RefreshToken.name, schema, schemaOptions, collectionName);
+    super(database, RefreshToken.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {

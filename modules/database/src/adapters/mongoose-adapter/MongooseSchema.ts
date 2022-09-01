@@ -7,13 +7,17 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { ConduitModelOptions, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitSchemaOptions,
+  ConduitSchema,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { createWithPopulations } from './utils';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 
-type _ConduitModelOptions = ConduitModelOptions & { collection: string };
+type _ConduitSchemaOptions = ConduitSchemaOptions & { collection: string };
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -29,11 +33,11 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.originalSchema = originalSchema;
 
     if (!isNil(schema.collectionName)) {
-      (schema.schemaOptions as _ConduitModelOptions).collection = schema.collectionName;
+      (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName;
     } else {
       (schema as Indexable).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.modelSchema, schema.schemaOptions);
+    const mongooseSchema = new Schema(schema.fields, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
@@ -144,7 +148,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         r = final.split('.');
         let controlBool = true;
         while (controlBool) {
-          if (this.originalSchema.modelSchema[r[0]]) {
+          if (this.originalSchema.fields[r[0]]) {
             controlBool = false;
           } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
             throw new Error("Failed populating '" + final + "'");

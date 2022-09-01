@@ -1,6 +1,6 @@
 import {
   ConduitModel,
-  ConduitModelOptions,
+  ConduitSchemaOptions,
   ConduitSchema,
 } from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
@@ -17,7 +17,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     ownerModule: string,
     extensions: DeclaredSchemaExtension[] = [],
     fields?: ConduitModel,
-    modelOptions?: ConduitModelOptions,
+    modelOptions?: ConduitSchemaOptions,
     collectionName?: string,
   ) {
     super(name, fields ?? {}, modelOptions, collectionName);

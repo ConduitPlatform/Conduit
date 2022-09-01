@@ -3,6 +3,7 @@ import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
+  Schema,
 } from '../../protoUtils/database';
 import { Query } from '../../interfaces';
 
@@ -14,23 +15,23 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   getSchema(
     schemaName: string,
-  ): Promise<{ name: string; modelSchema: any; modelOptions: any }> {
+  ): Promise<{ name: string; fields: any; modelOptions: any }> {
     return this.client!.getSchema({ schemaName: schemaName }).then(res => {
       return {
-        name: res.schema!.name,
-        modelSchema: JSON.parse(res.schema!.modelSchema),
-        modelOptions: JSON.parse(res.schema!.modelOptions),
+        name: res.name,
+        fields: JSON.parse(res.fields),
+        modelOptions: JSON.parse(res.modelOptions),
       };
     });
   }
 
-  getSchemas(): Promise<any> {
+  getSchemas(): Promise<{ name: string; fields: any; modelOptions: any }[]> {
     return this.client!.getSchemas({}).then(res => {
       return res.schemas.map(
-        (schema: { name: string; modelSchema: string; modelOptions: string }) => {
+        (schema: { name: string; fields: string; modelOptions: string }) => {
           return {
             name: schema.name,
-            modelSchema: JSON.parse(schema.modelSchema),
+            fields: JSON.parse(schema.fields),
             modelOptions: JSON.parse(schema.modelOptions),
           };
         },
@@ -42,36 +43,34 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.deleteSchema({ schemaName, deleteData });
   }
 
-  createSchemaFromAdapter(schema: ConduitSchema): Promise<any> {
+  createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema> {
     return this.client!.createSchemaFromAdapter({
-      schema: {
-        name: schema.name,
-        modelSchema: JSON.stringify(schema.fields ?? schema.modelSchema),
-        modelOptions: JSON.stringify(schema.schemaOptions),
-        collectionName: schema.collectionName,
-      },
+      name: schema.name,
+      fields: JSON.stringify(schema.fields),
+      modelOptions: JSON.stringify(schema.modelOptions),
+      collectionName: schema.collectionName,
     }).then(res => {
       return {
-        name: res.schema!.name,
-        modelSchema: JSON.parse(res.schema!.modelSchema),
-        modelOptions: JSON.parse(res.schema!.modelOptions),
-        collectionName: res.schema!.collectionName,
+        name: res.name,
+        fields: JSON.parse(res.fields),
+        modelOptions: JSON.parse(res.modelOptions),
+        collectionName: res.collectionName,
       };
     });
   }
 
-  setSchemaExtension(extension: ConduitSchemaExtension): Promise<any> {
+  setSchemaExtension(extension: ConduitSchemaExtension): Promise<Schema> {
     return this.client!.setSchemaExtension({
       extension: {
         name: extension.name,
-        modelSchema: JSON.stringify(extension.fields ?? extension.modelSchema),
+        fields: JSON.stringify(extension.fields ?? extension.fields),
       },
     }).then(res => {
       return {
-        name: res.schema!.name,
-        modelSchema: JSON.parse(res.schema!.modelSchema),
-        modelOptions: JSON.parse(res.schema!.modelOptions),
-        collectionName: res.schema!.collectionName,
+        name: res.name,
+        fields: JSON.parse(res.fields),
+        modelOptions: JSON.parse(res.modelOptions),
+        collectionName: res.collectionName,
       };
     });
   }

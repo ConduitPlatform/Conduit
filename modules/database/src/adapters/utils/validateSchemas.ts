@@ -36,8 +36,8 @@ export function systemRequiredValidator(
 
   // validate types
   validateSchemaFields(
-    oldSchema.fields ?? oldSchema.modelSchema,
-    newSchema.fields ?? newSchema.modelSchema,
+    oldSchema.fields ?? oldSchema.fields,
+    newSchema.fields ?? newSchema.fields,
   );
 
   return newSchema;

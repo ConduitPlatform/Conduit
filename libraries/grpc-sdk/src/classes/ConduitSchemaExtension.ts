@@ -8,8 +8,4 @@ export class ConduitSchemaExtension {
     this.name = name;
     this.fields = fields;
   }
-
-  get modelSchema(): ConduitModel {
-    return this.fields;
-  }
 }
