@@ -1,4 +1,5 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema, DeclaredSchemaExtension } from '../../interfaces';
 import { status } from '@grpc/grpc-js';
 const deepdash = require('deepdash/standalone');
 
@@ -36,12 +37,15 @@ export function validateExtensionFields(schema: any, extFields: any, extOwner: s
   deepFieldValidate(extFields);
 }
 
-export function stitchSchema(schema: any) {
-  // TODO Deep copy and return instead?
+export function stitchSchema(schema: ConduitDatabaseSchema) {
+  // Extension array initialization will be redundant once we streamline
+  // ConduitSchema -> ConduitDatabaseSchema transformations
   if (!schema.extensions) schema.extensions = [];
-  schema.extensions.forEach((ext: any) => {
+
+  schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+  schema.extensions.forEach((ext: DeclaredSchemaExtension) => {
     Object.keys(ext.fields).forEach((field: any) => {
-      schema.fields[field] = ext.fields[field];
+      schema.compiledFields[field] = ext.fields[field];
     });
   });
 }

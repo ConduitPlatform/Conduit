@@ -87,7 +87,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
       });
-      if (schemaModel?.extensions?.length > 0) {
+      // Retrieve extension fields on Database startup
+      if (
+        (schema as _ConduitSchema).extensions?.length === 0 &&
+        schemaModel?.extensions?.length > 0
+      ) {
         (schema as _ConduitSchema).extensions = schemaModel.extensions;
       }
     }
@@ -236,24 +240,28 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract ensureConnected(): Promise<void>;
 
   setSchemaExtension(
-    schema: ConduitSchema,
+    baseSchema: ConduitSchema, // ~ConduitDatabaseSchema
     extOwner: string,
     extFields: ConduitSchema['fields'],
   ): Promise<Schema> {
     if (
-      !schema.modelOptions.conduit ||
-      !schema.modelOptions.conduit.permissions ||
-      !schema.modelOptions.conduit.permissions.extendable
+      !baseSchema.modelOptions.conduit ||
+      !baseSchema.modelOptions.conduit.permissions ||
+      !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
     }
-    validateExtensionFields(schema, extFields, extOwner);
-    if (!(schema as ConduitDatabaseSchema).extensions) {
-      (schema as ConduitDatabaseSchema).extensions = [];
+    // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
+    const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;
+    if (!schema.extensions) {
+      schema.extensions = [];
     }
-    const extIndex = (schema as ConduitDatabaseSchema).extensions.findIndex(
-      (ext: any) => ext.ownerModule === extOwner,
-    );
+    if (!schema.compiledFields) {
+      // could technically be empty, repeated in stitchSchema() call from createSchemaFromAdapter()
+      schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+    }
+    validateExtensionFields(schema, extFields, extOwner);
+    const extIndex = schema.extensions.findIndex(ext => ext.ownerModule === extOwner);
     if (extIndex === -1) {
       // Create Extension
       if (Object.keys(extFields).length === 0) {

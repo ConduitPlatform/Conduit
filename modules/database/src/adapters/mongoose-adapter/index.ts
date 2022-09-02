@@ -216,9 +216,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
-    stitchSchema(schema);
-    original.compiledFields = schema.fields;
+    stitchSchema(schema as ConduitDatabaseSchema);
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);
@@ -230,7 +228,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
-    await this.saveSchemaToDatabase(original);
+    await this.saveSchemaToDatabase(schema);
 
     return this.models[schema.name];
   }
