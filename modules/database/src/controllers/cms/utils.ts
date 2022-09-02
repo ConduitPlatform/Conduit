@@ -7,7 +7,7 @@ import {
   RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { CmsHandlers } from '../../handlers/cms.handler';
+import { CmsHandlers } from '../../handlers/cms/handler';
 import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
