@@ -9,7 +9,7 @@ export async function checkModuleHealth(
   service: string = '',
   grpcToken?: string,
 ) {
-  let channel = createChannel(serviceUrl, undefined, {
+  const channel = createChannel(serviceUrl, undefined, {
     'grpc.max_receive_message_length': 1024 * 1024 * 100,
     'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
@@ -21,7 +21,7 @@ export async function checkModuleHealth(
         ? getGrpcSignedTokenInterceptor(grpcToken)
         : getModuleNameInterceptor(clientName),
     );
-  let _healthClient = clientFactory.create(HealthDefinition, channel);
+  const _healthClient = clientFactory.create(HealthDefinition, channel);
 
   let error;
   let status = await _healthClient

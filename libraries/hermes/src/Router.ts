@@ -113,7 +113,7 @@ export abstract class ConduitRouter {
   }
 
   routeChanged(route: ConduitRoute) {
-    let routeKey = `${route.input.action}-${route.input.path}`;
+    const routeKey = `${route.input.action}-${route.input.path}`;
     if (this._registeredRoutes.has(routeKey)) {
       return (
         ObjectHash.sha1(route) !== ObjectHash.sha1(this._registeredRoutes.get(routeKey))
