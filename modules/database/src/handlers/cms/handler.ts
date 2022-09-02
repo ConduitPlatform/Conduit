@@ -82,7 +82,7 @@ export class CmsHandlers {
     const res = await findSchema(call, this.database).catch((e: Error) => {
       throw e;
     });
-    const updatedDocument = await getUpdatedDocument(
+    return await getUpdatedDocument(
       res.schemaName,
       res.params,
       this.database,
@@ -90,15 +90,13 @@ export class CmsHandlers {
     ).catch((e: Error) => {
       throw e;
     });
-
-    return updatedDocument;
   }
 
   async patchDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const res = await findSchema(call, this.database).catch((e: Error) => {
       throw e;
     });
-    const updatedDocument = await getUpdatedDocument(
+    return await getUpdatedDocument(
       res.schemaName,
       res.params,
       this.database,

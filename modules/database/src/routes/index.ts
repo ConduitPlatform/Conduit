@@ -1,4 +1,4 @@
-import { CmsHandlers } from '../handlers/cms/cms.handler';
+import { CmsHandlers } from '../handlers/cms/handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
