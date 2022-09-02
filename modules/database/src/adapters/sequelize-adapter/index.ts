@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
+import { ConduitDatabaseSchema } from '../../interfaces';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { stitchSchema } from '../utils/extensions';

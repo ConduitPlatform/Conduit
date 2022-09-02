@@ -4,11 +4,10 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension, Schema } from '../interfaces';
+import { Schema, ConduitDatabaseSchema, DeclaredSchemaExtension } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
 type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
   modelOptions: ConduitSchemaOptions;
@@ -89,7 +88,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         name: schema.name,
       });
       if (schemaModel?.extensions?.length > 0) {
-        (schema as any).extensions = schemaModel.extensions;
+        (schema as _ConduitSchema).extensions = schemaModel.extensions;
       }
     }
     const createdSchema = this._createSchemaFromAdapter(schema);

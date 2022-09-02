@@ -6,10 +6,9 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
-import { ICustomEndpoint } from '../../interfaces';
+import { ICustomEndpoint, Sort } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
-import { Sort } from '../../interfaces/Sort';
 
 export class CustomEndpointHandler {
   private static routeControllers: Indexable = {};
