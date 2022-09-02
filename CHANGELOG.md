@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.8](https://github.com/ConduitPlatform/Conduit/compare/v0.14.6...v0.14.8) (2022-09-02)
+
+
+### Features
+
+* Prometheus Metrics Support ([#282](https://github.com/ConduitPlatform/Conduit/issues/282)) ([fa5f323](https://github.com/ConduitPlatform/Conduit/commit/fa5f3238616b50f4da69f0d4e297ac49d6524d72))
+
+
+### Bug Fixes
+
+* **database:** admin create schema return type regression ([#289](https://github.com/ConduitPlatform/Conduit/issues/289)) ([4f7979c](https://github.com/ConduitPlatform/Conduit/commit/4f7979c794fa0b63fdc1ad81b45796897bca2004))
+* **database:** DeclaredSchema compiledFields extension field and custom endpoint generation ([#290](https://github.com/ConduitPlatform/Conduit/issues/290)) ([6b7eb84](https://github.com/ConduitPlatform/Conduit/commit/6b7eb84ea298bf59fea41d9afd5f77f019f52049))
+* **database:** gRPC schema registration removing schema extensions from adapter models ([#293](https://github.com/ConduitPlatform/Conduit/issues/293)) ([47bf1c9](https://github.com/ConduitPlatform/Conduit/commit/47bf1c9b9ea0cbeeb2accbb909a73b6e67d4a9b7))
+* **grpc-sdk,database:** crash on unconditional Sequelize metrics ([#295](https://github.com/ConduitPlatform/Conduit/issues/295)) ([86666e0](https://github.com/ConduitPlatform/Conduit/commit/86666e00875475a119716b7a749db92cef50e4c9))
+* **hermes:** not throwing an error on unavaibable route middlewares ([#307](https://github.com/ConduitPlatform/Conduit/issues/307)) ([3d1f911](https://github.com/ConduitPlatform/Conduit/commit/3d1f9116d1d608d604efeab847cb68480a80986e))
+* **sms:** not starting up with invalid config ([#294](https://github.com/ConduitPlatform/Conduit/issues/294)) ([eb57231](https://github.com/ConduitPlatform/Conduit/commit/eb57231877649630ff85e038ca8135e0756e094b))
+
 ### [0.14.7](https://github.com/ConduitPlatform/Conduit/compare/v0.14.6...v0.14.7) (2022-08-31)
 
 
