@@ -142,11 +142,16 @@ export class AuthenticationRoutes {
       throw new GrpcError(status.UNAUTHENTICATED, 'No authorization header present');
     }
     const args = header.split(' ');
-
-    if (args[0] !== 'Bearer' || isNil(args[1])) {
+    if (args.length !== 2) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header malformed');
     }
 
+    if (args[0] !== 'Bearer') {
+      throw new GrpcError(
+        status.UNAUTHENTICATED,
+        "The Authorization header must be prefixed by 'Bearer '",
+      );
+    }
     const accessToken = await AccessToken.getInstance().findOne({
       token: args[1],
       clientId: context.clientId,
