@@ -98,7 +98,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private getHttpPort() {
-    const value = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
+    const value = process.env['ADMIN_HTTP_PORT'] ?? '3030';
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);

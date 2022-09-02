@@ -47,7 +47,7 @@ export class SocketController extends ConduitRouter {
     this.pubClient = new IORedis(redisDetails.port, redisDetails.host);
     this.subClient = this.pubClient.duplicate();
     this.io.adapter(createAdapter(this.pubClient, this.subClient));
-    this.httpServer.listen(process.env.SOCKET_PORT || this.port);
+    this.httpServer.listen(this.port);
     this._registeredNamespaces = new Map();
     this.globalMiddlewares = [];
   }

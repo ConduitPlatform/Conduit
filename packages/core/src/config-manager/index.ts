@@ -223,10 +223,6 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async registerModulesConfig(moduleName: string, moduleConfig: any) {
-    return this.set(moduleName, moduleConfig);
-  }
-
   async configureModule(
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,

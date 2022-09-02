@@ -11,7 +11,7 @@ export async function generateConfigDefaults(
     config.auth.tokenSecret = crypto.randomBytes(64).toString('base64');
   }
   if (hostUrlConfig === '' || isNil(hostUrlConfig)) {
-    const portValue = (process.env['ADMIN_HTTP_PORT'] || process.env['PORT']) ?? '3030'; // <=v13 compat (PORT)
+    const portValue = process.env['ADMIN_HTTP_PORT'] ?? '3030';
     config.hostUrl = `http://localhost:${portValue}`;
   }
   return config;
