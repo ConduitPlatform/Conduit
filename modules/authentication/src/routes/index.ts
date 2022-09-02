@@ -49,7 +49,6 @@ export class AuthenticationRoutes {
 
   async registerRoutes() {
     const config = ConfigController.getInstance().config;
-    let serverConfig: { hostUrl: string };
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -68,7 +67,7 @@ export class AuthenticationRoutes {
     }
     errorMessage = null;
 
-    serverConfig = await this.grpcSdk.config.get('router');
+    const serverConfig: { hostUrl: string } = await this.grpcSdk.config.get('router');
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
         const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](

@@ -100,7 +100,7 @@ export class ConfigStorage {
   }
 
   reconcileMonitor() {
-    let reconciliationInterval = setInterval(() => {
+    const reconciliationInterval = setInterval(() => {
       if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
         this.reconcile();
       }
@@ -115,7 +115,7 @@ export class ConfigStorage {
 
   reconcile() {
     this.changeState(true);
-    let promises = this.toBeReconciled.map(moduleName => {
+    const promises = this.toBeReconciled.map(moduleName => {
       return this.getConfig(moduleName, false).then(config =>
         models.Config.getInstance().findByIdAndUpdate(this.configDocId!, {
           $set: { [`moduleConfigs.${moduleName}`]: config },

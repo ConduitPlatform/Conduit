@@ -481,7 +481,8 @@ export class AdminHandlers {
   }
 
   async sendEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { templateName, body, subject, email, variables, sender } = call.request.params;
+    const { templateName, body, subject, email, variables } = call.request.params;
+    let { sender } = call.request.params;
     if (!templateName && (!body || !subject)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Template/body+subject not provided');
     }

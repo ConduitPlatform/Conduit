@@ -24,8 +24,6 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
   async connectWithProvider(details: ConnectionParams): Promise<Payload<TwitchUser>> {
     const twitch_access_token = details.accessToken;
     const expires_in = undefined;
-    let id;
-    let email;
     let profile_image_url;
     const response2 = await axios.get('https://api.twitch.tv/helix/users', {
       headers: {
@@ -34,8 +32,8 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
       },
     });
 
-    id = response2.data.data[0].id;
-    email = response2.data.data[0].email;
+    const id = response2.data.data[0].id;
+    const email = response2.data.data[0].email;
     //profile_image_url = response2.data.data[0].profile_image_url;
 
     return {

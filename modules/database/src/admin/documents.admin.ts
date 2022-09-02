@@ -39,7 +39,8 @@ export class DocumentsAdmin {
   }
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let { schemaName, query } = call.request.params;
+    let { query } = call.request.params;
+    const { schemaName } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const schema = await this.database
