@@ -454,9 +454,9 @@ export class SchemaAdmin {
       requestedSchema.name,
       call.request.params.fields,
     );
-    const base = this.database.getSchema(requestedSchema.name);
+    const schema = this.database.getSchema(requestedSchema.name);
     await this.database
-      .setSchemaExtension(base, 'database', extension.fields)
+      .setSchemaExtension(schema, 'database', extension.fields)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
