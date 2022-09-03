@@ -181,7 +181,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    stitchSchema(schema as ConduitDatabaseSchema);
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

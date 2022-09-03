@@ -96,15 +96,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
-      const collectionInDeclaredSchemas = (
-        declaredSchemas as unknown as ConduitSchema[]
-      ).some((declaredSchema: ConduitSchema) => {
-        if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
-          return declaredSchema.collectionName === collection;
-        } else {
-          return pluralize(declaredSchema.name) === collection;
-        }
-      });
+      const collectionInDeclaredSchemas = (declaredSchemas as unknown as ConduitSchema[]) // @dirty-type-cast
+        .some((declaredSchema: ConduitSchema) => {
+          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+            return declaredSchema.collectionName === collection;
+          } else {
+            return pluralize(declaredSchema.name) === collection;
+          }
+        });
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);
       }
@@ -157,7 +156,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     await db.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
-    (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
+    (declaredSchemas as unknown as ConduitSchema[]).forEach(schema => {
+      // @dirty-type-cast
       if (schema.modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
@@ -216,7 +216,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     this.addSchemaPermissions(schema);
-    stitchSchema(schema as ConduitDatabaseSchema);
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const newSchema = schemaConverter(schema);
 
     this.registeredSchemas.set(schema.name, schema);

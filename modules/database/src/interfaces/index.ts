@@ -6,3 +6,4 @@ export * from './DeclaredSchema';
 export * from './DeclaredSchemaExtension';
 export * from './SchemaAdapter';
 export * from './Sort';
+export * from './TypeHacks';

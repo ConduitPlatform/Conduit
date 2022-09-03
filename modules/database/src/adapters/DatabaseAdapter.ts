@@ -3,16 +3,11 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { Schema, ConduitDatabaseSchema, DeclaredSchemaExtension } from '../interfaces';
+import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 
-type _ConduitSchema = Omit<ConduitSchema, 'collectionName'> & {
-  extensions: DeclaredSchemaExtension[];
-  compiledFields: ConduitModel;
-  collectionName: string;
-};
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
   registeredSchemas: Map<string, ConduitSchema>;
@@ -78,7 +73,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           collectionName = declaredSchema.collectionName;
         }
       }
-      (schema as _ConduitSchema).collectionName = collectionName;
+      (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
     }
     if (schema.name !== '_DeclaredSchema') {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
@@ -86,10 +81,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       });
       // Retrieve extension fields on Database startup
       if (
-        (schema as _ConduitSchema).extensions?.length === 0 &&
+        (schema as _ConduitSchema).extensions?.length === 0 && // @dirty-type-cast
         schemaModel?.extensions?.length > 0
       ) {
-        (schema as _ConduitSchema).extensions = schemaModel.extensions;
+        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
     const createdSchema = this._createSchemaFromAdapter(schema);
@@ -173,8 +168,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -186,8 +181,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -207,8 +202,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model.collectionName,
         );
         schema.ownerModule = model.ownerModule;
-        (schema as ConduitDatabaseSchema).extensions = model.extensions;
-        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields;
+        (schema as ConduitDatabaseSchema).extensions = model.extensions; // @dirty-type-cast
+        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields; // @dirty-type-cast
         return schema;
       })
       .map((model: ConduitSchema) => {
