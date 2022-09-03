@@ -1,5 +1,4 @@
 import ConduitGrpcSdk, {
-  ConduitModel,
   ConduitSchemaOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
