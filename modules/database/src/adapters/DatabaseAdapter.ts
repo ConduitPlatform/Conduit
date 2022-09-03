@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   ConduitModel,
-  ConduitSchemaOptions,
   ConduitSchema,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
@@ -9,12 +8,10 @@ import { validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
+type _ConduitSchema = Omit<ConduitSchema, 'collectionName'> & {
   extensions: DeclaredSchemaExtension[];
   compiledFields: ConduitModel;
-} & {
-  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
+  collectionName: string;
 };
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -140,20 +137,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     callerModule: string,
   ): Promise<string>;
 
-  async getBaseSchema(schemaName: string): Promise<ConduitSchema> {
-    if (this.models && this.models[schemaName]) {
-      const schema = this.models[schemaName].originalSchema;
-      return this.models['_DeclaredSchema']
-        .findOne(JSON.stringify({ name: schemaName }), undefined, undefined)
-        .then(unstitched => {
-          (schema.fields as any) = unstitched.fields;
-          return schema;
-        });
-    } else {
-      throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-    }
-  }
-
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
@@ -242,7 +225,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   setSchemaExtension(
     baseSchema: ConduitSchema, // ~ConduitDatabaseSchema
     extOwner: string,
-    extFields: ConduitSchema['fields'],
+    extFields: ConduitModel,
   ): Promise<Schema> {
     if (
       !baseSchema.modelOptions.conduit ||
@@ -270,7 +253,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           'Could not create schema extension with no custom fields',
         );
       }
-      (schema as ConduitDatabaseSchema).extensions.push({
+      schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
         createdAt: new Date(), // TODO FORMAT
@@ -279,11 +262,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } else {
       if (Object.keys(extFields).length === 0) {
         // Remove Extension
-        (schema as ConduitDatabaseSchema).extensions.splice(extIndex, 1);
+        schema.extensions.splice(extIndex, 1);
       } else {
         // Update Extension
-        (schema as ConduitDatabaseSchema).extensions[extIndex].fields = extFields;
-        (schema as ConduitDatabaseSchema).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
+        schema.extensions[extIndex].fields = extFields;
+        schema.extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
       }
     }
     return this.createSchemaFromAdapter(schema);

@@ -454,7 +454,7 @@ export class SchemaAdmin {
       requestedSchema.name,
       call.request.params.fields,
     );
-    const base = await this.database.getBaseSchema(requestedSchema.name);
+    const base = this.database.getSchema(requestedSchema.name);
     await this.database
       .setSchemaExtension(base, 'database', extension.fields)
       .catch((e: Error) => {
