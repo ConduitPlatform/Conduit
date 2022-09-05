@@ -1,11 +1,11 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
+import { ConduitSchema } from '../../classes';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { Query } from '../../interfaces';
+import { Query, ConduitSchemaExtension } from '../../interfaces';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -61,10 +61,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   setSchemaExtension(extension: ConduitSchemaExtension): Promise<Schema> {
     return this.client!.setSchemaExtension({
-      extension: {
-        name: extension.name,
-        fields: JSON.stringify(extension.fields ?? extension.fields),
-      },
+      schemaName: extension.schemaName,
+      fields: JSON.stringify(extension.fields),
     }).then(res => {
       return {
         name: res.name,

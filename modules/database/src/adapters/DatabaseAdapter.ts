@@ -82,7 +82,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
     }
     this.addSchemaPermissions(schema);
-    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (schema.name !== '_DeclaredSchema' && gRPC) {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
@@ -91,6 +90,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const createdSchema = this._createSchemaFromAdapter(schema);
     if (!this.registeredSchemas.has(schema.name)) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
