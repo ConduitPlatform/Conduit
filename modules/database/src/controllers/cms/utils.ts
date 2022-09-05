@@ -8,7 +8,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { CmsHandlers } from '../../handlers/cms/handler';
-import { ConduitBuiltRoute } from '../../interfaces/ConduitBuiltRoute';
+import { ConduitBuiltRoute } from '../../interfaces';
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   const hasA = [];

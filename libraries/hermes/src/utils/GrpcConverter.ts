@@ -32,7 +32,7 @@ const protoLoader = require('@grpc/proto-loader');
 function getDescriptor(protofile: string) {
   const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
   fs.writeFileSync(protoPath, protofile);
-  let packageDefinition = protoLoader.loadSync(protoPath, {
+  const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
     longs: String,
     enums: String,
