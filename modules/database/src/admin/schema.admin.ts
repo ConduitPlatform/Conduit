@@ -2,7 +2,6 @@ import ConduitGrpcSdk, {
   ConduitSchemaOptions,
   ConduitModelOptionsPermModifyType,
   ConduitSchema,
-  ConduitSchemaExtension,
   GrpcError,
   TYPE,
   ParsedRouterRequest,
@@ -444,12 +443,8 @@ export class SchemaAdmin {
     if (!requestedSchema) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    const extension = new ConduitSchemaExtension(
-      requestedSchema.name,
-      call.request.params.fields,
-    );
     await this.database
-      .setSchemaExtension(requestedSchema.name, 'database', extension.fields)
+      .setSchemaExtension(requestedSchema.name, 'database', call.request.params.fields)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
