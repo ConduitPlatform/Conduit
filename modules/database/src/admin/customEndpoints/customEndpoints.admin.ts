@@ -124,7 +124,15 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-
+    error = paginationAnsSortingValidation(
+      operation,
+      call,
+      findSchema as ConduitDatabaseSchema,
+      endpoint,
+    );
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+    }
     if (paginated && operation !== OperationsEnum.GET) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -233,6 +241,7 @@ export class CustomEndpointsAdmin {
       operation,
       call,
       findSchema as ConduitDatabaseSchema,
+      null,
     );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
