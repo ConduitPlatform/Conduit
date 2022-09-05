@@ -6,10 +6,8 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { stitchSchema } from '../utils/extensions';
 import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
@@ -96,15 +94,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const collection of collectionNames) {
       if (collection === declaredSchemaCollectionName) continue;
-      const collectionInDeclaredSchemas = (
-        declaredSchemas as unknown as ConduitSchema[]
-      ).some((declaredSchema: ConduitSchema) => {
-        if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
-          return declaredSchema.collectionName === collection;
-        } else {
-          return pluralize(declaredSchema.name) === collection;
-        }
-      });
+      const collectionInDeclaredSchemas = (declaredSchemas as unknown as ConduitSchema[]) // @dirty-type-cast
+        .some((declaredSchema: ConduitSchema) => {
+          if (declaredSchema.collectionName && declaredSchema.collectionName !== '') {
+            return declaredSchema.collectionName === collection;
+          } else {
+            return pluralize(declaredSchema.name) === collection;
+          }
+        });
       if (!collectionInDeclaredSchemas) {
         this.foreignSchemaCollections.add(collection);
       }
@@ -157,7 +154,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     await db.collection(pendingSchemaCollectionName).deleteMany({});
     // Update Collection Names and Find Introspectable Schemas
     const importedSchemas: string[] = [];
-    (declaredSchemas as unknown as ConduitSchema[]).forEach((schema: ConduitSchema) => {
+    (declaredSchemas as unknown as ConduitSchema[]).forEach(schema => {
+      // @dirty-type-cast
       if (schema.modelOptions.conduit!.imported) {
         importedSchemas.push(schema.collectionName);
       }
@@ -210,19 +208,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
       this.mongoose.connection.deleteModel(schema.name);
     }
-    const owned = await this.checkModelOwnership(schema);
-    if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
-    }
 
-    this.addSchemaPermissions(schema);
-    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
-    stitchSchema(schema);
-    original.compiledFields = schema.fields;
     const newSchema = schemaConverter(schema);
-
     this.registeredSchemas.set(schema.name, schema);
-
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,
@@ -230,7 +218,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
-    await this.saveSchemaToDatabase(original);
+    await this.saveSchemaToDatabase(schema);
 
     return this.models[schema.name];
   }

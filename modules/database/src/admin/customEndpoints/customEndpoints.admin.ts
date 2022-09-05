@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitSchema,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
@@ -19,6 +20,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 export const OperationsEnum = {
   // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
@@ -78,11 +80,20 @@ export class CustomEndpointsAdmin {
       paginated,
     } = call.request.params;
 
+    const customEndpointExists = await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findOne({ name });
+    if (customEndpointExists) {
+      throw new GrpcError(
+        status.ALREADY_EXISTS,
+        `${name} custom endpoint already exists`,
+      );
+    }
     let error = paramValidation(call.request.params);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    const findSchema: Indexable | null = await this.findSchema(
+    const findSchema = await this.findSchema(
       selectedSchema,
       selectedSchemaName,
       operation,
@@ -130,7 +141,11 @@ export class CustomEndpointsAdmin {
       endpoint.sorted = sorted;
     }
     if (operation !== OperationsEnum.POST) {
-      const error = queryValidation(query, findSchema, inputs);
+      const error = queryValidation(
+        query,
+        findSchema as ConduitDatabaseSchema, // @dirty-type-cast
+        inputs,
+      );
       if (error !== true) {
         throw new GrpcError(status.INVALID_ARGUMENT, error as string);
       }
@@ -174,7 +189,6 @@ export class CustomEndpointsAdmin {
   }
 
   async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const params = call.request.params;
     const {
       id,
       selectedSchema,
@@ -184,7 +198,7 @@ export class CustomEndpointsAdmin {
       assignments,
       sorted,
       paginated,
-    } = params;
+    } = call.request.params;
 
     if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
       throw new GrpcError(
@@ -197,10 +211,10 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: id });
     if (isNil(found)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
 
-    const findSchema: Indexable | null = await this.findSchema(
+    const findSchema = await this.findSchema(
       selectedSchema,
       selectedSchemaName,
       found.operation,
@@ -232,7 +246,11 @@ export class CustomEndpointsAdmin {
       );
     }
     if (found.operation !== OperationsEnum.POST) {
-      const error = queryValidation(query, findSchema, inputs);
+      const error = queryValidation(
+        query,
+        findSchema as ConduitDatabaseSchema, // @dirty-type-cast
+        inputs,
+      );
       if (error !== true) {
         throw new GrpcError(status.INVALID_ARGUMENT, error as string);
       }
@@ -264,10 +282,11 @@ export class CustomEndpointsAdmin {
       );
     }
 
-    delete params.id;
-    Object.keys(params).forEach(key => {
-      // @ts-ignore
-      found[key] = params[key];
+    delete call.request.params.id;
+    delete call.request.params.name;
+    Object.keys(call.request.params).forEach(key => {
+      // TODO: "Bugs are Welcome", we should clean this up
+      found[key] = call.request.params[key];
     });
     found.returns = findSchema.name;
     found.selectedSchemaName = findSchema.name;
@@ -338,11 +357,10 @@ export class CustomEndpointsAdmin {
     selectedSchema: string,
     selectedSchemaName: string,
     operation: number,
-  ): Promise<Indexable | null> {
-    let findSchema: Indexable | null;
+  ): Promise<ConduitSchema | null> {
     if (!isNil(selectedSchema)) {
       // Find schema using selectedSchema
-      findSchema = await this.database
+      return this.database
         .getSchemaModel('_DeclaredSchema')
         .model.findOne({ _id: selectedSchema });
     } else {
@@ -353,9 +371,7 @@ export class CustomEndpointsAdmin {
           'Only get requests are allowed for schemas from other modules',
         );
       }
-      findSchema = await this.database.getSchema(selectedSchemaName);
-      findSchema.compiledFields = findSchema.fields;
+      return this.database.getSchema(selectedSchemaName);
     }
-    return findSchema;
   }
 }

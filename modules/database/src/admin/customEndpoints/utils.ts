@@ -1,6 +1,7 @@
 import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil, isPlainObject } from 'lodash';
+import { ConduitDatabaseSchema } from '../../interfaces';
 import { OperationsEnum } from './customEndpoints.admin';
+import { isNil, isPlainObject } from 'lodash';
 
 /**
  * Query schema:
@@ -12,7 +13,7 @@ import { OperationsEnum } from './customEndpoints.admin';
  */
 export function queryValidation(
   query: any,
-  findSchema: Indexable,
+  findSchema: ConduitDatabaseSchema,
   inputs: Indexable,
 ): true | string {
   if (query.hasOwnProperty('AND')) {
@@ -71,7 +72,7 @@ export function queryValidation(
 }
 
 function _queryValidation(
-  findSchema: Indexable,
+  findSchema: ConduitDatabaseSchema,
   inputs: Indexable,
   schemaField: string,
   operation: number,

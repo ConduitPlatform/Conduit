@@ -1,10 +1,11 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
-  GrpcRequest,
-  GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
+  GrpcRequest,
+  GrpcResponse,
+  ConduitModel,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -203,7 +204,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
-      .createSchemaFromAdapter(schema, false, true)
+      .createSchemaFromAdapter(schema, false, true, true)
       .then((schemaAdapter: Schema) => {
         this.publishSchema({
           name: call.request.name,
@@ -298,13 +299,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemaName = call.request.extension.name;
       const extOwner = call.metadata!.get('module-name')![0] as string;
-      const extModel = JSON.parse(call.request.extension.fields);
-      const schema = await this._activeAdapter.getBaseSchema(schemaName);
+      const extModel: ConduitModel = JSON.parse(call.request.extension.fields);
+      const schema = this._activeAdapter.getSchema(schemaName);
       if (!schema) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
       }
       await this._activeAdapter
-        .setSchemaExtension(schema, extOwner, extModel)
+        .setSchemaExtension(schemaName, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
           this.publishSchema({
             name: call.request.extension.name,

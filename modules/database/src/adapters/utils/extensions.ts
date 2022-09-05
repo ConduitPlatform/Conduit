@@ -1,8 +1,9 @@
-import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, ConduitModel } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema, DeclaredSchemaExtension } from '../../interfaces';
 import { status } from '@grpc/grpc-js';
 const deepdash = require('deepdash/standalone');
 
-function deepFieldValidate(extFields: any) {
+function deepFieldValidate(extFields: ConduitModel) {
   const uniqueError = new GrpcError(
     status.INVALID_ARGUMENT,
     "Schema extension fields can not be 'unique'",
@@ -17,7 +18,11 @@ function deepFieldValidate(extFields: any) {
   });
 }
 
-export function validateExtensionFields(schema: any, extFields: any, extOwner: string) {
+export function validateExtensionFields(
+  schema: ConduitDatabaseSchema,
+  extFields: ConduitModel,
+  extOwner: string,
+) {
   const duplicateError = new GrpcError(
     status.ALREADY_EXISTS,
     'Schema extension contains duplicate fields',
@@ -25,23 +30,26 @@ export function validateExtensionFields(schema: any, extFields: any, extOwner: s
   for (const field of Object.keys(extFields)) {
     if (field in schema.fields) throw duplicateError;
   }
-  if (schema.fields.extensions) {
-    for (const ext of schema.fields.extensions) {
-      if (ext.ownerModule === extOwner) continue;
-      for (const field of Object.keys(extFields)) {
-        if (field in ext.fields) throw duplicateError;
-      }
+  for (const ext of schema.extensions) {
+    if (ext.ownerModule === extOwner) continue;
+    for (const field of Object.keys(extFields)) {
+      if (field in ext.fields) throw duplicateError;
     }
   }
   deepFieldValidate(extFields);
 }
 
-export function stitchSchema(schema: any) {
-  // TODO Deep copy and return instead?
+export function stitchSchema(schema: ConduitDatabaseSchema) {
+  // TODO: This gets called from _createSchemaFromAdapter, schema type is missing stuff from ConduitDatabaseSchema
+
+  // Extension array initialization will be redundant once we streamline
+  // ConduitSchema -> ConduitDatabaseSchema transformations
   if (!schema.extensions) schema.extensions = [];
-  schema.extensions.forEach((ext: any) => {
-    Object.keys(ext.fields).forEach((field: any) => {
-      schema.fields[field] = ext.fields[field];
+
+  schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+  schema.extensions.forEach((ext: DeclaredSchemaExtension) => {
+    Object.keys(ext.fields).forEach(field => {
+      schema.compiledFields[field] = ext.fields[field];
     });
   });
 }

@@ -4,8 +4,8 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   ConduitSchemaExtension,
   GrpcError,
-  ParsedRouterRequest,
   TYPE,
+  ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -16,16 +16,10 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { ParsedQuery } from '../interfaces';
+import { _ConduitSchema, ParsedQuery } from '../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-  _id: string;
-} & {
-  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
-};
 const SYSTEM_SCHEMAS = ['CustomEndpoints', '_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
 
 export class SchemaAdmin {
@@ -454,9 +448,8 @@ export class SchemaAdmin {
       requestedSchema.name,
       call.request.params.fields,
     );
-    const base = await this.database.getBaseSchema(requestedSchema.name);
     await this.database
-      .setSchemaExtension(base, 'database', extension.fields)
+      .setSchemaExtension(requestedSchema.name, 'database', extension.fields)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -586,7 +579,7 @@ export class SchemaAdmin {
   }
 
   async finalizeSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas);
+    const schemas: _ConduitSchema[] = Object.values(call.request.params.schemas); // @dirty-type-cast
     if (schemas.length === 0) {
       // array check is required
       throw new GrpcError(
@@ -596,7 +589,7 @@ export class SchemaAdmin {
     }
     const schemaNames = schemas.map(schema => schema.name);
     await Promise.all(
-      schemas.map(async (schema: _ConduitSchema) => {
+      schemas.map(async schema => {
         const importedName = schema.name.startsWith('_')
           ? `imp${schema.name}`
           : `imp_${schema.name}`;
@@ -641,8 +634,8 @@ export class SchemaAdmin {
               : defaultPermissions,
           },
         );
-        (recreatedSchema as _ConduitSchema).collectionName =
-          this.database.getCollectionName(schema as _ConduitSchema); //keep collection name without prefix
+        (recreatedSchema as _ConduitSchema).collectionName = // @dirty-type-cast
+          this.database.getCollectionName(schema); //keep collection name without prefix
         await this.database.createSchemaFromAdapter(recreatedSchema, true);
       }),
     );
@@ -655,7 +648,7 @@ export class SchemaAdmin {
   }
 
   private patchSchemaPerms(
-    schema: _ConduitSchema,
+    schema: _ConduitSchema, // @dirty-type-cast
     // @ts-ignore
     perms: ConduitSchemaOptions['conduit']['permissions'],
   ) {

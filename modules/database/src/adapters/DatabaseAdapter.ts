@@ -1,22 +1,13 @@
 import ConduitGrpcSdk, {
   ConduitModel,
-  ConduitSchemaOptions,
   ConduitSchema,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension, Schema } from '../interfaces';
-import { validateExtensionFields } from './utils/extensions';
+import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
+import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
 
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-  extensions: DeclaredSchemaExtension[];
-  compiledFields: ConduitModel;
-} & {
-  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
-};
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
   registeredSchemas: Map<string, ConduitSchema>;
@@ -52,11 +43,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
    * @param {boolean} cndPrefix Whether to prefix the schema's collection name with 'cnd_'
+   * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
     cndPrefix = true,
+    gRPC = false,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -82,14 +75,20 @@ export abstract class DatabaseAdapter<T extends Schema> {
           collectionName = declaredSchema.collectionName;
         }
       }
-      (schema as _ConduitSchema).collectionName = collectionName;
+      (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
     }
-    if (schema.name !== '_DeclaredSchema') {
+    const owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
+    }
+    this.addSchemaPermissions(schema);
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    if (schema.name !== '_DeclaredSchema' && gRPC) {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
       });
-      if (schemaModel?.extensions?.length > 0) {
-        (schema as any).extensions = schemaModel.extensions;
+      if (schemaModel.extensions?.length !== 0) {
+        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
     const createdSchema = this._createSchemaFromAdapter(schema);
@@ -137,20 +136,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     callerModule: string,
   ): Promise<string>;
 
-  async getBaseSchema(schemaName: string): Promise<ConduitSchema> {
-    if (this.models && this.models[schemaName]) {
-      const schema = this.models[schemaName].originalSchema;
-      return this.models['_DeclaredSchema']
-        .findOne(JSON.stringify({ name: schemaName }), undefined, undefined)
-        .then(unstitched => {
-          (schema.fields as any) = unstitched.fields;
-          return schema;
-        });
-    } else {
-      throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-    }
-  }
-
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
@@ -187,8 +172,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -200,8 +185,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -221,8 +206,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model.collectionName,
         );
         schema.ownerModule = model.ownerModule;
-        (schema as ConduitDatabaseSchema).extensions = model.extensions;
-        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields;
+        (schema as ConduitDatabaseSchema).extensions = model.extensions; // @dirty-type-cast
+        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields; // @dirty-type-cast
         return schema;
       })
       .map((model: ConduitSchema) => {
@@ -237,24 +222,29 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract ensureConnected(): Promise<void>;
 
   setSchemaExtension(
-    schema: ConduitSchema,
+    schemaName: string,
     extOwner: string,
-    extFields: ConduitSchema['fields'],
+    extFields: ConduitModel,
   ): Promise<Schema> {
+    const baseSchema = this.getSchema(schemaName);
     if (
-      !schema.modelOptions.conduit ||
-      !schema.modelOptions.conduit.permissions ||
-      !schema.modelOptions.conduit.permissions.extendable
+      !baseSchema.modelOptions.conduit ||
+      !baseSchema.modelOptions.conduit.permissions ||
+      !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
     }
-    validateExtensionFields(schema, extFields, extOwner);
-    if (!(schema as ConduitDatabaseSchema).extensions) {
-      (schema as ConduitDatabaseSchema).extensions = [];
+    // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
+    const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;
+    if (!schema.extensions) {
+      schema.extensions = [];
     }
-    const extIndex = (schema as ConduitDatabaseSchema).extensions.findIndex(
-      (ext: any) => ext.ownerModule === extOwner,
-    );
+    if (!schema.compiledFields) {
+      // could technically be empty, repeated in stitchSchema() call from createSchemaFromAdapter()
+      schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+    }
+    validateExtensionFields(schema, extFields, extOwner);
+    const extIndex = schema.extensions.findIndex(ext => ext.ownerModule === extOwner);
     if (extIndex === -1) {
       // Create Extension
       if (Object.keys(extFields).length === 0) {
@@ -263,7 +253,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           'Could not create schema extension with no custom fields',
         );
       }
-      (schema as ConduitDatabaseSchema).extensions.push({
+      schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
         createdAt: new Date(), // TODO FORMAT
@@ -272,11 +262,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } else {
       if (Object.keys(extFields).length === 0) {
         // Remove Extension
-        (schema as ConduitDatabaseSchema).extensions.splice(extIndex, 1);
+        schema.extensions.splice(extIndex, 1);
       } else {
         // Update Extension
-        (schema as ConduitDatabaseSchema).extensions[extIndex].fields = extFields;
-        (schema as ConduitDatabaseSchema).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
+        schema.extensions[extIndex].fields = extFields;
+        schema.extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
       }
     }
     return this.createSchemaFromAdapter(schema);

@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { isNil } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { CustomEndpointsQuery } from '../../interfaces/CustomEndpointsQuery';
+import { CustomEndpointsQuery } from '../../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
