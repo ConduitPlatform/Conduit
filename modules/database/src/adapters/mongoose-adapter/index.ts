@@ -6,10 +6,8 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { stitchSchema } from '../utils/extensions';
 import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
@@ -210,17 +208,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
       this.mongoose.connection.deleteModel(schema.name);
     }
-    const owned = await this.checkModelOwnership(schema);
-    if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
-    }
 
-    this.addSchemaPermissions(schema);
-    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const newSchema = schemaConverter(schema);
-
     this.registeredSchemas.set(schema.name, schema);
-
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,

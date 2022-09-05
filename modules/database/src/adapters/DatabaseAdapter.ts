@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
-import { validateExtensionFields } from './utils/extensions';
+import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 
@@ -43,11 +43,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
    * @param {boolean} cndPrefix Whether to prefix the schema's collection name with 'cnd_'
+   * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
     cndPrefix = true,
+    gRPC = false,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -75,15 +77,17 @@ export abstract class DatabaseAdapter<T extends Schema> {
       }
       (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
     }
-    if (schema.name !== '_DeclaredSchema') {
+    const owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
+    }
+    this.addSchemaPermissions(schema);
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    if (schema.name !== '_DeclaredSchema' && gRPC) {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
       });
-      // Retrieve extension fields on Database startup
-      if (
-        (schema as _ConduitSchema).extensions?.length === 0 && // @dirty-type-cast
-        schemaModel?.extensions?.length > 0
-      ) {
+      if (schemaModel.extensions?.length !== 0) {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }

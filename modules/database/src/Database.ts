@@ -204,7 +204,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
-      .createSchemaFromAdapter(schema, false, true)
+      .createSchemaFromAdapter(schema, false, true, true)
       .then((schemaAdapter: Schema) => {
         this.publishSchema({
           name: call.request.name,
