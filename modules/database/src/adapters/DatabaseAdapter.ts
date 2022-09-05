@@ -86,7 +86,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
       });
-      if (schemaModel.extensions?.length !== 0) {
+      if (schemaModel?.extensions?.length > 0) {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
