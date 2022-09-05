@@ -305,7 +305,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
       }
       await this._activeAdapter
-        .setSchemaExtension(schema, extOwner, extModel)
+        .setSchemaExtension(schemaName, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
           this.publishSchema({
             name: call.request.extension.name,

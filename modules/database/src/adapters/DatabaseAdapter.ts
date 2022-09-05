@@ -218,10 +218,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract ensureConnected(): Promise<void>;
 
   setSchemaExtension(
-    baseSchema: ConduitSchema, // ~ConduitDatabaseSchema
+    schemaName: string,
     extOwner: string,
     extFields: ConduitModel,
   ): Promise<Schema> {
+    const baseSchema = this.getSchema(schemaName);
     if (
       !baseSchema.modelOptions.conduit ||
       !baseSchema.modelOptions.conduit.permissions ||
