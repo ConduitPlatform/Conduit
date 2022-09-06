@@ -7,6 +7,9 @@
   "engines": {
     "node": ">=14"
   },
+  "jest": {
+    "testTimeout": 20000
+  },
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
@@ -15,7 +18,8 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "tests": "jest"
   },
   "license": "ISC",
   "dependencies": {
