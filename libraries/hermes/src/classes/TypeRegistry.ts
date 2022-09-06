@@ -1,10 +1,17 @@
 import ConduitGrpcSdk, { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
+type RouterDocUpdateFunction = (typeName: string, typeFields: ConduitModel) => void;
+
+// Limitations:
+// Schema types are not removed from requestedTypes upon deregistration of the routes referencing them
+
 export class TypeRegistry {
   private static instance: TypeRegistry;
+  private static updateRouterDocFunctions: RouterDocUpdateFunction[] = [];
   private readonly schemaTypes: Map<string, ConduitModel> = new Map();
   private readonly pendingTypes: Set<string> = new Set();
+  private readonly requestedTypes: Set<string> = new Set();
   private dbAvailable = false;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
@@ -47,8 +54,15 @@ export class TypeRegistry {
     await this.grpcSdk
       .database!.getSchema(schemaName)
       .then(schema => {
-        if (schema) {
+        // Only update route docs for explicitly requested types upon schema changes
+        if (schema && this.requestedTypes.has(schema.name)) {
+          const typeUpdate = this.schemaTypes.get(schemaName) !== schema.fields; // use lodash.isEqual() or hash ???
           this.schemaTypes.set(schemaName, schema.fields);
+          if (typeUpdate) {
+            TypeRegistry.updateRouterDocFunctions.forEach(f =>
+              f(schemaName, schema.fields),
+            );
+          }
         }
       })
       .catch(error => {
@@ -57,13 +71,20 @@ export class TypeRegistry {
   }
 
   getType(typeName: string) {
+    this.requestedTypes.add(typeName);
     return this.schemaTypes.get(typeName);
   }
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk): TypeRegistry {
+  static getInstance(
+    grpcSdk?: ConduitGrpcSdk,
+    updateRouterDocFunction?: (typeName: string, typeFields: ConduitModel) => void,
+  ): TypeRegistry {
     if (!TypeRegistry.instance) {
       if (!grpcSdk) throw new Error('No grpc-sdk instance provided!');
       TypeRegistry.instance = new TypeRegistry(grpcSdk);
+    }
+    if (updateRouterDocFunction) {
+      TypeRegistry.updateRouterDocFunctions.push(updateRouterDocFunction);
     }
     return TypeRegistry.instance;
   }

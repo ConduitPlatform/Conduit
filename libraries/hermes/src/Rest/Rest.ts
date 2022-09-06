@@ -17,7 +17,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces';
 import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -43,6 +43,7 @@ export class RestController extends ConduitRouter {
         : [];
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
+    TypeRegistry.getInstance(grpcSdk, this._swagger.updateSchemaType.bind(this._swagger));
   }
 
   registerRoute(

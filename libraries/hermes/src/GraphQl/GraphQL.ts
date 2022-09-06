@@ -18,7 +18,7 @@ import ConduitGrpcSdk, {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
@@ -39,6 +39,7 @@ export class GraphQLController extends ConduitRouter {
     super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
+    TypeRegistry.getInstance(grpcSdk, this.updateSchemaType.bind(this));
   }
 
   refreshGQLServer() {
@@ -57,13 +58,25 @@ export class GraphQLController extends ConduitRouter {
     this._apollo = server.getMiddleware();
   }
 
-  generateType(name: string, fields: ConduitModel | ConduitRouteOption | string) {
-    if (this.typeDefs.includes('type ' + name + ' ')) {
-      return;
-    }
+  generateType(
+    name: string,
+    fields: ConduitModel | ConduitRouteOption | string,
+    dbTypeRefresh = false,
+  ) {
+    const typeExists = this.typeDefs.includes('type ' + name + ' ');
+    if (typeExists && !dbTypeRefresh) return;
     const self = this;
     const parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
-    this.types += parseResult.typeString;
+    if (typeExists) {
+      const start = this.types.indexOf(`type ${name} `);
+      const end = this.types.indexOf('\n', start) + 2;
+      this.types =
+        this.types.substring(0, start) +
+        parseResult.typeString +
+        this.types.substring(end);
+    } else {
+      this.types += parseResult.typeString;
+    }
     parseResult.relationTypes.forEach((type: string) => {
       if (self._relationTypes.indexOf(type) === -1) {
         self._relationTypes.push(type);
@@ -456,5 +469,11 @@ export class GraphQLController extends ConduitRouter {
       this.generateType(typeName, typeFields);
       this.generateSchema();
     });
+  }
+
+  updateSchemaType(typeName: string, typeFields: ConduitModel) {
+    this.generateType(typeName, typeFields, true);
+    this.generateSchema();
+    this.scheduleApolloRefresh();
   }
 }

@@ -1,6 +1,6 @@
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
-import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, Indexable, ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
 import { validateRelationTypes } from '../utils/types';
@@ -167,5 +167,13 @@ export class SwaggerGenerator {
         false,
       );
     });
+  }
+
+  updateSchemaType(schemaName: string, schemaFields: ConduitModel) {
+    this._swaggerDoc.components.schemas[schemaName] = this._parser.extractTypes(
+      schemaName,
+      schemaFields,
+      false,
+    );
   }
 }
