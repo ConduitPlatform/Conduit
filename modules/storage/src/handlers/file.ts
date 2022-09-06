@@ -86,7 +86,6 @@ export class FileHandlers {
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
-      const config = ConfigController.getInstance().config;
       let fileData = await this.storageProvider
         .container(found.container)
         .get((found.folder ?? '') + found.name);
