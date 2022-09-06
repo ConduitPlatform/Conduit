@@ -323,7 +323,8 @@ export function paginationAnsSortingValidation(
     );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-    } else if (endpoint !== null) {
+    }
+    if (endpoint !== null) {
       endpoint.query = query;
     }
   }
