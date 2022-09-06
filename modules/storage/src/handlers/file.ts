@@ -52,9 +52,9 @@ export class FileHandlers {
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
-      : await this.findContainer(container, isPublic);
+      : await this.findOrCreateContainer(container, isPublic);
     if (!isNil(folder)) {
-      await this.findFolder(newFolder, usedContainer, isPublic);
+      await this.findOrCreateFolder(newFolder, usedContainer, isPublic);
     }
 
     const exists = await File.getInstance().findOne({
@@ -108,10 +108,10 @@ export class FileHandlers {
         newFolder === found.folder;
 
       if (newContainer !== found.container) {
-        await this.findContainer(newContainer);
+        await this.findOrCreateContainer(newContainer);
       }
       if (newFolder !== found.folder) {
-        await this.findFolder(newFolder, newContainer);
+        await this.findOrCreateFolder(newFolder, newContainer);
       }
 
       const exists = await File.getInstance().findOne({
@@ -218,7 +218,10 @@ export class FileHandlers {
     }
   }
 
-  private async findContainer(container: string, isPublic?: boolean): Promise<string> {
+  private async findOrCreateContainer(
+    container: string,
+    isPublic?: boolean,
+  ): Promise<string> {
     const config = ConfigController.getInstance().config;
     // the container is sent from the client
     const found = await _StorageContainer.getInstance().findOne({
@@ -243,7 +246,7 @@ export class FileHandlers {
     return container;
   }
 
-  private async findFolder(
+  private async findOrCreateFolder(
     folder: string,
     container: string,
     isPublic?: boolean,
