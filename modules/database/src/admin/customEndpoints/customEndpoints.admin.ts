@@ -12,7 +12,7 @@ import {
   inputValidation,
   paramValidation,
   operationValidation,
-  paginationAnsSortingValidation,
+  paginationAndSortingValidation,
 } from './utils';
 import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
@@ -121,7 +121,7 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-    error = paginationAnsSortingValidation(
+    error = paginationAndSortingValidation(
       operation,
       call,
       findSchema as ConduitDatabaseSchema,
@@ -207,7 +207,7 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
-    error = paginationAnsSortingValidation(
+    error = paginationAndSortingValidation(
       operation,
       call,
       findSchema as ConduitDatabaseSchema,

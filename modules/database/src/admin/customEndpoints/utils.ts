@@ -297,7 +297,7 @@ export function operationValidation(
   return true;
 }
 
-export function paginationAnsSortingValidation(
+export function paginationAndSortingValidation(
   operation: number,
   call: ParsedRouterRequest,
   findSchema: ConduitDatabaseSchema,
