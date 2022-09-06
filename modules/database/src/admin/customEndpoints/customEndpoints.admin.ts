@@ -10,7 +10,6 @@ import { status } from '@grpc/grpc-js';
 import {
   assignmentValidation,
   inputValidation,
-  queryValidation,
   paramValidation,
   operationValidation,
   paginationAnsSortingValidation,
@@ -77,8 +76,6 @@ export class CustomEndpointsAdmin {
       query,
       authentication,
       assignments,
-      sorted,
-      paginated,
     } = call.request.params;
 
     const customEndpointExists = await this.database
@@ -132,33 +129,6 @@ export class CustomEndpointsAdmin {
     );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-    }
-    if (paginated && operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add pagination to non-get endpoint',
-      );
-    } else if (paginated) {
-      endpoint.paginated = paginated;
-    }
-    if (sorted && operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add sorting to non-get endpoint',
-      );
-    } else if (sorted) {
-      endpoint.sorted = sorted;
-    }
-    if (operation !== OperationsEnum.POST) {
-      const error = queryValidation(
-        query,
-        findSchema as ConduitDatabaseSchema, // @dirty-type-cast
-        inputs,
-      );
-      if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-      }
-      endpoint.query = query;
     }
 
     if (
