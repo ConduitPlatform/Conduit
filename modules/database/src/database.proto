@@ -1,10 +1,6 @@
 syntax = 'proto3';
 package database;
 
-message SetSchemaExtensionRequest {
-    SchemaExtension extension = 1;
-}
-
 message GetSchemaRequest {
     string schemaName = 1;
 }
@@ -15,7 +11,7 @@ message GetSchemasRequest {
 message GetSchemasResponse {
     repeated Schema schemas = 1;
 }
-message DropCollectionResponse{
+message DropCollectionResponse {
     string result = 1;
 }
 
@@ -27,7 +23,7 @@ message Schema {
 }
 
 message SchemaExtension {
-    string name = 1;
+    string schemaName = 1;
     string fields = 2;
 }
 
@@ -72,25 +68,25 @@ message UpdateManyRequest {
     optional bool updateProvidedOnly = 4;
 }
 
-message DropCollectionRequest{
+message DropCollectionRequest {
     string schemaName = 1;
     bool deleteData = 2;
 }
 
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter(Schema) returns (Schema);
-    rpc GetSchema (GetSchemaRequest) returns (Schema);
+    rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
-    rpc SetSchemaExtension(SetSchemaExtensionRequest) returns (Schema);
+    rpc SetSchemaExtension(SchemaExtension) returns (Schema);
     // Database queries
-    rpc findOne (FindOneRequest) returns (QueryResponse);
-    rpc findMany (FindRequest) returns (QueryResponse);
-    rpc create (QueryRequest) returns (QueryResponse);
+    rpc findOne(FindOneRequest) returns (QueryResponse);
+    rpc findMany(FindRequest) returns (QueryResponse);
+    rpc create(QueryRequest) returns (QueryResponse);
     rpc createMany(QueryRequest) returns (QueryResponse);
-    rpc deleteOne (QueryRequest) returns (QueryResponse);
-    rpc deleteMany (QueryRequest) returns (QueryResponse);
-    rpc findByIdAndUpdate (UpdateRequest) returns (QueryResponse);
+    rpc deleteOne(QueryRequest) returns (QueryResponse);
+    rpc deleteMany(QueryRequest) returns (QueryResponse);
+    rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
-    rpc countDocuments (QueryRequest) returns (QueryResponse);
+    rpc countDocuments(QueryRequest) returns (QueryResponse);
 }

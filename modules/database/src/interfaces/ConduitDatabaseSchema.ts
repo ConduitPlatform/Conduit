@@ -15,8 +15,8 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     model: SchemaAdapter<Schema>,
     name: string,
     ownerModule: string,
+    fields: ConduitModel,
     extensions: DeclaredSchemaExtension[] = [],
-    fields?: ConduitModel,
     modelOptions?: ConduitSchemaOptions,
     collectionName?: string,
   ) {

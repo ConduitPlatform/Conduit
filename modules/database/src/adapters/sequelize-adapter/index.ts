@@ -7,10 +7,8 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { stitchSchema } from '../utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
@@ -175,17 +173,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       }
       delete this.sequelize.models[schema.collectionName];
     }
-    const owned = await this.checkModelOwnership(schema);
-    if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
-    }
 
-    this.addSchemaPermissions(schema);
-    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
-    stitchSchema(schema);
-    original.compiledFields = schema.fields;
     const newSchema = schemaConverter(schema);
-
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
@@ -198,7 +187,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
-    await this.saveSchemaToDatabase(original);
+    await this.saveSchemaToDatabase(schema);
 
     return this.models[schema.name];
   }

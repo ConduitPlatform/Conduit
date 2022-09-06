@@ -6,9 +6,7 @@ import {
 
 export type CreateSchemaRequest = GrpcRequest<SchemaDto>;
 
-export type CreateSchemaExtensionRequest = GrpcRequest<{
-  extension: SchemaExtensionDto;
-}>;
+export type CreateSchemaExtensionRequest = GrpcRequest<SchemaExtensionDto>;
 
 export type GetSchemaRequest = GrpcRequest<{
   schemaName: string;

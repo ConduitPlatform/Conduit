@@ -7,17 +7,12 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import {
-  ConduitSchemaOptions,
-  ConduitSchema,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { _ConduitSchema, _ConduitSchemaOptions } from '../../interfaces';
 import { createWithPopulations } from './utils';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
-
-type _ConduitSchemaOptions = ConduitSchemaOptions & { collection: string };
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
@@ -33,9 +28,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.originalSchema = originalSchema;
 
     if (!isNil(schema.collectionName)) {
-      (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName;
+      (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
-      (schema as Indexable).collectionName = schema.name; //restore collectionName
+      (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
     const mongooseSchema = new Schema(schema.fields, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
