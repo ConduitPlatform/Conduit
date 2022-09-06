@@ -102,7 +102,10 @@ export class FileHandlers {
       }
       const newContainer = container ?? found.container;
       found.mimeType = mimeType ?? found.mimeType;
-      const isDataUpdate = this.isDataUpdate(newName, newContainer, newFolder, found);
+      const isDataUpdate =
+        newName === found.name &&
+        newContainer === found.container &&
+        newFolder === found.folder;
 
       if (newContainer !== found.container) {
         await this.findContainer(newContainer);
@@ -315,16 +318,5 @@ export class FileHandlers {
     found.container = container;
     found.size = fileData.byteLength;
     return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
-  }
-
-  private isDataUpdate(
-    name: string,
-    container: string,
-    folder: string,
-    found: File,
-  ): boolean {
-    return (
-      name === found.name && container === found.container && folder === found.folder
-    );
   }
 }
