@@ -29,11 +29,12 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { Schema } from './interfaces';
+import { Schema, ConduitDatabaseSchema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
+import { convertToGrpcSchema } from './utils/grpcSchemaCorverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsConfig from './metrics';
@@ -179,6 +180,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   publishSchema(schema: any) {
+    // @dirty-type-cast
     const sendingSchema = JSON.stringify(schema);
     this.grpcSdk.bus!.publish('database', sendingSchema);
     ConduitGrpcSdk.Logger.log('Updated state');
@@ -210,16 +212,17 @@ export default class DatabaseModule extends ManagedModule<void> {
         this.publishSchema({
           name: call.request.name,
           fields: JSON.parse(call.request.fields),
+          extensions: (schemaAdapter.originalSchema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schemaAdapter.originalSchema as ConduitDatabaseSchema)
+            .compiledFields, // @dirty-type-cast
           modelOptions: JSON.parse(call.request.modelOptions),
           collectionName: call.request.collectionName,
           owner: schema.ownerModule,
         });
-        callback(null, {
-          name: schemaAdapter.originalSchema.name,
-          fields: JSON.stringify(schemaAdapter.originalSchema.fields),
-          modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
-          collectionName: schemaAdapter.originalSchema.collectionName,
-        });
+        callback(
+          null,
+          convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
+        ); // @dirty-type-cast
       })
       .catch(err => {
         callback({
@@ -237,12 +240,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   getSchema(call: GrpcRequest<GetSchemaRequest>, callback: SchemaResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
-      callback(null, {
-        name: schemaAdapter.name,
-        fields: JSON.stringify(schemaAdapter.fields),
-        modelOptions: JSON.stringify(schemaAdapter.modelOptions),
-        collectionName: schemaAdapter.collectionName,
-      });
+      callback(null, convertToGrpcSchema(schemaAdapter as ConduitDatabaseSchema)); // @dirty-type-cast
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -255,14 +253,9 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
-        schemas: schemas.map(schema => {
-          return {
-            name: schema.name,
-            fields: JSON.stringify(schema.fields),
-            modelOptions: JSON.stringify(schema.modelOptions),
-            collectionName: schema.collectionName,
-          };
-        }),
+        schemas: schemas.map(schema =>
+          convertToGrpcSchema(schema as ConduitDatabaseSchema),
+        ), // @dirty-type-cast
       });
     } catch (err) {
       callback({
@@ -298,9 +291,9 @@ export default class DatabaseModule extends ManagedModule<void> {
    */
   async setSchemaExtension(call: CreateSchemaExtensionRequest, callback: SchemaResponse) {
     try {
-      const schemaName = call.request.extension.name;
+      const schemaName = call.request.schemaName;
       const extOwner = call.metadata!.get('module-name')![0] as string;
-      const extModel: ConduitModel = JSON.parse(call.request.extension.fields);
+      const extModel: ConduitModel = JSON.parse(call.request.fields);
       const schema = this._activeAdapter.getSchema(schemaName);
       if (!schema) {
         throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -309,18 +302,22 @@ export default class DatabaseModule extends ManagedModule<void> {
         .setSchemaExtension(schemaName, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
           this.publishSchema({
-            name: call.request.extension.name,
-            schema: schemaAdapter.model,
+            name: schemaName,
+            fields: schemaAdapter.model,
+            extensions: JSON.stringify(
+              (schemaAdapter.originalSchema as ConduitDatabaseSchema).extensions,
+            ), // @dirty-type-cast
+            compiledFields: JSON.stringify(
+              (schemaAdapter.originalSchema as ConduitDatabaseSchema).compiledFields,
+            ), // @dirty-type-cast
             modelOptions: schemaAdapter.originalSchema.modelOptions,
             collectionName: schemaAdapter.originalSchema.collectionName,
             owner: schemaAdapter.originalSchema.ownerModule,
           });
-          callback(null, {
-            name: schemaAdapter.originalSchema.name,
-            fields: JSON.stringify(schemaAdapter.originalSchema.fields),
-            modelOptions: JSON.stringify(schemaAdapter.originalSchema.modelOptions),
-            collectionName: schemaAdapter.originalSchema.collectionName,
-          });
+          callback(
+            null,
+            convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
+          ); // @dirty-type-cast;
         })
         .catch(err => {
           callback({

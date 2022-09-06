@@ -152,7 +152,7 @@ export class AdminHandlers {
       limit,
       sort,
     );
-    const countPromise = Forms.getInstance().countDocuments({});
+    const countPromise = Forms.getInstance().countDocuments(query);
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });

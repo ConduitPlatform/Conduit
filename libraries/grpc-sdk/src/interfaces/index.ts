@@ -1,3 +1,4 @@
+export * from './ConduitSchemaExtension';
 export * from './ConduitService';
 export * from './Model';
 export * from './Route';
