@@ -1,12 +1,12 @@
 let client;
-let core;
+let coreProcess;
 describe('Testing Config package', () => {
   beforeAll(async () => {
     const { exec } = require('child_process');
     const options = {
       env: { ...process.env, REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032 }
     }
-    core = exec("node ./dist/bin/www.js", options);
+    coreProcess = exec("node ./dist/bin/www.js", options);
     await new Promise((r) => setTimeout(r, 2000));
     const path = require('path');
     const protoLoader = require('@grpc/proto-loader');
@@ -34,6 +34,6 @@ describe('Testing Config package', () => {
       });
   });
   afterAll(() => {
-    process.kill(core.pid);
+    process.kill(coreProcess.pid);
   })
 });
