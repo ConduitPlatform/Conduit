@@ -1,0 +1,2 @@
+docker run --name conduit-redis -d -p 6379:6379 redis:latest
+docker run -d --name conduit-mongo --network-alias mongo --network "conduit" -h conduit-mongo  -p 27017:27017  docker.io/library/mongo:latest

@@ -6,8 +6,11 @@ describe('Testing Config package', () => {
     const options = {
       env: { ...process.env, REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032 }
     }
+    exec("sh ./tests/scripts/redis.sh")
+    await new Promise((r) => setTimeout(r, 2000))
     coreProcess = exec("node ./dist/bin/www.js", options);
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 5000));
+
     const path = require('path');
     const protoLoader = require('@grpc/proto-loader');
     const grpc = require('@grpc/grpc-js');
@@ -25,6 +28,9 @@ describe('Testing Config package', () => {
     client = new core.Config('0.0.0.0:55152',
       grpc.credentials.createInsecure());
   });
+  afterAll(() => {
+    process.kill(coreProcess.pid);
+  })
   test('Getting Redis Details', () => {
       client.getRedisDetails({}, (err, res) => {
         expect(res).toMatchObject({
@@ -33,7 +39,4 @@ describe('Testing Config package', () => {
         });
       });
   });
-  afterAll(() => {
-    process.kill(coreProcess.pid);
-  })
 });
