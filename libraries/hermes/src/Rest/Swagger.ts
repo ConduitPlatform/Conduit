@@ -3,7 +3,7 @@ import { isNil } from 'lodash';
 import { ConduitRouteActions, Indexable, ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
-import { validateRelationTypes } from '../utils/types';
+import { importDbTypes } from '../utils/types';
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: Indexable;
@@ -159,14 +159,8 @@ export class SwaggerGenerator {
     }
   }
 
-  validateRelationTypes() {
-    validateRelationTypes(this._parser, (typeName, typeFields) => {
-      this._swaggerDoc.components.schemas[typeName] = this._parser.extractTypes(
-        typeName,
-        typeFields,
-        false,
-      );
-    });
+  importDbTypes() {
+    importDbTypes(this._parser, this.updateSchemaType.bind(this));
   }
 
   updateSchemaType(schemaName: string, schemaFields: ConduitModel) {

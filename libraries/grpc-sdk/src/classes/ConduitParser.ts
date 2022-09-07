@@ -77,7 +77,13 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, false);
     if (typeof fields === 'string') {
-      this.getResultFromString(processingObject, 'result', fields, false, false);
+      this.getResultFromString(
+        processingObject,
+        name !== fields ? 'result' : name, // implicit fields (db schema)
+        fields,
+        false,
+        false,
+      );
     } else {
       for (const field in fields) {
         if (!fields.hasOwnProperty(field)) continue;

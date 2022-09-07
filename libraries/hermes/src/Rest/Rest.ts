@@ -96,9 +96,7 @@ export class RestController extends ConduitRouter {
   }
 
   private addConduitRoute(route: ConduitRoute) {
-    const self = this;
     let routerMethod: IRouterMatcher<Router>;
-
     switch (route.input.action) {
       case ConduitRouteActions.GET: {
         routerMethod = this._expressRouter!.get.bind(this._expressRouter);
@@ -124,9 +122,7 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter!.get.bind(this._expressRouter);
       }
     }
-
     routerMethod(route.input.path, this.constructHandler(route));
-
     this._swagger!.addRouteSwaggerDocumentation(route);
   }
 
@@ -277,7 +273,7 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.forEach(route => {
       this.addConduitRoute(route);
     });
-    this._swagger?.validateRelationTypes();
+    this._swagger?.importDbTypes();
   }
 
   private initializeRouter() {

@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
+import { isEqual } from 'lodash';
 
 type TransportUpdateHandler = (typeName: string, typeFields: ConduitModel) => void;
 
@@ -56,7 +57,7 @@ export class TypeRegistry {
       .then(schema => {
         // Only update route docs for explicitly requested types upon schema changes
         if (schema && this.requestedTypes.has(schema.name)) {
-          const typeUpdate = this.schemaTypes.get(schemaName) !== schema.fields; // use lodash.isEqual() or hash ???
+          const typeUpdate = !isEqual(this.schemaTypes.get(schemaName), schema.fields); // we could hash this
           this.schemaTypes.set(schemaName, schema.fields);
           if (typeUpdate) {
             TypeRegistry.transportUpdateHandlers.forEach(handler => {

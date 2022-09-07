@@ -7,7 +7,7 @@ import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
-import { validateRelationTypes } from '../utils/types';
+import { importDbTypes } from '../utils/types';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 import ConduitGrpcSdk, {
@@ -47,7 +47,7 @@ export class GraphQLController extends ConduitRouter {
 
   refreshGQLServer() {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
-    this.validateRelationTypes();
+    this.importDbTypes();
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -72,7 +72,7 @@ export class GraphQLController extends ConduitRouter {
     const parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
     if (typeExists) {
       const start = this.types.indexOf(`type ${name} `);
-      const end = this.types.indexOf('\n', start) + 2;
+      const end = this.types.indexOf('\n', start);
       this.types =
         this.types.substring(0, start) +
         parseResult.typeString +
@@ -468,16 +468,17 @@ export class GraphQLController extends ConduitRouter {
     delete this._apollo;
   }
 
-  private validateRelationTypes() {
-    validateRelationTypes(this._parser, (typeName, typeFields) => {
-      this.generateType(typeName, typeFields);
-      this.generateSchema();
-    });
+  private importDbTypes() {
+    importDbTypes(this._parser, this.updateSchemaType.bind(this));
   }
 
-  updateSchemaType(typeName: string, typeFields: ConduitModel) {
+  updateSchemaType(typeName: string, typeFields: ConduitModel, refresh = true) {
     this.generateType(typeName, typeFields, true);
     this.generateSchema();
-    this.scheduleApolloRefresh();
+    if (refresh) {
+      // refresh on schema type update (TypeRegistry)
+      // false on this.refreshGQLServer() -> importDbTypes() -> updateSchemaType()
+      this.scheduleApolloRefresh();
+    }
   }
 }

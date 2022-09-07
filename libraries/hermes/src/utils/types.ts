@@ -13,9 +13,13 @@ type TypeObject = {
   missing: Set<string>;
 };
 
-export function validateRelationTypes(
+export function importDbTypes(
   parser: SwaggerParser | GraphQlParser,
-  importedTypeHandler: (typeName: string, typeFields: ConduitModel) => void,
+  importedTypeHandler: (
+    typeName: string,
+    typeFields: ConduitModel,
+    gqlRefresh?: boolean,
+  ) => void,
 ) {
   const typesObject: TypeObject = {
     known: parser.knownTypes,
@@ -43,7 +47,7 @@ export function validateRelationTypes(
       throw new Error(`Could not retrieve types: ${missingTypes}`);
     }
     typesObject.imported.forEach((typeFields, typeName) => {
-      importedTypeHandler(typeName, typeFields);
+      importedTypeHandler(typeName, typeFields, false);
       parser.knownTypes.delete(typeName);
     });
   }

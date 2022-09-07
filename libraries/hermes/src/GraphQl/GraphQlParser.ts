@@ -4,6 +4,7 @@ import {
   ConduitRouteOption,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { TypeRegistry } from '../classes';
 
 export interface ResolverDefinition {
   [key: string]: {
@@ -86,10 +87,23 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean,
   ): void {
-    processingObject.typeString +=
-      `${name}: ${isArray ? '[' : ''}` +
-      this.getType(value) +
-      `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
+    if (name === value) {
+      const typeFields = TypeRegistry.getInstance().getType(name);
+      if (typeFields) {
+        processingObject.typeString = this.extractTypes(
+          name,
+          typeFields,
+          false,
+        ).typeString;
+      } else {
+        processingObject.typeString = ''; // missing type
+      }
+    } else {
+      processingObject.typeString +=
+        `${name}: ${isArray ? '[' : ''}` +
+        this.getType(value) +
+        `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
+    }
   }
 
   protected getResultFromObject(
