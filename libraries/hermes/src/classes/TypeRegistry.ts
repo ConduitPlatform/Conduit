@@ -1,14 +1,14 @@
 import ConduitGrpcSdk, { ConduitModel } from '@conduitplatform/grpc-sdk';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
-type RouterDocUpdateFunction = (typeName: string, typeFields: ConduitModel) => void;
+type TransportUpdateHandler = (typeName: string, typeFields: ConduitModel) => void;
 
 // Limitations:
 // Schema types are not removed from requestedTypes upon deregistration of the routes referencing them
 
 export class TypeRegistry {
   private static instance: TypeRegistry;
-  private static updateRouterDocFunctions: RouterDocUpdateFunction[] = [];
+  private static transportUpdateHandlers: Map<string, TransportUpdateHandler> = new Map();
   private readonly schemaTypes: Map<string, ConduitModel> = new Map();
   private readonly pendingTypes: Set<string> = new Set();
   private readonly requestedTypes: Set<string> = new Set();
@@ -59,9 +59,9 @@ export class TypeRegistry {
           const typeUpdate = this.schemaTypes.get(schemaName) !== schema.fields; // use lodash.isEqual() or hash ???
           this.schemaTypes.set(schemaName, schema.fields);
           if (typeUpdate) {
-            TypeRegistry.updateRouterDocFunctions.forEach(f =>
-              f(schemaName, schema.fields),
-            );
+            TypeRegistry.transportUpdateHandlers.forEach(handler => {
+              handler(schemaName, schema.fields);
+            });
           }
         }
       })
@@ -77,15 +77,20 @@ export class TypeRegistry {
 
   static getInstance(
     grpcSdk?: ConduitGrpcSdk,
-    updateRouterDocFunction?: (typeName: string, typeFields: ConduitModel) => void,
+    transport?: { name: string; updateHandler: TransportUpdateHandler },
   ): TypeRegistry {
     if (!TypeRegistry.instance) {
       if (!grpcSdk) throw new Error('No grpc-sdk instance provided!');
+      if (!transport) throw new Error('No transport object provided!');
       TypeRegistry.instance = new TypeRegistry(grpcSdk);
     }
-    if (updateRouterDocFunction) {
-      TypeRegistry.updateRouterDocFunctions.push(updateRouterDocFunction);
+    if (transport) {
+      TypeRegistry.transportUpdateHandlers.set(transport.name, transport.updateHandler);
     }
     return TypeRegistry.instance;
+  }
+
+  static removeTransport(name: string) {
+    TypeRegistry.transportUpdateHandlers.delete(name);
   }
 }

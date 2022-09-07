@@ -43,7 +43,10 @@ export class RestController extends ConduitRouter {
         : [];
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
-    TypeRegistry.getInstance(grpcSdk, this._swagger.updateSchemaType.bind(this._swagger));
+    TypeRegistry.getInstance(grpcSdk, {
+      name: 'rest',
+      updateHandler: this._swagger.updateSchemaType.bind(this._swagger),
+    });
   }
 
   registerRoute(
@@ -293,6 +296,7 @@ export class RestController extends ConduitRouter {
   }
 
   shutDown() {
+    TypeRegistry.removeTransport('rest');
     super.shutDown();
     this._registeredLocalRoutes.clear();
     delete this._swagger;

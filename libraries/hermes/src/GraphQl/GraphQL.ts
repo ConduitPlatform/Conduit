@@ -39,7 +39,10 @@ export class GraphQLController extends ConduitRouter {
     super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
-    TypeRegistry.getInstance(grpcSdk, this.updateSchemaType.bind(this));
+    TypeRegistry.getInstance(grpcSdk, {
+      name: 'graphql',
+      updateHandler: this.updateSchemaType.bind(this),
+    });
   }
 
   refreshGQLServer() {
@@ -457,6 +460,7 @@ export class GraphQLController extends ConduitRouter {
   }
 
   shutDown() {
+    TypeRegistry.removeTransport('graphql');
     super.shutDown();
     if (this._apolloRefreshTimeout) {
       clearTimeout(this._apolloRefreshTimeout);
