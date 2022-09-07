@@ -1,13 +1,13 @@
 let client;
+let core;
 describe('Testing Config package', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     const { exec } = require('child_process');
     const options = {
       env: { ...process.env, REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032 }
     }
-    exec("node ./dist/bin/www.js", options,function (err,stdout,stderr) {
-
-    });
+    core = exec("node ./dist/bin/www.js", options);
+    await new Promise((r) => setTimeout(r, 2000));
     const path = require('path');
     const protoLoader = require('@grpc/proto-loader');
     const grpc = require('@grpc/grpc-js');
@@ -26,15 +26,14 @@ describe('Testing Config package', () => {
       grpc.credentials.createInsecure());
   });
   test('Getting Redis Details', () => {
-    try {
       client.getRedisDetails({}, (err, res) => {
-        expect(res).toEqual(expect.objectContaining({
+        expect(res).toMatchObject({
           redisHost: expect.any(String),
           redisPort: expect.any(Number),
-        }));
+        });
       });
-    } catch (e) {
-      throw e;
-    }
   });
+  afterAll(() => {
+    process.kill(core.pid);
+  })
 });
