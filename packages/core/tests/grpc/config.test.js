@@ -47,4 +47,16 @@ describe('Testing Config package', () => {
       });
     });
   });
+
+  test('Getting Module List', () => {
+    client.moduleList({}, (err, res) => {
+      res.modules.forEach((module) => {
+        expect(module).toMatchObject({
+          moduleName: expect.any(String),
+          url: expect.any(String),
+          serving: expect.any(Boolean)
+        });
+      })
+    });
+  });
 });
