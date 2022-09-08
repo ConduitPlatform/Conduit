@@ -1,11 +1,11 @@
 import ConduitGrpcSdk, { ConduitModel } from '@conduitplatform/grpc-sdk';
-import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 import { isEqual } from 'lodash';
 
 type TransportUpdateHandler = (typeName: string, typeFields: ConduitModel) => void;
 
-// Limitations:
-// Schema types are not removed from requestedTypes upon deregistration of the routes referencing them
+// Limitations & Optimizations:
+// - Schema types are not removed from requestedTypes upon deregistration of the routes referencing them
+// - We should ideally be hashing type fields for faster object equality comparison
 
 export class TypeRegistry {
   private static instance: TypeRegistry;
@@ -51,7 +51,6 @@ export class TypeRegistry {
       this.pendingTypes.add(schemaName);
       return;
     }
-    await sleep(250); // prevent gRPC request flooding during early Core/Database initialization
     await this.grpcSdk
       .database!.getSchema(schemaName)
       .then(schema => {
