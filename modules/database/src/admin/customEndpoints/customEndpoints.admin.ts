@@ -10,9 +10,9 @@ import { status } from '@grpc/grpc-js';
 import {
   assignmentValidation,
   inputValidation,
-  queryValidation,
   paramValidation,
   operationValidation,
+  paginationAndSortingValidation,
 } from './utils';
 import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
@@ -76,8 +76,6 @@ export class CustomEndpointsAdmin {
       query,
       authentication,
       assignments,
-      sorted,
-      paginated,
     } = call.request.params;
 
     const customEndpointExists = await this.database
@@ -123,34 +121,16 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
+    error = paginationAndSortingValidation(
+      operation,
+      call,
+      findSchema as ConduitDatabaseSchema,
+      endpoint,
+    );
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+    }
 
-    if (paginated && operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add pagination to non-get endpoint',
-      );
-    } else if (paginated) {
-      endpoint.paginated = paginated;
-    }
-    if (sorted && operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add sorting to non-get endpoint',
-      );
-    } else if (sorted) {
-      endpoint.sorted = sorted;
-    }
-    if (operation !== OperationsEnum.POST) {
-      const error = queryValidation(
-        query,
-        findSchema as ConduitDatabaseSchema, // @dirty-type-cast
-        inputs,
-      );
-      if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-      }
-      endpoint.query = query;
-    }
     if (
       operation === OperationsEnum.POST ||
       operation === OperationsEnum.PUT ||
@@ -189,16 +169,8 @@ export class CustomEndpointsAdmin {
   }
 
   async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
-      id,
-      selectedSchema,
-      selectedSchemaName,
-      query,
-      inputs,
-      assignments,
-      sorted,
-      paginated,
-    } = call.request.params;
+    const { id, selectedSchema, selectedSchemaName, query, inputs, assignments } =
+      call.request.params;
 
     if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
       throw new GrpcError(
@@ -214,16 +186,18 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
 
+    const operation = found.operation;
+
     const findSchema = await this.findSchema(
       selectedSchema,
       selectedSchemaName,
-      found.operation,
+      operation,
     );
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
 
-    let error = operationValidation(found.operation, query, assignments);
+    let error = operationValidation(operation, query, assignments);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -233,33 +207,20 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
-    if (paginated && found.operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add pagination to non-get endpoint',
-      );
-    }
-    if (sorted && found.operation !== OperationsEnum.GET) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Cannot add sorting to non-get endpoint',
-      );
-    }
-    if (found.operation !== OperationsEnum.POST) {
-      const error = queryValidation(
-        query,
-        findSchema as ConduitDatabaseSchema, // @dirty-type-cast
-        inputs,
-      );
-      if (error !== true) {
-        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-      }
+    error = paginationAndSortingValidation(
+      operation,
+      call,
+      findSchema as ConduitDatabaseSchema,
+      null,
+    );
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
     if (
-      found.operation === OperationsEnum.POST ||
-      found.operation === OperationsEnum.PUT ||
-      found.operation === OperationsEnum.PATCH
+      operation === OperationsEnum.POST ||
+      operation === OperationsEnum.PUT ||
+      operation === OperationsEnum.PATCH
     ) {
       assignments.forEach(
         (r: {
@@ -270,7 +231,7 @@ export class CustomEndpointsAdmin {
           const error = assignmentValidation(
             findSchema,
             inputs,
-            found.operation,
+            operation,
             r.schemaField,
             r.assignmentField,
             r.action,
