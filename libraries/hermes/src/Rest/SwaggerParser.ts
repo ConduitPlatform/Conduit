@@ -112,9 +112,18 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any,
     isRequired: boolean = false,
     isArray: boolean,
+    parentField: string,
   ): void {
-    if (name !== value) {
-      // not implicit fields (db schema)
+    if (!isArray && (name === value || name === parentField)) {
+      Object.keys(processingObject).forEach(field => {
+        // @ts-ignore
+        delete processingObject[field];
+      });
+      Object.assign(processingObject, this.getType(value));
+    } else {
+      if (!processingObject.properties) {
+        processingObject.properties = {};
+      }
       // @ts-ignore
       processingObject.properties[name] = this.getType(value);
     }

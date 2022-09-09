@@ -84,11 +84,12 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     name: string,
     value: string,
-    isRequired: boolean = false,
+    isRequired: boolean,
     isArray: boolean,
+    parentField: string,
   ): void {
-    if (name === value) {
-      const typeFields = TypeRegistry.getInstance().getType(name);
+    if (!isArray && name === parentField) {
+      const typeFields = TypeRegistry.getInstance().getType(value);
       if (typeFields) {
         processingObject.typeString = this.extractTypes(
           name,
