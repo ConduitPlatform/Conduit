@@ -1,4 +1,4 @@
-let coreProcess,client,testModule;
+let coreProcess, client, testModule;
 const path = require('path');
 const protoLoader = require('@grpc/proto-loader');
 const grpc = require('@grpc/grpc-js');
@@ -6,7 +6,7 @@ const { exec } = require('child_process');
 beforeAll(async () => {
   let options = {
     env: { ...process.env, REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032 },
-    cwd: './'
+    cwd: './',
   };
   exec('sh ./src/tests/scripts/setup.sh');
   await new Promise((r) => setTimeout(r, 5000));
@@ -35,20 +35,32 @@ beforeAll(async () => {
 
 
 describe('Testing Core package', () => {
-  test('Getting Redis Details', () => {
+  test('Getting Redis Details', done => {
     client.getRedisDetails({}, (err, res) => {
-      return expect(res).toMatchObject({
-        redisHost: expect.any(String),
-        redisPort: expect.any(Number),
-      });
+      try {
+        expect(res).toMatchObject({
+          redisHost: expect.any(String),
+          redisPort: expect.any(Number),
+        });
+        done()
+      }
+      catch (err) {
+        done(err)
+      }
     });
   });
 
-  test('Getting Server Config', () => {
+  test('Getting Server Config', done => {
     client.getServerConfig({}, (err, res) => {
-      return expect(res).toMatchObject({
-        data: expect.any(String),
-      });
+      try {
+        expect(res).toMatchObject({
+          data: expect.any(String),
+        });
+        done()
+      }
+      catch(err) {
+        done(err)
+      }
     });
   });
 });
@@ -56,21 +68,25 @@ describe('Testing Core package', () => {
 describe('Testing module related rpc calls', () => {
   beforeAll(async () => {
     let testOptions = {
-      env: { ...process.env , SERVICE_IP: '0.0.0.0:55184', CONDUIT_SERVER: '0.0.0.0:55152' }
-    }
+      env: { ...process.env, SERVICE_IP: '0.0.0.0:55184', CONDUIT_SERVER: '0.0.0.0:55152' },
+    };
     testModule = exec('node ./dist/tests/mocks/module/index.js', testOptions);
     await new Promise((r) => setTimeout(r, 10000));
-  })
+  });
 
   test('Getting Module List', done => {
-     client.moduleList({}, async (err, res) => {
-       expect(res.modules).toMatchObject({
-        name: 'test',
-        url: '0.0.0.0:55184',
-        serving: true,
-      });
-       done()
+    client.moduleList({}, async (err, res) => {
+      try {
+        expect(res.modules[0]).toMatchObject({
+          name: 'test',
+          url: expect.any(String),
+          serving: expect.any(Boolean)
+        });
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
-  })
+  });
 
-})
+});
