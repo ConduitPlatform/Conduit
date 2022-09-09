@@ -160,19 +160,7 @@ export class AdminHandlers {
   }
 
   async createForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (Object.keys(call.request.params.fields).length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
-    }
-    Object.keys(call.request.params.fields).forEach(r => {
-      if (
-        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
-      ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-        );
-      }
-    });
+    this.formFieldsChecks(call);
     const formExists = await Forms.getInstance()
       .findOne({ name: call.request.params.name })
       .catch(e => {
@@ -199,19 +187,7 @@ export class AdminHandlers {
   }
 
   async updateForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (Object.keys(call.request.params.fields).length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
-    }
-    Object.keys(call.request.params.fields).forEach(r => {
-      if (
-        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
-      ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-        );
-      }
-    });
+    this.formFieldsChecks(call);
     Forms.getInstance()
       .findByIdAndUpdate(call.request.params.formId, {
         name: call.request.params.name,
@@ -265,5 +241,21 @@ export class AdminHandlers {
       },
     );
     return { replies, count };
+  }
+
+  private formFieldsChecks(call: ParsedRouterRequest) {
+    if (Object.keys(call.request.params.fields).length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
+    }
+    Object.keys(call.request.params.fields).forEach(r => {
+      if (
+        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
+        );
+      }
+    });
   }
 }
