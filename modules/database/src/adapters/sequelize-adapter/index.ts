@@ -14,6 +14,7 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -213,6 +214,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string = 'database',
+    instanceSync = false,
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
@@ -235,7 +237,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
-    this.grpcSdk.bus!.publish('database:dataTypes:deregistration', schemaName);
+    if (!instanceSync)
+      this.publishSchema(
+        this.models[schemaName].originalSchema as ConduitDatabaseSchema, // @dirty-type-cast
+        true,
+        deleteData,
+      );
     return 'Schema deleted!';
   }
 

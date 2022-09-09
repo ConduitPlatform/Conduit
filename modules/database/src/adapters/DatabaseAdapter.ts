@@ -45,12 +45,14 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * @param {boolean} imported Whether schema is an introspected schema
    * @param {boolean} cndPrefix Whether to prefix the collection name with a Conduit system schema identifier (cnd_)
    * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
+   * @param {boolean} instanceSync Do not republish schema changes for multi-instance sync calls
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
     cndPrefix = true,
     gRPC = false,
+    instanceSync = false,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -98,7 +100,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         imported: imported ? 'true' : 'false',
       });
     }
-    this.grpcSdk.bus!.publish('database:dataTypes:registration', schema.name);
+    if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
   }
 
@@ -136,6 +138,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string,
+    instanceSync?: boolean,
   ): Promise<string>;
 
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
@@ -297,5 +300,25 @@ export abstract class DatabaseAdapter<T extends Schema> {
       });
     }
     return schema;
+  }
+
+  /**
+   * Publishes schema types for multi-instance synchronization
+   * @param {ConduitDatabaseSchema} schema
+   * @param {boolean} [deleteSchema=false]
+   * @param {boolean} [deleteData=false]
+   */
+  publishSchema(
+    schema: ConduitDatabaseSchema, // @dirty-type-cast
+    deleteSchema = false,
+    deleteData = false,
+  ) {
+    if (deleteSchema) {
+      const { fields, extensions, compiledFields, ...syncSchema } = schema;
+      (syncSchema as any).deleteData = deleteData;
+      this.grpcSdk.bus!.publish('database:schema', JSON.stringify(syncSchema));
+    } else {
+      this.grpcSdk.bus!.publish('database:schema', JSON.stringify(schema));
+    }
   }
 }

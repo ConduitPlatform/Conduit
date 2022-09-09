@@ -11,17 +11,18 @@ export class TypeRegistry {
   private static instance: TypeRegistry;
   private static transportUpdateHandlers: Map<string, TransportUpdateHandler> = new Map();
   private readonly schemaTypes: Map<string, ConduitModel> = new Map();
-  private readonly pendingTypes: Set<string> = new Set();
   private readonly requestedTypes: Set<string> = new Set();
   private dbAvailable = false;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.waitForDatabase().then();
-    this.grpcSdk.bus!.subscribe('database:dataTypes:registration', async schemaName => {
-      await this.setType(schemaName);
-    });
-    this.grpcSdk.bus!.subscribe('database:dataTypes:deregistration', async schemaName => {
-      await this.setType(schemaName);
+    this.grpcSdk.bus!.subscribe('database:schema', async schema => {
+      const syncSchema = JSON.parse(schema);
+      if ('compiledFields' in syncSchema) {
+        this.setType(syncSchema.name, syncSchema.compiledFields);
+      } else {
+        this.schemaTypes.delete(syncSchema.name);
+      }
     });
   }
 
@@ -36,8 +37,7 @@ export class TypeRegistry {
         .database!.getSchemas()
         .then(schemas => {
           schemas.forEach(schema => {
-            this.schemaTypes.set(schema.name, schema.fields);
-            this.pendingTypes.delete(schema.name);
+            this.schemaTypes.set(schema.name, schema.fields); // gRPC fields = compiledFields
           });
         })
         .catch(error => {
@@ -46,28 +46,16 @@ export class TypeRegistry {
     });
   }
 
-  async setType(schemaName: string) {
-    if (!this.dbAvailable) {
-      this.pendingTypes.add(schemaName);
-      return;
+  setType(schemaName: string, schemaFields: ConduitModel) {
+    if (this.requestedTypes.has(schemaName)) {
+      const typeUpdate = !isEqual(this.schemaTypes.get(schemaName), schemaFields); // we could hash this
+      this.schemaTypes.set(schemaName, schemaFields);
+      if (typeUpdate) {
+        TypeRegistry.transportUpdateHandlers.forEach(handler => {
+          handler(schemaName, schemaFields);
+        });
+      }
     }
-    await this.grpcSdk
-      .database!.getSchema(schemaName)
-      .then(schema => {
-        // Only update route docs for explicitly requested types upon schema changes
-        if (schema && this.requestedTypes.has(schema.name)) {
-          const typeUpdate = !isEqual(this.schemaTypes.get(schemaName), schema.fields); // we could hash this
-          this.schemaTypes.set(schemaName, schema.fields);
-          if (typeUpdate) {
-            TypeRegistry.transportUpdateHandlers.forEach(handler => {
-              handler(schemaName, schema.fields);
-            });
-          }
-        }
-      })
-      .catch(error => {
-        ConduitGrpcSdk.Logger.error(error);
-      });
   }
 
   getType(typeName: string) {

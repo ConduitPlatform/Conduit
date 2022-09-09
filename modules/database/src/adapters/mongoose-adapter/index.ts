@@ -11,6 +11,7 @@ import { DatabaseAdapter } from '../DatabaseAdapter';
 import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -240,6 +241,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string = 'database',
+    instanceSync = false,
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
@@ -265,7 +267,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     delete this.models[schemaName];
     this.mongoose.connection.deleteModel(schemaName);
-    this.grpcSdk.bus!.publish('database:dataTypes:deregistration', schemaName);
+    if (!instanceSync)
+      this.publishSchema(
+        this.models[schemaName].originalSchema as ConduitDatabaseSchema, // @dirty-type-cast
+        true,
+        deleteData,
+      );
     return 'Schema deleted!';
   }
 }
