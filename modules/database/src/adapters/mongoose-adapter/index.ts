@@ -245,6 +245,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (instanceSync) {
+      delete this.models[schemaName];
+      this.mongoose.connection.deleteModel(schemaName);
+      return 'Instance synchronized!';
+    }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
@@ -267,12 +272,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     delete this.models[schemaName];
     this.mongoose.connection.deleteModel(schemaName);
-    if (!instanceSync)
-      this.publishSchema(
-        this.models[schemaName].originalSchema as ConduitDatabaseSchema, // @dirty-type-cast
-        true,
-        deleteData,
-      );
+    this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
 }

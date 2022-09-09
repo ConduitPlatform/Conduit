@@ -16,13 +16,12 @@ export class TypeRegistry {
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.waitForDatabase().then();
-    this.grpcSdk.bus!.subscribe('database:schema', async schema => {
-      const syncSchema = JSON.parse(schema);
-      if ('compiledFields' in syncSchema) {
-        this.setType(syncSchema.name, syncSchema.compiledFields);
-      } else {
-        this.schemaTypes.delete(syncSchema.name);
-      }
+    this.grpcSdk.bus!.subscribe('database:create:schema', async syncSchema => {
+      const schema = JSON.parse(syncSchema);
+      this.setType(schema.name, schema.compiledFields);
+    });
+    this.grpcSdk.bus!.subscribe('database:delete:schema', async schemaName => {
+      this.schemaTypes.delete(schemaName);
     });
   }
 

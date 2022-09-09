@@ -105,48 +105,35 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onRegister() {
-    const self = this;
-    self.grpcSdk.bus?.subscribe('database:schema', (message: string) => {
-      if (message === 'request') {
-        self._activeAdapter.registeredSchemas.forEach(schema => {
-          this._activeAdapter.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
-        });
-        return;
-      } else {
-        try {
-          const syncSchema = JSON.parse(message);
-          if (syncSchema.hasOwnProperty('fields')) {
-            self._activeAdapter
-              .createSchemaFromAdapter(
-                syncSchema as ConduitDatabaseSchema,
-                false,
-                false,
-                false,
-                true,
-              )
-              .catch(() => {
-                ConduitGrpcSdk.Logger.error('Failed to create/update schema');
-              });
-          } else {
-            self._activeAdapter
-              .deleteSchema(
-                syncSchema.name,
-                syncSchema.deleteData,
-                syncSchema.ownerModule,
-                true,
-              )
-              .catch(() => {
-                ConduitGrpcSdk.Logger.error('Failed to delete schema');
-              });
-          }
-        } catch (err) {
-          ConduitGrpcSdk.Logger.error('Something was wrong with the message');
-        }
-      }
-    });
+    this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
+  }
+
+  private registerInstanceSyncEvents() {
+    this.grpcSdk.bus?.subscribe('database:request:schemas', () => {
+      this._activeAdapter.registeredSchemas.forEach(schema => {
+        this._activeAdapter.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+      });
+    });
+    try {
+      this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
+        const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
+        await this._activeAdapter.createSchemaFromAdapter(
+          syncSchema,
+          false,
+          false,
+          false,
+          true,
+        );
+      });
+      this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
+        await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+      });
+    } catch {
+      ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
+    }
   }
 
   initializeMetrics() {

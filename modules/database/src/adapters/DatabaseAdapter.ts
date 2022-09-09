@@ -305,20 +305,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
   /**
    * Publishes schema types for multi-instance synchronization
    * @param {ConduitDatabaseSchema} schema
-   * @param {boolean} [deleteSchema=false]
-   * @param {boolean} [deleteData=false]
    */
-  publishSchema(
-    schema: ConduitDatabaseSchema, // @dirty-type-cast
-    deleteSchema = false,
-    deleteData = false,
-  ) {
-    if (deleteSchema) {
-      const { fields, extensions, compiledFields, ...syncSchema } = schema;
-      (syncSchema as any).deleteData = deleteData;
-      this.grpcSdk.bus!.publish('database:schema', JSON.stringify(syncSchema));
-    } else {
-      this.grpcSdk.bus!.publish('database:schema', JSON.stringify(schema));
-    }
+  publishSchema(schema: ConduitDatabaseSchema) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish('database:create:schema', JSON.stringify(schema));
   }
 }

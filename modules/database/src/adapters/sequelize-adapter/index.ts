@@ -218,6 +218,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (instanceSync) {
+      delete this.models[schemaName];
+      delete this.sequelize.models[schemaName];
+      return 'Instance synchronized!';
+    }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
@@ -237,12 +242,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
-    if (!instanceSync)
-      this.publishSchema(
-        this.models[schemaName].originalSchema as ConduitDatabaseSchema, // @dirty-type-cast
-        true,
-        deleteData,
-      );
+    this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
 
