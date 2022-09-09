@@ -53,58 +53,49 @@ export class EmailService {
 
   async sendEmail(template: string, params: ISendEmailParams) {
     const { email, body, subject, variables, sender } = params;
-
     const builder = this.emailer.emailBuilder();
 
     if (!template && (!body || !subject)) {
       throw new Error(`Template/body+subject not provided`);
     }
 
-    let templateFound: EmailTemplate | null = null;
+    let subjectString = subject!;
+    let bodyString = body!;
+    let templateFound: EmailTemplate | null;
+
     if (template) {
       templateFound = await EmailTemplate.getInstance().findOne({ name: template });
       if (isNil(templateFound)) {
         throw new Error(`Template ${template} not found`);
       }
+      if (templateFound.externalManaged) {
+        builder.setTemplate({ id: templateFound._id, variables: variables });
+      } else {
+        const handled_body = handlebars.compile(templateFound.body);
+        bodyString = templateFound ? handled_body(variables) : body!;
+      }
+      const handled_subject = handlebars.compile(templateFound.subject);
+      subjectString = handled_subject(variables);
     }
 
     if (!isNil(sender)) {
       builder.setSender(sender);
-    } else if (!isNil(templateFound!.sender) && isNil(sender)) {
+    } else if (!isNil(templateFound!.sender)) {
       builder.setSender(templateFound!.sender);
     } else {
       throw new Error(`Sender must be provided!`);
     }
 
-    let subjectString = subject!;
-    let bodyString = body!;
-    if (template) {
-      if (templateFound && templateFound.externalManaged) {
-        builder.setTemplate({
-          id: templateFound._id,
-          variables: variables,
-        });
-      } else {
-        const handled_body = handlebars.compile(templateFound!.body);
-        bodyString = templateFound! ? handled_body(variables) : body!;
-      }
-
-      const handled_subject = handlebars.compile(templateFound!.subject);
-      subjectString = handled_subject(variables);
-    }
     builder.setContent(bodyString);
-    builder.setSender(sender);
     builder.setReceiver(email);
     builder.setSubject(subjectString);
 
     if (params.cc) {
       builder.setCC(params.cc);
     }
-
     if (params.replyTo) {
       builder.setReplyTo(params.replyTo);
     }
-
     if (params.attachments) {
       builder.addAttachments(params.attachments as Attachment[]);
     }
