@@ -14,7 +14,6 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
-import { ConduitDatabaseSchema } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
