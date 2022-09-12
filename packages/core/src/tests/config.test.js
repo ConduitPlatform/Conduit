@@ -78,7 +78,7 @@ describe('Testing module related rpc calls', () => {
     client.moduleList({}, async (err, res) => {
       try {
         expect(res.modules[0]).toMatchObject({
-          name: 'test',
+          moduleName: 'test',
           url: expect.any(String),
           serving: expect.any(Boolean)
         });
