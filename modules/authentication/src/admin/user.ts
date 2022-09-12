@@ -74,7 +74,8 @@ export class UserAdmin {
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
+    const { id, email, isVerified, hasTwoFA, phoneNumber, twoFaMethod } =
+      call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
@@ -85,12 +86,19 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
+    if (twoFaMethod !== 'phone') {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Can not enable 2fa with other method than phone',
+      );
+    }
 
     const query = {
       email: email ?? user.email,
       isVerified: isVerified ?? user.isVerified,
       hasTwoFA: hasTwoFA ?? user.hasTwoFA,
       phoneNumber: phoneNumber ?? user.phoneNumber,
+      twoFaMethod: twoFaMethod ?? user.twoFaMethod,
     };
 
     const res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
