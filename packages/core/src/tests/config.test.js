@@ -28,12 +28,6 @@ beforeAll(async () => {
     grpc.credentials.createInsecure());
 });
 
-// afterAll( () => {
-//   process.kill(coreProcess.pid)
-//   process.kill(testModule.pid)
-// })
-
-
 describe('Testing Core package', () => {
   test('Getting Redis Details', done => {
     client.getRedisDetails({}, (err, res) => {
@@ -90,3 +84,9 @@ describe('Testing module related rpc calls', () => {
   });
 
 });
+
+afterAll( () => {
+  process.kill(coreProcess.pid)
+  process.kill(testModule.pid)
+  exec('docker stop conduit-redis')
+})
