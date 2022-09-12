@@ -1,7 +1,13 @@
-import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  GrpcError,
+  Indexable,
+  ParsedRouterRequest,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitDatabaseSchema } from '../../interfaces';
 import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
+import { status } from '@grpc/grpc-js';
 
 /**
  * Query schema:
@@ -287,6 +293,40 @@ export function operationValidation(
     (!Array.isArray(assignments) || assignments.length === 0)
   ) {
     return "Custom endpoint's target operation requires that assignments field be a non-empty array";
+  }
+  return true;
+}
+
+export function paginationAndSortingValidation(
+  operation: number,
+  call: ParsedRouterRequest,
+  findSchema: ConduitDatabaseSchema,
+  endpoint: Indexable | null,
+) {
+  const { query, inputs, sorted, paginated } = call.request.params;
+
+  if (paginated && operation !== OperationsEnum.GET) {
+    return 'Cannot add pagination to non-get endpoint';
+  } else if (paginated && endpoint !== null) {
+    endpoint.paginated = paginated;
+  }
+  if (sorted && operation !== OperationsEnum.GET) {
+    return 'Cannot add sorting to non-get endpoint';
+  } else if (sorted && endpoint !== null) {
+    endpoint.sorted = sorted;
+  }
+  if (operation !== OperationsEnum.POST) {
+    const error = queryValidation(
+      query,
+      findSchema as ConduitDatabaseSchema, // @dirty-type-cast
+      inputs,
+    );
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+    }
+    if (endpoint !== null) {
+      endpoint.query = query;
+    }
   }
   return true;
 }
