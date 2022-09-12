@@ -58,23 +58,10 @@ export class RoutingManager {
     input: ConduitMiddlewareOptions,
     handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
   ) {
-    const routeObject: any = {
+    const routeObject = this.parseRouteObject({
       options: input,
       grpcFunction: input.name,
-    };
-    if (!routeObject.options.middlewares) {
-      routeObject.options.middlewares = [];
-    }
-    for (const option in routeObject.options) {
-      if (!routeObject.options.hasOwnProperty(option)) continue;
-      if (option === 'middlewares') continue;
-      if (
-        typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String
-      )
-        continue;
-      routeObject.options[option] = JSON.stringify(routeObject.options[option]);
-    }
+    });
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
@@ -84,51 +71,24 @@ export class RoutingManager {
     type: ConduitRouteReturnDefinition,
     handler: RequestHandlers,
   ) {
-    const routeObject: any = {
+    const routeObject = this.parseRouteObject({
       options: input,
       returns: {
         name: type.name,
         fields: JSON.stringify(type.fields),
       },
       grpcFunction: this.generateGrpcName(input),
-    };
-
-    if (!routeObject.options.middlewares) {
-      routeObject.options.middlewares = [];
-    }
-    for (const option in routeObject.options) {
-      if (!routeObject.options.hasOwnProperty(option)) continue;
-      if (option === 'middlewares') continue;
-      if (
-        typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String
-      )
-        continue;
-      routeObject.options[option] = JSON.stringify(routeObject.options[option]);
-    }
+    });
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
   socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
-    const routeObject: any = {
+    const eventsObj: EventsProtoDescription = {};
+    const routeObject = this.parseRouteObject({
       options: input,
       events: '',
-    };
-    const eventsObj: EventsProtoDescription = {};
-    if (!routeObject.options.middlewares) {
-      routeObject.options.middlewares = [];
-    }
-    for (const option in routeObject.options) {
-      if (!routeObject.options.hasOwnProperty(option)) continue;
-      if (option === 'middlewares') continue;
-      if (
-        typeof routeObject.options[option] === 'string' ||
-        routeObject.options[option] instanceof String
-      )
-        continue;
-      routeObject.options[option] = JSON.stringify(routeObject.options[option]);
-    }
+    });
     let primary: string;
     Object.keys(events).forEach((eventName: string) => {
       if (!primary) primary = eventName;
@@ -155,7 +115,7 @@ export class RoutingManager {
     } = wrapFunctionsAsync(this._routeHandlers);
     const protoDescriptions = constructProtoFile(
       this._router.moduleName,
-      Object.values((this._moduleRoutes as unknown) as SocketProtoDescription[]),
+      Object.values(this._moduleRoutes as unknown as SocketProtoDescription[]),
     );
     await this._server.addService(
       protoDescriptions.path,
@@ -186,5 +146,22 @@ export class RoutingManager {
       .split('/')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join('');
+  }
+
+  private parseRouteObject(routeObject: any) {
+    if (!routeObject.options.middlewares) {
+      routeObject.options.middlewares = [];
+    }
+    for (const option in routeObject.options) {
+      if (!routeObject.options.hasOwnProperty(option)) continue;
+      if (option === 'middlewares') continue;
+      if (
+        typeof routeObject.options[option] === 'string' ||
+        routeObject.options[option] instanceof String
+      )
+        continue;
+      routeObject.options[option] = JSON.stringify(routeObject.options[option]);
+    }
+    return routeObject;
   }
 }
