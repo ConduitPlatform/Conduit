@@ -62,7 +62,7 @@ describe('Testing Core package', () => {
 describe('Testing module related rpc calls', () => {
   beforeAll(async () => {
     let testOptions = {
-      env: { ...process.env, SERVICE_IP: '0.0.0.0:55184', CONDUIT_SERVER: '0.0.0.0:55152' },
+      env: { SERVICE_IP: '0.0.0.0:55184', CONDUIT_SERVER: '0.0.0.0:55152', ...process.env },
     };
     testModule = exec('node ./dist/tests/mocks/module/index.js', testOptions);
     await new Promise((r) => setTimeout(r, 10000));
