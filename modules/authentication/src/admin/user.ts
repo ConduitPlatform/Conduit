@@ -86,6 +86,9 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
+    if (twoFaMethod === 'qrcode') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Can not enable 2fa with Qr code');
+    }
 
     const query = {
       email: email ?? user.email,
