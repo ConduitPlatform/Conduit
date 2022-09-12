@@ -3,8 +3,7 @@ import {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import { Config } from './config';
-import AppConfigSchema from '@conduitplatform/chat/dist/config';
+import AppConfigSchema, { Config } from './config';
 import path from 'path';
 
 export default class TestModule extends ManagedModule<Config> {
