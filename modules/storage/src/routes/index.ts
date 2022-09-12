@@ -30,6 +30,7 @@ export class StorageRoutes {
         },
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
+        description: `Returns a file given a specific id.`,
       },
       new ConduitRouteReturnDefinition('File', File.getInstance().fields),
       this.fileHandlers.getFile.bind(this.fileHandlers),
@@ -45,6 +46,8 @@ export class StorageRoutes {
         },
         action: ConduitRouteActions.GET,
         path: '/storage/getFileUrl/:id',
+        description: `Returns the file's url given a specific id
+                      and optionally redirects to the url.`,
       },
       new ConduitRouteReturnDefinition('FileUrl', 'String'),
       this.fileHandlers.getFileUrl.bind(this.fileHandlers),
@@ -63,6 +66,7 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.POST,
           path: '/storage/file',
+          description: `Creates a new file requiring at least name and data.`,
           middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('File', File.getInstance().fields),
@@ -77,6 +81,7 @@ export class StorageRoutes {
           action: ConduitRouteActions.GET,
           middlewares: ['authMiddleware'],
           path: '/storage/file/data/:id',
+          description: `Returns the data of a file given a specific id.`,
         },
         new ConduitRouteReturnDefinition('File', {
           data: TYPE.String,
@@ -91,6 +96,7 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.DELETE,
           path: '/storage/file/:id',
+          description: `Deletes a file given a specific id.`,
           middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('FileDeleteResponse', {
@@ -113,6 +119,7 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/file/:id',
+          description: `Updates the given fields of a file.`,
           middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
