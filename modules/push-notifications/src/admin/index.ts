@@ -37,7 +37,6 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         sendNotification: this.sendNotification.bind(this),
-        sendNotifications: this.sendNotifications.bind(this),
         sendNotificationToManyDevices: this.sendNotificationToManyDevices.bind(this),
         getNotificationToken: this.getNotificationToken.bind(this),
       })
@@ -62,15 +61,6 @@ export class AdminHandlers {
         },
         new ConduitRouteReturnDefinition('SendNotification', 'String'),
         'sendNotification',
-      ),
-      constructConduitRoute(
-        {
-          path: '/sendMany',
-          action: ConduitRouteActions.POST, // unimplemented
-          bodyParams: {},
-        },
-        new ConduitRouteReturnDefinition('SendNotifications', {}),
-        'sendNotifications',
       ),
       constructConduitRoute(
         {
@@ -116,11 +106,6 @@ export class AdminHandlers {
       devices_count: 1,
     });
     return 'Ok';
-  }
-
-  async sendNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    // TODO: Implement this
-    throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
   async sendNotificationToManyDevices(
