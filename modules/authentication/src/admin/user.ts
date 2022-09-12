@@ -87,7 +87,10 @@ export class UserAdmin {
       );
     }
     if (twoFaMethod !== 'phone') {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Can not enable 2fa with Qr code');
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Can not enable 2fa with other method than phone',
+      );
     }
 
     const query = {
