@@ -6,7 +6,6 @@ import {
 import { Config } from './config';
 import AppConfigSchema from '@conduitplatform/chat/dist/config';
 import path from 'path';
-import { AdminHandlers } from '@conduitplatform/chat/dist/admin';
 
 export default class TestModule extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
