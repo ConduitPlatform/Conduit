@@ -13,13 +13,12 @@
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
-    "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan src/test/**",
+    "test": "jest",
     "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/ && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/",
     "prepare": "npm run build",
-    "prepublish": "npm run build",
-    "tests": "jest"
+    "prepublish": "npm run build"
   },
   "license": "ISC",
   "dependencies": {
