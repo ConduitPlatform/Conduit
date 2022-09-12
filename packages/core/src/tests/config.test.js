@@ -5,7 +5,7 @@ const grpc = require('@grpc/grpc-js');
 const { exec } = require('child_process');
 beforeAll(async () => {
   let options = {
-    env: { ...process.env, REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032 },
+    env: { REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032, ...process.env },
     cwd: './',
   };
   exec('sh ./src/tests/scripts/setup.sh');
@@ -36,10 +36,9 @@ describe('Testing Core package', () => {
           redisHost: expect.any(String),
           redisPort: expect.any(Number),
         });
-        done()
-      }
-      catch (err) {
-        done(err)
+        done();
+      } catch (err) {
+        done(err);
       }
     });
   });
@@ -50,10 +49,9 @@ describe('Testing Core package', () => {
         expect(res).toMatchObject({
           data: expect.any(String),
         });
-        done()
-      }
-      catch(err) {
-        done(err)
+        done();
+      } catch (err) {
+        done(err);
       }
     });
   });
@@ -74,7 +72,7 @@ describe('Testing module related rpc calls', () => {
         expect(res.modules[0]).toMatchObject({
           moduleName: 'test',
           url: expect.any(String),
-          serving: expect.any(Boolean)
+          serving: expect.any(Boolean),
         });
         done();
       } catch (err) {
@@ -85,8 +83,8 @@ describe('Testing module related rpc calls', () => {
 
 });
 
-afterAll( () => {
-  process.kill(coreProcess.pid)
-  process.kill(testModule.pid)
-  exec('docker stop conduit-redis')
-})
+afterAll(() => {
+  process.kill(coreProcess.pid);
+  process.kill(testModule.pid);
+  exec('docker stop conduit-redis');
+});
