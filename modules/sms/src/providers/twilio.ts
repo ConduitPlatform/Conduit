@@ -46,7 +46,7 @@ export class TwilioProvider implements ISmsProvider {
       });
 
     if (!verification) {
-      return Promise.reject(Error('could not send verication code'));
+      return Promise.reject(Error('could not send verification code'));
     }
 
     return Promise.resolve(verification.sid);

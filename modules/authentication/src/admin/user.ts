@@ -74,7 +74,8 @@ export class UserAdmin {
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
+    const { id, email, isVerified, hasTwoFA, phoneNumber, twoFaMethod } =
+      call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
@@ -91,6 +92,7 @@ export class UserAdmin {
       isVerified: isVerified ?? user.isVerified,
       hasTwoFA: hasTwoFA ?? user.hasTwoFA,
       phoneNumber: phoneNumber ?? user.phoneNumber,
+      twoFaMethod: twoFaMethod ?? user.twoFaMethod,
     };
 
     const res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
