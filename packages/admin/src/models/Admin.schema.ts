@@ -33,6 +33,8 @@ export class Admin extends ConduitActiveSchema<Admin> {
   password!: string;
   createdAt!: Date;
   updatedAt!: Date;
+  hasTwoFA: Boolean;
+  twoFaMethod: string;
 
   private constructor(database: DatabaseProvider) {
     super(database, Admin.name, schema, modelOptions, collectionName);

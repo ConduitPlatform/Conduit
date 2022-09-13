@@ -7,8 +7,11 @@ import {
   ConduitRouteParameters,
   ConduitString,
   ConfigController,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { TwoFactorSecret } from '@conduitplatform/authentication/dist/models';
+import { status } from '@grpc/grpc-js';
 
 export function getLoginRoute() {
   return new ConduitRoute(
@@ -41,7 +44,18 @@ export function getLoginRoute() {
       if (!passwordsMatch) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
-
+      if (admin.hasTwoFA) {
+        if (admin.twoFaMethod === 'qrcode') {
+          const secret = await TwoFactorSecret.getInstance().findOne({
+            userId: admin._id,
+          });
+          if (isNil(secret))
+            throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
+          return { message: 'OTP required' };
+        } else {
+          throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
+        }
+      }
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
       const token = signToken(

@@ -4,3 +4,6 @@ export * from './GetAdminUsers.route';
 export * from './DeleteAdminUser.route';
 export * from './ChangePasswordRoute';
 export * from './Ready';
+export * from './EnableTwoFaRoute';
+export * from './DisableTwoFaRoute';
+export * from './VerifyQrCodeRoute';
