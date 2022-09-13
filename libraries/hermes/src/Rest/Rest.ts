@@ -135,6 +135,16 @@ export class RestController extends ConduitRouter {
         route,
         req.headers['cache-control'],
       );
+      validateParams(context.params, {
+        ...route.input.bodyParams,
+        ...route.input.queryParams,
+        ...route.input.urlParams,
+      });
+      validateParams(context.params, {
+        ...route.input.bodyParams,
+        ...route.input.queryParams,
+        ...route.input.urlParams,
+      });
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {

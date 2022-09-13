@@ -1,42 +1,21 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
-import { Group } from './Group.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  name: {
-    type: TYPE.String,
+  resource: {
+    type: 'Relation',
+    model: 'Resource',
     required: true,
   },
-  group: {
+  roles: [
+    {
+      type: TYPE.String,
+    },
+  ],
+  user: {
     type: TYPE.Relation,
-    model: 'Group',
+    model: 'User',
     required: true,
-  },
-  isDefault: {
-    type: TYPE.Boolean,
-    default: false,
-  },
-  permissions: {
-    canInvite: {
-      type: TYPE.Boolean,
-      default: false,
-    },
-    canEditRoles: {
-      type: TYPE.Boolean,
-      default: false,
-    },
-    canRemove: {
-      type: TYPE.Boolean,
-      default: false,
-    },
-    canDeleteGroup: {
-      type: TYPE.Boolean,
-      default: false,
-    },
-    canCreateGroup: {
-      type: TYPE.Boolean,
-      default: false,
-    },
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -45,9 +24,9 @@ const schemaOptions = {
   timestamps: true,
   conduit: {
     permissions: {
-      extendable: true,
+      extendable: false,
       canCreate: false,
-      canModify: 'ExtensionOnly',
+      canModify: 'Nothing',
       canDelete: false,
     },
   },

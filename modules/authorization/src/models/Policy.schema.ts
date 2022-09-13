@@ -4,17 +4,63 @@ const schema = {
   _id: TYPE.ObjectId,
   name: {
     type: TYPE.String,
-    required: true,
-  },
-  parentGroup: {
-    type: TYPE.Relation,
-    model: 'Group',
     required: false,
   },
-  isDefault: {
-    type: TYPE.Boolean,
-    default: false,
+  description: {
+    type: TYPE.String,
+    required: false,
   },
+  policyType: {
+    type: TYPE.String,
+    enum: ['RBAC', 'ABAC'],
+  },
+  /**
+   * Valid rules
+   * {
+   * "or":[
+   *   {
+   *    condition: {
+   *      "and:[{
+   *    type: "Role"
+   *    is: "Editor"
+   *    on: "_resource.team.parent"
+   *   },{
+   *    type: "Attribute"
+   *    left: "user._id"
+   *    expression: "eq"
+   *    right: "resource.owner"
+   *   },{
+   *    type: "Attribute"
+   *    left: "resource.company"
+   *    expression: "eq"
+   *    right: "resource.owner"
+   *   }]
+   *   access: "fields"
+   *   fields: ["name", "address"]
+   *    }
+   *   },
+   *   {
+   *     or:[{
+   *       type: "Role",
+   *       is: "Editor",
+   *       on: ab123xca
+   *     }]
+   *
+   *   }
+   * ]
+   *
+   * }
+   */
+  rules: [
+    {
+      expression: TYPE.JSON,
+      fieldAccess: [
+        {
+          type: TYPE.String,
+        },
+      ],
+    },
+  ],
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -37,6 +83,7 @@ export class Group extends ConduitActiveSchema<Group> {
   name: string;
   parentGroup: string | Group;
   isDefault: boolean;
+  isRealm: boolean;
   createdAt: Date;
   updatedAt: Date;
 

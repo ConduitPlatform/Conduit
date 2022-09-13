@@ -58,7 +58,7 @@ export class CmsHandlers {
 
     const document: Doc | undefined = await this.database
       .getSchemaModel(schemaName)
-      .model?.findOne({ _id: id }, undefined, populate);
+      .model?.findOne({ _id: id }, authzResult.fields, populate);
     if (!document) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }

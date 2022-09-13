@@ -1,0 +1,36 @@
+syntax = "proto3";
+package authorization;
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+
+message UserLoginRequest {
+  string userId = 1;
+  string clientId = 2;
+}
+
+message UserCreateRequest {
+  string email = 1;
+  optional string password = 2;
+  bool verify = 3;
+}
+message UserDeleteResponse {
+  string message = 1;
+}
+message UserCreateResponse {
+  optional string password = 1;
+}
+
+service Authorization {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+
+  rpc GetUserRoles(SetConfigRequest) returns (SetConfigResponse);
+  rpc GetUserPermissions(SetConfigRequest) returns (SetConfigResponse);
+  rpc UserCanDo(SetConfigRequest) returns (SetConfigResponse);
+
+}
