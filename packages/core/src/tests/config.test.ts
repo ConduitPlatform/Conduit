@@ -17,7 +17,7 @@ const testModuleUrl = '0.0.0.0:55184';
 
 let eventEmitter;
 beforeAll(async () => {
-  let options = {
+  const options = {
     env: {
       REDIS_PORT: 6379,
       REDIS_HOST: 'localhost',
@@ -81,7 +81,7 @@ describe('Testing Core package', () => {
 
 describe('Testing module related rpc calls', () => {
   beforeAll(async () => {
-    let testOptions = {
+    const testOptions = {
       env: { SERVICE_IP: testModuleUrl, CONDUIT_SERVER: '0.0.0.0:55152', ...process.env },
     };
     testModule = exec('node ./dist/tests/mocks/module/index.js', testOptions);
