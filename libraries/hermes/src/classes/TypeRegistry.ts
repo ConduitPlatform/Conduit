@@ -1,16 +1,18 @@
-import ConduitGrpcSdk, { ConduitModel } from '@conduitplatform/grpc-sdk';
-import { isEqual } from 'lodash';
+import ConduitGrpcSdk, {
+  ConduitModel,
+  ConduitModelField,
+} from '@conduitplatform/grpc-sdk';
 
 type TransportUpdateHandler = (typeName: string, typeFields: ConduitModel) => void;
 
 // Limitations & Optimizations:
 // - Schema types are not removed from requestedTypes upon deregistration of the routes referencing them
-// - We should ideally be hashing type fields for faster object equality comparison
 
 export class TypeRegistry {
   private static instance: TypeRegistry;
   private static transportUpdateHandlers: Map<string, TransportUpdateHandler> = new Map();
-  private readonly schemaTypes: Map<string, ConduitModel> = new Map();
+  private readonly schemaTypes: Map<string, { fields: ConduitModel; hash: string }> =
+    new Map();
   private readonly requestedTypes: Set<string> = new Set();
   private dbAvailable = false;
 
@@ -18,7 +20,7 @@ export class TypeRegistry {
     this.waitForDatabase().then();
     this.grpcSdk.bus!.subscribe('database:create:schema', async syncSchema => {
       const schema = JSON.parse(syncSchema);
-      this.setType(schema.name, schema.compiledFields);
+      this.setType(schema.name, schema.compiledFields, schema.fieldHash);
     });
     this.grpcSdk.bus!.subscribe('database:delete:schema', async schemaName => {
       this.schemaTypes.delete(schemaName);
@@ -36,7 +38,11 @@ export class TypeRegistry {
         .database!.getSchemas()
         .then(schemas => {
           schemas.forEach(schema => {
-            this.schemaTypes.set(schema.name, schema.fields); // gRPC fields = compiledFields
+            this.removeHiddenFields(schema.fields);
+            this.schemaTypes.set(schema.name, {
+              fields: schema.fields,
+              hash: schema.fieldHash,
+            }); // gRPC fields = compiledFields
           });
         })
         .catch(error => {
@@ -45,21 +51,21 @@ export class TypeRegistry {
     });
   }
 
-  setType(schemaName: string, schemaFields: ConduitModel) {
+  setType(schemaName: string, schemaFields: ConduitModel, fieldHash: string) {
+    const typeUpdate = this.schemaTypes.get(schemaName)?.hash !== fieldHash;
+    if (!typeUpdate) return;
+    this.removeHiddenFields(schemaFields);
+    this.schemaTypes.set(schemaName, { fields: schemaFields, hash: fieldHash });
     if (this.requestedTypes.has(schemaName)) {
-      const typeUpdate = !isEqual(this.schemaTypes.get(schemaName), schemaFields); // we could hash this
-      this.schemaTypes.set(schemaName, schemaFields);
-      if (typeUpdate) {
-        TypeRegistry.transportUpdateHandlers.forEach(handler => {
-          handler(schemaName, schemaFields);
-        });
-      }
+      TypeRegistry.transportUpdateHandlers.forEach(handler => {
+        handler(schemaName, schemaFields);
+      });
     }
   }
 
   getType(typeName: string) {
     this.requestedTypes.add(typeName);
-    return this.schemaTypes.get(typeName);
+    return this.schemaTypes.get(typeName)?.fields;
   }
 
   static getInstance(
@@ -79,5 +85,21 @@ export class TypeRegistry {
 
   static removeTransport(name: string) {
     TypeRegistry.transportUpdateHandlers.delete(name);
+  }
+
+  private removeHiddenFields(schemaFields: ConduitModel) {
+    Object.keys(schemaFields).forEach(field => {
+      const targetObject: ConduitModelField | null = Array.isArray(schemaFields[field])
+        ? (schemaFields[field] as ConduitModelField[])[0]
+        : typeof schemaFields[field] === 'object'
+        ? (schemaFields[field] as ConduitModelField)
+        : null;
+      if (!targetObject) return;
+      if (targetObject.select !== false) {
+        this.removeHiddenFields(targetObject as ConduitModel);
+      } else {
+        delete schemaFields[field];
+      }
+    });
   }
 }

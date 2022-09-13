@@ -34,7 +34,7 @@ import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { convertToGrpcSchema } from './utils/grpcSchemaCorverter';
+import { convertToGrpcSchema } from './utils/grpcSchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsConfig from './metrics';
@@ -120,6 +120,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
+        delete (syncSchema as any).fieldHash;
         await this._activeAdapter.createSchemaFromAdapter(
           syncSchema,
           false,
@@ -204,7 +205,10 @@ export default class DatabaseModule extends ManagedModule<void> {
       .then((schemaAdapter: Schema) => {
         callback(
           null,
-          convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
+          convertToGrpcSchema(
+            this._activeAdapter,
+            schemaAdapter.originalSchema as ConduitDatabaseSchema,
+          ),
         ); // @dirty-type-cast
       })
       .catch(err => {
@@ -223,7 +227,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   getSchema(call: GrpcRequest<GetSchemaRequest>, callback: SchemaResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
-      callback(null, convertToGrpcSchema(schemaAdapter as ConduitDatabaseSchema)); // @dirty-type-cast
+      callback(
+        null,
+        convertToGrpcSchema(this._activeAdapter, schemaAdapter as ConduitDatabaseSchema),
+      ); // @dirty-type-cast
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -237,7 +244,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
         schemas: schemas.map(schema =>
-          convertToGrpcSchema(schema as ConduitDatabaseSchema),
+          convertToGrpcSchema(this._activeAdapter, schema as ConduitDatabaseSchema),
         ), // @dirty-type-cast
       });
     } catch (err) {
@@ -286,8 +293,11 @@ export default class DatabaseModule extends ManagedModule<void> {
         .then((schemaAdapter: Schema) => {
           callback(
             null,
-            convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
-          ); // @dirty-type-cast;
+            convertToGrpcSchema(
+              this._activeAdapter,
+              schemaAdapter.originalSchema as ConduitDatabaseSchema,
+            ),
+          ); // @dirty-type-cast
         })
         .catch(err => {
           callback({

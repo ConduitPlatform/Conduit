@@ -8,9 +8,9 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+import { status } from '@grpc/grpc-js';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');

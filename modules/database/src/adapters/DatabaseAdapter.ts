@@ -7,6 +7,7 @@ import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
+import ObjectHash from 'object-hash';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -95,6 +96,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const createdSchema = this._createSchemaFromAdapter(schema);
+    this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!this.registeredSchemas.has(schema.name)) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
@@ -303,11 +305,21 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   /**
-   * Publishes schema types for multi-instance synchronization
+   * Publishes schema types for Database (multi-instance) and Hermes synchronization
    * @param {ConduitDatabaseSchema} schema
    */
   publishSchema(schema: ConduitDatabaseSchema) {
     // @dirty-type-cast
-    this.grpcSdk.bus!.publish('database:create:schema', JSON.stringify(schema));
+    this.grpcSdk.bus!.publish(
+      'database:create:schema',
+      JSON.stringify({
+        ...schema,
+        fieldHash: this.models[schema.name].fieldHash,
+      }),
+    );
+  }
+
+  private hashSchemaFields(schema: ConduitDatabaseSchema) {
+    return (this.models[schema.name].fieldHash = ObjectHash.sha1(schema.compiledFields));
   }
 }
