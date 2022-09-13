@@ -22,6 +22,8 @@ export class InvitationRoutes {
     this.routingManager.route(
       {
         path: '/hook/invitations/:answer/:invitationToken',
+        description: `A webhook used to answer to a chat room invitation
+                      requiring the invitation token.`,
         action: ConduitRouteActions.GET,
         urlParams: {
           answer: ConduitString.Required,
@@ -35,6 +37,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/:answer/:id',
         action: ConduitRouteActions.GET,
+        description: `Answers to a chat room invitation requiring the invitation token id.`,
         urlParams: {
           id: ConduitString.Required,
           answer: ConduitString.Required,
@@ -48,6 +51,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/received',
         action: ConduitRouteActions.GET,
+        description: `Returns all current user's invitations.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -68,6 +72,7 @@ export class InvitationRoutes {
           limit: ConduitNumber.Optional,
         },
         action: ConduitRouteActions.GET,
+        description: `Returns all the invitations the current user has sent.`,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {
@@ -80,6 +85,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/cancel/:id',
         action: ConduitRouteActions.DELETE,
+        description: `Cancels an invitation the current user has sent.`,
         urlParams: {
           id: ConduitString.Required,
         },
@@ -93,12 +99,11 @@ export class InvitationRoutes {
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
-    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne(
-      {
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
         _id: id,
         receiver: user._id,
-      },
-    );
+      });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
@@ -129,12 +134,11 @@ export class InvitationRoutes {
   ): Promise<UnparsedRouterResponse> {
     const { invitationToken, answer } = call.request.params;
     const { user } = call.request.context;
-    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne(
-      {
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
         token: invitationToken,
         receiver: user._id,
-      },
-    );
+      });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
