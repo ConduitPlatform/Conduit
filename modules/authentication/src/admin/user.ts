@@ -86,6 +86,12 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
+    if (twoFaMethod !== 'phone') {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Can not enable 2fa with other method than phone',
+      );
+    }
 
     const query = {
       email: email ?? user.email,
