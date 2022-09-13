@@ -264,10 +264,11 @@ export class ServiceDiscovery {
 
   moduleExists(
     call: GrpcRequest<{ moduleName: string }>,
-    callback: GrpcResponse<string>,
+    callback: GrpcResponse<{ url: string }>,
   ) {
     if (this.registeredModules.has(call.request.moduleName)) {
-      callback(null, this.registeredModules.get(call.request.moduleName)!.address);
+      const address = this.registeredModules.get(call.request.moduleName)!.address;
+      callback(null, { url: address });
     } else {
       callback({
         code: status.NOT_FOUND,
