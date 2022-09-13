@@ -10,6 +10,14 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
+  hasTwoFA: {
+    type: TYPE.Boolean,
+    required: false,
+  },
+  twoFaMethod: {
+    type: TYPE.String,
+    required: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -33,8 +41,8 @@ export class Admin extends ConduitActiveSchema<Admin> {
   password!: string;
   createdAt!: Date;
   updatedAt!: Date;
-  hasTwoFA: Boolean;
-  twoFaMethod: string;
+  hasTwoFA?: Boolean;
+  twoFaMethod?: string;
 
   private constructor(database: DatabaseProvider) {
     super(database, Admin.name, schema, modelOptions, collectionName);

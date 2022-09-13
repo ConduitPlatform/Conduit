@@ -57,8 +57,7 @@ export function enableTwoFaRoute() {
         });
         return secret.qr.toString();
       }
-      // throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
-      return { result: { message: 'OK' } };
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
     },
   );
 }

@@ -33,6 +33,14 @@ export function getAdminUsersRoute() {
             type: TYPE.String,
             required: true,
           },
+          hasTwoFA: {
+            type: TYPE.Boolean,
+            required: false,
+          },
+          twoFaMethod: {
+            type: TYPE.String,
+            required: false,
+          },
           createdAt: TYPE.Date,
           updatedAt: TYPE.Date,
         },

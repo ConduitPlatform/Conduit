@@ -7,3 +7,4 @@ export * from './Ready';
 export * from './EnableTwoFaRoute';
 export * from './DisableTwoFaRoute';
 export * from './VerifyQrCodeRoute';
+export * from './VerifyTwoFa';
