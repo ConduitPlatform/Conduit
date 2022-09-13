@@ -27,7 +27,7 @@ export class PushNotificationsRoutes {
           platform: TYPE.String,
         },
         action: ConduitRouteActions.POST,
-        description: `Sets a notification token for a user.`,
+        description: `Sets the given notification token for a user.`,
         middlewares: ['authMiddleware'],
         path: '/token',
       },
