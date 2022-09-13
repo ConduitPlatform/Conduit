@@ -19,7 +19,7 @@ provide a way for Conduit modules to register application routes.
 |:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
 |   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
 |     `SERVICE_IP`     | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
-|     `GRPC_PORT`      | Always 0.0.0.0 and a port numer                      |  False   |  `55190`           |
+|     `GRPC_PORT`      | The port number the gRPC server will listen to                      |  False   |  `55190`           |
 |     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
 |  `CLIENT_HTTP_PORT`  | Port to be used by application REST and GrahpQL APIs |  False   |  `3000` |
 | `CLIENT_SOCKET_PORT` | DPort to be used by application WebSockets API       |  False   |  `3001` |

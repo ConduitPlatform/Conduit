@@ -21,5 +21,5 @@ Documents may have complex structures and subcollections and can be stored local
 |:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
 |   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
 |     `SERVICE_IP`     | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
-|     `GRPC_PORT`      | Always 0.0.0.0 and a port numer                      |  False   |  `55190`           |
+|     `GRPC_PORT`      | The port number the gRPC server will listen to                      |  False   |  `55190`           |
 |     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
