@@ -4,6 +4,7 @@ import {
   ModuleByNameResponse,
   ModuleExistsResponse,
   ModuleListResponse,
+  UpdateResponse,
 } from '@conduitplatform/commons';
 
 let coreProcess: any, client: any, testModule: any;
@@ -11,6 +12,7 @@ import path from 'path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { EventEmitter } from 'events';
+
 const { exec } = require('child_process');
 
 const testModuleUrl = '0.0.0.0:55184';
@@ -67,6 +69,7 @@ describe('Testing Core package', () => {
 
   test('Getting Server Config', done => {
     client.getServerConfig({}, (err: Error, res: GetConfigResponse) => {
+      if (err) done(err);
       try {
         expect(res).toMatchObject({
           data: expect.any(String),
@@ -90,6 +93,7 @@ describe('Testing module related rpc calls', () => {
 
   test('Getting Module List', done => {
     client.moduleList({}, async (err: Error, res: ModuleListResponse) => {
+      if (err) done(err);
       try {
         expect(res.modules[0]).toMatchObject({
           moduleName: 'test',
@@ -107,6 +111,7 @@ describe('Testing module related rpc calls', () => {
     client.moduleExists(
       { moduleName: 'test' },
       async (err: Error, res: ModuleExistsResponse) => {
+        if (err) done(err);
         try {
           expect(res).toMatchObject({
             url: testModuleUrl,
@@ -123,9 +128,43 @@ describe('Testing module related rpc calls', () => {
     client.getModuleUrlByName(
       { name: 'test' },
       async (err: Error, res: ModuleByNameResponse) => {
+        if (err) done(err);
         try {
           expect(res).toMatchObject({
             moduleUrl: testModuleUrl,
+          });
+          done();
+        } catch (e) {
+          done((e as Error).message);
+        }
+      },
+    );
+  });
+  test('Get Config Request', done => {
+    client.get({ key: 'test' }, (err: Error, res: GetConfigResponse) => {
+      if (err) done(err);
+      try {
+        expect(res).toMatchObject({
+          data: expect.any(String),
+        });
+        done();
+      } catch (e) {
+        done((e as Error).message);
+      }
+    });
+  });
+
+  test('Update Config Request', done => {
+    client.updateConfig(
+      {
+        config: JSON.stringify({ active: false }),
+        schema: 'test',
+      },
+      (err: Error, res: UpdateResponse) => {
+        if (err) done(err);
+        try {
+          expect(res).toMatchObject({
+            result: expect.any(String),
           });
           done();
         } catch (e) {
