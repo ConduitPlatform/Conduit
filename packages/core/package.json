@@ -16,9 +16,10 @@
     "test": "jest",
     "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/*.proto ./dist/ && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/",
+    "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "test:build": "npm run build && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/"
   },
   "license": "ISC",
   "dependencies": {
