@@ -3,6 +3,7 @@ const path = require('path');
 const protoLoader = require('@grpc/proto-loader');
 const grpc = require('@grpc/grpc-js');
 const { exec } = require('child_process');
+const testModuleUrl = '0.0.0.0:55184';
 beforeAll(async () => {
   let options = {
     env: { REDIS_PORT: 6379, REDIS_HOST: 'localhost', PORT: 3030, ADMIN_SOCKET_PORT: 3032, ...process.env },
@@ -10,8 +11,8 @@ beforeAll(async () => {
   };
   exec('sh ./src/tests/scripts/setup.sh');
   await new Promise((r) => setTimeout(r, 5000));
- coreProcess = exec('node ./dist/bin/www.js', options);
- await new Promise((r) => setTimeout(r, 8000));
+  coreProcess = exec('node ./dist/bin/www.js', options);
+  await new Promise((r) => setTimeout(r, 8000));
 
   const current_path = path.join(__dirname, '..', '..', '/src/core.proto');
   const packageDefinition = protoLoader.loadSync(
@@ -60,7 +61,7 @@ describe('Testing Core package', () => {
 describe('Testing module related rpc calls', () => {
   beforeAll(async () => {
     let testOptions = {
-      env: { SERVICE_IP: '0.0.0.0:55184', CONDUIT_SERVER: '0.0.0.0:55152', ...process.env },
+      env: { SERVICE_IP: testModuleUrl, CONDUIT_SERVER: '0.0.0.0:55152', ...process.env },
     };
     testModule = exec('node ./dist/tests/mocks/module/index.js', testOptions);
     await new Promise((r) => setTimeout(r, 10000));
@@ -71,7 +72,7 @@ describe('Testing module related rpc calls', () => {
       try {
         expect(res.modules[0]).toMatchObject({
           moduleName: 'test',
-          url: expect.any(String),
+          url: testModuleUrl,
           serving: expect.any(Boolean),
         });
         done();
@@ -82,10 +83,10 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Module Exists', done => {
-    client.moduleExists({ moduleName: 'test'}, async (err, res) => {
+    client.moduleExists({ moduleName: 'test' }, async (err, res) => {
       try {
         expect(res).toMatchObject({
-         url: expect.any(String)
+          url: testModuleUrl,
         });
         done();
       } catch (err) {
@@ -93,6 +94,20 @@ describe('Testing module related rpc calls', () => {
       }
     });
   });
+
+  test('Watch Modules', done => {
+    client.getModuleUrlByName({ name: 'test' }, async (err, res) => {
+      try {
+        expect(res).toMatchObject({
+          moduleUrl: testModuleUrl,
+        });
+        done();
+      } catch (err) {
+        done(err);
+      }
+    });
+  });
+
 });
 
 afterAll(() => {
