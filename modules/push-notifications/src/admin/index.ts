@@ -66,15 +66,6 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/sendMany',
-          action: ConduitRouteActions.POST, // unimplemented
-          bodyParams: {},
-        },
-        new ConduitRouteReturnDefinition('SendNotifications', {}),
-        'sendNotifications',
-      ),
-      constructConduitRoute(
-        {
           path: '/sendToManyDevices',
           action: ConduitRouteActions.POST,
           description: `Sends a notification to multiple devices requiring at least an array
