@@ -10,8 +10,8 @@ beforeAll(async () => {
   };
   exec('sh ./src/tests/scripts/setup.sh');
   await new Promise((r) => setTimeout(r, 5000));
-  coreProcess = exec('node ./dist/bin/www.js', options);
-  await new Promise((r) => setTimeout(r, 8000));
+ coreProcess = exec('node ./dist/bin/www.js', options);
+ await new Promise((r) => setTimeout(r, 8000));
 
   const current_path = path.join(__dirname, '..', '..', '/src/core.proto');
   const packageDefinition = protoLoader.loadSync(
@@ -81,6 +81,18 @@ describe('Testing module related rpc calls', () => {
     });
   });
 
+  test('Module Exists', done => {
+    client.moduleExists({ moduleName: 'test'}, async (err, res) => {
+      try {
+        expect(res).toMatchObject({
+         url: expect.any(String)
+        });
+        done();
+      } catch (err) {
+        done(err);
+      }
+    });
+  });
 });
 
 afterAll(() => {
