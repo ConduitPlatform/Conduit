@@ -15,8 +15,7 @@ WORKDIR /app/modules/authentication
 ENV CONDUIT_SERVER conduit_server
 
 ENV SERVICE_IP 0.0.0.0:5000
-
-ENV REGISTER_NAME true
+ENV GRPC_PORT 5000
 
 EXPOSE 5000
 
