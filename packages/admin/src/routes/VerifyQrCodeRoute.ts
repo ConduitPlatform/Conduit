@@ -7,8 +7,8 @@ import {
 import { isEmpty, isNil } from 'lodash';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { TwoFactorSecret, User } from '@conduitplatform/authentication/dist/models';
 import { TwoFactorAuth } from '@conduitplatform/authentication/dist/TwoFactorAuth';
+import { Admin, AdminTwoFactorSecret } from '../models';
 
 export function verifyQrCodeRoute() {
   return new ConduitRoute(
@@ -35,8 +35,8 @@ export function verifyQrCodeRoute() {
         return '2FA already enabled';
       }
 
-      const secret = await TwoFactorSecret.getInstance().findOne({
-        userId: admin._id,
+      const secret = await AdminTwoFactorSecret.getInstance().findOne({
+        adminId: admin._id,
       });
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
@@ -46,7 +46,7 @@ export function verifyQrCodeRoute() {
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
       }
 
-      await User.getInstance().findByIdAndUpdate(context.user._id, {
+      await Admin.getInstance().findByIdAndUpdate(admin._id, {
         hasTwoFA: true,
       });
 
