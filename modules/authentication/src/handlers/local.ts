@@ -81,6 +81,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/forgot-password',
           action: ConduitRouteActions.POST,
+          description: `Used when user forgets password. Sends an email for password reset.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -94,7 +95,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           path: '/reset-password',
           action: ConduitRouteActions.POST,
           description: `Used after the user clicks on the 'forgot password' link and
-                 requires the token from the url and the new password`,
+                 requires the token from the url and the new password.`,
           bodyParams: {
             passwordResetToken: ConduitString.Required,
             password: ConduitString.Required,
@@ -108,7 +109,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/local/resend-verification',
           action: ConduitRouteActions.POST,
-          description: `Used to resend email verification after new user is created`,
+          description: `Used to resend email verification after new user is created.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -153,7 +154,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify user email. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -166,7 +167,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-change-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify an email address change. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify an email address change. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -217,7 +218,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/local/verify-qr-code',
           action: ConduitRouteActions.GET,
-          description: `Verifies the code the user received from scanning the QR image`,
+          description: `Verifies the code the user received from scanning the QR image.`,
           middlewares: ['authMiddleware'],
           bodyParams: {
             code: ConduitString.Required,
