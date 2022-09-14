@@ -16,7 +16,7 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
-import { _StorageContainer, _StorageFolder, File } from '../models';
+import { _StorageContainer, _StorageFolder } from '../models';
 
 export class AdminRoutes {
   constructor(

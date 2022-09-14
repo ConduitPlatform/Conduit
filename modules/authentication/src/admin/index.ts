@@ -12,7 +12,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
-import { User, Service } from '../models';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;

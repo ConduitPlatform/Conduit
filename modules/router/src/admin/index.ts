@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
 import { RouterAdmin } from './router';
 import { SecurityAdmin } from './security';
 import ConduitDefaultRouter from '../Router';
-import { Client } from '../models';
 
 export class AdminHandlers {
   private readonly routerAdmin: RouterAdmin;

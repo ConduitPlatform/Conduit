@@ -49,10 +49,7 @@ export class ConduitRouteReturnDefinition {
   // - explicitly registered route return type names
   // - registered database schema types
 
-  constructor(
-    name: string,
-    fields?: ConduitModel | string, //
-  ) {
+  constructor(name: string, fields?: ConduitModel | string) {
     this._name = name;
     // TODO:
     // Defaulting to named schema types should throw on "reserved" base types (throw on Hermes-side also).
