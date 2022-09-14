@@ -13,6 +13,7 @@ export default function getConfigRoute(
     {
       path: `/config/${moduleName}`,
       action: ConduitRouteActions.GET,
+      description: `Returns configuration of module ${moduleName}.`,
     },
     new ConduitRouteReturnDefinition(
       `Get${moduleName.charAt(0).toUpperCase() + moduleName.slice(1)}ConfigRoute`,
