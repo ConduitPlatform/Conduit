@@ -217,8 +217,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       routingManager.route(
         {
           path: '/local/verify-qr-code',
-          action: ConduitRouteActions.GET,
-          description: `Verifies the code the user received from scanning the QR image.`,
+          action: ConduitRouteActions.POST,
+          description: `Verifies the code the user received from scanning the QR image`,
           middlewares: ['authMiddleware'],
           bodyParams: {
             code: ConduitString.Required,

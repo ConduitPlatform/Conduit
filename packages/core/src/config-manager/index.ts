@@ -48,8 +48,6 @@ export default class ConfigManager implements IConfigManager {
         get: this.getGrpc.bind(this),
         getServerConfig: this.getServerConfig.bind(this),
         getRedisDetails: this.getRedisDetails.bind(this),
-        updateConfig: this.updateConfig.bind(this),
-        addFieldsToConfig: this.addFieldsToConfig.bind(this),
         configure: this.configureModule.bind(this),
         moduleExists: this.serviceDiscovery.moduleExists.bind(this.serviceDiscovery),
         registerModule: this.serviceDiscovery.registerModule.bind(this.serviceDiscovery),
@@ -205,24 +203,6 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async updateConfig(
-    call: GrpcRequest<UpdateRequest>,
-    callback: GrpcCallback<UpdateResponse>,
-  ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
-    const moduleConfig = JSON.parse(call.request.config);
-    try {
-      await this.set(moduleName, moduleConfig);
-      return callback(null, { result: JSON.stringify(moduleConfig) });
-    } catch {
-      callback({
-        code: status.INTERNAL,
-        message: `Could not update "${moduleName}" configuration`,
-      });
-      return;
-    }
-  }
-
   async configureModule(
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
@@ -269,24 +249,6 @@ export default class ConfigManager implements IConfigManager {
       return false;
     }
     return true;
-  }
-
-  addFieldsToConfig(
-    call: GrpcRequest<UpdateRequest>,
-    callback: GrpcCallback<UpdateResponse>,
-  ) {
-    const moduleName = call.metadata!.get('module-name')![0] as string;
-    const newFields = JSON.parse(call.request.config);
-    this.addFieldsToModule(moduleName, newFields)
-      .then(r => {
-        return callback(null, { result: JSON.stringify(r) });
-      })
-      .catch(err => {
-        callback({
-          code: status.INTERNAL,
-          message: err.message ? err.message : err,
-        });
-      });
   }
 
   private registerAdminRoutes() {

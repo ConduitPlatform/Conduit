@@ -105,7 +105,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
       await this.addHealthCheckService();
       await this.grpcServer.start();
-      ConduitGrpcSdk.Logger.log('gRPC server is online');
+      ConduitGrpcSdk.Logger.log('gRPC server listening on ' + this._port);
     }
   }
 

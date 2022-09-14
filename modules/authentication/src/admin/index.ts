@@ -101,6 +101,7 @@ export class AdminHandlers {
             isVerified: ConduitBoolean.Optional,
             hasTwoFA: ConduitBoolean.Optional,
             phoneNumber: ConduitString.Optional,
+            twoFaMethod: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('PatchUser', userFields),
