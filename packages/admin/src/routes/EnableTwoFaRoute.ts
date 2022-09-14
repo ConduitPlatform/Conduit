@@ -5,10 +5,9 @@ import {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { Admin } from '../models';
+import { Admin, AdminTwoFactorSecret } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { TwoFactorSecret } from '@conduitplatform/authentication/dist/models';
 import { TwoFactorAuth } from '@conduitplatform/authentication/dist/TwoFactorAuth';
 
 export function enableTwoFaRoute() {
@@ -41,12 +40,12 @@ export function enableTwoFaRoute() {
           account: admin.email,
         });
 
-        await TwoFactorSecret.getInstance().deleteMany({
-          userId: admin._id,
+        await AdminTwoFactorSecret.getInstance().deleteMany({
+          adminId: admin._id,
         });
 
-        await TwoFactorSecret.getInstance().create({
-          userId: admin._id,
+        await AdminTwoFactorSecret.getInstance().create({
+          adminId: admin._id,
           secret: secret.secret,
           uri: secret.uri,
           qr: secret.qr,
@@ -54,6 +53,7 @@ export function enableTwoFaRoute() {
 
         await Admin.getInstance().findByIdAndUpdate(admin._id, {
           twoFaMethod: 'qrcode',
+          hasTwoFA: true,
         });
         return secret.qr.toString();
       }
