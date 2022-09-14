@@ -55,7 +55,7 @@ export class InvitationRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('GetInvitationsResponse', {
-        invitations: [InvitationToken.getInstance().fields],
+        invitations: ['InvitationToken'],
         count: ConduitNumber.Required,
       }),
       this.getInvitations.bind(this),
@@ -71,7 +71,7 @@ export class InvitationRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {
-        invitations: [InvitationToken.getInstance().fields],
+        invitations: ['InvitationToken'],
         count: ConduitNumber.Required,
       }),
       this.sentInvitations.bind(this),
@@ -93,12 +93,11 @@ export class InvitationRoutes {
   async answerInvitation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, answer } = call.request.params;
     const { user } = call.request.context;
-    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne(
-      {
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
         _id: id,
         receiver: user._id,
-      },
-    );
+      });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }
@@ -129,12 +128,11 @@ export class InvitationRoutes {
   ): Promise<UnparsedRouterResponse> {
     const { invitationToken, answer } = call.request.params;
     const { user } = call.request.context;
-    const invitationTokenDoc: InvitationToken | null = await InvitationToken.getInstance().findOne(
-      {
+    const invitationTokenDoc: InvitationToken | null =
+      await InvitationToken.getInstance().findOne({
         token: invitationToken,
         receiver: user._id,
-      },
-    );
+      });
     if (isNil(invitationTokenDoc)) {
       throw new GrpcError(status.NOT_FOUND, 'Invitation not valid');
     }

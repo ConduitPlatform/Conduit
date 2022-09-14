@@ -85,7 +85,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetNotificationToken', {
-          tokenDocuments: [NotificationToken.getInstance().fields],
+          tokenDocuments: ['NotificationToken'],
         }),
         'getNotificationToken',
       ),

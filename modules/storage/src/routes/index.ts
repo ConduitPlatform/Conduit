@@ -31,7 +31,7 @@ export class StorageRoutes {
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
       },
-      new ConduitRouteReturnDefinition('File', File.getInstance().fields),
+      new ConduitRouteReturnDefinition('File'),
       this.fileHandlers.getFile.bind(this.fileHandlers),
     );
 
@@ -65,7 +65,7 @@ export class StorageRoutes {
           path: '/storage/file',
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('File', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('File'),
         this.fileHandlers.createFile.bind(this.fileHandlers),
       );
 
@@ -115,7 +115,7 @@ export class StorageRoutes {
           path: '/storage/file/:id',
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('FileUpdateResponse', 'File'),
         this.fileHandlers.updateFile.bind(this.fileHandlers),
       );
     }

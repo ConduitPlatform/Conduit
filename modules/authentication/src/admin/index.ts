@@ -51,8 +51,6 @@ export class AdminHandlers {
   }
 
   private getRegisteredRoutes(): ConduitRouteObject[] {
-    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
-    delete userFields.hashedPassword;
     return [
       // User Routes
       constructConduitRoute(
@@ -69,7 +67,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetUsers', {
-          users: [userFields],
+          users: ['User'],
           count: ConduitNumber.Required,
         }),
         'getUsers',
@@ -83,7 +81,7 @@ export class AdminHandlers {
             password: ConduitString.Required,
           },
         },
-        new ConduitRouteReturnDefinition('User', userFields),
+        new ConduitRouteReturnDefinition('User'),
         'createUser',
       ),
       constructConduitRoute(
@@ -101,7 +99,7 @@ export class AdminHandlers {
             twoFaMethod: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('PatchUser', userFields),
+        new ConduitRouteReturnDefinition('PatchUser', 'User'),
         'patchUser',
       ),
       constructConduitRoute(
@@ -174,7 +172,7 @@ export class AdminHandlers {
           description: 'Returns registered services',
         },
         new ConduitRouteReturnDefinition('GetServices', {
-          services: [Service.getInstance().fields],
+          services: ['Service'],
           count: ConduitNumber.Required,
         }),
         'getServices',

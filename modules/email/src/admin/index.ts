@@ -74,7 +74,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
-          templateDocuments: [EmailTemplate.getInstance().fields],
+          templateDocuments: ['EmailTemplate'],
           count: ConduitNumber.Required,
         }),
         'getTemplates',
@@ -93,7 +93,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('CreateTemplate', {
-          template: EmailTemplate.getInstance().fields,
+          template: EmailTemplate.getInstance().fields, // @type-inconsistency
         }),
         'createTemplate',
       ),
@@ -111,7 +111,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('PatchTemplate', {
-          template: EmailTemplate.getInstance().fields,
+          template: EmailTemplate.getInstance().fields, // @type-inconsistency
         }),
         'patchTemplate',
       ),
@@ -124,7 +124,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: [EmailTemplate.getInstance().fields],
+          template: ['EmailTemplate'],
         }),
         'deleteTemplates',
       ),
@@ -160,7 +160,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
-          templateDocuments: [EmailTemplate.getInstance().fields],
+          templateDocuments: ['EmailTemplate'],
           count: ConduitNumber.Required,
         }),
         'getExternalTemplates',
@@ -171,7 +171,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.UPDATE,
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
-          updated: [EmailTemplate.getInstance().fields],
+          updated: ['EmailTemplate'],
           count: ConduitNumber.Required,
         }),
         'syncExternalTemplates',

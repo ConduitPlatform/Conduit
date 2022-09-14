@@ -61,7 +61,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetForms', {
-          forms: [Forms.getInstance().fields],
+          forms: ['Forms'],
           count: ConduitNumber.Required,
         }),
         'getForms',
@@ -108,7 +108,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('DeleteForms', {
-          forms: [Forms.getInstance().fields],
+          forms: ['Forms'],
           count: ConduitString.Required,
         }),
         'deleteForms',
@@ -127,7 +127,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetFormReplies', {
-          replies: [FormReplies.getInstance().fields],
+          replies: ['FormReplies'],
           count: ConduitNumber.Required,
         }),
         'getFormReplies',

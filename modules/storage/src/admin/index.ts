@@ -61,7 +61,7 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('File', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('File'),
         'getFile',
       ),
       constructConduitRoute(
@@ -96,7 +96,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateFile', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('CreateFile', 'File'),
         'createFile',
       ),
       constructConduitRoute(
@@ -114,7 +114,7 @@ export class AdminRoutes {
             mimeType: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('PatchFile', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('PatchFile', 'File'),
         'patchFile',
       ),
       constructConduitRoute(
@@ -173,7 +173,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('getFolders', {
-          folders: [_StorageFolder.getInstance().fields],
+          folders: ['_StorageFolder'],
           folderCount: ConduitNumber.Required,
         }),
         'getFolders',
@@ -188,10 +188,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition(
-          'CreateFolder',
-          _StorageFolder.getInstance().fields,
-        ),
+        new ConduitRouteReturnDefinition('CreateFolder', '_StorageFolder'),
         'createFolder',
       ),
       constructConduitRoute(
@@ -216,7 +213,7 @@ export class AdminRoutes {
           },
         },
         new ConduitRouteReturnDefinition('GetContainers', {
-          containers: [_StorageContainer.getInstance().fields],
+          containers: ['_StorageContainer'],
           containersCount: ConduitNumber.Required,
         }),
         'getContainers',
@@ -230,10 +227,7 @@ export class AdminRoutes {
             isPublic: ConduitBoolean.Optional,
           },
         },
-        new ConduitRouteReturnDefinition(
-          'CreateContainer',
-          _StorageContainer.getInstance().fields,
-        ),
+        new ConduitRouteReturnDefinition('CreateContainer', '_StorageContainer'),
         'createContainer',
       ),
       constructConduitRoute(
@@ -244,10 +238,7 @@ export class AdminRoutes {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition(
-          'DeleteContainer',
-          _StorageContainer.getInstance().fields,
-        ),
+        new ConduitRouteReturnDefinition('DeleteContainer', '_StorageContainer'),
         'deleteContainer',
       ),
     ];

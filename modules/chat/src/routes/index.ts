@@ -481,7 +481,7 @@ export class ChatRoutes {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
+      new ConduitRouteReturnDefinition('ChatRoom'),
       this.getRoom.bind(this),
     );
     this._routingManager.route(
@@ -510,7 +510,7 @@ export class ChatRoutes {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
+      new ConduitRouteReturnDefinition('ChatMessage'),
       this.getMessage.bind(this),
     );
 
