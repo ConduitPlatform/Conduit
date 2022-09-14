@@ -8,7 +8,7 @@ import { isNil } from 'lodash';
 import { Admin, AdminTwoFactorSecret } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { TwoFactorAuth } from '@conduitplatform/authentication/dist/TwoFactorAuth';
+import { generateSecret } from '../utils/auth';
 
 export function enableTwoFaRoute() {
   return new ConduitRoute(
@@ -35,7 +35,7 @@ export function enableTwoFaRoute() {
       }
 
       if (method === 'qrcode') {
-        const secret = TwoFactorAuth.generateSecret({
+        const secret = generateSecret({
           name: 'Conduit',
           account: admin.email,
         });

@@ -7,7 +7,7 @@ import {
 import { isEmpty, isNil } from 'lodash';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { TwoFactorAuth } from '@conduitplatform/authentication/dist/TwoFactorAuth';
+import { verify2Fa } from '../utils/auth';
 
 export function verifyTwoFaRoute() {
   return new ConduitRoute(
@@ -29,11 +29,10 @@ export function verifyTwoFaRoute() {
 
       if (isNil(context) || isEmpty(context))
         throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-      const clientId = context.clientId;
 
       if (isNil(admin)) throw new GrpcError(status.UNAUTHENTICATED, 'Admin not found');
       if (admin.twoFaMethod == 'qrcode') {
-        // return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, admin, code);
+        return await verify2Fa(admin._id, admin, code);
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
       }

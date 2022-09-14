@@ -1,4 +1,4 @@
-import { Admin } from '../models';
+import { Admin, AdminTwoFactorSecret } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
 import {
@@ -10,7 +10,6 @@ import {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { TwoFactorSecret } from '@conduitplatform/authentication/dist/models';
 import { status } from '@grpc/grpc-js';
 
 export function getLoginRoute() {
@@ -46,8 +45,8 @@ export function getLoginRoute() {
       }
       if (admin.hasTwoFA) {
         if (admin.twoFaMethod === 'qrcode') {
-          const secret = await TwoFactorSecret.getInstance().findOne({
-            userId: admin._id,
+          const secret = await AdminTwoFactorSecret.getInstance().findOne({
+            adminId: admin._id,
           });
           if (isNil(secret))
             throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');

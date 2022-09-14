@@ -7,8 +7,8 @@ import {
 import { isEmpty, isNil } from 'lodash';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { TwoFactorAuth } from '@conduitplatform/authentication/dist/TwoFactorAuth';
 import { Admin, AdminTwoFactorSecret } from '../models';
+import { verifyToken } from '../utils/auth';
 
 export function verifyQrCodeRoute() {
   return new ConduitRoute(
@@ -41,7 +41,7 @@ export function verifyQrCodeRoute() {
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-      const verification = TwoFactorAuth.verifyToken(secret.secret, code);
+      const verification = verifyToken(secret.secret, code);
       if (isNil(verification)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
       }
