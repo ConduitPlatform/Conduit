@@ -8,7 +8,7 @@ New features are being added on-demand and when they can be adapted to both syst
 
 The query language used is BSON, since it is easy to serialize into string and deserialize back into
 query objects that can be easily manipulated in JS.<br />
-This means that the database module will almost always have better support for Mongo operations than SQL ones, 
+This means that the database module will almost always have better support for Mongo operations than SQL ones,
 since the latter need to go through parsers that are otherwise unnecessary for Mongo.
 
 ## Features ✔️
@@ -37,8 +37,8 @@ since the latter need to go through parsers that are otherwise unnecessary for M
 |       Variable       | Description                                          | Required |      Example       | Default  |
 |:--------------------:|:-----------------------------------------------------| :------: | :----------------: | :------: |
 |   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |    -     |
-|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |    -     |
-|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |    -     |
+|     `SERVICE_IP`     | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
+|     `GRPC_PORT`      | The port number the gRPC server will listen to                      |  False   |  `55190`           |
 |     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` | - |
 |   `DB_CONN_URI`      | DB Connection URI  |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
 |     `DB_TYPE`        | DB Engine Type     |  False   |                    `postgres`                    | `mongodb`                   |
@@ -76,9 +76,9 @@ Each relation field can be filled (or populated) by supplying a relevant array, 
 
 ### Setting related fields
 
-While we advise creating each document seperately and setting the relation inside a model after the "child" document 
-has been created, the database module supports "create with population" operations, where if you supply an entire object 
-instead of an id in the place of the relation field, then the module will automatically create the associated document and 
+While we advise creating each document seperately and setting the relation inside a model after the "child" document
+has been created, the database module supports "create with population" operations, where if you supply an entire object
+instead of an id in the place of the relation field, then the module will automatically create the associated document and
 add its id in place of the data.
 
 ## Sequelize Caveats

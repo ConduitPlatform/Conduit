@@ -11,7 +11,7 @@ function bootstrap() {
 }
 
 function getGrpcPort() {
-  const value = process.env['SERVICE_PORT'] ?? '55152';
+  const value = process.env['GRPC_PORT'] ?? '55152';
   const port = parseInt(value, 10);
   if (isNaN(port) || port < 0) {
     throw new Error(`Invalid gRPC port value: ${port}`);

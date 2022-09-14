@@ -22,12 +22,11 @@ export class ModuleManager<T> {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
-    this.serviceAddress = process.env.SERVICE_IP
-      ? process.env.SERVICE_IP.split(':')[0]
-      : '0.0.0.0';
-    this.servicePort = process.env.SERVICE_IP
-      ? process.env.SERVICE_IP.split(':')[1]
-      : undefined;
+
+    this.servicePort = process.env.GRPC_PORT ?? '5000';
+
+    this.serviceAddress =
+      process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
         process.env.CONDUIT_SERVER,
@@ -47,13 +46,9 @@ export class ModuleManager<T> {
     const self = this;
     try {
       await this.preRegisterLifecycle();
-      const url =
-        (process.env.REGISTER_NAME === 'true'
-          ? `${self.module.name}:`
-          : `${self.serviceAddress}:`) + self.module.port;
       await self.grpcSdk.config.registerModule(
         self.module.name,
-        url,
+        this.serviceAddress,
         this.module.healthState,
       );
     } catch (err) {
