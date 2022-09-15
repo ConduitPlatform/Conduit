@@ -8,7 +8,7 @@ import { isNil } from 'lodash';
 import { Admin, AdminTwoFactorSecret } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { generateSecret } from '../utils/auth';
+import { generateSecret, generateToken } from '../utils/auth';
 
 export function enableTwoFaRoute() {
   return new ConduitRoute(
@@ -53,9 +53,11 @@ export function enableTwoFaRoute() {
 
         await Admin.getInstance().findByIdAndUpdate(admin._id, {
           twoFaMethod: 'qrcode',
-          hasTwoFA: true,
         });
-        return secret.qr.toString();
+
+        const code = generateToken(secret.secret);
+
+        return { secret: secret.qr.toString(), code: code?.token.toString() };
       }
       throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
     },

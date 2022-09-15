@@ -15,12 +15,11 @@ export function verifyTwoFaRoute() {
       path: '/verify-twofa',
       action: ConduitRouteActions.POST,
       bodyParams: {
-        email: ConduitString.Required,
         code: ConduitString.Required,
       },
     },
     new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
-      message: ConduitString.Required,
+      token: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
       const admin = params.context!.admin;

@@ -13,6 +13,9 @@ export function signToken(data: any, secret: string, expiresIn?: number) {
 export function verifyToken(token: string, secret: string): any {
   return jwt.verify(token, secret);
 }
+export function verifyTwoFactorToken(secret: string, token?: string, window?: number) {
+  return twoFactor.verifyToken(secret, token, window);
+}
 
 export async function hashPassword(password: string, rounds?: number) {
   return hash(password, rounds ?? 11);
@@ -21,18 +24,19 @@ export async function hashPassword(password: string, rounds?: number) {
 export function comparePasswords(password: string, hashed: string) {
   return compare(password, hashed);
 }
-
+export function generateToken(secret: string) {
+  return twoFactor.generateToken(secret);
+}
 export async function verify2Fa(adminId: string, admin: Admin, code: string) {
   const secret = await AdminTwoFactorSecret.getInstance().findOne({
     adminId: adminId,
   });
   if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-  const verification = verifyToken(secret.secret, code);
+  const verification = verifyTwoFactorToken(secret.secret, code);
   if (isNil(verification)) {
     throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
   }
-
   const authConfig = ConfigController.getInstance().config.auth;
   const { tokenSecret, tokenExpirationTime } = authConfig;
   const token = signToken({ id: adminId }, tokenSecret, tokenExpirationTime);
@@ -41,8 +45,4 @@ export async function verify2Fa(adminId: string, admin: Admin, code: string) {
 
 export function generateSecret(options?: { name: string; account: string }) {
   return twoFactor.generateSecret(options);
-}
-
-export function generateToken(secret: string) {
-  return twoFactor.generateToken(secret);
 }

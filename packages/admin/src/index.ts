@@ -80,6 +80,7 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.enableTwoFaRoute(),
     adminRoutes.disableTwoFaRoute(),
     adminRoutes.verifyQrCodeRoute(),
+    adminRoutes.verifyTwoFaRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];

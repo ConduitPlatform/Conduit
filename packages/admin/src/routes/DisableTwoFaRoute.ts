@@ -27,6 +27,7 @@ export function disableTwoFaRoute() {
       }
 
       await Admin.getInstance().findByIdAndUpdate(admin._id, {
+        twoFaMethod: null,
         hasTwoFA: false,
       });
 
