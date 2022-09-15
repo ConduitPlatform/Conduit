@@ -3,6 +3,7 @@ import {
   ConduitRouteActions,
   ConduitError,
   ConduitString,
+  ConduitBoolean,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
@@ -17,6 +18,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
         {
           moduleName: ConduitString.Required,
           url: ConduitString.Required,
+          serving: ConduitBoolean.Required,
         },
       ],
     }),
