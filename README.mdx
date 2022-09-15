@@ -70,13 +70,13 @@ Check out GraphQL on `/graphql`
 yarn
 npx lerna run build
 REDIS_HOST=localhost REDIS_PORT=6379 yarn --cwd ./packages/core start
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:55165 DB_CONN_URI=mongodb://localhost:27017 yarn --cwd ./modules/database start
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:55165 DB_CONN_URI=mongodb://localhost:27017 yarn --cwd ./modules/database start
 ```
 
 Then repeat the following step for every additional module you wish to bring online, specifying any additional env vars.
 
 ```sh
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
+CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
 ```
 
 ## Environment Variables 📃 <a name="env-vars"></a>
@@ -89,7 +89,7 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_IP=0.0.0.0:PORT yarn --cwd ./modules/MODULE
 |     `REDIS_PORT`    | Redis Port                                                 |   True   |    `6379`   |
 |  `ADMIN_HTTP_PORT`  | Port to be used by admin REST and GrahpQL APIs             |  False   |    `3030`   |
 | `ADMIN_SOCKET_PORT` | Port to be used by admin WebSockets API                    |  False   |    `3030`   |
-|   `SERVICE_PORT`    | Port to be used by the gRPC server                         |  False   |   `55152`   |
+|    `GRPC_PORT`      | Port to be used by the gRPC server                         |  False   |   `55152`   |
 |    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
 |     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
 | `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config  | False  | `true` |
@@ -118,6 +118,6 @@ Generic module env variables are also supported, with required ones being obliga
 |       Variable       | Description                                          | Required |      Example       |
 |:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
 |   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
-|     `SERVICE_IP`     | Always 0.0.0.0 and a port numer                      |   True   |  `0.0.0.0:55190`   |
-|   `REGISTER_NAME`    | Set to `true` if running in Kubernetes               |   False  |       `true`       |
+|    `SERVICE_URL`     | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
+|    `GRPC_PORT`       | Port to be used by the gRPC server                   |  False   |  `55190`           |
 |     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
