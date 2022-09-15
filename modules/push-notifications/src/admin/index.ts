@@ -53,6 +53,7 @@ export class AdminHandlers {
         {
           path: '/send',
           action: ConduitRouteActions.POST,
+          description: `Sends a notification.`,
           bodyParams: {
             userId: ConduitString.Required,
             title: ConduitString.Required,
@@ -65,17 +66,9 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/sendMany',
-          action: ConduitRouteActions.POST, // unimplemented
-          bodyParams: {},
-        },
-        new ConduitRouteReturnDefinition('SendNotifications', {}),
-        'sendNotifications',
-      ),
-      constructConduitRoute(
-        {
           path: '/sendToManyDevices',
           action: ConduitRouteActions.POST,
+          description: `Sends a notification to multiple devices.`,
           bodyParams: {
             userIds: { type: [TYPE.String], required: true }, // handler array check is still required
             title: ConduitString.Required,
@@ -90,6 +83,7 @@ export class AdminHandlers {
         {
           path: '/token/:userId',
           action: ConduitRouteActions.GET,
+          description: `Returns a user's notification token.`,
           urlParams: {
             userId: { type: RouteOptionType.String, required: true },
           },

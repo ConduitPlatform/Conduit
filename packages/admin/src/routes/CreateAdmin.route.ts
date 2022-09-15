@@ -15,6 +15,7 @@ export function getCreateAdminRoute() {
     {
       path: '/admins',
       action: ConduitRouteActions.POST,
+      description: `Creates a new admin using username/password.`,
       bodyParams: {
         username: ConduitString.Required,
         password: ConduitString.Required,

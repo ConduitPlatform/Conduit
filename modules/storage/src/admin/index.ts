@@ -57,6 +57,7 @@ export class AdminRoutes {
         {
           path: '/files/:id',
           action: ConduitRouteActions.GET,
+          description: `Returns a file.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -68,6 +69,7 @@ export class AdminRoutes {
         {
           path: '/files',
           action: ConduitRouteActions.GET,
+          description: `Returns queried files.`,
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
@@ -87,6 +89,7 @@ export class AdminRoutes {
         {
           path: '/files',
           action: ConduitRouteActions.POST,
+          description: `Creates a new file.`,
           bodyParams: {
             name: ConduitString.Required,
             data: ConduitString.Required,
@@ -103,6 +106,7 @@ export class AdminRoutes {
         {
           path: '/files/:id',
           action: ConduitRouteActions.PATCH,
+          description: `Updates a file.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -121,6 +125,7 @@ export class AdminRoutes {
         {
           path: '/files/:id',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes a file.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -134,6 +139,7 @@ export class AdminRoutes {
         {
           path: '/files/:id/url',
           action: ConduitRouteActions.GET,
+          description: `Returns the file's url and optionally redirects to it.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -151,6 +157,7 @@ export class AdminRoutes {
         {
           path: '/files/:id/data',
           action: ConduitRouteActions.GET,
+          description: `Returns the data of a file.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -164,6 +171,7 @@ export class AdminRoutes {
         {
           path: '/folders',
           action: ConduitRouteActions.GET,
+          description: `Returns queried folders.`,
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
@@ -182,6 +190,7 @@ export class AdminRoutes {
         {
           path: '/folders',
           action: ConduitRouteActions.POST,
+          description: `Creates a new folder.`,
           bodyParams: {
             name: ConduitString.Required,
             container: ConduitString.Required,
@@ -198,6 +207,7 @@ export class AdminRoutes {
         {
           path: '/folders/:id',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes a folder.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -209,6 +219,7 @@ export class AdminRoutes {
         {
           path: '/containers',
           action: ConduitRouteActions.GET,
+          description: `Returns queried containers.`,
           queryParams: {
             skip: ConduitNumber.Required,
             limit: ConduitNumber.Required,
@@ -225,6 +236,7 @@ export class AdminRoutes {
         {
           path: '/containers',
           action: ConduitRouteActions.POST,
+          description: `Creates a new container.`,
           bodyParams: {
             name: ConduitString.Required,
             isPublic: ConduitBoolean.Optional,
@@ -240,6 +252,7 @@ export class AdminRoutes {
         {
           path: '/containers/:id',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes a container.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },

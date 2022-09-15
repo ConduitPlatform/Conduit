@@ -58,6 +58,7 @@ export class FormsController {
         {
           path: `/${r._id}`,
           action: ConduitRouteActions.POST,
+          description: `Submits form with id ${r._id}.`,
           bodyParams: r.fields,
         },
         new ConduitRouteReturnDefinition(`SubmitForm${r.name}`, 'String'),
