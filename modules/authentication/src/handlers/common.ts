@@ -195,6 +195,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       {
         path: '/logout',
         action: ConduitRouteActions.POST,
+        description: `Logs out authenticated user.`,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('LogoutResponse', 'String'),

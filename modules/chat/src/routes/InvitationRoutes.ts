@@ -22,6 +22,8 @@ export class InvitationRoutes {
     this.routingManager.route(
       {
         path: '/hook/invitations/:answer/:invitationToken',
+        description: `A webhook used to respond to a chat room invitation
+                      requiring the invitation token.`,
         action: ConduitRouteActions.GET,
         urlParams: {
           answer: ConduitString.Required,
@@ -35,6 +37,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/:answer/:id',
         action: ConduitRouteActions.GET,
+        description: `Responds to a chat room invitation requiring the invitation token id.`,
         urlParams: {
           id: ConduitString.Required,
           answer: ConduitString.Required,
@@ -48,6 +51,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/received',
         action: ConduitRouteActions.GET,
+        description: `Returns current user's received invitations and their total count.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -68,6 +72,7 @@ export class InvitationRoutes {
           limit: ConduitNumber.Optional,
         },
         action: ConduitRouteActions.GET,
+        description: `Returns queried invitations the current user has sent.`,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {
@@ -80,6 +85,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/cancel/:id',
         action: ConduitRouteActions.DELETE,
+        description: `Cancels an invitation the current user has sent.`,
         urlParams: {
           id: ConduitString.Required,
         },

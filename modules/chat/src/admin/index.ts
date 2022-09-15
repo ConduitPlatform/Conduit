@@ -49,6 +49,7 @@ export class AdminHandlers {
         {
           path: '/rooms',
           action: ConduitRouteActions.GET,
+          description: `Returns queried chat rooms.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -66,6 +67,7 @@ export class AdminHandlers {
         {
           path: '/rooms',
           action: ConduitRouteActions.POST,
+          description: `Creates a new chat room.`,
           bodyParams: {
             name: ConduitString.Required,
             participants: { type: [TYPE.String], required: true }, // handler array check is still required
@@ -78,6 +80,7 @@ export class AdminHandlers {
         {
           path: '/rooms',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes queried chat rooms.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true },
           },
@@ -89,6 +92,7 @@ export class AdminHandlers {
         {
           path: '/messages',
           action: ConduitRouteActions.GET,
+          description: `Returns queried messages.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -108,6 +112,7 @@ export class AdminHandlers {
         {
           path: '/messages',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes queried messages.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },

@@ -50,6 +50,7 @@ export class AdminHandlers {
         {
           path: '/router/middlewares',
           action: ConduitRouteActions.GET,
+          description: `Returns middleware.`,
         },
         new ConduitRouteReturnDefinition('GetMiddlewares', {
           response: TYPE.JSON,
@@ -60,6 +61,7 @@ export class AdminHandlers {
         {
           path: '/routes',
           action: ConduitRouteActions.GET,
+          description: `Returns available routes.`,
         },
         new ConduitRouteReturnDefinition('GetRoutes', {
           response: TYPE.JSON,
@@ -70,6 +72,7 @@ export class AdminHandlers {
         {
           path: '/security/client',
           action: ConduitRouteActions.POST,
+          description: `Creates a security client.`,
           bodyParams: {
             platform: ConduitString.Required,
             domain: ConduitString.Optional,
@@ -84,6 +87,7 @@ export class AdminHandlers {
         {
           path: '/security/client/:id',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes a security client.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -97,6 +101,7 @@ export class AdminHandlers {
         {
           path: '/security/client',
           action: ConduitRouteActions.GET,
+          description: `Returns security clients.`,
         },
         new ConduitRouteReturnDefinition('GetSecurityClients', {
           clients: [Client.name],
@@ -110,6 +115,7 @@ export class AdminHandlers {
             id: ConduitString.Required,
           },
           action: ConduitRouteActions.UPDATE,
+          description: `Updates a security client.`,
           bodyParams: {
             domain: ConduitString.Optional,
             alias: ConduitString.Optional,
