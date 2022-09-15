@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { File } from '../models';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -30,7 +31,7 @@ export class StorageRoutes {
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
       },
-      new ConduitRouteReturnDefinition('File'),
+      new ConduitRouteReturnDefinition(File.name),
       this.fileHandlers.getFile.bind(this.fileHandlers),
     );
 
@@ -64,7 +65,7 @@ export class StorageRoutes {
           path: '/storage/file',
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('File'),
+        new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
       );
 
@@ -77,7 +78,7 @@ export class StorageRoutes {
           middlewares: ['authMiddleware'],
           path: '/storage/file/data/:id',
         },
-        new ConduitRouteReturnDefinition('File', {
+        new ConduitRouteReturnDefinition('FileData', {
           data: TYPE.String,
         }),
         this.fileHandlers.getFileData.bind(this.fileHandlers),
@@ -114,7 +115,7 @@ export class StorageRoutes {
           path: '/storage/file/:id',
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('FileUpdateResponse', 'File'),
+        new ConduitRouteReturnDefinition('FileUpdateResponse', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),
       );
     }

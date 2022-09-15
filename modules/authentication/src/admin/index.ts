@@ -12,6 +12,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
+import { User, Service } from '../models';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
@@ -66,7 +67,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetUsers', {
-          users: ['User'],
+          users: [User.name],
           count: ConduitNumber.Required,
         }),
         'getUsers',
@@ -80,7 +81,7 @@ export class AdminHandlers {
             password: ConduitString.Required,
           },
         },
-        new ConduitRouteReturnDefinition('User'),
+        new ConduitRouteReturnDefinition(User.name),
         'createUser',
       ),
       constructConduitRoute(
@@ -98,7 +99,7 @@ export class AdminHandlers {
             twoFaMethod: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('PatchUser', 'User'),
+        new ConduitRouteReturnDefinition('PatchUser', User.name),
         'patchUser',
       ),
       constructConduitRoute(
@@ -171,7 +172,7 @@ export class AdminHandlers {
           description: 'Returns registered services',
         },
         new ConduitRouteReturnDefinition('GetServices', {
-          services: ['Service'],
+          services: [Service.name],
           count: ConduitNumber.Required,
         }),
         'getServices',

@@ -74,7 +74,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
-          templateDocuments: ['EmailTemplate'],
+          templateDocuments: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'getTemplates',
@@ -124,7 +124,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: ['EmailTemplate'],
+          template: [EmailTemplate.name],
         }),
         'deleteTemplates',
       ),
@@ -160,7 +160,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
-          templateDocuments: ['EmailTemplate'],
+          templateDocuments: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'getExternalTemplates',
@@ -171,7 +171,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.UPDATE,
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
-          updated: ['EmailTemplate'],
+          updated: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'syncExternalTemplates',

@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
 import { RouterAdmin } from './router';
 import { SecurityAdmin } from './security';
 import ConduitDefaultRouter from '../Router';
+import { Client } from '../models';
 
 export class AdminHandlers {
   private readonly routerAdmin: RouterAdmin;
@@ -76,7 +77,7 @@ export class AdminHandlers {
             notes: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('CreateSecurityClient', 'Client'),
+        new ConduitRouteReturnDefinition('CreateSecurityClient', Client.name),
         'createSecurityClient',
       ),
       constructConduitRoute(
@@ -98,7 +99,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.GET,
         },
         new ConduitRouteReturnDefinition('GetSecurityClients', {
-          clients: ['Client'],
+          clients: [Client.name],
         }),
         'getSecurityClients',
       ),
@@ -115,7 +116,7 @@ export class AdminHandlers {
             notes: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition('UpdateSecurityClient', 'Client'),
+        new ConduitRouteReturnDefinition('UpdateSecurityClient', Client.name),
         'updateSecurityClient',
       ),
     ];

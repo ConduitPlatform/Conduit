@@ -49,7 +49,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         },
         middlewares: [],
       },
-      new ConduitRouteReturnDefinition('RegisterResponse', 'User'),
+      new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
     );
 
