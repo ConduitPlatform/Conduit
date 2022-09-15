@@ -1,23 +1,11 @@
-import {
-  GetConfigResponse,
-  GetRedisDetailsResponse,
-  ModuleByNameResponse,
-  ModuleExistsResponse,
-  ModuleListResponse,
-  UpdateResponse,
-} from '@conduitplatform/commons';
+import { createChannel, createClientFactory } from 'nice-grpc';
 
 let coreProcess: any, client: any, testModule: any;
-import path from 'path';
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { EventEmitter } from 'events';
+import { getModuleNameInterceptor } from '@conduitplatform/grpc-sdk/dist/interceptors';
+import { ConfigDefinition } from './mocks/module/protoTypes/core';
 
 const { exec } = require('child_process');
-
 const testModuleUrl = '0.0.0.0:55184';
-
-let eventEmitter;
 beforeAll(async () => {
   const options = {
     env: {
@@ -29,149 +17,119 @@ beforeAll(async () => {
     },
     cwd: './',
   };
+  await new Promise(r => setTimeout(r, 3000));
   exec('sh ./src/tests/scripts/setup.sh');
   await new Promise(r => setTimeout(r, 5000));
   coreProcess = exec('node ./dist/bin/www.js', options);
   await new Promise(r => setTimeout(r, 8000));
-
-  const current_path = path.join(__dirname, '..', '..', '/src/core.proto');
-  const packageDefinition = protoLoader.loadSync(current_path, {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true,
+  const channel = createChannel('0.0.0.0:55152', undefined, {
+    'grpc.max_receive_message_length': 1024 * 1024 * 100,
+    'grpc.max_send_message_length': 1024 * 1024 * 100,
   });
-  //@ts-ignore
-  const core = grpc.loadPackageDefinition(packageDefinition).conduit.core;
-  client = new core.Config('0.0.0.0:55152', grpc.credentials.createInsecure());
-
-  eventEmitter = new EventEmitter();
+  const clientFactory = createClientFactory().use(getModuleNameInterceptor('test'));
+  client = clientFactory.create(ConfigDefinition, channel);
 });
 
 describe('Testing Core package', () => {
-  test('Getting Redis Details', done => {
-    client.getRedisDetails({}, (err: Error, res: GetRedisDetailsResponse) => {
-      if (err) {
-        done(err);
-      }
-      try {
-        expect(res).toMatchObject({
-          redisHost: expect.any(String),
-          redisPort: expect.any(Number),
-        });
-        done();
-      } catch (e) {
-        done((e as Error).message);
-      }
-    });
+  test('Getting Redis Details', async () => {
+    try {
+      const res = await client.getRedisDetails({});
+      expect(res).toMatchObject({
+        redisPort: expect.any(Number),
+        redisHost: expect.any(String),
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
   });
 
-  test('Getting Server Config', done => {
-    client.getServerConfig({}, (err: Error, res: GetConfigResponse) => {
-      if (err) done(err);
-      try {
-        expect(res).toMatchObject({
-          data: expect.any(String),
-        });
-        done();
-      } catch (e) {
-        done((e as Error).message);
-      }
-    });
+  test('Getting Server Config', async () => {
+    const res = await client.getServerConfig({});
+    try {
+      expect(res).toMatchObject({
+        data: expect.any(String),
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
   });
 });
 
 describe('Testing module related rpc calls', () => {
   beforeAll(async () => {
     const testOptions = {
-      env: { SERVICE_IP: testModuleUrl, CONDUIT_SERVER: '0.0.0.0:55152', ...process.env },
+      env: {
+        SERVICE_IP: testModuleUrl,
+        CONDUIT_SERVER: '0.0.0.0:55152',
+        GRPC_PORT: 55184,
+        ...process.env,
+      },
     };
     testModule = exec('node ./dist/tests/mocks/module/index.js', testOptions);
     await new Promise(r => setTimeout(r, 10000));
   });
 
-  test('Getting Module List', done => {
-    client.moduleList({}, async (err: Error, res: ModuleListResponse) => {
-      if (err) done(err);
-      try {
-        expect(res.modules[0]).toMatchObject({
-          moduleName: 'test',
-          url: testModuleUrl,
-          serving: expect.any(Boolean),
-        });
-        done();
-      } catch (e) {
-        done((e as Error).message);
-      }
+  test('Getting Module List', async () => {
+    const res = await client.moduleList({});
+    try {
+      expect(res.modules[0]).toMatchObject({
+        moduleName: 'test',
+        url: testModuleUrl,
+        serving: expect.any(Boolean),
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
+  });
+
+  test('Module Exists', async () => {
+    const res = await client.moduleExists({ moduleName: 'test' });
+    try {
+      expect(res).toMatchObject({
+        url: testModuleUrl,
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
+  });
+
+  test('Get Module Url By Name', async () => {
+    const res = await client.getModuleUrlByName({ name: 'test' });
+    try {
+      expect(res).toMatchObject({
+        moduleUrl: testModuleUrl,
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
+  });
+
+  test('Get Config Request', async () => {
+    const res = await client.get({ key: 'test' });
+    try {
+      expect(res).toMatchObject({
+        data: expect.any(String),
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
+  });
+
+  test('Configure', async () => {
+    const res = await client.configure({
+      config: JSON.stringify({ active: false, mockField: 'some field' }),
+      schema: JSON.stringify({
+        active: { format: 'Boolean', default: true },
+        mockField: { format: 'String', default: '' },
+      }),
     });
-  });
-
-  test('Module Exists', done => {
-    client.moduleExists(
-      { moduleName: 'test' },
-      async (err: Error, res: ModuleExistsResponse) => {
-        if (err) done(err);
-        try {
-          expect(res).toMatchObject({
-            url: testModuleUrl,
-          });
-          done();
-        } catch (e) {
-          done((e as Error).message);
-        }
-      },
-    );
-  });
-
-  test('Get Module Url By Name', done => {
-    client.getModuleUrlByName(
-      { name: 'test' },
-      async (err: Error, res: ModuleByNameResponse) => {
-        if (err) done(err);
-        try {
-          expect(res).toMatchObject({
-            moduleUrl: testModuleUrl,
-          });
-          done();
-        } catch (e) {
-          done((e as Error).message);
-        }
-      },
-    );
-  });
-  test('Get Config Request', done => {
-    client.get({ key: 'test' }, (err: Error, res: GetConfigResponse) => {
-      if (err) done(err);
-      try {
-        expect(res).toMatchObject({
-          data: expect.any(String),
-        });
-        done();
-      } catch (e) {
-        done((e as Error).message);
-      }
-    });
-  });
-
-  test('Update Config Request', done => {
-    client.updateConfig(
-      {
-        config: JSON.stringify({ active: false }),
-        schema: 'test',
-      },
-      (err: Error, res: UpdateResponse) => {
-        if (err) done(err);
-        try {
-          expect(res).toMatchObject({
-            result: expect.any(String),
-          });
-          done();
-        } catch (e) {
-          done((e as Error).message);
-        }
-      },
-    );
+    try {
+      expect(res).toMatchObject({
+        result: expect.any(String),
+      });
+    } catch (e) {
+      expect(e).toMatch('error');
+    }
   });
 });
 

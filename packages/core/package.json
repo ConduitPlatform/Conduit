@@ -16,7 +16,7 @@
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
     "prepublish": "npm run build",
-    "test:build": "npm run build && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/"
+    "build:test": "sh ./src/tests/scripts/build.sh && npm run build && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/"
   },
   "license": "ISC",
   "dependencies": {
@@ -39,6 +39,7 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.8.2",
-    "typescript": "~4.7.4"
+    "typescript": "~4.7.4",
+    "ts-proto": "^1.117.0"
   }
 }
