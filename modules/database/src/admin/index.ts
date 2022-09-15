@@ -113,7 +113,7 @@ export class AdminHandlers {
         {
           path: '/schemas/owners',
           action: ConduitRouteActions.GET,
-          description: `Returns queried modules that own schemas.`,
+          description: `Returns queried schema owner modules.`,
           queryParams: {
             sort: ConduitString.Optional,
           },
