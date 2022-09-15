@@ -81,7 +81,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/forgot-password',
           action: ConduitRouteActions.POST,
-          description: `Used when user forgets password. Sends an email for password reset.`,
+          description: `Generates a password reset token and forwards a verification link to the user's email address.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -95,7 +95,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           path: '/reset-password',
           action: ConduitRouteActions.POST,
           description: `Used after the user clicks on the 'forgot password' link and
-                 requires the token from the url and the new password.`,
+                        requires the token from the url and the new password.`,
           bodyParams: {
             passwordResetToken: ConduitString.Required,
             password: ConduitString.Required,

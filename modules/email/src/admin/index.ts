@@ -66,7 +66,7 @@ export class AdminHandlers {
         {
           path: '/templates',
           action: ConduitRouteActions.GET,
-          description: `Returns all templates and their total number.`,
+          description: `Returns queried templates and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -84,7 +84,7 @@ export class AdminHandlers {
         {
           path: '/templates',
           action: ConduitRouteActions.POST,
-          description: `Creates a new email template requiring at least template's name and body.`,
+          description: `Creates a new email template.`,
           bodyParams: {
             _id: ConduitString.Optional, // externally managed
             name: ConduitString.Required,
@@ -103,7 +103,7 @@ export class AdminHandlers {
         {
           path: '/templates/:id',
           action: ConduitRouteActions.PATCH,
-          description: `Updates specified fields of a template and requires its id.`,
+          description: `Updates an email template.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -122,7 +122,7 @@ export class AdminHandlers {
         {
           path: '/templates',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes all templates included in given array of template ids.`,
+          description: `Deletes queried email templates.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
@@ -136,7 +136,7 @@ export class AdminHandlers {
         {
           path: '/templates/:id',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes a template given a specific id.`,
+          description: `Deletes an email template.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -150,7 +150,7 @@ export class AdminHandlers {
         {
           path: '/templates/upload',
           action: ConduitRouteActions.POST,
-          description: `Uploads a local template to remote provider.`,
+          description: `Uploads a local email template to remote provider.`,
           bodyParams: {
             _id: ConduitString.Required,
           },
@@ -164,7 +164,7 @@ export class AdminHandlers {
         {
           path: '/externalTemplates',
           action: ConduitRouteActions.GET,
-          description: `Returns all external templates and their total number.`,
+          description: `Returns external email templates and their total count.`,
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
           templateDocuments: [EmailTemplate.getInstance().fields],
@@ -176,7 +176,7 @@ export class AdminHandlers {
         {
           path: '/syncExternalTemplates',
           action: ConduitRouteActions.UPDATE,
-          description: `Synchronizes local templates from remote provider.`,
+          description: `Synchronizes local email templates from remote provider.`,
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
           updated: [EmailTemplate.getInstance().fields],
@@ -188,7 +188,7 @@ export class AdminHandlers {
         {
           path: '/send',
           action: ConduitRouteActions.POST,
-          description: `Sends an email requiring at least a message and sender/receiver emails.`,
+          description: `Sends an email.`,
           bodyParams: {
             email: ConduitString.Required,
             sender: ConduitString.Required,

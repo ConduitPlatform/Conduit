@@ -13,7 +13,7 @@ export function getAdminUsersRoute() {
     {
       path: '/admins',
       action: ConduitRouteActions.GET,
-      description: `Returns all admin users and their total number.`,
+      description: `Returns queried admin users and their total count.`,
       queryParams: {
         skip: ConduitNumber.Optional,
         limit: ConduitNumber.Optional,

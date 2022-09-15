@@ -431,7 +431,7 @@ export class ChatRoutes {
       {
         path: '/rooms',
         action: ConduitRouteActions.POST,
-        description: `Creates a new room requiring a room name and an array of participants.`,
+        description: `Creates a new room.`,
         bodyParams: {
           roomName: ConduitString.Required,
           users: [TYPE.String],
@@ -479,7 +479,7 @@ export class ChatRoutes {
       {
         path: '/rooms/:id',
         action: ConduitRouteActions.GET,
-        description: `Returns a room given a specific id, if accessible to current user.`,
+        description: `Returns a chat room.`,
         urlParams: {
           id: ConduitString.Required,
         },
@@ -492,7 +492,7 @@ export class ChatRoutes {
       {
         path: '/rooms',
         action: ConduitRouteActions.GET,
-        description: `Returns all chat rooms accessible to current user.`,
+        description: `Returns queried chat rooms.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -510,7 +510,7 @@ export class ChatRoutes {
       {
         path: '/messages/:id',
         action: ConduitRouteActions.GET,
-        description: `Returns a message given a specific id, if accessible to current user.`,
+        description: `Returns a message.`,
         urlParams: {
           id: ConduitString.Required,
         },
@@ -524,7 +524,7 @@ export class ChatRoutes {
       {
         path: '/messages',
         action: ConduitRouteActions.GET,
-        description: `Returns all messages accessible to current user and their total number.`,
+        description: `Returns queried messages and their total count.`,
         queryParams: {
           roomId: ConduitString.Optional,
           skip: ConduitNumber.Optional,
@@ -545,7 +545,7 @@ export class ChatRoutes {
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes a message given a specific id.`,
+          description: `Deletes a message.`,
           urlParams: {
             messageId: ConduitString.Required,
           },
@@ -561,7 +561,7 @@ export class ChatRoutes {
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.UPDATE,
-          description: `Updates message content requiring a message id and new text content.`,
+          description: `Updates content of a message.`,
           urlParams: {
             messageId: ConduitString.Required,
           },

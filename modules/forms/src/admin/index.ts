@@ -53,7 +53,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.GET,
-          description: `Returns all forms.`,
+          description: `Returns queried forms and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -106,7 +106,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes all forms included in the provided array of form ids.`,
+          description: `Deletes queried forms.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
@@ -121,7 +121,7 @@ export class AdminHandlers {
         {
           path: '/replies/:formId',
           action: ConduitRouteActions.GET,
-          description: `Returns all form replies and their total number.`,
+          description: `Returns queried form replies and their total count.`,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
           },

@@ -22,7 +22,7 @@ export class InvitationRoutes {
     this.routingManager.route(
       {
         path: '/hook/invitations/:answer/:invitationToken',
-        description: `A webhook used to answer to a chat room invitation
+        description: `A webhook used to respond to a chat room invitation
                       requiring the invitation token.`,
         action: ConduitRouteActions.GET,
         urlParams: {
@@ -37,7 +37,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/:answer/:id',
         action: ConduitRouteActions.GET,
-        description: `Answers to a chat room invitation requiring the invitation token id.`,
+        description: `Responds to a chat room invitation requiring the invitation token id.`,
         urlParams: {
           id: ConduitString.Required,
           answer: ConduitString.Required,
@@ -51,7 +51,7 @@ export class InvitationRoutes {
       {
         path: '/invitations/received',
         action: ConduitRouteActions.GET,
-        description: `Returns all current user's invitations.`,
+        description: `Returns current user's received invitations and their total count.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -72,7 +72,7 @@ export class InvitationRoutes {
           limit: ConduitNumber.Optional,
         },
         action: ConduitRouteActions.GET,
-        description: `Returns all the invitations the current user has sent.`,
+        description: `Returns queried invitations the current user has sent.`,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {

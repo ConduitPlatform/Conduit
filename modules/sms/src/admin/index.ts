@@ -47,7 +47,7 @@ export class AdminHandlers {
         {
           path: '/send',
           action: ConduitRouteActions.POST,
-          description: `Sends sms requiring text message and receiver's number.`,
+          description: `Sends sms.`,
           bodyParams: {
             to: ConduitString.Required,
             message: ConduitString.Required,

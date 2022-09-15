@@ -11,7 +11,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
     {
       path: '/config/modules',
       action: ConduitRouteActions.GET,
-      description: `Returns configuration of all registered modules.`,
+      description: `Returns as array of currently available modules, providing information about their service.`,
     },
     new ConduitRouteReturnDefinition('GetModules', {
       modules: [

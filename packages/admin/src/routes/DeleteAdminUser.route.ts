@@ -13,7 +13,7 @@ export function deleteAdminUserRoute() {
     {
       path: '/admins/:id',
       action: ConduitRouteActions.DELETE,
-      description: `Deletes an admin user given a specific id.`,
+      description: `Deletes an admin user.`,
       urlParams: {
         id: ConduitString.Required,
       },

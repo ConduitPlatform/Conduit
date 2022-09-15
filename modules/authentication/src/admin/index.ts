@@ -59,7 +59,7 @@ export class AdminHandlers {
         {
           path: '/users',
           action: ConduitRouteActions.GET,
-          description: `Returns all users and their total number.`,
+          description: `Returns queried users and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -92,7 +92,7 @@ export class AdminHandlers {
         {
           path: '/users/:id',
           action: ConduitRouteActions.PATCH,
-          description: `Updates user's fields given a specific id.`,
+          description: `Updates user's fields.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -111,7 +111,7 @@ export class AdminHandlers {
         {
           path: '/users',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes all users included in given array of user ids.`,
+          description: `Deletes queried users.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
@@ -123,7 +123,7 @@ export class AdminHandlers {
         {
           path: '/users/:id',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes a user given a specific id.`,
+          description: `Deletes a user.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -135,7 +135,7 @@ export class AdminHandlers {
         {
           path: '/users/:id/block',
           action: ConduitRouteActions.POST,
-          description: `Blocks/inactivates a user given a specific id.`,
+          description: `Blocks/inactivates a user.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -147,7 +147,7 @@ export class AdminHandlers {
         {
           path: '/users/:id/unblock',
           action: ConduitRouteActions.POST,
-          description: `Unblocks/activates a user given a specific id.`,
+          description: `Unblocks/activates a user.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -159,7 +159,7 @@ export class AdminHandlers {
         {
           path: '/users/toggle',
           action: ConduitRouteActions.POST,
-          description: `Blocks/unblocks multiple users given an array of user ids and block option.`,
+          description: `Blocks/unblocks queried users.`,
           bodyParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
             block: ConduitBoolean.Required,
@@ -179,7 +179,7 @@ export class AdminHandlers {
             sort: ConduitString.Optional,
           },
           name: 'GetServices',
-          description: 'Returns all registered services.',
+          description: 'Returns queried registered services.',
         },
         new ConduitRouteReturnDefinition('GetServices', {
           services: [Service.getInstance().fields],

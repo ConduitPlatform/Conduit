@@ -113,7 +113,7 @@ export class AdminHandlers {
         {
           path: '/schemas/owners',
           action: ConduitRouteActions.GET,
-          description: `Returns all modules that own schemas.`,
+          description: `Returns queried modules that own schemas.`,
           queryParams: {
             sort: ConduitString.Optional,
           },
@@ -127,7 +127,7 @@ export class AdminHandlers {
         {
           path: '/schemas/extensions',
           action: ConduitRouteActions.GET,
-          description: `Returns all schema extensions and their total number.`,
+          description: `Returns queried schema extensions and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -144,7 +144,7 @@ export class AdminHandlers {
         {
           path: '/schemas/:id',
           action: ConduitRouteActions.GET,
-          description: `Returns a schema given a specific id.`,
+          description: `Returns a schema.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -156,7 +156,7 @@ export class AdminHandlers {
         {
           path: '/schemas',
           action: ConduitRouteActions.GET,
-          description: `Returns all schemas and their total number.`,
+          description: `Returns queried schemas and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -257,7 +257,7 @@ export class AdminHandlers {
         {
           path: '/schemas',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes all schemas included in given array of schema ids.`,
+          description: `Deletes queried schemas.`,
           queryParams: {
             ids: [ConduitJson.Required], // handler array check is still required
             deleteData: ConduitBoolean.Required,
@@ -285,7 +285,7 @@ export class AdminHandlers {
         {
           path: '/schemas/toggle',
           action: ConduitRouteActions.POST,
-          description: `Updates all schemas included in given array of schema ids.`,
+          description: `Enables/disables queried schemas.`,
           bodyParams: {
             ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
             enabled: ConduitBoolean.Required,
@@ -301,7 +301,7 @@ export class AdminHandlers {
         {
           path: '/schemas/:id/toggle',
           action: ConduitRouteActions.POST,
-          description: `Updates a schema given a specific id.`,
+          description: `Enables/disables a schema.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -316,7 +316,8 @@ export class AdminHandlers {
         {
           path: '/schemas/:schemaId/extensions',
           action: ConduitRouteActions.POST,
-          description: `Sets extension fields to a schema.`,
+          description: `Sets a database-owned extension for target schema, expanding it 
+                        with additional fields. Passing an empty fields object removes the extension.`,
           urlParams: {
             schemaId: { type: RouteOptionType.String, required: true },
           },
@@ -331,7 +332,7 @@ export class AdminHandlers {
         {
           path: '/schemas/:id/permissions',
           action: ConduitRouteActions.PATCH,
-          description: `Sets permissions to a schema.`,
+          description: `Updates schema permissions.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -365,7 +366,8 @@ export class AdminHandlers {
         {
           path: '/introspection',
           action: ConduitRouteActions.POST,
-          description: `Performs database introspection.`,
+          description: `Performs database introspection, registering any unknown
+                        collections as pending schemas.`,
         },
         new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
         'introspectDatabase',
@@ -374,7 +376,7 @@ export class AdminHandlers {
         {
           path: '/introspection/schemas/:id',
           action: ConduitRouteActions.GET,
-          description: `Returns a pending schema given a specific id.`,
+          description: `Returns a pending schema.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -386,7 +388,7 @@ export class AdminHandlers {
         {
           path: '/introspection/schemas',
           action: ConduitRouteActions.GET,
-          description: `Returns all pending schemas.`,
+          description: `Returns queried pending schemas.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -403,7 +405,7 @@ export class AdminHandlers {
         {
           path: '/introspection/schemas/finalize',
           action: ConduitRouteActions.POST,
-          description: `Finalizes schema structures upon introspection.`,
+          description: `Converts a previously imported pending schema to a CMS schema.`,
           bodyParams: {
             schemas: { type: [PendingSchemas.fields], required: true },
           },
@@ -416,7 +418,7 @@ export class AdminHandlers {
         {
           path: '/schemas/:schemaName/docs/:id',
           action: ConduitRouteActions.GET,
-          description: `Returns a document given a specific id and schema name.`,
+          description: `Returns a document.`,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
             id: { type: RouteOptionType.String, required: true },
@@ -429,7 +431,7 @@ export class AdminHandlers {
         {
           path: '/schemas/:schemaName/query',
           action: ConduitRouteActions.POST,
-          description: `Returns all documents given a specific schema name and query.`,
+          description: `Returns queried documents.`,
           urlParams: {
             schemaName: { type: RouteOptionType.String, required: true },
           },
@@ -530,7 +532,7 @@ export class AdminHandlers {
         {
           path: '/customEndpoints/schemas',
           action: ConduitRouteActions.GET,
-          description: `Returns all schemas with custom endpoints.`,
+          description: `Returns queried schemas with custom endpoints.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -547,7 +549,7 @@ export class AdminHandlers {
         {
           path: '/customEndpoints',
           action: ConduitRouteActions.GET,
-          description: `Returns all custom endpoints and their total number.`,
+          description: `Returns queried custom endpoints and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -588,7 +590,7 @@ export class AdminHandlers {
         {
           path: '/customEndpoints/:id',
           action: ConduitRouteActions.PATCH,
-          description: `Updates a custom endpoint given a specific id.`,
+          description: `Updates a custom endpoint.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
@@ -610,7 +612,7 @@ export class AdminHandlers {
         {
           path: '/customEndpoints/:id',
           action: ConduitRouteActions.DELETE,
-          description: `Deletes a custom endpoint given a specific id.`,
+          description: `Deletes a custom endpoint.`,
           urlParams: {
             id: { type: RouteOptionType.String, required: true },
           },
