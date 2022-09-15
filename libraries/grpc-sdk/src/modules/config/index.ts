@@ -48,27 +48,6 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     });
   }
 
-  updateConfig(config: any, name: string) {
-    const request = {
-      config: JSON.stringify(config),
-      moduleName: name,
-    };
-
-    return this.client!.updateConfig(request).then(res => {
-      return JSON.parse(res.result);
-    });
-  }
-
-  addFieldsToConfig(config: any, name: string) {
-    const request = {
-      config: JSON.stringify(config),
-      moduleName: name,
-    };
-    return this.client!.addFieldsToConfig(request).then(res => {
-      return JSON.parse(res.result);
-    });
-  }
-
   configure(config: any, schema: any) {
     const request = {
       config: JSON.stringify(config),
