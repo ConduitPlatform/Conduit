@@ -38,8 +38,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
-    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
-    delete userFields.hashedPassword;
     routingManager.route(
       {
         path: '/local/new',
@@ -51,7 +49,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         },
         middlewares: [],
       },
-      new ConduitRouteReturnDefinition('RegisterResponse', userFields),
+      new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
     );
 

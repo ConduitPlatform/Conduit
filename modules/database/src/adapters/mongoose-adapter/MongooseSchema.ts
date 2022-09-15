@@ -17,6 +17,7 @@ const EJSON = require('mongodb-extended-json');
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
   originalSchema: ConduitSchema;
+  fieldHash: string;
 
   constructor(
     mongoose: Mongoose,

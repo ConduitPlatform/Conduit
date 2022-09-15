@@ -75,7 +75,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetTemplates', {
-          templateDocuments: [EmailTemplate.getInstance().fields],
+          templateDocuments: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'getTemplates',
@@ -95,7 +95,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('CreateTemplate', {
-          template: EmailTemplate.getInstance().fields,
+          template: EmailTemplate.getInstance().fields, // @type-inconsistency
         }),
         'createTemplate',
       ),
@@ -114,7 +114,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('PatchTemplate', {
-          template: EmailTemplate.getInstance().fields,
+          template: EmailTemplate.getInstance().fields, // @type-inconsistency
         }),
         'patchTemplate',
       ),
@@ -128,7 +128,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: [EmailTemplate.getInstance().fields],
+          template: [EmailTemplate.name],
         }),
         'deleteTemplates',
       ),
@@ -167,7 +167,7 @@ export class AdminHandlers {
           description: `Returns external email templates and their total count.`,
         },
         new ConduitRouteReturnDefinition('GetExternalTemplates', {
-          templateDocuments: [EmailTemplate.getInstance().fields],
+          templateDocuments: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'getExternalTemplates',
@@ -179,7 +179,7 @@ export class AdminHandlers {
           description: `Synchronizes local email templates from remote provider.`,
         },
         new ConduitRouteReturnDefinition('SyncExternalTemplates', {
-          updated: [EmailTemplate.getInstance().fields],
+          updated: [EmailTemplate.name],
           count: ConduitNumber.Required,
         }),
         'syncExternalTemplates',

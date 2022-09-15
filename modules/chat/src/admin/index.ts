@@ -58,7 +58,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetRooms', {
-          chatRoomDocuments: [ChatRoom.getInstance().fields],
+          chatRoomDocuments: [ChatRoom.name],
           count: ConduitNumber.Required,
         }),
         'getRooms',
@@ -73,7 +73,7 @@ export class AdminHandlers {
             participants: { type: [TYPE.String], required: true }, // handler array check is still required
           },
         },
-        new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
+        new ConduitRouteReturnDefinition(ChatRoom.name),
         'createRoom',
       ),
       constructConduitRoute(
@@ -103,7 +103,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetMessages', {
-          messages: [ChatMessage.getInstance().fields],
+          messages: [ChatMessage.name],
           count: ConduitNumber.Required,
         }),
         'getMessages',

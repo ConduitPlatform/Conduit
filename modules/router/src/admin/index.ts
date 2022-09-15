@@ -45,7 +45,6 @@ export class AdminHandlers {
   }
 
   private getRegisteredRoutes(): ConduitRouteObject[] {
-    const { clientSecret, ...securityClientSelectedFields } = Client.getInstance().fields;
     return [
       constructConduitRoute(
         {
@@ -81,10 +80,7 @@ export class AdminHandlers {
             notes: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition(
-          'CreateSecurityClient',
-          Client.getInstance().fields,
-        ),
+        new ConduitRouteReturnDefinition('CreateSecurityClient', Client.name),
         'createSecurityClient',
       ),
       constructConduitRoute(
@@ -108,7 +104,7 @@ export class AdminHandlers {
           description: `Returns security clients.`,
         },
         new ConduitRouteReturnDefinition('GetSecurityClients', {
-          clients: [securityClientSelectedFields],
+          clients: [Client.name],
         }),
         'getSecurityClients',
       ),
@@ -126,10 +122,7 @@ export class AdminHandlers {
             notes: ConduitString.Optional,
           },
         },
-        new ConduitRouteReturnDefinition(
-          'UpdateSecurityClient',
-          securityClientSelectedFields,
-        ),
+        new ConduitRouteReturnDefinition('UpdateSecurityClient', Client.name),
         'updateSecurityClient',
       ),
     ];

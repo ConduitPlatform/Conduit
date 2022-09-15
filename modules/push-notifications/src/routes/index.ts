@@ -32,7 +32,7 @@ export class PushNotificationsRoutes {
         path: '/token',
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
-        newTokenDocument: NotificationToken.getInstance().fields,
+        newTokenDocument: NotificationToken.getInstance().fields, // @type-inconsistency
       }),
       this.handlers.setNotificationToken.bind(this.handlers),
     );

@@ -1,6 +1,13 @@
 syntax = 'proto3';
 package database;
 
+message CreateSchemaRequest {
+    string name = 1;
+    string fields = 2;
+    string modelOptions = 3;
+    string collectionName = 4;
+}
+
 message GetSchemaRequest {
     string schemaName = 1;
 }
@@ -11,6 +18,7 @@ message GetSchemasRequest {
 message GetSchemasResponse {
     repeated Schema schemas = 1;
 }
+
 message DropCollectionResponse {
     string result = 1;
 }
@@ -20,6 +28,7 @@ message Schema {
     string fields = 2;
     string modelOptions = 3;
     string collectionName = 4;
+    string fieldHash = 5;
 }
 
 message SchemaExtension {
@@ -74,7 +83,7 @@ message DropCollectionRequest {
 }
 
 service DatabaseProvider {
-    rpc CreateSchemaFromAdapter(Schema) returns (Schema);
+    rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
     rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);

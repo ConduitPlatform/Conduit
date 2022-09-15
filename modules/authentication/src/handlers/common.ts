@@ -159,7 +159,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('User', User.getInstance().fields),
+      new ConduitRouteReturnDefinition(User.name),
       this.getUser.bind(this),
     );
     routingManager.route(

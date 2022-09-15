@@ -59,7 +59,7 @@ export class InvitationRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('GetInvitationsResponse', {
-        invitations: [InvitationToken.getInstance().fields],
+        invitations: [InvitationToken.name],
         count: ConduitNumber.Required,
       }),
       this.getInvitations.bind(this),
@@ -76,7 +76,7 @@ export class InvitationRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('SentInvitationsResponse', {
-        invitations: [InvitationToken.getInstance().fields],
+        invitations: [InvitationToken.name],
         count: ConduitNumber.Required,
       }),
       this.sentInvitations.bind(this),

@@ -149,7 +149,7 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
         },
-        new ConduitRouteReturnDefinition('GetSchema', DeclaredSchema.fields),
+        new ConduitRouteReturnDefinition('GetSchema', '_DeclaredSchema'),
         'getSchema',
       ),
       constructConduitRoute(
@@ -167,7 +167,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetSchemas', {
-          schemas: [DeclaredSchema.fields],
+          schemas: ['_DeclaredSchema'],
           count: ConduitNumber.Required,
         }),
         'getSchemas',
@@ -208,7 +208,7 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('CreateSchema', DeclaredSchema.fields),
+        new ConduitRouteReturnDefinition('CreateSchema', '_DeclaredSchema'),
         'createSchema',
       ),
       constructConduitRoute(
@@ -250,7 +250,7 @@ export class AdminHandlers {
             },
           },
         },
-        new ConduitRouteReturnDefinition('PatchSchema', DeclaredSchema.fields),
+        new ConduitRouteReturnDefinition('PatchSchema', '_DeclaredSchema'),
         'patchSchema',
       ),
       constructConduitRoute(
@@ -292,7 +292,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('ToggleSchemas', {
-          updatedSchemas: [DeclaredSchema.fields],
+          updatedSchemas: ['_DeclaredSchema'],
           enabled: ConduitBoolean.Required,
         }),
         'toggleSchemas',
