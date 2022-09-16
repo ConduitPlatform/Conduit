@@ -18,6 +18,10 @@ const schema = {
     type: TYPE.String,
     required: false,
   },
+  isSuperAdmin: {
+    type: TYPE.Boolean,
+    required: true,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -41,8 +45,9 @@ export class Admin extends ConduitActiveSchema<Admin> {
   password!: string;
   createdAt!: Date;
   updatedAt!: Date;
-  hasTwoFA?: Boolean;
+  hasTwoFA?: boolean;
   twoFaMethod?: string;
+  isSuperAdmin!: boolean;
 
   private constructor(database: DatabaseProvider) {
     super(database, Admin.name, schema, modelOptions, collectionName);

@@ -42,6 +42,10 @@ export function getAdminUsersRoute() {
             type: TYPE.String,
             required: false,
           },
+          isSuperAdmi: {
+            type: TYPE.Boolean,
+            required: true,
+          },
           createdAt: TYPE.Date,
           updatedAt: TYPE.Date,
         },
