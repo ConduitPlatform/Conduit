@@ -26,6 +26,7 @@ export class ModuleManager<T> {
     this.servicePort = process.env.GRPC_PORT ?? '5000';
 
     this.serviceAddress =
+      // @compat (v0.15): SERVICE_IP -> SERVICE_IP
       process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
