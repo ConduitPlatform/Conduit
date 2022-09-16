@@ -54,7 +54,7 @@ export function getLoginRoute() {
           const code = generateToken(secret.secret);
 
           return { message: 'OTP required', code: code?.token.toString() };
-          //  return { message: 'OTP required' };
+          // return { message: 'OTP required' };
         } else {
           throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
         }
