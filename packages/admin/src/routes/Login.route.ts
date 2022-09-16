@@ -17,6 +17,7 @@ export function getLoginRoute() {
     {
       path: '/login',
       action: ConduitRouteActions.POST,
+      description: `Login endpoint for admin users.`,
       bodyParams: {
         username: ConduitString.Required,
         password: ConduitString.Required,

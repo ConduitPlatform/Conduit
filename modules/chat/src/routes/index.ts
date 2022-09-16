@@ -431,6 +431,7 @@ export class ChatRoutes {
       {
         path: '/rooms',
         action: ConduitRouteActions.POST,
+        description: `Creates a new room.`,
         bodyParams: {
           roomName: ConduitString.Required,
           users: [TYPE.String],
@@ -447,6 +448,7 @@ export class ChatRoutes {
       {
         path: '/rooms/:roomId/addUsers',
         action: ConduitRouteActions.UPDATE,
+        description: `Adds users to a chat room.`,
         urlParams: {
           roomId: ConduitString.Required,
         },
@@ -463,6 +465,7 @@ export class ChatRoutes {
       {
         path: '/leave/:roomId',
         action: ConduitRouteActions.UPDATE,
+        description: `Removes current user from a chat room.`,
         urlParams: {
           roomId: ConduitString.Required,
         },
@@ -476,18 +479,20 @@ export class ChatRoutes {
       {
         path: '/rooms/:id',
         action: ConduitRouteActions.GET,
+        description: `Returns a chat room.`,
         urlParams: {
           id: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('ChatRoom', ChatRoom.getInstance().fields),
+      new ConduitRouteReturnDefinition(ChatRoom.name),
       this.getRoom.bind(this),
     );
     this._routingManager.route(
       {
         path: '/rooms',
         action: ConduitRouteActions.GET,
+        description: `Returns queried chat rooms.`,
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
@@ -495,7 +500,7 @@ export class ChatRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatRoomsResponse', {
-        rooms: ['ChatRoom'],
+        rooms: [ChatRoom.name],
         count: ConduitNumber.Required,
       }),
       this.getRooms.bind(this),
@@ -505,12 +510,13 @@ export class ChatRoutes {
       {
         path: '/messages/:id',
         action: ConduitRouteActions.GET,
+        description: `Returns a message.`,
         urlParams: {
           id: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('ChatMessage', ChatMessage.getInstance().fields),
+      new ConduitRouteReturnDefinition(ChatMessage.name),
       this.getMessage.bind(this),
     );
 
@@ -518,6 +524,7 @@ export class ChatRoutes {
       {
         path: '/messages',
         action: ConduitRouteActions.GET,
+        description: `Returns queried messages and their total count.`,
         queryParams: {
           roomId: ConduitString.Optional,
           skip: ConduitNumber.Optional,
@@ -526,7 +533,7 @@ export class ChatRoutes {
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('ChatMessagesResponse', {
-        messages: ['ChatMessage'],
+        messages: [ChatMessage.name],
         count: ConduitNumber.Required,
       }),
       this.getMessages.bind(this),
@@ -538,6 +545,7 @@ export class ChatRoutes {
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes a message.`,
           urlParams: {
             messageId: ConduitString.Required,
           },
@@ -553,6 +561,7 @@ export class ChatRoutes {
         {
           path: '/messages/:messageId',
           action: ConduitRouteActions.UPDATE,
+          description: `Updates content of a message.`,
           urlParams: {
             messageId: ConduitString.Required,
           },

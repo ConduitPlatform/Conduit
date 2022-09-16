@@ -34,7 +34,7 @@ import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { convertToGrpcSchema } from './utils/grpcSchemaCorverter';
+import { convertToGrpcSchema } from './utils/grpcSchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsConfig from './metrics';
@@ -79,6 +79,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async preServerStart() {
+    this._activeAdapter.setGrpcSdk(this.grpcSdk);
     this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
   }
@@ -104,35 +105,36 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onRegister() {
-    const self = this;
-    self.grpcSdk.bus?.subscribe('database', (message: string) => {
-      if (message === 'request') {
-        self._activeAdapter.registeredSchemas.forEach(k => {
-          this.grpcSdk.bus!.publish('database', JSON.stringify(k));
-        });
-        return;
-      }
-      try {
-        const receivedSchema = JSON.parse(message);
-        if (receivedSchema.name) {
-          const schema = new ConduitSchema(
-            receivedSchema.name,
-            receivedSchema.fields,
-            receivedSchema.modelOptions,
-            receivedSchema.collectionName,
-          );
-          schema.ownerModule = receivedSchema.ownerModule;
-          self._activeAdapter.createSchemaFromAdapter(schema).catch(() => {
-            ConduitGrpcSdk.Logger.error('Failed to create/update schema');
-          });
-        }
-      } catch (err) {
-        ConduitGrpcSdk.Logger.error('Something was wrong with the message');
-      }
-    });
+    this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
+  }
+
+  private registerInstanceSyncEvents() {
+    this.grpcSdk.bus?.subscribe('database:request:schemas', () => {
+      this._activeAdapter.registeredSchemas.forEach(schema => {
+        this._activeAdapter.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+      });
+    });
+    try {
+      this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
+        const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
+        delete (syncSchema as any).fieldHash;
+        await this._activeAdapter.createSchemaFromAdapter(
+          syncSchema,
+          false,
+          false,
+          false,
+          true,
+        );
+      });
+      this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
+        await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+      });
+    } catch {
+      ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
+    }
   }
 
   initializeMetrics() {
@@ -178,13 +180,6 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  publishSchema(schema: any) {
-    // @dirty-type-cast
-    const sendingSchema = JSON.stringify(schema);
-    this.grpcSdk.bus!.publish('database', sendingSchema);
-    ConduitGrpcSdk.Logger.log('Updated state');
-  }
-
   // gRPC Service
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
@@ -208,19 +203,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter
       .createSchemaFromAdapter(schema, false, true, true)
       .then((schemaAdapter: Schema) => {
-        this.publishSchema({
-          name: call.request.name,
-          fields: JSON.parse(call.request.fields),
-          extensions: (schemaAdapter.originalSchema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-          compiledFields: (schemaAdapter.originalSchema as ConduitDatabaseSchema)
-            .compiledFields, // @dirty-type-cast
-          modelOptions: JSON.parse(call.request.modelOptions),
-          collectionName: call.request.collectionName,
-          owner: schema.ownerModule,
-        });
         callback(
           null,
-          convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
+          convertToGrpcSchema(
+            this._activeAdapter,
+            schemaAdapter.originalSchema as ConduitDatabaseSchema,
+          ),
         ); // @dirty-type-cast
       })
       .catch(err => {
@@ -239,7 +227,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   getSchema(call: GrpcRequest<GetSchemaRequest>, callback: SchemaResponse) {
     try {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
-      callback(null, convertToGrpcSchema(schemaAdapter as ConduitDatabaseSchema)); // @dirty-type-cast
+      callback(
+        null,
+        convertToGrpcSchema(this._activeAdapter, schemaAdapter as ConduitDatabaseSchema),
+      ); // @dirty-type-cast
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -253,7 +244,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
         schemas: schemas.map(schema =>
-          convertToGrpcSchema(schema as ConduitDatabaseSchema),
+          convertToGrpcSchema(this._activeAdapter, schema as ConduitDatabaseSchema),
         ), // @dirty-type-cast
       });
     } catch (err) {
@@ -300,23 +291,13 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter
         .setSchemaExtension(schemaName, extOwner, extModel)
         .then((schemaAdapter: Schema) => {
-          this.publishSchema({
-            name: schemaName,
-            fields: schemaAdapter.model,
-            extensions: JSON.stringify(
-              (schemaAdapter.originalSchema as ConduitDatabaseSchema).extensions,
-            ), // @dirty-type-cast
-            compiledFields: JSON.stringify(
-              (schemaAdapter.originalSchema as ConduitDatabaseSchema).compiledFields,
-            ), // @dirty-type-cast
-            modelOptions: schemaAdapter.originalSchema.modelOptions,
-            collectionName: schemaAdapter.originalSchema.collectionName,
-            owner: schemaAdapter.originalSchema.ownerModule,
-          });
           callback(
             null,
-            convertToGrpcSchema(schemaAdapter.originalSchema as ConduitDatabaseSchema),
-          ); // @dirty-type-cast;
+            convertToGrpcSchema(
+              this._activeAdapter,
+              schemaAdapter.originalSchema as ConduitDatabaseSchema,
+            ),
+          ); // @dirty-type-cast
         })
         .catch(err => {
           callback({

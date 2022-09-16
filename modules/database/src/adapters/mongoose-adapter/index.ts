@@ -8,9 +8,9 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { status } from '@grpc/grpc-js';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
+import { status } from '@grpc/grpc-js';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -240,9 +240,15 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string = 'database',
+    instanceSync = false,
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (instanceSync) {
+      delete this.models[schemaName];
+      this.mongoose.connection.deleteModel(schemaName);
+      return 'Instance synchronized!';
+    }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
@@ -265,6 +271,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     delete this.models[schemaName];
     this.mongoose.connection.deleteModel(schemaName);
+    this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
 }

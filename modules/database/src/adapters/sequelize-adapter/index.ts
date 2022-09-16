@@ -7,13 +7,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
-import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -213,9 +213,15 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string = 'database',
+    instanceSync = false,
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (instanceSync) {
+      delete this.models[schemaName];
+      delete this.sequelize.models[schemaName];
+      return 'Instance synchronized!';
+    }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
@@ -235,6 +241,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
+    this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
 
