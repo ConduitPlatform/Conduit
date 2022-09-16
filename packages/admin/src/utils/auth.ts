@@ -1,7 +1,7 @@
 import * as jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
-import { Admin, ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
-import { AdminTwoFactorSecret } from '../models';
+import { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
+import { AdminTwoFactorSecret, Admin } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import * as twoFactor from 'node-2fa';
@@ -13,6 +13,7 @@ export function signToken(data: any, secret: string, expiresIn?: number) {
 export function verifyToken(token: string, secret: string): any {
   return jwt.verify(token, secret);
 }
+
 export function verifyTwoFactorToken(secret: string, token?: string, window?: number) {
   return twoFactor.verifyToken(secret, token, window);
 }
@@ -24,9 +25,11 @@ export async function hashPassword(password: string, rounds?: number) {
 export function comparePasswords(password: string, hashed: string) {
   return compare(password, hashed);
 }
+
 export function generateToken(secret: string) {
   return twoFactor.generateToken(secret);
 }
+
 export async function verify2Fa(adminId: string, admin: Admin, code: string) {
   const secret = await AdminTwoFactorSecret.getInstance().findOne({
     adminId: adminId,

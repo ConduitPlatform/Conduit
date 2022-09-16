@@ -8,6 +8,7 @@ import { isEmpty, isNil } from 'lodash';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 import { verify2Fa } from '../utils/auth';
+import { Admin } from '../models';
 
 export function verifyTwoFaRoute() {
   return new ConduitRoute(
@@ -22,13 +23,8 @@ export function verifyTwoFaRoute() {
       token: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      const admin = params.context!.admin;
-      const { code } = params.params!;
-      const context = params.context!;
-
-      if (isNil(context) || isEmpty(context))
-        throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
+      const { username, code } = params.params!;
+      const admin = await Admin.getInstance().findOne({ name: username });
       if (isNil(admin)) throw new GrpcError(status.UNAUTHENTICATED, 'Admin not found');
       if (admin.twoFaMethod == 'qrcode') {
         return await verify2Fa(admin._id, admin, code);
