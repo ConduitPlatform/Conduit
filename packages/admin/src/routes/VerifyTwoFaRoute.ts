@@ -4,7 +4,7 @@ import {
   ConduitString,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { isEmpty, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 import { verify2Fa } from '../utils/auth';
