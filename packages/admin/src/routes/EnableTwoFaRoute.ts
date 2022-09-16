@@ -37,7 +37,7 @@ export function enableTwoFaRoute() {
       if (method === 'qrcode') {
         const secret = generateSecret({
           name: 'Conduit',
-          account: admin.email,
+          account: 'admin',
         });
 
         await AdminTwoFactorSecret.getInstance().deleteMany({
