@@ -1,6 +1,9 @@
 syntax = "proto3";
 package authorization;
 
+message Empty {
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -8,29 +11,60 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+message Resource {
+  string name = 1;
+  repeated _Relation relations = 2;
+  repeated _Permission permissions = 3;
 
-message UserLoginRequest {
-  string userId = 1;
-  string clientId = 2;
+  message _Relation {
+    string name = 1;
+    repeated string resourceType = 2;
+  }
+
+  message _Permission {
+    string name = 1;
+    repeated string roles = 2;
+  }
+
 }
 
-message UserCreateRequest {
-  string email = 1;
-  optional string password = 2;
-  bool verify = 3;
+message Relation {
+  string subject = 1;
+  string connection = 2;
+  string resource = 3;
 }
-message UserDeleteResponse {
-  string message = 1;
+/**
+  Provide different search criteria to find relations
+  ex. provide subject and find connections to resources
+  ex. provide resource and find all connections with subjects
+  ex. provide resource and connection to find subjects
+ */
+message FindRelation {
+  optional string subject = 1;
+  optional string connection = 2;
+  string resource = 3;
 }
-message UserCreateResponse {
-  optional string password = 1;
+/*
+  {
+    "subject": "user:1",
+    "connection": "owns",
+    "resource": "user:2"
+  }
+ */
+message PermissionCheck {
+  string subject = 1;
+  string connection = 2;
+  string resource = 3;
+}
+
+message Decision {
+  bool allow = 1;
 }
 
 service Authorization {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-
-  rpc GetUserRoles(SetConfigRequest) returns (SetConfigResponse);
-  rpc GetUserPermissions(SetConfigRequest) returns (SetConfigResponse);
-  rpc UserCanDo(SetConfigRequest) returns (SetConfigResponse);
-
+  rpc DefineResource(Resource) returns (Empty);
+  rpc CreateRelation(Relation) returns (Empty);
+  rpc FindRelation(FindRelation) returns (Relation);
+  rpc Check(PermissionCheck) returns (Decision);
 }

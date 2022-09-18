@@ -1,20 +1,18 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
+/**
+ * This is used to model a relation tuple like:
+ * user:2131cdad reader token:123aDSA
+ */
 const schema = {
   _id: TYPE.ObjectId,
-  resource: {
-    type: 'Relation',
-    model: 'Resource',
-    required: true,
-  },
-  roles: [
-    {
-      type: TYPE.String,
-    },
-  ],
-  user: {
-    type: TYPE.Relation,
-    model: 'User',
+  /**
+   * {
+   *   "user:12312312": "organization:123123#member"
+   * }
+   */
+  index: {
+    type: TYPE.JSON,
     required: true,
   },
   createdAt: TYPE.Date,
@@ -33,32 +31,25 @@ const schemaOptions = {
 } as const;
 const collectionName = undefined;
 
-export class Role extends ConduitActiveSchema<Role> {
-  private static _instance: Role;
+export class ActorIndex extends ConduitActiveSchema<ActorIndex> {
+  private static _instance: ActorIndex;
   _id: string;
-  name: string;
-  group: string | Group;
-  isDefault: boolean;
-  permissions: {
-    canInvite: boolean;
-    canRemove: boolean;
-    canEditRoles: boolean;
-    canDeleteGroup: boolean;
-    canCreateGroup: boolean;
+  index: {
+    [key: string]: string;
   };
   createdAt: Date;
   updatedAt: Date;
 
   constructor(database: DatabaseProvider) {
-    super(database, Role.name, schema, schemaOptions, collectionName);
+    super(database, ActorIndex.name, schema, schemaOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (Role._instance) return Role._instance;
+    if (ActorIndex._instance) return ActorIndex._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    Role._instance = new Role(database);
-    return Role._instance;
+    ActorIndex._instance = new ActorIndex(database);
+    return ActorIndex._instance;
   }
 }
