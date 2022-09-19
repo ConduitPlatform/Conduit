@@ -24,10 +24,11 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { ISendNotification } from './interfaces/ISendNotification';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',
@@ -60,12 +61,6 @@ export default class PushNotifications extends ManagedModule<Config> {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);
       }
     });
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   async onConfig() {

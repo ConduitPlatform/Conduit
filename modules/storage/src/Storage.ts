@@ -16,15 +16,14 @@ import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash';
 import { runMigrations } from './migrations';
 import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
-import metricsConfig from './metrics';
+import MetricsSchema from './metrics';
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
 
-type Callback = (arg1: { code: number; message: string }) => void;
-
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  metricsSchema = MetricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',
@@ -55,12 +54,6 @@ export default class Storage extends ManagedModule<Config> {
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
     await this.registerSchemas();
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   async preConfig(config: Config) {

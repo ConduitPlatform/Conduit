@@ -28,10 +28,11 @@ import {
   UserDeleteResponse,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
@@ -95,12 +96,6 @@ export default class Authentication extends ManagedModule<Config> {
         this.localSendVerificationEmail = false;
         this.grpcSdk.unmonitorModule('email');
       }
-    }
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 

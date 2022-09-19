@@ -37,10 +37,11 @@ import { CustomEndpointController } from './controllers/customEndpoints/customEn
 import { convertToGrpcSchema } from './utils/grpcSchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
+  metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -127,12 +128,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       });
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
-    }
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 

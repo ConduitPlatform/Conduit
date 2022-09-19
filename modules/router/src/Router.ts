@@ -33,7 +33,7 @@ import {
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -74,6 +74,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
@@ -129,12 +130,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
     this._security = new SecurityModule(this.grpcSdk, this);
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   protected registerSchemas() {
