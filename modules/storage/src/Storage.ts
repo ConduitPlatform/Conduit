@@ -23,7 +23,7 @@ import { getAwsAccountId } from './utils';
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = MetricsSchema;
+  protected metricsSchema = MetricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',
@@ -50,10 +50,10 @@ export default class Storage extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    await this.registerSchemas();
   }
 
   async preConfig(config: Config) {
@@ -124,6 +124,23 @@ export default class Storage extends ManagedModule<Config> {
       }
     });
     return Promise.all(promises);
+  }
+
+  async initializeMetrics() {
+    const containersTotal = await models._StorageContainer
+      .getInstance()
+      .countDocuments({});
+    const foldersTotal = await models._StorageFolder.getInstance().countDocuments({});
+    const files = await models.File.getInstance().findMany({}, 'size');
+    const filesTotalSize = files
+      .map(file => file.size)
+      .reduce((prev, next) => {
+        return prev + next;
+      });
+    ConduitGrpcSdk.Metrics?.set('containers_total', containersTotal);
+    ConduitGrpcSdk.Metrics?.set('folders_total', foldersTotal);
+    ConduitGrpcSdk.Metrics?.set('files_total', files.length);
+    ConduitGrpcSdk.Metrics?.set('storage_size_bytes_total', filesTotalSize);
   }
 
   // gRPC Service

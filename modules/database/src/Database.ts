@@ -41,7 +41,7 @@ import metricsSchema from './metrics';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -167,6 +167,14 @@ export default class DatabaseModule extends ManagedModule<void> {
         boundFunctionRef,
       );
     }
+  }
+
+  async initializeMetrics() {
+    // registered_schemas_total incremented in createSchemaFromAdapter() during startup model sync
+    const customEndpointsTotal = await this._activeAdapter
+      .getSchemaModel('CustomEndpoints')
+      .model.countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('custom_endpoints_total', customEndpointsTotal);
   }
 
   // gRPC Service

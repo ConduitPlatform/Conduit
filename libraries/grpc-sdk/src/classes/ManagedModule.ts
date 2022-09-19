@@ -11,8 +11,8 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
-  abstract readonly configSchema?: object;
-  abstract readonly metricsSchema?: object;
+  protected abstract readonly configSchema?: object;
+  protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
   service?: ConduitService;
 

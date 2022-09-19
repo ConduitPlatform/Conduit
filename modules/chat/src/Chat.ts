@@ -14,7 +14,6 @@ import { AdminHandlers } from './admin';
 import { ChatRoutes } from './routes';
 import * as models from './models';
 import { validateUsersInput } from './utils';
-import { ChatMessage, ChatRoom } from './models';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -29,7 +28,7 @@ import metricsSchema from './metrics';
 
 export default class Chat extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),
     protoDescription: 'chat.Chat',
@@ -64,6 +63,7 @@ export default class Chat extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
       this.updateHealth(
@@ -77,7 +77,6 @@ export default class Chat extends ManagedModule<Config> {
     if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.registerSchemas();
       this._sendEmail =
         config.explicit_room_joins.enabled && config.explicit_room_joins.send_email;
       if (this._sendEmail) {
@@ -144,6 +143,13 @@ export default class Chat extends ManagedModule<Config> {
     return Promise.all(promises);
   }
 
+  async initializeMetrics() {
+    const roomsTotal = await models.ChatRoom.getInstance().countDocuments({});
+    const messagesTotal = await models.ChatMessage.getInstance().countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('chat_rooms_total', roomsTotal);
+    ConduitGrpcSdk.Metrics?.increment('messages_sent_total', messagesTotal);
+  }
+
   // gRPC Service
   async createRoom(call: GrpcRequest<CreateRoomRequest>, callback: GrpcCallback<Room>) {
     const { name, participants } = call.request;
@@ -189,7 +195,7 @@ export default class Chat extends ManagedModule<Config> {
     const { roomId, message } = call.request;
 
     let errorMessage: string | null = null;
-    const room = await ChatRoom.getInstance()
+    const room = await models.ChatRoom.getInstance()
       .findOne({ _id: roomId })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -199,11 +205,11 @@ export default class Chat extends ManagedModule<Config> {
     }
 
     // @ts-ignore
-    if (isNil(room) || !(room as ChatRoom).participants.includes(userId)) {
+    if (isNil(room) || !room.participants.includes(userId)) {
       return callback({ code: status.INVALID_ARGUMENT, message: 'invalid room' });
     }
 
-    ChatMessage.getInstance()
+    models.ChatMessage.getInstance()
       .create({
         message,
         senderUser: userId,

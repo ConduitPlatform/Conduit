@@ -32,7 +32,7 @@ import metricsSchema from './metrics';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
@@ -58,6 +58,7 @@ export default class Authentication extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
   }
 
@@ -74,7 +75,6 @@ export default class Authentication extends ManagedModule<Config> {
     if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.registerSchemas();
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
@@ -135,6 +135,8 @@ export default class Authentication extends ManagedModule<Config> {
       this.refreshAppRoutesTimeout = null;
     }, 800);
   }
+
+  async initializeMetrics() {}
 
   // gRPC Service
   // produces login credentials for a user without them having to login

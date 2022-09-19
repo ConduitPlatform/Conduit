@@ -28,7 +28,7 @@ import metricsSchema from './metrics';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',
@@ -53,6 +53,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
       if (serving && ConfigController.getInstance().config.active) {
@@ -75,7 +76,6 @@ export default class PushNotifications extends ManagedModule<Config> {
   private async enableModule() {
     if (!this.isRunning) {
       await this.initProvider();
-      await this.registerSchemas();
       const self = this;
       this.grpcSdk
         .waitForExistence('router')
@@ -121,6 +121,8 @@ export default class PushNotifications extends ManagedModule<Config> {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     }
   }
+
+  async initializeMetrics() {}
 
   // gRPC Service
   async setNotificationToken(

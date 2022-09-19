@@ -35,7 +35,14 @@ export class GraphQLController extends ConduitRouter {
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private readonly _parser: GraphQlParser;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
+  ) {
     super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
@@ -212,6 +219,11 @@ export class GraphQLController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'graphql',
+        });
+      }
     }
   }
 

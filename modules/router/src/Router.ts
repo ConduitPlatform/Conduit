@@ -74,7 +74,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
@@ -103,10 +103,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    if (!this.grpcSdk.database) {
-      await this.grpcSdk.waitForExistence('database');
-      this.database = this.grpcSdk.databaseProvider!;
-    }
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.databaseProvider!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
@@ -115,6 +114,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.grpcSdk,
       1000,
       swaggerRouterMetadata,
+      { registeredRoutes: { name: 'client_routes_total' } },
     );
     this.registerGlobalMiddleware(
       'conduitRequestMiddleware',
@@ -127,7 +127,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
     this._security = new SecurityModule(this.grpcSdk, this);
   }
@@ -288,6 +287,20 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         url,
       }),
     );
+  }
+
+  async initializeMetrics() {
+    const securityClients = await models.Client.getInstance().findMany({});
+    const clientPlatforms: Map<string, number> = new Map();
+    securityClients.forEach(client => {
+      const currentValue = clientPlatforms.get(client.platform.toLowerCase()) ?? 0;
+      clientPlatforms.set(client.platform.toLowerCase(), currentValue + 1);
+    });
+    clientPlatforms.forEach((clients, platformName) => {
+      ConduitGrpcSdk.Metrics?.set('security_clients_total', clients, {
+        platform: platformName,
+      });
+    });
   }
 
   async registerGrpcRoute(

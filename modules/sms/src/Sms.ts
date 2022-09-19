@@ -24,7 +24,7 @@ import metricsSchema from './metrics';
 
 export default class Sms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  metricsSchema = metricsSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'sms.proto'),
     protoDescription: 'sms.Sms',
@@ -89,6 +89,8 @@ export default class Sms extends ManagedModule<Config> {
     this.isRunning = true;
     this.updateHealth(HealthCheckStatus.SERVING);
   }
+
+  async initializeMetrics() {}
 
   // gRPC Service
   async sendSms(
