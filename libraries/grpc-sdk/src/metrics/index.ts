@@ -7,7 +7,9 @@ import {
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
+import defaultMetrics from './config/defaults';
 import { registry as niceGrpcRegistry } from 'nice-grpc-prometheus';
+import { MetricConfiguration, MetricType } from '../types';
 
 export class ConduitMetrics {
   private readonly moduleName: string;
@@ -23,6 +25,30 @@ export class ConduitMetrics {
     this._httpServer = new MetricsServer(moduleName, instance, this.Registry);
     this._httpServer.initialize();
     this.collectDefaultMetrics();
+  }
+
+  initializeDefaultMetrics() {
+    for (const metric of Object.values(defaultMetrics)) {
+      this.registerMetric(metric.type, metric.config);
+    }
+  }
+
+  registerMetric(type: MetricType, config: MetricConfiguration) {
+    config.name = `conduit_${config.name}`;
+    switch (type) {
+      case MetricType.Counter:
+        this.createCounter(config as CounterConfiguration<any>);
+        break;
+      case MetricType.Gauge:
+        this.createGauge(config as GaugeConfiguration<any>);
+        break;
+      case MetricType.Histogram:
+        this.createHistogram(config as HistogramConfiguration<any>);
+        break;
+      case MetricType.Summary:
+        this.createSummary(config as SummaryConfiguration<any>);
+        break;
+    }
   }
 
   setDefaultLabels(labels: { [key: string]: string }) {
@@ -56,7 +82,7 @@ export class ConduitMetrics {
   }
 
   getMetric(name: string) {
-    return this.Registry.getSingleMetric(name);
+    return this.Registry.getSingleMetric(name); // TODO: addPrefix()
   }
 
   increment(metric: string, increment: number = 1, labels?: LabelValues<any>) {

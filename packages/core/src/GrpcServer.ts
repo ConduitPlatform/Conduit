@@ -99,7 +99,7 @@ export class GrpcServer {
 
   private initializeMetrics() {
     if (process.env['METRICS_PORT']) {
-      this.grpcSdk.initializeDefaultMetrics();
+      ConduitGrpcSdk.Metrics?.initializeDefaultMetrics();
     }
   }
 

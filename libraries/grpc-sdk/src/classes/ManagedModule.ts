@@ -86,16 +86,22 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   /**
    * Registers common and module-specific metric types.
    */
-  registerMetrics() {
-    if (process.env['METRICS_PORT']) {
-      this.grpcSdk.initializeDefaultMetrics();
+  async registerMetrics() {
+    if (ConduitGrpcSdk.Metrics) {
+      ConduitGrpcSdk.Metrics.initializeDefaultMetrics();
       if (this.metricsSchema) {
         Object.values(this.metricsSchema).forEach(metric => {
-          this.grpcSdk.registerMetric(metric.type, metric.config);
+          ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
         });
       }
     }
   }
+
+  /**
+   * Initializes metric startup values.
+   * Implemented by individual modules.
+   */
+  async initializeMetrics() {}
 
   async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

@@ -69,9 +69,10 @@ export class ModuleManager<T> {
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.module.handleConfigSyncUpdate();
-    await this.module.startGrpcServer();
     await this.module.registerMetrics();
+    await this.module.startGrpcServer();
     await this.module.onServerStart();
+    await this.module.initializeMetrics();
     await this.module.preRegister();
   }
 
