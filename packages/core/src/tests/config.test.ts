@@ -1,14 +1,11 @@
 import TestingTools from '@conduitplatform/testing-tools';
-import { ConfigDefinition } from './mocks/module/protoTypes/core';
 let coreProcess: any, client: any, testModule: any;
 const testModuleUrl = '0.0.0.0:55184';
 
 const testTools = new TestingTools();
 beforeAll(async () => {
-  await testTools.stopRedis();
-  await testTools.startRedis();
-  await testTools.startCore();
-  client = testTools.createClient(ConfigDefinition);
+  await testTools.baseSetup();
+  client = testTools.coreClient;
 });
 
 describe('Testing Core package', () => {
