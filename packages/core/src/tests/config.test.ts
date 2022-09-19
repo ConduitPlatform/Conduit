@@ -1,18 +1,33 @@
 import TestingTools from '@conduitplatform/testing-tools';
-
-let coreProcess: any, client: any, testModule: any;
+import { ConfigDefinition } from '@conduitplatform/commons';
+import path from 'path';
+let coreProcess: any, testModule: any;
 const testModuleUrl = '0.0.0.0:55184';
 
-const testTools = new TestingTools();
+const testTools = new TestingTools<ConfigDefinition>('0.0.0.0:55152', ConfigDefinition);
 beforeAll(async () => {
   await testTools.baseSetup();
-  client = testTools.coreClient;
+  await testTools.runDependencies([
+    {
+      command: 'node ' + path.resolve(__dirname, '../../dist/bin/www.js'),
+      options: {
+        env: {
+          REDIS_PORT: '6379',
+          REDIS_HOST: 'localhost',
+          PORT: '3030',
+          ADMIN_SOCKET_PORT: '3032',
+          process_env: process.env,
+        },
+      },
+      delay: 8000,
+    },
+  ]);
 });
 
 describe('Testing Core package', () => {
   test('Getting Redis Details', async () => {
     try {
-      const res = await client.getRedisDetails({});
+      const res = await testTools.client.getRedisDetails({});
       expect(res).toMatchObject({
         redisPort: expect.any(Number),
         redisHost: expect.any(String),
@@ -23,7 +38,7 @@ describe('Testing Core package', () => {
   });
 
   test('Getting Server Config', async () => {
-    const res = await client.getServerConfig({});
+    const res = await testTools.client.getServerConfig({});
     try {
       expect(res).toMatchObject({
         data: expect.any(String),
@@ -36,7 +51,11 @@ describe('Testing Core package', () => {
 
 describe('Testing module related rpc calls', () => {
   test('Register Module', async () => {
-    const res = await testTools.coreTestUtils.testRegisterModule();
+    const res = await testTools.client.registerModule({
+      moduleName: 'test',
+      url: '0.0.0.0:55122',
+      healthStatus: 1,
+    });
     try {
       expect(res).toMatchObject({
         result: expect.any(Boolean),
@@ -45,18 +64,18 @@ describe('Testing module related rpc calls', () => {
       throw e;
     }
   });
-  // test('Getting Module List', async () => {
-  //   const res = await client.moduleList({});
-  //   try {
-  //     expect(res.modules[0]).toMatchObject({
-  //       moduleName: 'test',
-  //       url: testModuleUrl,
-  //       serving: expect.any(Boolean),
-  //     });
-  //   } catch (e) {
-  //     expect(e).toMatch('error');
-  //   }
-  // });
+  test('Getting Module List', async () => {
+    const res = await testTools.client.moduleList({});
+    try {
+      expect(res.modules[0]).toMatchObject({
+        moduleName: 'test',
+        url: testModuleUrl,
+        serving: expect.any(Boolean),
+      });
+    } catch (e) {
+      throw e;
+    }
+  });
   //
   // test('Module Exists', async () => {
   //   const res = await client.moduleExists({ moduleName: 'test' });
@@ -109,8 +128,8 @@ describe('Testing module related rpc calls', () => {
   // });
 });
 
-afterAll(() => {
+afterAll(async () => {
   process.kill(coreProcess.pid);
   process.kill(testModule.pid);
-  exec('docker stop conduit-redis');
+  await testTools.stopRedis();
 });
