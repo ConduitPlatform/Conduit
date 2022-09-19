@@ -21,6 +21,7 @@ const schema = {
   isSuperAdmin: {
     type: TYPE.Boolean,
     required: true,
+    default: false,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
