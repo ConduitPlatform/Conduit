@@ -177,17 +177,18 @@ export class RestController extends ConduitRouter {
             if (r.fromCache) {
               return res.status(200).json(r.data);
             } else {
-              result = r.result ? r.result : r;
+              result = r.result ?? r;
             }
-            if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              if (typeof r.result === 'string') {
-                // only grpc route data is stringified
-                result = JSON.parse(result);
+            try {
+              // Handle gRPC route responses
+              result = JSON.parse(result);
+            } catch {
+              if (typeof result === 'string') {
+                // Nest plain string responses
+                result = {
+                  result: this.extractResult(route.returnTypeFields as string, result),
+                };
               }
-            } else {
-              result = {
-                result: this.extractResult(route.returnTypeFields as string, result),
-              };
             }
             if (r.setCookies && r.setCookies.length) {
               r.setCookies.forEach((cookie: Cookie) => {
