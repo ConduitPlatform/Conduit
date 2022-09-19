@@ -1,6 +1,6 @@
 import { TestUtils } from './TestUtils';
 import { ConfigDefinition } from '@conduitplatform/grpc-sdk/src/protoUtils/core';
-import { exec, ExecOptions } from 'child_process';
+const { exec } = require('child_process');
 
 export class CoreTestUtils extends TestUtils<ConfigDefinition> {
   constructor() {
@@ -8,7 +8,7 @@ export class CoreTestUtils extends TestUtils<ConfigDefinition> {
   }
 
   async startCore() {
-    const options: ExecOptions = {
+    const options = {
       env: {
         REDIS_PORT: '6379',
         REDIS_HOST: 'localhost',
@@ -20,7 +20,15 @@ export class CoreTestUtils extends TestUtils<ConfigDefinition> {
     };
     const coreProcess = exec('node ../../packages/core/dist/bin/www.js', options);
     await new Promise(r => setTimeout(r, 8000));
-    this._client = this.createClient(ConfigDefinition);
+    await this.createClient(ConfigDefinition);
     return coreProcess;
+  }
+
+  async testRegisterModule() {
+    return this.client.registerModule({
+      moduleName: 'test',
+      url: '0.0.0.0:55185',
+      healthStatus: 1,
+    });
   }
 }

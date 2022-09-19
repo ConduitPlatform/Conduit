@@ -3,7 +3,7 @@ import { Client, createChannel, createClientFactory } from 'nice-grpc';
 import { getModuleNameInterceptor } from '@conduitplatform/grpc-sdk/dist/interceptors';
 
 export class TestUtils<T extends CompatServiceDefinition> {
-  protected _client: Client<T>;
+  private _client: Client<T>;
   constructor() {}
 
   createClient(serviceDefinition: T) {
@@ -12,7 +12,7 @@ export class TestUtils<T extends CompatServiceDefinition> {
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
     const clientFactory = createClientFactory().use(getModuleNameInterceptor('test'));
-    return clientFactory.create(serviceDefinition, channel);
+    this._client = clientFactory.create(serviceDefinition, channel);
   }
 
   get client() {
