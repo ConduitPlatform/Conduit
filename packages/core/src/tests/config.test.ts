@@ -1,33 +1,14 @@
-import { createChannel, createClientFactory } from 'nice-grpc';
-
-let coreProcess: any, client: any, testModule: any;
-import { getModuleNameInterceptor } from '@conduitplatform/grpc-sdk/dist/interceptors';
+import TestingTools from '@conduitplatform/testing-tools';
 import { ConfigDefinition } from './mocks/module/protoTypes/core';
-
-const { exec } = require('child_process');
+let coreProcess: any, client: any, testModule: any;
 const testModuleUrl = '0.0.0.0:55184';
+
+const testTools = new TestingTools();
 beforeAll(async () => {
-  const options = {
-    env: {
-      REDIS_PORT: 6379,
-      REDIS_HOST: 'localhost',
-      PORT: 3030,
-      ADMIN_SOCKET_PORT: 3032,
-      ...process.env,
-    },
-    cwd: './',
-  };
-  await new Promise(r => setTimeout(r, 3000));
-  exec('sh ./src/tests/scripts/setup.sh');
-  await new Promise(r => setTimeout(r, 5000));
-  coreProcess = exec('node ./dist/bin/www.js', options);
-  await new Promise(r => setTimeout(r, 8000));
-  const channel = createChannel('0.0.0.0:55152', undefined, {
-    'grpc.max_receive_message_length': 1024 * 1024 * 100,
-    'grpc.max_send_message_length': 1024 * 1024 * 100,
-  });
-  const clientFactory = createClientFactory().use(getModuleNameInterceptor('test'));
-  client = clientFactory.create(ConfigDefinition, channel);
+  await testTools.stopRedis();
+  await testTools.startRedis();
+  await testTools.startCore();
+  client = testTools.createClient(ConfigDefinition);
 });
 
 describe('Testing Core package', () => {
