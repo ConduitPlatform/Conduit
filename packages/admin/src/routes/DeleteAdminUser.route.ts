@@ -38,7 +38,7 @@ export function deleteAdminUserRoute() {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
           400,
-          'Only superAdmin can create admin',
+          'Only superAdmin can delete admin',
         );
       }
       await Admin.getInstance().deleteOne({ _id: id });

@@ -6,18 +6,20 @@ import {
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { compare, hash } from 'bcrypt';
+import { isNil } from 'lodash';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { isNil } from 'lodash';
 
-export function changePasswordRoute() {
+export function changeUsersPasswordRoute() {
   return new ConduitRoute(
     {
-      path: '/change-password',
+      path: '/change-user-password/:id',
       action: ConduitRouteActions.POST,
-      description: `Changes authenticated admin user's password.`,
+      description: `Changes authenticated user's password.`,
+      urlParams: {
+        id: ConduitString.Required,
+      },
       bodyParams: {
-        oldPassword: ConduitString.Required,
         newPassword: ConduitString.Required,
       },
     },
@@ -25,26 +27,30 @@ export function changePasswordRoute() {
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      const { oldPassword, newPassword } = params.params!;
-      const admin = params.context!.admin;
+      const { id, newPassword } = params.params!;
+      const loggedInAdmin = params.context!.admin;
 
-      if (isNil(oldPassword) || isNil(newPassword)) {
+      if (!loggedInAdmin.isSuperAdmin) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
           400,
-          'Both old and new password must be provided',
+          'Only superAdmin can change other admins password',
         );
+      }
+      if (isNil(id)) {
+        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
+      }
+      const admin = await Admin.getInstance().findOne({ _id: id });
+      if (isNil(admin)) {
+        throw new ConduitError('NOT_FOUND', 404, 'Admin not found');
       }
 
       const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
-      const passwordsMatch = await compare(oldPassword, admin.password);
 
-      if (!passwordsMatch) {
-        throw new ConduitError('INVALID_ARGUMENTS', 400, 'Incorrect Password');
-      }
       await Admin.getInstance().findByIdAndUpdate(admin._id, {
         password: await hash(newPassword, hashRounds ?? 11),
       });
+
       return { result: { message: 'OK' } };
     },
   );
