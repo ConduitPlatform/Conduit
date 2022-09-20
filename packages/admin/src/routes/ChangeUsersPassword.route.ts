@@ -14,8 +14,8 @@ export function changeUsersPasswordRoute() {
   return new ConduitRoute(
     {
       path: '/change-user-password/:id',
-      action: ConduitRouteActions.POST,
-      description: `Changes authenticated user's password.`,
+      action: ConduitRouteActions.UPDATE,
+      description: `Super Admin changes authenticated user's password.`,
       urlParams: {
         id: ConduitString.Required,
       },
