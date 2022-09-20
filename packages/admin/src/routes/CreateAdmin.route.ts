@@ -26,6 +26,8 @@ export function getCreateAdminRoute() {
     }),
     async (params: ConduitRouteParameters) => {
       const { username, password } = params.params!;
+      const loggedInAdmin = params.context!.admin;
+
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
@@ -37,6 +39,14 @@ export function getCreateAdminRoute() {
       const admin = await Admin.getInstance().findOne({ username });
       if (!isNil(admin)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
+      }
+
+      if (!loggedInAdmin.isSuperAdmin) {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Only superAdmin can create admin',
+        );
       }
       const adminConfig = ConfigController.getInstance().config;
       const hashRounds = adminConfig.auth.hashRounds;

@@ -8,7 +8,7 @@ import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
-const excludedRestRoutes = ['/ready', '/login', '/modules'];
+const excludedRestRoutes = ['/ready', '/login', '/modules', '/verify-twofa'];
 const excludedGqlOperations = [
   '__schema',
   'IntrospectionQuery',

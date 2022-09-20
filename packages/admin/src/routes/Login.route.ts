@@ -1,4 +1,4 @@
-import { Admin } from '../models';
+import { Admin, AdminTwoFactorSecret } from '../models';
 import { isNil } from 'lodash';
 import { comparePasswords, signToken } from '../utils/auth';
 import {
@@ -7,8 +7,10 @@ import {
   ConduitRouteParameters,
   ConduitString,
   ConfigController,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { status } from '@grpc/grpc-js';
 
 export function getLoginRoute() {
   return new ConduitRoute(
@@ -42,7 +44,15 @@ export function getLoginRoute() {
       if (!passwordsMatch) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
+      if (admin.hasTwoFA) {
+        const secret = await AdminTwoFactorSecret.getInstance().findOne({
+          adminId: admin._id,
+        });
+        if (isNil(secret))
+          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
+        return { message: 'OTP required' };
+      }
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
       const token = signToken(

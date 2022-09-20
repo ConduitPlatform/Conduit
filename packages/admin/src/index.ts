@@ -77,6 +77,11 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.deleteAdminUserRoute(),
     adminRoutes.changePasswordRoute(),
     adminRoutes.getReadyRoute(),
+    adminRoutes.enableTwoFaRoute(),
+    adminRoutes.disableTwoFaRoute(),
+    adminRoutes.verifyQrCodeRoute(),
+    adminRoutes.verifyTwoFaRoute(),
+    adminRoutes.changeUsersPasswordRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
@@ -135,7 +140,10 @@ export default class AdminModule extends IConduitAdmin {
     );
     this.grpcSdk
       .waitForExistence('database')
-      .then(() => this.handleDatabase())
+      .then(async () => {
+        await this.handleDatabase();
+        await runMigrations(this.grpcSdk);
+      })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
@@ -384,6 +392,7 @@ export default class AdminModule extends IConduitAdmin {
           return models.Admin.getInstance().create({
             username: 'admin',
             password: result,
+            isSuperAdmin: true,
           });
         }
       })

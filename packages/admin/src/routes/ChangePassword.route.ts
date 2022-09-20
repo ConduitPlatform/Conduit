@@ -6,15 +6,15 @@ import {
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { compare, hash } from 'bcrypt';
-import { isNil } from 'lodash';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { isNil } from 'lodash';
 
 export function changePasswordRoute() {
   return new ConduitRoute(
     {
       path: '/change-password',
-      action: ConduitRouteActions.POST,
+      action: ConduitRouteActions.UPDATE,
       description: `Changes authenticated admin user's password.`,
       bodyParams: {
         oldPassword: ConduitString.Required,
@@ -27,6 +27,7 @@ export function changePasswordRoute() {
     async (params: ConduitRouteParameters) => {
       const { oldPassword, newPassword } = params.params!;
       const admin = params.context!.admin;
+
       if (isNil(oldPassword) || isNil(newPassword)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
@@ -34,6 +35,7 @@ export function changePasswordRoute() {
           'Both old and new password must be provided',
         );
       }
+
       const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
       const passwordsMatch = await compare(oldPassword, admin.password);
 
