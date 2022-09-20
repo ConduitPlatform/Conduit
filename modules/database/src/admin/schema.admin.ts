@@ -253,17 +253,14 @@ export class SchemaAdmin {
       );
     }
 
-    await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.deleteOne(requestedSchema);
-    await this.database
-      .getSchemaModel('CustomEndpoints')
-      .model.deleteMany({ selectedSchema: id });
     const message = await this.database.deleteSchema(
       requestedSchema.name,
       deleteData,
       'database',
     );
+    await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.deleteMany({ selectedSchema: id });
 
     this.schemaController.refreshRoutes();
     this.customEndpointController.refreshEndpoints();
