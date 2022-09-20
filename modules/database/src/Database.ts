@@ -92,16 +92,9 @@ export default class DatabaseModule extends ManagedModule<void> {
       !declaredSchemaExists,
     );
     await this._activeAdapter.retrieveForeignSchemas();
-    this.updateHealth(HealthCheckStatus.SERVING);
-    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (model.name === '_DeclaredSchema') return [];
-      return this._activeAdapter.createSchemaFromAdapter(model, false, true);
-    });
-
-    await Promise.all(modelPromises);
-    await runMigrations(this._activeAdapter);
-
     await this._activeAdapter.recoverSchemasFromDatabase();
+    await runMigrations(this._activeAdapter);
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   async onRegister() {

@@ -217,7 +217,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
         return schema;
       })
       .map((model: ConduitSchema) => {
-        return this.createSchemaFromAdapter(model);
+        return this.createSchemaFromAdapter(
+          model,
+          !!model.modelOptions.conduit?.imported,
+          true,
+          false,
+          false,
+        );
       });
 
     await Promise.all(models);
