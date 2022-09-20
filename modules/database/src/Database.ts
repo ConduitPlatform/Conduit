@@ -170,7 +170,9 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async initializeMetrics() {
-    // registered_schemas_total incremented in createSchemaFromAdapter() during startup model sync
+    // @improve-metrics
+    // TODO: This should initialize 'registered_schemas_total' as it's called on [POST] @ /metrics/reset
+    // registered_schemas_total currently incremented in createSchemaFromAdapter() during startup model sync
     const customEndpointsTotal = await this._activeAdapter
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments({});

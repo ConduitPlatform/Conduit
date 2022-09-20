@@ -17,12 +17,21 @@ export class ConduitMetrics {
   private readonly Registry: client.Registry;
   private _httpServer: MetricsServer;
 
-  constructor(moduleName: string, instance: string) {
+  constructor(
+    moduleName: string,
+    instance: string,
+    initializeMetrics?: () => Promise<void>,
+  ) {
     this.moduleName = moduleName;
     this.instance = instance;
     const globalRegistry = new client.Registry();
     this.Registry = client.Registry.merge([globalRegistry, niceGrpcRegistry]);
-    this._httpServer = new MetricsServer(moduleName, instance, this.Registry);
+    this._httpServer = new MetricsServer(
+      moduleName,
+      instance,
+      this.Registry,
+      initializeMetrics,
+    );
     this._httpServer.initialize();
     this.collectDefaultMetrics();
   }

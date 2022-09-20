@@ -136,7 +136,11 @@ export default class Authentication extends ManagedModule<Config> {
     }, 800);
   }
 
-  async initializeMetrics() {}
+  async initializeMetrics() {
+    // @improve-metrics
+    // TODO: This should initialize 'logged_in_users_total' based on valid tokens
+    // Gauge value should also decrease on latest token expiry.
+  }
 
   // gRPC Service
   // produces login credentials for a user without them having to login
