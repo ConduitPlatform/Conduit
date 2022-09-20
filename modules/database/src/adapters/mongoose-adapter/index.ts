@@ -259,13 +259,16 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     this.models['_DeclaredSchema']
       .findOne(JSON.stringify({ name: schemaName }))
-      .then(model => {
+      .then(async model => {
         if (model) {
           this.models['_DeclaredSchema']
             .deleteOne(JSON.stringify({ name: schemaName }))
             .catch((e: Error) => {
               throw new GrpcError(status.INTERNAL, e.message);
             });
+          ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+            imported: String(!!model.modelOptions.conduit?.imported),
+          });
         }
       });
 

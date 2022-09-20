@@ -92,6 +92,9 @@ export default class DatabaseModule extends ManagedModule<void> {
       models.DeclaredSchema,
       false,
       !declaredSchemaExists,
+      false,
+      false,
+      true,
     );
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
@@ -170,9 +173,20 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async initializeMetrics() {
-    // @improve-metrics
-    // TODO: This should initialize 'registered_schemas_total' as it's called on [POST] @ /metrics/reset
-    // registered_schemas_total currently incremented in createSchemaFromAdapter() during startup model sync
+    const schemas = await this._activeAdapter
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({});
+    const importedCount = schemas.filter(
+      (schema: ConduitSchema) => schema.modelOptions.conduit?.imported,
+    ).length;
+    ConduitGrpcSdk.Metrics?.set(
+      'registered_schemas_total',
+      schemas.length - importedCount,
+      { imported: 'false' },
+    );
+    ConduitGrpcSdk.Metrics?.set('registered_schemas_total', importedCount, {
+      imported: 'true',
+    });
     const customEndpointsTotal = await this._activeAdapter
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments({});

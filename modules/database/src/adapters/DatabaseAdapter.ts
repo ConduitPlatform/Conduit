@@ -47,6 +47,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * @param {boolean} cndPrefix Whether to prefix the collection name with a Conduit system schema identifier (cnd_)
    * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
    * @param {boolean} instanceSync Do not republish schema changes for multi-instance sync calls
+   * @param {boolean} startupSync Do not re-increase metrics on startup model sync
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
@@ -54,6 +55,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     cndPrefix = true,
     gRPC = false,
     instanceSync = false,
+    startupSync = false,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -98,7 +100,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = this._createSchemaFromAdapter(schema);
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    if (!schemaUpdate) {
+    if (!startupSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
       });
@@ -224,6 +226,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           true,
           false,
           false,
+          true,
         );
       });
 
