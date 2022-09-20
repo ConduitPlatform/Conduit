@@ -32,9 +32,9 @@ const modelOptions = {
   timestamps: true,
   conduit: {
     permissions: {
-      extendable: true,
+      extendable: false,
       canCreate: false,
-      canModify: 'ExtensionOnly',
+      canModify: 'Nothing',
       canDelete: false,
     },
   },

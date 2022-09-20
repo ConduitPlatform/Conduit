@@ -5,7 +5,7 @@ import {
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { Admin } from '../models';
+import { Admin, AdminTwoFactorSecret } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 
@@ -30,6 +30,8 @@ export function disableTwoFaRoute() {
         twoFaMethod: null,
         hasTwoFA: false,
       });
+
+      await AdminTwoFactorSecret.getInstance().deleteOne({ adminId: admin._id });
 
       return { result: { message: 'OK' } };
     },

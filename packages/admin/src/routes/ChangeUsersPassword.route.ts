@@ -13,7 +13,7 @@ import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/her
 export function changeUsersPasswordRoute() {
   return new ConduitRoute(
     {
-      path: '/change-user-password/:id',
+      path: '/change-password/:adminId',
       action: ConduitRouteActions.UPDATE,
       description: `Super Admin changes authenticated user's password.`,
       urlParams: {

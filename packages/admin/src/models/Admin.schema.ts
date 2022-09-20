@@ -1,6 +1,6 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
-const schema = {
+export const schema = {
   _id: TYPE.ObjectId,
   username: {
     type: TYPE.String,
@@ -14,10 +14,6 @@ const schema = {
     type: TYPE.Boolean,
     required: false,
   },
-  twoFaMethod: {
-    type: TYPE.String,
-    required: false,
-  },
   isSuperAdmin: {
     type: TYPE.Boolean,
     required: true,
@@ -26,6 +22,7 @@ const schema = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
+
 const modelOptions = {
   timestamps: true,
   conduit: {
@@ -47,7 +44,6 @@ export class Admin extends ConduitActiveSchema<Admin> {
   createdAt!: Date;
   updatedAt!: Date;
   hasTwoFA?: boolean;
-  twoFaMethod?: string;
   isSuperAdmin!: boolean;
 
   private constructor(database: DatabaseProvider) {

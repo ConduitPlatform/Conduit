@@ -45,17 +45,13 @@ export function getLoginRoute() {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
       if (admin.hasTwoFA) {
-        if (admin.twoFaMethod === 'qrcode') {
-          const secret = await AdminTwoFactorSecret.getInstance().findOne({
-            adminId: admin._id,
-          });
-          if (isNil(secret))
-            throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
+        const secret = await AdminTwoFactorSecret.getInstance().findOne({
+          adminId: admin._id,
+        });
+        if (isNil(secret))
+          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
-          return { message: 'OTP required' };
-        } else {
-          throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
-        }
+        return { message: 'OTP required' };
       }
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;

@@ -13,12 +13,6 @@ export default {
       default: 72000,
     },
   },
-  twofa: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-  },
   hostUrl: {
     type: 'String',
     default: '', // to be generated in set config
