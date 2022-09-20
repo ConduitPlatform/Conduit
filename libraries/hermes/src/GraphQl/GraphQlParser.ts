@@ -4,6 +4,7 @@ import {
   ConduitRouteOption,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
+import { TypeRegistry } from '../classes';
 
 export interface ResolverDefinition {
   [key: string]: {
@@ -33,6 +34,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean,
   ): ParseResult {
+    if (!isInput) this.knownTypes.add(name);
     this.isInput = isInput;
     this.result = this.getInitializedResult();
     this.result.typeString = super.extractTypesInternal(name, fields).finalString;
@@ -73,6 +75,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
       case 'JSON':
         return 'JSONObject';
       default:
+        this.requestedTypes.add(conduitType);
         return conduitType;
     }
   }
@@ -81,13 +84,27 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     name: string,
     value: string,
-    isRequired: boolean = false,
+    isRequired: boolean,
     isArray: boolean,
+    parentField: string,
   ): void {
-    processingObject.typeString +=
-      `${name}: ${isArray ? '[' : ''}` +
-      this.getType(value) +
-      `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
+    if (!isArray && name === parentField) {
+      const typeFields = TypeRegistry.getInstance().getType(value);
+      if (typeFields) {
+        processingObject.typeString = this.extractTypes(
+          name,
+          typeFields,
+          false,
+        ).typeString;
+      } else {
+        processingObject.typeString = ''; // missing type
+      }
+    } else {
+      processingObject.typeString +=
+        `${name}: ${isArray ? '[' : ''}` +
+        this.getType(value) +
+        `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
+    }
   }
 
   protected getResultFromObject(

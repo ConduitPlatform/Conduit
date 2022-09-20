@@ -26,6 +26,7 @@ const incrementDbQueries = () =>
 export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   model: ModelCtor<any>;
   originalSchema: ConduitSchema;
+  fieldHash: string;
   excludedFields: string[];
   relations: Indexable;
 
@@ -44,7 +45,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     deepdash.eachDeep(
       this.originalSchema.fields,
-      (value: Indexable, key: string, parentValue: Indexable, context: Indexable) => {
+      (value: Indexable, key: string, parentValue: Indexable) => {
         if (!parentValue?.hasOwnProperty(key!)) {
           return true;
         }

@@ -38,8 +38,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
-    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
-    delete userFields.hashedPassword;
     routingManager.route(
       {
         path: '/local/new',
@@ -51,7 +49,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         },
         middlewares: [],
       },
-      new ConduitRouteReturnDefinition('RegisterResponse', userFields),
+      new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
     );
 
@@ -81,6 +79,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/forgot-password',
           action: ConduitRouteActions.POST,
+          description: `Generates a password reset token and forwards a verification link to the user's email address.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -94,7 +93,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           path: '/reset-password',
           action: ConduitRouteActions.POST,
           description: `Used after the user clicks on the 'forgot password' link and
-                 requires the token from the url and the new password`,
+                        requires the token from the url and the new password.`,
           bodyParams: {
             passwordResetToken: ConduitString.Required,
             password: ConduitString.Required,
@@ -108,7 +107,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/local/resend-verification',
           action: ConduitRouteActions.POST,
-          description: `Used to resend email verification after new user is created`,
+          description: `Used to resend email verification after new user is created.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -153,7 +152,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify user email. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -166,7 +165,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-change-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify an email address change. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify an email address change. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },

@@ -19,6 +19,7 @@ export default function setConfigRoute(
     {
       path: `/config/${moduleName}`,
       action: ConduitRouteActions.PATCH,
+      description: `Updates ${moduleName} module configuration.`,
       bodyParams: {
         config: { type: configSchema, required: true },
       },

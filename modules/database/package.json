@@ -29,6 +29,7 @@
     "mongodb-schema": "^9.0.0",
     "mongoose": "6.4.6",
     "mongoose-deep-populate": "^3.2.0",
+    "object-hash": "^3.0.0",
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.21.2",

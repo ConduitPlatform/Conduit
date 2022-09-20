@@ -27,11 +27,12 @@ export class PushNotificationsRoutes {
           platform: TYPE.String,
         },
         action: ConduitRouteActions.POST,
+        description: `Sets the given notification token for a user.`,
         middlewares: ['authMiddleware'],
         path: '/token',
       },
       new ConduitRouteReturnDefinition('SetNotificationTokenResponse', {
-        newTokenDocument: NotificationToken.getInstance().fields,
+        newTokenDocument: NotificationToken.getInstance().fields, // @type-inconsistency
       }),
       this.handlers.setNotificationToken.bind(this.handlers),
     );

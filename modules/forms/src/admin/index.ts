@@ -53,6 +53,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.GET,
+          description: `Returns queried forms and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -61,7 +62,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetForms', {
-          forms: [Forms.getInstance().fields],
+          forms: [Forms.name],
           count: ConduitNumber.Required,
         }),
         'getForms',
@@ -70,6 +71,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.POST,
+          description: `Creates a new form.`,
           bodyParams: {
             name: ConduitString.Required,
             fields: ConduitJson.Required,
@@ -85,6 +87,7 @@ export class AdminHandlers {
         {
           path: '/forms/:formId',
           action: ConduitRouteActions.UPDATE,
+          description: `Updates a form.`,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
           },
@@ -103,12 +106,13 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes queried forms.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
         },
         new ConduitRouteReturnDefinition('DeleteForms', {
-          forms: [Forms.getInstance().fields],
+          forms: [Forms.name],
           count: ConduitString.Required,
         }),
         'deleteForms',
@@ -117,6 +121,7 @@ export class AdminHandlers {
         {
           path: '/replies/:formId',
           action: ConduitRouteActions.GET,
+          description: `Returns queried form replies and their total count.`,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
           },
@@ -127,7 +132,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetFormReplies', {
-          replies: [FormReplies.getInstance().fields],
+          replies: [FormReplies.name],
           count: ConduitNumber.Required,
         }),
         'getFormReplies',
