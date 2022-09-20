@@ -46,7 +46,7 @@ describe('Testing Core package', () => {
         data: expect.any(String),
       });
     } catch (e) {
-      expect(e).toMatch('error');
+      throw e;
     }
   });
 });
@@ -66,6 +66,7 @@ describe('Testing module related rpc calls', () => {
       throw e;
     }
   });
+
   test('Getting Module List', async () => {
     const res = await testTools.client.moduleList({});
     try {
@@ -78,7 +79,7 @@ describe('Testing module related rpc calls', () => {
       throw e;
     }
   });
-  //
+
   test('Module Exists', async () => {
     const res = await testTools.client.moduleExists({ moduleName: 'test' });
     try {
@@ -114,7 +115,7 @@ describe('Testing module related rpc calls', () => {
         data: expect.any(String),
       });
     } catch (e) {
-      expect(e).toMatch('error');
+      throw e;
     }
   });
 
@@ -131,7 +132,32 @@ describe('Testing module related rpc calls', () => {
         result: expect.any(String),
       });
     } catch (e) {
-      expect(e).toMatch('error');
+      throw e;
+    }
+  });
+
+  test('Module Health Probe', async () => {
+    const res = await testTools.client.moduleHealthProbe({
+      moduleName: 'test',
+      url: testModuleUrl,
+      status: 1,
+    });
+    try {
+      expect(res).toMatchObject({});
+    } catch (e) {
+      throw e;
+    }
+  });
+
+  test('Watch Modules', async () => {
+    const call = testTools.client.watchModules({});
+    const res = await testTools.client.registerModule({
+      moduleName: 'test',
+      url: testModuleUrl,
+      healthStatus: 1,
+    });
+    for await (const data of call) {
+      //need to fetch the module list
     }
   });
 });

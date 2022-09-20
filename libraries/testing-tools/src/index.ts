@@ -11,7 +11,7 @@ export default class TestingTools<T extends CompatServiceDefinition> {
 
   constructor(private readonly serverAddress: string, serviceDefinition: T) {
     const channel = createChannel(this.serverAddress, undefined, {
-      'grpc.max_receive_message_length': 1024 * 1024 * 100,
+      'grpc.max _receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
     const clientFactory = createClientFactory().use(getModuleNameInterceptor('test'));
