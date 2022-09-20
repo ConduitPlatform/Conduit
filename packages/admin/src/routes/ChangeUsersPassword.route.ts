@@ -17,7 +17,7 @@ export function changeUsersPasswordRoute() {
       action: ConduitRouteActions.UPDATE,
       description: `Super Admin changes authenticated user's password.`,
       urlParams: {
-        id: ConduitString.Required,
+        adminId: ConduitString.Required,
       },
       bodyParams: {
         newPassword: ConduitString.Required,
@@ -27,7 +27,7 @@ export function changeUsersPasswordRoute() {
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
-      const { id, newPassword } = params.params!;
+      const { adminId, newPassword } = params.params!;
       const loggedInAdmin = params.context!.admin;
 
       if (!loggedInAdmin.isSuperAdmin) {
@@ -37,10 +37,10 @@ export function changeUsersPasswordRoute() {
           'Only superAdmin can change other admins password',
         );
       }
-      if (isNil(id)) {
+      if (isNil(adminId)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
       }
-      const admin = await Admin.getInstance().findOne({ _id: id });
+      const admin = await Admin.getInstance().findOne({ _id: adminId });
       if (isNil(admin)) {
         throw new ConduitError('NOT_FOUND', 404, 'Admin not found');
       }
