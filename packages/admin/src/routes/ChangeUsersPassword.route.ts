@@ -15,7 +15,7 @@ export function changeUsersPasswordRoute() {
     {
       path: '/change-password/:adminId',
       action: ConduitRouteActions.UPDATE,
-      description: `Super Admin changes authenticated user's password.`,
+      description: `Changes target admin user's password as a super admin.`,
       urlParams: {
         adminId: ConduitString.Required,
       },
