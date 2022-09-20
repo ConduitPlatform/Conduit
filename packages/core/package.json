@@ -15,8 +15,7 @@
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
     "prepare": "npm run build",
-    "prepublish": "npm run build",
-    "build:test": "npm run build && cp src/tests/mocks/module/test.proto ./dist/tests/mocks/module/"
+    "prepublish": "npm run build"
   },
   "license": "ISC",
   "dependencies": {
