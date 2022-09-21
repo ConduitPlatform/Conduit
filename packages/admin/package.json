@@ -36,7 +36,8 @@
     "crypto": "^1.0.1",
     "helmet": "^5.1.0",
     "jsonwebtoken": "^8.5.1",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "node-2fa": "^2.0.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
