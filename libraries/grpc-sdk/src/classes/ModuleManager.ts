@@ -69,9 +69,10 @@ export class ModuleManager<T> {
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.module.handleConfigSyncUpdate();
+    await this.module.registerMetrics();
     await this.module.startGrpcServer();
-    await this.initializeMetrics();
     await this.module.onServerStart();
+    await this.module.initializeMetrics();
     await this.module.preRegister();
   }
 
@@ -88,13 +89,6 @@ export class ModuleManager<T> {
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.module.onConfig();
-    }
-  }
-
-  private initializeMetrics() {
-    if (process.env['METRICS_PORT']) {
-      this.grpcSdk.initializeDefaultMetrics();
-      this.module.initializeMetrics();
     }
   }
 }

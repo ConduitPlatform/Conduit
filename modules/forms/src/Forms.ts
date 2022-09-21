@@ -12,10 +12,11 @@ import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
 import path from 'path';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'forms.proto'),
     protoDescription: 'forms.Forms',
@@ -38,6 +39,7 @@ export default class Forms extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
+    await this.registerSchemas();
     await this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {
         this.updateHealth(HealthCheckStatus.SERVING);
@@ -45,12 +47,6 @@ export default class Forms extends ManagedModule<Config> {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);
       }
     });
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   async onRegister() {
@@ -73,7 +69,6 @@ export default class Forms extends ManagedModule<Config> {
     } else {
       if (!this.isRunning) {
         if (!this.grpcSdk.isAvailable('email')) return;
-        await this.registerSchemas();
         await this.grpcSdk.emailProvider!.registerTemplate(FormSubmissionTemplate);
         this.formController = new FormsController(this.grpcSdk);
         this.adminRouter = new AdminHandlers(
@@ -102,5 +97,10 @@ export default class Forms extends ManagedModule<Config> {
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
+  }
+
+  async initializeMetrics() {
+    const formsTotal = await models.Forms.getInstance().countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('forms_total', formsTotal);
   }
 }

@@ -29,7 +29,7 @@ import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { GrpcError, HealthCheckStatus, MetricConfiguration, MetricType } from './types';
+import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
@@ -37,13 +37,6 @@ import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
-import defaultMetrics from './metrics/config/defaults';
-import {
-  CounterConfiguration,
-  GaugeConfiguration,
-  HistogramConfiguration,
-  SummaryConfiguration,
-} from 'prom-client';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -402,30 +395,6 @@ export default class ConduitGrpcSdk {
           ConduitGrpcSdk.Logger.error(err);
         }
       });
-  }
-
-  initializeDefaultMetrics() {
-    for (const metric of Object.values(defaultMetrics)) {
-      this.registerMetric(metric.type, metric.config);
-    }
-  }
-
-  registerMetric(type: MetricType, config: MetricConfiguration) {
-    config.name = `conduit_${config.name}`;
-    switch (type) {
-      case MetricType.Counter:
-        ConduitGrpcSdk.Metrics?.createCounter(config as CounterConfiguration<any>);
-        break;
-      case MetricType.Gauge:
-        ConduitGrpcSdk.Metrics?.createGauge(config as GaugeConfiguration<any>);
-        break;
-      case MetricType.Histogram:
-        ConduitGrpcSdk.Metrics?.createHistogram(config as HistogramConfiguration<any>);
-        break;
-      case MetricType.Summary:
-        ConduitGrpcSdk.Metrics?.createSummary(config as SummaryConfiguration<any>);
-        break;
-    }
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {

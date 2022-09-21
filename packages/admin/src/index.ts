@@ -37,6 +37,7 @@ import convict from 'convict';
 import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
+import metricsSchema from './metrics';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -97,8 +98,10 @@ export default class AdminModule extends IConduitAdmin {
       this.grpcSdk,
       1000,
       swaggerRouterMetadata,
+      { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
+    this.registerMetrics();
   }
 
   private getHttpPort() {
@@ -220,6 +223,12 @@ export default class AdminModule extends IConduitAdmin {
     } else {
       this._router.stopSockets();
     }
+  }
+
+  private registerMetrics() {
+    Object.values(metricsSchema).forEach(metric => {
+      ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
+    });
   }
 
   // grpc

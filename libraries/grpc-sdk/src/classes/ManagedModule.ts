@@ -11,7 +11,8 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
-  abstract readonly configSchema?: object;
+  protected abstract readonly configSchema?: object;
+  protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
   service?: ConduitService;
 
@@ -83,10 +84,24 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   async onConfig() {}
 
   /**
-   * This is triggered when a module needs to initialize its own custom metric
-   * types and configuration by using the sdk's ConduitMetrics.
+   * Registers common and module-specific metric types.
    */
-  initializeMetrics() {}
+  async registerMetrics() {
+    if (ConduitGrpcSdk.Metrics) {
+      ConduitGrpcSdk.Metrics.initializeDefaultMetrics();
+      if (this.metricsSchema) {
+        Object.values(this.metricsSchema).forEach(metric => {
+          ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
+        });
+      }
+    }
+  }
+
+  /**
+   * Initializes metric startup values.
+   * Implemented by individual modules.
+   */
+  async initializeMetrics() {}
 
   async createGrpcServer(servicePort?: string) {
     this.grpcServer = new GrpcServer(servicePort);

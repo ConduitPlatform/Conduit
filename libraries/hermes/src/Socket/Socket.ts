@@ -33,6 +33,11 @@ export class SocketController extends ConduitRouter {
     grpcSdk: ConduitGrpcSdk,
     expressApp: Application,
     redisDetails: { host: string; port: number },
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
   ) {
     super(grpcSdk);
     this.httpServer = createServer(expressApp);
@@ -66,6 +71,11 @@ export class SocketController extends ConduitRouter {
         ObjectHash.sha1(this._registeredNamespaces.get(namespace))
       ) {
         this.removeNamespace(namespace);
+        if (this.metrics?.registeredRoutes) {
+          ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+            transport: 'socket',
+          });
+        }
       } else {
         return;
       }

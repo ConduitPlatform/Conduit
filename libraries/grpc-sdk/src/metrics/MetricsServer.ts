@@ -15,10 +15,6 @@ export class MetricsServer {
   }
 
   initialize() {
-    this._initialize();
-  }
-
-  private _initialize() {
     const server = express();
     const port = this.getHttpPort();
     const url = '0.0.0.0:' + port.toString();
@@ -35,12 +31,6 @@ export class MetricsServer {
     server.get('/metrics', async (req: express.Request, res: express.Response) => {
       const metrics = await this.Registry.metrics();
       return res.status(200).send(metrics);
-    });
-    server.get('/metrics/reset', async (req: express.Request, res: express.Response) => {
-      this.Registry.resetMetrics();
-      return res.status(200).send({
-        message: 'Metrics reset',
-      });
     });
     return server;
   }

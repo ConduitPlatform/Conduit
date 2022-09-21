@@ -37,10 +37,11 @@ import { CustomEndpointController } from './controllers/customEndpoints/customEn
 import { convertToGrpcSchema } from './utils/grpcSchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -82,6 +83,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     this._activeAdapter.setGrpcSdk(this.grpcSdk);
     this._activeAdapter.connect();
     await this._activeAdapter.ensureConnected();
+    await this.registerMetrics();
   }
 
   async onServerStart() {
@@ -90,6 +92,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       models.DeclaredSchema,
       false,
       !declaredSchemaExists,
+      false,
+      false,
     );
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
@@ -130,12 +134,6 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
-  }
-
   private onCoreHealthChange(state: HealthCheckStatus) {
     const boundFunctionRef = this.onCoreHealthChange.bind(this);
     if (state === HealthCheckStatus.SERVING) {
@@ -171,6 +169,13 @@ export default class DatabaseModule extends ManagedModule<void> {
         boundFunctionRef,
       );
     }
+  }
+
+  async initializeMetrics() {
+    const customEndpointsTotal = await this._activeAdapter
+      .getSchemaModel('CustomEndpoints')
+      .model.countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('custom_endpoints_total', customEndpointsTotal);
   }
 
   // gRPC Service

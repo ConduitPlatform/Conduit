@@ -237,6 +237,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
             .catch((e: Error) => {
               throw new GrpcError(status.INTERNAL, e.message);
             });
+          if (!instanceSync) {
+            ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+              imported: String(!!model.modelOptions.conduit?.imported),
+            });
+          }
         }
       });
     delete this.models[schemaName];

@@ -34,6 +34,11 @@ export class RestController extends ConduitRouter {
       globalSecurityHeaders: [],
       setExtraRouteHeaders(): void {},
     },
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
   ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
@@ -63,6 +68,11 @@ export class RestController extends ConduitRouter {
       this.refreshRouter();
     } else {
       this.addRoute(path, router);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'rest',
+        });
+      }
     }
   }
 
@@ -73,6 +83,11 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'rest',
+        });
+      }
     }
   }
 
