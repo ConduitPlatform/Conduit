@@ -34,19 +34,21 @@ export class ConduitMetrics {
   }
 
   registerMetric(type: MetricType, config: MetricConfiguration) {
-    config.name = `conduit_${config.name}`;
+    if (this.getMetric(config.name)) return;
+    const metricConfig = JSON.parse(JSON.stringify(config));
+    metricConfig.name = this.addPrefix(config.name);
     switch (type) {
       case MetricType.Counter:
-        this.createCounter(config as CounterConfiguration<any>);
+        this.createCounter(metricConfig as CounterConfiguration<any>);
         break;
       case MetricType.Gauge:
-        this.createGauge(config as GaugeConfiguration<any>);
+        this.createGauge(metricConfig as GaugeConfiguration<any>);
         break;
       case MetricType.Histogram:
-        this.createHistogram(config as HistogramConfiguration<any>);
+        this.createHistogram(metricConfig as HistogramConfiguration<any>);
         break;
       case MetricType.Summary:
-        this.createSummary(config as SummaryConfiguration<any>);
+        this.createSummary(metricConfig as SummaryConfiguration<any>);
         break;
     }
   }
