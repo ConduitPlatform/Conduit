@@ -16,46 +16,50 @@ export function enableTwoFaRoute() {
       path: '/enable-twofa',
       action: ConduitRouteActions.UPDATE,
       bodyParams: {
-        method: ConduitString.Required,
+        enableTwoFa: ConduitString.Required,
       },
     },
     new ConduitRouteReturnDefinition('EnableTwoFaResponse', {
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
+      const { enableTwoFa } = params.params!;
       const admin = params.context!.admin;
       const context = params.context!;
 
       if (isNil(context) || isNil(admin)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
       }
-      if (admin.hasTwoFA) {
-        return '2FA already enabled';
+      if (enableTwoFa === true) {
+        if (admin.hasTwoFA) {
+          return '2FA already enabled';
+        }
+
+        const secret = generateSecret({
+          name: 'Conduit',
+          account: admin.username,
+        });
+
+        await AdminTwoFactorSecret.getInstance().deleteMany({
+          adminId: admin._id,
+        });
+
+        await AdminTwoFactorSecret.getInstance().create({
+          adminId: admin._id,
+          secret: secret.secret,
+          uri: secret.uri,
+          qr: secret.qr,
+        });
+
+        return secret.qr.toString();
+      } else {
+        await Admin.getInstance().findByIdAndUpdate(admin._id, {
+          hasTwoFA: false,
+        });
+        await AdminTwoFactorSecret.getInstance().deleteOne({ adminId: admin._id });
+
+        return { result: { message: 'OK' } };
       }
-
-      const secret = generateSecret({
-        name: 'Conduit',
-        account: admin.username,
-      });
-
-      await AdminTwoFactorSecret.getInstance().deleteMany({
-        adminId: admin._id,
-      });
-
-      await AdminTwoFactorSecret.getInstance().create({
-        adminId: admin._id,
-        secret: secret.secret,
-        uri: secret.uri,
-        qr: secret.qr,
-      });
-
-      await Admin.getInstance().findByIdAndUpdate(admin._id, {
-        twoFaMethod: 'qrcode',
-      });
-
-      return secret.qr.toString();
-
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
     },
   );
 }

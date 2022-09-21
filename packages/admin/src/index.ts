@@ -78,7 +78,6 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.changePasswordRoute(),
     adminRoutes.getReadyRoute(),
     adminRoutes.enableTwoFaRoute(),
-    adminRoutes.disableTwoFaRoute(),
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
