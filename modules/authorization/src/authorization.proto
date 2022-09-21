@@ -85,6 +85,7 @@ message Decision {
 service Authorization {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc DefineResource(Resource) returns (Empty);
+  rpc UpdateResourceDefinition(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc FindRelation(FindRelation) returns (Relation);
   rpc Check(PermissionCheck) returns (Decision);

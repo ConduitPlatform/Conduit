@@ -22,6 +22,16 @@ export class ResourceController {
     return await ResourceDefinition.getInstance().create(resource);
   }
 
+  //edit resource
+  async updateResourceDefinition(name: string, resource: ResourceDefinition) {
+    const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
+    if (!resourceDefinition) throw new Error('Resource not found');
+    return await ResourceDefinition.getInstance().findByIdAndUpdate(
+      resourceDefinition._id,
+      resource,
+    );
+  }
+
   async deleteResource(name: string) {
     //todo should also trigger relation deletions
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });

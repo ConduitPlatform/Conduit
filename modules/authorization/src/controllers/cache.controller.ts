@@ -2,15 +2,20 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 export namespace RuleCache {
-  function storeResolution(
+  export function storeResolution(
     grpcSdk: ConduitGrpcSdk,
     computedTuple: string,
     decision: boolean,
   ) {
-    grpcSdk.state!.setKey(`ruleCache:${computedTuple}`, Boolean(decision).toString());
+    // 6s TTL
+    grpcSdk.state!.setKey(
+      `ruleCache:${computedTuple}`,
+      Boolean(decision).toString(),
+      6000,
+    );
   }
 
-  function findResolution(
+  export function findResolution(
     grpcSdk: ConduitGrpcSdk,
     computedTuple: string,
   ): Promise<boolean | null> {

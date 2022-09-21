@@ -2,18 +2,25 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { ResourceDefinition } from '../models/ResourceDefinition.schema';
 import { Relationship } from '../models/Relationship.schema';
+import { IndexController } from './index.controller';
 
 export class RelationsController {
   private static _instance: RelationsController;
 
-  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  private constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly indexController: IndexController,
+  ) {}
 
-  getInstance(grpcSdk?: ConduitGrpcSdk) {
+  getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk) {
-      return (RelationsController._instance = new RelationsController(grpcSdk));
+    if (grpcSdk && indexController) {
+      return (RelationsController._instance = new RelationsController(
+        grpcSdk,
+        indexController,
+      ));
     }
-    throw new Error('No grpcSdk instance provided!');
+    throw new Error('Missing grpcSdk or indexController!');
   }
 
   async createRelation(subject: string, relation: string, object: string) {
@@ -48,7 +55,7 @@ export class RelationsController {
       resource: object,
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-
+    await this.indexController.constructRelationIndex(subject, relation, object);
     return relationResource;
   }
 
@@ -58,9 +65,13 @@ export class RelationsController {
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     if (!relationResource) throw new Error('Relation does not exist');
-    return await Relationship.getInstance().deleteOne({
+    await Relationship.getInstance().deleteOne({
       computedTuple: computeRelationTuple(subject, relation, object),
     });
+
+    await this.indexController.removeRelationIndex(subject, relation, object);
+
+    return;
   }
 
   async getRelation(subject: string, relation: string, object: string) {
