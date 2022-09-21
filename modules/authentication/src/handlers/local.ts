@@ -70,7 +70,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
         accessToken: ConduitString.Optional,
         message: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
-        twoFaQrToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
     );
@@ -424,7 +423,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
           token: uuid(),
         });
-        return { message: 'OTP required', twoFaQrToken: qrVerificationToken.token };
+        return { message: 'OTP required', accessToken: qrVerificationToken.token };
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
       }
