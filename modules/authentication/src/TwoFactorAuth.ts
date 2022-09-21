@@ -1,11 +1,12 @@
 import * as twoFactor from 'node-2fa';
 import ConduitGrpcSdk, { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, TwoFactorSecret, User } from './models';
+import { AccessToken, RefreshToken, Token, TwoFactorSecret, User } from './models';
 import { isNil } from 'lodash';
 import { AuthUtils } from './utils/auth';
 import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import moment from 'moment';
+import { TokenType } from './constants/TokenType';
 
 export namespace TwoFactorAuth {
   export function generateSecret(options?: { name: string; account: string }) {
@@ -24,8 +25,22 @@ export namespace TwoFactorAuth {
     grpcSdk: ConduitGrpcSdk,
     clientId: string,
     user: User,
+    token: string,
     code: string,
   ): Promise<{ userId: string; accessToken: string; refreshToken: string }> {
+    const qrVerificationToken = await Token.getInstance().findOne({
+      userId: user._id,
+      type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
+      token: token,
+    });
+    if (isNil(qrVerificationToken))
+      throw new GrpcError(status.UNAUTHENTICATED, 'QR verification token not found');
+    await Token.getInstance()
+      .deleteMany({ user: user._id, token: token })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+
     const secret = await TwoFactorSecret.getInstance().findOne({
       userId: user._id,
     });

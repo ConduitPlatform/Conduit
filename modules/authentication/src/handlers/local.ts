@@ -70,6 +70,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         accessToken: ConduitString.Optional,
         message: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
+        twoFaQrToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
     );
@@ -183,6 +184,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
             code: ConduitString.Required,
+            token: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
@@ -408,7 +410,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
         });
         if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
-        return { message: 'OTP required' };
+
+        await Token.getInstance()
+          .deleteMany({
+            userId: user._id,
+            type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        const qrVerificationToken = await Token.getInstance().create({
+          userId: user._id,
+          type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
+          token: uuid(),
+        });
+        return { message: 'OTP required', twoFaQrToken: qrVerificationToken.token };
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
       }
@@ -866,7 +882,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const clientId = context.clientId;
-    const { email, code } = call.request.params;
+    const { email, code, token } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -880,7 +896,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
         code,
       );
     } else if (user.twoFaMethod == 'qrcode') {
-      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, code);
+      if (!token) throw new GrpcError(status.UNAUTHENTICATED, 'No token provided');
+      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, token, code);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
