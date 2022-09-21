@@ -1,4 +1,5 @@
 import {
+  ConduitBoolean,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
@@ -10,16 +11,16 @@ import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/her
 import { status } from '@grpc/grpc-js';
 import { generateSecret } from '../utils/auth';
 
-export function enableTwoFaRoute() {
+export function toggleTwoFaRoute() {
   return new ConduitRoute(
     {
-      path: '/enable-twofa',
+      path: '/toggle-twofa',
       action: ConduitRouteActions.UPDATE,
       bodyParams: {
-        enableTwoFa: ConduitString.Required,
+        enableTwoFa: ConduitBoolean.Required,
       },
     },
-    new ConduitRouteReturnDefinition('EnableTwoFaResponse', {
+    new ConduitRouteReturnDefinition('ToggleTwoFaResponse', {
       message: ConduitString.Required,
     }),
     async (params: ConduitRouteParameters) => {
