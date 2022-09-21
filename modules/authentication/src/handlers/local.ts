@@ -389,7 +389,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         await Token.getInstance()
           .deleteMany({
             userId: user._id,
-            type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+            type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
           })
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
@@ -397,7 +397,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
         await Token.getInstance().create({
           userId: user._id,
-          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+          type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
           token: verificationSid,
         });
 
@@ -892,7 +892,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         this.grpcSdk,
         clientId,
         user,
-        TokenType.TWO_FA_VERIFICATION_TOKEN,
+        TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         code,
       );
     } else if (user.twoFaMethod == 'qrcode') {
