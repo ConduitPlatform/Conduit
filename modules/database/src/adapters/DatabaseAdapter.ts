@@ -98,7 +98,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = this._createSchemaFromAdapter(schema);
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    if (!schemaUpdate) {
+    if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
       });

@@ -266,9 +266,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
             .catch((e: Error) => {
               throw new GrpcError(status.INTERNAL, e.message);
             });
-          ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
-            imported: String(!!model.modelOptions.conduit?.imported),
-          });
+          if (!instanceSync) {
+            ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+              imported: String(!!model.modelOptions.conduit?.imported),
+            });
+          }
         }
       });
 
