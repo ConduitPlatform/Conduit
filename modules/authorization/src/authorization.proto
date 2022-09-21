@@ -11,6 +11,21 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
+/**
+  name = "Group"
+  relations: [{
+  name: "members",
+  type: "User"
+  }],
+  permissions: [{
+  name: "read",
+  roles: ["admin", "user"]
+  },{
+  name: "edit",
+  roles: ["_self", "members"]
+  }]
+ */
+
 message Resource {
   string name = 1;
   repeated _Relation relations = 2;
@@ -27,10 +42,16 @@ message Resource {
   }
 
 }
-
+/*
+  {
+    "subject": "user:1",
+    "relation": "owner",
+    "resource": "user:2"
+  }
+ */
 message Relation {
   string subject = 1;
-  string connection = 2;
+  string relation = 2;
   string resource = 3;
 }
 /**
@@ -41,19 +62,19 @@ message Relation {
  */
 message FindRelation {
   optional string subject = 1;
-  optional string connection = 2;
+  optional string relation = 2;
   string resource = 3;
 }
 /*
   {
     "subject": "user:1",
-    "connection": "owns",
+    "action": "read",
     "resource": "user:2"
   }
  */
 message PermissionCheck {
   string subject = 1;
-  string connection = 2;
+  string action = 2;
   string resource = 3;
 }
 

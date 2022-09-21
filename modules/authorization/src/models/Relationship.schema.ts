@@ -16,23 +16,14 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  // member
-  connection: {
+  // member relation: "owner"
+  relation: {
     type: TYPE.String,
     required: true,
   },
-  // user:12312312#member@organization:123123
+  // user:12312312#owner@organization:123123
   computedTuple: {
     type: TYPE.String,
-    required: true,
-  },
-  /**
-   * {
-   *   "user:12312312": "organization:123123#member"
-   * }
-   */
-  actorIndex: {
-    type: TYPE.JSON,
     required: true,
   },
   createdAt: TYPE.Date,

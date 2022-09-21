@@ -9,6 +9,7 @@ const schema = {
   /**
    * {
    *   "organization:123123#view": "organization:123123#member"
+   *   "organization:123123#view": "organization:123124#member"
    * }
    */
   index: {

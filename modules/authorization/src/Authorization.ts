@@ -18,13 +18,15 @@ export default class Authorization extends ManagedModule<Config> {
     protoDescription: 'authorization.Authorization',
     functions: {
       setConfig: this.setConfig.bind(this),
+      defineResource: this.defineResource.bind(this),
+      createRelation: this.createRelation.bind(this),
+      findRelation: this.findRelation.bind(this),
+      check: this.check.bind(this),
     },
   };
   private adminRouter: AdminHandlers;
   // private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
-  private localSendVerificationEmail: boolean = false;
-  private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     super('authorization');
@@ -61,6 +63,14 @@ export default class Authorization extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
+
+  defineResource() {}
+
+  createRelation() {}
+
+  findRelation() {}
+
+  check() {}
 
   initializeMetrics() {
     for (const metric of Object.values(metricsConfig)) {
