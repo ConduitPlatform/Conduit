@@ -29,7 +29,7 @@ import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { GrpcError, HealthCheckStatus, MetricConfiguration, MetricType } from './types';
+import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
