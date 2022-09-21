@@ -82,7 +82,7 @@ export class ConduitMetrics {
   }
 
   getMetric(name: string) {
-    return this.Registry.getSingleMetric(name); // TODO: addPrefix()
+    return this.Registry.getSingleMetric(this.addPrefix(name));
   }
 
   increment(metric: string, increment: number = 1, labels?: LabelValues<any>) {
