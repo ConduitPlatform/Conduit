@@ -2,9 +2,15 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 
 export async function migrateIsSuperAdminToAdmin(grpcSdk: ConduitGrpcSdk) {
-  const superAdmin: Admin = await grpcSdk.databaseProvider!.findOne('Admin', {
+  const originalAdmin: Admin = await grpcSdk.databaseProvider!.findOne('Admin', {
     username: 'admin',
   });
-  superAdmin.isSuperAdmin = true;
-  await grpcSdk.databaseProvider!.findByIdAndUpdate('Admin', superAdmin._id, superAdmin);
+  if (originalAdmin) {
+    originalAdmin.isSuperAdmin = true;
+    await grpcSdk.databaseProvider!.findByIdAndUpdate(
+      'Admin',
+      originalAdmin._id,
+      originalAdmin,
+    );
+  }
 }
