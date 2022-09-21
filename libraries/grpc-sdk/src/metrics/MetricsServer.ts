@@ -8,12 +8,7 @@ export class MetricsServer {
   private readonly instance: string;
   private readonly Registry: client.Registry;
 
-  constructor(
-    moduleName: string,
-    instance: string,
-    registry: client.Registry,
-    private readonly initializeMetrics?: () => Promise<void>,
-  ) {
+  constructor(moduleName: string, instance: string, registry: client.Registry) {
     this.moduleName = moduleName;
     this.instance = instance;
     this.Registry = registry;
@@ -36,13 +31,6 @@ export class MetricsServer {
     server.get('/metrics', async (req: express.Request, res: express.Response) => {
       const metrics = await this.Registry.metrics();
       return res.status(200).send(metrics);
-    });
-    server.post('/metrics/reset', async (req: express.Request, res: express.Response) => {
-      this.Registry.resetMetrics();
-      await this.initializeMetrics?.();
-      return res.status(200).send({
-        message: 'Metrics reset',
-      });
     });
     return server;
   }

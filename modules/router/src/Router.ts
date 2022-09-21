@@ -290,8 +290,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async initializeMetrics() {
-    // @improve-metrics
-    // TODO: This should initialize 'client_routes_total' as it's called on [POST] @ /metrics/reset
+    // 'client_routes_total' updated via Hermes
     const securityClients = await models.Client.getInstance().findMany({});
     const clientPlatforms: Map<string, number> = new Map();
     securityClients.forEach(client => {

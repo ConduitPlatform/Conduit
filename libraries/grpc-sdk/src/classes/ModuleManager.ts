@@ -36,7 +36,6 @@ export class ModuleManager<T> {
         },
         module.name,
       );
-      this.grpcSdk.enableMetrics(this.module.initializeMetrics.bind(this.module));
     } catch {
       throw new Error('Failed to initialize grpcSdk');
     }

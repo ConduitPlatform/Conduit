@@ -93,6 +93,12 @@ export default class ConduitGrpcSdk {
       ? this.name.substring(8)
       : Crypto.randomBytes(16).toString('hex');
 
+    if (process.env.METRICS_PORT) {
+      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
+      ConduitGrpcSdk.Metrics.setDefaultLabels({
+        module_instance: this.instance,
+      });
+    }
     if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
       ConduitGrpcSdk.Logger.addTransport(
         new LokiTransport({
@@ -115,19 +121,6 @@ export default class ConduitGrpcSdk {
       const sign = createSigner({ key: process.env.GRPC_KEY });
       this._grpcToken = sign({
         moduleName: this.name,
-      });
-    }
-  }
-
-  enableMetrics(initializeMetrics?: () => Promise<void>) {
-    if (process.env.METRICS_PORT) {
-      ConduitGrpcSdk.Metrics = new ConduitMetrics(
-        this.name,
-        this.instance,
-        initializeMetrics,
-      );
-      ConduitGrpcSdk.Metrics.setDefaultLabels({
-        module_instance: this.instance,
       });
     }
   }
