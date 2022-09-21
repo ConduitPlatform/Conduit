@@ -7943,22 +7943,6 @@ nice-grpc-common@^1.1.0:
     node-abort-controller "^2.0.0"
     ts-error "^1.0.6"
 
-nice-grpc-common@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/nice-grpc-common/-/nice-grpc-common-2.0.0.tgz#36c9b9cdc38d3b4aa8ad7abf120fd4737eff70ea"
-  integrity sha512-8h/QraeDmScnbKLd5ImS+e7uUDxumvByBo6ILj1jLHjKlIa74WKHNSn54u7RmnJ5tFAYE70iTm8VWyvbTv82yg==
-  dependencies:
-    ts-error "^1.0.6"
-
-nice-grpc-prometheus@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/nice-grpc-prometheus/-/nice-grpc-prometheus-0.1.0.tgz#4db2a1ea745f5129288dc2783c2178ae0b53704e"
-  integrity sha512-jrHKeAgLN6RNmlUhhG8zKzF5ESTVLc3xxhyuWUYfy7+F1sKDXZN6p61dJL9IuS3uV1/OZEzepsOVqGpoA9mj2Q==
-  dependencies:
-    abort-controller-x "^0.4.0"
-    nice-grpc-common "^2.0.0"
-    prom-client "^14.0.1"
-
 nice-grpc@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/nice-grpc/-/nice-grpc-1.2.0.tgz#43b7cbf373c9bab8c21080c2c3bcd181ee9e9645"
