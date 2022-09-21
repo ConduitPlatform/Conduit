@@ -716,7 +716,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-      const verification = TwoFactorAuth.verifyToken(secret.secret, code);
+      const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
       if (isNil(verification))
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     } else {
@@ -975,7 +975,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
     if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-    const verification = TwoFactorAuth.verifyToken(secret.secret, code);
+    const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
     if (isNil(verification)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     }
