@@ -51,7 +51,7 @@ export function changePasswordRoute() {
       await Admin.getInstance().findByIdAndUpdate(admin._id, {
         password: await hash(newPassword, hashRounds ?? 11),
       });
-      return { result: { message: 'OK' } };
+      return { message: 'OK' };
     },
   );
 }

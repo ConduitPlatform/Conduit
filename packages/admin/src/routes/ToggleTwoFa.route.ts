@@ -59,7 +59,7 @@ export function toggleTwoFaRoute() {
         });
         await AdminTwoFactorSecret.getInstance().deleteOne({ adminId: admin._id });
 
-        return { result: { message: 'OK' } };
+        return { message: 'OK' };
       }
     },
   );

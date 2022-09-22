@@ -50,7 +50,7 @@ export function verifyQrCodeRoute() {
         hasTwoFA: true,
       });
 
-      return { result: { message: 'OK' } };
+      return { message: 'OK' };
     },
   );
 }
