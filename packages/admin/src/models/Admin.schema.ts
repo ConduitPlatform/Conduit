@@ -1,6 +1,6 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 
-export const schema = {
+const schema = {
   _id: TYPE.ObjectId,
   username: {
     type: TYPE.String,
@@ -9,6 +9,7 @@ export const schema = {
   password: {
     type: TYPE.String,
     required: true,
+    select: false,
   },
   hasTwoFA: {
     type: TYPE.Boolean,

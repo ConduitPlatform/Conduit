@@ -21,9 +21,9 @@ export function deleteAdminUserRoute() {
     new ConduitRouteReturnDefinition('DeleteAdminUser', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { id } = params.params!;
-      const loggedInAdmin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { id } = req.params!;
+      const loggedInAdmin = req.context!.admin;
       if (isNil(id)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
       }

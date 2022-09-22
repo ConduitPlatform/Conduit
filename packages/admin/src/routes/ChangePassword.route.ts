@@ -24,9 +24,15 @@ export function changePasswordRoute() {
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { oldPassword, newPassword } = params.params!;
-      const admin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { oldPassword, newPassword } = req.params!;
+      const admin = await Admin.getInstance().findOne(
+        { _id: req.context!.admin },
+        'password',
+      );
+      if (!admin) {
+        throw ConduitError.notFound('Authenticated admin no longer exists');
+      }
 
       if (isNil(oldPassword) || isNil(newPassword)) {
         throw new ConduitError(

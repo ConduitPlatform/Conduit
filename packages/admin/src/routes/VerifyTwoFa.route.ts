@@ -18,9 +18,9 @@ export function verifyTwoFaRoute() {
     new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
       token: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { code } = params.params!;
-      const admin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { code } = req.params!;
+      const admin = req.context!.admin;
       return await verify2Fa(admin, code);
     },
   );

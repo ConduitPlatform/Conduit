@@ -26,9 +26,9 @@ export function changeUsersPasswordRoute() {
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { adminId, newPassword } = params.params!;
-      const loggedInAdmin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { adminId, newPassword } = req.params!;
+      const loggedInAdmin = req.context!.admin;
 
       if (!loggedInAdmin.isSuperAdmin) {
         throw new ConduitError(

@@ -26,8 +26,8 @@ export function getLoginRoute() {
     new ConduitRouteReturnDefinition('Login', {
       token: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { username, password } = params.params!;
+    async (req: ConduitRouteParameters) => {
+      const { username, password } = req.params!;
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
@@ -36,7 +36,7 @@ export function getLoginRoute() {
         );
       }
 
-      const admin = await Admin.getInstance().findOne({ username });
+      const admin = await Admin.getInstance().findOne({ username }, 'password');
       if (isNil(admin)) {
         throw new ConduitError('UNAUTHORIZED', 401, 'Invalid username/password');
       }
