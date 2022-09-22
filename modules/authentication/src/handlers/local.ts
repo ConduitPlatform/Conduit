@@ -979,6 +979,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(verification)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
     }
+    if (verification.delta === -1)
+      throw new GrpcError(status.UNAUTHENTICATED, 'Code entered too late');
+    else if (verification.delta === 1)
+      throw new GrpcError(status.UNAUTHENTICATED, 'Code entered too early');
 
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       hasTwoFA: true,

@@ -47,6 +47,6 @@ export function verifyToken(secret: string, token?: string, window = 4) {
 
   return notp.totp.verify(token.replace(/\W+/g, ''), bin, {
     window,
-    time: 30,
+    time: 60,
   });
 }
