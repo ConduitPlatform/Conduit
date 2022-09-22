@@ -9,6 +9,7 @@ const schema = {
   password: {
     type: TYPE.String,
     required: true,
+    select: false,
   },
   hasTwoFA: {
     type: TYPE.Boolean,

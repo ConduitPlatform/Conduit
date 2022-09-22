@@ -27,7 +27,6 @@ export function getAdminRoute() {
       if (!admin) {
         throw ConduitError.notFound('Admin does not exist');
       }
-      delete (admin as any).password;
       return admin;
     },
   );
