@@ -77,7 +77,7 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
 
     Admin.getInstance()
       .findOne({ _id: id })
-      .then((admin: any) => {
+      .then(admin => {
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }

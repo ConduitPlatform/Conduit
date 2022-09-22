@@ -6,9 +6,8 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { schema as AdminSchema } from '../models/Admin.schema';
 
-export function getAdminUsersRoute() {
+export function getAdminsRoute() {
   return new ConduitRoute(
     {
       path: '/admins',
@@ -21,7 +20,7 @@ export function getAdminUsersRoute() {
       },
     },
     new ConduitRouteReturnDefinition('GetAdminUsers', {
-      admins: [AdminSchema],
+      admins: [Admin.name],
       count: ConduitNumber.Required,
     }),
     async (params: ConduitRouteParameters) => {
