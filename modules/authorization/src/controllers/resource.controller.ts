@@ -6,7 +6,7 @@ export class ResourceController {
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  getInstance(grpcSdk?: ConduitGrpcSdk) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (ResourceController._instance) return ResourceController._instance;
     if (grpcSdk) {
       return (ResourceController._instance = new ResourceController(grpcSdk));
@@ -14,7 +14,8 @@ export class ResourceController {
     throw new Error('No grpcSdk instance provided!');
   }
 
-  async createResource(resource: ResourceDefinition) {
+  //todo check permission and relation content
+  async createResource(resource: any) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       name: resource.name,
     });
@@ -23,6 +24,7 @@ export class ResourceController {
   }
 
   //edit resource
+  //todo check permission and relation content
   async updateResourceDefinition(name: string, resource: ResourceDefinition) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');

@@ -11,21 +11,6 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
-/**
-  name = "Group"
-  relations: [{
-  name: "members",
-  type: "User"
-  }],
-  permissions: [{
-  name: "read",
-  roles: ["admin", "user"]
-  },{
-  name: "edit",
-  roles: ["_self", "members"]
-  }]
- */
-
 message Resource {
   string name = 1;
   repeated _Relation relations = 2;
@@ -42,36 +27,19 @@ message Resource {
   }
 
 }
-/*
-  {
-    "subject": "user:1",
-    "relation": "owner",
-    "resource": "user:2"
-  }
- */
+
 message Relation {
   string subject = 1;
   string relation = 2;
   string resource = 3;
 }
-/**
-  Provide different search criteria to find relations
-  ex. provide subject and find connections to resources
-  ex. provide resource and find all connections with subjects
-  ex. provide resource and connection to find subjects
- */
-message FindRelation {
+
+message FindRelationRequest {
   optional string subject = 1;
   optional string relation = 2;
   string resource = 3;
 }
-/*
-  {
-    "subject": "user:1",
-    "action": "read",
-    "resource": "user:2"
-  }
- */
+
 message PermissionCheck {
   string subject = 1;
   string action = 2;
@@ -87,6 +55,6 @@ service Authorization {
   rpc DefineResource(Resource) returns (Empty);
   rpc UpdateResourceDefinition(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
-  rpc FindRelation(FindRelation) returns (Relation);
+  rpc FindRelation(FindRelationRequest) returns (Relation);
   rpc Check(PermissionCheck) returns (Decision);
 }

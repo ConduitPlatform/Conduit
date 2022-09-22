@@ -12,7 +12,7 @@ export class RelationsController {
     private readonly indexController: IndexController,
   ) {}
 
-  getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
     if (grpcSdk && indexController) {
       return (RelationsController._instance = new RelationsController(
@@ -42,7 +42,8 @@ export class RelationsController {
         }
         if (
           !resourceDefinition.relations[relation] ||
-          resourceDefinition.relations[relation] !== subject.split(':')[0]
+          (resourceDefinition.relations[relation] !== subject.split(':')[0] &&
+            resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1)
         ) {
           throw new Error('Relation not allowed');
         }

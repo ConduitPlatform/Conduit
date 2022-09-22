@@ -13,7 +13,7 @@ export class PermissionsController {
     private readonly indexController: IndexController,
   ) {}
 
-  getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (PermissionsController._instance) return PermissionsController._instance;
     if (grpcSdk && indexController) {
       return (PermissionsController._instance = new PermissionsController(

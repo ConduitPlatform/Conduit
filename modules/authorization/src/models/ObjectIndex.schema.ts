@@ -12,8 +12,12 @@ const schema = {
    *   "organization:123123#view": "organization:123124#member"
    * }
    */
-  index: {
-    type: TYPE.JSON,
+  subject: {
+    type: TYPE.String,
+    required: true,
+  },
+  entity: {
+    type: TYPE.String,
     required: true,
   },
   createdAt: TYPE.Date,
@@ -35,9 +39,8 @@ const collectionName = undefined;
 export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   private static _instance: ObjectIndex;
   _id: string;
-  index: {
-    [key: string]: string;
-  };
+  subject: string;
+  entity: string;
   createdAt: Date;
   updatedAt: Date;
 
