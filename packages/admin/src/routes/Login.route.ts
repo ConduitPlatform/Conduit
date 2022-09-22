@@ -58,7 +58,7 @@ export function getLoginRoute() {
           tokenSecret,
           60,
         );
-        return { result: { token } };
+        return { token };
       }
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;
@@ -67,7 +67,7 @@ export function getLoginRoute() {
         tokenSecret,
         tokenExpirationTime,
       );
-      return { result: { token } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return { token };
     },
   );
 }

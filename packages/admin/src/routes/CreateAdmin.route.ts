@@ -53,7 +53,7 @@ export function getCreateAdminRoute() {
       const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });
 
-      return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return { message: 'OK' };
     },
   );
 }

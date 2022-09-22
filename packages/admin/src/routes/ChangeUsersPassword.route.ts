@@ -51,7 +51,7 @@ export function changeUsersPasswordRoute() {
         password: await hash(newPassword, hashRounds ?? 11),
       });
 
-      return { result: { message: 'OK' } };
+      return { message: 'OK' };
     },
   );
 }

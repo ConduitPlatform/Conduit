@@ -42,7 +42,7 @@ export function deleteAdminUserRoute() {
         );
       }
       await Admin.getInstance().deleteOne({ _id: id });
-      return { result: { message: 'Admin deleted.' } };
+      return { message: 'Admin deleted.' };
     },
   );
 }
