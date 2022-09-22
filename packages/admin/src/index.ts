@@ -227,7 +227,7 @@ export default class AdminModule extends IConduitAdmin {
 
   private registerMetrics() {
     Object.values(metricsSchema).forEach(metric => {
-      ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
+      ConduitGrpcSdk.Metrics?.registerMetric(metric.type, metric.config);
     });
   }
 
