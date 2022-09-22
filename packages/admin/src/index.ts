@@ -74,7 +74,8 @@ export default class AdminModule extends IConduitAdmin {
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
     adminRoutes.getCreateAdminRoute(),
-    adminRoutes.getAdminUsersRoute(),
+    adminRoutes.getAdminRoute(),
+    adminRoutes.getAdminsRoute(),
     adminRoutes.deleteAdminUserRoute(),
     adminRoutes.changePasswordRoute(),
     adminRoutes.getReadyRoute(),
@@ -227,7 +228,7 @@ export default class AdminModule extends IConduitAdmin {
 
   private registerMetrics() {
     Object.values(metricsSchema).forEach(metric => {
-      ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
+      ConduitGrpcSdk.Metrics?.registerMetric(metric.type, metric.config);
     });
   }
 

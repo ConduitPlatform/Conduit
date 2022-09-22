@@ -22,11 +22,11 @@ export function verifyQrCodeRoute() {
     new ConduitRouteReturnDefinition('VerifyQRCodeResponse', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const admin = params.context!.admin;
-      const context = params.context!;
+    async (req: ConduitRouteParameters) => {
+      const admin = req.context!.admin;
+      const context = req.context!;
 
-      const { code } = params.params!;
+      const { code } = req.params!;
 
       if (isNil(context) || isEmpty(context)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'User unauthenticated');
@@ -41,7 +41,7 @@ export function verifyQrCodeRoute() {
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-      const verification = verifyTwoFactorToken(secret.secret, code);
+      const verification = verifyTwoFactorToken(secret.secret, code, 1);
       if (isNil(verification)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
       }
@@ -50,7 +50,7 @@ export function verifyQrCodeRoute() {
         hasTwoFA: true,
       });
 
-      return { result: { message: 'OK' } };
+      return { message: 'OK' };
     },
   );
 }

@@ -24,9 +24,9 @@ export function getCreateAdminRoute() {
     new ConduitRouteReturnDefinition('Create', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { username, password } = params.params!;
-      const loggedInAdmin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { username, password } = req.params!;
+      const loggedInAdmin = req.context!.admin;
 
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(
@@ -53,7 +53,7 @@ export function getCreateAdminRoute() {
       const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });
 
-      return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return { message: 'OK' };
     },
   );
 }

@@ -33,7 +33,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
             serving: value.serving,
           });
         });
-        return { result: { modules } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+        return { modules };
       } else {
         throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
       }

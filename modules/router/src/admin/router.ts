@@ -38,6 +38,6 @@ export class RouterAdmin {
         });
       });
     });
-    return { result: response }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+    return response;
   }
 }

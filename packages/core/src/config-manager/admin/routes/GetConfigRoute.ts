@@ -29,7 +29,7 @@ export default function getConfigRoute(
       } else {
         finalConfig = JSON.parse(finalConfig);
       }
-      return { result: { config: finalConfig } };
+      return { config: finalConfig };
     },
   );
 }

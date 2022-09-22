@@ -8,7 +8,7 @@ import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
-const excludedRestRoutes = ['/ready', '/login', '/modules', '/verify-twofa'];
+const excludedRestRoutes = ['/ready', '/login', '/modules'];
 const excludedGqlOperations = [
   '__schema',
   'IntrospectionQuery',
@@ -71,10 +71,13 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
       return res.status(401).json({ error: 'Invalid token' });
     }
     const { id } = decoded;
+    if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
+      return res.status(401).json({ error: 'Two FA required' });
+    }
 
     Admin.getInstance()
       .findOne({ _id: id })
-      .then((admin: any) => {
+      .then(admin => {
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }

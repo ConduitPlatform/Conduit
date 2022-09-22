@@ -23,10 +23,10 @@ export function toggleTwoFaRoute() {
     new ConduitRouteReturnDefinition('ToggleTwoFaResponse', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { enableTwoFa } = params.params!;
-      const admin = params.context!.admin;
-      const context = params.context!;
+    async (req: ConduitRouteParameters) => {
+      const { enableTwoFa } = req.params!;
+      const admin = req.context!.admin;
+      const context = req.context!;
 
       if (isNil(context) || isNil(admin)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
@@ -59,7 +59,7 @@ export function toggleTwoFaRoute() {
         });
         await AdminTwoFactorSecret.getInstance().deleteOne({ adminId: admin._id });
 
-        return { result: { message: 'OK' } };
+        return { message: 'OK' };
       }
     },
   );

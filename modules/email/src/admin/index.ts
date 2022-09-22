@@ -236,7 +236,7 @@ export class AdminHandlers {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { result: { templateDocuments, count } };
+    return { templateDocuments, count };
   }
 
   async createTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
