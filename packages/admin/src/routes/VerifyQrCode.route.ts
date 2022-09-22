@@ -22,11 +22,11 @@ export function verifyQrCodeRoute() {
     new ConduitRouteReturnDefinition('VerifyQRCodeResponse', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const admin = params.context!.admin;
-      const context = params.context!;
+    async (req: ConduitRouteParameters) => {
+      const admin = req.context!.admin;
+      const context = req.context!;
 
-      const { code } = params.params!;
+      const { code } = req.params!;
 
       if (isNil(context) || isEmpty(context)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'User unauthenticated');

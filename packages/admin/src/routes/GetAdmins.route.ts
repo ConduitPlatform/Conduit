@@ -23,10 +23,10 @@ export function getAdminsRoute() {
       admins: [Admin.name],
       count: ConduitNumber.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const skip = params.params!.skip ?? 0;
-      const limit = params.params!.limit ?? 25;
-      const sort = params.params!.sort;
+    async (req: ConduitRouteParameters) => {
+      const skip = req.params!.skip ?? 0;
+      const limit = req.params!.limit ?? 25;
+      const sort = req.params!.sort;
       const adminsPromise = Admin.getInstance().findMany(
         {},
         '-password',

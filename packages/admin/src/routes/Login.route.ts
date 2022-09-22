@@ -26,8 +26,8 @@ export function getLoginRoute() {
     new ConduitRouteReturnDefinition('Login', {
       token: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { username, password } = params.params!;
+    async (req: ConduitRouteParameters) => {
+      const { username, password } = req.params!;
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',

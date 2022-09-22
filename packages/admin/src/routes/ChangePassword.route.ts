@@ -24,10 +24,10 @@ export function changePasswordRoute() {
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { oldPassword, newPassword } = params.params!;
+    async (req: ConduitRouteParameters) => {
+      const { oldPassword, newPassword } = req.params!;
       const admin = await Admin.getInstance().findOne(
-        { _id: params.context!.admin },
+        { _id: req.context!.admin },
         'password',
       );
       if (!admin) {
