@@ -1,5 +1,6 @@
 export * from './Login.route';
 export * from './CreateAdmin.route';
+export * from './GetAdmin.route';
 export * from './GetAdminUsers.route';
 export * from './DeleteAdminUser.route';
 export * from './ChangePassword.route';

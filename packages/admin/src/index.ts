@@ -74,6 +74,7 @@ export default class AdminModule extends IConduitAdmin {
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
     adminRoutes.getCreateAdminRoute(),
+    adminRoutes.getAdminRoute(),
     adminRoutes.getAdminUsersRoute(),
     adminRoutes.deleteAdminUserRoute(),
     adminRoutes.changePasswordRoute(),
