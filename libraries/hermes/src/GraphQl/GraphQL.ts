@@ -427,16 +427,18 @@ export class GraphQLController extends ConduitRouter {
             context.removeCookie = r.removeCookies;
           }
 
-          if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            if (typeof r.result === 'string') {
-              // only grpc route data is stringified
-              result = JSON.parse(result);
+          try {
+            // Handle gRPC route responses
+            result = JSON.parse(result);
+          } catch {
+            if (typeof result === 'string') {
+              // Nest plain string responses
+              result = {
+                result: this.extractResult(route.returnTypeFields as string, result),
+              };
             }
-          } else {
-            result = {
-              result: this.extractResult(route.returnTypeFields as string, result),
-            };
           }
+
           return result;
         })
         .catch(errorHandler);
