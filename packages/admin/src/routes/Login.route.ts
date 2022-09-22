@@ -51,7 +51,14 @@ export function getLoginRoute() {
         if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
-        return { message: 'OTP required' };
+        const authConfig = ConfigController.getInstance().config.auth;
+        const { tokenSecret, tokenExpirationTime } = authConfig;
+        const token = signToken(
+          { id: admin._id.toString(), twoFaRequired: true },
+          tokenSecret,
+          tokenExpirationTime,
+        );
+        return { result: { token } };
       }
       const authConfig = ConfigController.getInstance().config.auth;
       const { tokenSecret, tokenExpirationTime } = authConfig;

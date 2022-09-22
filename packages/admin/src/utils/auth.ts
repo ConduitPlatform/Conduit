@@ -30,20 +30,20 @@ export function generateToken(secret: string) {
   return twoFactor.generateToken(secret);
 }
 
-export async function verify2Fa(adminId: string, admin: Admin, code: string) {
+export async function verify2Fa(admin: Admin, code: string) {
   const secret = await AdminTwoFactorSecret.getInstance().findOne({
-    adminId: adminId,
+    adminId: admin._id,
   });
   if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-  const verification = verifyTwoFactorToken(secret.secret, code);
+  const verification = verifyTwoFactorToken(secret.secret, code, 1);
   if (isNil(verification)) {
     throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
   }
   const authConfig = ConfigController.getInstance().config.auth;
   const { tokenSecret, tokenExpirationTime } = authConfig;
-  const token = signToken({ id: adminId }, tokenSecret, tokenExpirationTime);
-  return { result: { token } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+  const token = signToken({ id: admin._id }, tokenSecret, tokenExpirationTime);
+  return { result: { token } };
 }
 
 export function generateSecret(options?: { name: string; account: string }) {
