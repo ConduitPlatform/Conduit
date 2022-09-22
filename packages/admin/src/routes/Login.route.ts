@@ -52,11 +52,11 @@ export function getLoginRoute() {
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
 
         const authConfig = ConfigController.getInstance().config.auth;
-        const { tokenSecret, tokenExpirationTime } = authConfig;
+        const { tokenSecret } = authConfig;
         const token = signToken(
           { id: admin._id.toString(), twoFaRequired: true },
           tokenSecret,
-          tokenExpirationTime,
+          60,
         );
         return { result: { token } };
       }
