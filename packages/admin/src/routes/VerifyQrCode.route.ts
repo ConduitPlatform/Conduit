@@ -41,7 +41,7 @@ export function verifyQrCodeRoute() {
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-      const verification = verifyTwoFactorToken(secret.secret, code);
+      const verification = verifyTwoFactorToken(secret.secret, code, 1);
       if (isNil(verification)) {
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
       }
