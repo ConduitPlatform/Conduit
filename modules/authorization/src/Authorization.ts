@@ -12,7 +12,13 @@ import * as models from './models';
 // import { AdminHandlers } from './admin';
 import { runMigrations } from './migrations';
 import metricsConfig from './metrics';
-import { Empty, Relation, Resource } from './protoTypes/authorization';
+import {
+  Decision,
+  Empty,
+  PermissionCheck,
+  Relation,
+  Resource,
+} from './protoTypes/authorization';
 import { IndexController } from './controllers/index.controller';
 import { PermissionsController } from './controllers/permissions.controller';
 import { RelationsController } from './controllers/relations.controller';
@@ -114,7 +120,17 @@ export default class Authorization extends ManagedModule<Config> {
 
   findRelation() {}
 
-  check() {}
+  check(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
+    const { subject, resource, action } = call.request;
+    this.permissionsController
+      .can(subject, action, resource)
+      .then(allow => {
+        callback(null, { allow });
+      })
+      .catch(e => {
+        callback(e);
+      });
+  }
 
   initializeMetrics() {
     for (const metric of Object.values(metricsConfig)) {

@@ -100,6 +100,15 @@ export class IndexController {
   }
 
   async findIndex(subject: string, action: string, object: string) {
-    return null;
+    let subjectDefinition = await ActorIndex.getInstance().findMany({
+      subject: subject,
+    });
+
+    let objectDefinition = await ObjectIndex.getInstance().findOne({
+      subject: object + '#' + action,
+      entity: { $in: subjectDefinition.map(index => index.entity) },
+    });
+    if (objectDefinition) return true;
+    return false;
   }
 }

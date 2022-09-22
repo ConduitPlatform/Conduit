@@ -33,8 +33,8 @@ export class PermissionsController {
     }
 
     let validPermission = await ResourceDefinition.getInstance().findOne({
-      name: subject.split(':')[0],
-      permissions: { [action]: { $exists: true } },
+      name: object.split(':')[0],
+      [`permissions.${action}`]: { $exists: true },
     });
 
     // if the action does not exist at all
