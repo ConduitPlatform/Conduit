@@ -180,7 +180,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.POST,
         description: `A webhook used to passwordless login.`,
         bodyParams: {
-          email: ConduitString.Required,
+          identifier: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('PasswordLessLoginResponse', 'String'),
@@ -1118,31 +1118,44 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async passwordlessLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email } = call.request.params;
-    const user: User | null = await User.getInstance().findOne({ email });
+    const { identifier } = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ identifier });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    if (this.sendVerificationEmail) {
-      if (user.hasTwoFA) {
-        if (user.twoFaMethod === 'qrcode') {
-          //code + mail
-        } else {
-          //OTP + mail
-        }
-      } else {
-        await this.sendEmailForPasswordLessLogin(user);
-      }
+    let method;
+    if (user.phoneNumber === identifier) {
+      method = 'phone';
+    } else if (user.hasTwoFA && user.twoFaMethod === 'qrcode') {
+      method = 'qrcode';
+    } else {
+      method = 'email';
     }
-    return 'ok';
-  }
 
-  private async sendEmailForPasswordLessLogin(user: User) {
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
     const token: Token = await Token.getInstance().create({
       type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
       userId: user._id,
       token: uuid(),
+      data: {
+        name: method,
+      },
     });
+    if (method === 'qrcode') {
+      return token;
+    } else if (method === 'phone') {
+      await AuthUtils.sendVerificationCode(this.smsModule, identifier);
+      return token;
+    } else {
+      if (!this.grpcSdk.isAvailable('email')) {
+        throw new GrpcError(status.INTERNAL, 'Could not send email.s');
+      }
+      await this.sendEmailForPasswordLessLogin(user, token);
+    }
+    return 'ok';
+  }
+
+  private async sendEmailForPasswordLessLogin(user: User, token: Token) {
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
+
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
     await this.emailModule
