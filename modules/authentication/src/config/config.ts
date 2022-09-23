@@ -28,8 +28,7 @@ export default {
         default: false,
       },
       send_email: {
-        doc:
-          'Defines if the authenticator should automatically send a verification e-mail to the user',
+        doc: 'Defines if the authenticator should automatically send a verification e-mail to the user',
         format: 'Boolean',
         default: false,
       },
@@ -49,8 +48,7 @@ export default {
       default: false,
     },
     clientId: {
-      doc:
-        'The client id that is provided by google developer console for a specific app',
+      doc: 'The client id that is provided by google developer console for a specific app',
       format: 'String',
       default: '',
       nullable: true,
@@ -66,10 +64,20 @@ export default {
       optional: true,
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',
+      doc: 'When enabled, if a new google user matches with an existing email on the database, they will be enriched with google details',
       format: 'Boolean',
       default: true,
+    },
+  },
+  passwordless_login: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    redirect_uri: {
+      format: 'String',
+      default: '',
+      optional: true,
     },
   },
   facebook: {
@@ -93,8 +101,7 @@ export default {
       optional: true,
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
+      doc: 'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
       format: 'Boolean',
       default: true,
     },
@@ -120,8 +127,7 @@ export default {
       optional: true,
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
+      doc: 'When enabled, if a new github user matches with an existing email on the database, they will be enriched with github details',
       format: 'Boolean',
       default: true,
     },
@@ -144,8 +150,7 @@ export default {
       default: '',
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new slack user matches with an existing email on the database, they will be enriched with slack details',
+      doc: 'When enabled, if a new slack user matches with an existing email on the database, they will be enriched with slack details',
       format: 'Boolean',
       default: true,
     },
@@ -168,8 +173,7 @@ export default {
       default: '',
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new figma user matches with an existing email on the database, they will be enriched with figma details',
+      doc: 'When enabled, if a new figma user matches with an existing email on the database, they will be enriched with figma details',
       format: 'Boolean',
       default: true,
     },
@@ -192,8 +196,7 @@ export default {
       default: '',
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new microsoft user matches with an existing email on the database, they will be enriched with microsoft details',
+      doc: 'When enabled, if a new microsoft user matches with an existing email on the database, they will be enriched with microsoft details',
       format: 'Boolean',
       default: true,
     },
@@ -216,8 +219,7 @@ export default {
       default: '',
     },
     accountLinking: {
-      doc:
-        'When enabled, if a new twitch user matches with an existing email on the database, they will be enriched with twitch details',
+      doc: 'When enabled, if a new twitch user matches with an existing email on the database, they will be enriched with twitch details',
       format: 'Boolean',
       default: true,
     },

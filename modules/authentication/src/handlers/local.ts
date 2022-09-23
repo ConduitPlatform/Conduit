@@ -174,6 +174,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.verifyChangeEmail.bind(this),
     );
 
+    routingManager.route(
+      {
+        path: '/hook/passwordless-login/:verificationToken',
+        action: ConduitRouteActions.GET,
+        description: `A webhook used to passwordless login.`,
+        urlParams: {
+          verificationToken: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('PasswordLessLoginResponse', 'String'),
+      this.passwordlessLogin.bind(this),
+    );
+
     if (config.twofa.enabled) {
       routingManager.route(
         {
@@ -1102,5 +1115,45 @@ export class LocalHandlers implements IAuthenticationStrategy {
       .catch(() => {
         ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
       });
+  }
+
+  async passwordlessLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    if (this.sendVerificationEmail) {
+      if (user.hasTwoFA) {
+        if (user.twoFaMethod === 'qrcode') {
+          //code + mail
+        } else {
+          //OTP + mail
+        }
+      } else {
+        await this.sendEmailForPasswordLessLogin(user);
+      }
+    }
+    return 'ok';
+  }
+
+  private async sendEmailForPasswordLessLogin(user: User) {
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
+    const token: Token = await Token.getInstance().create({
+      type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
+      userId: user._id,
+      token: uuid(),
+    });
+    const result = { token, hostUrl: url };
+    const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
+    await this.emailModule
+      .sendEmail('PasswordlessLoginEmail', {
+        email: user.email,
+        sender: 'no-reply',
+        variables: {
+          link,
+        },
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+    return 'Email send';
   }
 }
