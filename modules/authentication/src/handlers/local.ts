@@ -719,6 +719,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
       const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
       if (isNil(verification))
         throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+      if (verification.delta === -1)
+        throw new GrpcError(status.UNAUTHENTICATED, 'Code entered too late');
+      else if (verification.delta === 1)
+        throw new GrpcError(status.UNAUTHENTICATED, 'Code entered too early');
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
     }
