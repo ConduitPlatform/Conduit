@@ -18,9 +18,12 @@ RUN yarn && \
 
 RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
     elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/admin \
-    --scope=@conduitplatform/commons --scope=@conduitplatform/core --scope=@conduitplatform/hermes; \
+    --scope=@conduitplatform/commons --scope=@conduitplatform/core --scope=@conduitplatform/hermes  \
+    --scope=@conduitplatform/node-2fa; \
     elif [ "$BUILDING_SERVICE" = "modules/router" ] ; then npx lerna run build --scope=@conduitplatform/router \
     --scope=@conduitplatform/hermes; \
+    elif [ "$BUILDING_SERVICE" = "modules/authentication" ] ; then npx lerna run build --scope=@conduitplatform/authentication \
+    --scope=@conduitplatform/node-2fa; \
     else cd /app/$BUILDING_SERVICE && yarn build && cd /app ; fi
 
 RUN yarn cache clean && npx lerna clean -y && rm -rf node_modules
