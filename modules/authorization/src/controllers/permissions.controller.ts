@@ -31,37 +31,8 @@ export class PermissionsController {
     if (!isNil(cachedResponse)) {
       return cachedResponse;
     }
-
-    let validPermission = await ResourceDefinition.getInstance().findOne({
-      name: object.split(':')[0],
-      [`permissions.${action}`]: { $exists: true },
-    });
-
-    // if the action does not exist at all
-    if (!validPermission) throw new Error('Invalid action');
-    // if none is allowed to do action
-    if (
-      Array.isArray(validPermission.permissions[action]) &&
-      validPermission.permissions[action].length === 0
-    ) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, false);
-      return false;
-    }
-    // if the actor is the object itself and the permission is allowed for self
-    if (
-      subject === object &&
-      (validPermission.permissions[action] === '_self' ||
-        (validPermission.permissions[action] as string[]).indexOf('_self') !== -1)
-    ) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
-      return true;
-    }
-
-    // if the action is allowed for everyone
-    if (
-      validPermission.permissions[action] === '*' ||
-      (validPermission.permissions[action] as string[]).indexOf('*') !== -1
-    ) {
+    // if the actor is the object itself, all permissions are provided
+    if (subject === object) {
       await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }

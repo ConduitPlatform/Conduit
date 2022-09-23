@@ -32,7 +32,7 @@ const schema = {
    * {
    *   "read": ["role1", "role2"], || "read": "*"
    *   || read:[] = none
-   *   || read: ["role1", "organization:read] // if in the related organization,
+   *   || read: ["role1", "organization->read] // if in the related organization,
    *   the subject has the read permission.
    *   "write": ["role1", "role2"],
    *   "delete": ["role1", "role2"],

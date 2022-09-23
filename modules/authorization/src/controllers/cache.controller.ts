@@ -7,11 +7,11 @@ export namespace RuleCache {
     computedTuple: string,
     decision: boolean,
   ) {
-    // 6s TTL
+    // 2s TTL
     grpcSdk.state!.setKey(
       `ruleCache:${computedTuple}`,
       Boolean(decision).toString(),
-      6000,
+      2000,
     );
   }
 

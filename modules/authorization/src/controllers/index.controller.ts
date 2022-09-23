@@ -36,8 +36,12 @@ export class IndexController {
         for (const role of roles) {
           // no index needed for "allowAll" permissions
           // or for self modification
-          if (role === '*' || role === '_self') continue;
-          if (role.indexOf('->') === -1) {
+          if (role === '*') {
+            await ObjectIndex.getInstance().create({
+              subject: object + '#' + permission,
+              entity: `*`,
+            });
+          } else if (role.indexOf('->') === -1) {
             await ObjectIndex.getInstance().create({
               subject: object + '#' + permission,
               entity: `${object}#${role}`,
@@ -60,8 +64,12 @@ export class IndexController {
       } else {
         // no index needed for "allowAll" permissions
         // or for self modification
-        if (permission === '*' || permission === '_self') continue;
-        if (permission.indexOf('->') === -1) {
+        if (permission === '*') {
+          await ObjectIndex.getInstance().create({
+            subject: object + '#' + permission,
+            entity: `*`,
+          });
+        } else if (permission.indexOf('->') === -1) {
           await ObjectIndex.getInstance().create({
             subject: object + '#' + permission,
             entity: `${object}#${objectDefinition.permissions[permission]}`,
@@ -106,9 +114,8 @@ export class IndexController {
 
     let objectDefinition = await ObjectIndex.getInstance().findOne({
       subject: object + '#' + action,
-      entity: { $in: subjectDefinition.map(index => index.entity) },
+      entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
     });
-    if (objectDefinition) return true;
-    return false;
+    return !!objectDefinition;
   }
 }
