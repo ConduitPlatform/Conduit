@@ -32,7 +32,27 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.mongoose = new Mongoose();
   }
 
-  async ensureConnected(): Promise<void> {
+  protected connect() {
+    this.mongoose = new Mongoose();
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    this.mongoose
+      .connect(this.connectionString, this.options)
+      .then(() => {
+        deepPopulate = deepPopulate(this.mongoose);
+      })
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
+        throw new Error();
+      })
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
+      });
+    this.mongoose.set('debug', () => {
+      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
+    });
+  }
+
+  protected async ensureConnected(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const db = this.mongoose.connection;
       db.on('connected', () => {
@@ -62,24 +82,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     });
   }
 
-  connect() {
-    this.mongoose = new Mongoose();
-    ConduitGrpcSdk.Logger.log('Connecting to database...');
-    this.mongoose
-      .connect(this.connectionString, this.options)
-      .then(() => {
-        deepPopulate = deepPopulate(this.mongoose);
-      })
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
-        throw new Error();
-      })
-      .then(() => {
-        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
-      });
-    this.mongoose.set('debug', () => {
-      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
-    });
+  protected async hasLegacyCollections() {
+    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
+      c => c.name === '_declaredschemas',
+    );
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -228,12 +234,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return { model: this.models[schemaName], relations: null };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-  }
-
-  async checkDeclaredSchemaExistence() {
-    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
-      c => c.name === '_declaredschemas',
-    );
   }
 
   async deleteSchema(

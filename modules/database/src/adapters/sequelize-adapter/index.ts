@@ -26,8 +26,45 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.connectionUri = connectionUri;
   }
 
-  connect() {
+  protected connect() {
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  }
+
+  protected async ensureConnected() {
+    let error;
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
+      try {
+        await this.sequelize.authenticate();
+        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
+        return;
+      } catch (err: any) {
+        error = err;
+        if (error.original.code !== 'ECONNREFUSED') break;
+        await sleep(200);
+      }
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
+      throw new Error();
+    }
+  }
+
+  protected async hasLegacyCollections() {
+    return (
+      (
+        await this.sequelize.query(
+          `SELECT EXISTS (
+    SELECT FROM 
+        information_schema.tables 
+    WHERE 
+        table_schema LIKE '${sqlSchemaName}' AND 
+        table_type LIKE 'BASE TABLE' AND
+        table_name = '_DeclaredSchema'
+    );`,
+        )
+      )[0][0] as { exists: boolean }
+    ).exists;
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -192,23 +229,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return this.models[schema.name];
   }
 
-  async checkDeclaredSchemaExistence() {
-    return (
-      (
-        await this.sequelize.query(
-          `SELECT EXISTS (
-    SELECT FROM 
-        information_schema.tables 
-    WHERE 
-        table_schema LIKE '${sqlSchemaName}' AND 
-        table_type LIKE 'BASE TABLE' AND
-        table_name = '_DeclaredSchema'
-    );`,
-        )
-      )[0][0] as { exists: boolean }
-    ).exists;
-  }
-
   async deleteSchema(
     schemaName: string,
     deleteData: boolean,
@@ -261,25 +281,5 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       return { model: this.models[schemaName], relations };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-  }
-
-  async ensureConnected() {
-    let error;
-    ConduitGrpcSdk.Logger.log('Connecting to database...');
-    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
-      try {
-        await this.sequelize.authenticate();
-        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
-        return;
-      } catch (err: any) {
-        error = err;
-        if (error.original.code !== 'ECONNREFUSED') break;
-        await sleep(200);
-      }
-    }
-    if (error) {
-      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
-      throw new Error();
-    }
   }
 }
