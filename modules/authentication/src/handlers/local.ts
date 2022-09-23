@@ -177,10 +177,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/hook/passwordless-login/:verificationToken',
-        action: ConduitRouteActions.GET,
+        action: ConduitRouteActions.POST,
         description: `A webhook used to passwordless login.`,
-        urlParams: {
-          verificationToken: ConduitString.Required,
+        bodyParams: {
+          email: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('PasswordLessLoginResponse', 'String'),
@@ -1118,7 +1118,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async passwordlessLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { user } = call.request.context;
+    const { email } = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ email });
+    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     if (this.sendVerificationEmail) {
       if (user.hasTwoFA) {
         if (user.twoFaMethod === 'qrcode') {
