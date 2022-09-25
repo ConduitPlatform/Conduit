@@ -1,4 +1,9 @@
 {
+  "contributors": [
+    "Jeremy Scalpello <jeremy@scalpello.info>",
+    "Alistair Smith <hey@alistair.cloud>"
+  ],
+  "homepage": "https://github.com/jeremyscalpello/node-2fa#readme",
   "name": "@conduitplatform/node-2fa",
   "version": "1.0.0",
   "main": "dist/index.js",
