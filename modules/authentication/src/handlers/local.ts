@@ -1179,7 +1179,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
     await this.emailModule
-      .sendEmail('PasswordlessLoginEmail', {
+      .sendEmail('PasswordlessLogin', {
         email: user.email,
         sender: 'no-reply',
         variables: {
