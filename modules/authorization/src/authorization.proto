@@ -56,5 +56,5 @@ service Authorization {
   rpc UpdateResourceDefinition(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc FindRelation(FindRelationRequest) returns (Relation);
-  rpc Check(PermissionCheck) returns (Decision);
+  rpc Can(PermissionCheck) returns (Decision);
 }

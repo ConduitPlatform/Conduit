@@ -91,21 +91,23 @@ export class IndexController {
     }
   }
 
-  async removeRelationIndex(subject: string, relation: string, object: string) {
-    let subjectDefinition = await ResourceDefinition.getInstance().findOne({
-      name: subject.split(':')[0],
-    });
-    // construct actor index
-    await ActorIndex.getInstance().deleteOne({
-      index: {
-        [subject]: `${object}#${relation}`,
-      },
-    });
-    if (Object.keys(subjectDefinition!.relations).length === 0) {
-    } else {
-      // delete object indices
-    }
+  async removeRelation(subject: string, relation: string, object: string) {
+    // todo
   }
+
+  async permissionsChange(subject: string, relation: string, object: string) {
+    // todo
+  }
+
+  async modifyPermission(oldResource: any, resource: any) {
+    // todo
+  }
+
+  async modifyRelations(oldResource: any, resource: any) {
+    // todo
+  }
+
+  async removeResource(resourceName: string) {}
 
   async findIndex(subject: string, action: string, object: string) {
     let subjectDefinition = await ActorIndex.getInstance().findMany({

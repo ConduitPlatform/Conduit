@@ -34,7 +34,7 @@ export default class Authorization extends ManagedModule<Config> {
       defineResource: this.defineResource.bind(this),
       createRelation: this.createRelation.bind(this),
       findRelation: this.findRelation.bind(this),
-      check: this.check.bind(this),
+      can: this.can.bind(this),
     },
   };
   // private adminRouter: AdminHandlers;
@@ -77,14 +77,8 @@ export default class Authorization extends ManagedModule<Config> {
       await this.registerSchemas();
       this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.indexController = IndexController.getInstance(this.grpcSdk);
-      this.relationsController = RelationsController.getInstance(
-        this.grpcSdk,
-        this.indexController,
-      );
-      this.permissionsController = PermissionsController.getInstance(
-        this.grpcSdk,
-        this.indexController,
-      );
+      this.relationsController = RelationsController.getInstance(this.grpcSdk);
+      this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
       // this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
@@ -120,7 +114,7 @@ export default class Authorization extends ManagedModule<Config> {
 
   findRelation() {}
 
-  check(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
+  can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
     const { subject, resource, action } = call.request;
     this.permissionsController
       .can(subject, action, resource)

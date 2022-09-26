@@ -1,7 +1,6 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
-import { ResourceDefinition } from '../models/ResourceDefinition.schema';
-import { Relationship } from '../models/Relationship.schema';
+import { ResourceDefinition, Relationship } from '../models';
 import { IndexController } from './index.controller';
 
 export class RelationsController {
@@ -9,16 +8,13 @@ export class RelationsController {
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexController: IndexController,
+    private readonly indexController = IndexController.getInstance(grpcSdk),
   ) {}
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk && indexController) {
-      return (RelationsController._instance = new RelationsController(
-        grpcSdk,
-        indexController,
-      ));
+    if (grpcSdk) {
+      return (RelationsController._instance = new RelationsController(grpcSdk));
     }
     throw new Error('Missing grpcSdk or indexController!');
   }
@@ -34,7 +30,7 @@ export class RelationsController {
       name: subject.split(':')[0],
     });
     if (!subjectResource) throw new Error('Subject resource not found');
-    let resource = await ResourceDefinition.getInstance()
+    await ResourceDefinition.getInstance()
       .findOne({ name: object.split(':')[0] })
       .then(resourceDefinition => {
         if (!resourceDefinition) {
@@ -42,12 +38,10 @@ export class RelationsController {
         }
         if (
           !resourceDefinition.relations[relation] ||
-          (resourceDefinition.relations[relation] !== subject.split(':')[0] &&
-            resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1)
+          resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
         ) {
           throw new Error('Relation not allowed');
         }
-        return resourceDefinition;
       });
 
     relationResource = await Relationship.getInstance().create({
@@ -70,7 +64,7 @@ export class RelationsController {
       computedTuple: computeRelationTuple(subject, relation, object),
     });
 
-    await this.indexController.removeRelationIndex(subject, relation, object);
+    await this.indexController.removeRelation(subject, relation, object);
 
     return;
   }

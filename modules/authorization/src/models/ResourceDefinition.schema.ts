@@ -64,8 +64,8 @@ export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> 
   private static _instance: ResourceDefinition;
   _id: string;
   name: string;
-  relations: { [key: string]: string | string[] };
-  permissions: { [key: string]: string | string[] };
+  relations: { [key: string]: string[] };
+  permissions: { [key: string]: string[] };
   createdAt: Date;
   updatedAt: Date;
 

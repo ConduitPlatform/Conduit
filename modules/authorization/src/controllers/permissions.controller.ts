@@ -3,23 +3,19 @@ import { checkRelation, computePermissionTuple } from '../utils';
 import { IndexController } from './index.controller';
 import { RuleCache } from './cache.controller';
 import { isNil } from 'lodash';
-import { ResourceDefinition } from '../models';
 
 export class PermissionsController {
   private static _instance: PermissionsController;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexController: IndexController,
+    private readonly indexController = IndexController.getInstance(grpcSdk),
   ) {}
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (PermissionsController._instance) return PermissionsController._instance;
-    if (grpcSdk && indexController) {
-      return (PermissionsController._instance = new PermissionsController(
-        grpcSdk,
-        indexController,
-      ));
+    if (grpcSdk) {
+      return (PermissionsController._instance = new PermissionsController(grpcSdk));
     }
     throw new Error('Missing grpcSdk or indexController!');
   }
