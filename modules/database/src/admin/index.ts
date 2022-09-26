@@ -180,31 +180,33 @@ export class AdminHandlers {
           bodyParams: {
             name: ConduitString.Required,
             fields: ConduitJson.Required,
-            modelOptions: ConduitJson.Optional,
-            enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: {
-              create: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Required,
+            conduitOptions: {
+              cms: {
+                crudOperations: {
+                  create: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  read: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  update: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  delete: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                },
               },
-              read: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Required,
+              permissions: {
+                extendable: ConduitBoolean.Optional,
+                canCreate: ConduitBoolean.Optional,
+                canModify: ConduitString.Optional,
+                canDelete: ConduitBoolean.Optional,
               },
-              update: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Required,
-              },
-              delete: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Required,
-              },
-            },
-            permissions: {
-              extendable: ConduitBoolean.Optional,
-              canCreate: ConduitBoolean.Optional,
-              canModify: ConduitString.Optional,
-              canDelete: ConduitBoolean.Optional,
             },
           },
         },
@@ -222,31 +224,33 @@ export class AdminHandlers {
           bodyParams: {
             name: ConduitString.Optional,
             fields: ConduitJson.Optional,
-            modelOptions: ConduitJson.Optional,
-            enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-            crudOperations: {
-              create: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Optional,
+            conduitOptions: {
+              cms: {
+                crudOperations: {
+                  create: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  read: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  update: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                  delete: {
+                    enabled: ConduitBoolean.Optional,
+                    authenticated: ConduitBoolean.Optional,
+                  },
+                },
               },
-              read: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Optional,
+              permissions: {
+                extendable: ConduitBoolean.Optional,
+                canCreate: ConduitBoolean.Optional,
+                canModify: ConduitString.Optional,
+                canDelete: ConduitBoolean.Optional,
               },
-              update: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Optional,
-              },
-              delete: {
-                enabled: ConduitBoolean.Optional,
-                authenticated: ConduitBoolean.Optional,
-              },
-            },
-            permissions: {
-              extendable: ConduitBoolean.Optional,
-              canCreate: ConduitBoolean.Optional,
-              canModify: ConduitString.Optional,
-              canDelete: ConduitBoolean.Optional,
             },
           },
         },

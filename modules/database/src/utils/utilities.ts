@@ -13,6 +13,7 @@ import {
   ConduitSchemaOptions,
   Indexable,
   TYPE,
+  ConduitModelOptionsPermModifyType as ValidModifyPermValues,
 } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
@@ -43,36 +44,19 @@ export function validateSchemaInput(
   name: string,
   fields: ConduitModel,
   modelOptions: ConduitSchemaOptions,
-  enabled?: boolean,
 ) {
-  if (!isNil(enabled) && !isBoolean(enabled)) {
-    return "Field 'enabled' must be of type Boolean";
-  }
-
-  if (!isNil(name) && !isString(name)) return "Field 'name' must be of type String";
+  if (!isNil(name) && !isString(name))
+    throw new Error("Field 'name' must be of type String");
 
   if (!isNil(modelOptions)) {
-    let optionsValidationError = null;
-    if (!isPlainObject(modelOptions)) {
-      optionsValidationError = 'Model options must be an object';
-    }
-    Object.keys(modelOptions).forEach(key => {
-      if (key !== 'conduit' && key !== 'timestamps') {
-        optionsValidationError = "Only 'conduit' and 'timestamps' options allowed";
-      } else if (key === 'timestamps' && !isBoolean(modelOptions[key])) {
-        optionsValidationError = "Option 'timestamps' must be of type Boolean";
-      } else if (key === 'conduit' && !isObject(modelOptions[key])) {
-        optionsValidationError = "Option 'conduit' must be of type Object";
-      }
-    });
-    if (!isNil(optionsValidationError)) return optionsValidationError;
+    validateModelOptions(modelOptions);
   }
 
   if (isNil(fields)) return null;
   if (!isPlainObject(fields)) {
     return "'fields' must be an object";
   }
-  if (isEmpty(fields)) return "'fields' can't be an empty object";
+  if (isEmpty(fields)) throw new Error("'fields' can't be an empty object");
 
   let fieldsErrorFlag = false;
   deepdash.eachDeep(
@@ -129,7 +113,7 @@ export function validateSchemaInput(
       }
     },
   );
-  if (fieldsErrorFlag) return 'Invalid schema fields configuration';
+  if (fieldsErrorFlag) throw new Error('Invalid schema fields configuration');
 }
 
 export function populateArray(pop: any) {
@@ -142,4 +126,103 @@ export function populateArray(pop: any) {
     pop = [pop];
   }
   return pop;
+}
+
+function validateModelOptions(modelOptions: ConduitSchemaOptions) {
+  if (!isPlainObject(modelOptions)) throw new Error('Model options must be an object');
+  Object.keys(modelOptions).forEach(key => {
+    if (key !== 'conduit' && key !== 'timestamps')
+      throw new Error("Only 'conduit' and 'timestamps' options allowed");
+    else if (key === 'timestamps' && !isBoolean(modelOptions.timestamps))
+      throw new Error("Option 'timestamps' must be of type Boolean");
+    else if (key === 'conduit') {
+      if (!isObject(modelOptions.conduit))
+        throw new Error("Option 'conduit' must be of type Object");
+      Object.keys(modelOptions.conduit).forEach((conduitKey: string) => {
+        if (conduitKey !== 'cms' && conduitKey !== 'permissions')
+          throw new Error(
+            "Only 'cms' and 'permissions' fields allowed inside 'conduit' field",
+          );
+        if (!isObject(modelOptions.conduit![conduitKey]))
+          throw new Error(`Conduit field option ${conduitKey} must be of type Object`);
+      });
+      if (modelOptions.conduit!.cms?.enabled) {
+        if (!isBoolean(modelOptions.conduit.cms.enabled))
+          return "CMS field 'enabled' must be of type Boolean";
+      }
+      if (modelOptions.conduit!.cms?.crudOperations) {
+        validateCrudOperations(modelOptions.conduit.cms.crudOperations);
+      }
+      if (modelOptions.conduit!.permissions) {
+        validatePermissions(modelOptions.conduit.permissions);
+      }
+    }
+  });
+}
+
+function validateCrudOperations(crudOperations: {
+  create?: { enabled?: boolean; authenticated?: boolean };
+  read?: { enabled?: boolean; authenticated?: boolean };
+  update?: { enabled?: boolean; authenticated?: boolean };
+  delete?: { enabled?: boolean; authenticated?: boolean };
+}) {
+  if (!isObject(crudOperations))
+    throw new Error(`CMS field 'crudOperations' must be of type Object`);
+  Object.keys(crudOperations).forEach(op => {
+    // @ts-ignore
+    if (!crudOperations[op] === undefined) return;
+    if (!['create', 'read', 'update', 'delete'].includes(op)) {
+      throw new Error(`Unrecognized CRUD operation '${op}' provided`);
+    }
+    // @ts-ignore
+    if (!isObject(crudOperations[op])) {
+      throw new Error(`Crud operation field '${op}' must be of type Object`);
+    }
+    // @ts-ignore
+    Object.keys(crudOperations[op]).forEach(opField => {
+      // @ts-ignore
+      if (!crudOperations[op][opField] === undefined) return;
+      if (!['enabled', 'authenticated'].includes(opField)) {
+        throw new Error(
+          `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
+        );
+      }
+      // @ts-ignore
+      if (!isBoolean(crudOperations[op][opField])) {
+        throw new Error(
+          `Crud operation field '${opField}' for operation '${op}' must be of type Boolean`,
+        );
+      }
+    });
+  });
+}
+
+export function validatePermissions(permissions: {
+  extendable?: boolean;
+  canCreate?: boolean;
+  canModify?: 'Everything' | 'Nothing' | 'ExtensionOnly';
+  canDelete?: boolean;
+}) {
+  Object.keys(permissions).forEach(perm => {
+    // @ts-ignore
+    if (permissions[perm] === undefined) return;
+    if (!['extendable', 'canCreate', 'canModify', 'canDelete'].includes(perm)) {
+      throw new Error(`Unrecognized permission '${perm}' provided`);
+    }
+    if (perm !== 'canModify') {
+      // @ts-ignore
+      if (!isBoolean(permissions[perm]))
+        throw new Error(`Permission field '${perm}' must be of type Boolean`);
+    } else if (
+      !isString(permissions[perm]) ||
+      !ValidModifyPermValues.includes(
+        permissions.canModify as 'Everything' | 'Nothing' | 'ExtensionOnly',
+      )
+    )
+      throw new Error(
+        `Permission field 'canModify' must be one of: ${ValidModifyPermValues.join(
+          ', ',
+        )}`,
+      );
+  });
 }
