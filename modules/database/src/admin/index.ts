@@ -259,7 +259,7 @@ export class AdminHandlers {
           action: ConduitRouteActions.DELETE,
           description: `Deletes queried schemas.`,
           queryParams: {
-            ids: [ConduitJson.Required], // handler array check is still required
+            ids: [ConduitString.Required], // handler array check is still required
             deleteData: ConduitBoolean.Required,
           },
         },
