@@ -80,21 +80,22 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async preServerStart() {
-    this._activeAdapter.setGrpcSdk(this.grpcSdk);
-    this._activeAdapter.connect();
-    await this._activeAdapter.ensureConnected();
+    await this._activeAdapter.init(this.grpcSdk);
     await this.registerMetrics();
   }
 
   async onServerStart() {
-    const declaredSchemaExists = await this._activeAdapter.checkDeclaredSchemaExistence();
     await this._activeAdapter.createSchemaFromAdapter(
       models.DeclaredSchema,
       false,
-      !declaredSchemaExists,
       false,
       false,
     );
+    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+      if (model.name === '_DeclaredSchema') return [];
+      return this._activeAdapter.createSchemaFromAdapter(model, false);
+    });
+    await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await runMigrations(this._activeAdapter);
@@ -118,13 +119,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
         delete (syncSchema as any).fieldHash;
-        await this._activeAdapter.createSchemaFromAdapter(
-          syncSchema,
-          false,
-          false,
-          false,
-          true,
-        );
+        await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
@@ -199,7 +194,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
-      .createSchemaFromAdapter(schema, false, true, true)
+      .createSchemaFromAdapter(schema, false, true)
       .then((schemaAdapter: Schema) => {
         callback(
           null,
