@@ -1095,7 +1095,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (this.sendVerificationEmail) {
+    if (this.sendVerificationEmail || config.passwordless_login.enabled) {
       await this.grpcSdk.config.moduleExists('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
@@ -1116,6 +1116,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.smsModule = this.grpcSdk.sms!;
     } else {
       ConduitGrpcSdk.Logger.log('phone authentication not active');
+    }
+
+    if (config.passwordless_login.enabled && !errorMessage) {
+      // maybe check if verify is enabled in sms module
+      await this.grpcSdk.waitForExistence('sms');
+      this.smsModule = this.grpcSdk.sms!;
+    } else {
+      ConduitGrpcSdk.Logger.log('passwordless_login not active');
     }
 
     if (this.sendVerificationEmail) {
@@ -1139,7 +1147,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async passwordlessLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { identifier } = call.request.params;
-    const user: User | null = await User.getInstance().findOne({ identifier });
+    const user: User | null = await User.getInstance().findOne({
+      $or: [{ phoneNumber: identifier }, { email: identifier }],
+    });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     let method;
     if (user.phoneNumber === identifier) {
@@ -1174,7 +1184,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   private async sendEmailForPasswordLessLogin(user: User, token: Token) {
     const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
+    const url = serverConfig.passwordless_login.redirect_uri;
 
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
