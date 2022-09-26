@@ -176,7 +176,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     routingManager.route(
       {
-        path: '/hook/passwordless-login/:verificationToken',
+        path: '/hook/passwordless-login',
         action: ConduitRouteActions.POST,
         description: `A webhook used to passwordless login.`,
         bodyParams: {
@@ -186,6 +186,26 @@ export class LocalHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('PasswordLessLoginResponse', 'String'),
       this.passwordlessLogin.bind(this),
     );
+
+    // routingManager.route(
+    //     {
+    //         path: '/hook/passwordless-login/:verificationToken',
+    //         action: ConduitRouteActions.GET,
+    //         description: `A webhook used to verify a passwordless login.`,
+    //         urlParams: {
+    //             verificationToken: ConduitString.Required,
+    //         },
+    //     },
+    //     new ConduitRouteReturnDefinition('VerifyPasswordLessLoginResponse', {
+    //         userId: ConduitString.Optional,
+    //         accessToken: ConduitString.Optional,
+    //         refreshToken: config.generateRefreshToken
+    //             ? ConduitString.Required
+    //             : ConduitString.Optional,
+    //         message: ConduitString.Optional,
+    //     }),
+    //     this.verifyPasswordLessLogin.bind(this),
+    // );
 
     if (config.twofa.enabled) {
       routingManager.route(
@@ -1145,7 +1165,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       return token;
     } else {
       if (!this.grpcSdk.isAvailable('email')) {
-        throw new GrpcError(status.INTERNAL, 'Could not send email.s');
+        throw new GrpcError(status.INTERNAL, 'Could not send email.');
       }
       await this.sendEmailForPasswordLessLogin(user, token);
     }
@@ -1170,5 +1190,62 @@ export class LocalHandlers implements IAuthenticationStrategy {
         ConduitGrpcSdk.Logger.error(e);
       });
     return 'Email send';
+  }
+
+  async verifyPasswordLessLogin(call: ParsedRouterRequest, clientId: string) {
+    const { verificationToken } = call.request.params.verificationToken;
+    const config = ConfigController.getInstance().config;
+    const token: Token | null = await Token.getInstance().findOne({
+      type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
+      token: verificationToken,
+    });
+    if (isNil(token)) {
+      throw new GrpcError(status.NOT_FOUND, 'Passwordless login token does not exist');
+    }
+    const user: User | null = await User.getInstance().findOne({
+      _id: token.userId,
+    });
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    await Token.getInstance()
+      .deleteMany({ userId: token.userId, type: TokenType.PASSWORDLESS_LOGIN_TOKEN })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
+
+    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
+      this.grpcSdk,
+      {
+        userId: user._id,
+        clientId: clientId,
+        config,
+      },
+    );
+
+    if (config.setCookies.enabled) {
+      const cookieOptions = config.setCookies.options;
+      const cookies: Cookie[] = [
+        {
+          name: 'accessToken',
+          value: accessToken.token,
+          options: cookieOptions,
+        },
+      ];
+      if (!isNil(refreshToken)) {
+        cookies.push({
+          name: 'refreshToken',
+          value: refreshToken.token,
+          options: cookieOptions,
+        });
+      }
+      return {
+        result: { message: 'Successfully authenticated' },
+        setCookies: cookies,
+      };
+    }
+    return {
+      userId: user!._id.toString(),
+      accessToken: accessToken,
+      refreshToken: !isNil(refreshToken) ? refreshToken : undefined,
+    };
   }
 }
