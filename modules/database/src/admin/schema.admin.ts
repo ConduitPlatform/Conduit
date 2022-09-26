@@ -144,14 +144,7 @@ export class SchemaAdmin {
   }
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, fields } = call.request.params;
-    if (!isNil(name) && name !== '') {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Name of existing schema cannot be edited',
-      );
-    }
-
+    const { id, fields } = call.request.params;
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({

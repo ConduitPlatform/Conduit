@@ -222,7 +222,6 @@ export class AdminHandlers {
             id: { type: RouteOptionType.String, required: true },
           },
           bodyParams: {
-            name: ConduitString.Optional,
             fields: ConduitJson.Optional,
             conduitOptions: {
               cms: {
