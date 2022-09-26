@@ -107,12 +107,6 @@ export class SchemaAdmin {
 
   async createSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, fields } = call.request.params;
-    if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Names cannot include spaces and - characters',
-      );
-    }
     const existingSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ name });

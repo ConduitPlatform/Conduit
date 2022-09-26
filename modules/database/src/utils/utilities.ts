@@ -47,6 +47,9 @@ export function validateSchemaInput(
 ) {
   if (!isNil(name) && !isString(name))
     throw new Error("Field 'name' must be of type String");
+  if (name.indexOf('-') >= 0 || name.indexOf(' ') >= 0) {
+    throw new Error('Names cannot include spaces and - characters');
+  }
 
   if (!isNil(modelOptions)) {
     validateModelOptions(modelOptions);
