@@ -75,11 +75,7 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   private async enableModule() {
     if (!this.isRunning) {
-      try {
-        await this.initProvider();
-      } catch (e) {
-        throw e;
-      }
+      await this.initProvider();
       const self = this;
       this.grpcSdk
         .waitForExistence('router')
@@ -97,11 +93,7 @@ export default class PushNotifications extends ManagedModule<Config> {
       );
       this.isRunning = true;
     } else {
-      try {
-        await this.initProvider();
-      } catch (e) {
-        throw e;
-      }
+      await this.initProvider();
       this.adminRouter.updateProvider(this._provider!);
     }
   }
@@ -122,11 +114,15 @@ export default class PushNotifications extends ManagedModule<Config> {
     const name = notificationsConfig.providerName;
     const settings = notificationsConfig[name];
 
-    if (name === 'firebase') {
-      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
-    } else {
-      // this was done just for now so that we surely initialize the _provider variable
-      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+    try {
+      if (name === 'firebase') {
+        this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+      } else {
+        // this was done just for now so that we surely initialize the _provider variable
+        this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+      }
+    } catch (e) {
+      throw e;
     }
   }
 
