@@ -4,7 +4,7 @@ import {
   ParsedRouterRequest,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces';
+import { IDeclaredSchema } from '../../interfaces';
 import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -19,7 +19,7 @@ import { status } from '@grpc/grpc-js';
  */
 export function queryValidation(
   query: any,
-  findSchema: ConduitDatabaseSchema,
+  findSchema: IDeclaredSchema,
   inputs: Indexable,
 ): true | string {
   if (query.hasOwnProperty('AND')) {
@@ -78,7 +78,7 @@ export function queryValidation(
 }
 
 function _queryValidation(
-  findSchema: ConduitDatabaseSchema,
+  findSchema: IDeclaredSchema,
   inputs: Indexable,
   schemaField: string,
   operation: number,
@@ -300,7 +300,7 @@ export function operationValidation(
 export function paginationAndSortingValidation(
   operation: number,
   call: ParsedRouterRequest,
-  findSchema: ConduitDatabaseSchema,
+  findSchema: IDeclaredSchema,
   endpoint: Indexable | null,
 ) {
   const { query, inputs, sorted, paginated } = call.request.params;
@@ -316,11 +316,7 @@ export function paginationAndSortingValidation(
     endpoint.sorted = sorted;
   }
   if (operation !== OperationsEnum.POST) {
-    const error = queryValidation(
-      query,
-      findSchema as ConduitDatabaseSchema, // @dirty-type-cast
-      inputs,
-    );
+    const error = queryValidation(query, findSchema, inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }

@@ -1,5 +1,4 @@
 import ConduitGrpcSdk, {
-  ConduitSchema,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
@@ -20,7 +19,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ConduitDatabaseSchema } from '../../interfaces';
+import { IDeclaredSchema } from '../../interfaces';
 
 export const OperationsEnum = {
   // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
@@ -92,9 +91,9 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
     const findSchema = await this.findSchema(
+      operation,
       selectedSchema,
       selectedSchemaName,
-      operation,
     );
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -111,7 +110,7 @@ export class CustomEndpointsAdmin {
     const endpoint = {
       name,
       operation,
-      selectedSchema,
+      selectedSchema: findSchema._id.toString(),
       selectedSchemaName: findSchema.name,
       inputs,
       authentication,
@@ -121,12 +120,7 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(
-      operation,
-      call,
-      findSchema as ConduitDatabaseSchema,
-      endpoint,
-    );
+    error = paginationAndSortingValidation(operation, call, findSchema, endpoint);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -189,9 +183,9 @@ export class CustomEndpointsAdmin {
     const operation = found.operation;
 
     const findSchema = await this.findSchema(
+      operation,
       selectedSchema,
       selectedSchemaName,
-      operation,
     );
     if (isNil(findSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
@@ -207,12 +201,7 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
 
-    error = paginationAndSortingValidation(
-      operation,
-      call,
-      findSchema as ConduitDatabaseSchema,
-      null,
-    );
+    error = paginationAndSortingValidation(operation, call, findSchema, null);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -315,24 +304,20 @@ export class CustomEndpointsAdmin {
   }
 
   private async findSchema(
-    selectedSchema: string,
-    selectedSchemaName: string,
     operation: number,
-  ): Promise<ConduitSchema | null> {
-    if (!isNil(selectedSchema)) {
-      // Find schema using selectedSchema
-      return this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ _id: selectedSchema });
-    } else {
-      // Find schema using selectedSchemaName
-      if (operation !== OperationsEnum.GET) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Only get requests are allowed for schemas from other modules',
-        );
-      }
-      return this.database.getSchema(selectedSchemaName);
+    selectedSchema?: string,
+    selectedSchemaName?: string,
+  ): Promise<IDeclaredSchema | null> {
+    if (operation !== OperationsEnum.GET) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Only get requests are allowed for schemas from other modules',
+      );
     }
+    return this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne(
+        selectedSchema ? { _id: selectedSchema } : { name: selectedSchemaName },
+      );
   }
 }

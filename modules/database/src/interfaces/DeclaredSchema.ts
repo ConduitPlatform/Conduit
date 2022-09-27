@@ -6,6 +6,7 @@ export interface IDeclaredSchema {
   name: string;
   fields: ConduitModel;
   extensions: DeclaredSchemaExtension[];
+  compiledFields: ConduitModel;
   modelOptions: ConduitSchemaOptions;
   createdAt: Date;
   updatedAt: Date;
