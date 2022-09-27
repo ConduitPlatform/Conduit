@@ -1,11 +1,10 @@
-import ConduitGrpcSdk, {
-  ManagedModule,
+import {
   ConfigController,
   DatabaseProvider,
-  HealthCheckStatus,
   GrpcRequest,
   GrpcResponse,
-  GrpcError,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config';

@@ -1,8 +1,7 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
-import { ResourceDefinition, Relationship, ActorIndex } from '../models';
+import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
-import { Relation } from '../protoTypes/authorization';
 
 export class RelationsController {
   private static _instance: RelationsController;
