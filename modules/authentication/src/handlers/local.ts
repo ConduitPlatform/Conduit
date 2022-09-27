@@ -1153,10 +1153,18 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     let method;
     if (user.phoneNumber === identifier) {
+      if (!this.grpcSdk.isAvailable('sms')) {
+        throw new GrpcError(status.UNAVAILABLE, 'Could not send sms.');
+      }
       method = 'phone';
     } else if (user.hasTwoFA && user.twoFaMethod === 'qrcode') {
+      //TODO isServing check
       method = 'qrcode';
     } else {
+      if (!this.grpcSdk.isAvailable('email')) {
+        //TODO isServing check
+        throw new GrpcError(status.UNAVAILABLE, 'Could not send email.');
+      }
       method = 'email';
     }
 
@@ -1171,12 +1179,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (method === 'qrcode') {
       return token;
     } else if (method === 'phone') {
-      await AuthUtils.sendVerificationCode(this.smsModule, identifier);
+      await AuthUtils.sendVerificationCode(this.smsModule, identifier).catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+      });
       return token;
     } else {
-      if (!this.grpcSdk.isAvailable('email')) {
-        throw new GrpcError(status.INTERNAL, 'Could not send email.');
-      }
       await this.sendEmailForPasswordLessLogin(user, token);
     }
     return 'ok';
@@ -1184,7 +1191,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   private async sendEmailForPasswordLessLogin(user: User, token: Token) {
     const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.passwordless_login.redirect_uri;
+    const url = serverConfig.hostUrl;
 
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
