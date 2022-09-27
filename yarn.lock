@@ -3646,7 +3646,7 @@
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.1.tgz#d3357479a0fdfdd5907fe67e17e0a85c906e1301"
   integrity sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==
 
-"@types/notp@^2.0.0", "@types/notp@^2.0.2":
+"@types/notp@^2.0.2":
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@types/notp/-/notp-2.0.2.tgz#7283f4918b2770555e0f2df72acc9f46ebd41ae9"
   integrity sha512-JUcVYN9Tmw0AjoAfvjslS4hbv39fPBbZdftBK3b50g5z/DmhLsu6cd0UOEBiQuMwy2FirshF2Gk9gAvfWjshMw==
@@ -9553,16 +9553,6 @@ nice-grpc@^1.2.0:
     nice-grpc-common "^1.1.0"
     node-abort-controller "^1.2.1"
 
-node-2fa@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/node-2fa/-/node-2fa-2.0.3.tgz#74a5f3c618e803c3b7a9b04c38d36cbf4a5e26d6"
-  integrity sha512-PQldrOhjuoZyoydMvMSctllPN1ZPZ1/NwkEcgYwY9faVqE/OymxR+3awPpbWZxm6acLKqvmNqQmdqTsqYyflFw==
-  dependencies:
-    "@types/notp" "^2.0.0"
-    notp "^2.0.3"
-    thirty-two "1.0.2"
-    tslib "^2.1.0"
-
 node-abort-controller@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/node-abort-controller/-/node-abort-controller-1.2.1.tgz#1eddb57eb8fea734198b11b28857596dc6165708"
@@ -12093,7 +12083,7 @@ thenify-all@^1.0.0:
   dependencies:
     any-promise "^1.0.0"
 
-thirty-two@1.0.2, thirty-two@^1.0.2:
+thirty-two@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/thirty-two/-/thirty-two-1.0.2.tgz#4ca2fffc02a51290d2744b9e3f557693ca6b627a"
   integrity sha512-OEI0IWCe+Dw46019YLl6V10Us5bi574EvlJEOcAkB29IzQ/mYD1A6RyNHLjZPiHCmuodxvgF6U+vZO1L15lxVA==

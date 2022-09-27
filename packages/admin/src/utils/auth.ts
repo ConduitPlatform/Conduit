@@ -4,7 +4,7 @@ import { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
 import { AdminTwoFactorSecret, Admin } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import * as twoFactor from 'node-2fa';
+import * as twoFactor from '@conduitplatform/node-2fa';
 
 export function signToken(data: any, secret: string, expiresIn?: number) {
   return jwt.sign(data, secret, { expiresIn: expiresIn ?? '6 hours' });
