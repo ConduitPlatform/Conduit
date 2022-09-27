@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ICustomEndpoint } from '../../interfaces';
+import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
 
 function getOperation(op: number) {
@@ -69,7 +69,7 @@ function extractParams(
 }
 
 export function createCustomEndpointRoute(
-  endpoint: ICustomEndpoint,
+  endpoint: ICustomEndpoint | PopulatedCustomEndpoint,
   handler: RequestHandlers,
 ) {
   const route = new RouteBuilder()
