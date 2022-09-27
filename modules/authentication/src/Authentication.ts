@@ -77,7 +77,7 @@ export default class Authentication extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-      await this.refreshAppRoutes();
+      this.refreshAppRoutes();
       this.initMonitors();
       this.updateHealth(HealthCheckStatus.SERVING);
       if (config.local.verification.send_email) {
@@ -93,14 +93,14 @@ export default class Authentication extends ManagedModule<Config> {
   initMonitors() {
     if (this.monitorsActive) return;
     this.monitorsActive = true;
-    this.grpcSdk.monitorModule('email', async serving => {
-      await this.refreshAppRoutes();
+    this.grpcSdk.monitorModule('email', async () => {
+      this.refreshAppRoutes();
     });
-    this.grpcSdk.monitorModule('sms', async serving => {
-      await this.refreshAppRoutes();
+    this.grpcSdk.monitorModule('sms', async () => {
+      this.refreshAppRoutes();
     });
-    this.grpcSdk.monitorModule('router', async serving => {
-      await this.refreshAppRoutes();
+    this.grpcSdk.monitorModule('router', async () => {
+      this.refreshAppRoutes();
     });
   }
 
@@ -112,7 +112,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('router');
   }
 
-  private async refreshAppRoutes() {
+  private refreshAppRoutes() {
     if (this.userRouter && this.grpcSdk.isAvailable('router')) {
       return;
     }
