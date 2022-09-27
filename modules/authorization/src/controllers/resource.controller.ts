@@ -33,11 +33,11 @@ export class ResourceController {
   }
 
   async validateResourceRelations(relations: { [key: string]: string[] }) {
-    let relationResources = [];
-    for (let relation of Object.keys(relations)) {
+    const relationResources = [];
+    for (const relation of Object.keys(relations)) {
       relationResources.push(...relations[relation]);
     }
-    let found = await ResourceDefinition.getInstance().countDocuments({
+    const found = await ResourceDefinition.getInstance().countDocuments({
       name: { $in: relationResources },
     });
     if (found !== relationResources.length)
@@ -45,13 +45,13 @@ export class ResourceController {
   }
 
   async validateResourcePermissions(resource: any) {
-    let perms = resource.permissions;
-    for (let perm of Object.keys(perms)) {
+    const perms = resource.permissions;
+    for (const perm of Object.keys(perms)) {
       if (!Array.isArray(perms[perm])) {
         throw new Error('Permissions must be an array');
       }
       if (perm.indexOf('->') !== -1) {
-        let found = await ResourceDefinition.getInstance().findMany({
+        const found = await ResourceDefinition.getInstance().findMany({
           name: { $in: resource.relations[perm.split('->')[0]] },
           [`permissions${perm.split('->')[1]}`]: { $exists: true },
         });

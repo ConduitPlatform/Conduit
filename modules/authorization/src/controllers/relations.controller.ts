@@ -26,7 +26,7 @@ export class RelationsController {
     });
     if (relationResource) throw new Error('Relation already exists');
 
-    let subjectResource = await ResourceDefinition.getInstance().findOne({
+    const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
     });
     if (!subjectResource) throw new Error('Subject resource not found');
