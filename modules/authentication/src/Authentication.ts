@@ -47,8 +47,8 @@ export default class Authentication extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
-  private localSendVerificationEmail: boolean = false;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
+  private monitorsActive = false;
 
   constructor() {
     super('authentication');
@@ -73,35 +73,50 @@ export default class Authentication extends ManagedModule<Config> {
   async onConfig() {
     const config = ConfigController.getInstance().config;
     if (!config.active) {
+      this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.refreshAppRoutes();
+      this.initMonitors();
       this.updateHealth(HealthCheckStatus.SERVING);
       if (config.local.verification.send_email) {
-        this.grpcSdk.monitorModule('email', async serving => {
-          const alreadyEnabled = this.localSendVerificationEmail;
-          this.localSendVerificationEmail = serving;
-          if (serving) {
-            if (!alreadyEnabled) {
-              await this.refreshAppRoutes();
-            }
-          } else {
-            ConduitGrpcSdk.Logger.warn(
-              'Failed to enable email verification for local authentication strategy. Email module not serving.',
-            );
-          }
-        });
-      } else {
-        this.localSendVerificationEmail = false;
-        this.grpcSdk.unmonitorModule('email');
+        if (!this.grpcSdk.isAvailable('email')) {
+          ConduitGrpcSdk.Logger.warn(
+            'Failed to enable email verification for local authentication strategy. Email module not serving.',
+          );
+        }
       }
     }
   }
 
+  initMonitors() {
+    if (this.monitorsActive) return;
+    this.monitorsActive = true;
+    this.grpcSdk.monitorModule('email', async serving => {
+      await this.refreshAppRoutes();
+    });
+    this.grpcSdk.monitorModule('sms', async serving => {
+      await this.refreshAppRoutes();
+    });
+    this.grpcSdk.monitorModule('router', async serving => {
+      await this.refreshAppRoutes();
+    });
+  }
+
+  destroyMonitors() {
+    if (!this.monitorsActive) return;
+    this.monitorsActive = false;
+    this.grpcSdk.unmonitorModule('email');
+    this.grpcSdk.unmonitorModule('sms');
+    this.grpcSdk.unmonitorModule('router');
+  }
+
   private async refreshAppRoutes() {
+    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
+      return;
+    }
     if (this.userRouter) {
-      this.userRouter.updateLocalHandlers(this.localSendVerificationEmail);
       this.scheduleAppRouteRefresh();
       return;
     }
@@ -109,11 +124,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk
       .waitForExistence('router')
       .then(() => {
-        self.userRouter = new AuthenticationRoutes(
-          self.grpcServer,
-          self.grpcSdk,
-          self.localSendVerificationEmail,
-        );
+        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
         this.scheduleAppRouteRefresh();
       })
       .catch(e => {
@@ -223,8 +234,10 @@ export default class Authentication extends ManagedModule<Config> {
         hashedPassword,
         isVerified: !verify,
       });
-
-      if (verify && this.localSendVerificationEmail) {
+      const sendEmail =
+        ConfigController.getInstance().config.local.verification.send_email;
+      const emailAvailable = this.grpcSdk.isAvailable('email');
+      if (verify && sendEmail && emailAvailable) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
@@ -241,8 +254,11 @@ export default class Authentication extends ManagedModule<Config> {
             link,
           },
         });
+      } else if (verify) {
+        ConduitGrpcSdk.Logger.error(
+          'Failed to send verification email.' + ' Email service not online!',
+        );
       }
-
       return callback(null, { password });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
