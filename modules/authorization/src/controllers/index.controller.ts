@@ -19,14 +19,14 @@ export class IndexController {
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
-    let index = await ObjectIndex.getInstance().findOne({ subject, entity });
+    const index = await ObjectIndex.getInstance().findOne({ subject, entity });
     if (!index) {
       await ObjectIndex.getInstance().create({ subject, entity });
     }
   }
 
   async constructRelationIndex(subject: string, relation: string, object: string) {
-    let objectDefinition = (await ResourceDefinition.getInstance().findOne({
+    const objectDefinition = (await ResourceDefinition.getInstance().findOne({
       name: object.split(':')[0],
     }))!;
     // relations can only be created between actors and resources
@@ -42,9 +42,9 @@ export class IndexController {
         entity: `${object}#${relation}`,
       });
     }
-    let permissions = Object.keys(objectDefinition.permissions);
+    const permissions = Object.keys(objectDefinition.permissions);
     for (const permission of permissions) {
-      let roles = objectDefinition.permissions[permission];
+      const roles = objectDefinition.permissions[permission];
       for (const role of roles) {
         // no index needed for "allowAll" permissions
         // or for self modification
@@ -54,9 +54,9 @@ export class IndexController {
             role === '*' ? `*` : `${object}#${role}`,
           );
         } else {
-          let [relatedSubject, action] = role.split('->');
+          const [relatedSubject, action] = role.split('->');
           if (relation !== relatedSubject) continue;
-          let possibleConnections = await ObjectIndex.getInstance().findMany({
+          const possibleConnections = await ObjectIndex.getInstance().findMany({
             subject: `${subject}#${action}`,
           });
           for (const connection of possibleConnections) {
@@ -95,14 +95,14 @@ export class IndexController {
   }
 
   async modifyPermission(oldResource: any, resource: any) {
-    let oldPermissions = oldResource.permissions;
-    let newPermissions = resource.permissions;
-    let oldPermissionNames = Object.keys(oldPermissions);
-    let newPermissionNames = Object.keys(newPermissions);
-    let removedPermissions = oldPermissionNames.filter(
+    const oldPermissions = oldResource.permissions;
+    const newPermissions = resource.permissions;
+    const oldPermissionNames = Object.keys(oldPermissions);
+    const newPermissionNames = Object.keys(newPermissions);
+    const removedPermissions = oldPermissionNames.filter(
       permission => !newPermissionNames.includes(permission),
     );
-    let modifiedPermissions = newPermissionNames.filter(
+    const modifiedPermissions = newPermissionNames.filter(
       permission => !oldPermissionNames.includes(permission),
     );
     // remove all permissions that are no longer present
@@ -117,9 +117,9 @@ export class IndexController {
     for (const permission of modifiedPermissions) {
       // check if any roles are no longer valid for a specific permission
       if (oldPermissions[permission] !== newPermissions[permission]) {
-        let oldRoleNames = Object.keys(oldPermissions[permission]);
-        let newRoleNames = Object.keys(newPermissions[permission]);
-        let removedRoles = oldRoleNames.filter(role => !newRoleNames.includes(role));
+        const oldRoleNames = Object.keys(oldPermissions[permission]);
+        const newRoleNames = Object.keys(newPermissions[permission]);
+        const removedRoles = oldRoleNames.filter(role => !newRoleNames.includes(role));
         // for all roles that are no longer valid for a specific permission
         // remove all applicable actor indexes
         if (removedRoles.length > 0) {
@@ -136,8 +136,8 @@ export class IndexController {
                 },
               });
             } else {
-              let [relatedSubject, action] = removedRole.split('->');
-              let removedResources = oldResource.relations[relatedSubject];
+              const [relatedSubject, action] = removedRole.split('->');
+              const removedResources = oldResource.relations[relatedSubject];
               for (const removedResource of removedResources) {
                 await ObjectIndex.getInstance().deleteMany({
                   subject: {
@@ -153,7 +153,7 @@ export class IndexController {
             }
           }
         }
-        let addedRoles = newRoleNames.filter(role => !oldRoleNames.includes(role));
+        const addedRoles = newRoleNames.filter(role => !oldRoleNames.includes(role));
         // for all roles that are newly valid for a specific permission
         // add all applicable actor indexes
         if (addedRoles.length > 0) {
@@ -164,14 +164,14 @@ export class IndexController {
                 addedRole === '*' ? `*` : `${resource.name}#${addedRole}`,
               );
             } else {
-              let [relatedSubject, action] = addedRole.split('->');
-              let addedResources = resource.relations[relatedSubject];
+              const [relatedSubject, action] = addedRole.split('->');
+              const addedResources = resource.relations[relatedSubject];
 
               for (const addedResource of addedResources) {
-                let possibleConnections = await ObjectIndex.getInstance().findMany({
+                const possibleConnections = await ObjectIndex.getInstance().findMany({
                   subject: `${addedResource}.*#${action}`,
                 });
-                let applicableObjects = await ObjectIndex.getInstance().findMany({
+                const applicableObjects = await ObjectIndex.getInstance().findMany({
                   subject: `${resource.name}.*`,
                 });
                 let objectNames: string[] = [];
@@ -197,14 +197,14 @@ export class IndexController {
   }
 
   async modifyRelations(oldResource: any, resource: any) {
-    let oldRelations = oldResource.relations;
-    let newRelations = resource.relations;
-    let oldRelationNames = Object.keys(oldRelations);
-    let newRelationNames = Object.keys(newRelations);
-    let removedRelations = oldRelationNames.filter(
+    const oldRelations = oldResource.relations;
+    const newRelations = resource.relations;
+    const oldRelationNames = Object.keys(oldRelations);
+    const newRelationNames = Object.keys(newRelations);
+    const removedRelations = oldRelationNames.filter(
       relation => !newRelationNames.includes(relation),
     );
-    let modifiedRelations = newRelationNames.filter(relation =>
+    const modifiedRelations = newRelationNames.filter(relation =>
       oldRelationNames.includes(relation),
     );
     // remove all relations that are no longer present
@@ -216,9 +216,9 @@ export class IndexController {
     for (const relation of modifiedRelations) {
       // check if any resources are no longer valid for a specific relation
       if (oldRelations[relation] !== newRelations[relation]) {
-        let oldResourceNames = Object.keys(oldRelations[relation]);
-        let newResourceNames = Object.keys(newRelations[relation]);
-        let removedResources = oldResourceNames.filter(
+        const oldResourceNames = Object.keys(oldRelations[relation]);
+        const newResourceNames = Object.keys(newRelations[relation]);
+        const removedResources = oldResourceNames.filter(
           resource => !newResourceNames.includes(resource),
         );
         // for all resources that are no longer valid for a specific relation
@@ -263,11 +263,11 @@ export class IndexController {
   }
 
   async findIndex(subject: string, action: string, object: string) {
-    let subjectDefinition = await ActorIndex.getInstance().findMany({
+    const subjectDefinition = await ActorIndex.getInstance().findMany({
       subject: subject,
     });
 
-    let objectDefinition = await ObjectIndex.getInstance().findOne({
+    const objectDefinition = await ObjectIndex.getInstance().findOne({
       subject: object + '#' + action,
       entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
     });

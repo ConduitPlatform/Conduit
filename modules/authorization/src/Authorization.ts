@@ -91,7 +91,7 @@ export default class Authorization extends ManagedModule<Config> {
 
   async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
     const { name, relations, permissions } = call.request;
-    let resource: {
+    const resource: {
       name: string;
       relations?: { [key: string]: string | string[] };
       permissions?: { [key: string]: string | string[] };
@@ -112,7 +112,7 @@ export default class Authorization extends ManagedModule<Config> {
 
   async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
     const { name, relations, permissions } = call.request;
-    let resource: {
+    const resource: {
       name: string;
       relations?: { [key: string]: string | string[] };
       permissions?: { [key: string]: string | string[] };

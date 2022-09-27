@@ -23,7 +23,7 @@ export class PermissionsController {
   async can(subject: string, action: string, object: string) {
     checkRelation(subject, action, object);
     const computedTuple = computePermissionTuple(subject, action, object);
-    let cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
+    const cachedResponse = await RuleCache.findResolution(this.grpcSdk, computedTuple);
     if (!isNil(cachedResponse)) {
       return cachedResponse;
     }
@@ -33,7 +33,7 @@ export class PermissionsController {
       return true;
     }
 
-    let index = await this.indexController.findIndex(subject, action, object);
+    const index = await this.indexController.findIndex(subject, action, object);
 
     await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
 
