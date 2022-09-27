@@ -1,7 +1,8 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
-import { ResourceDefinition, Relationship } from '../models';
+import { ResourceDefinition, Relationship, ActorIndex } from '../models';
 import { IndexController } from './index.controller';
+import { Relation } from '../protoTypes/authorization';
 
 export class RelationsController {
   private static _instance: RelationsController;
@@ -67,6 +68,40 @@ export class RelationsController {
     await this.indexController.removeRelation(subject, relation, object);
 
     return;
+  }
+
+  async removeResource(name: string) {
+    // delete all relations that could be associated with resource
+    await Relationship.getInstance().deleteMany({
+      $or: [
+        {
+          subject: {
+            $regex: `${name}.*`,
+            $options: 'i',
+          },
+        },
+        { resource: { $regex: `${name}.*`, $options: 'i' } },
+      ],
+    });
+  }
+
+  async removeGeneralRelation(
+    subjectResource: string,
+    relation: string,
+    objectResource: string,
+  ) {
+    // delete all relations that could be associated with resource
+    await Relationship.getInstance().deleteMany({
+      subject: {
+        $regex: `${subjectResource}.*`,
+        $options: 'i',
+      },
+      resource: {
+        $regex: `${objectResource}.*`,
+        $options: 'i',
+      },
+      relation: relation,
+    });
   }
 
   async getRelation(subject: string, relation: string, object: string) {

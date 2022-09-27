@@ -1,6 +1,7 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition, Relationship } from '../models';
 import { IndexController } from './index.controller';
+import { RelationsController } from './relations.controller';
 
 export class ResourceController {
   private static _instance: ResourceController;
@@ -8,6 +9,7 @@ export class ResourceController {
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController = IndexController.getInstance(grpcSdk),
+    private readonly relationsController = RelationsController.getInstance(grpcSdk),
   ) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
@@ -59,21 +61,17 @@ export class ResourceController {
     }
   }
 
-  //edit resource
-  //todo check permission and relation content
   async updateResourceDefinition(name: string, resource: ResourceDefinition) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
-    if (resource.relations !== resourceDefinition.relations) {
-      await this.validateResourceRelations(resource.relations);
-      await this.indexController.modifyRelations(resourceDefinition, resource);
-    }
-
     if (resource.permissions !== resourceDefinition.permissions) {
       await this.validateResourcePermissions(resource);
       await this.indexController.modifyPermission(resourceDefinition, resource);
     }
-    // delete applicable indices and re-create valid ones
+    if (resource.relations !== resourceDefinition.relations) {
+      await this.validateResourceRelations(resource.relations);
+      await this.indexController.modifyRelations(resourceDefinition, resource);
+    }
     return await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
@@ -81,14 +79,13 @@ export class ResourceController {
   }
 
   async deleteResource(name: string) {
-    //todo should also trigger relation deletions
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
     await Relationship.getInstance().deleteMany({
       name: { $regex: `.*${resourceDefinition.name}.*`, $options: 'i' },
     });
-    // delete indices
-    this.indexController.removeResource(name);
+    await this.relationsController.removeResource(name);
+    await this.indexController.removeResource(name);
     return await ResourceDefinition.getInstance().deleteOne({ name });
   }
 
