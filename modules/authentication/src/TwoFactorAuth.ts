@@ -1,4 +1,4 @@
-import * as twoFactor from 'node-2fa';
+import * as twoFactor from '@conduitplatform/node-2fa';
 import ConduitGrpcSdk, { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { AccessToken, RefreshToken, Token, TwoFactorSecret, User } from './models';

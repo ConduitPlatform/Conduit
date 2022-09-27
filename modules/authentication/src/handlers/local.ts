@@ -717,8 +717,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
       const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
-      if (isNil(verification))
-        throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+      if (isNil(verification) || verification.delta !== 0)
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Provided code is invalid');
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
     }
@@ -976,10 +976,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
     const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
-    if (isNil(verification)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+    if (isNil(verification) || verification.delta !== 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Provided code is invalid');
     }
-
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       hasTwoFA: true,
     });
