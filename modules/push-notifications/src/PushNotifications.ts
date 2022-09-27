@@ -75,7 +75,11 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   private async enableModule() {
     if (!this.isRunning) {
-      await this.initProvider();
+      try {
+        await this.initProvider();
+      } catch (e) {
+        throw e;
+      }
       const self = this;
       this.grpcSdk
         .waitForExistence('router')
@@ -93,7 +97,11 @@ export default class PushNotifications extends ManagedModule<Config> {
       );
       this.isRunning = true;
     } else {
-      await this.initProvider();
+      try {
+        await this.initProvider();
+      } catch (e) {
+        throw e;
+      }
       this.adminRouter.updateProvider(this._provider!);
     }
   }
