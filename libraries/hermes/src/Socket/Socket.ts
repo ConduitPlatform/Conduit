@@ -33,6 +33,11 @@ export class SocketController extends ConduitRouter {
     grpcSdk: ConduitGrpcSdk,
     expressApp: Application,
     redisDetails: { host: string; port: number },
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
   ) {
     super(grpcSdk);
     this.httpServer = createServer(expressApp);
@@ -47,7 +52,7 @@ export class SocketController extends ConduitRouter {
     this.pubClient = new IORedis(redisDetails.port, redisDetails.host);
     this.subClient = this.pubClient.duplicate();
     this.io.adapter(createAdapter(this.pubClient, this.subClient));
-    this.httpServer.listen(process.env.SOCKET_PORT || this.port);
+    this.httpServer.listen(this.port);
     this._registeredNamespaces = new Map();
     this.globalMiddlewares = [];
   }
@@ -66,6 +71,11 @@ export class SocketController extends ConduitRouter {
         ObjectHash.sha1(this._registeredNamespaces.get(namespace))
       ) {
         this.removeNamespace(namespace);
+        if (this.metrics?.registeredRoutes) {
+          ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+            transport: 'socket',
+          });
+        }
       } else {
         return;
       }
@@ -111,6 +121,7 @@ export class SocketController extends ConduitRouter {
           this.handleResponse(res, socket);
         })
         .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
           socket.emit('conduit_error', e);
         });
 
@@ -127,6 +138,7 @@ export class SocketController extends ConduitRouter {
             this.handleResponse(res, socket);
           })
           .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
           });
       });
@@ -143,6 +155,7 @@ export class SocketController extends ConduitRouter {
             this.handleResponse(res, socket);
           })
           .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
             socket.emit('conduit_error', e);
           });
       });

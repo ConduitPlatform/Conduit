@@ -6,15 +6,16 @@ import {
   ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { compare, hash } from 'bcrypt';
-import { isNil } from 'lodash';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { isNil } from 'lodash';
 
 export function changePasswordRoute() {
   return new ConduitRoute(
     {
       path: '/change-password',
-      action: ConduitRouteActions.POST,
+      action: ConduitRouteActions.UPDATE,
+      description: `Changes authenticated admin user's password.`,
       bodyParams: {
         oldPassword: ConduitString.Required,
         newPassword: ConduitString.Required,
@@ -23,9 +24,16 @@ export function changePasswordRoute() {
     new ConduitRouteReturnDefinition('ChangePassword', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { oldPassword, newPassword } = params.params!;
-      const admin = params.context!.admin;
+    async (req: ConduitRouteParameters) => {
+      const { oldPassword, newPassword } = req.params!;
+      const admin = await Admin.getInstance().findOne(
+        { _id: req.context!.admin },
+        '+password',
+      );
+      if (!admin) {
+        throw ConduitError.notFound('Authenticated admin no longer exists');
+      }
+
       if (isNil(oldPassword) || isNil(newPassword)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
@@ -33,6 +41,7 @@ export function changePasswordRoute() {
           'Both old and new password must be provided',
         );
       }
+
       const hashRounds = ConfigController.getInstance().config.auth.hashRounds;
       const passwordsMatch = await compare(oldPassword, admin.password);
 
@@ -42,7 +51,7 @@ export function changePasswordRoute() {
       await Admin.getInstance().findByIdAndUpdate(admin._id, {
         password: await hash(newPassword, hashRounds ?? 11),
       });
-      return { result: { message: 'OK' } };
+      return { message: 'OK' };
     },
   );
 }

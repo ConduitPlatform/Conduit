@@ -7,6 +7,7 @@ import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
+import { importDbTypes } from '../utils/types';
 import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 import ConduitGrpcSdk, {
@@ -17,7 +18,7 @@ import ConduitGrpcSdk, {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
@@ -32,16 +33,28 @@ export class GraphQLController extends ConduitRouter {
   private _apollo?: express.Router;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
-  private _parser: GraphQlParser;
+  private readonly _parser: GraphQlParser;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
+  ) {
     super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
+    TypeRegistry.getInstance(grpcSdk, {
+      name: 'graphql',
+      updateHandler: this.updateSchemaType.bind(this),
+    });
   }
 
   refreshGQLServer() {
     if (!this.typeDefs || this.typeDefs === ' ' || !this.resolvers) return;
+    this.importDbTypes();
     const server = new ApolloServer({
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
@@ -55,13 +68,25 @@ export class GraphQLController extends ConduitRouter {
     this._apollo = server.getMiddleware();
   }
 
-  generateType(name: string, fields: ConduitModel | ConduitRouteOption | string) {
-    if (this.typeDefs.includes('type ' + name + ' ')) {
-      return;
-    }
+  generateType(
+    name: string,
+    fields: ConduitModel | ConduitRouteOption | string,
+    dbTypeRefresh = false,
+  ) {
+    const typeExists = this.typeDefs.includes('type ' + name + ' ');
+    if (typeExists && !dbTypeRefresh) return;
     const self = this;
     const parseResult: ParseResult = this._parser.extractTypes(name, fields, false);
-    this.types += parseResult.typeString;
+    if (typeExists) {
+      const start = this.types.indexOf(`type ${name} `);
+      const end = this.types.indexOf('\n', start);
+      this.types =
+        this.types.substring(0, start) +
+        parseResult.typeString +
+        this.types.substring(end);
+    } else {
+      this.types += parseResult.typeString;
+    }
     parseResult.relationTypes.forEach((type: string) => {
       if (self._relationTypes.indexOf(type) === -1) {
         self._relationTypes.push(type);
@@ -194,6 +219,11 @@ export class GraphQLController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'graphql',
+        });
+      }
     }
   }
 
@@ -345,23 +375,22 @@ export class GraphQLController extends ConduitRouter {
           if (r.fromCache) {
             return r.data;
           } else {
-            result = r.result ? r.result : r;
+            result = r.result ?? r;
           }
-
-          if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            if (typeof r.result === 'string') {
-              // only grpc route data is stringified
-              result = JSON.parse(result);
+          try {
+            // Handle gRPC route responses
+            result = JSON.parse(result);
+          } catch {
+            if (typeof result === 'string') {
+              // Nest plain string responses
+              result = {
+                result: this.extractResult(route.returnTypeFields as string, result),
+              };
             }
-          } else {
-            result = {
-              result: self.extractResult(route.returnTypeFields as string, result),
-            };
           }
           if (caching) {
             this.storeInCache(hashKey, result, cacheAge!);
           }
-
           return result;
         })
         .catch(errorHandler);
@@ -398,16 +427,18 @@ export class GraphQLController extends ConduitRouter {
             context.removeCookie = r.removeCookies;
           }
 
-          if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            if (typeof r.result === 'string') {
-              // only grpc route data is stringified
-              result = JSON.parse(result);
+          try {
+            // Handle gRPC route responses
+            result = JSON.parse(result);
+          } catch {
+            if (typeof result === 'string') {
+              // Nest plain string responses
+              result = {
+                result: this.extractResult(route.returnTypeFields as string, result),
+              };
             }
-          } else {
-            result = {
-              result: this.extractResult(route.returnTypeFields as string, result),
-            };
           }
+
           return result;
         })
         .catch(errorHandler);
@@ -442,10 +473,25 @@ export class GraphQLController extends ConduitRouter {
   }
 
   shutDown() {
+    TypeRegistry.removeTransport('graphql');
     super.shutDown();
     if (this._apolloRefreshTimeout) {
       clearTimeout(this._apolloRefreshTimeout);
     }
     delete this._apollo;
+  }
+
+  private importDbTypes() {
+    importDbTypes(this._parser, this.updateSchemaType.bind(this));
+  }
+
+  updateSchemaType(typeName: string, typeFields: ConduitModel, refresh = true) {
+    this.generateType(typeName, typeFields, true);
+    this.generateSchema();
+    if (refresh) {
+      // refresh on schema type update (TypeRegistry)
+      // false on this.refreshGQLServer() -> importDbTypes() -> updateSchemaType()
+      this.scheduleApolloRefresh();
+    }
   }
 }

@@ -1,64 +1,64 @@
 export default {
   active: {
-    type: Boolean,
+    format: 'Boolean',
     default: false,
   },
   provider: {
-    type: String,
+    format: 'String',
     default: 'local',
   },
   defaultContainer: {
-    type: String,
+    format: 'String',
     default: 'conduit',
   },
   allowContainerCreation: {
-    type: Boolean,
+    format: 'Boolean',
     default: true,
   },
   google: {
     serviceAccountKeyPath: {
-      type: String,
+      format: 'String',
       default: '',
     },
   },
   azure: {
-    connectionString: { type: String, default: '' },
+    connectionString: { format: 'String', default: '' },
   },
   aws: {
     region: {
-      type: String,
+      format: 'String',
       default: '',
     },
     accessKeyId: {
-      type: String,
+      format: 'String',
       default: '',
     },
     secretAccessKey: {
-      type: String,
+      format: 'String',
       default: '',
     },
     accountId: {
-      type: String,
+      format: 'String',
       default: '',
     },
   },
   aliyun: {
     region: {
-      type: String,
+      format: 'String',
       default: '',
     },
     accessKeyId: {
-      type: String,
+      format: 'String',
       default: '',
     },
     accessKeySecret: {
-      type: String,
+      format: 'String',
       default: '',
     },
   },
   local: {
     storagePath: {
-      type: String,
+      format: 'String',
       default: '/var/tmp',
     },
   },

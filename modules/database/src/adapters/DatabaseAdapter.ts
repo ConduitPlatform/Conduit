@@ -1,24 +1,18 @@
 import ConduitGrpcSdk, {
   ConduitModel,
-  ConduitSchemaOptions,
   ConduitSchema,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension, Schema } from '../interfaces';
-import { validateExtensionFields } from './utils/extensions';
+import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
+import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { ConduitDatabaseSchema } from '../interfaces/ConduitDatabaseSchema';
+import ObjectHash from 'object-hash';
 
-type _ConduitSchema = Omit<ConduitSchema, 'modelOptions'> & {
-  modelOptions: ConduitSchemaOptions;
-  extensions: DeclaredSchemaExtension[];
-  compiledFields: ConduitModel;
-} & {
-  -readonly [k in keyof ConduitSchema]: ConduitSchema[k];
-};
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
+  protected grpcSdk: ConduitGrpcSdk;
+  private legacyDeployment = false; // unprefixed declared schema collection
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
@@ -32,31 +26,44 @@ export abstract class DatabaseAdapter<T extends Schema> {
         : this.maxConnTimeoutMs;
   }
 
+  async init(grpcSdk: ConduitGrpcSdk) {
+    this.grpcSdk = grpcSdk;
+    this.connect();
+    await this.ensureConnected();
+    this.legacyDeployment = await this.hasLegacyCollections();
+  }
+
+  protected abstract connect(): void;
+
+  protected abstract ensureConnected(): Promise<void>;
+
   /**
    * Introspects all schemas of current db connection, registers them to Conduit
    */
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
-   * Check Declared Schema Existence
+   * Checks whether DeclaredSchema collection name is unprefixed
    */
-  abstract checkDeclaredSchemaExistence(): Promise<boolean>;
+  protected abstract hasLegacyCollections(): Promise<boolean>;
 
   /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
    */
   abstract retrieveForeignSchemas(): Promise<void>;
 
-  /**
-   * Should accept a JSON schema and output a .ts interface for the adapter
+  /**-
+   * Registers a schema, creates its collection in the database and updates routing types
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
-   * @param {boolean} cndPrefix Whether to prefix the schema's collection name with 'cnd_'
+   * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
+   * @param {boolean} instanceSync Do not republish schema changes for multi-instance sync calls
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
-    cndPrefix = true,
+    gRPC = false,
+    instanceSync = false,
   ): Promise<Schema> {
     if (!this.models) {
       this.models = {};
@@ -65,11 +72,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
       this.foreignSchemaCollections.delete(schema.collectionName);
     } else {
       let collectionName = this.getCollectionName(schema);
-      if (cndPrefix && !this.models['_DeclaredSchema']) {
+      if (!this.legacyDeployment && !this.models['_DeclaredSchema']) {
         collectionName = collectionName.startsWith('_')
           ? `cnd${collectionName}`
           : `cnd_${collectionName}`;
-      } else if (cndPrefix) {
+      } else if (schema.name !== '_DeclaredSchema') {
         const declaredSchema = await this.models['_DeclaredSchema'].findOne({
           name: schema.name,
         });
@@ -78,26 +85,35 @@ export abstract class DatabaseAdapter<T extends Schema> {
             ? `cnd${collectionName}`
             : `cnd_${collectionName}`;
         } else {
-          //recover collection name from DeclaredSchema
+          // recover collection name from DeclaredSchema
           collectionName = declaredSchema.collectionName;
         }
       }
-      (schema as _ConduitSchema).collectionName = collectionName;
+      (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
     }
-    if (schema.name !== '_DeclaredSchema') {
+    const owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
+    }
+    this.addSchemaPermissions(schema);
+    if (schema.name !== '_DeclaredSchema' && gRPC) {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
       });
       if (schemaModel?.extensions?.length > 0) {
-        (schema as any).extensions = schemaModel.extensions;
+        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = this._createSchemaFromAdapter(schema);
-    if (!this.registeredSchemas.has(schema.name)) {
+    this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
       });
     }
+    if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
   }
 
@@ -135,21 +151,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
     schemaName: string,
     deleteData: boolean,
     callerModule: string,
+    instanceSync?: boolean,
   ): Promise<string>;
-
-  async getBaseSchema(schemaName: string): Promise<ConduitSchema> {
-    if (this.models && this.models[schemaName]) {
-      const schema = this.models[schemaName].originalSchema;
-      return this.models['_DeclaredSchema']
-        .findOne(JSON.stringify({ name: schemaName }), undefined, undefined)
-        .then(unstitched => {
-          (schema.fields as any) = unstitched.fields;
-          return schema;
-        });
-    } else {
-      throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-    }
-  }
 
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
@@ -177,7 +180,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
-
     const model = await this.models['_DeclaredSchema'].findOne(
       JSON.stringify({ name: schema.name }),
     );
@@ -187,8 +189,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -200,8 +202,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
         JSON.stringify({
           name: schema.name,
           fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions,
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields,
+          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
           modelOptions: schema.modelOptions,
           ownerModule: schema.ownerModule,
           collectionName: schema.collectionName,
@@ -221,40 +223,46 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model.collectionName,
         );
         schema.ownerModule = model.ownerModule;
-        (schema as ConduitDatabaseSchema).extensions = model.extensions;
-        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields;
+        (schema as ConduitDatabaseSchema).extensions = model.extensions; // @dirty-type-cast
+        (schema as ConduitDatabaseSchema).compiledFields = model.compiledFields; // @dirty-type-cast
         return schema;
       })
       .map((model: ConduitSchema) => {
-        return this.createSchemaFromAdapter(model);
+        return this.createSchemaFromAdapter(
+          model,
+          !!model.modelOptions.conduit?.imported,
+          true,
+          false,
+        );
       });
 
     await Promise.all(models);
   }
 
-  abstract connect(): void;
-
-  abstract ensureConnected(): Promise<void>;
-
   setSchemaExtension(
-    schema: ConduitSchema,
+    schemaName: string,
     extOwner: string,
-    extFields: ConduitSchema['fields'],
+    extFields: ConduitModel,
   ): Promise<Schema> {
+    const baseSchema = this.getSchema(schemaName);
     if (
-      !schema.modelOptions.conduit ||
-      !schema.modelOptions.conduit.permissions ||
-      !schema.modelOptions.conduit.permissions.extendable
+      !baseSchema.modelOptions.conduit ||
+      !baseSchema.modelOptions.conduit.permissions ||
+      !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
     }
-    validateExtensionFields(schema, extFields, extOwner);
-    if (!(schema as ConduitDatabaseSchema).extensions) {
-      (schema as ConduitDatabaseSchema).extensions = [];
+    // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
+    const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;
+    if (!schema.extensions) {
+      schema.extensions = [];
     }
-    const extIndex = (schema as ConduitDatabaseSchema).extensions.findIndex(
-      (ext: any) => ext.ownerModule === extOwner,
-    );
+    if (!schema.compiledFields) {
+      // could technically be empty, repeated in stitchSchema() call from createSchemaFromAdapter()
+      schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+    }
+    validateExtensionFields(schema, extFields, extOwner);
+    const extIndex = schema.extensions.findIndex(ext => ext.ownerModule === extOwner);
     if (extIndex === -1) {
       // Create Extension
       if (Object.keys(extFields).length === 0) {
@@ -263,7 +271,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           'Could not create schema extension with no custom fields',
         );
       }
-      (schema as ConduitDatabaseSchema).extensions.push({
+      schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
         createdAt: new Date(), // TODO FORMAT
@@ -272,11 +280,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     } else {
       if (Object.keys(extFields).length === 0) {
         // Remove Extension
-        (schema as ConduitDatabaseSchema).extensions.splice(extIndex, 1);
+        schema.extensions.splice(extIndex, 1);
       } else {
         // Update Extension
-        (schema as ConduitDatabaseSchema).extensions[extIndex].fields = extFields;
-        (schema as ConduitDatabaseSchema).extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
+        schema.extensions[extIndex].fields = extFields;
+        schema.extensions[extIndex].updatedAt = new Date(); // TODO FORMAT
       }
     }
     return this.createSchemaFromAdapter(schema);
@@ -302,5 +310,24 @@ export abstract class DatabaseAdapter<T extends Schema> {
       });
     }
     return schema;
+  }
+
+  /**
+   * Publishes schema types for Database (multi-instance) and Hermes synchronization
+   * @param {ConduitDatabaseSchema} schema
+   */
+  publishSchema(schema: ConduitDatabaseSchema) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish(
+      'database:create:schema',
+      JSON.stringify({
+        ...schema,
+        fieldHash: this.models[schema.name].fieldHash,
+      }),
+    );
+  }
+
+  private hashSchemaFields(schema: ConduitDatabaseSchema) {
+    return (this.models[schema.name].fieldHash = ObjectHash.sha1(schema.compiledFields));
   }
 }

@@ -1,14 +1,15 @@
 import { SwaggerParser } from './SwaggerParser';
 import { isNil } from 'lodash';
-import { ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, Indexable, ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
+import { importDbTypes } from '../utils/types';
 
 export class SwaggerGenerator {
   private readonly _swaggerDoc: Indexable;
   private readonly _routerMetadata: SwaggerRouterMetadata;
   private readonly _stringifiedGlobalSecurityHeaders: string;
-  private _parser: SwaggerParser;
+  private readonly _parser: SwaggerParser;
 
   constructor(routerMetadata: SwaggerRouterMetadata) {
     this._swaggerDoc = {
@@ -156,5 +157,17 @@ export class SwaggerGenerator {
         return 'get';
       }
     }
+  }
+
+  importDbTypes() {
+    importDbTypes(this._parser, this.updateSchemaType.bind(this));
+  }
+
+  updateSchemaType(schemaName: string, schemaFields: ConduitModel) {
+    this._swaggerDoc.components.schemas[schemaName] = this._parser.extractTypes(
+      schemaName,
+      schemaFields,
+      false,
+    );
   }
 }

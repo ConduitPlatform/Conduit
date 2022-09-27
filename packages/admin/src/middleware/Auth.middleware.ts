@@ -55,12 +55,11 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
 
     const args = tokenHeader.split(' ');
     if (args.length !== 2) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Authorization header malformed' });
     }
 
     const [prefix, token] = args;
-    if (prefix !== 'Bearer' && prefix !== 'JWT') {
-      // Compat (<=0.12.2): JWT
+    if (prefix !== 'Bearer') {
       return res
         .status(401)
         .json({ error: "The Authorization header must be prefixed by 'Bearer '" });
@@ -72,10 +71,13 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
       return res.status(401).json({ error: 'Invalid token' });
     }
     const { id } = decoded;
+    if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
+      return res.status(401).json({ error: 'Two FA required' });
+    }
 
     Admin.getInstance()
       .findOne({ _id: id })
-      .then((admin: any) => {
+      .then(admin => {
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }

@@ -7,15 +7,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces/ConduitDatabaseSchema';
+import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { stitchSchema } from '../utils/extensions';
+import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
-import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -28,8 +26,45 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.connectionUri = connectionUri;
   }
 
-  connect() {
+  protected connect() {
     this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  }
+
+  protected async ensureConnected() {
+    let error;
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
+      try {
+        await this.sequelize.authenticate();
+        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
+        return;
+      } catch (err: any) {
+        error = err;
+        if (error.original.code !== 'ECONNREFUSED') break;
+        await sleep(200);
+      }
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
+      throw new Error();
+    }
+  }
+
+  protected async hasLegacyCollections() {
+    return (
+      (
+        await this.sequelize.query(
+          `SELECT EXISTS (
+    SELECT FROM 
+        information_schema.tables 
+    WHERE 
+        table_schema LIKE '${sqlSchemaName}' AND 
+        table_type LIKE 'BASE TABLE' AND
+        table_name = '_DeclaredSchema'
+    );`,
+        )
+      )[0][0] as { exists: boolean }
+    ).exists;
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -175,17 +210,8 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       }
       delete this.sequelize.models[schema.collectionName];
     }
-    const owned = await this.checkModelOwnership(schema);
-    if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
-    }
 
-    this.addSchemaPermissions(schema);
-    const original: ConduitDatabaseSchema = JSON.parse(JSON.stringify(schema));
-    stitchSchema(schema);
-    original.compiledFields = schema.fields;
     const newSchema = schemaConverter(schema);
-
     this.registeredSchemas.set(schema.name, schema);
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
@@ -198,35 +224,24 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
-    await this.saveSchemaToDatabase(original);
+    await this.saveSchemaToDatabase(schema);
 
     return this.models[schema.name];
-  }
-
-  async checkDeclaredSchemaExistence() {
-    return (
-      (
-        await this.sequelize.query(
-          `SELECT EXISTS (
-    SELECT FROM 
-        information_schema.tables 
-    WHERE 
-        table_schema LIKE '${sqlSchemaName}' AND 
-        table_type LIKE 'BASE TABLE' AND
-        table_name = '_DeclaredSchema'
-    );`,
-        )
-      )[0][0] as { exists: boolean }
-    ).exists;
   }
 
   async deleteSchema(
     schemaName: string,
     deleteData: boolean,
     callerModule: string = 'database',
+    instanceSync = false,
   ): Promise<string> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    if (instanceSync) {
+      delete this.models[schemaName];
+      delete this.sequelize.models[schemaName];
+      return 'Instance synchronized!';
+    }
     if (this.models[schemaName].originalSchema.ownerModule !== callerModule) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
@@ -242,10 +257,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
             .catch((e: Error) => {
               throw new GrpcError(status.INTERNAL, e.message);
             });
+          if (!instanceSync) {
+            ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+              imported: String(!!model.modelOptions.conduit?.imported),
+            });
+          }
         }
       });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
+    this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
 
@@ -260,25 +281,5 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       return { model: this.models[schemaName], relations };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
-  }
-
-  async ensureConnected() {
-    let error;
-    ConduitGrpcSdk.Logger.log('Connecting to database...');
-    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
-      try {
-        await this.sequelize.authenticate();
-        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
-        return;
-      } catch (err: any) {
-        error = err;
-        if (error.original.code !== 'ECONNREFUSED') break;
-        await sleep(200);
-      }
-    }
-    if (error) {
-      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
-      throw new Error();
-    }
   }
 }

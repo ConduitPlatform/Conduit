@@ -28,10 +28,11 @@ import {
   UserDeleteResponse,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
@@ -57,6 +58,7 @@ export default class Authentication extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
   }
 
@@ -73,7 +75,6 @@ export default class Authentication extends ManagedModule<Config> {
     if (!config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.registerSchemas();
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
@@ -95,12 +96,6 @@ export default class Authentication extends ManagedModule<Config> {
         this.localSendVerificationEmail = false;
         this.grpcSdk.unmonitorModule('email');
       }
-    }
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 
@@ -139,6 +134,12 @@ export default class Authentication extends ManagedModule<Config> {
       }
       this.refreshAppRoutesTimeout = null;
     }, 800);
+  }
+
+  async initializeMetrics() {
+    // @improve-metrics
+    // TODO: This should initialize 'logged_in_users_total' based on valid tokens
+    // Gauge value should also decrease on latest token expiry.
   }
 
   // gRPC Service

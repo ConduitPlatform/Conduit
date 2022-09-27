@@ -60,7 +60,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       {
         path: '/phone/verify',
         action: ConduitRouteActions.POST,
-        description: `Verifies the token which is used for phone authentication`,
+        description: `Verifies the token which is used for phone authentication.`,
         bodyParams: {
           code: ConduitString.Required,
           phone: ConduitString.Required,

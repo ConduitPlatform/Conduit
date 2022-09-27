@@ -17,7 +17,7 @@ export default {
   //   },
   // },
   registeredSchemas: {
-    type: MetricType.Counter,
+    type: MetricType.Gauge,
     config: {
       name: 'registered_schemas_total',
       help: 'Tracks the total number of registered schemas',

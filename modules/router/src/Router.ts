@@ -33,7 +33,7 @@ import {
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -74,6 +74,7 @@ const swaggerRouterMetadata: SwaggerRouterMetadata = {
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
@@ -102,10 +103,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onServerStart() {
-    if (!this.grpcSdk.database) {
-      await this.grpcSdk.waitForExistence('database');
-      this.database = this.grpcSdk.databaseProvider!;
-    }
+    await this.grpcSdk.waitForExistence('database');
+    this.database = this.grpcSdk.databaseProvider!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
@@ -114,6 +114,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.grpcSdk,
       1000,
       swaggerRouterMetadata,
+      { registeredRoutes: { name: 'client_routes_total' } },
     );
     this.registerGlobalMiddleware(
       'conduitRequestMiddleware',
@@ -126,15 +127,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   async onRegister() {
-    await this.registerSchemas();
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this);
     this._security = new SecurityModule(this.grpcSdk, this);
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   protected registerSchemas() {
@@ -189,7 +183,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   private getHttpPort() {
-    const value = (process.env['CLIENT_HTTP_PORT'] || process.env['PORT']) ?? '3000'; // <=v13 compat (PORT)
+    const value = process.env['CLIENT_HTTP_PORT'] ?? '3000';
     const port = parseInt(value, 10);
     if (isNaN(port)) {
       ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
@@ -293,6 +287,21 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         url,
       }),
     );
+  }
+
+  async initializeMetrics() {
+    // 'client_routes_total' updated via Hermes
+    const securityClients = await models.Client.getInstance().findMany({});
+    const clientPlatforms: Map<string, number> = new Map();
+    securityClients.forEach(client => {
+      const currentValue = clientPlatforms.get(client.platform.toLowerCase()) ?? 0;
+      clientPlatforms.set(client.platform.toLowerCase(), currentValue + 1);
+    });
+    clientPlatforms.forEach((clients, platformName) => {
+      ConduitGrpcSdk.Metrics?.set('security_clients_total', clients, {
+        platform: platformName,
+      });
+    });
   }
 
   async registerGrpcRoute(

@@ -19,6 +19,10 @@ services:
       ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
       ADMIN_SOCKET_PORT: '${ADMIN_SOCKET_PORT:-3031}'
       GRPC_KEY: '${GRPC_KEY}'
+    networks:
+      default:
+        aliases:
+          - conduit-${NETWORK_SUFFIX}
     depends_on:
       - redis
 
@@ -29,7 +33,7 @@ services:
     ports:
       - '${UI_PORT:-8080}:8080'
     environment:
-      CONDUIT_URL: 'http://conduit-${IMAGE_TAG}:${ADMIN_HTTP_PORT:-3030}'
+      CONDUIT_URL: 'http://conduit-${NETWORK_SUFFIX}:${ADMIN_HTTP_PORT:-3030}'
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
 
   database:
@@ -40,11 +44,15 @@ services:
       - core
       - ${DB_TYPE:-mongodb}
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
       DB_TYPE: '${DB_TYPE:-mongodb}'
       DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}' # append '/conduit' db for PostgreSQL
+    networks:
+      default:
+        aliases:
+          - conduit-database-${NETWORK_SUFFIX}
 
   router:
     container_name: 'conduit-router-${IMAGE_TAG}'
@@ -57,11 +65,15 @@ services:
       - '${CLIENT_HTTP_PORT:-3000}:3000'
       - '${CLIENT_SOCKET_PORT:-3001}:3001'
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
       CLIENT_HTTP_PORT: '${CLIENT_HTTP_PORT:-3000}'
       CLIENT_SOCKET_PORT: '${CLIENT_SOCKET_PORT:-3001}'
+    networks:
+      default:
+        aliases:
+          - conduit-router-${NETWORK_SUFFIX}
 
   authentication:
     container_name: 'conduit-authentication-${IMAGE_TAG}'
@@ -71,9 +83,13 @@ services:
       - core
       - database
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
+    networks:
+      default:
+        aliases:
+          - conduit-authentication-${NETWORK_SUFFIX}
 
   # Optional Services
   chat:
@@ -85,10 +101,14 @@ services:
       - database
       - router
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['chat']
+    networks:
+      default:
+        aliases:
+          - conduit-chat-${NETWORK_SUFFIX}
 
   email:
     container_name: 'conduit-email-${IMAGE_TAG}'
@@ -98,10 +118,14 @@ services:
       - core
       - database
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['email']
+    networks:
+      default:
+        aliases:
+          - conduit-email-${NETWORK_SUFFIX}
 
   forms:
     container_name: 'conduit-forms-${IMAGE_TAG}'
@@ -113,10 +137,14 @@ services:
       - router
       - email
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['forms']
+    networks:
+      default:
+        aliases:
+          - conduit-forms-${NETWORK_SUFFIX}
 
   push-notifications:
     container_name: 'conduit-push-notifications-${IMAGE_TAG}'
@@ -127,10 +155,14 @@ services:
       - database
       - router
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['push-notifications']
+    networks:
+      default:
+        aliases:
+          - conduit-push-notifications-${NETWORK_SUFFIX}
 
   sms:
     container_name: 'conduit-sms-${IMAGE_TAG}'
@@ -140,10 +172,14 @@ services:
       - core
       - database # not directly, but no point starting it otherwise
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['sms']
+    networks:
+      default:
+        aliases:
+          - conduit-sms-${NETWORK_SUFFIX}
 
   storage:
     container_name: 'conduit-storage-${IMAGE_TAG}'
@@ -154,10 +190,14 @@ services:
       - database
       - router
     environment:
-      CONDUIT_SERVER: 'conduit-${IMAGE_TAG}:55152'
+      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
       REGISTER_NAME: 'true'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['storage']
+    networks:
+      default:
+        aliases:
+          - conduit-storage-${NETWORK_SUFFIX}
 
   # Dependencies
   redis:

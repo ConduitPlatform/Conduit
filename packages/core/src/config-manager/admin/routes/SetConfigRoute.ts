@@ -19,6 +19,7 @@ export default function setConfigRoute(
     {
       path: `/config/${moduleName}`,
       action: ConduitRouteActions.PATCH,
+      description: `Updates ${moduleName} module configuration.`,
       bodyParams: {
         config: { type: configSchema, required: true },
       },
@@ -63,7 +64,7 @@ export default function setConfigRoute(
           updatedConfig = JSON.parse(updatedConfig.updatedConfig);
       }
       await conduit.getConfigManager().set(moduleName, updatedConfig);
-      return { result: { config: updatedConfig } };
+      return { config: updatedConfig };
     },
   );
 }

@@ -1,5 +1,4 @@
 import { FileHandlers } from '../handlers/file';
-import { File } from '../models';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -7,6 +6,7 @@ import ConduitGrpcSdk, {
   RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { File } from '../models';
 
 export class StorageRoutes {
   private _routingManager: RoutingManager;
@@ -30,8 +30,9 @@ export class StorageRoutes {
         },
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
+        description: `Returns a file.`,
       },
-      new ConduitRouteReturnDefinition('File', File.getInstance().fields),
+      new ConduitRouteReturnDefinition(File.name),
       this.fileHandlers.getFile.bind(this.fileHandlers),
     );
 
@@ -45,6 +46,7 @@ export class StorageRoutes {
         },
         action: ConduitRouteActions.GET,
         path: '/storage/getFileUrl/:id',
+        description: `Returns the file's url and optionally redirects to it.`,
       },
       new ConduitRouteReturnDefinition('FileUrl', 'String'),
       this.fileHandlers.getFileUrl.bind(this.fileHandlers),
@@ -63,9 +65,10 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.POST,
           path: '/storage/file',
+          description: `Creates a new file.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('File', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
       );
 
@@ -77,8 +80,9 @@ export class StorageRoutes {
           action: ConduitRouteActions.GET,
           middlewares: ['authMiddleware'],
           path: '/storage/file/data/:id',
+          description: `Returns the data of a file.`,
         },
-        new ConduitRouteReturnDefinition('File', {
+        new ConduitRouteReturnDefinition('FileData', {
           data: TYPE.String,
         }),
         this.fileHandlers.getFileData.bind(this.fileHandlers),
@@ -91,6 +95,7 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.DELETE,
           path: '/storage/file/:id',
+          description: `Deletes a file.`,
           middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('FileDeleteResponse', {
@@ -113,9 +118,10 @@ export class StorageRoutes {
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/file/:id',
+          description: `Updates a file.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('FileUpdateResponse', File.getInstance().fields),
+        new ConduitRouteReturnDefinition('FileUpdateResponse', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),
       );
     }

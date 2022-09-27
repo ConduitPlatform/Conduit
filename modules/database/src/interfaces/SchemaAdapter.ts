@@ -19,6 +19,10 @@ export interface SchemaAdapter<T> {
    * The original model used to generate this
    */
   originalSchema: ConduitSchema;
+  /**
+   * A hash of the schema's compiled fields object
+   */
+  fieldHash: string;
 
   /**
    * Should find one

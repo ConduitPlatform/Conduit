@@ -37,7 +37,6 @@ export class AdminHandlers {
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
         sendNotification: this.sendNotification.bind(this),
-        sendNotifications: this.sendNotifications.bind(this),
         sendNotificationToManyDevices: this.sendNotificationToManyDevices.bind(this),
         getNotificationToken: this.getNotificationToken.bind(this),
       })
@@ -53,6 +52,7 @@ export class AdminHandlers {
         {
           path: '/send',
           action: ConduitRouteActions.POST,
+          description: `Sends a notification.`,
           bodyParams: {
             userId: ConduitString.Required,
             title: ConduitString.Required,
@@ -65,17 +65,9 @@ export class AdminHandlers {
       ),
       constructConduitRoute(
         {
-          path: '/sendMany',
-          action: ConduitRouteActions.POST, // unimplemented
-          bodyParams: {},
-        },
-        new ConduitRouteReturnDefinition('SendNotifications', {}),
-        'sendNotifications',
-      ),
-      constructConduitRoute(
-        {
           path: '/sendToManyDevices',
           action: ConduitRouteActions.POST,
+          description: `Sends a notification to multiple devices.`,
           bodyParams: {
             userIds: { type: [TYPE.String], required: true }, // handler array check is still required
             title: ConduitString.Required,
@@ -90,12 +82,13 @@ export class AdminHandlers {
         {
           path: '/token/:userId',
           action: ConduitRouteActions.GET,
+          description: `Returns a user's notification token.`,
           urlParams: {
             userId: { type: RouteOptionType.String, required: true },
           },
         },
         new ConduitRouteReturnDefinition('GetNotificationToken', {
-          tokenDocuments: [NotificationToken.getInstance().fields],
+          tokenDocuments: ['NotificationToken'],
         }),
         'getNotificationToken',
       ),
@@ -112,15 +105,8 @@ export class AdminHandlers {
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
-      devices_count: 1,
-    });
+    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
     return 'Ok';
-  }
-
-  async sendNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    // TODO: Implement this
-    throw new GrpcError(status.UNIMPLEMENTED, 'Not implemented yet');
   }
 
   async sendNotificationToManyDevices(
@@ -142,9 +128,10 @@ export class AdminHandlers {
     await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
-      devices_count: call.request.params.userIds.length,
-    });
+    ConduitGrpcSdk.Metrics?.increment(
+      'push_notifications_sent_total',
+      call.request.params.userIds.length,
+    );
     return 'Ok';
   }
 

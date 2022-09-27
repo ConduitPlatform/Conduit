@@ -45,6 +45,10 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     fields: ConduitModel | ConduitRouteOption | string,
     isInput: boolean,
   ): ParseResult {
+    if (!isInput) {
+      if (name === fields) this.requestedTypes.add(name); // implicit fields (db schema)
+      else this.knownTypes.add(name);
+    }
     this.isInput = isInput;
     this.result = this.getInitializedResult();
     // @ts-ignore
@@ -79,6 +83,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         res.type = conduitType.toLowerCase();
         break;
       default:
+        this.requestedTypes.add(conduitType);
         res.$ref = `#/components/schemas/${conduitType}`;
     }
     return res;
@@ -107,9 +112,21 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any,
     isRequired: boolean = false,
     isArray: boolean,
+    parentField: string,
   ): void {
-    // @ts-ignore
-    processingObject.properties[name] = this.getType(value);
+    if (!isArray && (name === value || name === parentField)) {
+      Object.keys(processingObject).forEach(field => {
+        // @ts-ignore
+        delete processingObject[field];
+      });
+      Object.assign(processingObject, this.getType(value));
+    } else {
+      if (!processingObject.properties) {
+        processingObject.properties = {};
+      }
+      // @ts-ignore
+      processingObject.properties[name] = this.getType(value);
+    }
     this.addFieldToRequired(processingObject, name, isRequired);
   }
 

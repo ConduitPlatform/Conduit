@@ -17,7 +17,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { Cookie } from '../interfaces';
 import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -34,6 +34,11 @@ export class RestController extends ConduitRouter {
       globalSecurityHeaders: [],
       setExtraRouteHeaders(): void {},
     },
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
   ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
@@ -43,6 +48,10 @@ export class RestController extends ConduitRouter {
         : [];
     this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
     this.initializeRouter();
+    TypeRegistry.getInstance(grpcSdk, {
+      name: 'rest',
+      updateHandler: this._swagger.updateSchemaType.bind(this._swagger),
+    });
   }
 
   registerRoute(
@@ -59,6 +68,11 @@ export class RestController extends ConduitRouter {
       this.refreshRouter();
     } else {
       this.addRoute(path, router);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'rest',
+        });
+      }
     }
   }
 
@@ -69,6 +83,11 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'rest',
+        });
+      }
     }
   }
 
@@ -92,9 +111,7 @@ export class RestController extends ConduitRouter {
   }
 
   private addConduitRoute(route: ConduitRoute) {
-    const self = this;
     let routerMethod: IRouterMatcher<Router>;
-
     switch (route.input.action) {
       case ConduitRouteActions.GET: {
         routerMethod = this._expressRouter!.get.bind(this._expressRouter);
@@ -120,9 +137,7 @@ export class RestController extends ConduitRouter {
         routerMethod = this._expressRouter!.get.bind(this._expressRouter);
       }
     }
-
     routerMethod(route.input.path, this.constructHandler(route));
-
     this._swagger!.addRouteSwaggerDocumentation(route);
   }
 
@@ -177,17 +192,18 @@ export class RestController extends ConduitRouter {
             if (r.fromCache) {
               return res.status(200).json(r.data);
             } else {
-              result = r.result ? r.result : r;
+              result = r.result ?? r;
             }
-            if (r.result && !(typeof route.returnTypeFields === 'string')) {
-              if (typeof r.result === 'string') {
-                // only grpc route data is stringified
-                result = JSON.parse(result);
+            try {
+              // Handle gRPC route responses
+              result = JSON.parse(result);
+            } catch {
+              if (typeof result === 'string') {
+                // Nest plain string responses
+                result = {
+                  result: this.extractResult(route.returnTypeFields as string, result),
+                };
               }
-            } else {
-              result = {
-                result: this.extractResult(route.returnTypeFields as string, result),
-              };
             }
             if (r.setCookies && r.setCookies.length) {
               r.setCookies.forEach((cookie: Cookie) => {
@@ -273,6 +289,7 @@ export class RestController extends ConduitRouter {
     this._registeredRoutes.forEach(route => {
       this.addConduitRoute(route);
     });
+    this._swagger?.importDbTypes();
   }
 
   private initializeRouter() {
@@ -291,6 +308,7 @@ export class RestController extends ConduitRouter {
   }
 
   shutDown() {
+    TypeRegistry.removeTransport('rest');
     super.shutDown();
     this._registeredLocalRoutes.clear();
     delete this._swagger;

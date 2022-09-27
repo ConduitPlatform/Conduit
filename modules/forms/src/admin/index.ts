@@ -53,6 +53,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.GET,
+          description: `Returns queried forms and their total count.`,
           queryParams: {
             skip: ConduitNumber.Optional,
             limit: ConduitNumber.Optional,
@@ -61,7 +62,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetForms', {
-          forms: [Forms.getInstance().fields],
+          forms: [Forms.name],
           count: ConduitNumber.Required,
         }),
         'getForms',
@@ -70,6 +71,7 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.POST,
+          description: `Creates a new form.`,
           bodyParams: {
             name: ConduitString.Required,
             fields: ConduitJson.Required,
@@ -85,6 +87,7 @@ export class AdminHandlers {
         {
           path: '/forms/:formId',
           action: ConduitRouteActions.UPDATE,
+          description: `Updates a form.`,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
           },
@@ -103,12 +106,13 @@ export class AdminHandlers {
         {
           path: '/forms',
           action: ConduitRouteActions.DELETE,
+          description: `Deletes queried forms.`,
           queryParams: {
             ids: { type: [TYPE.String], required: true }, // handler array check is still required
           },
         },
         new ConduitRouteReturnDefinition('DeleteForms', {
-          forms: [Forms.getInstance().fields],
+          forms: [Forms.name],
           count: ConduitString.Required,
         }),
         'deleteForms',
@@ -117,6 +121,7 @@ export class AdminHandlers {
         {
           path: '/replies/:formId',
           action: ConduitRouteActions.GET,
+          description: `Returns queried form replies and their total count.`,
           urlParams: {
             formId: { type: RouteOptionType.String, required: true },
           },
@@ -127,7 +132,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetFormReplies', {
-          replies: [FormReplies.getInstance().fields],
+          replies: [FormReplies.name],
           count: ConduitNumber.Required,
         }),
         'getFormReplies',
@@ -152,7 +157,7 @@ export class AdminHandlers {
       limit,
       sort,
     );
-    const countPromise = Forms.getInstance().countDocuments({});
+    const countPromise = Forms.getInstance().countDocuments(query);
     const [forms, count] = await Promise.all([formsPromise, countPromise]).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
@@ -160,19 +165,7 @@ export class AdminHandlers {
   }
 
   async createForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (Object.keys(call.request.params.fields).length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
-    }
-    Object.keys(call.request.params.fields).forEach(r => {
-      if (
-        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
-      ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-        );
-      }
-    });
+    this.formFieldsChecks(call);
     const formExists = await Forms.getInstance()
       .findOne({ name: call.request.params.name })
       .catch(e => {
@@ -199,19 +192,7 @@ export class AdminHandlers {
   }
 
   async updateForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    if (Object.keys(call.request.params.fields).length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
-    }
-    Object.keys(call.request.params.fields).forEach(r => {
-      if (
-        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
-      ) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
-        );
-      }
-    });
+    this.formFieldsChecks(call);
     Forms.getInstance()
       .findByIdAndUpdate(call.request.params.formId, {
         name: call.request.params.name,
@@ -265,5 +246,21 @@ export class AdminHandlers {
       },
     );
     return { replies, count };
+  }
+
+  private formFieldsChecks(call: ParsedRouterRequest) {
+    if (Object.keys(call.request.params.fields).length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Fields object cannot be empty');
+    }
+    Object.keys(call.request.params.fields).forEach(r => {
+      if (
+        ['String', 'File', 'Date', 'Number'].indexOf(call.request.params.fields[r]) === -1
+      ) {
+        throw new GrpcError(
+          status.INVALID_ARGUMENT,
+          'Fields object should contain fields that have their value as a type of: String, File, Date, Number',
+        );
+      }
+    });
   }
 }

@@ -38,8 +38,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
-    const userFields = JSON.parse(JSON.stringify(User.getInstance().fields));
-    delete userFields.hashedPassword;
     routingManager.route(
       {
         path: '/local/new',
@@ -51,7 +49,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         },
         middlewares: [],
       },
-      new ConduitRouteReturnDefinition('RegisterResponse', userFields),
+      new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
     );
 
@@ -81,6 +79,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/forgot-password',
           action: ConduitRouteActions.POST,
+          description: `Generates a password reset token and forwards a verification link to the user's email address.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -94,7 +93,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           path: '/reset-password',
           action: ConduitRouteActions.POST,
           description: `Used after the user clicks on the 'forgot password' link and
-                 requires the token from the url and the new password`,
+                        requires the token from the url and the new password.`,
           bodyParams: {
             passwordResetToken: ConduitString.Required,
             password: ConduitString.Required,
@@ -108,7 +107,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         {
           path: '/local/resend-verification',
           action: ConduitRouteActions.POST,
-          description: `Used to resend email verification after new user is created`,
+          description: `Used to resend email verification after new user is created.`,
           bodyParams: {
             email: ConduitString.Required,
           },
@@ -153,7 +152,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify user email. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify user email. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -166,7 +165,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/verify-change-email/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify an email address change. This bypasses the need for clientid/secret`,
+        description: `A webhook used to verify an email address change. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -184,6 +183,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           bodyParams: {
             email: ConduitString.Required,
             code: ConduitString.Required,
+            token: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
@@ -216,7 +216,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       routingManager.route(
         {
           path: '/local/verify-qr-code',
-          action: ConduitRouteActions.GET,
+          action: ConduitRouteActions.POST,
           description: `Verifies the code the user received from scanning the QR image`,
           middlewares: ['authMiddleware'],
           bodyParams: {
@@ -388,7 +388,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         await Token.getInstance()
           .deleteMany({
             userId: user._id,
-            type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+            type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
           })
           .catch(e => {
             ConduitGrpcSdk.Logger.error(e);
@@ -396,7 +396,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
         await Token.getInstance().create({
           userId: user._id,
-          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
+          type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
           token: verificationSid,
         });
 
@@ -409,7 +409,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
         });
         if (isNil(secret))
           throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
-        return { message: 'OTP required' };
+
+        await Token.getInstance()
+          .deleteMany({
+            userId: user._id,
+            type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
+          })
+          .catch(e => {
+            ConduitGrpcSdk.Logger.error(e);
+          });
+        const qrVerificationToken = await Token.getInstance().create({
+          userId: user._id,
+          type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
+          token: uuid(),
+        });
+        return { message: 'OTP required', accessToken: qrVerificationToken.token };
       } else {
         throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
       }
@@ -702,9 +716,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       if (isNil(secret))
         throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-      const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-      if (isNil(verification))
-        throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+      const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
+      if (isNil(verification) || verification.delta !== 0)
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Provided code is invalid');
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
     }
@@ -867,7 +881,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
     const clientId = context.clientId;
-    const { email, code } = call.request.params;
+    const { email, code, token } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -877,11 +891,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
         this.grpcSdk,
         clientId,
         user,
-        TokenType.TWO_FA_VERIFICATION_TOKEN,
+        TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         code,
       );
     } else if (user.twoFaMethod == 'qrcode') {
-      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, code);
+      if (!token) throw new GrpcError(status.UNAUTHENTICATED, 'No token provided');
+      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, token, code);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
@@ -960,11 +975,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
     if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
 
-    const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-    if (isNil(verification)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
+    const verification = TwoFactorAuth.verifyToken(secret.secret, code, 1);
+    if (isNil(verification) || verification.delta !== 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Provided code is invalid');
     }
-
     await User.getInstance().findByIdAndUpdate(context.user._id, {
       hasTwoFA: true,
     });

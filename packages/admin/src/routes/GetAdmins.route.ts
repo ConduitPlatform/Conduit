@@ -3,16 +3,16 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
-  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 
-export function getAdminUsersRoute() {
+export function getAdminsRoute() {
   return new ConduitRoute(
     {
       path: '/admins',
       action: ConduitRouteActions.GET,
+      description: `Returns queried admin users and their total count.`,
       queryParams: {
         skip: ConduitNumber.Optional,
         limit: ConduitNumber.Optional,
@@ -20,29 +20,13 @@ export function getAdminUsersRoute() {
       },
     },
     new ConduitRouteReturnDefinition('GetAdminUsers', {
-      // DO NOT REMOVE THIS.
-      // The database instance is not initialized when this route is registered
-      admins: [
-        {
-          _id: TYPE.ObjectId,
-          username: {
-            type: TYPE.String,
-            required: true,
-          },
-          password: {
-            type: TYPE.String,
-            required: true,
-          },
-          createdAt: TYPE.Date,
-          updatedAt: TYPE.Date,
-        },
-      ],
+      admins: [Admin.name],
       count: ConduitNumber.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const skip = params.params!.skip ?? 0;
-      const limit = params.params!.limit ?? 25;
-      const sort = params.params!.sort;
+    async (req: ConduitRouteParameters) => {
+      const skip = req.params!.skip ?? 0;
+      const limit = req.params!.limit ?? 25;
+      const sort = req.params!.sort;
       const adminsPromise = Admin.getInstance().findMany(
         {},
         '-password',

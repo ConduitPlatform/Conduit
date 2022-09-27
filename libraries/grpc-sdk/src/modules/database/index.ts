@@ -1,11 +1,11 @@
 import { ConduitModule } from '../../classes/ConduitModule';
-import { ConduitSchema, ConduitSchemaExtension } from '../../classes';
+import { ConduitSchema } from '../../classes';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { Query } from '../../interfaces';
+import { Query, ConduitSchemaExtension } from '../../interfaces';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -13,26 +13,43 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     this.initializeClient(DatabaseProviderDefinition);
   }
 
-  getSchema(
-    schemaName: string,
-  ): Promise<{ name: string; fields: any; modelOptions: any }> {
+  getSchema(schemaName: string): Promise<{
+    name: string;
+    fields: any;
+    modelOptions: any;
+    fieldHash: string;
+  }> {
     return this.client!.getSchema({ schemaName: schemaName }).then(res => {
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.modelOptions),
+        fieldHash: res.fieldHash,
       };
     });
   }
 
-  getSchemas(): Promise<{ name: string; fields: any; modelOptions: any }[]> {
+  getSchemas(): Promise<
+    {
+      name: string;
+      fields: any;
+      modelOptions: any;
+      fieldHash: string;
+    }[]
+  > {
     return this.client!.getSchemas({}).then(res => {
       return res.schemas.map(
-        (schema: { name: string; fields: string; modelOptions: string }) => {
+        (schema: {
+          name: string;
+          fields: string;
+          modelOptions: string;
+          fieldHash: string;
+        }) => {
           return {
             name: schema.name,
             fields: JSON.parse(schema.fields),
             modelOptions: JSON.parse(schema.modelOptions),
+            fieldHash: schema.fieldHash,
           };
         },
       );
@@ -55,22 +72,22 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.modelOptions),
         collectionName: res.collectionName,
+        fieldHash: res.fieldHash,
       };
     });
   }
 
   setSchemaExtension(extension: ConduitSchemaExtension): Promise<Schema> {
     return this.client!.setSchemaExtension({
-      extension: {
-        name: extension.name,
-        fields: JSON.stringify(extension.fields ?? extension.fields),
-      },
+      schemaName: extension.schemaName,
+      fields: JSON.stringify(extension.fields),
     }).then(res => {
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.modelOptions),
         collectionName: res.collectionName,
+        fieldHash: res.fieldHash,
       };
     });
   }
