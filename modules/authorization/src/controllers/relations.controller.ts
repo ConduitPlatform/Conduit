@@ -114,7 +114,7 @@ export class RelationsController {
   async findRelations(searchQuery: {
     subject?: string;
     relation?: string;
-    object?: string;
+    resource?: string;
   }) {
     const query: { subject?: string; relation?: string; resource?: string } = {};
     if (searchQuery.subject) {
@@ -123,8 +123,8 @@ export class RelationsController {
     if (searchQuery.relation) {
       query['relation'] = searchQuery.relation;
     }
-    if (searchQuery.object) {
-      query['resource'] = searchQuery.object;
+    if (searchQuery.resource) {
+      query['resource'] = searchQuery.resource;
     }
     return await Relationship.getInstance().findMany(query);
   }

@@ -61,7 +61,7 @@ export class ResourceController {
     }
   }
 
-  async updateResourceDefinition(name: string, resource: ResourceDefinition) {
+  async updateResourceDefinition(name: string, resource: any) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
     if (resource.permissions !== resourceDefinition.permissions) {
@@ -72,9 +72,12 @@ export class ResourceController {
       await this.validateResourceRelations(resource.relations);
       await this.indexController.modifyRelations(resourceDefinition, resource);
     }
+    delete resource._id;
+    delete resource.name;
     return await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
+      true,
     );
   }
 
