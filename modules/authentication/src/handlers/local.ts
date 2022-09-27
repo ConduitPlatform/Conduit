@@ -187,25 +187,25 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.passwordlessLogin.bind(this),
     );
 
-    // routingManager.route(
-    //     {
-    //         path: '/hook/passwordless-login/:verificationToken',
-    //         action: ConduitRouteActions.GET,
-    //         description: `A webhook used to verify a passwordless login.`,
-    //         urlParams: {
-    //             verificationToken: ConduitString.Required,
-    //         },
-    //     },
-    //     new ConduitRouteReturnDefinition('VerifyPasswordLessLoginResponse', {
-    //         userId: ConduitString.Optional,
-    //         accessToken: ConduitString.Optional,
-    //         refreshToken: config.generateRefreshToken
-    //             ? ConduitString.Required
-    //             : ConduitString.Optional,
-    //         message: ConduitString.Optional,
-    //     }),
-    //     this.verifyPasswordLessLogin.bind(this),
-    // );
+    routingManager.route(
+      {
+        path: '/passwordless-login/:verificationToken',
+        action: ConduitRouteActions.GET,
+        description: `A webhook used to verify a passwordless login.`,
+        urlParams: {
+          verificationToken: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('VerifyPasswordLessLoginResponse', {
+        userId: ConduitString.Optional,
+        accessToken: ConduitString.Optional,
+        refreshToken: config.generateRefreshToken
+          ? ConduitString.Required
+          : ConduitString.Optional,
+        message: ConduitString.Optional,
+      }),
+      this.verifyPasswordLessLogin.bind(this),
+    );
 
     if (config.twofa.enabled) {
       routingManager.route(
@@ -1186,7 +1186,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     } else {
       await this.sendEmailForPasswordLessLogin(user, token);
     }
-    return 'ok';
+    return 'token send';
   }
 
   private async sendEmailForPasswordLessLogin(user: User, token: Token) {
@@ -1209,8 +1209,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Email send';
   }
 
-  async verifyPasswordLessLogin(call: ParsedRouterRequest, clientId: string) {
+  async verifyPasswordLessLogin(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
+    const context = call.request.context;
+    if (isNil(context))
+      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
+
+    const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
