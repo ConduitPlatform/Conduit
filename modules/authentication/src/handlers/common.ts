@@ -1,5 +1,4 @@
 import { isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
@@ -41,12 +40,11 @@ export class CommonHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
 
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: (oldRefreshToken.user as User)._id,
-        clientId,
-      }),
-    );
+    // delete the old refresh token
+    await RefreshToken.getInstance().deleteOne({
+      token: refreshToken,
+      clientId,
+    });
 
     const user = await User.getInstance().findOne({
       _id: (oldRefreshToken.user as User)._id,
@@ -58,6 +56,8 @@ export class CommonHandlers implements IAuthenticationStrategy {
       user,
       clientId,
       config,
+      twoFaPass: true,
+      isRefresh: true,
     });
   }
 
@@ -65,34 +65,36 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
     const clientId = context.clientId;
     const user = context.user;
-    const config = ConfigController.getInstance().config;
+    const config: Config = ConfigController.getInstance().config;
     const authToken = call.request.headers.authorization;
     const clientConfig = config.clients;
-
-    await AuthUtils.logOutClientOperations(
+    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
+    await TokenProvider.getInstance()!.logOutClientOperations(
       this.grpcSdk,
       clientConfig,
       authToken,
       clientId,
       user._id,
     );
-    const options = config.setCookies.options;
-    if (config.setCookies.enabled) {
+    let removeCookies = [];
+    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+      removeCookies.push({
+        name: 'refreshToken',
+        options: { ...config.cookieOptions, ...config.refreshTokens.cookieOptions },
+      });
+    }
+    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+      removeCookies.push({
+        name: 'accessToken',
+        options: { ...config.cookieOptions, ...config.accessTokens.cookieOptions },
+      });
+    }
+    if (removeCookies.length > 0) {
       return {
         result: 'LoggedOut',
-        removeCookies: [
-          {
-            name: 'accessToken',
-            options: options,
-          },
-          {
-            name: 'refreshToken',
-            options: options,
-          },
-        ],
+        removeCookies,
       };
     }
-    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
     return 'LoggedOut';
   }
 
@@ -106,12 +108,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const user = context.user;
     await User.getInstance().deleteOne({ _id: user._id });
 
-    Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-      }),
-    ).catch(() => ConduitGrpcSdk.Logger.error('Failed to delete all access tokens'));
-    return 'Done';
+    return this.logOut(call);
   }
 
   declareRoutes(routingManager: RoutingManager, config: Config): void {

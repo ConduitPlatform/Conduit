@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   ConfigController,
   GrpcError,
   Indexable,
-  Query,
   SMS,
 } from '@conduitplatform/grpc-sdk';
 import { Token, User } from '../models';
@@ -83,17 +82,6 @@ export namespace AuthUtils {
     return bcrypt.compare(password, hashed);
   }
 
-  export function deleteUserTokens(sdk: ConduitGrpcSdk, query: Query) {
-    const promise1 = sdk.databaseProvider!.deleteMany('AccessToken', query);
-    const promise2 = sdk.databaseProvider!.deleteMany('RefreshToken', query);
-
-    return [promise1, promise2];
-  }
-
-  export function deleteUserTokensAsPromise(sdk: ConduitGrpcSdk, query: Query) {
-    return Promise.all(deleteUserTokens(sdk, query));
-  }
-
   export async function verifyCode(
     grpcSdk: ConduitGrpcSdk,
     clientId: string,
@@ -128,13 +116,6 @@ export namespace AuthUtils {
 
     const config = ConfigController.getInstance().config;
 
-    await Promise.all(
-      deleteUserTokens(grpcSdk, {
-        userId: user._id,
-        clientId,
-      }),
-    );
-
     return TokenProvider.getInstance(grpcSdk)!.provideUserTokens({
       user,
       clientId,
@@ -154,46 +135,5 @@ export namespace AuthUtils {
       .match(
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
-  }
-
-  export async function signInClientOperations(
-    grpcSdk: ConduitGrpcSdk,
-    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
-    userId: string,
-    clientId: string,
-  ) {
-    const isAnonymous = 'anonymous-client' === clientId;
-    if (!clientConfig.multipleUserSessions) {
-      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
-        userId: userId,
-        clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
-      });
-    } else if (!clientConfig.multipleClientLogins) {
-      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
-        userId: userId,
-        clientId: { $ne: clientId },
-      });
-    }
-  }
-
-  export async function logOutClientOperations(
-    grpcSdk: ConduitGrpcSdk,
-    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
-    authToken: string,
-    clientId: string,
-    userId: string,
-  ) {
-    const isAnonymous = 'anonymous-client' === clientId;
-    const token = authToken.split(' ')[1];
-    if (!clientConfig.multipleUserSessions) {
-      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
-        clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
-        userId: userId,
-      });
-    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
-      await AuthUtils.deleteUserTokensAsPromise(grpcSdk, {
-        token: token,
-      });
-    }
   }
 }

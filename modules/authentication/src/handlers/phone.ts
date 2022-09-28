@@ -106,13 +106,6 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       });
       this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
-      await Promise.all(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-          clientId,
-        }),
-      );
-
       ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
       return TokenProvider.getInstance()!.provideUserTokens({
         user,

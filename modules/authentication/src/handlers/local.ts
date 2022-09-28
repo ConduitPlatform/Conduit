@@ -335,19 +335,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
-      user._id,
-      user,
-    );
-    const tokenPromise = Token.getInstance().deleteOne(passwordResetTokenDoc);
+    await User.getInstance().findByIdAndUpdate(user._id, user, true);
+    await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
-    await Promise.all(
-      [userPromise, tokenPromise].concat(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-        }),
-      ),
-    );
+    await TokenProvider.getInstance()!.deleteUserTokens({
+      userId: user._id,
+    });
 
     return 'Password reset successful';
   }

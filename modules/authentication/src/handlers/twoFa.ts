@@ -425,12 +425,6 @@ export class TwoFa implements IAuthenticationStrategy {
     if (isNil(verification) || verification.delta !== 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
     }
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-        clientId,
-      }),
-    );
     const config = ConfigController.getInstance().config;
     return TokenProvider.getInstance()!.provideUserTokens({
       user,

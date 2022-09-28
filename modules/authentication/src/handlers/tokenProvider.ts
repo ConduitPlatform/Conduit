@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import moment from 'moment/moment';
@@ -29,17 +29,15 @@ export class TokenProvider {
   }
 
   async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {
-    await AuthUtils.signInClientOperations(
+    await this.signInClientOperations(
       this.grpcSdk,
       tokenOptions.config.clients,
       tokenOptions.user._id,
       tokenOptions.clientId,
     );
     const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
-    const cookies: { accessToken?: Cookie; refreshToken?: Cookie } = this.constructCookies(
-      tokenOptions,
-      [accessToken, refreshToken],
-    );
+    const cookies: { accessToken?: Cookie; refreshToken?: Cookie } =
+      this.constructCookies(tokenOptions, [accessToken, refreshToken]);
     if (Object.keys(cookies).length > 0) {
       if (redirectUrl) {
         const redirectUrlWithParams = new URL(redirectUrl);
@@ -107,6 +105,7 @@ export class TokenProvider {
     let authorized = false;
     if (
       !tokenOptions.user.hasTwoFA ||
+      tokenOptions.isRefresh ||
       (tokenOptions.user.hasTwoFA && tokenOptions.twoFaPass)
     ) {
       authorized = true;
@@ -183,5 +182,53 @@ export class TokenProvider {
   private signToken(data: { [key: string]: any }, options: ISignTokenOptions) {
     const { secret, expiresIn } = options;
     return jwt.sign(data, secret, { expiresIn });
+  }
+
+  async signInClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
+    userId: string,
+    clientId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
+    if (!clientConfig.multipleUserSessions) {
+      await this.deleteUserTokens({
+        userId: userId,
+        clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
+      });
+    } else if (!clientConfig.multipleClientLogins) {
+      await this.deleteUserTokens({
+        userId: userId,
+        clientId: { $ne: clientId },
+      });
+    }
+  }
+
+  async logOutClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
+    authToken: string,
+    clientId: string,
+    userId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
+    const token = authToken.split(' ')[1];
+    if (!clientConfig.multipleUserSessions) {
+      await this.deleteUserTokens({
+        clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
+        userId: userId,
+      });
+    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
+      await this.deleteUserTokens({
+        token: token,
+      });
+    }
+  }
+
+  deleteUserTokens(query: Query) {
+    const promise1 = AccessToken.getInstance().deleteMany(query);
+    const promise2 = RefreshToken.getInstance().deleteMany(query);
+
+    return Promise.all([promise1, promise2]);
   }
 }

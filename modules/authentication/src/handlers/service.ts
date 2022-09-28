@@ -52,12 +52,6 @@ export class ServiceHandler implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
 
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: serviceUser._id,
-        clientId,
-      }),
-    );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance()!.provideUserTokens({
       user: serviceUser as unknown as User,
