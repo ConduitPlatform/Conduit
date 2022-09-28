@@ -82,7 +82,12 @@ export class TwoFa {
     return '2FA disabled';
   }
 
-  async authenticate(user: User): Promise<any> {
+  async authenticate(
+    user: User,
+  ): Promise<
+    | { message: string; accessToken?: undefined }
+    | { message: string; accessToken: string }
+  > {
     if (user.twoFaMethod === 'phone') {
       const verificationSid = await AuthUtils.sendVerificationCode(
         this.smsModule,
@@ -130,6 +135,8 @@ export class TwoFa {
         message: 'OTP required',
         accessToken: qrVerificationToken.token,
       };
+    } else {
+      throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
   }
 
