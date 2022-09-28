@@ -180,7 +180,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         action: ConduitRouteActions.POST,
         description: `A webhook used to passwordless login.`,
         bodyParams: {
-          identifier: ConduitString.Required,
+          email: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('PasswordLessLoginResponse', 'String'),
@@ -189,7 +189,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     routingManager.route(
       {
-        path: '/passwordless-login/:verificationToken',
+        path: '/hook/passwordless-login/:verificationToken',
         action: ConduitRouteActions.GET,
         description: `A webhook used to verify a passwordless login.`,
         urlParams: {
@@ -1118,14 +1118,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       ConduitGrpcSdk.Logger.log('phone authentication not active');
     }
 
-    if (config.passwordless_login.enabled && !errorMessage) {
-      // maybe check if verify is enabled in sms module
-      await this.grpcSdk.waitForExistence('sms');
-      this.smsModule = this.grpcSdk.sms!;
-    } else {
-      ConduitGrpcSdk.Logger.log('passwordless_login not active');
-    }
-
     if (this.sendVerificationEmail) {
       this.registerTemplates();
     }
@@ -1146,46 +1138,18 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async passwordlessLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { identifier } = call.request.params;
-    const user: User | null = await User.getInstance().findOne({
-      $or: [{ phoneNumber: identifier }, { email: identifier }],
-    });
-    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    let method;
-    if (user.phoneNumber === identifier) {
-      if (!this.grpcSdk.isAvailable('sms')) {
-        throw new GrpcError(status.UNAVAILABLE, 'Could not send sms.');
-      }
-      method = 'phone';
-    } else if (user.hasTwoFA && user.twoFaMethod === 'qrcode') {
-      //TODO isServing check
-      method = 'qrcode';
-    } else {
-      if (!this.grpcSdk.isAvailable('email')) {
-        //TODO isServing check
-        throw new GrpcError(status.UNAVAILABLE, 'Could not send email.');
-      }
-      method = 'email';
+    const { email } = call.request.params;
+    const user: User | null = await User.getInstance().findOne({ email: email });
+    if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (!this.grpcSdk.isAvailable('email')) {
+      throw new GrpcError(status.UNAVAILABLE, 'Could not send email.');
     }
-
     const token: Token = await Token.getInstance().create({
       type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
       userId: user._id,
       token: uuid(),
-      data: {
-        name: method,
-      },
     });
-    if (method === 'qrcode') {
-      return token;
-    } else if (method === 'phone') {
-      await AuthUtils.sendVerificationCode(this.smsModule, identifier).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-      return token;
-    } else {
-      await this.sendEmailForPasswordLessLogin(user, token);
-    }
+    await this.sendEmailForPasswordLessLogin(user, token);
     return 'token send';
   }
 
@@ -1230,6 +1194,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       _id: token.userId,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    if (user.hasTwoFA) {
+      //TODO implement 2fa login
+    }
     await Token.getInstance()
       .deleteMany({ userId: token.userId, type: TokenType.PASSWORDLESS_LOGIN_TOKEN })
       .catch(e => {
