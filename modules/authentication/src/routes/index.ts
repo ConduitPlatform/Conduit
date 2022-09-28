@@ -62,7 +62,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     errorMessage = null;
-    let twoFaActive = await this.twoFaHandlers.validate().catch(e => (errorMessage = e));
+    const twoFaActive = await this.twoFaHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && twoFaActive) {
       await this.twoFaHandlers.declareRoutes(this._routingManager, config);
       enabled = true;
@@ -153,7 +153,7 @@ export class AuthenticationRoutes {
         "The Authorization header must be prefixed by 'Bearer '",
       );
     }
-    let payload: string | JwtPayload | null = AuthUtils.verify(
+    const payload: string | JwtPayload | null = AuthUtils.verify(
       args[1],
       ConfigController.getInstance().config.accessTokens.jwtSecret,
     );
