@@ -15,13 +15,13 @@ import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
 import { isNil } from 'lodash';
 import moment from 'moment';
-import { AccessToken, User } from '../models';
+import { AccessToken } from '../models';
 import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { AuthUtils } from '../utils/auth';
-import { Jwt, JwtPayload } from 'jsonwebtoken';
+import { JwtPayload } from 'jsonwebtoken';
 import { TwoFa } from '../handlers/twoFa';
 
 type OAuthHandler = typeof oauth2;

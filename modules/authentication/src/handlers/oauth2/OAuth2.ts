@@ -25,11 +25,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
 {
   grpcSdk: ConduitGrpcSdk;
-  private providerName: string;
-  protected settings: S;
   initialized: boolean = false;
   mapScopes: { [key: string]: string };
   defaultScopes: string[];
+  protected settings: S;
+  private providerName: string;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;

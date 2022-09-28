@@ -28,6 +28,75 @@ export class TokenProvider {
     TokenProvider._instance = new TokenProvider(grpcSdk);
   }
 
+  async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {
+    await AuthUtils.signInClientOperations(
+      this.grpcSdk,
+      tokenOptions.config.clients,
+      tokenOptions.user._id,
+      tokenOptions.clientId,
+    );
+    const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
+    let cookies: { accessToken?: Cookie; refreshToken?: Cookie } = this.constructCookies(
+      tokenOptions,
+      [accessToken, refreshToken],
+    );
+    if (Object.keys(cookies).length > 0) {
+      if (redirectUrl) {
+        let redirectUrlWithParams = new URL(redirectUrl);
+        if (!cookies.accessToken) {
+          redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
+        }
+        if (!cookies.refreshToken && refreshToken) {
+          redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
+        }
+        return {
+          redirectUrl: redirectUrlWithParams.toString(),
+          setCookies: cookies,
+        };
+      } else {
+        return {
+          result: {
+            message: 'Successfully authenticated',
+            userId: tokenOptions.user._id.toString(),
+            accessToken: cookies.accessToken ?? undefined,
+            refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
+          },
+          setCookies: cookies,
+        };
+      }
+    }
+    if (redirectUrl) {
+      let redirectUrlWithParams = new URL(redirectUrl);
+      redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
+      if (refreshToken) {
+        redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
+      }
+      return {
+        redirectUrl: redirectUrlWithParams.toString(),
+      };
+    } else {
+      return {
+        userId: tokenOptions.user._id.toString(),
+        accessToken: accessToken.token,
+        refreshToken: refreshToken?.token,
+      };
+    }
+  }
+
+  // used only for the login grpc call
+  async provideUserTokensInternal(tokenOptions: TokenOptions) {
+    // do not escalate user permissions when created internally
+    const [accessToken, refreshToken] = await this.createUserTokens({
+      ...tokenOptions,
+      noSudo: true,
+    });
+    return {
+      userId: tokenOptions.user._id.toString(),
+      accessToken: accessToken.token,
+      refreshToken: refreshToken?.token,
+    };
+  }
+
   private createUserTokens(
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
@@ -109,75 +178,6 @@ export class TokenProvider {
       };
     }
     return cookies;
-  }
-
-  async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {
-    await AuthUtils.signInClientOperations(
-      this.grpcSdk,
-      tokenOptions.config.clients,
-      tokenOptions.user._id,
-      tokenOptions.clientId,
-    );
-    const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
-    let cookies: { accessToken?: Cookie; refreshToken?: Cookie } = this.constructCookies(
-      tokenOptions,
-      [accessToken, refreshToken],
-    );
-    if (Object.keys(cookies).length > 0) {
-      if (redirectUrl) {
-        let redirectUrlWithParams = new URL(redirectUrl);
-        if (!cookies.accessToken) {
-          redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
-        }
-        if (!cookies.refreshToken && refreshToken) {
-          redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
-        }
-        return {
-          redirectUrl: redirectUrlWithParams.toString(),
-          setCookies: cookies,
-        };
-      } else {
-        return {
-          result: {
-            message: 'Successfully authenticated',
-            userId: tokenOptions.user._id.toString(),
-            accessToken: cookies.accessToken ?? undefined,
-            refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
-          },
-          setCookies: cookies,
-        };
-      }
-    }
-    if (redirectUrl) {
-      let redirectUrlWithParams = new URL(redirectUrl);
-      redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
-      if (refreshToken) {
-        redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
-      }
-      return {
-        redirectUrl: redirectUrlWithParams.toString(),
-      };
-    } else {
-      return {
-        userId: tokenOptions.user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: refreshToken?.token,
-      };
-    }
-  }
-
-  // used only for the login grpc call
-  async provideUserTokensInternal(tokenOptions: TokenOptions) {
-    // do not escalate user permissions when created internally
-    const [accessToken, refreshToken] = await this.createUserTokens({
-      ...tokenOptions,
-      noSudo: true,
-    });
-    return {
-      userId: tokenOptions.user._id.toString(),
-      accessToken: accessToken.token,
-      refreshToken: refreshToken?.token,
-    };
   }
 
   private signToken(data: { [key: string]: any }, options: ISignTokenOptions) {

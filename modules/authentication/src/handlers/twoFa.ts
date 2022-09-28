@@ -148,48 +148,6 @@ export class TwoFa implements IAuthenticationStrategy {
     return this.disable2Fa(context.user);
   }
 
-  private async enableSms2Fa(user: User, phoneNumber: string): Promise<string> {
-    const verificationSid = await AuthUtils.sendVerificationCode(
-      this.smsModule,
-      phoneNumber,
-    );
-    if (verificationSid === '') {
-      throw new GrpcError(status.INTERNAL, 'Could not send verification code');
-    }
-    await AuthUtils.createToken(
-      user._id,
-      { data: phoneNumber },
-      TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-    ).catch(e => ConduitGrpcSdk.Logger.error(e));
-
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      twoFaMethod: 'phone',
-    });
-    return 'Verification code sent';
-  }
-
-  private async enableAuthenticator2Fa(user: User): Promise<string> {
-    const secret = node2fa.generateSecret({
-      //to do: add logic for app name insertion
-      name: 'Conduit',
-      // add another string when mail is not available
-      account: user.email ?? `conduit-${user._id}`,
-    });
-    await TwoFactorSecret.getInstance().deleteMany({
-      user: user._id,
-    });
-    await TwoFactorSecret.getInstance().create({
-      user: user._id,
-      secret: secret.secret,
-      uri: secret.uri,
-      qr: secret.qr,
-    });
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      twoFaMethod: 'authenticator',
-    });
-    return secret.qr.toString();
-  }
-
   async disable2Fa(user: User): Promise<string> {
     await User.getInstance().findByIdAndUpdate(user._id, {
       hasTwoFA: false,
@@ -409,6 +367,48 @@ export class TwoFa implements IAuthenticationStrategy {
       }),
     );
     return '2FA enabled';
+  }
+
+  private async enableSms2Fa(user: User, phoneNumber: string): Promise<string> {
+    const verificationSid = await AuthUtils.sendVerificationCode(
+      this.smsModule,
+      phoneNumber,
+    );
+    if (verificationSid === '') {
+      throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+    }
+    await AuthUtils.createToken(
+      user._id,
+      { data: phoneNumber },
+      TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+    ).catch(e => ConduitGrpcSdk.Logger.error(e));
+
+    await User.getInstance().findByIdAndUpdate(user._id, {
+      twoFaMethod: 'phone',
+    });
+    return 'Verification code sent';
+  }
+
+  private async enableAuthenticator2Fa(user: User): Promise<string> {
+    const secret = node2fa.generateSecret({
+      //to do: add logic for app name insertion
+      name: 'Conduit',
+      // add another string when mail is not available
+      account: user.email ?? `conduit-${user._id}`,
+    });
+    await TwoFactorSecret.getInstance().deleteMany({
+      user: user._id,
+    });
+    await TwoFactorSecret.getInstance().create({
+      user: user._id,
+      secret: secret.secret,
+      uri: secret.uri,
+      qr: secret.qr,
+    });
+    await User.getInstance().findByIdAndUpdate(user._id, {
+      twoFaMethod: 'authenticator',
+    });
+    return secret.qr.toString();
   }
 
   private async verifyAuthenticatorCodeForLogin(

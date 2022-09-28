@@ -31,7 +31,6 @@ import { TokenProvider } from './handlers/tokenProvider';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
@@ -43,6 +42,7 @@ export default class Authentication extends ManagedModule<Config> {
       userDelete: this.userDelete.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
@@ -59,14 +59,6 @@ export default class Authentication extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      return this.database.createSchemaFromAdapter(modelInstance);
-    });
-    return Promise.all(promises);
   }
 
   async onConfig() {
@@ -111,48 +103,12 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('router');
   }
 
-  private refreshAppRoutes() {
-    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
-      return;
-    }
-    if (this.userRouter) {
-      this.scheduleAppRouteRefresh();
-      return;
-    }
-    const self = this;
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
-        this.scheduleAppRouteRefresh();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
-  }
-
-  private scheduleAppRouteRefresh() {
-    if (this.refreshAppRoutesTimeout) {
-      clearTimeout(this.refreshAppRoutesTimeout);
-      this.refreshAppRoutesTimeout = null;
-    }
-    this.refreshAppRoutesTimeout = setTimeout(async () => {
-      try {
-        await this.userRouter.registerRoutes();
-      } catch (err) {
-        ConduitGrpcSdk.Logger.error(err as Error);
-      }
-      this.refreshAppRoutesTimeout = null;
-    }, 800);
-  }
-
   async initializeMetrics() {
     // @improve-metrics
     // TODO: This should initialize 'logged_in_users_total' based on valid tokens
     // Gauge value should also decrease on latest token expiry.
   }
 
-  // gRPC Service
   // produces login credentials for a user without them having to login
   async userLogin(
     call: GrpcRequest<UserLoginRequest>,
@@ -263,6 +219,8 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
+  // gRPC Service
+
   async changePass(
     call: GrpcRequest<UserChangePass>,
     callback: GrpcCallback<UserCreateResponse>,
@@ -291,5 +249,48 @@ export default class Authentication extends ManagedModule<Config> {
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
+  }
+
+  private refreshAppRoutes() {
+    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    if (this.userRouter) {
+      this.scheduleAppRouteRefresh();
+      return;
+    }
+    const self = this;
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
+        this.scheduleAppRouteRefresh();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
+  }
+
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.userRouter.registerRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
   }
 }

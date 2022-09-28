@@ -234,25 +234,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return { user };
   }
 
-  private async _authenticateChecks(password: string, config: Config, user: User) {
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-    if (!user.hashedPassword)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch)
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-
-    if (config.local.verification.required && !user.isVerified) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'You must verify your account to login',
-      );
-    }
-  }
-
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     let email = call.request.params.email;
@@ -604,6 +585,25 @@ export class LocalHandlers implements IAuthenticationStrategy {
       },
     });
     return 'Verification code sent';
+  }
+
+  private async _authenticateChecks(password: string, config: Config, user: User) {
+    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+    if (!user.hashedPassword)
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
+      );
+    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
+    if (!passwordsMatch)
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
+
+    if (config.local.verification.required && !user.isVerified) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You must verify your account to login',
+      );
+    }
   }
 
   private async initDbAndEmail() {
