@@ -195,7 +195,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           verificationToken: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('VerifyPasswordLessLoginResponse', {
+      new ConduitRouteReturnDefinition('VerifyPasswordlessLoginResponse', {
         userId: ConduitString.Optional,
         accessToken: ConduitString.Optional,
         refreshToken: config.generateRefreshToken
@@ -203,7 +203,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           : ConduitString.Optional,
         message: ConduitString.Optional,
       }),
-      this.verifyPasswordLessLogin.bind(this),
+      this.verifyPasswordlessLogin.bind(this),
     );
 
     if (config.twofa.enabled) {
@@ -829,7 +829,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     if (config.passwordless_login.enabled && this.grpcSdk.isAvailable('email')) {
-      await this.grpcSdk.config.moduleExists('email');
       this.emailModule = this.grpcSdk.emailProvider!;
     }
 
@@ -874,6 +873,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       userId: user._id,
       token: uuid(),
     });
+
     await this.sendEmailForPasswordLessLogin(user, token);
     return 'token send';
   }
@@ -898,7 +898,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Email send';
   }
 
-  async verifyPasswordLessLogin(
+  async verifyPasswordlessLogin(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
@@ -919,8 +919,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       _id: token.userId,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+
     if (user.hasTwoFA) {
-      //TODO implement 2fa login
+      return this.twoFa.authenticate(user);
     }
     await Token.getInstance()
       .deleteMany({ userId: token.userId, type: TokenType.PASSWORDLESS_LOGIN_TOKEN })
