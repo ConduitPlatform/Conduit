@@ -60,8 +60,10 @@ export class TokenProvider {
     return Promise.all(promises);
   }
 
-  async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {
-    const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
+  private constructCookies(
+    tokenOptions: TokenOptions,
+    tokens: [AccessToken, RefreshToken?],
+  ) {
     let cookies: Cookie[] = [];
     if (tokenOptions.config.accessTokens.setCookie) {
       const cookieOptions = {
@@ -70,12 +72,12 @@ export class TokenProvider {
       };
       cookies.push({
         name: 'accessToken',
-        value: (accessToken as AccessToken).token,
+        value: (tokens[0] as AccessToken).token,
         options: cookieOptions,
       });
     }
     if (
-      !isNil((refreshToken as RefreshToken).token) &&
+      !isNil((tokens[1] as RefreshToken).token) &&
       tokenOptions.config.refreshTokens.setCookie
     ) {
       const cookieOptions = {
@@ -84,10 +86,25 @@ export class TokenProvider {
       };
       cookies.push({
         name: 'refreshToken',
-        value: (refreshToken as RefreshToken).token,
+        value: (tokens[1] as RefreshToken).token,
         options: cookieOptions,
       });
     }
+    return cookies;
+  }
+
+  async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {
+    await AuthUtils.signInClientOperations(
+      this.grpcSdk,
+      tokenOptions.config.clients,
+      tokenOptions.user._id,
+      tokenOptions.clientId,
+    );
+    const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
+    let cookies: Cookie[] = this.constructCookies(tokenOptions, [
+      accessToken,
+      refreshToken,
+    ]);
     if (cookies.length > 0) {
       if (redirectUrl) {
         let redirectUrlWithParams = new URL(redirectUrl);

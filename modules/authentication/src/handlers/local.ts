@@ -381,13 +381,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (user.hasTwoFA) {
       return this.twoFa.authenticate(user);
     }
-    const clientConfig = config.clients;
-    await AuthUtils.signInClientOperations(
-      this.grpcSdk,
-      clientConfig,
-      user._id,
-      clientId,
-    );
 
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
     return TokenProvider.getInstance()!.provideUserTokens({
