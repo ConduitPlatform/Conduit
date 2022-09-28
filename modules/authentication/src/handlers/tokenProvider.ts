@@ -12,6 +12,7 @@ export interface TokenOptions {
   user: User;
   clientId: string;
   config: Config;
+  twoFaPass: boolean;
 }
 
 export class TokenProvider {
@@ -32,11 +33,18 @@ export class TokenProvider {
       secret: tokenOptions.config.accessTokens.jwtSecret,
       expiresIn: tokenOptions.config.accessTokens.expiryPeriod,
     };
+    let authorized = false;
+    if (
+      !tokenOptions.user.hasTwoFA ||
+      (tokenOptions.user.hasTwoFA && tokenOptions.twoFaPass)
+    ) {
+      authorized = true;
+    }
 
     const accessTokenPromise = AccessToken.getInstance().create({
       userId: tokenOptions.user._id,
       clientId: tokenOptions.clientId,
-      token: this.signToken({ id: tokenOptions.user._id }, signTokenOptions),
+      token: this.signToken({ id: tokenOptions.user._id, authorized }, signTokenOptions),
       expiresOn: moment()
         .add(tokenOptions.config.accessTokens.expiryPeriod as number, 'milliseconds')
         .toDate(),
@@ -46,7 +54,9 @@ export class TokenProvider {
       refreshToken?: Promise<RefreshToken>,
     ] = [accessTokenPromise];
     let refreshTokenPromise;
-    if (tokenOptions.config.refreshTokens.enabled) {
+    // do not construct refresh tokens when the user has 2fa enabled
+    // the tokens will be constructed when the user has successfully verified the 2fa
+    if (tokenOptions.config.refreshTokens.enabled && authorized) {
       refreshTokenPromise = RefreshToken.getInstance().create({
         userId: tokenOptions.user._id,
         clientId: tokenOptions.clientId,
@@ -64,17 +74,17 @@ export class TokenProvider {
     tokenOptions: TokenOptions,
     tokens: [AccessToken, RefreshToken?],
   ) {
-    let cookies: Cookie[] = [];
+    let cookies: { accessToken?: Cookie; refreshToken?: Cookie } = {};
     if (tokenOptions.config.accessTokens.setCookie) {
       const cookieOptions = {
         ...tokenOptions.config.cookieOptions,
         ...tokenOptions.config.accessTokens.cookieOptions,
       };
-      cookies.push({
+      cookies.accessToken = {
         name: 'accessToken',
         value: (tokens[0] as AccessToken).token,
         options: cookieOptions,
-      });
+      };
     }
     if (
       !isNil((tokens[1] as RefreshToken).token) &&
@@ -84,11 +94,11 @@ export class TokenProvider {
         ...tokenOptions.config.cookieOptions,
         ...tokenOptions.config.refreshTokens.cookieOptions,
       };
-      cookies.push({
+      cookies.refreshToken = {
         name: 'refreshToken',
         value: (tokens[1] as RefreshToken).token,
         options: cookieOptions,
-      });
+      };
     }
     return cookies;
   }
@@ -101,20 +111,17 @@ export class TokenProvider {
       tokenOptions.clientId,
     );
     const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
-    let cookies: Cookie[] = this.constructCookies(tokenOptions, [
-      accessToken,
-      refreshToken,
-    ]);
-    if (cookies.length > 0) {
+    let cookies: { accessToken?: Cookie; refreshToken?: Cookie } = this.constructCookies(
+      tokenOptions,
+      [accessToken, refreshToken],
+    );
+    if (Object.keys(cookies).length > 0) {
       if (redirectUrl) {
         let redirectUrlWithParams = new URL(redirectUrl);
-        if (!tokenOptions.config.accessTokens.setCookie) {
+        if (!cookies.accessToken) {
           redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
         }
-        if (
-          tokenOptions.config.refreshTokens.enabled &&
-          !tokenOptions.config.refreshTokens.setCookie
-        ) {
+        if (!cookies.refreshToken && refreshToken) {
           redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
         }
         return {
@@ -126,12 +133,8 @@ export class TokenProvider {
           result: {
             message: 'Successfully authenticated',
             userId: tokenOptions.user._id.toString(),
-            accessToken: tokenOptions.config.accessTokens.setCookie
-              ? undefined
-              : accessToken.token,
-            refreshToken: tokenOptions.config.refreshTokens.setCookie
-              ? undefined
-              : refreshToken?.token,
+            accessToken: cookies.accessToken ?? undefined,
+            refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
           },
           setCookies: cookies,
         };
@@ -140,7 +143,7 @@ export class TokenProvider {
     if (redirectUrl) {
       let redirectUrlWithParams = new URL(redirectUrl);
       redirectUrlWithParams.searchParams.append('accessToken', accessToken.token);
-      if (tokenOptions.config.refreshTokens.enabled) {
+      if (refreshToken) {
         redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
       }
       return {
