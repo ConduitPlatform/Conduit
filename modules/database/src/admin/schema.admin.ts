@@ -115,6 +115,7 @@ export class SchemaAdmin {
     }
 
     const modelOptions = SchemaConverter.getModelOptions({
+      cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
     });
@@ -152,6 +153,7 @@ export class SchemaAdmin {
 
     requestedSchema.fields = fields ?? requestedSchema.fields;
     const modelOptions = SchemaConverter.getModelOptions({
+      cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
       existingModelOptions: requestedSchema.modelOptions,
@@ -553,6 +555,7 @@ export class SchemaAdmin {
           : `imp_${schema.name}`;
 
         const modelOptions = SchemaConverter.getModelOptions({
+          cmsSchema: true,
           existingModelOptions: schema.modelOptions,
           importedSchema: true,
         });

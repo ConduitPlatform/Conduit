@@ -25,6 +25,7 @@ export namespace SchemaConverter {
    * Generates a new or updated modelOptions object.
    */
   export function getModelOptions(opts: {
+    cmsSchema?: boolean; // separate field as unprovided 'cms' could indicate default values
     cms?: {
       enabled?: boolean;
       crudOperations?: {
@@ -49,72 +50,74 @@ export namespace SchemaConverter {
     const existing = opts.existingModelOptions?.conduit;
     const explicit = { cms: opts.cms, permissions: opts.permissions };
     // Grab first source available: explicit -> existing -> default
-    modelOptions.conduit.cms = {
-      enabled:
-        explicit.cms?.enabled !== undefined
-          ? explicit.cms.enabled
-          : existing?.cms?.enabled !== undefined
-          ? existing.cms.enabled
-          : defaults.cms.enabled,
-      crudOperations: {
-        create: {
-          enabled:
-            explicit.cms?.crudOperations?.create?.enabled !== undefined
-              ? explicit.cms.crudOperations?.create.enabled
-              : existing?.cms?.crudOperations?.create?.enabled !== undefined
-              ? existing.cms.crudOperations.create.enabled
-              : defaults.cms.crudOperations.create.enabled,
-          authenticated:
-            explicit.cms?.crudOperations?.create?.authenticated !== undefined
-              ? explicit.cms.crudOperations?.create.authenticated
-              : existing?.cms?.crudOperations?.create?.authenticated !== undefined
-              ? existing.cms.crudOperations.create.authenticated
-              : defaults.cms.crudOperations.create.authenticated,
+    if (opts.cmsSchema) {
+      modelOptions.conduit.cms = {
+        enabled:
+          explicit.cms?.enabled !== undefined
+            ? explicit.cms.enabled
+            : existing?.cms?.enabled !== undefined
+            ? existing.cms.enabled
+            : defaults.cms.enabled,
+        crudOperations: {
+          create: {
+            enabled:
+              explicit.cms?.crudOperations?.create?.enabled !== undefined
+                ? explicit.cms.crudOperations?.create.enabled
+                : existing?.cms?.crudOperations?.create?.enabled !== undefined
+                ? existing.cms.crudOperations.create.enabled
+                : defaults.cms.crudOperations.create.enabled,
+            authenticated:
+              explicit.cms?.crudOperations?.create?.authenticated !== undefined
+                ? explicit.cms.crudOperations?.create.authenticated
+                : existing?.cms?.crudOperations?.create?.authenticated !== undefined
+                ? existing.cms.crudOperations.create.authenticated
+                : defaults.cms.crudOperations.create.authenticated,
+          },
+          read: {
+            enabled:
+              explicit.cms?.crudOperations?.read?.enabled !== undefined
+                ? explicit.cms.crudOperations?.read.enabled
+                : existing?.cms?.crudOperations?.read?.enabled !== undefined
+                ? existing.cms.crudOperations.read.enabled
+                : defaults.cms.crudOperations.read.enabled,
+            authenticated:
+              explicit.cms?.crudOperations?.read?.authenticated !== undefined
+                ? explicit.cms.crudOperations?.read.authenticated
+                : existing?.cms?.crudOperations?.read?.authenticated !== undefined
+                ? existing.cms.crudOperations.read.authenticated
+                : defaults.cms.crudOperations.read.authenticated,
+          },
+          update: {
+            enabled:
+              explicit.cms?.crudOperations?.update?.enabled !== undefined
+                ? explicit.cms.crudOperations?.update.enabled
+                : existing?.cms?.crudOperations?.update?.enabled !== undefined
+                ? existing.cms.crudOperations.update.enabled
+                : defaults.cms.crudOperations.update.enabled,
+            authenticated:
+              explicit.cms?.crudOperations?.update?.authenticated !== undefined
+                ? explicit.cms.crudOperations?.update.authenticated
+                : existing?.cms?.crudOperations?.update?.authenticated !== undefined
+                ? existing.cms.crudOperations.update.authenticated
+                : defaults.cms.crudOperations.update.authenticated,
+          },
+          delete: {
+            enabled:
+              explicit.cms?.crudOperations?.delete?.enabled !== undefined
+                ? explicit.cms.crudOperations?.delete.enabled
+                : existing?.cms?.crudOperations?.delete?.enabled !== undefined
+                ? existing.cms.crudOperations.delete.enabled
+                : defaults.cms.crudOperations.delete.enabled,
+            authenticated:
+              explicit.cms?.crudOperations?.delete?.authenticated !== undefined
+                ? explicit.cms.crudOperations?.delete.authenticated
+                : existing?.cms?.crudOperations?.delete?.authenticated !== undefined
+                ? existing.cms.crudOperations.delete.authenticated
+                : defaults.cms.crudOperations.delete.authenticated,
+          },
         },
-        read: {
-          enabled:
-            explicit.cms?.crudOperations?.read?.enabled !== undefined
-              ? explicit.cms.crudOperations?.read.enabled
-              : existing?.cms?.crudOperations?.read?.enabled !== undefined
-              ? existing.cms.crudOperations.read.enabled
-              : defaults.cms.crudOperations.read.enabled,
-          authenticated:
-            explicit.cms?.crudOperations?.read?.authenticated !== undefined
-              ? explicit.cms.crudOperations?.read.authenticated
-              : existing?.cms?.crudOperations?.read?.authenticated !== undefined
-              ? existing.cms.crudOperations.read.authenticated
-              : defaults.cms.crudOperations.read.authenticated,
-        },
-        update: {
-          enabled:
-            explicit.cms?.crudOperations?.update?.enabled !== undefined
-              ? explicit.cms.crudOperations?.update.enabled
-              : existing?.cms?.crudOperations?.update?.enabled !== undefined
-              ? existing.cms.crudOperations.update.enabled
-              : defaults.cms.crudOperations.update.enabled,
-          authenticated:
-            explicit.cms?.crudOperations?.update?.authenticated !== undefined
-              ? explicit.cms.crudOperations?.update.authenticated
-              : existing?.cms?.crudOperations?.update?.authenticated !== undefined
-              ? existing.cms.crudOperations.update.authenticated
-              : defaults.cms.crudOperations.update.authenticated,
-        },
-        delete: {
-          enabled:
-            explicit.cms?.crudOperations?.delete?.enabled !== undefined
-              ? explicit.cms.crudOperations?.delete.enabled
-              : existing?.cms?.crudOperations?.delete?.enabled !== undefined
-              ? existing.cms.crudOperations.delete.enabled
-              : defaults.cms.crudOperations.delete.enabled,
-          authenticated:
-            explicit.cms?.crudOperations?.delete?.authenticated !== undefined
-              ? explicit.cms.crudOperations?.delete.authenticated
-              : existing?.cms?.crudOperations?.delete?.authenticated !== undefined
-              ? existing.cms.crudOperations.delete.authenticated
-              : defaults.cms.crudOperations.delete.authenticated,
-        },
-      },
-    };
+      };
+    }
     modelOptions.conduit.permissions = {
       extendable:
         explicit.permissions?.extendable !== undefined
