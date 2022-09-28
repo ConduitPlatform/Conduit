@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY --from=conduit-base:latest /app/packages /app/packages
 COPY --from=conduit-base:latest /app/libraries/hermes /app/libraries/hermes
+COPY --from=conduit-base:latest /app/libraries/node-2fa /app/libraries/node-2fa
 
 RUN yarn install --production --pure-lockfile --non-interactive && yarn cache clean
 

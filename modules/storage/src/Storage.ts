@@ -132,11 +132,14 @@ export default class Storage extends ManagedModule<Config> {
       .countDocuments({});
     const foldersTotal = await models._StorageFolder.getInstance().countDocuments({});
     const files = await models.File.getInstance().findMany({}, 'size');
-    const filesTotalSize = files
-      .map(file => file.size)
-      .reduce((prev, next) => {
-        return prev + next;
-      });
+    let filesTotalSize = 0;
+    if (files.length > 0) {
+      filesTotalSize = files
+        .map(file => file.size)
+        .reduce((prev, next) => {
+          return prev + next;
+        });
+    }
     ConduitGrpcSdk.Metrics?.set('containers_total', containersTotal);
     ConduitGrpcSdk.Metrics?.set('folders_total', foldersTotal);
     ConduitGrpcSdk.Metrics?.set('files_total', files.length);

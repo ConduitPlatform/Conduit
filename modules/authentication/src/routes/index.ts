@@ -30,21 +30,12 @@ export class AuthenticationRoutes {
   private readonly phoneHandlers: PhoneHandlers;
   private readonly _routingManager: RoutingManager;
 
-  constructor(
-    readonly server: GrpcServer,
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private localSendVerificationEmail: boolean,
-  ) {
+  constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.serviceHandler = new ServiceHandler(grpcSdk);
     this.commonHandlers = new CommonHandlers(grpcSdk);
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
-    this.updateLocalHandlers(localSendVerificationEmail);
-  }
-
-  updateLocalHandlers(sendVerificationEmail: boolean) {
-    this.localSendVerificationEmail = sendVerificationEmail;
-    this.localHandlers = new LocalHandlers(this.grpcSdk, sendVerificationEmail);
+    this.localHandlers = new LocalHandlers(this.grpcSdk);
   }
 
   async registerRoutes() {
