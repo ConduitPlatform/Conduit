@@ -17,17 +17,15 @@ import { AccessToken, RefreshToken, User } from '../models';
 import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
+import { TokenProvider } from './tokenProvider';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
-
     const clientId = context.clientId;
-
     const { refreshToken } = call.request.params;
-
     const config = ConfigController.getInstance().config;
 
     const oldRefreshToken: RefreshToken | null = await RefreshToken.getInstance().findOne(
@@ -50,52 +48,15 @@ export class CommonHandlers implements IAuthenticationStrategy {
       }),
     );
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const newAccessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: oldRefreshToken.userId,
-      clientId,
-      token: AuthUtils.signToken({ id: oldRefreshToken.userId }, signTokenOptions),
-      expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
-    });
-
-    const newRefreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: oldRefreshToken.userId,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
-        .toDate(),
-    });
-
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: newAccessToken.token,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(refreshToken!)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: newAccessToken.token,
-          options: cookieOptions,
-        });
-      }
-      return {
-        result: { message: 'Successfully authenticated' },
-        setCookies: cookies,
-      };
+    const user = await User.getInstance().findOne({ _id: oldRefreshToken.userId });
+    if (!user) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
     }
-    return {
-      accessToken: newAccessToken.token,
-      refreshToken: newRefreshToken.token,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId,
+      config,
+    });
   }
 
   async logOut(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -172,7 +133,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
       this.deleteUser.bind(this),
     );
-    if (config.generateRefreshToken) {
+    if (config.refreshTokens.enabled) {
       routingManager.route(
         {
           path: '/renew',

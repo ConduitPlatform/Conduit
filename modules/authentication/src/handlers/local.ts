@@ -21,6 +21,7 @@ import { status } from '@grpc/grpc-js';
 import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TwoFa } from './twoFa';
+import { TokenProvider } from './tokenProvider';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -173,7 +174,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.verifyChangeEmail.bind(this),
     );
 
-    if (config.twofa.enabled) {
+    if (config.twoFa.enabled) {
       routingManager.route(
         {
           path: '/local/twofa',
@@ -188,7 +189,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
           userId: ConduitString.Optional,
           accessToken: ConduitString.Optional,
-          refreshToken: config.generateRefreshToken
+          refreshToken: config.refreshTokens.enabled
             ? ConduitString.Required
             : ConduitString.Optional,
           message: ConduitString.Optional,
@@ -387,45 +388,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
       user._id,
       clientId,
     );
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: user._id,
-        clientId: clientId,
-        config,
-      },
-    );
 
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      if (cookieOptions.path === '') {
-        delete cookieOptions.path;
-      }
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: (accessToken as AccessToken).token,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(refreshToken)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: refreshToken.token,
-          options: cookieOptions,
-        });
-      }
-      return {
-        userId: user._id.toString(),
-        setCookies: cookies,
-      };
-    }
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken!.token,
-      refreshToken: !isNil(refreshToken) ? refreshToken.token : undefined,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId,
+      config,
+    });
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

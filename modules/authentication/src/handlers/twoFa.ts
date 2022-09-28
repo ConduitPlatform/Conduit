@@ -12,9 +12,11 @@ import * as node2fa from '@conduitplatform/node-2fa';
 import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import moment from 'moment';
 import { v4 as uuid } from 'uuid';
+import { TokenProvider } from './tokenProvider';
 
 export class TwoFa {
   private smsModule: SMS;
+
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async enable2Fa(user: User, method: string, phoneNumber?: string): Promise<string> {
@@ -145,7 +147,7 @@ export class TwoFa {
     code: string,
     token: string,
     clientId: string,
-  ): Promise<{ userId: string; accessToken: string; refreshToken: string }> {
+  ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     if (user.twoFaMethod === 'phone') {
       return await AuthUtils.verifyCode(
         this.grpcSdk,
@@ -320,7 +322,7 @@ export class TwoFa {
     user: User,
     token: string,
     code: string,
-  ): Promise<{ userId: string; accessToken: string; refreshToken: string }> {
+  ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     const qrVerificationToken = await Token.getInstance().findOne({
       userId: user._id,
       type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
@@ -350,30 +352,10 @@ export class TwoFa {
       }),
     );
     const config = ConfigController.getInstance().config;
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-    const accessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: user._id,
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
       clientId,
-      token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment()
-        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
+      config,
     });
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
-    };
   }
 }

@@ -29,6 +29,7 @@ import {
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
+import { TokenProvider } from './handlers/tokenProvider';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -160,41 +161,24 @@ export default class Authentication extends ManagedModule<Config> {
     callback: GrpcCallback<UserLoginResponse>,
   ) {
     const { userId, clientId } = call.request;
+    const user = await models.User.getInstance(this.database).findOne({ _id: userId });
+    if (!user) {
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'User not found',
+      });
+    }
     const config = ConfigController.getInstance().config;
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-    let errorMessage = null;
-    const accessToken: models.AccessToken = await models.AccessToken.getInstance()
-      .create({
-        userId: userId,
-        clientId,
-        token: AuthUtils.signToken({ id: userId }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const refreshToken: models.RefreshToken = await models.RefreshToken.getInstance()
-      .create({
-        userId: userId,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    const tokens = await TokenProvider.getInstance()!.provideUserTokensInternal({
+      user,
+      clientId,
+      config,
+    });
 
     return callback(null, {
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? undefined,
     });
   }
 

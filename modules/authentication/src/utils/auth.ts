@@ -1,5 +1,4 @@
 import * as crypto from 'crypto';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import ConduitGrpcSdk, {
@@ -9,12 +8,11 @@ import ConduitGrpcSdk, {
   Query,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import moment from 'moment';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { Config } from '../config';
 import { v4 as uuid } from 'uuid';
+import { TokenProvider } from '../handlers/tokenProvider';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -69,11 +67,6 @@ export namespace AuthUtils {
     return dbUser;
   }
 
-  export function signToken(data: { [key: string]: any }, options: ISignTokenOptions) {
-    const { secret, expiresIn } = options;
-    return jwt.sign(data, secret, { expiresIn });
-  }
-
   export function verify(token: string, secret: string): string | object | null {
     try {
       return jwt.verify(token, secret);
@@ -88,12 +81,6 @@ export namespace AuthUtils {
 
   export async function checkPassword(password: string, hashed: string) {
     return bcrypt.compare(password, hashed);
-  }
-
-  export interface TokenOptions {
-    userId: string;
-    clientId: string;
-    config: Config;
   }
 
   export function deleteUserTokens(sdk: ConduitGrpcSdk, query: Query) {
@@ -148,72 +135,11 @@ export namespace AuthUtils {
       }),
     );
 
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const accessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: user._id,
+    return TokenProvider.getInstance(grpcSdk)!.provideUserTokens({
+      user,
       clientId,
-      token: signToken({ id: user._id }, signTokenOptions),
-      expiresOn: moment()
-        .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
+      config,
     });
-
-    const refreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: user._id,
-      clientId,
-      token: randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
-    };
-  }
-
-  export function createUserTokens(
-    sdk: ConduitGrpcSdk,
-    tokenOptions: TokenOptions,
-  ): [accesstoken: Promise<AccessToken>, refreshToken?: Promise<RefreshToken>] {
-    const signTokenOptions: ISignTokenOptions = {
-      secret: tokenOptions.config.jwtSecret,
-      expiresIn: tokenOptions.config.tokenInvalidationPeriod,
-    };
-    const accessToken = AccessToken.getInstance().create({
-      userId: tokenOptions.userId,
-      clientId: tokenOptions.clientId,
-      token: AuthUtils.signToken({ id: tokenOptions.userId }, signTokenOptions),
-      expiresOn: moment()
-        .add(tokenOptions.config.tokenInvalidationPeriod as number, 'milliseconds')
-        .toDate(),
-    });
-    let refreshToken;
-    if (tokenOptions.config.generateRefreshToken) {
-      refreshToken = RefreshToken.getInstance().create({
-        userId: tokenOptions.userId,
-        clientId: tokenOptions.clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(tokenOptions.config.refreshTokenInvalidationPeriod, 'milliseconds')
-          .toDate(),
-      });
-    }
-
-    return refreshToken ? [accessToken, refreshToken] : [accessToken];
-  }
-
-  export function createUserTokensAsPromise(
-    sdk: ConduitGrpcSdk,
-    tokenOptions: TokenOptions,
-  ) {
-    return Promise.all(createUserTokens(sdk, tokenOptions));
   }
 
   export async function sendVerificationCode(sms: SMS, to: string) {
