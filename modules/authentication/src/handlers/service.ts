@@ -1,11 +1,11 @@
 import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils/auth';
 import ConduitGrpcSdk, {
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
   RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { Service, User } from '../models';
 import { status } from '@grpc/grpc-js';

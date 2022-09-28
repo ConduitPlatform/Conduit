@@ -2,21 +2,18 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
   RoutingManager,
   SMS,
   UnparsedRouterResponse,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, Token, User } from '../models';
+import { Token, User } from '../models';
 import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import moment = require('moment');
-import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
 

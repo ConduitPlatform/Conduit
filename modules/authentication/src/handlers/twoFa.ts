@@ -5,12 +5,10 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, Token, TwoFactorSecret, User } from '../models';
+import { Token, TwoFactorSecret, User } from '../models';
 import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
 import * as node2fa from '@conduitplatform/node-2fa';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import moment from 'moment';
 import { v4 as uuid } from 'uuid';
 import { TokenProvider } from './tokenProvider';
 

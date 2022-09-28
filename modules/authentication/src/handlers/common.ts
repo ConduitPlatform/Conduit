@@ -1,20 +1,18 @@
 import { isNil } from 'lodash';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk, {
-  GrpcError,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
-  RoutingManager,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConfigController,
+  GrpcError,
+  ParsedRouterRequest,
+  RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, User } from '../models';
-import { Cookie } from '../interfaces/Cookie';
+import { RefreshToken, User } from '../models';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
 import { TokenProvider } from './tokenProvider';

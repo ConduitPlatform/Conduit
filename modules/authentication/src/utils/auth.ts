@@ -2,11 +2,11 @@ import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import ConduitGrpcSdk, {
-  GrpcError,
-  SMS,
   ConfigController,
-  Query,
+  GrpcError,
   Indexable,
+  Query,
+  SMS,
 } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, Token, User } from '../models';
 import { isNil } from 'lodash';

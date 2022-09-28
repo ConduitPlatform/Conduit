@@ -1,27 +1,23 @@
 import ConduitGrpcSdk, {
-  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
   RoutingManager,
-  ConduitRouteActions,
-  ConduitString,
-  ConduitRouteReturnDefinition,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
-import { AuthUtils } from '../../utils/auth';
 import axios from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
-import { Cookie } from '../../interfaces/Cookie';
 import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
-import { Config } from '../../config';
 import { OAuthRequest } from './interfaces/MakeRequest';
 import { TokenProvider } from '../tokenProvider';
 

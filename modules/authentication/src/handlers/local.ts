@@ -4,21 +4,20 @@ import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
+  RoutingManager,
   SMS,
   UnparsedRouterResponse,
-  ConfigController,
-  RoutingManager,
-  ConduitRouteActions,
-  ConduitString,
-  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
-import { AccessToken, Token, User } from '../models';
+import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TwoFa } from './twoFa';
 import { TokenProvider } from './tokenProvider';

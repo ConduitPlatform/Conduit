@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
   ConfigController,
   DatabaseProvider,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
   HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -13,19 +13,17 @@ import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { AuthenticationRoutes } from './routes';
 import * as models from './models';
-import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
-import moment from 'moment';
 import {
   UserChangePass,
   UserCreateRequest,
+  UserCreateResponse,
   UserDeleteRequest,
+  UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
-  UserCreateResponse,
-  UserDeleteResponse,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';

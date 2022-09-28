@@ -1,18 +1,18 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
+  ConduitBoolean,
+  ConduitNumber,
   ConduitRouteActions,
+  ConduitRouteObject,
   ConduitRouteReturnDefinition,
+  ConduitString,
+  constructConduitRoute,
+  GrpcServer,
   RouteOptionType,
   TYPE,
-  ConduitString,
-  ConduitNumber,
-  ConduitBoolean,
-  ConduitRouteObject,
-  constructConduitRoute,
 } from '@conduitplatform/grpc-sdk';
 import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
-import { User, Service } from '../models';
+import { Service, User } from '../models';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
