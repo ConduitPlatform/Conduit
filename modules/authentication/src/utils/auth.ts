@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   Query,
   SMS,
 } from '@conduitplatform/grpc-sdk';
-import { AccessToken, RefreshToken, Token, User } from '../models';
+import { Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
