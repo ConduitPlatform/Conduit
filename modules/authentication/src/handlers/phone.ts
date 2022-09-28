@@ -130,7 +130,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
       await Token.getInstance()
         .deleteMany({
-          userId: user._id,
+          user: user._id,
           type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         })
         .catch(e => {
@@ -138,7 +138,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         });
 
       await Token.getInstance().create({
-        userId: user._id,
+        user: user._id,
         type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         token: verificationSid,
       });

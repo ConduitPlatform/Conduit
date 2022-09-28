@@ -26,14 +26,14 @@ export namespace AuthUtils {
   ) {
     await Token.getInstance()
       .deleteMany({
-        userId: dbUserId,
+        user: dbUserId,
         type: tokenType,
       })
       .catch(e => {
         throw e;
       });
     return await Token.getInstance().create({
-      userId: dbUserId,
+      user: dbUserId,
       type: tokenType,
       token: uuid(),
       data: data,
@@ -102,7 +102,7 @@ export namespace AuthUtils {
     code: string,
   ): Promise<any> {
     const verificationRecord: Token | null = await Token.getInstance().findOne({
-      userId: user._id,
+      user: user._id,
       type: tokenType,
     });
     if (isNil(verificationRecord))
@@ -119,7 +119,7 @@ export namespace AuthUtils {
 
     await Token.getInstance()
       .deleteMany({
-        userId: user._id,
+        user: user._id,
         type: tokenType,
       })
       .catch(e => {
@@ -139,6 +139,7 @@ export namespace AuthUtils {
       user,
       clientId,
       config,
+      twoFaPass: true,
     });
   }
 

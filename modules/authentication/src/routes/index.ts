@@ -20,15 +20,19 @@ import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
+import { AuthUtils } from '../utils/auth';
+import { Jwt, JwtPayload } from 'jsonwebtoken';
+import { TwoFa } from '../handlers/twoFa';
 
 type OAuthHandler = typeof oauth2;
 
 export class AuthenticationRoutes {
-  private localHandlers: LocalHandlers;
+  private readonly localHandlers: LocalHandlers;
   private readonly serviceHandler: ServiceHandler;
   private readonly commonHandlers: CommonHandlers;
   private readonly phoneHandlers: PhoneHandlers;
   private readonly _routingManager: RoutingManager;
+  private readonly twoFaHandlers: TwoFa;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
@@ -36,6 +40,7 @@ export class AuthenticationRoutes {
     this.commonHandlers = new CommonHandlers(grpcSdk);
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
     this.localHandlers = new LocalHandlers(this.grpcSdk);
+    this.twoFaHandlers = new TwoFa(this.grpcSdk);
   }
 
   async registerRoutes() {
@@ -54,6 +59,12 @@ export class AuthenticationRoutes {
     let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
       await this.localHandlers.declareRoutes(this._routingManager, config);
+      enabled = true;
+    }
+    errorMessage = null;
+    let twoFaActive = await this.twoFaHandlers.validate().catch(e => (errorMessage = e));
+    if (!errorMessage && twoFaActive) {
+      await this.twoFaHandlers.declareRoutes(this._routingManager, config);
       enabled = true;
     }
     errorMessage = null;
@@ -142,29 +153,39 @@ export class AuthenticationRoutes {
         "The Authorization header must be prefixed by 'Bearer '",
       );
     }
-    const accessToken = await AccessToken.getInstance().findOne({
-      token: args[1],
-      clientId: context.clientId,
-    });
-    if (isNil(accessToken) || moment().isAfter(moment(accessToken.expiresOn))) {
+    let payload: string | JwtPayload | null = AuthUtils.verify(
+      args[1],
+      ConfigController.getInstance().config.accessTokens.jwtSecret,
+    );
+    if (!payload || typeof payload === 'string') {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
+    }
+    if (moment().isAfter(moment(payload.exp))) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
         'Token is expired or otherwise not valid',
       );
     }
-    if (!accessToken.userId) {
+    if (!(payload as JwtPayload).authorized && call.request.path !== '/twoFa/verify') {
+      throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
+    }
+    const accessToken = await AccessToken.getInstance().findOne(
+      {
+        token: args[1],
+        clientId: context.clientId,
+      },
+      undefined,
+      ['user'],
+    );
+    if (!accessToken || !accessToken.user) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
         'Token is expired or otherwise not valid',
       );
     }
-
-    const user = await User.getInstance().findOne({
-      _id: accessToken.userId,
-    });
-    if (isNil(user)) {
+    if (isNil(accessToken.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'User no longer exists');
     }
-    return { user: user };
+    return { user: accessToken.user, jwtPayload: payload };
   }
 }

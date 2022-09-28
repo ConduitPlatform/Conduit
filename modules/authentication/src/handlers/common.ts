@@ -31,6 +31,8 @@ export class CommonHandlers implements IAuthenticationStrategy {
         token: refreshToken,
         clientId,
       },
+      undefined,
+      ['user'],
     );
     if (isNil(oldRefreshToken)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
@@ -41,12 +43,14 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
     await Promise.all(
       AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: oldRefreshToken.userId,
+        userId: (oldRefreshToken.user as User)._id,
         clientId,
       }),
     );
 
-    const user = await User.getInstance().findOne({ _id: oldRefreshToken.userId });
+    const user = await User.getInstance().findOne({
+      _id: (oldRefreshToken.user as User)._id,
+    });
     if (!user) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
     }

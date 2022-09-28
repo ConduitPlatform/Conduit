@@ -14,10 +14,15 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    allowedMethods: {
-      doc: 'Defines the allowed methods for 2FA',
-      format: ['phone', 'authenticator'],
-      default: 'authenticator',
+    methods: {
+      sms: {
+        format: 'Boolean',
+        default: false,
+      },
+      authenticator: {
+        format: 'Boolean',
+        default: true,
+      },
     },
   },
   phoneAuthentication: {

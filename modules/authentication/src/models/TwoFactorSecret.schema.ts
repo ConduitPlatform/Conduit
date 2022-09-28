@@ -3,7 +3,7 @@ import { User } from './User.schema';
 
 const schema = {
   _id: TYPE.ObjectId,
-  userId: {
+  user: {
     type: TYPE.Relation,
     model: 'User',
     required: true,
@@ -40,7 +40,7 @@ const collectionName = undefined;
 export class TwoFactorSecret extends ConduitActiveSchema<TwoFactorSecret> {
   private static _instance: TwoFactorSecret;
   _id: string;
-  userId: string | User;
+  user: string | User;
   secret: string;
   uri: string;
   qr: string;

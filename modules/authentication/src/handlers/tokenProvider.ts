@@ -12,7 +12,9 @@ export interface TokenOptions {
   user: User;
   clientId: string;
   config: Config;
-  twoFaPass: boolean;
+  twoFaPass?: boolean;
+  isRefresh?: boolean;
+  noSudo?: boolean;
 }
 
 export class TokenProvider {
@@ -40,11 +42,17 @@ export class TokenProvider {
     ) {
       authorized = true;
     }
-
+    // to activate sudo, a user needs to have passed 2fa (if applicable)
+    // the tokens should not be created during the refresh token flow
+    // and the noSudo flag needs to be false or not set
+    const sudo = authorized && !tokenOptions.isRefresh && !tokenOptions.noSudo;
     const accessTokenPromise = AccessToken.getInstance().create({
-      userId: tokenOptions.user._id,
+      user: tokenOptions.user._id,
       clientId: tokenOptions.clientId,
-      token: this.signToken({ id: tokenOptions.user._id, authorized }, signTokenOptions),
+      token: this.signToken(
+        { id: tokenOptions.user._id, authorized, sudo },
+        signTokenOptions,
+      ),
       expiresOn: moment()
         .add(tokenOptions.config.accessTokens.expiryPeriod as number, 'milliseconds')
         .toDate(),
@@ -58,7 +66,7 @@ export class TokenProvider {
     // the tokens will be constructed when the user has successfully verified the 2fa
     if (tokenOptions.config.refreshTokens.enabled && authorized) {
       refreshTokenPromise = RefreshToken.getInstance().create({
-        userId: tokenOptions.user._id,
+        user: tokenOptions.user._id,
         clientId: tokenOptions.clientId,
         token: AuthUtils.randomToken(),
         expiresOn: moment()
@@ -160,7 +168,11 @@ export class TokenProvider {
 
   // used only for the login grpc call
   async provideUserTokensInternal(tokenOptions: TokenOptions) {
-    const [accessToken, refreshToken] = await this.createUserTokens(tokenOptions);
+    // do not escalate user permissions when created internally
+    const [accessToken, refreshToken] = await this.createUserTokens({
+      ...tokenOptions,
+      noSudo: true,
+    });
     return {
       userId: tokenOptions.user._id.toString(),
       accessToken: accessToken.token,
