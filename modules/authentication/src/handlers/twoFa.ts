@@ -68,8 +68,7 @@ export class TwoFa {
     await User.getInstance().findByIdAndUpdate(user._id, {
       twoFaMethod: 'qrcode',
     });
-    const test = node2fa.generateToken(secret.secret);
-    return secret.qr.toString() + ' code: ' + test!.token.toString();
+    return secret.qr.toString();
   }
 
   async disable2Fa(user: User): Promise<string> {
@@ -127,9 +126,8 @@ export class TwoFa {
         type: TokenType.QR_TWO_FA_VERIFICATION_TOKEN,
         token: uuid(),
       });
-      const test = node2fa.generateToken(secret.secret);
       return {
-        message: 'OTP required' + ' code: ' + test!.token.toString(),
+        message: 'OTP required',
         accessToken: qrVerificationToken.token,
       };
     }
@@ -199,8 +197,7 @@ export class TwoFa {
           password: newPassword,
         },
       });
-      const test = node2fa.generateToken(secret.secret);
-      return 'OTP required' + ' code: ' + test!.token.toString();
+      return 'OTP required';
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
     }
