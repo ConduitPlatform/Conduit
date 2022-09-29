@@ -6,6 +6,7 @@ export interface ConduitRouteParameters {
   path?: string;
   headers: IncomingHttpHeaders;
   context?: { [field: string]: any };
+  cookies?: { [field: string]: any };
 }
 
 export enum RouteOptionType {
