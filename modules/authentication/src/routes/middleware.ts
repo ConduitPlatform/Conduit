@@ -36,7 +36,7 @@ export default async function (
     args[1],
     ConfigController.getInstance().config.accessTokens.jwtSecret,
   );
-  if (!payload || typeof payload === 'string' || !payload.exp) {
+  if (!payload || typeof payload === 'string') {
     throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
   }
   if (moment().isAfter(moment().milliseconds(payload.exp!))) {
