@@ -31,7 +31,7 @@ export namespace AuthUtils {
       .catch(e => {
         throw e;
       });
-    return await Token.getInstance().create({
+    return Token.getInstance().create({
       user: dbUserId,
       type: tokenType,
       token: uuid(),

@@ -253,7 +253,7 @@ export class TwoFa implements IAuthenticationStrategy {
         twoFaPass: true,
       });
     } else if (user.twoFaMethod == 'authenticator') {
-      return await this.verifyAuthenticatorCodeForLogin(clientId, user, code);
+      return this.verifyAuthenticatorCodeForLogin(clientId, user, code);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }
