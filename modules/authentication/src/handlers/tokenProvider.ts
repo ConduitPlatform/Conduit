@@ -1,12 +1,12 @@
 import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
 import moment from 'moment/moment';
 import { AuthUtils } from '../utils/auth';
 import * as jwt from 'jsonwebtoken';
 import { Config } from '../config';
 import { Cookie } from '../interfaces/Cookie';
 import { isNil } from 'lodash';
+import { SignOptions } from 'jsonwebtoken';
 
 export interface TokenOptions {
   user: User;
@@ -98,9 +98,8 @@ export class TokenProvider {
   private createUserTokens(
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
-    const signTokenOptions: ISignTokenOptions = {
-      secret: tokenOptions.config.accessTokens.jwtSecret,
-      expiresIn: tokenOptions.config.accessTokens.expiryPeriod,
+    const signTokenOptions: SignOptions = {
+      expiresIn: tokenOptions.config.accessTokens.expiryPeriod + 'ms',
     };
     let authorized = false;
     if (
@@ -119,6 +118,7 @@ export class TokenProvider {
       clientId: tokenOptions.clientId,
       token: this.signToken(
         { id: tokenOptions.user._id, authorized, sudo },
+        tokenOptions.config.accessTokens.jwtSecret,
         signTokenOptions,
       ),
       expiresOn: moment()
@@ -179,9 +179,8 @@ export class TokenProvider {
     return cookies;
   }
 
-  private signToken(data: { [key: string]: any }, options: ISignTokenOptions) {
-    const { secret, expiresIn } = options;
-    return jwt.sign(data, secret, { expiresIn });
+  private signToken(data: { [key: string]: any }, secret: string, options: SignOptions) {
+    return jwt.sign(data, secret, options);
   }
 
   async signInClientOperations(
