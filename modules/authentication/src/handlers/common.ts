@@ -20,9 +20,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    const clientId = context.clientId;
-    const { refreshToken } = call.request.params;
+    const { refreshToken, clientId } = call.request.context;
     const config = ConfigController.getInstance().config;
 
     const oldRefreshToken: RefreshToken | null = await RefreshToken.getInstance().findOne(
@@ -125,7 +123,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/user',
-        description: `Deletes the authenticated user.`,
+        description: 'Deletes the authenticated user.',
         action: ConduitRouteActions.DELETE,
         middlewares: ['authMiddleware'],
       },
@@ -138,11 +136,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
         {
           path: '/renew',
           action: ConduitRouteActions.POST,
-          description: `Renews the access and refresh tokens 
-              when provided with a valid refresh token.`,
-          bodyParams: {
-            refreshToken: ConduitString.Required,
-          },
+          description:
+            'Renews the access and refresh tokens. ' +
+            `Requires a valid refresh token provided in Authorization header/cookie. Format 'Bearer TOKEN'`,
+          middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
           accessToken: ConduitString.Required,
@@ -156,7 +153,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       {
         path: '/logout',
         action: ConduitRouteActions.POST,
-        description: `Logs out authenticated user.`,
+        description: 'Logs out authenticated user.',
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('LogoutResponse', 'String'),

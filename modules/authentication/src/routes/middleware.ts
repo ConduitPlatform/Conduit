@@ -16,22 +16,31 @@ export default async function (
 ): Promise<UnparsedRouterResponse> {
   const context = call.request.context;
   const headers = call.request.headers;
+  const cookies = call.request.cookies;
 
-  const header = (headers['Authorization'] || headers['authorization']) as string;
+  const header = (headers['Authorization'] ||
+    headers['authorization'] ||
+    cookies['Authorization'] ||
+    cookies['authorization']) as string;
   if (isNil(header)) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'No authorization header present');
+    throw new GrpcError(status.UNAUTHENTICATED, 'No authorization header/cookie present');
   }
   const args = header.split(' ');
   if (args.length !== 2) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header malformed');
+    throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header/cookie malformed');
   }
 
   if (args[0] !== 'Bearer') {
     throw new GrpcError(
       status.UNAUTHENTICATED,
-      "The Authorization header must be prefixed by 'Bearer '",
+      "The Authorization header/cookie must be prefixed by 'Bearer '",
     );
   }
+
+  if (call.request.path === '/authentication/renew') {
+    return { refreshToken: args[1] };
+  }
+
   const payload: string | JwtPayload | null = AuthUtils.verify(
     args[1],
     ConfigController.getInstance().config.accessTokens.jwtSecret,
