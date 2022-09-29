@@ -162,10 +162,10 @@ export class AuthenticationRoutes {
       args[1],
       ConfigController.getInstance().config.accessTokens.jwtSecret,
     );
-    if (!payload || typeof payload === 'string') {
+    if (!payload || typeof payload === 'string' || !payload.exp) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
     }
-    if (moment().isAfter(moment(payload.exp))) {
+    if (moment().isAfter(moment().milliseconds(payload.exp!))) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
         'Token is expired or otherwise not valid',

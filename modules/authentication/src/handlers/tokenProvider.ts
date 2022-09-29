@@ -99,7 +99,7 @@ export class TokenProvider {
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
     const signTokenOptions: SignOptions = {
-      expiresIn: tokenOptions.config.accessTokens.expiryPeriod + 'ms',
+      expiresIn: tokenOptions.config.accessTokens.expiryPeriod as number,
     };
     let authorized = false;
     if (
@@ -138,7 +138,7 @@ export class TokenProvider {
         clientId: tokenOptions.clientId,
         token: AuthUtils.randomToken(),
         expiresOn: moment()
-          .add(tokenOptions.config.refreshTokens.expiryPeriod, 'milliseconds')
+          .add(tokenOptions.config.refreshTokens.expiryPeriod as number, 'milliseconds')
           .toDate(),
       });
       promises.push(refreshTokenPromise);
