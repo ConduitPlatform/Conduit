@@ -1,29 +1,21 @@
 import { LocalHandlers } from '../handlers/local';
-import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   ConfigController,
-  GrpcError,
   GrpcServer,
-  ParsedRouterRequest,
   RoutingManager,
-  UnparsedRouterResponse,
+  ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
-import { isNil } from 'lodash';
-import moment from 'moment';
-import { AccessToken } from '../models';
 import * as oauth2 from '../handlers/oauth2';
 import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
-import { AuthUtils } from '../utils/auth';
-import { JwtPayload } from 'jsonwebtoken';
 import { TwoFa } from '../handlers/twoFa';
 import { TokenProvider } from '../handlers/tokenProvider';
+import authMiddleware from './middleware';
 
 type OAuthHandler = typeof oauth2;
 
@@ -130,64 +122,12 @@ export class AuthenticationRoutes {
       this.commonHandlers.declareRoutes(this._routingManager);
       this._routingManager.middleware(
         { path: '/', name: 'authMiddleware' },
-        this.middleware.bind(this),
+        authMiddleware,
       );
     }
     return this._routingManager.registerRoutes().catch((err: Error) => {
       ConduitGrpcSdk.Logger.error('Failed to register routes for module');
       ConduitGrpcSdk.Logger.error(err);
     });
-  }
-
-  async middleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    const headers = call.request.headers;
-
-    const header = (headers['Authorization'] || headers['authorization']) as string;
-    if (isNil(header)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'No authorization header present');
-    }
-    const args = header.split(' ');
-    if (args.length !== 2) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Authorization header malformed');
-    }
-
-    if (args[0] !== 'Bearer') {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        "The Authorization header must be prefixed by 'Bearer '",
-      );
-    }
-    const payload: string | JwtPayload | null = AuthUtils.verify(
-      args[1],
-      ConfigController.getInstance().config.accessTokens.jwtSecret,
-    );
-    if (!payload || typeof payload === 'string' || !payload.exp) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
-    }
-    if (moment().isAfter(moment().milliseconds(payload.exp!))) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid',
-      );
-    }
-    if (!(payload as JwtPayload).authorized && call.request.path !== '/twoFa/verify') {
-      throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
-    }
-    const accessToken = await AccessToken.getInstance().findOne(
-      {
-        token: args[1],
-        clientId: context.clientId,
-      },
-      undefined,
-      ['user'],
-    );
-    if (!accessToken || !accessToken.user) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'Token is expired or otherwise not valid',
-      );
-    }
-    return { user: accessToken.user, jwtPayload: payload };
   }
 }
