@@ -76,7 +76,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       clientId,
       user._id,
     );
-    let removeCookies = [];
+    const removeCookies = [];
     if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
       removeCookies.push({
         name: 'refreshToken',
