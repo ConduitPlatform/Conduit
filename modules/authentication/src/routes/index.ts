@@ -188,9 +188,6 @@ export class AuthenticationRoutes {
         'Token is expired or otherwise not valid',
       );
     }
-    if (isNil(accessToken.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User no longer exists');
-    }
     return { user: accessToken.user, jwtPayload: payload };
   }
 }

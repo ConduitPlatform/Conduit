@@ -104,6 +104,12 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
     const { method, phoneNumber } = call.request.params;
     const context = call.request.context;
     const user = context.user;
@@ -141,6 +147,12 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
     const context = call.request.context;
     if (isNil(context) || isNil(context.user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
@@ -430,6 +442,7 @@ export class TwoFa implements IAuthenticationStrategy {
       user,
       clientId,
       config,
+      twoFaPass: true,
     });
   }
 }

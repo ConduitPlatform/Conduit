@@ -93,6 +93,12 @@ export default {
       format: 'Boolean',
       default: true,
     },
+    expiryPeriod: {
+      doc: 'How long should the generated refresh tokens be valid for',
+      format: 'Number',
+      // 1 week
+      default: 86400000 * 7,
+    },
     setCookie: {
       format: 'Boolean',
       default: false,
@@ -126,12 +132,6 @@ export default {
         format: 'String',
         default: 'Lax',
       },
-    },
-    expiryPeriod: {
-      doc: 'How long should the generated refresh tokens be valid for',
-      format: 'Number',
-      // 1 week
-      default: 86400000 * 7,
     },
   },
 };
