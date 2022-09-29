@@ -85,15 +85,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.createSchemaFromAdapter(
-      models.DeclaredSchema,
-      false,
-      false,
-      false,
-    );
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (model.name === '_DeclaredSchema') return [];
-      return this._activeAdapter.createSchemaFromAdapter(model, false);
+      return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();

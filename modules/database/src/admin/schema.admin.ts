@@ -17,8 +17,6 @@ import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import escapeStringRegexp = require('escape-string-regexp');
 
-const SYSTEM_SCHEMAS = ['CustomEndpoints', '_PendingSchemas']; // DeclaredSchemas is not a DeclaredSchema
-
 export class SchemaAdmin {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
@@ -30,7 +28,7 @@ export class SchemaAdmin {
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {
       _id: call.request.params.id,
-      name: { $nin: SYSTEM_SCHEMAS },
+      name: { $nin: this.database.systemSchemas },
     };
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -45,7 +43,7 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: ParsedQuery = { name: { $nin: SYSTEM_SCHEMAS } };
+    let query: ParsedQuery = { name: { $nin: this.database.systemSchemas } };
     if (owner && owner.length !== 0) {
       query = {
         $and: [query, { ownerModule: { $in: owner } }],
@@ -144,7 +142,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: id,
       });
     if (isNil(requestedSchema)) {
@@ -196,7 +194,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: id,
       });
     if (isNil(requestedSchema)) {
@@ -244,7 +242,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: { $in: ids },
       });
     if (requestedSchemas.length === 0) {
@@ -254,7 +252,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: { $in: ids },
       });
     if (foundSchemas !== requestedSchemas.length) {
@@ -294,7 +292,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: call.request.params.id,
       });
     if (isNil(requestedSchema)) {
@@ -347,7 +345,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: { $in: ids },
       });
     if (isNil(requestedSchemas)) {
@@ -357,7 +355,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: { $in: ids },
       });
     if (foundDocumentsCount !== requestedSchemas.length) {
@@ -369,7 +367,7 @@ export class SchemaAdmin {
       .model.updateMany(
         {
           ownerModule: 'database',
-          name: { $nin: SYSTEM_SCHEMAS },
+          name: { $nin: this.database.systemSchemas },
           _id: { $in: ids },
         },
         { 'modelOptions.conduit.cms.enabled': enabled },
@@ -429,7 +427,7 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
         ownerModule: 'database',
-        name: { $nin: SYSTEM_SCHEMAS },
+        name: { $nin: this.database.systemSchemas },
         _id: id,
       });
     if (isNil(requestedSchema)) {
