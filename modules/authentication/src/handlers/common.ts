@@ -111,7 +111,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     return this.logOut(call);
   }
 
-  declareRoutes(routingManager: RoutingManager, config: Config): void {
+  declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
         path: '/user',
@@ -132,6 +132,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
       this.deleteUser.bind(this),
     );
+    const config = ConfigController.getInstance().config;
     if (config.refreshTokens.enabled) {
       routingManager.route(
         {

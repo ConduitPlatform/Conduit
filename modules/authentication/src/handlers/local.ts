@@ -31,7 +31,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     });
   }
 
-  async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
+  async declareRoutes(routingManager: RoutingManager): Promise<void> {
     routingManager.route(
       {
         path: '/local/new',
@@ -66,7 +66,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }),
       this.authenticate.bind(this),
     );
-
+    const config = ConfigController.getInstance().config;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {

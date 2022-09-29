@@ -41,7 +41,7 @@ export class TwoFa implements IAuthenticationStrategy {
     return true;
   }
 
-  declareRoutes(routingManager: RoutingManager, config: Config): void {
+  declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
         path: '/twoFa/verify',

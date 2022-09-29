@@ -23,6 +23,7 @@ import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { AuthUtils } from '../utils/auth';
 import { JwtPayload } from 'jsonwebtoken';
 import { TwoFa } from '../handlers/twoFa';
+import { TokenProvider } from '../handlers/tokenProvider';
 
 type OAuthHandler = typeof oauth2;
 
@@ -41,6 +42,8 @@ export class AuthenticationRoutes {
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
     this.localHandlers = new LocalHandlers(this.grpcSdk);
     this.twoFaHandlers = new TwoFa(this.grpcSdk);
+    // initialize SDK
+    TokenProvider.getInstance(grpcSdk);
   }
 
   async registerRoutes() {
@@ -58,13 +61,15 @@ export class AuthenticationRoutes {
 
     let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
-      await this.localHandlers.declareRoutes(this._routingManager, config);
+      await this.localHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
     errorMessage = null;
-    const twoFaActive = await this.twoFaHandlers.validate().catch(e => (errorMessage = e));
+    const twoFaActive = await this.twoFaHandlers
+      .validate()
+      .catch(e => (errorMessage = e));
     if (!errorMessage && twoFaActive) {
-      await this.twoFaHandlers.declareRoutes(this._routingManager, config);
+      await this.twoFaHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
     errorMessage = null;
@@ -122,7 +127,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
     if (enabled) {
-      this.commonHandlers.declareRoutes(this._routingManager, config);
+      this.commonHandlers.declareRoutes(this._routingManager);
       this._routingManager.middleware(
         { path: '/', name: 'authMiddleware' },
         this.middleware.bind(this),
