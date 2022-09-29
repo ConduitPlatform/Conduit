@@ -162,19 +162,18 @@ export class TokenProvider {
         options: cookieOptions,
       };
     }
-    if (
-      !isNil((tokens[1] as RefreshToken).token) &&
-      tokenOptions.config.refreshTokens.setCookie
-    ) {
-      const cookieOptions = {
-        ...tokenOptions.config.cookieOptions,
-        ...tokenOptions.config.refreshTokens.cookieOptions,
-      };
-      cookies.refreshToken = {
-        name: 'refreshToken',
-        value: (tokens[1] as RefreshToken).token,
-        options: cookieOptions,
-      };
+    if (!isNil(tokens[1]) && tokenOptions.config.refreshTokens.setCookie) {
+      if (!isNil((tokens[1] as RefreshToken).token)) {
+        const cookieOptions = {
+          ...tokenOptions.config.cookieOptions,
+          ...tokenOptions.config.refreshTokens.cookieOptions,
+        };
+        cookies.refreshToken = {
+          name: 'refreshToken',
+          value: (tokens[1] as RefreshToken).token,
+          options: cookieOptions,
+        };
+      }
     }
     return cookies;
   }
