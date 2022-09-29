@@ -193,12 +193,12 @@ export class TokenProvider {
     const isAnonymous = 'anonymous-client' === clientId;
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
-        userId: userId,
+        user: userId,
         clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
       });
     } else if (!clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
-        userId: userId,
+        user: userId,
         clientId: { $ne: clientId },
       });
     }
@@ -216,7 +216,7 @@ export class TokenProvider {
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
         clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
-        userId: userId,
+        user: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
