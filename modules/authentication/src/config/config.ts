@@ -25,17 +25,6 @@ export default {
       },
     },
   },
-  passwordless_login: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-    redirect_uri: {
-      format: 'String',
-      default: '',
-      optional: true,
-    },
-  },
   phoneAuthentication: {
     enabled: {
       format: 'Boolean',
