@@ -1,5 +1,5 @@
 import { isEmpty, isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import ConduitGrpcSdk, {
   ConfigController,
   GrpcError,
