@@ -1,5 +1,4 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { RefreshToken } from '../models';
 
 export async function UserIdToUserRefreshTokenSchemaMigration(grpcSdk: ConduitGrpcSdk) {
   const refreshTokenSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
