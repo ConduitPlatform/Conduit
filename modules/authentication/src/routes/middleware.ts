@@ -45,7 +45,11 @@ export default async function (
       'Token is expired or otherwise not valid',
     );
   }
-  if (!(payload as JwtPayload).authorized && call.request.path !== '/twoFa/verify') {
+  if (
+    !(payload as JwtPayload).authorized &&
+    call.request.path !== '/twoFa/verify' &&
+    call.request.path !== '/twoFa/begin'
+  ) {
     throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
   }
   const accessToken = await AccessToken.getInstance().findOne(
