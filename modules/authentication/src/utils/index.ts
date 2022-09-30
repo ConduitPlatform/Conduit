@@ -78,26 +78,19 @@ export namespace AuthUtils {
 
   export async function verifyCode(
     grpcSdk: ConduitGrpcSdk,
-    clientId: string,
-    user: User,
-    tokenType: string,
+    token: Token,
     code: string,
   ): Promise<boolean> {
-    const verificationRecord: Token | null = await Token.getInstance().findOne({
-      user: user._id,
-      type: tokenType,
-    });
-    if (isNil(verificationRecord)) {
-      return false;
-    }
-    const verified = await grpcSdk.sms!.verify(verificationRecord.token, code);
+    const verified = await grpcSdk.sms!.verify(token.data.verification, code);
     if (!verified.verified) {
       return false;
     }
     await Token.getInstance()
       .deleteMany({
-        user: user._id,
-        type: tokenType,
+        data: {
+          phone: token.data.phone,
+        },
+        type: token.type,
       })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
