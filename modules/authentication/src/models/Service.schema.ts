@@ -31,6 +31,7 @@ const modelOptions = {
   },
 } as const;
 const collectionName = undefined;
+
 export class Service extends ConduitActiveSchema<Service> {
   private static _instance: Service;
   _id: string;

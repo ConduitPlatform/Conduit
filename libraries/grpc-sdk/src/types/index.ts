@@ -51,7 +51,7 @@ export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
 export type ParsedSocketRequest = GrpcRequest<{
   event: string;
   socketId: string;
-  params: Params;
+  params: string[];
   context: Context;
   cookies: Cookies;
 }>;

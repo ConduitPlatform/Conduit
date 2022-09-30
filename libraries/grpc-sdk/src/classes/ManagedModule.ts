@@ -14,6 +14,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   protected abstract readonly configSchema?: object;
   protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
+  configOverride: boolean = false;
   service?: ConduitService;
 
   protected constructor(moduleName: string) {
