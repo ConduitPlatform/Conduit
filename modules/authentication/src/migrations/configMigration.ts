@@ -40,6 +40,7 @@ export async function configMigration(grpcSdk: ConduitGrpcSdk) {
   delete authConfig.jwtSecret;
   delete authConfig.generateRefreshToken;
   delete authConfig.setCookies;
+  delete authConfig.rateLimit;
 
   return authConfig;
 }
