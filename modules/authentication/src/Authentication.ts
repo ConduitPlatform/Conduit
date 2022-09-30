@@ -61,6 +61,16 @@ export default class Authentication extends ManagedModule<Config> {
     await runMigrations(this.grpcSdk);
   }
 
+  async preConfig(config: Config) {
+    if (
+      config.accessTokens.cookieOptions.maxAge > config.accessTokens.expiryPeriod ||
+      config.refreshTokens.cookieOptions.maxAge > config.refreshTokens.expiryPeriod
+    ) {
+      throw new Error('Invalid configuration given');
+    }
+    return config;
+  }
+
   async onConfig() {
     const config = ConfigController.getInstance().config;
     if (!config.active) {
