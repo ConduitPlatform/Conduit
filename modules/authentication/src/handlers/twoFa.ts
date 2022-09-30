@@ -44,6 +44,22 @@ export class TwoFa implements IAuthenticationStrategy {
   declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
+        path: '/twoFa/begin',
+        action: ConduitRouteActions.POST,
+        description: `Starts 2FA process by sending a code to user's phone
+                      or returns a message to check authenticator app.
+                      User's 2FA mechanism has to be enabled.`,
+        middlewares: ['authMiddleware'],
+        bodyParams: {
+          method: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('BeginTwoFaResponse', 'String'),
+      this.beginTwoFa.bind(this),
+    );
+
+    routingManager.route(
+      {
         path: '/twoFa/verify',
         action: ConduitRouteActions.POST,
         description: `Verifies the code the user received from their authentication method.
@@ -101,6 +117,29 @@ export class TwoFa implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
       this.disableTwoFa.bind(this),
     );
+  }
+
+  async beginTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { method } = call.request.params;
+    const configMethods = ConfigController.getInstance().config.twoFa.methods;
+    const user = call.request.context.user;
+    if (!user.hasTwoFA) {
+      return '2FA disabled';
+    }
+    if (method === 'sms' && configMethods.sms) {
+      const verificationSid = await AuthUtils.sendVerificationCode(
+        this.smsModule,
+        user.phoneNumber,
+      );
+      if (verificationSid === '') {
+        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
+      }
+      return 'Verification code sent';
+    } else if (method === 'authenticator' && configMethods.authenticator) {
+      return 'Proceed to authenticator app';
+    } else {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
+    }
   }
 
   async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
