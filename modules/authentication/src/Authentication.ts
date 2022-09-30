@@ -66,7 +66,9 @@ export default class Authentication extends ManagedModule<Config> {
       config.accessTokens.cookieOptions.maxAge > config.accessTokens.expiryPeriod ||
       config.refreshTokens.cookieOptions.maxAge > config.refreshTokens.expiryPeriod
     ) {
-      throw new Error('Invalid configuration given');
+      throw new Error(
+        'Invalid configuration: *.cookieOptions.maxAge should not exceed *.expiryPeriod',
+      );
     }
     return config;
   }
