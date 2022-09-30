@@ -11,6 +11,7 @@ export default {
       default: true,
     },
   },
+
   accessTokens: {
     jwtSecret: {
       doc: 'The secret to use when generating an access token',

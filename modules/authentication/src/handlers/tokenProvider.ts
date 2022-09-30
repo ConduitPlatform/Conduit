@@ -152,9 +152,7 @@ export class TokenProvider {
   ) {
     const cookies: { accessToken?: Cookie; refreshToken?: Cookie } = {};
     if (tokenOptions.config.accessTokens.setCookie) {
-      const cookieOptions = {
-        ...tokenOptions.config.accessTokens.cookieOptions,
-      };
+      const cookieOptions = tokenOptions.config.accessTokens.cookieOptions;
       cookies.accessToken = {
         name: 'accessToken',
         value: (tokens[0] as AccessToken).token,
@@ -163,9 +161,7 @@ export class TokenProvider {
     }
     if (!isNil(tokens[1]) && tokenOptions.config.refreshTokens.setCookie) {
       if (!isNil(tokens[1].token)) {
-        const cookieOptions = {
-          ...tokenOptions.config.refreshTokens.cookieOptions,
-        };
+        const cookieOptions = tokenOptions.config.refreshTokens.cookieOptions;
         cookies.refreshToken = {
           name: 'refreshToken',
           value: (tokens[1] as RefreshToken).token,
