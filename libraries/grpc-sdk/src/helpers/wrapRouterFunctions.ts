@@ -25,6 +25,7 @@ export function wrapCallObjectForRouter(call: Indexable): ParsedRouterRequest {
       path: '',
       headers: {},
       context: {},
+      cookies: {},
     },
   };
 }
@@ -72,6 +73,7 @@ export function wrapRouterGrpcFunction(
     try {
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);
+      call.request.cookies = parseRequestData(call.request.cookies);
 
       routerRequest = !call.request.hasOwnProperty('event');
       if (routerRequest) {
