@@ -47,8 +47,8 @@ export default async function (
   }
   if (
     !(payload as JwtPayload).authorized &&
-    call.request.path !== '/twoFa/verify' &&
-    call.request.path !== '/twoFa/begin'
+    call.request.path !== '/authentication/twoFa/verify' &&
+    call.request.path !== '/authentication/twoFa/begin'
   ) {
     throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
   }
