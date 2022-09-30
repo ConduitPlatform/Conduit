@@ -235,15 +235,25 @@ export class TwoFa implements IAuthenticationStrategy {
     clientId: string,
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     if (user.twoFaMethod === 'phone') {
-      return await AuthUtils.verifyCode(
+      const verified = await AuthUtils.verifyCode(
         this.grpcSdk,
         clientId,
         user,
         TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         code,
       );
+      if (!verified) {
+        throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+      }
+      const config = ConfigController.getInstance().config;
+      return TokenProvider.getInstance(this.grpcSdk)!.provideUserTokens({
+        user,
+        clientId,
+        config,
+        twoFaPass: true,
+      });
     } else if (user.twoFaMethod == 'authenticator') {
-      return await this.verifyAuthenticatorCodeForLogin(clientId, user, code);
+      return this.verifyAuthenticatorCodeForLogin(clientId, user, code);
     } else {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
     }

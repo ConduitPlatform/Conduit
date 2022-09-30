@@ -1,17 +1,11 @@
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk, {
-  ConfigController,
-  GrpcError,
-  Indexable,
-  SMS,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError, Indexable, SMS } from '@conduitplatform/grpc-sdk';
 import { Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
-import { TokenProvider } from '../handlers/tokenProvider';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -31,7 +25,7 @@ export namespace AuthUtils {
       .catch(e => {
         throw e;
       });
-    return await Token.getInstance().create({
+    return Token.getInstance().create({
       user: dbUserId,
       type: tokenType,
       token: uuid(),
@@ -88,23 +82,18 @@ export namespace AuthUtils {
     user: User,
     tokenType: string,
     code: string,
-  ): Promise<any> {
+  ): Promise<boolean> {
     const verificationRecord: Token | null = await Token.getInstance().findOne({
       user: user._id,
       type: tokenType,
     });
-    if (isNil(verificationRecord))
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No verification record for this user',
-      );
-
-    const verified = await grpcSdk.sms!.verify(verificationRecord.token, code);
-
-    if (!verified.verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+    if (isNil(verificationRecord)) {
+      return false;
     }
-
+    const verified = await grpcSdk.sms!.verify(verificationRecord.token, code);
+    if (!verified.verified) {
+      return false;
+    }
     await Token.getInstance()
       .deleteMany({
         user: user._id,
@@ -113,15 +102,7 @@ export namespace AuthUtils {
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-
-    const config = ConfigController.getInstance().config;
-
-    return TokenProvider.getInstance(grpcSdk)!.provideUserTokens({
-      user,
-      clientId,
-      config,
-      twoFaPass: true,
-    });
+    return true;
   }
 
   export async function sendVerificationCode(sms: SMS, to: string) {

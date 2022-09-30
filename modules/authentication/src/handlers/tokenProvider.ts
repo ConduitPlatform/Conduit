@@ -162,19 +162,18 @@ export class TokenProvider {
         options: cookieOptions,
       };
     }
-    if (
-      !isNil((tokens[1] as RefreshToken).token) &&
-      tokenOptions.config.refreshTokens.setCookie
-    ) {
-      const cookieOptions = {
-        ...tokenOptions.config.cookieOptions,
-        ...tokenOptions.config.refreshTokens.cookieOptions,
-      };
-      cookies.refreshToken = {
-        name: 'refreshToken',
-        value: (tokens[1] as RefreshToken).token,
-        options: cookieOptions,
-      };
+    if (!isNil(tokens[1]) && tokenOptions.config.refreshTokens.setCookie) {
+      if (!isNil(tokens[1].token)) {
+        const cookieOptions = {
+          ...tokenOptions.config.cookieOptions,
+          ...tokenOptions.config.refreshTokens.cookieOptions,
+        };
+        cookies.refreshToken = {
+          name: 'refreshToken',
+          value: (tokens[1] as RefreshToken).token,
+          options: cookieOptions,
+        };
+      }
     }
     return cookies;
   }
@@ -192,12 +191,12 @@ export class TokenProvider {
     const isAnonymous = 'anonymous-client' === clientId;
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
-        userId: userId,
+        user: userId,
         clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
       });
     } else if (!clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
-        userId: userId,
+        user: userId,
         clientId: { $ne: clientId },
       });
     }
@@ -215,7 +214,7 @@ export class TokenProvider {
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
         clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
-        userId: userId,
+        user: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
