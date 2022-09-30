@@ -50,18 +50,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local',
         action: ConduitRouteActions.POST,
-        description: `Login endpoint that can be used to authenticate. 
-              If 2FA is used for the user then instead of tokens 
-              you will receive a message indicating the need for a token from the 2FA mechanism.`,
+        description: `Login endpoint that can be used to authenticate.
+         Tokens are returned according to configuration.`,
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
-        userId: ConduitString.Optional,
         accessToken: ConduitString.Optional,
-        message: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
@@ -278,7 +275,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.PASSWORD_RESET_TOKEN,
       user: user._id,
     });
-    if (!isNil(oldToken)) await Token.getInstance().deleteOne(oldToken);
+    if (!isNil(oldToken) && this.checkResendThreshold(oldToken)) {
+      await Token.getInstance().deleteOne(oldToken);
+    }
 
     const passwordResetTokenDoc = await Token.getInstance().create({
       type: TokenType.PASSWORD_RESET_TOKEN,
@@ -515,6 +514,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Email changed successfully';
   }
 
+  checkResendThreshold(token: Token, notBefore: number = 600000) {
+    const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
+    if (diffInMilliSec < notBefore) {
+      const remainTime = Math.ceil((notBefore - diffInMilliSec) / notBefore);
+      throw new GrpcError(
+        status.RESOURCE_EXHAUSTED,
+        'Verification code not sent. You have to wait ' +
+          remainTime +
+          ' minutes to try again',
+      );
+    } else {
+      return true;
+    }
+  }
+
   async resendVerificationEmail(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
@@ -535,19 +549,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       user: user._id,
     });
-    if (!isNil(verificationToken)) {
-      const diffInMilliSec = Math.abs(
-        new Date(verificationToken.createdAt).getTime() - Date.now(),
-      );
-      if (diffInMilliSec < 600000) {
-        const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
-        throw new GrpcError(
-          status.RESOURCE_EXHAUSTED,
-          'Verification code not sent. You have to wait ' +
-            remainTime +
-            ' minutes to try again',
-        );
-      }
+    if (!isNil(verificationToken) && this.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
         user: user._id,
         type: TokenType.VERIFICATION_TOKEN,
