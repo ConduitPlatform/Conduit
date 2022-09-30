@@ -80,7 +80,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     const token: Token = await Token.getInstance().create({
-      type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
+      type: TokenType.MAGIC_LINK,
       userId: user._id,
       token: uuid(),
     });
@@ -94,9 +94,9 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const url = serverConfig.hostUrl;
 
     const result = { token, hostUrl: url };
-    const link = `${result.hostUrl}/hook/authentication/passwordless-login/${result.token.token}`;
+    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
     await this.emailModule
-      .sendEmail('PasswordlessLogin', {
+      .sendEmail('MagicLik', {
         email: user.email,
         sender: 'no-reply',
         variables: {
@@ -119,11 +119,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const redirectUri = config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
-      type: TokenType.PASSWORDLESS_LOGIN_TOKEN,
+      type: TokenType.MAGIC_LINK,
       token: verificationToken,
     });
     if (isNil(token)) {
-      throw new GrpcError(status.NOT_FOUND, 'Passwordless login token does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
     }
     const user: User | null = await User.getInstance().findOne({
       _id: token.user,
@@ -131,7 +131,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     await Token.getInstance()
-      .deleteMany({ userId: token.user, type: TokenType.PASSWORDLESS_LOGIN_TOKEN })
+      .deleteMany({ userId: token.user, type: TokenType.MAGIC_LINK })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
