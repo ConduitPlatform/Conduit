@@ -95,7 +95,12 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preRegister(): Promise<void> {
-    (this.config as unknown) = await configMigration(this.grpcSdk);
+    const config = await configMigration(this.grpcSdk);
+    if (config) {
+      (this.config as unknown) = config;
+      this.configOverride = true;
+    }
+
     return super.preRegister();
   }
 

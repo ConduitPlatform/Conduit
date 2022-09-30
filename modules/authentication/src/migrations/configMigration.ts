@@ -5,7 +5,7 @@ export async function configMigration(grpcSdk: ConduitGrpcSdk) {
   const authConfig = ((await grpcSdk.databaseProvider!.findOne('Config', {})) as any)
     ?.moduleConfigs?.authentication;
 
-  if (isNil(authConfig) || isNil(authConfig.clients)) {
+  if (isNil(authConfig) || isNil(authConfig.generateRefreshToken)) {
     return;
   }
 
@@ -37,4 +37,5 @@ export async function configMigration(grpcSdk: ConduitGrpcSdk) {
   Object.assign(authConfig, {
     refreshTokens: { cookieOptions: authConfig.setCookies.options },
   });
+  return authConfig;
 }
