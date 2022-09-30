@@ -11,36 +11,7 @@ export default {
       default: true,
     },
   },
-  cookieOptions: {
-    httpOnly: {
-      format: 'Boolean',
-      default: false,
-    },
-    secure: {
-      format: 'Boolean',
-      default: false,
-    },
-    signed: {
-      format: 'Boolean',
-      default: false,
-    },
-    maxAge: {
-      format: 'Number',
-      default: 900000,
-    },
-    domain: {
-      format: 'String',
-      default: '',
-    },
-    path: {
-      format: 'String',
-      default: '',
-    },
-    sameSite: {
-      format: 'String',
-      default: 'Lax',
-    },
-  },
+
   accessTokens: {
     jwtSecret: {
       doc: 'The secret to use when generating an access token',

@@ -28,6 +28,7 @@ import {
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
+import { configMigration } from './migrations/configMigration';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -79,6 +80,11 @@ export default class Authentication extends ManagedModule<Config> {
         }
       }
     }
+  }
+
+  async preRegister(): Promise<void> {
+    (this.config as unknown) = await configMigration(this.grpcSdk);
+    return super.preRegister();
   }
 
   initMonitors() {
