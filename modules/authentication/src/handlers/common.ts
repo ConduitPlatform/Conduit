@@ -78,13 +78,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
     if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
       removeCookies.push({
         name: 'refreshToken',
-        options: { ...config.cookieOptions, ...config.refreshTokens.cookieOptions },
+        options: config.refreshTokens.cookieOptions,
       });
     }
     if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
       removeCookies.push({
         name: 'accessToken',
-        options: { ...config.cookieOptions, ...config.accessTokens.cookieOptions },
+        options: config.accessTokens.cookieOptions,
       });
     }
     if (removeCookies.length > 0) {
