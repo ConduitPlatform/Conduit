@@ -37,21 +37,15 @@ export class CommonHandlers implements IAuthenticationStrategy {
     if (moment().isAfter(moment(oldRefreshToken.expiresOn))) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
-
-    // delete the old refresh token
-    await RefreshToken.getInstance().deleteOne({
-      token: refreshToken,
-      clientId,
-    });
-
-    const user = await User.getInstance().findOne({
-      _id: (oldRefreshToken.user as User)._id,
-    });
-    if (!user) {
+    if (!oldRefreshToken.user) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
     }
+
+    // delete the old refresh token
+    await RefreshToken.getInstance().deleteOne({ _id: oldRefreshToken._id });
+
     return TokenProvider.getInstance()!.provideUserTokens({
-      user,
+      user: oldRefreshToken.user as User,
       clientId,
       config,
       twoFaPass: true,
@@ -101,9 +95,13 @@ export class CommonHandlers implements IAuthenticationStrategy {
   }
 
   async deleteUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-
-    const user = context.user;
+    const { user, jwtPayload } = call.request.context;
+    if (!jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
     await User.getInstance().deleteOne({ _id: user._id });
 
     return this.logOut(call);
