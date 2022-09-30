@@ -16,6 +16,7 @@ import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { TwoFa } from '../handlers/twoFa';
 import { TokenProvider } from '../handlers/tokenProvider';
 import authMiddleware from './middleware';
+import { MagicLinkHandlers } from '../handlers/magic.link';
 
 type OAuthHandler = typeof oauth2;
 
@@ -26,6 +27,7 @@ export class AuthenticationRoutes {
   private readonly phoneHandlers: PhoneHandlers;
   private readonly _routingManager: RoutingManager;
   private readonly twoFaHandlers: TwoFa;
+  private readonly magicLinkHandlers: MagicLinkHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
@@ -34,6 +36,7 @@ export class AuthenticationRoutes {
     this.phoneHandlers = new PhoneHandlers(grpcSdk);
     this.localHandlers = new LocalHandlers(this.grpcSdk);
     this.twoFaHandlers = new TwoFa(this.grpcSdk);
+    this.magicLinkHandlers = new MagicLinkHandlers(this.grpcSdk);
     // initialize SDK
     TokenProvider.getInstance(grpcSdk);
   }

@@ -27,6 +27,15 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       this.clientValidation = config.security.clientValidation;
     });
   }
+  async validate(): Promise<boolean> {
+    const config = ConfigController.getInstance().config;
+    if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
+      this.emailModule = this.grpcSdk.emailProvider!;
+      return (this.initialized = true);
+    } else {
+      return (this.initialized = false);
+    }
+  }
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
     const config = ConfigController.getInstance().config;
@@ -62,16 +71,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       }),
       this.verifyLogin.bind(this),
     );
-  }
-
-  async validate(): Promise<boolean> {
-    const config = ConfigController.getInstance().config;
-    if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
-      this.emailModule = this.grpcSdk.emailProvider!;
-      return (this.initialized = true);
-    } else {
-      return (this.initialized = false);
-    }
   }
 
   async sendMagicLink(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
