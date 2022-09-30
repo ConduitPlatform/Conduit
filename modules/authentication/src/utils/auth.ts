@@ -1,17 +1,11 @@
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk, {
-  ConfigController,
-  GrpcError,
-  Indexable,
-  SMS,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError, Indexable, SMS } from '@conduitplatform/grpc-sdk';
 import { Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
-import { TokenProvider } from '../handlers/tokenProvider';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {

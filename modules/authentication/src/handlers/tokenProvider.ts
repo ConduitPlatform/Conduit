@@ -163,7 +163,7 @@ export class TokenProvider {
       };
     }
     if (!isNil(tokens[1]) && tokenOptions.config.refreshTokens.setCookie) {
-      if (!isNil((tokens[1] as RefreshToken).token)) {
+      if (!isNil(tokens[1].token)) {
         const cookieOptions = {
           ...tokenOptions.config.cookieOptions,
           ...tokenOptions.config.refreshTokens.cookieOptions,
