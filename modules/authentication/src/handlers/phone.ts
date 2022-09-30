@@ -75,19 +75,27 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
     const clientId = context.clientId;
-
     const { phone, code } = call.request.params;
+    const config = ConfigController.getInstance().config;
+
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    return await AuthUtils.verifyCode(
+    const verified = await AuthUtils.verifyCode(
       this.grpcSdk,
       clientId,
       user,
       TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
       code,
     );
+    if (!verified) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+    }
+    return TokenProvider.getInstance(this.grpcSdk)!.provideUserTokens({
+      user,
+      clientId,
+      config,
+    });
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

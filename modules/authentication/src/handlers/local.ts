@@ -339,7 +339,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
     await TokenProvider.getInstance()!.deleteUserTokens({
-      userId: user._id,
+      user: user._id,
     });
 
     return 'Password reset successful';

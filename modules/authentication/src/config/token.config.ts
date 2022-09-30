@@ -31,7 +31,7 @@ export default {
     cookieOptions: {
       httpOnly: {
         format: 'Boolean',
-        default: false,
+        default: true,
       },
       secure: {
         format: 'Boolean',
@@ -77,7 +77,7 @@ export default {
     cookieOptions: {
       httpOnly: {
         format: 'Boolean',
-        default: false,
+        default: true,
       },
       secure: {
         format: 'Boolean',

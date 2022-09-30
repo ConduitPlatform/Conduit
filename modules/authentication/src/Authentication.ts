@@ -186,7 +186,7 @@ export default class Authentication extends ManagedModule<Config> {
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
           type: TokenType.VERIFICATION_TOKEN,
-          userId: user._id,
+          user: user._id,
           token: uuid(),
         });
         const result = { verificationToken, hostUrl: url };

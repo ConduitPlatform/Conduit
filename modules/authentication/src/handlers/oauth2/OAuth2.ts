@@ -112,7 +112,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    return await TokenProvider.getInstance()!.provideUserTokens(
+    return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId,
