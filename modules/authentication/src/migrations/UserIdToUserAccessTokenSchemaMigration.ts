@@ -1,5 +1,4 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { AccessToken } from '../models';
 
 export async function UserIdToUserAccessTokenSchemaMigration(grpcSdk: ConduitGrpcSdk) {
   const accessTokenSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
