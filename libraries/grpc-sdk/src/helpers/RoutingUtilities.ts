@@ -16,6 +16,7 @@ message RouterRequest {
   string path = 2;
   string headers = 3;
   string context = 4;
+  string cookies = 5;
 }
 
 message RouterResponse {

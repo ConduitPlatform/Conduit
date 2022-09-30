@@ -62,7 +62,8 @@ export class GraphQLController extends ConduitRouter {
       context: ({ req, res }: Indexable) => {
         const context = req.conduit || {};
         const headers = req.headers;
-        return { context, headers, setCookie: [], removeCookie: [], res };
+        const cookies = req.cookies || {};
+        return { context, headers, cookies, setCookie: [], removeCookie: [], res };
       },
     });
     this._apollo = server.getMiddleware();
