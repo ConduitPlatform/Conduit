@@ -117,4 +117,19 @@ export namespace AuthUtils {
         /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       );
   }
+
+  export function checkResendThreshold(token: Token, notBefore: number = 600000) {
+    const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
+    if (diffInMilliSec < notBefore) {
+      const remainTime = Math.ceil((notBefore - diffInMilliSec) / notBefore);
+      throw new GrpcError(
+        status.RESOURCE_EXHAUSTED,
+        'Verification code not sent. You have to wait ' +
+          remainTime +
+          ' minutes to try again',
+      );
+    } else {
+      return true;
+    }
+  }
 }

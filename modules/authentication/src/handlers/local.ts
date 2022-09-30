@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
@@ -275,7 +275,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.PASSWORD_RESET_TOKEN,
       user: user._id,
     });
-    if (!isNil(oldToken) && this.checkResendThreshold(oldToken)) {
+    if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
       await Token.getInstance().deleteOne(oldToken);
     }
 
@@ -514,21 +514,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Email changed successfully';
   }
 
-  checkResendThreshold(token: Token, notBefore: number = 600000) {
-    const diffInMilliSec = Math.abs(new Date(token.createdAt).getTime() - Date.now());
-    if (diffInMilliSec < notBefore) {
-      const remainTime = Math.ceil((notBefore - diffInMilliSec) / notBefore);
-      throw new GrpcError(
-        status.RESOURCE_EXHAUSTED,
-        'Verification code not sent. You have to wait ' +
-          remainTime +
-          ' minutes to try again',
-      );
-    } else {
-      return true;
-    }
-  }
-
   async resendVerificationEmail(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
@@ -549,7 +534,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       user: user._id,
     });
-    if (!isNil(verificationToken) && this.checkResendThreshold(verificationToken)) {
+    if (!isNil(verificationToken) && AuthUtils.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
         user: user._id,
         type: TokenType.VERIFICATION_TOKEN,
