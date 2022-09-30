@@ -114,6 +114,7 @@ function createHandlerForRoute(
       path: req.path,
       headers: JSON.stringify(req.headers),
       context: JSON.stringify(req.context),
+      cookies: JSON.stringify(req.cookies),
     };
     return new Promise((resolve, reject) => {
       client[route.grpcFunction](

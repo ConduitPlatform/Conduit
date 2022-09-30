@@ -1,17 +1,14 @@
 import { Request } from 'express';
-import {
-  ConduitError,
-  TYPE,
-  Indexable,
-  Params,
-  ConduitSchemaOptions,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitError, TYPE, Indexable, Params } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
-export function extractRequestData(req: Request) {
-  const context = (req as ConduitSchemaOptions).conduit || {};
+type ConduitRequest = Request & { conduit?: Indexable };
+
+export function extractRequestData(req: ConduitRequest) {
+  const context = req.conduit || {};
   const params: any = {};
   const headers = req.headers;
+  const cookies = req.cookies;
   if (req.query) {
     const newObj = {};
     Object.keys(req.query).forEach((k: string) => {
@@ -44,7 +41,7 @@ export function extractRequestData(req: Request) {
     }
   }
   const path = req.baseUrl + req.path;
-  return { context, params, headers, path };
+  return { context, params, headers, cookies, path };
 }
 
 export function validateParams(params: Params, routeDefinedParams: Params) {
