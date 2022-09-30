@@ -369,7 +369,7 @@ export class TwoFa implements IAuthenticationStrategy {
     user: User,
     phoneNumber: string,
   ): Promise<string> {
-    let existingToken = await Token.getInstance().findOne({
+    const existingToken = await Token.getInstance().findOne({
       type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       user: user._id,
     });

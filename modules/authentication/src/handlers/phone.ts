@@ -74,7 +74,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { token, code } = call.request.params;
     const config = ConfigController.getInstance().config;
     let user: User | null = null;
-    let existingToken: Token | null = await Token.getInstance().findOne({
+    const existingToken: Token | null = await Token.getInstance().findOne({
       token: token,
     });
     if (!existingToken) {
@@ -104,8 +104,8 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
     const { phone } = call.request.params;
     const { clientId } = call.request.context;
-    let user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
-    let existingToken = await Token.getInstance().findOne({
+    const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    const existingToken = await Token.getInstance().findOne({
       type: {
         $in: [
           TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
@@ -131,7 +131,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     if (verificationSid === '') {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
-    let token = await Token.getInstance().create({
+    const token = await Token.getInstance().create({
       type: isNil(user)
         ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
         : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
