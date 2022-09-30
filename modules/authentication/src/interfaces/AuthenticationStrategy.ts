@@ -2,5 +2,6 @@ import { RoutingManager } from '@conduitplatform/grpc-sdk';
 
 export interface IAuthenticationStrategy {
   validate(): Promise<boolean>;
-  declareRoutes(routingManager: RoutingManager, config: any): void;
+
+  declareRoutes(routingManager: RoutingManager): void;
 }

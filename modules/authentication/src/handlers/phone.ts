@@ -2,22 +2,20 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
   RoutingManager,
   SMS,
   UnparsedRouterResponse,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, Token, User } from '../models';
+import { Token, User } from '../models';
 import { AuthUtils } from '../utils/auth';
 import { TokenType } from '../constants/TokenType';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import moment = require('moment');
-import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { TokenProvider } from './tokenProvider';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -77,19 +75,27 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const context = call.request.context;
     if (isNil(context) || isEmpty(context))
       throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-
     const clientId = context.clientId;
-
     const { phone, code } = call.request.params;
+    const config = ConfigController.getInstance().config;
+
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
     if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-    return await AuthUtils.verifyCode(
+    const verified = await AuthUtils.verifyCode(
       this.grpcSdk,
       clientId,
       user,
       TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
       code,
     );
+    if (!verified) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
+    }
+    return TokenProvider.getInstance(this.grpcSdk)!.provideUserTokens({
+      user,
+      clientId,
+      config,
+    });
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -108,66 +114,12 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       });
       this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
 
-      await Promise.all(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-          clientId,
-        }),
-      );
-
-      const signTokenOptions: ISignTokenOptions = {
-        secret: config.jwtSecret,
-        expiresIn: config.tokenInvalidationPeriod,
-      };
-
-      const accessToken: AccessToken = await AccessToken.getInstance().create({
-        userId: user._id,
-        clientId,
-        token: AuthUtils.signToken({ id: user._id }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      });
-      let refreshToken = null;
-      if (config.generateRefreshToken) {
-        refreshToken = await RefreshToken.getInstance().create({
-          userId: user._id,
-          clientId,
-          token: AuthUtils.randomToken(),
-          expiresOn: moment()
-            .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-            .toDate(),
-        });
-      }
       ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-      if (config.setCookies.enabled) {
-        const cookieOptions = config.setCookies.options;
-        const cookies: Cookie[] = [
-          {
-            name: 'accessToken',
-            value: (accessToken as AccessToken).token,
-            options: cookieOptions,
-          },
-        ];
-        if (!isNil((refreshToken as RefreshToken).token)) {
-          cookies.push({
-            name: 'refreshToken',
-            value: (refreshToken! as RefreshToken).token,
-            options: cookieOptions,
-          });
-        }
-        return {
-          result: { message: 'Successfully authenticated' },
-          setCookies: cookies,
-        };
-      }
-      return {
-        userId: user._id.toString(),
-        accessToken: accessToken.token,
-        refreshToken: !isNil(refreshToken)
-          ? (refreshToken as RefreshToken).token
-          : undefined,
-      };
+      return TokenProvider.getInstance()!.provideUserTokens({
+        user,
+        clientId,
+        config,
+      });
     } else {
       const verificationSid = await AuthUtils.sendVerificationCode(
         this.sms!,
@@ -179,7 +131,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
       await Token.getInstance()
         .deleteMany({
-          userId: user._id,
+          user: user._id,
           type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         })
         .catch(e => {
@@ -187,7 +139,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         });
 
       await Token.getInstance().create({
-        userId: user._id,
+        user: user._id,
         type: TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
         token: verificationSid,
       });

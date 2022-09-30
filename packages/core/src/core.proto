@@ -111,6 +111,7 @@ message GetConfigResponse {
 message UpdateRequest {
   string config = 1;
   string schema = 2;
+  bool override = 3;
 }
 
 message UpdateResponse {

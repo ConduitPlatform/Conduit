@@ -1,33 +1,26 @@
 import { isNil } from 'lodash';
-import { ISignTokenOptions } from '../interfaces/ISignTokenOptions';
-import { AuthUtils } from '../utils/auth';
 import moment from 'moment';
 import ConduitGrpcSdk, {
-  GrpcError,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
-  RoutingManager,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
+  ConfigController,
+  GrpcError,
+  ParsedRouterRequest,
+  RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AccessToken, RefreshToken, User } from '../models';
-import { Cookie } from '../interfaces/Cookie';
+import { RefreshToken, User } from '../models';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
+import { TokenProvider } from './tokenProvider';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async renewAuth(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-
-    const clientId = context.clientId;
-
-    const { refreshToken } = call.request.params;
-
+    const { refreshToken, clientId } = call.request.context;
     const config = ConfigController.getInstance().config;
 
     const oldRefreshToken: RefreshToken | null = await RefreshToken.getInstance().findOne(
@@ -35,6 +28,8 @@ export class CommonHandlers implements IAuthenticationStrategy {
         token: refreshToken,
         clientId,
       },
+      undefined,
+      ['user'],
     );
     if (isNil(oldRefreshToken)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
@@ -43,93 +38,61 @@ export class CommonHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
 
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: oldRefreshToken.userId,
-        clientId,
-      }),
-    );
-
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-
-    const newAccessToken: AccessToken = await AccessToken.getInstance().create({
-      userId: oldRefreshToken.userId,
+    // delete the old refresh token
+    await RefreshToken.getInstance().deleteOne({
+      token: refreshToken,
       clientId,
-      token: AuthUtils.signToken({ id: oldRefreshToken.userId }, signTokenOptions),
-      expiresOn: moment().add(config.tokenInvalidationPeriod, 'milliseconds').toDate(),
     });
 
-    const newRefreshToken: RefreshToken = await RefreshToken.getInstance().create({
-      userId: oldRefreshToken.userId,
-      clientId,
-      token: AuthUtils.randomToken(),
-      expiresOn: moment()
-        .add(config.refreshTokenInvalidationPeriod, 'milliseconds')
-        .toDate(),
+    const user = await User.getInstance().findOne({
+      _id: (oldRefreshToken.user as User)._id,
     });
-
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: newAccessToken.token,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(refreshToken!)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: newAccessToken.token,
-          options: cookieOptions,
-        });
-      }
-      return {
-        result: { message: 'Successfully authenticated' },
-        setCookies: cookies,
-      };
+    if (!user) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Invalid user');
     }
-    return {
-      accessToken: newAccessToken.token,
-      refreshToken: newRefreshToken.token,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId,
+      config,
+      twoFaPass: true,
+      isRefresh: true,
+    });
   }
 
   async logOut(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     const clientId = context.clientId;
     const user = context.user;
-    const config = ConfigController.getInstance().config;
+    const config: Config = ConfigController.getInstance().config;
     const authToken = call.request.headers.authorization;
     const clientConfig = config.clients;
-
-    await AuthUtils.logOutClientOperations(
+    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
+    await TokenProvider.getInstance()!.logOutClientOperations(
       this.grpcSdk,
       clientConfig,
       authToken,
       clientId,
       user._id,
     );
-    const options = config.setCookies.options;
-    if (config.setCookies.enabled) {
+    const removeCookies = [];
+    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+      removeCookies.push({
+        name: 'refreshToken',
+        options: config.refreshTokens.cookieOptions,
+      });
+    }
+    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+      removeCookies.push({
+        name: 'accessToken',
+        options: config.accessTokens.cookieOptions,
+      });
+    }
+    if (removeCookies.length > 0) {
       return {
         result: 'LoggedOut',
-        removeCookies: [
-          {
-            name: 'accessToken',
-            options: options,
-          },
-          {
-            name: 'refreshToken',
-            options: options,
-          },
-        ],
+        removeCookies,
       };
     }
-    ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
     return 'LoggedOut';
   }
 
@@ -143,15 +106,10 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const user = context.user;
     await User.getInstance().deleteOne({ _id: user._id });
 
-    Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: user._id,
-      }),
-    ).catch(() => ConduitGrpcSdk.Logger.error('Failed to delete all access tokens'));
-    return 'Done';
+    return this.logOut(call);
   }
 
-  declareRoutes(routingManager: RoutingManager, config: Config): void {
+  declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
         path: '/user',
@@ -165,23 +123,23 @@ export class CommonHandlers implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/user',
-        description: `Deletes the authenticated user.`,
+        description: 'Deletes the authenticated user.',
         action: ConduitRouteActions.DELETE,
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('DeleteUserResponse', 'String'),
       this.deleteUser.bind(this),
     );
-    if (config.generateRefreshToken) {
+    const config = ConfigController.getInstance().config;
+    if (config.refreshTokens.enabled) {
       routingManager.route(
         {
           path: '/renew',
           action: ConduitRouteActions.POST,
-          description: `Renews the access and refresh tokens 
-              when provided with a valid refresh token.`,
-          bodyParams: {
-            refreshToken: ConduitString.Required,
-          },
+          description:
+            'Renews the access and refresh tokens. ' +
+            `Requires a valid refresh token provided in Authorization header/cookie. Format 'Bearer TOKEN'`,
+          middlewares: ['authMiddleware'],
         },
         new ConduitRouteReturnDefinition('RenewAuthenticationResponse', {
           accessToken: ConduitString.Required,
@@ -195,7 +153,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
       {
         path: '/logout',
         action: ConduitRouteActions.POST,
-        description: `Logs out authenticated user.`,
+        description: 'Logs out authenticated user.',
         middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('LogoutResponse', 'String'),

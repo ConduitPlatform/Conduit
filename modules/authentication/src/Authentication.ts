@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
   ConfigController,
   DatabaseProvider,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
   HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -13,26 +13,25 @@ import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { AuthenticationRoutes } from './routes';
 import * as models from './models';
-import { ISignTokenOptions } from './interfaces/ISignTokenOptions';
 import { AuthUtils } from './utils/auth';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
-import moment from 'moment';
 import {
   UserChangePass,
   UserCreateRequest,
+  UserCreateResponse,
   UserDeleteRequest,
+  UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
-  UserCreateResponse,
-  UserDeleteResponse,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
+import { TokenProvider } from './handlers/tokenProvider';
+import { configMigration } from './migrations/configMigration';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
@@ -44,6 +43,7 @@ export default class Authentication extends ManagedModule<Config> {
       userDelete: this.userDelete.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private adminRouter: AdminHandlers;
   private userRouter: AuthenticationRoutes;
   private database: DatabaseProvider;
@@ -62,12 +62,16 @@ export default class Authentication extends ManagedModule<Config> {
     await runMigrations(this.grpcSdk);
   }
 
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      return this.database.createSchemaFromAdapter(modelInstance);
-    });
-    return Promise.all(promises);
+  async preConfig(config: Config) {
+    if (
+      config.accessTokens.cookieOptions.maxAge > config.accessTokens.expiryPeriod ||
+      config.refreshTokens.cookieOptions.maxAge > config.refreshTokens.expiryPeriod
+    ) {
+      throw new Error(
+        'Invalid configuration: *.cookieOptions.maxAge should not exceed *.expiryPeriod',
+      );
+    }
+    return config;
   }
 
   async onConfig() {
@@ -88,6 +92,16 @@ export default class Authentication extends ManagedModule<Config> {
         }
       }
     }
+  }
+
+  async preRegister(): Promise<void> {
+    const config = await configMigration(this.grpcSdk);
+    if (config) {
+      (this.config as unknown) = config;
+      this.configOverride = true;
+    }
+
+    return super.preRegister();
   }
 
   initMonitors() {
@@ -112,89 +126,36 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.unmonitorModule('router');
   }
 
-  private refreshAppRoutes() {
-    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
-      return;
-    }
-    if (this.userRouter) {
-      this.scheduleAppRouteRefresh();
-      return;
-    }
-    const self = this;
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
-        this.scheduleAppRouteRefresh();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
-  }
-
-  private scheduleAppRouteRefresh() {
-    if (this.refreshAppRoutesTimeout) {
-      clearTimeout(this.refreshAppRoutesTimeout);
-      this.refreshAppRoutesTimeout = null;
-    }
-    this.refreshAppRoutesTimeout = setTimeout(async () => {
-      try {
-        await this.userRouter.registerRoutes();
-      } catch (err) {
-        ConduitGrpcSdk.Logger.error(err as Error);
-      }
-      this.refreshAppRoutesTimeout = null;
-    }, 800);
-  }
-
   async initializeMetrics() {
     // @improve-metrics
     // TODO: This should initialize 'logged_in_users_total' based on valid tokens
     // Gauge value should also decrease on latest token expiry.
   }
 
-  // gRPC Service
   // produces login credentials for a user without them having to login
   async userLogin(
     call: GrpcRequest<UserLoginRequest>,
     callback: GrpcCallback<UserLoginResponse>,
   ) {
     const { userId, clientId } = call.request;
+    const user = await models.User.getInstance(this.database).findOne({ _id: userId });
+    if (!user) {
+      return callback({
+        code: status.NOT_FOUND,
+        message: 'User not found',
+      });
+    }
     const config = ConfigController.getInstance().config;
-    const signTokenOptions: ISignTokenOptions = {
-      secret: config.jwtSecret,
-      expiresIn: config.tokenInvalidationPeriod,
-    };
-    let errorMessage = null;
-    const accessToken: models.AccessToken = await models.AccessToken.getInstance()
-      .create({
-        userId: userId,
-        clientId,
-        token: AuthUtils.signToken({ id: userId }, signTokenOptions),
-        expiresOn: moment()
-          .add(config.tokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
 
-    const refreshToken: models.RefreshToken = await models.RefreshToken.getInstance()
-      .create({
-        userId: userId,
-        clientId,
-        token: AuthUtils.randomToken(),
-        expiresOn: moment()
-          .add(config.refreshTokenInvalidationPeriod as number, 'milliseconds')
-          .toDate(),
-      })
-      .catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage))
-      return callback({ code: status.INTERNAL, message: errorMessage });
+    const tokens = await TokenProvider.getInstance()!.provideUserTokensInternal({
+      user,
+      clientId,
+      config,
+    });
 
     return callback(null, {
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? undefined,
     });
   }
 
@@ -242,7 +203,7 @@ export default class Authentication extends ManagedModule<Config> {
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
           type: TokenType.VERIFICATION_TOKEN,
-          userId: user._id,
+          user: user._id,
           token: uuid(),
         });
         const result = { verificationToken, hostUrl: url };
@@ -281,6 +242,8 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
+  // gRPC Service
+
   async changePass(
     call: GrpcRequest<UserChangePass>,
     callback: GrpcCallback<UserCreateResponse>,
@@ -309,5 +272,48 @@ export default class Authentication extends ManagedModule<Config> {
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      return this.database.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
+  }
+
+  private refreshAppRoutes() {
+    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
+      return;
+    }
+    if (this.userRouter) {
+      this.scheduleAppRouteRefresh();
+      return;
+    }
+    const self = this;
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        self.userRouter = new AuthenticationRoutes(self.grpcServer, self.grpcSdk);
+        this.scheduleAppRouteRefresh();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
+  }
+
+  private scheduleAppRouteRefresh() {
+    if (this.refreshAppRoutesTimeout) {
+      clearTimeout(this.refreshAppRoutesTimeout);
+      this.refreshAppRoutesTimeout = null;
+    }
+    this.refreshAppRoutesTimeout = setTimeout(async () => {
+      try {
+        await this.userRouter.registerRoutes();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this.refreshAppRoutesTimeout = null;
+    }, 800);
   }
 }

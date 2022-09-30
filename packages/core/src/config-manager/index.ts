@@ -211,11 +211,15 @@ export default class ConfigManager implements IConfigManager {
     let config = JSON.parse(call.request.config);
     const configSchema = JSON.parse(call.request.schema);
     parseConfigSchema(configSchema);
-    const existingConfig = await this.get(moduleName);
-    if (!existingConfig) {
+    if (call.request.override) {
       await this.set(moduleName, config);
+    } else {
+      const existingConfig = await this.get(moduleName);
+      if (!existingConfig) {
+        await this.set(moduleName, config);
+      }
+      config = await this.addFieldsToModule(moduleName, config);
     }
-    config = await this.addFieldsToModule(moduleName, config);
     this.registerConfigRoutes(moduleName, configSchema);
     this.updateState(moduleName, configSchema);
     return callback(null, { result: JSON.stringify(config) });
