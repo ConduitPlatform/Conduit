@@ -130,10 +130,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-email',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's email but requires password first.`,
+        description: `Changes the user's email (requires sudo access).`,
         bodyParams: {
           newEmail: ConduitString.Required,
-          password: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -377,7 +376,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    const { newEmail, password } = call.request.params;
+    const { newEmail } = call.request.params;
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
@@ -399,13 +398,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser = await AuthUtils.dbUserChecks(user, password).catch(error => {
-      throw error;
-    });
 
     if (config.local.verification.required) {
       const verificationToken: Token | void = await AuthUtils.createToken(
-        dbUser._id,
+        user._id,
         { email: newEmail },
         TokenType.CHANGE_EMAIL_TOKEN,
       ).catch(e => {
@@ -433,7 +429,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
       return 'Verification required';
     }
-    await User.getInstance().findByIdAndUpdate(dbUser._id, { email: newEmail });
+    await User.getInstance().findByIdAndUpdate(user._id, { email: newEmail }, true);
     return 'Email changed successfully';
   }
 
