@@ -143,7 +143,7 @@ export class TwoFa implements IAuthenticationStrategy {
         message: `Use your authenticator app to get the code`,
       };
     } else {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Valid method not found');
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid method');
     }
   }
 
