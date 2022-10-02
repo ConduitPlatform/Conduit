@@ -10,7 +10,7 @@ const schema = {
   user: {
     type: TYPE.Relation,
     model: 'User',
-    required: true,
+    required: false,
   },
   token: {
     type: TYPE.String,
@@ -39,7 +39,7 @@ export class Token extends ConduitActiveSchema<Token> {
   private static _instance: Token;
   _id: string;
   type: string;
-  user: string | User;
+  user?: string | User;
   token: string;
   data?: any;
   createdAt: Date;

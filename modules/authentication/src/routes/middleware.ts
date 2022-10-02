@@ -7,7 +7,7 @@ import {
   Headers,
   Cookies,
 } from '@conduitplatform/grpc-sdk';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import { AccessToken } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

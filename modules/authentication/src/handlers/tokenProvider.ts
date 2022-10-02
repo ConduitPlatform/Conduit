@@ -1,12 +1,12 @@
 import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models';
 import moment from 'moment/moment';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import * as jwt from 'jsonwebtoken';
+import { SignOptions } from 'jsonwebtoken';
 import { Config } from '../config';
 import { Cookie } from '../interfaces/Cookie';
 import { isNil } from 'lodash';
-import { SignOptions } from 'jsonwebtoken';
 
 export interface TokenOptions {
   user: User;
@@ -54,8 +54,6 @@ export class TokenProvider {
       } else {
         return {
           result: {
-            message: 'Successfully authenticated',
-            userId: tokenOptions.user._id.toString(),
             accessToken: cookies.accessToken ?? undefined,
             refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
           },
@@ -74,7 +72,6 @@ export class TokenProvider {
       };
     } else {
       return {
-        userId: tokenOptions.user._id.toString(),
         accessToken: accessToken.token,
         refreshToken: refreshToken?.token,
       };
@@ -86,6 +83,7 @@ export class TokenProvider {
     // do not escalate user permissions when created internally
     const [accessToken, refreshToken] = await this.createUserTokens({
       ...tokenOptions,
+      twoFaPass: true,
       noSudo: true,
     });
     return {
