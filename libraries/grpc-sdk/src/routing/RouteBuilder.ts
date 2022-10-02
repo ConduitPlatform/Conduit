@@ -1,12 +1,13 @@
+import { ConduitModel } from '../interfaces';
+import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
+import { RoutingManager } from './RoutingManager';
+import { RequestHandlers } from './wrapRouterFunctions';
 import {
-  ConduitModel,
   ConduitRouteActions,
   ConduitRouteOption,
   ConduitRouteOptions,
-} from '../../interfaces';
-import { ConduitRouteReturnDefinition } from '../ConduitRouteReturn';
-import { RequestHandlers } from '../../helpers';
-import { RoutingManager } from './RoutingManager';
+} from './interfaces/Route';
+import { ConduitRoute } from './interfaces/ConduitRoute';
 
 export class RouteBuilder {
   private readonly _options!: ConduitRouteOptions;
@@ -99,11 +100,7 @@ export class RouteBuilder {
     this.manager.route(this._options, this._returns, this._handler);
   }
 
-  build(): {
-    input: ConduitRouteOptions;
-    returnType: ConduitRouteReturnDefinition;
-    handler: RequestHandlers;
-  } {
+  build(): ConduitRoute {
     if (!this._options) throw new Error('Cannot build route without options');
     if (!this._options.action) throw new Error('Cannot build route without action');
     if (!this._options.path) throw new Error('Cannot build route without action');

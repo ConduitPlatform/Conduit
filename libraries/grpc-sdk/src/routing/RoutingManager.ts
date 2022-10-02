@@ -1,33 +1,42 @@
+import { ParsedRouterRequest, UnparsedRouterResponse } from './interfaces/types';
+import { GrpcServer } from '../index';
+import { Admin, Router } from '../modules';
+import { RouteBuilder } from './RouteBuilder';
+import { RequestHandlers } from './wrapRouterFunctions';
+import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
+import { constructProtoFile, wrapFunctionsAsync } from './RoutingUtilities';
+import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
 import {
-  ConduitMiddlewareOptions,
   ConduitRouteActions,
+  ConduitRouteObject,
   ConduitRouteOptions,
+} from './interfaces/Route';
+import {
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
   SocketProtoDescription,
-} from '../../interfaces';
-import { ParsedRouterRequest, UnparsedRouterResponse } from '../../types';
-import { ConduitRouteReturnDefinition, GrpcServer } from '../index';
-import { Router } from '../../modules';
-import { RequestHandlers } from '../../helpers';
-import { constructProtoFile, wrapFunctionsAsync } from '../../helpers/RoutingUtilities';
-import { RouteBuilder } from './RouteBuilder';
+} from './interfaces/Socket';
+import { ConduitMiddlewareOptions } from './interfaces/ConduitMiddleware';
+import { RegisterAdminRouteRequest_PathDefinition } from '../protoUtils/core';
 
 export class RoutingManager {
   private _moduleRoutes: {
-    [key: string]: {
-      options: ConduitRouteOptions;
-      returns: { name: string; fields: string };
-      grpcFunctionName: string;
-      grpcFunction: RequestHandlers;
-    };
+    [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
   private _routeHandlers: {
     [key: string]: RequestHandlers;
   } = {};
+  private readonly isAdmin: boolean = false;
 
-  constructor(private readonly _router: Router, private readonly _server: GrpcServer) {}
+  constructor(
+    private readonly _router: Router | Admin,
+    private readonly _server: GrpcServer,
+  ) {
+    if (_router instanceof Admin) {
+      this.isAdmin = true;
+    }
+  }
 
   get(path: string): RouteBuilder {
     return new RouteBuilder(this).method(ConduitRouteActions.GET).path(path);
@@ -58,10 +67,10 @@ export class RoutingManager {
     input: ConduitMiddlewareOptions,
     handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
   ) {
-    const routeObject = this.parseRouteObject({
+    const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
       grpcFunction: input.name,
-    });
+    }) as ConduitRouteObject;
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
@@ -71,24 +80,24 @@ export class RoutingManager {
     type: ConduitRouteReturnDefinition,
     handler: RequestHandlers,
   ) {
-    const routeObject = this.parseRouteObject({
+    const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
       returns: {
         name: type.name,
         fields: JSON.stringify(type.fields),
       },
       grpcFunction: this.generateGrpcName(input),
-    });
+    }) as ConduitRouteObject;
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
   socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
     const eventsObj: EventsProtoDescription = {};
-    const routeObject = this.parseRouteObject({
+    const routeObject: SocketProtoDescription = this.parseRouteObject({
       options: input,
       events: '',
-    });
+    }) as SocketProtoDescription;
     let primary: string;
     Object.keys(events).forEach((eventName: string) => {
       if (!primary) primary = eventName;
@@ -115,15 +124,19 @@ export class RoutingManager {
     } = wrapFunctionsAsync(this._routeHandlers);
     const protoDescriptions = constructProtoFile(
       this._router.moduleName,
-      Object.values(this._moduleRoutes as unknown as SocketProtoDescription[]),
+      Object.values(this._moduleRoutes),
+      this.isAdmin,
     );
     await this._server.addService(
       protoDescriptions.path,
-      protoDescriptions.name + '.router.Router',
+      protoDescriptions.name + (this.isAdmin ? 'admin.Admin' : '.router.Router'),
       modifiedFunctions,
     );
+    let paths = Object.values(this._moduleRoutes);
     return this._router.register(
-      Object.values(this._moduleRoutes),
+      this.isAdmin
+        ? (paths as RegisterAdminRouteRequest_PathDefinition[])
+        : (paths as RegisterConduitRouteRequest_PathDefinition[]),
       protoDescriptions.file,
     );
   }
@@ -148,7 +161,9 @@ export class RoutingManager {
       .join('');
   }
 
-  private parseRouteObject(routeObject: any) {
+  private parseRouteObject(
+    routeObject: any,
+  ): ConduitRouteObject | SocketProtoDescription {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }

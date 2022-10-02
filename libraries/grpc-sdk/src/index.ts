@@ -470,4 +470,5 @@ export * from './classes';
 export * from './modules';
 export * from './helpers';
 export * from './constants';
+export * from './routing';
 export * from './types';
