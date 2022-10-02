@@ -32,7 +32,7 @@ export type Query<T> =
   // | arrayQuery<T>
   | conditionalQuery<T>;
 
-let query: Query<{ name: string; age: number }> = {
+const query: Query<{ name: string; age: number }> = {
   name: 'John',
   age: {
     $gt: 18,

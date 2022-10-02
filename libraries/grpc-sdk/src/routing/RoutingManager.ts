@@ -132,7 +132,7 @@ export class RoutingManager {
       protoDescriptions.name + (this.isAdmin ? 'admin.Admin' : '.router.Router'),
       modifiedFunctions,
     );
-    let paths = Object.values(this._moduleRoutes);
+    const paths = Object.values(this._moduleRoutes);
     return this._router.register(
       this.isAdmin
         ? (paths as RegisterAdminRouteRequest_PathDefinition[])
