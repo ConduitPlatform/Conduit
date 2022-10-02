@@ -111,7 +111,7 @@ export class InvitationRoutes {
     const receiver = user._id;
     const accepted = answer === 'accept';
     const chatRoom = await ChatRoom.getInstance().findOne({
-      _id: invitationTokenDoc.room,
+      _id: invitationTokenDoc.room as string,
     });
     if (isNil(chatRoom)) {
       throw new GrpcError(status.NOT_FOUND, 'Chat room does not exist');

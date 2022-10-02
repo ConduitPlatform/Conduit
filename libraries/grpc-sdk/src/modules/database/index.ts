@@ -5,7 +5,8 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { Query, ConduitSchemaExtension } from '../../interfaces';
+import { ConduitSchemaExtension } from '../../interfaces';
+import { Query } from '../../types/db';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -92,13 +93,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  processQuery(query: Query) {
+  processQuery<T>(query: Query<T>) {
     return JSON.stringify(query);
   }
 
   findOne<T>(
     schemaName: string,
-    query: Query,
+    query: Query<T>,
     select?: string,
     populate?: string | string[],
   ): Promise<T> {
@@ -117,11 +118,11 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   constructSortObj(sort: string[]) {
-    const sortObj: Query = {};
+    const sortObj: { [key: string]: number } = {};
     sort.forEach((sortVal: string) => {
       sortVal = sortVal.trim();
       if (sortVal.indexOf('-') !== -1) {
-        sortObj[sortVal.substr(1)] = -1;
+        sortObj[sortVal.substring(1)] = -1;
       } else {
         sortObj[sortVal] = 1;
       }
@@ -131,7 +132,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   findMany<T>(
     schemaName: string,
-    query: Query,
+    query: Query<T>,
     select?: string,
     skip?: number,
     limit?: number,
@@ -162,7 +163,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  create<T>(schemaName: string, query: Query): Promise<T> {
+  create<T>(schemaName: string, query: Query<T>): Promise<T> {
     return this.client!.create({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -170,7 +171,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  createMany<T>(schemaName: string, query: Query): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: Query<T>): Promise<T[] | any[]> {
     return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -181,7 +182,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   findByIdAndUpdate<T>(
     schemaName: string,
     id: string,
-    document: Query,
+    document: Query<T>,
     updateProvidedOnly: boolean = false,
     populate?: string | string[],
   ): Promise<T | any> {
@@ -200,10 +201,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  updateMany(
+  updateMany<T>(
     schemaName: string,
-    filterQuery: Query,
-    query: Query,
+    filterQuery: Query<T>,
+    query: Query<T>,
     updateProvidedOnly: boolean = false,
   ) {
     return this.client!.updateMany({
@@ -216,7 +217,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  deleteOne(schemaName: string, query: Query) {
+  deleteOne<T>(schemaName: string, query: Query<T>) {
     return this.client!.deleteOne({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -224,7 +225,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  deleteMany(schemaName: string, query: Query) {
+  deleteMany<T>(schemaName: string, query: Query<T>) {
     return this.client!.deleteMany({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -232,7 +233,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  countDocuments(schemaName: string, query: Query): Promise<number> {
+  countDocuments<T>(schemaName: string, query: Query<T>): Promise<number> {
     return this.client!.countDocuments({
       schemaName,
       query: this.processQuery(query),
