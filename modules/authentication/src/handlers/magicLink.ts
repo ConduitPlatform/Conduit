@@ -28,7 +28,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
-      let success = await this.registerTemplate()
+      const success = await this.registerTemplate()
         .then(() => true)
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
