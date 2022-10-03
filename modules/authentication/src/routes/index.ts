@@ -2,10 +2,10 @@ import { LocalHandlers } from '../handlers/local';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  ConduitString,
   ConfigController,
   GrpcServer,
   RoutingManager,
-  ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
@@ -17,6 +17,7 @@ import { TwoFa } from '../handlers/twoFa';
 import { TokenProvider } from '../handlers/tokenProvider';
 import authMiddleware from './middleware';
 import { MagicLinkHandlers } from '../handlers/magicLink';
+import { Config } from '../config';
 
 type OAuthHandler = typeof oauth2;
 
@@ -42,7 +43,7 @@ export class AuthenticationRoutes {
   }
 
   async registerRoutes() {
-    const config = ConfigController.getInstance().config;
+    const config: Config = ConfigController.getInstance().config;
     this._routingManager.clear();
     let enabled = false;
     let errorMessage = null;
@@ -104,13 +105,9 @@ export class AuthenticationRoutes {
     if (!errorMessage && authActive) {
       let returnField = {
         serviceId: ConduitString.Required,
-        accessToken: ConduitString.Required,
+        accessToken: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
       };
-      if (config.generateRefreshToken) {
-        returnField = Object.assign(returnField, {
-          refreshToken: ConduitString.Required,
-        });
-      }
 
       this._routingManager.route(
         {
