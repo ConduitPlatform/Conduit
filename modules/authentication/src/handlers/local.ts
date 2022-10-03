@@ -165,7 +165,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (!this.initialized) {
+    const config = ConfigController.getInstance().config;
+    if (config.local.enabled) {
       try {
         await this.initDbAndEmail();
         ConduitGrpcSdk.Logger.log('Local is active');
@@ -176,6 +177,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         this.initialized = false;
         throw err;
       }
+    } else {
+      ConduitGrpcSdk.Logger.log('Local not active');
+      this.initialized = false;
     }
     return this.initialized;
   }
