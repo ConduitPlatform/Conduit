@@ -28,7 +28,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
-      await this.registerTemplates();
+      await this.registerTemplates().catch(e => {
+        ConduitGrpcSdk.Logger.error(e);
+        return (this.initialized = false);
+      });
       return (this.initialized = true);
     } else {
       return (this.initialized = false);
@@ -144,8 +147,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   private registerTemplates() {
-    return this.emailModule.registerTemplate(magicLinkTemplate).catch(e => {
-      ConduitGrpcSdk.Logger.error(e);
-    });
+    return this.emailModule.registerTemplate(magicLinkTemplate);
   }
 }
