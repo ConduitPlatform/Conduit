@@ -234,16 +234,6 @@ export class SchemaAdmin {
     if (requestedSchemas.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
-    const foundSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.countDocuments({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: { $in: ids },
-      });
-    if (foundSchemas !== requestedSchemas.length) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
 
     for (const schema of requestedSchemas) {
       const endpoints = await this.database
@@ -335,16 +325,6 @@ export class SchemaAdmin {
         _id: { $in: ids },
       });
     if (isNil(requestedSchemas)) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
-    const foundDocumentsCount = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.countDocuments({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: { $in: ids },
-      });
-    if (foundDocumentsCount !== requestedSchemas.length) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
 
