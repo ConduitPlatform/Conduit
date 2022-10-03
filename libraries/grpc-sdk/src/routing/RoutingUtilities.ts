@@ -1,7 +1,9 @@
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
-import { Indexable, SocketProtoDescription } from '../interfaces';
 import path from 'path';
 import fs from 'fs';
+import { ConduitRouteObject } from './interfaces/Route';
+import { SocketProtoDescription } from './interfaces/Socket';
+import { Indexable } from '../interfaces';
 
 const protofile_template = `
 syntax = "proto3";
@@ -57,10 +59,68 @@ message SocketResponse {
 }
 `;
 
-export function constructProtoFile(moduleName: string, paths: SocketProtoDescription[]) {
+const admin_protofile_template = `
+syntax = "proto3";
+package MODULE_NAME.admin;
+
+service Admin {
+ MODULE_FUNCTIONS
+}
+
+message AdminRequest {
+  string params = 1;
+  string path = 2;
+  string headers = 3;
+  string context = 4;
+  string cookies = 5;
+}
+
+message AdminResponse {
+  string result = 1;
+  string redirect = 2;
+  repeated Cookie setCookies = 3;
+  repeated Cookie removeCookies = 4;
+}
+
+message SocketRequest {
+  string event = 1;
+  string socketId = 2;
+  string params = 3;
+  string context = 4;
+}
+
+message Cookie {
+  string name = 1;
+  optional string value = 2;
+  Options options = 3;
+}
+
+message Options {
+  bool httpOnly = 1;
+  bool secure = 2;
+  bool signed = 3;
+  int32 maxAge = 4;
+  string path = 5;
+  string domain = 6;
+  string sameSite = 7;
+  
+}
+message SocketResponse {
+  string event = 1;
+  string data = 2;
+  repeated string receivers = 3;
+  repeated string rooms = 4;
+}
+`;
+
+export function constructProtoFile(
+  moduleName: string,
+  paths: (ConduitRouteObject | SocketProtoDescription)[],
+  isAdmin: boolean = false,
+) {
   const formattedModuleName = getFormattedModuleName(moduleName);
-  const protoFunctions = createProtoFunctions(paths);
-  let protoFile = protofile_template
+  const protoFunctions = createProtoFunctions(paths, isAdmin);
+  let protoFile = (isAdmin ? admin_protofile_template : protofile_template)
     .toString()
     .replace('MODULE_FUNCTIONS', protoFunctions);
   protoFile = protoFile.replace('MODULE_NAME', formattedModuleName);
@@ -86,14 +146,24 @@ export function wrapFunctionsAsync(functions: { [name: string]: RequestHandlers 
   return modifiedFunctions;
 }
 
-export function createProtoFunctions(paths: SocketProtoDescription[]) {
+export function createProtoFunctions(
+  paths: (ConduitRouteObject | SocketProtoDescription)[],
+  isAdmin: boolean,
+) {
   let protoFunctions = '';
 
   paths.forEach(r => {
     if (r.hasOwnProperty('events')) {
-      protoFunctions += createProtoFunctionsForSocket(r, protoFunctions);
+      protoFunctions += createProtoFunctionsForSocket(
+        r as SocketProtoDescription,
+        protoFunctions,
+      );
     } else {
-      protoFunctions += createProtoFunctionForRoute(r, protoFunctions);
+      protoFunctions += createProtoFunctionForRoute(
+        r as ConduitRouteObject,
+        protoFunctions,
+        isAdmin,
+      );
     }
   });
 
@@ -119,14 +189,19 @@ function createProtoFunctionsForSocket(
   return newFunctions;
 }
 
-function createProtoFunctionForRoute(path: Indexable, protoFunctions: string) {
+function createProtoFunctionForRoute(
+  path: ConduitRouteObject,
+  protoFunctions: string,
+  isAdmin: boolean,
+) {
   const newFunction = createGrpcFunctionName(path.grpcFunction);
 
   if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
     return '';
   }
-
-  return `rpc ${newFunction}(RouterRequest) returns (RouterResponse);\n`;
+  return isAdmin
+    ? `rpc ${newFunction}(AdminRequest) returns (AdminResponse);\n`
+    : `rpc ${newFunction}(RouterRequest) returns (RouterResponse);\n`;
 }
 
 function createGrpcFunctionName(grpcFunction: string) {

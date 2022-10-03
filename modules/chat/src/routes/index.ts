@@ -1,22 +1,22 @@
 import ConduitGrpcSdk, {
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  ConduitNumber,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
+  ParsedSocketRequest,
+  Query,
   RoutingManager,
   TYPE,
-  ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
-  Query,
 } from '@conduitplatform/grpc-sdk';
-import { ChatMessage, ChatRoom } from '../models';
+import { ChatMessage, ChatRoom, User } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { validateUsersInput, sendInvitations } from '../utils';
+import { sendInvitations, validateUsersInput } from '../utils';
 import { InvitationRoutes } from './InvitationRoutes';
 import * as templates from '../templates';
 
@@ -342,7 +342,7 @@ export class ChatRoutes {
   async patchMessage(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { messageId, newMessage } = call.request.params;
     const { user } = call.request.context;
-    const message = await ChatMessage.getInstance()
+    const message: ChatMessage | null = await ChatMessage.getInstance()
       .findOne({ _id: messageId })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
@@ -355,7 +355,7 @@ export class ChatRoutes {
     }
     message.message = newMessage;
     await ChatMessage.getInstance()
-      .findByIdAndUpdate(message._id, { message })
+      .findByIdAndUpdate(message._id, { message: message.message })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -399,10 +399,10 @@ export class ChatRoutes {
   }
 
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
-    const { user } = call.request.context;
+    const user: User = call.request.context.user;
     const [roomId] = call.request.params;
     const room = await ChatRoom.getInstance().findOne({ _id: roomId });
-    if (isNil(room) || !room.participants.includes(user._id)) {
+    if (isNil(room) || !(room.participants as string[]).includes(user._id)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         "Room does not exist or you don't have access",

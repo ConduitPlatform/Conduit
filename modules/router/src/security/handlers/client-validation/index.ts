@@ -74,7 +74,7 @@ export class ClientValidator {
       // for the possibility of a secret refresh
     }
     Client.getInstance()
-      .findOne({ clientId: clientid }, 'clientSecret platform domain')
+      .findOne({ clientId: clientid as string }, 'clientSecret platform domain')
       .then(async client => {
         if (isNil(client)) {
           return {

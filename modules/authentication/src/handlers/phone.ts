@@ -89,7 +89,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         phoneNumber: existingToken.data.phone,
       });
     } else {
-      user = await User.getInstance().findOne({ _id: existingToken.user });
+      user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     }
 
@@ -112,7 +112,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
           TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
         ],
       },
-      [`data.phone`]: phone,
+      data: {
+        phone,
+      },
     });
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
@@ -123,7 +125,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
             TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
           ],
         },
-        [`data.phone`]: phone,
+        data: {
+          phone,
+        },
       });
     }
 

@@ -1,10 +1,5 @@
-import {
-  Array,
-  ConduitModel,
-  ConduitModelField,
-  ConduitRouteOption,
-  TYPE,
-} from '../interfaces';
+import { Array, ConduitModel, ConduitModelField, TYPE } from '../interfaces';
+import { ConduitRouteOption } from '../routing';
 
 const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON'];
 

@@ -1,17 +1,16 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
+  ConduitBoolean,
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
-  RouteOptionType,
   ConduitString,
-  ConduitNumber,
-  ConduitBoolean,
-  ConduitRouteObject,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
   Query,
+  RouteOptionType,
+  RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -19,242 +18,221 @@ import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 
 export class AdminRoutes {
+  private readonly routingManager: RoutingManager;
+
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly fileHandlers: FileHandlers,
   ) {
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        getFile: this.fileHandlers.getFile.bind(this.fileHandlers),
-        getFiles: this.getFiles.bind(this),
-        createFile: this.fileHandlers.createFile.bind(this.fileHandlers),
-        patchFile: this.fileHandlers.updateFile.bind(this.fileHandlers),
-        deleteFile: this.fileHandlers.deleteFile.bind(this.fileHandlers),
-        getFileUrl: this.fileHandlers.getFileUrl.bind(this.fileHandlers),
-        getFileData: this.fileHandlers.getFileData.bind(this.fileHandlers),
-        getFolders: this.getFolders.bind(this),
-        createFolder: this.createFolder.bind(this),
-        deleteFolder: this.deleteFolder.bind(this),
-        getContainers: this.getContainers.bind(this),
-        createContainer: this.createContainer.bind(this),
-        deleteContainer: this.deleteContainer.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/files/:id',
-          action: ConduitRouteActions.GET,
-          description: `Returns a file.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/files/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a file.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition(File.name),
-        'getFile',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried files.`,
-          queryParams: {
-            skip: ConduitNumber.Required,
-            limit: ConduitNumber.Required,
-            sort: ConduitString.Optional,
-            search: ConduitString.Optional,
-            folder: ConduitString.Optional,
-            container: ConduitString.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition(File.name),
+      this.fileHandlers.getFile.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/files',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried files.`,
+        queryParams: {
+          skip: ConduitNumber.Required,
+          limit: ConduitNumber.Required,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
+          folder: ConduitString.Optional,
+          container: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('GetFiles', {
-          files: [File.name],
-          filesCount: ConduitNumber.Required,
-        }),
-        'getFiles',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new file.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            data: ConduitString.Required,
-            folder: ConduitString.Optional,
-            container: ConduitString.Optional,
-            mimeType: ConduitString.Optional,
-            isPublic: ConduitBoolean.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('CreateFile', File.name),
-        'createFile',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files/:id',
-          action: ConduitRouteActions.PATCH,
-          description: `Updates a file.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-          bodyParams: {
-            name: ConduitString.Optional,
-            data: ConduitString.Optional,
-            folder: ConduitString.Optional,
-            container: ConduitString.Optional,
-            mimeType: ConduitString.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('PatchFile', File.name),
-        'patchFile',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a file.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-        },
-        new ConduitRouteReturnDefinition('DeleteFile', {
-          success: ConduitString.Required,
-        }),
-        'deleteFile',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files/:id/url',
-          action: ConduitRouteActions.GET,
-          description: `Returns the file's url and optionally redirects to it.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-          queryParams: {
-            redirect: ConduitBoolean.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('GetFileUrl', {
-          url: ConduitString.Optional,
-          redirect: ConduitString.Optional,
-        }),
-        'getFileUrl',
-      ),
-      constructConduitRoute(
-        {
-          path: '/files/:id/data',
-          action: ConduitRouteActions.GET,
-          description: `Returns the data of a file.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-        },
-        new ConduitRouteReturnDefinition('GetFileData', {
+      },
+      new ConduitRouteReturnDefinition('GetFiles', {
+        files: [File.name],
+        filesCount: ConduitNumber.Required,
+      }),
+      this.getFiles.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/files',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new file.`,
+        bodyParams: {
+          name: ConduitString.Required,
           data: ConduitString.Required,
-        }),
-        'getFileData',
-      ),
-      constructConduitRoute(
-        {
-          path: '/folders',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried folders.`,
-          queryParams: {
-            skip: ConduitNumber.Required,
-            limit: ConduitNumber.Required,
-            sort: ConduitString.Optional,
-            container: ConduitString.Optional,
-            parent: ConduitString.Optional,
-          },
+          folder: ConduitString.Optional,
+          container: ConduitString.Optional,
+          mimeType: ConduitString.Optional,
+          isPublic: ConduitBoolean.Optional,
         },
-        new ConduitRouteReturnDefinition('getFolders', {
-          folders: [_StorageFolder.name],
-          folderCount: ConduitNumber.Required,
-        }),
-        'getFolders',
-      ),
-      constructConduitRoute(
-        {
-          path: '/folders',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new folder.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            container: ConduitString.Required,
-            isPublic: ConduitBoolean.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('CreateFile', File.name),
+      this.fileHandlers.createFile.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/files/:id',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates a file.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.name),
-        'createFolder',
-      ),
-      constructConduitRoute(
-        {
-          path: '/folders/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a folder.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+        bodyParams: {
+          name: ConduitString.Optional,
+          data: ConduitString.Optional,
+          folder: ConduitString.Optional,
+          container: ConduitString.Optional,
+          mimeType: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
-        'deleteFolder',
-      ),
-      constructConduitRoute(
-        {
-          path: '/containers',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried containers.`,
-          queryParams: {
-            skip: ConduitNumber.Required,
-            limit: ConduitNumber.Required,
-            sort: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('PatchFile', File.name),
+      this.fileHandlers.updateFile.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/files/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a file.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('GetContainers', {
-          containers: [_StorageContainer.name],
-          containersCount: ConduitNumber.Required,
-        }),
-        'getContainers',
-      ),
-      constructConduitRoute(
-        {
-          path: '/containers',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new container.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            isPublic: ConduitBoolean.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('DeleteFile', {
+        success: ConduitString.Required,
+      }),
+      this.fileHandlers.deleteFile.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/files/:id/url',
+        action: ConduitRouteActions.GET,
+        description: `Returns the file's url and optionally redirects to it.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition(_StorageContainer.name),
-        'createContainer',
-      ),
-      constructConduitRoute(
-        {
-          path: '/containers/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a container.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+        queryParams: {
+          redirect: ConduitBoolean.Optional,
         },
-        new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.name),
-        'deleteContainer',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('GetFileUrl', {
+        url: ConduitString.Optional,
+        redirect: ConduitString.Optional,
+      }),
+      this.fileHandlers.getFileUrl.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/files/:id/data',
+        action: ConduitRouteActions.GET,
+        description: `Returns the data of a file.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('GetFileData', {
+        data: ConduitString.Required,
+      }),
+      this.fileHandlers.getFileData.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        path: '/folders',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried folders.`,
+        queryParams: {
+          skip: ConduitNumber.Required,
+          limit: ConduitNumber.Required,
+          sort: ConduitString.Optional,
+          container: ConduitString.Optional,
+          parent: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('getFolders', {
+        folders: [_StorageFolder.name],
+        folderCount: ConduitNumber.Required,
+      }),
+      this.getFolders.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/folders',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new folder.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          container: ConduitString.Required,
+          isPublic: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateFolder', _StorageFolder.name),
+      this.createFolder.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/folders/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a folder.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
+      this.deleteFolder.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/containers',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried containers.`,
+        queryParams: {
+          skip: ConduitNumber.Required,
+          limit: ConduitNumber.Required,
+          sort: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetContainers', {
+        containers: [_StorageContainer.name],
+        containersCount: ConduitNumber.Required,
+      }),
+      this.getContainers.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/containers',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new container.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          isPublic: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition(_StorageContainer.name),
+      this.createContainer.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/containers/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a container.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.name),
+      this.deleteContainer.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
