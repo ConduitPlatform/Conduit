@@ -44,6 +44,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return Array.from(this._systemSchemas);
   }
 
+  schemaInSystemSchemas(schemaName: string) {
+    const systemSchemas = this.systemSchemas.map(s => s.toLowerCase());
+    return systemSchemas.includes(schemaName.toLowerCase());
+  }
+
   protected abstract connect(): void;
 
   protected abstract ensureConnected(): Promise<void>;
@@ -133,6 +138,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract getCollectionName(schema: ConduitSchema): string;
 
   async createCustomSchemaFromAdapter(schema: ConduitSchema) {
+    if (this.schemaInSystemSchemas(schema.name)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Cannot modify database-owned system schema.',
+      );
+    }
     schema.ownerModule = 'database';
     return this.createSchemaFromAdapter(schema);
   }

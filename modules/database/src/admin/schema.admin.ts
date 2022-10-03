@@ -43,7 +43,9 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: ParsedQuery = { name: { $nin: this.database.systemSchemas } };
+    let query: ParsedQuery = {
+      name: { $nin: this.database.systemSchemas },
+    };
     if (owner && owner.length !== 0) {
       query = {
         $and: [query, { ownerModule: { $in: owner } }],
@@ -142,7 +144,6 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
         ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
         _id: id,
       });
     if (isNil(requestedSchema)) {
@@ -162,29 +163,14 @@ export class SchemaAdmin {
       throw new GrpcError(status.INTERNAL, (err as Error).message);
     }
 
-    const updatedSchema = await this.database.createCustomSchemaFromAdapter(
+    return this.schemaController.createSchema(
       new ConduitSchema(
         requestedSchema.name,
         requestedSchema.fields,
         requestedSchema.modelOptions,
       ),
+      'update',
     );
-    if (isNil(updatedSchema)) {
-      throw new GrpcError(status.INTERNAL, 'Could not update schema');
-    }
-
-    // Mongoose requires that schemas are re-created in order to update them
-    if (requestedSchema.modelOptions.conduit.cms.enabled) {
-      await this.schemaController.createSchema(
-        new ConduitSchema(
-          updatedSchema.originalSchema.name,
-          updatedSchema.originalSchema.fields,
-          updatedSchema.originalSchema.modelOptions,
-        ),
-      );
-    }
-
-    return updatedSchema.originalSchema;
   }
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

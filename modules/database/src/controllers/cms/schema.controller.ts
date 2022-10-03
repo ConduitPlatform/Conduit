@@ -65,11 +65,14 @@ export class SchemaController {
       });
   }
 
-  async createSchema(schema: ConduitSchema): Promise<ConduitSchema> {
+  async createSchema(
+    schema: ConduitSchema,
+    operation: 'create' | 'update' = 'create',
+  ): Promise<ConduitSchema> {
     const createdSchema = await this.database
       .createCustomSchemaFromAdapter(schema)
       .catch(err => {
-        ConduitGrpcSdk.Logger.error('Failed to create custom schema');
+        ConduitGrpcSdk.Logger.error(`Failed to ${operation} custom schema`);
         ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
