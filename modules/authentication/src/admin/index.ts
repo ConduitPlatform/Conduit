@@ -2,12 +2,11 @@ import ConduitGrpcSdk, {
   ConduitBoolean,
   ConduitNumber,
   ConduitRouteActions,
-  ConduitRouteObject,
   ConduitRouteReturnDefinition,
   ConduitString,
-  constructConduitRoute,
   GrpcServer,
   RouteOptionType,
+  RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { UserAdmin } from './user';
@@ -17,6 +16,7 @@ import { Service, User } from '../models';
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly serviceAdmin: ServiceAdmin;
+  private routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
@@ -24,212 +24,189 @@ export class AdminHandlers {
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        getUsers: this.userAdmin.getUsers.bind(this),
-        createUser: this.userAdmin.createUser.bind(this),
-        patchUser: this.userAdmin.patchUser.bind(this),
-        deleteUser: this.userAdmin.deleteUser.bind(this),
-        deleteUsers: this.userAdmin.deleteUsers.bind(this),
-        toggleUsers: this.userAdmin.toggleUsers.bind(this),
-        blockUser: this.userAdmin.blockUser.bind(this),
-        unblockUser: this.userAdmin.unblockUser.bind(this),
-        getServices: this.serviceAdmin.getServices.bind(this),
-        createService: this.serviceAdmin.createService.bind(this),
-        deleteService: this.serviceAdmin.deleteService.bind(this),
-        renewServiceToken: this.serviceAdmin.renewToken.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      // User Routes
-      constructConduitRoute(
-        {
-          path: '/users',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried users and their total count.`,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-            search: ConduitString.Optional,
-            isActive: ConduitBoolean.Optional,
-            provider: ConduitString.Optional,
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/users',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried users and their total count.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
+          isActive: ConduitBoolean.Optional,
+          provider: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetUsers', {
-          users: [User.name],
-          count: ConduitNumber.Required,
-        }),
-        'getUsers',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new user using email/password.`,
-          bodyParams: {
-            email: ConduitString.Required,
-            password: ConduitString.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('GetUsers', {
+        users: [User.name],
+        count: ConduitNumber.Required,
+      }),
+      this.userAdmin.getUsers.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new user using email/password.`,
+        bodyParams: {
+          email: ConduitString.Required,
+          password: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition(User.name),
-        'createUser',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users/:id',
-          action: ConduitRouteActions.PATCH,
-          description: `Updates user's fields.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-          bodyParams: {
-            email: ConduitString.Optional,
-            isVerified: ConduitBoolean.Optional,
-            hasTwoFA: ConduitBoolean.Optional,
-            phoneNumber: ConduitString.Optional,
-            twoFaMethod: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition(User.name),
+      this.userAdmin.createUser.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/:id',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates user's fields.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('PatchUser', User.name),
-        'patchUser',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes queried users.`,
-          queryParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
+        bodyParams: {
+          email: ConduitString.Optional,
+          isVerified: ConduitBoolean.Optional,
+          hasTwoFA: ConduitBoolean.Optional,
+          phoneNumber: ConduitString.Optional,
+          twoFaMethod: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
-        'deleteUsers',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a user.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition('PatchUser', User.name),
+      this.userAdmin.patchUser.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried users.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
-        new ConduitRouteReturnDefinition('DeleteUser', 'String'),
-        'deleteUser',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users/:id/block',
-          action: ConduitRouteActions.POST,
-          description: `Blocks/inactivates a user.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
+      this.userAdmin.deleteUsers.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a user.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('BlockUser', 'String'),
-        'blockUser',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users/:id/unblock',
-          action: ConduitRouteActions.POST,
-          description: `Unblocks/activates a user.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition('DeleteUser', 'String'),
+      this.userAdmin.deleteUser.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/:id/block',
+        action: ConduitRouteActions.POST,
+        description: `Blocks/inactivates a user.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('UnblockUser', 'String'),
-        'unblockUser',
-      ),
-      constructConduitRoute(
-        {
-          path: '/users/toggle',
-          action: ConduitRouteActions.POST,
-          description: `Blocks/unblocks queried users.`,
-          bodyParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-            block: ConduitBoolean.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('BlockUser', 'String'),
+      this.userAdmin.blockUser.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/:id/unblock',
+        action: ConduitRouteActions.POST,
+        description: `Unblocks/activates a user.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
-        'toggleUsers',
-      ),
-      // Service Routes
-      constructConduitRoute(
-        {
-          path: '/services',
-          action: ConduitRouteActions.GET,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-          },
-          name: 'GetServices',
-          description: 'Returns queried registered services.',
+      },
+      new ConduitRouteReturnDefinition('UnblockUser', 'String'),
+      this.userAdmin.unblockUser.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/users/toggle',
+        action: ConduitRouteActions.POST,
+        description: `Blocks/unblocks queried users.`,
+        bodyParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
+          block: ConduitBoolean.Required,
         },
-        new ConduitRouteReturnDefinition('GetServices', {
-          services: [Service.name],
-          count: ConduitNumber.Required,
-        }),
-        'getServices',
-      ),
-      constructConduitRoute(
-        {
-          path: '/services',
-          action: ConduitRouteActions.POST,
-          bodyParams: {
-            name: ConduitString.Required,
-          },
-          name: 'CreateService',
-          description: 'Registers a new service.',
+      },
+      new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
+      this.userAdmin.toggleUsers.bind(this),
+    );
+    // Service Routes
+    this.routingManager.route(
+      {
+        path: '/services',
+        action: ConduitRouteActions.GET,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('CreateService', {
+        name: 'GetServices',
+        description: 'Returns queried registered services.',
+      },
+      new ConduitRouteReturnDefinition('GetServices', {
+        services: [Service.name],
+        count: ConduitNumber.Required,
+      }),
+      this.serviceAdmin.getServices.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/services',
+        action: ConduitRouteActions.POST,
+        bodyParams: {
           name: ConduitString.Required,
-          token: ConduitString.Required,
-        }),
-        'createService',
-      ),
-      constructConduitRoute(
-        {
-          path: '/services/:id',
-          action: ConduitRouteActions.DELETE,
-          urlParams: {
-            id: ConduitString.Required,
-          },
-          name: 'DeleteService',
-          description: 'Deletes a service.',
         },
-        new ConduitRouteReturnDefinition('DeleteService', 'String'),
-        'deleteService',
-      ),
-      constructConduitRoute(
-        {
-          path: '/services/:serviceId/token',
-          action: ConduitRouteActions.GET,
-          urlParams: {
-            serviceId: ConduitString.Required,
-          },
-          name: 'RenewServiceToken',
-          description: 'Renews a service token.',
+        name: 'CreateService',
+        description: 'Registers a new service.',
+      },
+      new ConduitRouteReturnDefinition('CreateService', {
+        name: ConduitString.Required,
+        token: ConduitString.Required,
+      }),
+      this.serviceAdmin.createService.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/services/:id',
+        action: ConduitRouteActions.DELETE,
+        urlParams: {
+          id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('RenewServiceToken', {
-          name: ConduitString.Required,
-          token: ConduitString.Required,
-        }),
-        'renewServiceToken',
-      ),
-    ];
+        name: 'DeleteService',
+        description: 'Deletes a service.',
+      },
+      new ConduitRouteReturnDefinition('DeleteService', 'String'),
+      this.serviceAdmin.deleteService.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/services/:serviceId/token',
+        action: ConduitRouteActions.GET,
+        urlParams: {
+          serviceId: ConduitString.Required,
+        },
+        name: 'RenewServiceToken',
+        description: 'Renews a service token.',
+      },
+      new ConduitRouteReturnDefinition('RenewServiceToken', {
+        name: ConduitString.Required,
+        token: ConduitString.Required,
+      }),
+      this.serviceAdmin.renewToken.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 }

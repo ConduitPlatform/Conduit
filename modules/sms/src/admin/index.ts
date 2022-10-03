@@ -1,13 +1,12 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ConduitString,
-  ConduitRouteObject,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
+  RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -15,6 +14,7 @@ import { ISmsProvider } from '../interfaces/ISmsProvider';
 
 export class AdminHandlers {
   private provider: ISmsProvider | undefined;
+  private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
@@ -22,6 +22,7 @@ export class AdminHandlers {
     provider: ISmsProvider | undefined,
   ) {
     this.provider = provider;
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
@@ -30,33 +31,21 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        sendSms: this.sendSms.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/send',
-          action: ConduitRouteActions.POST,
-          description: `Sends sms.`,
-          bodyParams: {
-            to: ConduitString.Required,
-            message: ConduitString.Required,
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/send',
+        action: ConduitRouteActions.POST,
+        description: `Sends sms.`,
+        bodyParams: {
+          to: ConduitString.Required,
+          message: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('SendSMS', 'String'),
-        'sendSms',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('SendSMS', 'String'),
+      this.sendSms.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   async sendSms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

@@ -1,16 +1,11 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
+import { isNil } from 'lodash';
 
-export async function migrateIsSuperAdminToAdmin(grpcSdk: ConduitGrpcSdk) {
-  const originalAdmin: Admin = await grpcSdk.databaseProvider!.findOne('Admin', {
+export async function migrateIsSuperAdminToAdmin() {
+  const originalAdmin: Admin | null = await Admin.getInstance().findOne({
     username: 'admin',
   });
-  if (originalAdmin) {
-    originalAdmin.isSuperAdmin = true;
-    await grpcSdk.databaseProvider!.findByIdAndUpdate(
-      'Admin',
-      originalAdmin._id,
-      originalAdmin,
-    );
-  }
+  if (isNil(originalAdmin)) return;
+  originalAdmin.isSuperAdmin = true;
+  await Admin.getInstance().findByIdAndUpdate(originalAdmin._id, originalAdmin);
 }

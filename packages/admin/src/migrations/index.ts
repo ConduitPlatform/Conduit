@@ -3,5 +3,5 @@ import { migrateIsSuperAdminToAdmin } from './migrateIsSuperAdminToAdmin';
 
 export async function runMigrations(grpcSdk: ConduitGrpcSdk) {
   // ...
-  await migrateIsSuperAdminToAdmin(grpcSdk);
+  await migrateIsSuperAdminToAdmin();
 }
