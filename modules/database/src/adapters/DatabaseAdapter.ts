@@ -137,17 +137,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getCollectionName(schema: ConduitSchema): string;
 
-  async createCustomSchemaFromAdapter(schema: ConduitSchema) {
-    if (this.schemaInSystemSchemas(schema.name)) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'Cannot modify database-owned system schema.',
-      );
-    }
-    schema.ownerModule = 'database';
-    return this.createSchemaFromAdapter(schema);
-  }
-
   /**
    * Given a schema name, returns the schema adapter assigned
    * @param schemaName
