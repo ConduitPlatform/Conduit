@@ -16,7 +16,7 @@ import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
-import { MagicLinkTemplate as template } from '../templates';
+import { MagicLinkTemplate as magicLinkTemplate } from '../templates';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -103,7 +103,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-    return 'Email send';
+    return 'Email sent';
   }
 
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -123,12 +123,12 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.NOT_FOUND, 'Magic link token does not exist');
     }
     const user: User | null = await User.getInstance().findOne({
-      _id: token.user,
+      _id: token.user! as string,
     });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     await Token.getInstance()
-      .deleteMany({ userId: token.user, type: TokenType.MAGIC_LINK })
+      .deleteMany({ user: token.user, type: TokenType.MAGIC_LINK })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
@@ -144,7 +144,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   private registerTemplates() {
-    return this.emailModule.registerTemplate(template).catch(e => {
+    return this.emailModule.registerTemplate(magicLinkTemplate).catch(e => {
       ConduitGrpcSdk.Logger.error(e);
     });
   }
