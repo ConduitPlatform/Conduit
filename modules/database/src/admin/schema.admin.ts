@@ -140,11 +140,13 @@ export class SchemaAdmin {
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
-        ownerModule: 'database',
-        _id: id,
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
     }
 
     requestedSchema.fields = fields ?? requestedSchema.fields;
@@ -176,12 +178,13 @@ export class SchemaAdmin {
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: id,
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
     }
 
     // Temp: error out until Admin handles this case
@@ -224,9 +227,7 @@ export class SchemaAdmin {
     const requestedSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: { $in: ids },
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
       });
     if (requestedSchemas.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
@@ -264,12 +265,16 @@ export class SchemaAdmin {
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: call.request.params.id,
+        $and: [
+          { 'modelOptions.conduit.cms': { $exists: true } },
+          { _id: call.request.params.id },
+        ],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
     }
 
     requestedSchema.modelOptions.conduit.cms.enabled =
@@ -317,9 +322,7 @@ export class SchemaAdmin {
     const requestedSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: { $in: ids },
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
       });
     if (isNil(requestedSchemas)) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
@@ -389,12 +392,10 @@ export class SchemaAdmin {
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({
-        ownerModule: 'database',
-        name: { $nin: this.database.systemSchemas },
-        _id: id,
+        $and: [{ name: { $nin: this.database.systemSchemas } }, { _id: id }],
       });
     if (isNil(requestedSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(status.NOT_FOUND, "Schema does not exist or can't be modified");
     }
 
     merge(requestedSchema.modelOptions.permissions, permissions);
@@ -420,9 +421,7 @@ export class SchemaAdmin {
     return { modules };
   }
 
-  async getIntrospectionStatus(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
+  async getIntrospectionStatus(): Promise<UnparsedRouterResponse> {
     let foreignSchemas = Array.from(this.database.foreignSchemaCollections);
     const pendingSchemas = (
       await this.database.getSchemaModel('_PendingSchemas').model.findMany({})
@@ -450,7 +449,7 @@ export class SchemaAdmin {
     };
   }
 
-  async introspectDatabase(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async introspectDatabase(): Promise<UnparsedRouterResponse> {
     const introspectedSchemas = await this.database.introspectDatabase();
     await Promise.all(
       introspectedSchemas.map(async (schema: ConduitSchema) => {
