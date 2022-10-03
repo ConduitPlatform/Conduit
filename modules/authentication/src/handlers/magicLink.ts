@@ -43,7 +43,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       {
         path: '/magic-link',
         action: ConduitRouteActions.POST,
-        description: `A webhook used to send a magic link to a user.`,
+        description: `Send magic link to a user.`,
         bodyParams: {
           email: ConduitString.Required,
         },
