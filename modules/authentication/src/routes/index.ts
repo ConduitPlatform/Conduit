@@ -54,6 +54,13 @@ export class AuthenticationRoutes {
       await this.phoneHandlers.declareRoutes(this._routingManager);
     }
 
+    const magicLinkActive = await this.magicLinkHandlers
+      .validate()
+      .catch(e => (errorMessage = e));
+    if (magicLinkActive && !errorMessage) {
+      await this.magicLinkHandlers.declareRoutes(this._routingManager);
+    }
+
     let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
       await this.localHandlers.declareRoutes(this._routingManager);

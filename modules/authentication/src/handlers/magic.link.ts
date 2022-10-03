@@ -16,21 +16,19 @@ import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
+import { MagicLinkTemplate as template } from '../templates';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
   private initialized: boolean = false;
-  private clientValidation: boolean;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    grpcSdk.config.get('router').then(config => {
-      this.clientValidation = config.security.clientValidation;
-    });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
   async validate(): Promise<boolean> {
     const config = ConfigController.getInstance().config;
     if (config.magic_link.enabled && this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
+      await this.registerTemplates();
       return (this.initialized = true);
     } else {
       return (this.initialized = false);
@@ -56,7 +54,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       {
         path: '/hook/magic-link/:verificationToken',
         action: ConduitRouteActions.GET,
-        description: `A webhook used to verify a user who has recieved a magic link.`,
+        description: `A webhook used to verify a user who has received a magic link.`,
         urlParams: {
           verificationToken: ConduitString.Required,
         },
@@ -80,7 +78,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
     const token: Token = await Token.getInstance().create({
       type: TokenType.MAGIC_LINK,
-      userId: user._id,
+      user: user._id,
       token: uuid(),
     });
 
@@ -95,7 +93,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
     await this.emailModule
-      .sendEmail('MagicLik', {
+      .sendEmail('MagicLink', {
         email: user.email,
         sender: 'no-reply',
         variables: {
@@ -143,5 +141,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       },
       redirectUri,
     );
+  }
+
+  private registerTemplates() {
+    return this.emailModule.registerTemplate(template).catch(e => {
+      ConduitGrpcSdk.Logger.error(e);
+    });
   }
 }
