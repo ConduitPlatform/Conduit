@@ -64,7 +64,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('GetSchemaOwners', {
         modules: [ConduitString.Required],
       }),
-      this.schemaAdmin.getSchemaOwners.bind(this),
+      this.schemaAdmin.getSchemaOwners.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -81,7 +81,7 @@ export class AdminHandlers {
         schemasExtensions: [ConduitJson.Required],
         count: ConduitNumber.Required,
       }),
-      this.schemaAdmin.getSchemasExtensions.bind(this),
+      this.schemaAdmin.getSchemasExtensions.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -93,7 +93,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('GetSchema', '_DeclaredSchema'),
-      this.schemaAdmin.getSchema.bind(this),
+      this.schemaAdmin.getSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -113,7 +113,7 @@ export class AdminHandlers {
         schemas: ['_DeclaredSchema'],
         count: ConduitNumber.Required,
       }),
-      this.schemaAdmin.getSchemas.bind(this),
+      this.schemaAdmin.getSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -154,7 +154,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('CreateSchema', '_DeclaredSchema'),
-      this.schemaAdmin.createSchema.bind(this),
+      this.schemaAdmin.createSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -197,7 +197,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('PatchSchema', '_DeclaredSchema'),
-      this.schemaAdmin.patchSchema.bind(this),
+      this.schemaAdmin.patchSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -210,7 +210,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('DeleteSchemas', 'String'),
-      this.schemaAdmin.deleteSchemas.bind(this),
+      this.schemaAdmin.deleteSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -225,7 +225,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('DeleteSchema', 'String'),
-      this.schemaAdmin.deleteSchema.bind(this),
+      this.schemaAdmin.deleteSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -241,7 +241,7 @@ export class AdminHandlers {
         updatedSchemas: ['_DeclaredSchema'],
         enabled: ConduitBoolean.Required,
       }),
-      this.schemaAdmin.toggleSchemas.bind(this),
+      this.schemaAdmin.toggleSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -256,7 +256,7 @@ export class AdminHandlers {
         name: ConduitString.Required,
         enabled: ConduitBoolean.Required,
       }),
-      this.schemaAdmin.toggleSchema.bind(this),
+      this.schemaAdmin.toggleSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -272,7 +272,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('SetSchemaExtension', DeclaredSchema.fields),
-      this.schemaAdmin.setSchemaExtension.bind(this),
+      this.schemaAdmin.setSchemaExtension.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -290,7 +290,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('SetSchemaPermissions', 'String'),
-      this.schemaAdmin.setSchemaPerms.bind(this),
+      this.schemaAdmin.setSchemaPerms.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -306,7 +306,7 @@ export class AdminHandlers {
         importedSchemas: [ConduitString.Required],
         importedSchemaCount: ConduitNumber.Required,
       }),
-      this.schemaAdmin.getIntrospectionStatus.bind(this),
+      this.schemaAdmin.getIntrospectionStatus.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -316,7 +316,7 @@ export class AdminHandlers {
                         collections as pending schemas.`,
       },
       new ConduitRouteReturnDefinition('IntrospectDatabase', 'String'),
-      this.schemaAdmin.introspectDatabase.bind(this),
+      this.schemaAdmin.introspectDatabase.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -328,7 +328,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('GetSPendingSchema', PendingSchemas.fields),
-      this.schemaAdmin.getPendingSchema.bind(this),
+      this.schemaAdmin.getPendingSchema.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -345,7 +345,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('GetPendingSchemas', {
         schemas: [PendingSchemas.fields],
       }),
-      this.schemaAdmin.getPendingSchemas.bind(this),
+      this.schemaAdmin.getPendingSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -357,7 +357,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
-      this.schemaAdmin.finalizeSchemas.bind(this),
+      this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
     ),
       // Documents
       this.routingManager.route(
@@ -371,7 +371,7 @@ export class AdminHandlers {
           },
         },
         new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
-        this.documentsAdmin.getDocument.bind(this),
+        this.documentsAdmin.getDocument.bind(this.documentsAdmin),
       );
     this.routingManager.route(
       {
@@ -393,7 +393,7 @@ export class AdminHandlers {
         documents: ConduitJson.Required,
         count: ConduitNumber.Required,
       }),
-      this.documentsAdmin.getDocuments.bind(this),
+      this.documentsAdmin.getDocuments.bind(this.documentsAdmin),
     );
     this.routingManager.route(
       {
@@ -408,7 +408,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('CreateDocument', TYPE.JSON),
-      this.documentsAdmin.createDocument.bind(this),
+      this.documentsAdmin.createDocument.bind(this.documentsAdmin),
     );
     this.routingManager.route(
       {
@@ -425,7 +425,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('CreateDocuments', {
         docs: [ConduitJson.Required],
       }),
-      this.documentsAdmin.createDocuments.bind(this),
+      this.documentsAdmin.createDocuments.bind(this.documentsAdmin),
     );
     this.routingManager.route(
       {
@@ -442,7 +442,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('UpdateDocuments', {
         docs: [ConduitJson.Required],
       }),
-      this.documentsAdmin.updateDocuments.bind(this),
+      this.documentsAdmin.updateDocuments.bind(this.documentsAdmin),
     );
     this.routingManager.route(
       {
@@ -458,7 +458,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('UpdateDocument', TYPE.JSON),
-      this.documentsAdmin.updateDocument.bind(this),
+      this.documentsAdmin.updateDocument.bind(this.documentsAdmin),
     );
     this.routingManager.route(
       {
@@ -471,7 +471,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('DeleteDocument', 'String'),
-      this.documentsAdmin.deleteDocument.bind(this),
+      this.documentsAdmin.deleteDocument.bind(this.documentsAdmin),
     );
     // Custom Endpoints
     this.routingManager.route(
@@ -489,7 +489,9 @@ export class AdminHandlers {
         schemaNames: [ConduitString.Required],
         schemaIds: [ConduitString.Required],
       }),
-      this.customEndpointsAdmin.getSchemasWithCustomEndpoints.bind(this),
+      this.customEndpointsAdmin.getSchemasWithCustomEndpoints.bind(
+        this.customEndpointsAdmin,
+      ),
     );
     this.routingManager.route(
       {
@@ -509,7 +511,7 @@ export class AdminHandlers {
         customEndpoints: [CustomEndpoints.fields],
         count: ConduitNumber.Required,
       }),
-      this.customEndpointsAdmin.getCustomEndpoints.bind(this),
+      this.customEndpointsAdmin.getCustomEndpoints.bind(this.customEndpointsAdmin),
     );
     this.routingManager.route(
       {
@@ -530,7 +532,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('CreateCustomEndpoint', CustomEndpoints.fields),
-      this.customEndpointsAdmin.createCustomEndpoint.bind(this),
+      this.customEndpointsAdmin.createCustomEndpoint.bind(this.customEndpointsAdmin),
     );
     this.routingManager.route(
       {
@@ -552,7 +554,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('PatchCustomEndpoint', CustomEndpoints.fields),
-      this.customEndpointsAdmin.patchCustomEndpoint.bind(this),
+      this.customEndpointsAdmin.patchCustomEndpoint.bind(this.customEndpointsAdmin),
     );
     this.routingManager.route(
       {
@@ -564,7 +566,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('deleteCustomEndpoint', 'String'),
-      this.customEndpointsAdmin.deleteCustomEndpoint.bind(this),
+      this.customEndpointsAdmin.deleteCustomEndpoint.bind(this.customEndpointsAdmin),
     );
     this.routingManager.registerRoutes();
   }
