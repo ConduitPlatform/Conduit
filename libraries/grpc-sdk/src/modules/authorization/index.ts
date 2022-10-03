@@ -19,8 +19,16 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.defineResource(data);
   }
 
-  updateResourceDefinition(data: Resource): Promise<Empty> {
-    return this.client!.updateResourceDefinition(data);
+  updateResource(data: Resource): Promise<Empty> {
+    return this.client!.updateResource(data);
+  }
+
+  deleteResource(data: Resource): Promise<Empty> {
+    return this.client!.deleteResource(data);
+  }
+
+  deleteRelation(data: Relation): Promise<Empty> {
+    return this.client!.deleteRelation(data);
   }
 
   createRelation(data: Relation): Promise<Empty> {
