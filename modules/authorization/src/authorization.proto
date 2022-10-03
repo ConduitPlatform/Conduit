@@ -59,6 +59,7 @@ service Authorization {
   rpc DeleteResource(DeleteResourceRequest) returns (Empty);
   rpc UpdateResource(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
+  rpc DeleteRelation(Relation) returns (Empty);
   rpc FindRelation(FindRelationRequest) returns (Relation);
   rpc Can(PermissionCheck) returns (Decision);
 }

@@ -26,9 +26,11 @@ import { RelationsController } from './controllers/relations.controller';
 import { ResourceController } from './controllers/resource.controller';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
+import metricsSchema from './metrics';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authorization.proto'),
     protoDescription: 'authorization.Authorization',
@@ -38,6 +40,7 @@ export default class Authorization extends ManagedModule<Config> {
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
+      deleteRelation: this.deleteRelation.bind(this),
       findRelation: this.findRelation.bind(this),
       can: this.can.bind(this),
     },
@@ -145,6 +148,12 @@ export default class Authorization extends ManagedModule<Config> {
     callback(null, {});
   }
 
+  async deleteRelation(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
+    const { relation, resource, subject } = call.request;
+    await this.relationsController.deleteRelation(subject, relation, resource);
+    callback(null, {});
+  }
+
   async findRelation(
     call: GrpcRequest<FindRelationRequest>,
     callback: GrpcResponse<Empty>,
@@ -170,9 +179,9 @@ export default class Authorization extends ManagedModule<Config> {
     callback(null, { allow });
   }
 
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
+  async initializeMetrics() {
+    // for (const metric of Object.values(metricsConfig)) {
+    //   this.grpcSdk.registerMetric(metric.type, metric.config);
+    // }
   }
 }
