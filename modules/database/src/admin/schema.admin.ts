@@ -542,4 +542,10 @@ export class SchemaAdmin {
       schemas.length > 1 ? 'schemas' : 'schema'
     } finalized successfully`;
   }
+
+  async getDbSystemSchemas(): Promise<UnparsedRouterResponse> {
+    return {
+      databaseSystemSchemas: this.database.systemSchemas,
+    };
+  }
 }

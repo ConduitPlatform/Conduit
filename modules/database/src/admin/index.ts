@@ -85,6 +85,17 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/schemas/system',
+        action: ConduitRouteActions.GET,
+        description: `Returns Database-owned system schema names. Used for CMS operation validations.`,
+      },
+      new ConduitRouteReturnDefinition('GetDbSystemSchemas', {
+        databaseSystemSchemas: [ConduitString.Required],
+      }),
+      this.schemaAdmin.getDbSystemSchemas.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/schemas/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a schema.`,
