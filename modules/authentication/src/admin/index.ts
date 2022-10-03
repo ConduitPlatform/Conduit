@@ -48,7 +48,7 @@ export class AdminHandlers {
         users: [User.name],
         count: ConduitNumber.Required,
       }),
-      this.userAdmin.getUsers.bind(this),
+      this.userAdmin.getUsers.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -61,7 +61,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition(User.name),
-      this.userAdmin.createUser.bind(this),
+      this.userAdmin.createUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -80,7 +80,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('PatchUser', User.name),
-      this.userAdmin.patchUser.bind(this),
+      this.userAdmin.patchUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -92,7 +92,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('DeleteUsers', 'String'),
-      this.userAdmin.deleteUsers.bind(this),
+      this.userAdmin.deleteUsers.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -104,7 +104,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('DeleteUser', 'String'),
-      this.userAdmin.deleteUser.bind(this),
+      this.userAdmin.deleteUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -116,7 +116,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('BlockUser', 'String'),
-      this.userAdmin.blockUser.bind(this),
+      this.userAdmin.blockUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -128,7 +128,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('UnblockUser', 'String'),
-      this.userAdmin.unblockUser.bind(this),
+      this.userAdmin.unblockUser.bind(this.userAdmin),
     );
     this.routingManager.route(
       {
@@ -141,7 +141,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('ToggleUsers', 'String'),
-      this.userAdmin.toggleUsers.bind(this),
+      this.userAdmin.toggleUsers.bind(this.userAdmin),
     );
     // Service Routes
     this.routingManager.route(
@@ -160,7 +160,7 @@ export class AdminHandlers {
         services: [Service.name],
         count: ConduitNumber.Required,
       }),
-      this.serviceAdmin.getServices.bind(this),
+      this.serviceAdmin.getServices.bind(this.serviceAdmin),
     );
     this.routingManager.route(
       {
@@ -176,7 +176,7 @@ export class AdminHandlers {
         name: ConduitString.Required,
         token: ConduitString.Required,
       }),
-      this.serviceAdmin.createService.bind(this),
+      this.serviceAdmin.createService.bind(this.serviceAdmin),
     );
     this.routingManager.route(
       {
@@ -189,7 +189,7 @@ export class AdminHandlers {
         description: 'Deletes a service.',
       },
       new ConduitRouteReturnDefinition('DeleteService', 'String'),
-      this.serviceAdmin.deleteService.bind(this),
+      this.serviceAdmin.deleteService.bind(this.serviceAdmin),
     );
     this.routingManager.route(
       {
@@ -205,7 +205,7 @@ export class AdminHandlers {
         name: ConduitString.Required,
         token: ConduitString.Required,
       }),
-      this.serviceAdmin.renewToken.bind(this),
+      this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
     this.routingManager.registerRoutes();
   }
