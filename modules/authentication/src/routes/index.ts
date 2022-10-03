@@ -16,7 +16,7 @@ import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { TwoFa } from '../handlers/twoFa';
 import { TokenProvider } from '../handlers/tokenProvider';
 import authMiddleware from './middleware';
-import { MagicLinkHandlers } from '../handlers/magic.link';
+import { MagicLinkHandlers } from '../handlers/magicLink';
 
 type OAuthHandler = typeof oauth2;
 

@@ -39,10 +39,9 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
-    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
-        path: '/hook/magic-link',
+        path: '/magic-link',
         action: ConduitRouteActions.POST,
         description: `A webhook used to send a magic link to a user.`,
         bodyParams: {
@@ -63,12 +62,8 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         },
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
-        userId: ConduitString.Optional,
         accessToken: ConduitString.Optional,
-        refreshToken: config.generateRefreshToken
-          ? ConduitString.Required
-          : ConduitString.Optional,
-        message: ConduitString.Optional,
+        refreshToken: ConduitString.Optional,
       }),
       this.verifyLogin.bind(this),
     );
@@ -86,7 +81,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     });
 
     await this.sendMagicLinkMail(user, token);
-    return 'token send';
+    return 'token sent';
   }
 
   private async sendMagicLinkMail(user: User, token: Token) {
@@ -95,25 +90,19 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
     const result = { token, hostUrl: url };
     const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
-    await this.emailModule
-      .sendEmail('MagicLink', {
-        email: user.email,
-        sender: 'no-reply',
-        variables: {
-          link,
-        },
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+    await this.emailModule.sendEmail('MagicLink', {
+      email: user.email,
+      sender: 'no-reply',
+      variables: {
+        link,
+      },
+    });
     return 'Email sent';
   }
 
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const context = call.request.context;
-    if (isNil(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
 
     const clientId = context.clientId;
     const config = ConfigController.getInstance().config;
