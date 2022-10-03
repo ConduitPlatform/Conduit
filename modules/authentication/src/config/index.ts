@@ -9,6 +9,7 @@ import twitchConfig from './twitch.config';
 import slackConfig from './slack.config';
 import tokenConfig from './token.config';
 import localConfig from './local.config';
+import magicLinkConfig from './magicLink.config';
 
 const AppConfigSchema = {
   ...DefaultConfig,
@@ -21,6 +22,7 @@ const AppConfigSchema = {
   ...slackConfig,
   ...tokenConfig,
   ...localConfig,
+  ...magicLinkConfig,
 };
 const config = convict(AppConfigSchema);
 const configProperties = config.getProperties();
