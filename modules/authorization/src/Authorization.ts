@@ -26,9 +26,11 @@ import { RelationsController } from './controllers/relations.controller';
 import { ResourceController } from './controllers/resource.controller';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
+import metricsSchema from './metrics';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authorization.proto'),
     protoDescription: 'authorization.Authorization',
