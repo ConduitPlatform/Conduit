@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
@@ -50,18 +50,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local',
         action: ConduitRouteActions.POST,
-        description: `Login endpoint that can be used to authenticate. 
-              If 2FA is used for the user then instead of tokens 
-              you will receive a message indicating the need for a token from the 2FA mechanism.`,
+        description: `Login endpoint that can be used to authenticate.
+         Tokens are returned according to configuration.`,
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
-        userId: ConduitString.Optional,
         accessToken: ConduitString.Optional,
-        message: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
@@ -130,10 +127,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-email',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's email but requires password first.`,
+        description: `Changes the user's email (requires sudo access).`,
         bodyParams: {
           newEmail: ConduitString.Required,
-          password: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -169,7 +165,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async validate(): Promise<boolean> {
-    if (!this.initialized) {
+    const config = ConfigController.getInstance().config;
+    if (config.local.enabled) {
       try {
         await this.initDbAndEmail();
         ConduitGrpcSdk.Logger.log('Local is active');
@@ -180,6 +177,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         this.initialized = false;
         throw err;
       }
+    } else {
+      ConduitGrpcSdk.Logger.log('Local not active');
+      this.initialized = false;
     }
     return this.initialized;
   }
@@ -279,7 +279,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.PASSWORD_RESET_TOKEN,
       user: user._id,
     });
-    if (!isNil(oldToken)) await Token.getInstance().deleteOne(oldToken);
+    if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
+      await Token.getInstance().deleteOne(oldToken);
+    }
 
     const passwordResetTokenDoc = await Token.getInstance().create({
       type: TokenType.PASSWORD_RESET_TOKEN,
@@ -313,7 +315,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const user: User | null = await User.getInstance().findOne(
-      { _id: passwordResetTokenDoc.user },
+      { _id: passwordResetTokenDoc.user as string },
       '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -377,7 +379,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    const { newEmail, password } = call.request.params;
+    const { newEmail } = call.request.params;
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
@@ -399,13 +401,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser = await AuthUtils.dbUserChecks(user, password).catch(error => {
-      throw error;
-    });
 
     if (config.local.verification.required) {
       const verificationToken: Token | void = await AuthUtils.createToken(
-        dbUser._id,
+        user._id,
         { email: newEmail },
         TokenType.CHANGE_EMAIL_TOKEN,
       ).catch(e => {
@@ -433,7 +432,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
       return 'Verification required';
     }
-    await User.getInstance().findByIdAndUpdate(dbUser._id, { email: newEmail });
+    await User.getInstance().findByIdAndUpdate(user._id, { email: newEmail }, true);
     return 'Email changed successfully';
   }
 
@@ -539,19 +538,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       type: TokenType.VERIFICATION_TOKEN,
       user: user._id,
     });
-    if (!isNil(verificationToken)) {
-      const diffInMilliSec = Math.abs(
-        new Date(verificationToken.createdAt).getTime() - Date.now(),
-      );
-      if (diffInMilliSec < 600000) {
-        const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
-        throw new GrpcError(
-          status.RESOURCE_EXHAUSTED,
-          'Verification code not sent. You have to wait ' +
-            remainTime +
-            ' minutes to try again',
-        );
-      }
+    if (!isNil(verificationToken) && AuthUtils.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
         user: user._id,
         type: TokenType.VERIFICATION_TOKEN,

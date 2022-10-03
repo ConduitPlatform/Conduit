@@ -13,7 +13,7 @@ import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { AuthenticationRoutes } from './routes';
 import * as models from './models';
-import { AuthUtils } from './utils/auth';
+import { AuthUtils } from './utils';
 import { TokenType } from './constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import {
@@ -283,7 +283,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   private refreshAppRoutes() {
-    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
+    if (this.userRouter && !this.grpcSdk.isAvailable('router')) {
       return;
     }
     if (this.userRouter) {

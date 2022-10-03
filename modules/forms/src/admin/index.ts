@@ -1,143 +1,129 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  GrpcError,
-  RouteOptionType,
-  ConduitString,
-  ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE,
-  ConduitRouteObject,
+  ConduitNumber,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
   Query,
+  RouteOptionType,
+  RoutingManager,
+  TYPE,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FormsController } from '../controllers/forms.controller';
-import { Forms, FormReplies } from '../models';
+import { FormReplies, Forms } from '../models';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
+  private readonly routingManager: RoutingManager;
+
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly formsController: FormsController,
   ) {
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        getForms: this.getForms.bind(this),
-        createForm: this.createForm.bind(this),
-        updateForm: this.updateForm.bind(this),
-        deleteForms: this.deleteForms.bind(this),
-        getFormReplies: this.getFormReplies.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/forms',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried forms and their total count.`,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-            search: ConduitString.Optional,
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/forms',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried forms and their total count.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetForms', {
-          forms: [Forms.name],
-          count: ConduitNumber.Required,
-        }),
-        'getForms',
-      ),
-      constructConduitRoute(
-        {
-          path: '/forms',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new form.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            fields: ConduitJson.Required,
-            forwardTo: ConduitString.Required,
-            emailField: ConduitString.Required,
-            enabled: ConduitBoolean.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('GetForms', {
+        forms: [Forms.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getForms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/forms',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new form.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          fields: ConduitJson.Required,
+          forwardTo: ConduitString.Required,
+          emailField: ConduitString.Required,
+          enabled: ConduitBoolean.Required,
         },
-        new ConduitRouteReturnDefinition('Forms', 'String'),
-        'createForm',
-      ),
-      constructConduitRoute(
-        {
-          path: '/forms/:formId',
-          action: ConduitRouteActions.UPDATE,
-          description: `Updates a form.`,
-          urlParams: {
-            formId: { type: RouteOptionType.String, required: true },
-          },
-          bodyParams: {
-            name: ConduitString.Required,
-            fields: ConduitJson.Required,
-            forwardTo: ConduitString.Required,
-            emailField: ConduitString.Required,
-            enabled: ConduitBoolean.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('Forms', 'String'),
+      this.createForm.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/forms/:formId',
+        action: ConduitRouteActions.UPDATE,
+        description: `Updates a form.`,
+        urlParams: {
+          formId: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('UpdateForm', 'String'),
-        'updateForm',
-      ),
-      constructConduitRoute(
-        {
-          path: '/forms',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes queried forms.`,
-          queryParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
+        bodyParams: {
+          name: ConduitString.Required,
+          fields: ConduitJson.Required,
+          forwardTo: ConduitString.Required,
+          emailField: ConduitString.Required,
+          enabled: ConduitBoolean.Required,
         },
-        new ConduitRouteReturnDefinition('DeleteForms', {
-          forms: [Forms.name],
-          count: ConduitString.Required,
-        }),
-        'deleteForms',
-      ),
-      constructConduitRoute(
-        {
-          path: '/replies/:formId',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried form replies and their total count.`,
-          urlParams: {
-            formId: { type: RouteOptionType.String, required: true },
-          },
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('UpdateForm', 'String'),
+      this.updateForm.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/forms',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried forms.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
-        new ConduitRouteReturnDefinition('GetFormReplies', {
-          replies: [FormReplies.name],
-          count: ConduitNumber.Required,
-        }),
-        'getFormReplies',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('DeleteForms', {
+        forms: [Forms.name],
+        count: ConduitString.Required,
+      }),
+      this.deleteForms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/replies/:formId',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried form replies and their total count.`,
+        urlParams: {
+          formId: { type: RouteOptionType.String, required: true },
+        },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetFormReplies', {
+        replies: [FormReplies.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getFormReplies.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   async getForms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
