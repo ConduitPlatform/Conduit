@@ -283,7 +283,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   private refreshAppRoutes() {
-    if (this.userRouter && this.grpcSdk.isAvailable('router')) {
+    if (this.userRouter && !this.grpcSdk.isAvailable('router')) {
       return;
     }
     if (this.userRouter) {
