@@ -31,12 +31,3 @@ export type Query<T> =
   | setQuery<T>
   // | arrayQuery<T>
   | conditionalQuery<T>;
-
-const query: Query<{ name: string; age: number }> = {
-  name: 'John',
-  age: {
-    $gt: 18,
-    $in: [18, 19, 20],
-  },
-  $or: [{ name: 'kostas' }, { name: 'Giwrgos' }],
-};

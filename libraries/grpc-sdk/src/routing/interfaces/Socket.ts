@@ -39,11 +39,3 @@ export interface SocketProtoDescription {
   // JSON stringify EventsProtoDescription
   events: string;
 }
-
-function instanceOfSocketProtoDescription(object: any): object is SocketProtoDescription {
-  if (!('options' in object)) {
-    return false;
-  }
-
-  return 'events' in object && object.events !== '';
-}

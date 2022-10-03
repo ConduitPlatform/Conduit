@@ -1,8 +1,7 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 import { isNil } from 'lodash';
 
-export async function migrateIsSuperAdminToAdmin(grpcSdk: ConduitGrpcSdk) {
+export async function migrateIsSuperAdminToAdmin() {
   const originalAdmin: Admin | null = await Admin.getInstance().findOne({
     username: 'admin',
   });

@@ -129,7 +129,7 @@ export class RoutingManager {
     );
     await this._server.addService(
       protoDescriptions.path,
-      protoDescriptions.name + (this.isAdmin ? 'admin.Admin' : '.router.Router'),
+      protoDescriptions.name + (this.isAdmin ? '.admin.Admin' : '.router.Router'),
       modifiedFunctions,
     );
     const paths = Object.values(this._moduleRoutes);
