@@ -28,7 +28,6 @@ export class SchemaAdmin {
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {
       _id: call.request.params.id,
-      name: { $nin: this.database.systemSchemas },
     };
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
@@ -43,10 +42,8 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: ParsedQuery = {
-      name: { $nin: this.database.systemSchemas },
-    };
-    if (owner && owner.length !== 0) {
+    let query: ParsedQuery = {};
+    if (owner?.length !== 0) {
       query = {
         $and: [query, { ownerModule: { $in: owner } }],
       };
