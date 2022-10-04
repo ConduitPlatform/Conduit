@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitModel,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
@@ -86,17 +87,14 @@ export class CustomEndpointsAdmin {
         `${name} custom endpoint already exists`,
       );
     }
-    let error = paramValidation(call.request.params);
-    if (error !== true) {
-      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-    }
-    const findSchema = await this.findSchema(
+    const { schemaId, schemaName, fields } = await this.getAccessibleSchemaFields(
       operation,
       selectedSchema,
       selectedSchemaName,
     );
-    if (isNil(findSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    let error = paramValidation(call.request.params);
+    if (error !== true) {
+      throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
     error = operationValidation(operation, query, assignments);
     if (error !== true) {
@@ -110,17 +108,17 @@ export class CustomEndpointsAdmin {
     const endpoint = {
       name,
       operation,
-      selectedSchema: findSchema._id.toString(),
-      selectedSchemaName: findSchema.name,
+      selectedSchema: schemaId,
+      selectedSchemaName: schemaName,
       inputs,
       authentication,
       paginated: false,
       sorted: false,
-      returns: findSchema.name,
+      returns: schemaName,
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(operation, call, findSchema, endpoint);
+    error = paginationAndSortingValidation(operation, call, fields, endpoint);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -137,7 +135,7 @@ export class CustomEndpointsAdmin {
           assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
-            findSchema,
+            fields,
             inputs,
             operation,
             r.schemaField,
@@ -165,43 +163,35 @@ export class CustomEndpointsAdmin {
   async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, selectedSchema, selectedSchemaName, query, inputs, assignments } =
       call.request.params;
-
     if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Either selectedSchema or selectedSchemaName must be specified',
       );
     }
-
     const found = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
-
     const operation = found.operation;
 
-    const findSchema = await this.findSchema(
+    const { schemaName, fields } = await this.getAccessibleSchemaFields(
       operation,
       selectedSchema,
       selectedSchemaName,
     );
-    if (isNil(findSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
 
     let error = operationValidation(operation, query, assignments);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
     error = inputValidation(inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
-    error = paginationAndSortingValidation(operation, call, findSchema, null);
+    error = paginationAndSortingValidation(operation, call, fields, null);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -218,7 +208,7 @@ export class CustomEndpointsAdmin {
           assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
-            findSchema,
+            fields,
             inputs,
             operation,
             r.schemaField,
@@ -238,8 +228,8 @@ export class CustomEndpointsAdmin {
       // TODO: "Bugs are Welcome", we should clean this up
       found[key] = call.request.params[key];
     });
-    found.returns = findSchema.name;
-    found.selectedSchemaName = findSchema.name;
+    found.returns = schemaName;
+    found.selectedSchemaName = schemaName;
 
     const customEndpoint = await this.database
       .getSchemaModel('CustomEndpoints')
@@ -248,7 +238,7 @@ export class CustomEndpointsAdmin {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.INTERNAL, 'Could not update schema');
+      throw new GrpcError(status.INTERNAL, 'Could not update custom endpoint');
     }
 
     this.customEndpointController.refreshEndpoints();
@@ -303,21 +293,62 @@ export class CustomEndpointsAdmin {
     return { schemas };
   }
 
-  private async findSchema(
+  async schemaDetailsForOperation(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { schemaId, operation } = call.request.params;
+    const accessibleFields = await this.getAccessibleSchemaFields(operation, schemaId);
+    return { accessibleFields };
+  }
+
+  private async getAccessibleSchemaFields(
     operation: number,
-    selectedSchema?: string,
-    selectedSchemaName?: string,
-  ): Promise<IDeclaredSchema | null> {
-    if (operation !== OperationsEnum.GET) {
+    schemaId?: string,
+    schemaName?: string,
+  ): Promise<{
+    schemaId: string;
+    schemaName: string;
+    fields: ConduitModel;
+  }> {
+    if (!schemaId && !schemaName) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Specify schema id or name');
+    }
+    const schema: IDeclaredSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne(schemaId ? { _id: schemaId } : { name: schemaName });
+    if (!schema) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    if (!schema.modelOptions.conduit?.cms?.enabled) {
       throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Only get requests are allowed for schemas from other modules',
+        status.FAILED_PRECONDITION,
+        `CMS functionality not enabled for schema '${schema.name}'`,
       );
     }
-    return this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne(
-        selectedSchema ? { _id: selectedSchema } : { name: selectedSchemaName },
-      );
+    schemaId = schema._id.toString();
+    schemaName = schema.name;
+    // Field Accessibility Checks
+    const perms = schema.modelOptions.conduit.permissions!;
+    if (operation === OperationsEnum.GET) {
+      return { schemaId, schemaName, fields: schema.compiledFields };
+    } else if (operation === OperationsEnum.POST) {
+      const fields = perms.canCreate ? schema.compiledFields : {};
+      return { schemaId, schemaName, fields };
+    } else if ([OperationsEnum.PATCH, OperationsEnum.PUT].includes(operation)) {
+      const fields =
+        perms.canModify === 'Everything'
+          ? schema.compiledFields
+          : perms.canModify === 'ExtensionOnly'
+          ? perms.extendable
+            ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
+            : {}
+          : {};
+      return { schemaId, schemaName, fields };
+    } else if (operation === OperationsEnum.DELETE) {
+      const fields = perms.canDelete ? schema.compiledFields : {};
+      return { schemaId, schemaName, fields };
+    } else {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
+    }
   }
 }

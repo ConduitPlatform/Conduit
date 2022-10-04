@@ -514,7 +514,7 @@ export class AdminHandlers {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
-          operation: ConduitString.Optional,
+          operation: ConduitNumber.Optional,
           schemaName: [ConduitString.Optional],
         },
       },
@@ -578,6 +578,22 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('deleteCustomEndpoint', 'String'),
       this.customEndpointsAdmin.deleteCustomEndpoint.bind(this.customEndpointsAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:schemaId/cms/operation/:operation/details',
+        action: ConduitRouteActions.GET,
+        description:
+          'Returns accessible schema fields for target CMS operation (applicable for custom endpoints)',
+        urlParams: {
+          schemaId: ConduitString.Required,
+          operation: ConduitNumber.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('schemaDetailsForOperation', {
+        accessibleFields: ConduitJson.Required,
+      }),
+      this.customEndpointsAdmin.schemaDetailsForOperation.bind(this.customEndpointsAdmin),
     );
     this.routingManager.registerRoutes();
   }
