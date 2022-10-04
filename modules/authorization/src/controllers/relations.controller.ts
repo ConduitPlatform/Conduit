@@ -8,13 +8,16 @@ export class RelationsController {
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexController = IndexController.getInstance(grpcSdk),
+    private readonly indexController: IndexController,
   ) {}
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk) {
-      return (RelationsController._instance = new RelationsController(grpcSdk));
+    if (grpcSdk && indexController) {
+      return (RelationsController._instance = new RelationsController(
+        grpcSdk,
+        indexController,
+      ));
     }
     throw new Error('Missing grpcSdk or indexController!');
   }
@@ -66,6 +69,18 @@ export class RelationsController {
 
     await this.indexController.removeRelation(subject, relation, object);
 
+    return;
+  }
+
+  async deleteRelationById(id: string) {
+    const relationResource = await Relationship.getInstance().findOne({ _id: id });
+    if (!relationResource) throw new Error('Relation does not exist');
+    await Relationship.getInstance().deleteOne({ _id: id });
+    await this.indexController.removeRelation(
+      relationResource.subject,
+      relationResource.relation,
+      relationResource.resource,
+    );
     return;
   }
 

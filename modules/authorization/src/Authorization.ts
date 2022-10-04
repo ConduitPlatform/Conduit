@@ -10,7 +10,7 @@ import path from 'path';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 import {
   Decision,
   DeleteResourceRequest,
@@ -26,7 +26,6 @@ import { RelationsController } from './controllers/relations.controller';
 import { ResourceController } from './controllers/resource.controller';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
-import metricsSchema from './metrics';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -82,10 +81,14 @@ export default class Authorization extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
-      this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.indexController = IndexController.getInstance(this.grpcSdk);
-      this.relationsController = RelationsController.getInstance(this.grpcSdk);
+      this.relationsController = RelationsController.getInstance(
+        this.grpcSdk,
+        this.indexController,
+      );
+      this.indexController.relationsController = this.relationsController;
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
+      this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.updateHealth(HealthCheckStatus.SERVING);
     }

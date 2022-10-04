@@ -1,14 +1,12 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ResourceDefinition, ActorIndex, ObjectIndex, Relationship } from '../models';
+import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
 import { RelationsController } from './relations.controller';
 
 export class IndexController {
   private static _instance: IndexController;
+  private _relationsController: RelationsController;
 
-  private constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly relationsController = RelationsController.getInstance(grpcSdk),
-  ) {}
+  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
@@ -16,6 +14,10 @@ export class IndexController {
       return (IndexController._instance = new IndexController(grpcSdk));
     }
     throw new Error('No grpcSdk instance provided!');
+  }
+
+  set relationsController(relationsController: RelationsController) {
+    this._relationsController = relationsController;
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
@@ -117,8 +119,14 @@ export class IndexController {
     for (const permission of modifiedPermissions) {
       // check if any roles are no longer valid for a specific permission
       if (oldPermissions[permission] !== newPermissions[permission]) {
-        const oldRoleNames = Object.keys(oldPermissions[permission]);
-        const newRoleNames = Object.keys(newPermissions[permission]);
+        let oldRoleNames: string[] = [];
+        if (oldPermissions[permission]) {
+          oldRoleNames = Object.keys(oldPermissions[permission]);
+        }
+        let newRoleNames: string[] = [];
+        if (newPermissions[permission]) {
+          newRoleNames = Object.keys(newPermissions[permission]);
+        }
         const removedRoles = oldRoleNames.filter(role => !newRoleNames.includes(role));
         // for all roles that are no longer valid for a specific permission
         // remove all applicable actor indexes
@@ -226,7 +234,7 @@ export class IndexController {
         if (removedResources.length > 0) {
           for (const removedResource of removedResources) {
             await this.removeGeneralRelation(removedResource, relation, resource.name);
-            await this.relationsController.removeGeneralRelation(
+            await this._relationsController.removeGeneralRelation(
               removedResource,
               relation,
               resource.name,

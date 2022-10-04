@@ -81,6 +81,28 @@ export class ResourceController {
     );
   }
 
+  async updateResourceDefinitionById(id: string, resource: any) {
+    const resourceDefinition = await ResourceDefinition.getInstance().findOne({
+      _id: id,
+    });
+    if (!resourceDefinition) throw new Error('Resource not found');
+    if (resource.permissions !== resourceDefinition.permissions) {
+      await this.validateResourcePermissions(resource);
+      await this.indexController.modifyPermission(resourceDefinition, resource);
+    }
+    if (resource.relations !== resourceDefinition.relations) {
+      await this.validateResourceRelations(resource.relations);
+      await this.indexController.modifyRelations(resourceDefinition, resource);
+    }
+    delete resource._id;
+    delete resource.name;
+    return await ResourceDefinition.getInstance().findByIdAndUpdate(
+      resourceDefinition._id,
+      resource,
+      true,
+    );
+  }
+
   async deleteResource(name: string) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
