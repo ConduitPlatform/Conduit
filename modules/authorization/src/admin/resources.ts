@@ -79,8 +79,8 @@ export class ResourceHandler {
             id: ConduitString.Required,
           },
           bodyParams: {
-            relations: ConduitJson.Optional,
-            permissions: ConduitJson.Optional,
+            relations: ConduitJson.Required,
+            permissions: ConduitJson.Required,
           },
         },
         new ConduitRouteReturnDefinition(
