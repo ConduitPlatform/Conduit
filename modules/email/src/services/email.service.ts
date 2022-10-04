@@ -71,25 +71,20 @@ export class EmailService {
       if (isNil(templateFound.subject) && isNil(subject)) {
         throw new Error(`Subject is missing both in body params and template.`);
       }
-      if (!isNil(templateFound.subject) && !isNil(subject)) {
-        throw new Error(`Template already has a subject field.`);
-      }
       if (templateFound.externalManaged) {
         builder.setTemplate({ id: templateFound._id, variables: variables });
       } else {
-        const handled_body = handlebars.compile(templateFound.body);
-        bodyString = templateFound ? handled_body(variables) : body!;
+        bodyString = handlebars.compile(templateFound.body)(variables);
       }
-      const handled_subject = handlebars.compile(templateFound.subject);
-      subjectString = handled_subject(variables);
+      if (!isNil(templateFound.subject) && isNil(subject)) {
+        subjectString = handlebars.compile(templateFound.subject)(variables);
+      }
     }
 
     if (!isNil(sender)) {
       builder.setSender(sender);
     } else if (!isNil(templateFound!.sender)) {
       builder.setSender(templateFound!.sender);
-    } else if (!isNil(templateFound!.subject)) {
-      subjectString = templateFound!.subject;
     } else {
       throw new Error(`Sender must be provided!`);
     }

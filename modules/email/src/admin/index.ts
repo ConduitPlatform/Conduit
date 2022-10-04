@@ -496,9 +496,6 @@ export class AdminHandlers {
       if (isNil(templateFound.subject) && isNil(subject)) {
         throw new Error(`Subject is missing both in body params and template.`);
       }
-      if (!isNil(templateFound.subject) && !isNil(subject)) {
-        throw new Error(`Template already has a subject field.`);
-      }
     }
 
     await this.emailService
