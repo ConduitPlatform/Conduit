@@ -82,7 +82,9 @@ export class ResourceController {
   }
 
   async updateResourceDefinitionById(id: string, resource: any) {
-    const resourceDefinition = await ResourceDefinition.getInstance().findOne({ id });
+    const resourceDefinition = await ResourceDefinition.getInstance().findOne({
+      _id: id,
+    });
     if (!resourceDefinition) throw new Error('Resource not found');
     if (resource.permissions !== resourceDefinition.permissions) {
       await this.validateResourcePermissions(resource);

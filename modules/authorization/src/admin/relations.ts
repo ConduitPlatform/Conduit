@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   constructConduitRoute,
   ParsedRouterRequest,
+  Query,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RelationsController } from '../controllers/relations.controller';
@@ -111,12 +112,12 @@ export class RelationHandler {
     const { subject, relation, resource, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
+    let query: Query = {};
+    if (subject) query['subject'] = subject;
+    if (relation) query['relation'] = relation;
+    if (resource) query['resource'] = resource;
     const found = await Relationship.getInstance().findMany(
-      {
-        subject,
-        relation,
-        resource,
-      },
+      query,
       undefined,
       skip,
       limit,
@@ -125,7 +126,7 @@ export class RelationHandler {
     if (isNil(found)) {
       throw new Error('Relations not found');
     }
-    const count = await Relationship.getInstance().countDocuments({});
+    const count = await Relationship.getInstance().countDocuments(query);
     return { found, count };
   }
 
