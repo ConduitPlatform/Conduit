@@ -8,13 +8,16 @@ export class RelationsController {
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexController = IndexController.getInstance(grpcSdk),
+    private readonly indexController: IndexController,
   ) {}
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk) {
-      return (RelationsController._instance = new RelationsController(grpcSdk));
+    if (grpcSdk && indexController) {
+      return (RelationsController._instance = new RelationsController(
+        grpcSdk,
+        indexController,
+      ));
     }
     throw new Error('Missing grpcSdk or indexController!');
   }
