@@ -11,7 +11,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models';
-import { isNil } from 'lodash';
+import { isNil, isObject } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 import { ResourceController } from '../controllers/resource.controller';
 
@@ -106,6 +106,14 @@ export class ResourceHandler {
 
   async createResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, relations, permissions } = call.request.params;
+    if (
+      typeof relations !== 'object' ||
+      Array.isArray(relations) ||
+      typeof permissions !== 'object' ||
+      Array.isArray(permissions)
+    ) {
+      throw new Error('Relations and permissions must be objects');
+    }
     const resource = await ResourceController.getInstance().createResource({
       name,
       relations,
@@ -149,6 +157,14 @@ export class ResourceHandler {
 
   async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse | null> {
     const { id, relations, permissions } = call.request.params;
+    if (
+      typeof relations !== 'object' ||
+      Array.isArray(relations) ||
+      typeof permissions !== 'object' ||
+      Array.isArray(permissions)
+    ) {
+      throw new Error('Relations and permissions must be objects');
+    }
     const resource = await ResourceController.getInstance().updateResourceDefinitionById(
       id,
       { relations, permissions },

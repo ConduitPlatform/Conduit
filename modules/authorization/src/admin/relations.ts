@@ -71,13 +71,11 @@ export class RelationHandler {
       ),
       constructConduitRoute(
         {
-          path: '/relations',
+          path: '/relations/:id',
           action: ConduitRouteActions.DELETE,
           description: `Deletes a relation.`,
-          bodyParams: {
-            subject: ConduitString.Required,
-            relation: ConduitString.Required,
-            object: ConduitString.Required,
+          urlParams: {
+            id: ConduitString.Required,
           },
         },
         new ConduitRouteReturnDefinition('DeleteRelation'),
@@ -93,7 +91,10 @@ export class RelationHandler {
       relation,
       object,
     );
-    this.grpcSdk.bus?.publish('authentication:create:relation', JSON.stringify(relation));
+    this.grpcSdk.bus?.publish(
+      'authentication:create:relation',
+      JSON.stringify(newRelation),
+    );
     return newRelation;
   }
 
@@ -128,7 +129,7 @@ export class RelationHandler {
     return { found, count };
   }
 
-  async deleteRelation(call: ParsedRouterRequest) {
+  async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
     const found = Relationship.getInstance().findOne({ id });
     if (isNil(found)) {
