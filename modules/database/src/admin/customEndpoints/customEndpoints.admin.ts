@@ -315,20 +315,28 @@ export class CustomEndpointsAdmin {
     }
     const schema: IDeclaredSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findOne(schemaId ? { _id: schemaId } : { name: schemaName });
+      .model.findOne({
+        $and: [
+          { name: { $nin: this.database.systemSchemas } },
+          schemaId ? { _id: schemaId } : { name: schemaName },
+        ],
+      });
     if (!schema) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
-    if (!schema.modelOptions.conduit?.cms?.enabled) {
       throw new GrpcError(
-        status.FAILED_PRECONDITION,
-        `CMS functionality not enabled for schema '${schema.name}'`,
+        status.NOT_FOUND,
+        `Schema does not exist or can't be used by CMS`,
       );
     }
     schemaId = schema._id.toString();
     schemaName = schema.name;
     // Field Accessibility Checks
-    const perms = schema.modelOptions.conduit.permissions!;
+    const perms = schema.modelOptions.conduit?.permissions!;
+    if (!perms && operation !== OperationsEnum.GET) {
+      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
+      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
+      ConduitGrpcSdk.Logger.error(error);
+      throw new GrpcError(status.FAILED_PRECONDITION, error);
+    }
     if (operation === OperationsEnum.GET) {
       return { schemaId, schemaName, fields: schema.compiledFields };
     } else if (operation === OperationsEnum.POST) {

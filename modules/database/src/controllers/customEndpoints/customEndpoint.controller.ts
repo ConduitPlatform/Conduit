@@ -46,7 +46,6 @@ export class CustomEndpointController {
         }
         const routes: any[] = [];
         r.forEach(endpoint => {
-          if (!endpoint.selectedSchema.modelOptions.conduit?.cms?.enabled) return;
           routes.push(
             createCustomEndpointRoute(
               endpoint,

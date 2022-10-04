@@ -8,7 +8,6 @@ import {
 import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { IDeclaredSchema } from '../../interfaces';
 
 /**
  * Query schema:
