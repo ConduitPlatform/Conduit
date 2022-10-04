@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ResourceDefinition, ActorIndex, ObjectIndex } from '../models';
+import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
 import { RelationsController } from './relations.controller';
 
 export class IndexController {
@@ -119,8 +119,14 @@ export class IndexController {
     for (const permission of modifiedPermissions) {
       // check if any roles are no longer valid for a specific permission
       if (oldPermissions[permission] !== newPermissions[permission]) {
-        const oldRoleNames = Object.keys(oldPermissions[permission]);
-        const newRoleNames = Object.keys(newPermissions[permission]);
+        let oldRoleNames: string[] = [];
+        if (oldPermissions[permission]) {
+          oldRoleNames = Object.keys(oldPermissions[permission]);
+        }
+        let newRoleNames: string[] = [];
+        if (newPermissions[permission]) {
+          newRoleNames = Object.keys(newPermissions[permission]);
+        }
         const removedRoles = oldRoleNames.filter(role => !newRoleNames.includes(role));
         // for all roles that are no longer valid for a specific permission
         // remove all applicable actor indexes
