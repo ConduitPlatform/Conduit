@@ -9,6 +9,7 @@ const schema = {
   },
   subject: {
     type: TYPE.String,
+    required: true,
   },
   body: {
     type: TYPE.String,
@@ -46,7 +47,7 @@ export class EmailTemplate extends ConduitActiveSchema<EmailTemplate> {
   private static _instance: EmailTemplate;
   _id: string;
   name: string;
-  subject?: string;
+  subject: string;
   body: string;
   variables?: string[];
   sender?: string;
