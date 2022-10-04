@@ -1,126 +1,112 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   ConduitString,
-  ConduitNumber,
-  TYPE,
-  ConduitRouteObject,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
   Query,
+  RoutingManager,
+  TYPE,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils';
-import { ChatRoom, ChatMessage, User } from '../models';
+import { ChatMessage, ChatRoom, User } from '../models';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
+  private readonly routingManager: RoutingManager;
+
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        getRooms: this.getRooms.bind(this),
-        createRoom: this.createRoom.bind(this),
-        deleteRooms: this.deleteRooms.bind(this),
-        getMessages: this.getMessages.bind(this),
-        deleteMessages: this.deleteMessages.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/rooms',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried chat rooms.`,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-            search: ConduitString.Optional,
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried chat rooms.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetRooms', {
-          chatRoomDocuments: [ChatRoom.name],
-          count: ConduitNumber.Required,
-        }),
-        'getRooms',
-      ),
-      constructConduitRoute(
-        {
-          path: '/rooms',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new chat room.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            participants: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
+      },
+      new ConduitRouteReturnDefinition('GetRooms', {
+        chatRoomDocuments: [ChatRoom.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getRooms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new chat room.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          participants: { type: [TYPE.String], required: true }, // handler array check is still required
         },
-        new ConduitRouteReturnDefinition(ChatRoom.name),
-        'createRoom',
-      ),
-      constructConduitRoute(
-        {
-          path: '/rooms',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes queried chat rooms.`,
-          queryParams: {
-            ids: { type: [TYPE.String], required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition(ChatRoom.name),
+      this.createRoom.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried chat rooms.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true },
         },
-        new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
-        'deleteRooms',
-      ),
-      constructConduitRoute(
-        {
-          path: '/messages',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried messages.`,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-            senderUser: ConduitString.Optional,
-            roomId: ConduitString.Optional,
-            search: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
+      this.deleteRooms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/messages',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried messages.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          senderUser: ConduitString.Optional,
+          roomId: ConduitString.Optional,
+          search: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetMessages', {
-          messages: [ChatMessage.name],
-          count: ConduitNumber.Required,
-        }),
-        'getMessages',
-      ),
-      constructConduitRoute(
-        {
-          path: '/messages',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes queried messages.`,
-          queryParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
+      },
+      new ConduitRouteReturnDefinition('GetMessages', {
+        messages: [ChatMessage.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getMessages.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/messages',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried messages.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
-        new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
-        'deleteMessages',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
+      this.deleteMessages.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   private async validateUsersInput(users: User[]) {

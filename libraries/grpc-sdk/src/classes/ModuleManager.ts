@@ -83,6 +83,7 @@ export class ModuleManager<T> {
       const config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
         convictConfigParser(configSchema),
+        this.module.configOverride,
       );
 
       ConfigController.getInstance();

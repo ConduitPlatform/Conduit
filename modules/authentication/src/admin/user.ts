@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, {
+  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import { isNil } from 'lodash';
 import { User } from '../models';
 import escapeStringRegexp from 'escape-string-regexp';

@@ -48,10 +48,11 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     });
   }
 
-  configure(config: any, schema: any) {
+  configure(config: any, schema: any, override: boolean) {
     const request = {
       config: JSON.stringify(config),
       schema: JSON.stringify(schema),
+      override,
     };
     return this.client!.configure(request).then(res => {
       return JSON.parse(res.result);

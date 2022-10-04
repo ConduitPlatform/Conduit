@@ -3,7 +3,7 @@ import {
   ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
-} from '../types';
+} from './interfaces/types';
 
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
@@ -17,17 +17,6 @@ export type SocketRequestHandler = (
   call: ParsedSocketRequest,
 ) => Promise<UnparsedSocketResponse>;
 export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
-
-export function wrapCallObjectForRouter(call: Indexable): ParsedRouterRequest {
-  return {
-    request: {
-      params: call.request,
-      path: '',
-      headers: {},
-      context: {},
-    },
-  };
-}
 
 function generateLog(
   routerRequest: boolean,
@@ -72,6 +61,7 @@ export function wrapRouterGrpcFunction(
     try {
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);
+      call.request.cookies = parseRequestData(call.request.cookies);
 
       routerRequest = !call.request.hasOwnProperty('event');
       if (routerRequest) {

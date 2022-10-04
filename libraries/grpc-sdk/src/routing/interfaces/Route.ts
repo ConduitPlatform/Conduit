@@ -1,11 +1,11 @@
-import { ConduitModel } from './Model';
-import { IncomingHttpHeaders } from 'http';
+import { ConduitModel } from '../../interfaces';
 
 export interface ConduitRouteParameters {
   params?: { [field: string]: any };
   path?: string;
-  headers: IncomingHttpHeaders;
+  headers: { [field: string]: any };
   context?: { [field: string]: any };
+  cookies?: { [field: string]: any };
 }
 
 export enum RouteOptionType {

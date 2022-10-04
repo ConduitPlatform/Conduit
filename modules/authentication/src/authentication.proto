@@ -30,7 +30,7 @@ message SetConfigResponse {
 
 message UserLoginResponse {
   string accessToken = 1;
-  string refreshToken = 2;
+  optional string refreshToken = 2;
 }
 message UserDeleteResponse {
   string message = 1;

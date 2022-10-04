@@ -1,38 +1,35 @@
 import ConduitGrpcSdk, {
-  ConduitError,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
   RoutingManager,
-  ConduitRouteActions,
-  ConduitString,
-  ConduitRouteReturnDefinition,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { User } from '../../models';
-import { AuthUtils } from '../../utils/auth';
 import axios from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
-import { Cookie } from '../../interfaces/Cookie';
 import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
 import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
-import { Config } from '../../config';
 import { OAuthRequest } from './interfaces/MakeRequest';
+import { TokenProvider } from '../tokenProvider';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
 {
   grpcSdk: ConduitGrpcSdk;
-  private providerName: string;
-  protected settings: S;
   initialized: boolean = false;
   mapScopes: { [key: string]: string };
   defaultScopes: string[];
+  protected settings: S;
+  private providerName: string;
 
   constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
@@ -113,40 +110,16 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
     const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
-    const tokens = await this.createTokens(user._id, clientId, config);
+    ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      if (cookieOptions.path === '') {
-        delete cookieOptions.path;
-      }
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: tokens.accessToken,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(tokens.refreshToken)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: tokens.refreshToken,
-          options: cookieOptions,
-        });
-      }
-      return {
-        redirect: this.settings.finalRedirect,
-        setCookies: cookies,
-      };
-    }
-    return {
-      redirect:
-        this.settings.finalRedirect +
-        '?accessToken=' +
-        tokens.accessToken +
-        '&refreshToken=' +
-        tokens.refreshToken,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens(
+      {
+        user,
+        clientId,
+        config,
+      },
+      this.settings.finalRedirect,
+    );
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -158,38 +131,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
     const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
-    const tokens = await this.createTokens(
-      user._id,
-      call.request.params['clientId'],
-      config,
-    );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: tokens.accessToken,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(tokens.refreshToken)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: tokens.refreshToken,
-          options: cookieOptions,
-        });
-      }
-      return {
-        result: { message: 'Successfully authenticated' },
-        setCookies: cookies,
-      };
-    }
-    return {
-      userId: user!._id.toString(),
-      accessToken: tokens.accessToken,
-      refreshToken: !isNil(tokens.refreshToken) ? tokens.refreshToken : undefined,
-    };
+
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId: call.request.params['clientId'],
+      config,
+    });
   }
 
   async createOrUpdateUser(payload: Payload<T>): Promise<User> {
@@ -225,22 +173,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       });
     }
     return user!;
-  }
-
-  async createTokens(userId: string, clientId: string, config: Config) {
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: userId,
-        clientId: clientId,
-        config,
-      },
-    );
-    return {
-      userId: userId.toString(),
-      accessToken: accessToken!.token,
-      refreshToken: refreshToken?.token,
-    };
   }
 
   declareRoutes(routingManager: RoutingManager) {
