@@ -1,6 +1,6 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
-import { ICustomEndpoint } from '../../interfaces';
+import { PopulatedCustomEndpoint } from '../../interfaces';
 import { DatabaseRoutes } from '../../routes';
 import { createCustomEndpointRoute } from './utils';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
@@ -37,17 +37,22 @@ export class CustomEndpointController {
     }
     return this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({ enabled: true })
-      .then((r: ICustomEndpoint[]) => {
+      .model.findMany({ enabled: true }, undefined, undefined, undefined, undefined, [
+        'selectedSchema',
+      ])
+      .then((r: PopulatedCustomEndpoint[]) => {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No custom endpoints to register');
         }
         const routes: any[] = [];
-        r.forEach((schema: ICustomEndpoint) => {
+        r.forEach(endpoint => {
           routes.push(
-            createCustomEndpointRoute(schema, this.handler.entryPoint.bind(this.handler)),
+            createCustomEndpointRoute(
+              endpoint,
+              this.handler.entryPoint.bind(this.handler),
+            ),
           );
-          CustomEndpointHandler.addNewCustomOperationControl(schema);
+          CustomEndpointHandler.addNewCustomOperationControl(endpoint);
         });
 
         this.router!.addRoutes(routes, false);

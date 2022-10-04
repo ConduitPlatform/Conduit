@@ -85,6 +85,17 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/schemas/system',
+        action: ConduitRouteActions.GET,
+        description: `Returns Database-owned system schema names. Used for CMS operation validations.`,
+      },
+      new ConduitRouteReturnDefinition('GetDbSystemSchemas', {
+        databaseSystemSchemas: [ConduitString.Required],
+      }),
+      this.schemaAdmin.getDbSystemSchemas.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/schemas/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a schema.`,
@@ -123,31 +134,33 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           fields: ConduitJson.Required,
-          modelOptions: ConduitJson.Optional,
-          enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-          crudOperations: {
-            create: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Required,
+          conduitOptions: {
+            cms: {
+              crudOperations: {
+                create: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                read: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                update: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                delete: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+              },
             },
-            read: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Required,
+            permissions: {
+              extendable: ConduitBoolean.Optional,
+              canCreate: ConduitBoolean.Optional,
+              canModify: ConduitString.Optional,
+              canDelete: ConduitBoolean.Optional,
             },
-            update: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Required,
-            },
-            delete: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Required,
-            },
-          },
-          permissions: {
-            extendable: ConduitBoolean.Optional,
-            canCreate: ConduitBoolean.Optional,
-            canModify: ConduitString.Optional,
-            canDelete: ConduitBoolean.Optional,
           },
         },
       },
@@ -163,33 +176,34 @@ export class AdminHandlers {
           id: { type: RouteOptionType.String, required: true },
         },
         bodyParams: {
-          name: ConduitString.Optional,
           fields: ConduitJson.Optional,
-          modelOptions: ConduitJson.Optional,
-          enabled: ConduitBoolean.Optional, // move inside modelOptions (frontend-compat)
-          crudOperations: {
-            create: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Optional,
+          conduitOptions: {
+            cms: {
+              crudOperations: {
+                create: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                read: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                update: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+                delete: {
+                  enabled: ConduitBoolean.Optional,
+                  authenticated: ConduitBoolean.Optional,
+                },
+              },
             },
-            read: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Optional,
+            permissions: {
+              extendable: ConduitBoolean.Optional,
+              canCreate: ConduitBoolean.Optional,
+              canModify: ConduitString.Optional,
+              canDelete: ConduitBoolean.Optional,
             },
-            update: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Optional,
-            },
-            delete: {
-              enabled: ConduitBoolean.Optional,
-              authenticated: ConduitBoolean.Optional,
-            },
-          },
-          permissions: {
-            extendable: ConduitBoolean.Optional,
-            canCreate: ConduitBoolean.Optional,
-            canModify: ConduitString.Optional,
-            canDelete: ConduitBoolean.Optional,
           },
         },
       },
@@ -202,7 +216,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes queried schemas.`,
         queryParams: {
-          ids: [ConduitJson.Required], // handler array check is still required
+          ids: [ConduitString.Required], // handler array check is still required
           deleteData: ConduitBoolean.Required,
         },
       },
@@ -230,7 +244,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Enables/disables queried schemas.`,
         bodyParams: {
-          ids: { type: [TYPE.JSON], required: true }, // handler array check is still required
+          ids: [ConduitString.Required], // handler array check is still required
           enabled: ConduitBoolean.Required,
         },
       },
@@ -355,21 +369,21 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
       this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
-    ),
-      // Documents
-      this.routingManager.route(
-        {
-          path: '/schemas/:schemaName/docs/:id',
-          action: ConduitRouteActions.GET,
-          description: `Returns a document.`,
-          urlParams: {
-            schemaName: { type: RouteOptionType.String, required: true },
-            id: { type: RouteOptionType.String, required: true },
-          },
+    );
+    // Documents
+    this.routingManager.route(
+      {
+        path: '/schemas/:schemaName/docs/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a document.`,
+        urlParams: {
+          schemaName: { type: RouteOptionType.String, required: true },
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
-        this.documentsAdmin.getDocument.bind(this.documentsAdmin),
-      );
+      },
+      new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
+      this.documentsAdmin.getDocument.bind(this.documentsAdmin),
+    );
     this.routingManager.route(
       {
         path: '/schemas/:schemaName/query',
@@ -484,7 +498,7 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('GetSchemasWithCustomEndpoints', {
         schemaNames: [ConduitString.Required],
-        schemaIds: [ConduitNumber.Required],
+        schemaIds: [ConduitString.Required],
       }),
       this.customEndpointsAdmin.getSchemasWithCustomEndpoints.bind(
         this.customEndpointsAdmin,
@@ -500,7 +514,7 @@ export class AdminHandlers {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
-          operation: ConduitString.Optional,
+          operation: ConduitNumber.Optional,
           schemaName: [ConduitString.Optional],
         },
       },
@@ -564,6 +578,22 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('deleteCustomEndpoint', 'String'),
       this.customEndpointsAdmin.deleteCustomEndpoint.bind(this.customEndpointsAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:schemaId/cms/operation/:operation/details',
+        action: ConduitRouteActions.GET,
+        description:
+          'Returns accessible schema fields for target CMS operation (applicable for custom endpoints)',
+        urlParams: {
+          schemaId: ConduitString.Required,
+          operation: ConduitNumber.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('schemaDetailsForOperation', {
+        accessibleFields: ConduitJson.Required,
+      }),
+      this.customEndpointsAdmin.schemaDetailsForOperation.bind(this.customEndpointsAdmin),
     );
     this.routingManager.registerRoutes();
   }
