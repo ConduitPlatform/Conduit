@@ -48,6 +48,7 @@ export class Relationship extends ConduitActiveSchema<Relationship> {
   resource: string;
   resourceId: string;
   subject: string;
+  relation: string;
   computedTuple: string;
   createdAt: Date;
   updatedAt: Date;

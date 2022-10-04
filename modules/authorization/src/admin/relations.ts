@@ -36,13 +36,11 @@ export class RelationHandler {
       ),
       constructConduitRoute(
         {
-          path: '/relation',
+          path: '/relation/:id',
           action: ConduitRouteActions.GET,
           description: `Returns a relation.`,
-          queryParams: {
-            subject: ConduitString.Required,
-            relation: ConduitString.Required,
-            object: ConduitString.Required,
+          urlParams: {
+            id: ConduitString.Required,
           },
         },
         new ConduitRouteReturnDefinition(
@@ -60,6 +58,9 @@ export class RelationHandler {
             subject: ConduitString.Optional,
             relation: ConduitString.Optional,
             object: ConduitString.Optional,
+            skip: ConduitNumber.Optional,
+            limit: ConduitNumber.Optional,
+            sort: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('GetRelations', {
@@ -81,33 +82,23 @@ export class RelationHandler {
         new ConduitRouteReturnDefinition('DeleteRelation'),
         'deleteRelation',
       ),
-      constructConduitRoute(
-        {
-          path: '/relations/:resource',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes all relations associated with a resource.`,
-          urlParams: {
-            resource: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('DeleteRelationsOfResource'),
-        'deleteRelationsOfResource',
-      ),
     ];
   }
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { subject, relation, object } = call.request.params;
-    return RelationsController.getInstance().createRelation(subject, relation, object);
-  }
-
-  async getRelation(call: ParsedRouterRequest): Promise<Relationship | null> {
-    const { subject, relation, object } = call.request.params;
-    const found = RelationsController.getInstance().getRelation(
+    const newRelation = await RelationsController.getInstance().createRelation(
       subject,
       relation,
       object,
     );
+    this.grpcSdk.bus?.publish('authentication:create:relation', JSON.stringify(relation));
+    return newRelation;
+  }
+
+  async getRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const found = await Relationship.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new Error('Relation not found');
     }
@@ -115,21 +106,33 @@ export class RelationHandler {
   }
 
   async getRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, resource } = call.request.params;
-    return RelationsController.getInstance().findRelations({
-      subject,
-      relation,
-      resource,
-    });
+    const { subject, relation, resource, sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const found = await Relationship.getInstance().findMany(
+      {
+        subject,
+        relation,
+        resource,
+      },
+      undefined,
+      skip,
+      limit,
+      sort,
+    );
+    if (isNil(found)) {
+      throw new Error('Relations not found');
+    }
+    return found;
   }
 
   async deleteRelation(call: ParsedRouterRequest) {
-    const { subject, relation, object } = call.request.params;
-    return RelationsController.getInstance().deleteRelation(subject, relation, object);
-  }
-
-  async deleteRelationsOfResource(call: ParsedRouterRequest) {
-    const { name } = call.request.params;
-    return RelationsController.getInstance().removeResource(name);
+    const { id } = call.request.params;
+    const found = Relationship.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new Error('Relation not found');
+    }
+    await RelationsController.getInstance().deleteRelationById(id);
+    return 'Relation deleted successfully';
   }
 }

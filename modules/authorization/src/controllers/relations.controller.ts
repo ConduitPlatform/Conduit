@@ -69,6 +69,18 @@ export class RelationsController {
     return;
   }
 
+  async deleteRelationById(id: string) {
+    const relationResource = await Relationship.getInstance().findOne({ _id: id });
+    if (!relationResource) throw new Error('Relation does not exist');
+    await Relationship.getInstance().deleteOne({ _id: id });
+    await this.indexController.removeRelation(
+      relationResource.subject,
+      relationResource.relation,
+      relationResource.resource,
+    );
+    return;
+  }
+
   async removeResource(name: string) {
     // delete all relations that could be associated with resource
     await Relationship.getInstance().deleteMany({
