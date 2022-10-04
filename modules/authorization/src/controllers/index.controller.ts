@@ -96,6 +96,92 @@ export class IndexController {
     });
   }
 
+  async _processRemovedPermissions(
+    removedRoles: string[],
+    permission: string,
+    resource: ResourceDefinition,
+    oldResource: ResourceDefinition,
+  ) {
+    // for all roles that are no longer valid for a specific permission
+    // remove all applicable actor indexes
+    if (removedRoles.length > 0) {
+      for (const removedRole of removedRoles) {
+        if (removedRole.indexOf('->') === -1) {
+          await ObjectIndex.getInstance().deleteMany({
+            subject: {
+              $regex: `${resource.name}.*#${permission}`,
+              $options: 'i',
+            },
+            entity: {
+              $regex: `${resource.name}.*#${removedRole}`,
+              $options: 'i',
+            },
+          });
+        } else {
+          const [relatedSubject, action] = removedRole.split('->');
+          const removedResources = oldResource.relations[relatedSubject];
+          for (const removedResource of removedResources) {
+            await ObjectIndex.getInstance().deleteMany({
+              subject: {
+                $regex: `${resource.name}.*#${permission}`,
+                $options: 'i',
+              },
+              entity: {
+                $regex: `${removedResource}.*#${action}`,
+                $options: 'i',
+              },
+            });
+          }
+        }
+      }
+    }
+  }
+
+  async _processAddPermission(
+    addedRoles: string[],
+    permission: string,
+    resource: ResourceDefinition,
+  ) {
+    // for all roles that are newly valid for a specific permission
+    // add all applicable actor indexes
+    if (addedRoles.length > 0) {
+      for (const addedRole of addedRoles) {
+        if (addedRole.indexOf('->') === -1) {
+          await this.createOrUpdateObject(
+            resource.name + '#' + permission,
+            addedRole === '*' ? `*` : `${resource.name}#${addedRole}`,
+          );
+        } else {
+          const [relatedSubject, action] = addedRole.split('->');
+          const addedResources = resource.relations[relatedSubject];
+
+          for (const addedResource of addedResources) {
+            const possibleConnections = await ObjectIndex.getInstance().findMany({
+              subject: `${addedResource}.*#${action}`,
+            });
+            const applicableObjects = await ObjectIndex.getInstance().findMany({
+              subject: `${resource.name}.*`,
+            });
+            let objectNames: string[] = [];
+            if (applicableObjects.length > 0) {
+              objectNames = applicableObjects.map(object => {
+                return object.subject.split('#')[0];
+              });
+            }
+            for (const object of objectNames) {
+              for (const connection of possibleConnections) {
+                await this.createOrUpdateObject(
+                  object + '#' + permission,
+                  connection.entity,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   async modifyPermission(oldResource: any, resource: any) {
     const oldPermissions = oldResource.permissions;
     const newPermissions = resource.permissions;
@@ -128,78 +214,14 @@ export class IndexController {
           newRoleNames = Object.keys(newPermissions[permission]);
         }
         const removedRoles = oldRoleNames.filter(role => !newRoleNames.includes(role));
-        // for all roles that are no longer valid for a specific permission
-        // remove all applicable actor indexes
-        if (removedRoles.length > 0) {
-          for (const removedRole of removedRoles) {
-            if (removedRole.indexOf('->') === -1) {
-              await ObjectIndex.getInstance().deleteMany({
-                subject: {
-                  $regex: `${resource.name}.*#${permission}`,
-                  $options: 'i',
-                },
-                entity: {
-                  $regex: `${resource.name}.*#${removedRole}`,
-                  $options: 'i',
-                },
-              });
-            } else {
-              const [relatedSubject, action] = removedRole.split('->');
-              const removedResources = oldResource.relations[relatedSubject];
-              for (const removedResource of removedResources) {
-                await ObjectIndex.getInstance().deleteMany({
-                  subject: {
-                    $regex: `${resource.name}.*#${permission}`,
-                    $options: 'i',
-                  },
-                  entity: {
-                    $regex: `${removedResource}.*#${action}`,
-                    $options: 'i',
-                  },
-                });
-              }
-            }
-          }
-        }
+        await this._processRemovedPermissions(
+          removedRoles,
+          permission,
+          resource,
+          oldResource,
+        );
         const addedRoles = newRoleNames.filter(role => !oldRoleNames.includes(role));
-        // for all roles that are newly valid for a specific permission
-        // add all applicable actor indexes
-        if (addedRoles.length > 0) {
-          for (const addedRole of addedRoles) {
-            if (addedRole.indexOf('->') === -1) {
-              await this.createOrUpdateObject(
-                resource.name + '#' + permission,
-                addedRole === '*' ? `*` : `${resource.name}#${addedRole}`,
-              );
-            } else {
-              const [relatedSubject, action] = addedRole.split('->');
-              const addedResources = resource.relations[relatedSubject];
-
-              for (const addedResource of addedResources) {
-                const possibleConnections = await ObjectIndex.getInstance().findMany({
-                  subject: `${addedResource}.*#${action}`,
-                });
-                const applicableObjects = await ObjectIndex.getInstance().findMany({
-                  subject: `${resource.name}.*`,
-                });
-                let objectNames: string[] = [];
-                if (applicableObjects.length > 0) {
-                  objectNames = applicableObjects.map(object => {
-                    return object.subject.split('#')[0];
-                  });
-                }
-                for (const object of objectNames) {
-                  for (const connection of possibleConnections) {
-                    await this.createOrUpdateObject(
-                      object + '#' + permission,
-                      connection.entity,
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
+        await this._processAddPermission(addedRoles, permission, resource);
       }
     }
   }
