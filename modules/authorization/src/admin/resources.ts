@@ -2,106 +2,103 @@ import ConduitGrpcSdk, {
   ConduitJson,
   ConduitNumber,
   ConduitRouteActions,
-  ConduitRouteObject,
   ConduitRouteReturnDefinition,
   ConduitString,
-  constructConduitRoute,
   ParsedRouterRequest,
   Query,
+  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models';
-import { isNil, isObject } from 'lodash';
+import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 import { ResourceController } from '../controllers/resource.controller';
 
 export class ResourceHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  getRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/resources',
-          action: ConduitRouteActions.POST,
-          description: `Creates a resource.`,
-          bodyParams: {
-            name: ConduitString.Required,
-            relations: ConduitJson.Required,
-            permissions: ConduitJson.Required,
-          },
+  registerRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: '/resources',
+        action: ConduitRouteActions.POST,
+        description: `Creates a resource.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          relations: ConduitJson.Required,
+          permissions: ConduitJson.Required,
         },
-        new ConduitRouteReturnDefinition(
-          'CreateResource',
-          ResourceDefinition.getInstance().fields,
-        ),
-        'createResource',
+      },
+      new ConduitRouteReturnDefinition(
+        'CreateResource',
+        ResourceDefinition.getInstance().fields,
       ),
-      constructConduitRoute(
-        {
-          path: '/resources',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried resources.`,
-          queryParams: {
-            search: ConduitString.Optional,
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-          },
+      this.createResource.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/resources',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried resources.`,
+        queryParams: {
+          search: ConduitString.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetResources', {
-          resources: [ResourceDefinition.getInstance().fields],
-          count: ConduitNumber.Required,
-        }),
-        'getResources',
-      ),
-      constructConduitRoute(
-        {
-          path: '/resources/:id',
-          action: ConduitRouteActions.GET,
-          description: `Returns a resource.`,
-          urlParams: {
-            id: ConduitString.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('GetResources', {
+        resources: [ResourceDefinition.getInstance().fields],
+        count: ConduitNumber.Required,
+      }),
+      this.getResources.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/resources/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a resource.`,
+        urlParams: {
+          id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition(
-          'GetResource',
-          ResourceDefinition.getInstance().fields,
-        ),
-        'getResource',
+      },
+      new ConduitRouteReturnDefinition(
+        'Resource',
+        ResourceDefinition.getInstance().fields,
       ),
-      constructConduitRoute(
-        {
-          path: '/resources/:id',
-          action: ConduitRouteActions.PATCH,
-          description: `Updates a resource.`,
-          urlParams: {
-            id: ConduitString.Required,
-          },
-          bodyParams: {
-            relations: ConduitJson.Required,
-            permissions: ConduitJson.Required,
-          },
+      this.getResource.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/resources/:id',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates a resource.`,
+        urlParams: {
+          id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition(
-          'PatchResource',
-          ResourceDefinition.getInstance().fields,
-        ),
-        'patchResource',
-      ),
-      constructConduitRoute(
-        {
-          path: '/resources/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a resource.`,
-          urlParams: {
-            id: ConduitString.Required,
-          },
+        bodyParams: {
+          relations: ConduitJson.Required,
+          permissions: ConduitJson.Required,
         },
-        new ConduitRouteReturnDefinition('DeleteResource'),
-        'deleteResource',
+      },
+      new ConduitRouteReturnDefinition(
+        'PatchResource',
+        ResourceDefinition.getInstance().fields,
       ),
-    ];
+      this.patchResource.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/resources/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a resource.`,
+        urlParams: {
+          id: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteResource'),
+      this.deleteResource.bind(this),
+    );
   }
 
   async createResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -155,7 +152,7 @@ export class ResourceHandler {
     return ResourceController.getInstance().findResourceDefinitionById(id);
   }
 
-  async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse | null> {
+  async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, relations, permissions } = call.request.params;
     if (
       typeof relations !== 'object' ||
@@ -175,11 +172,11 @@ export class ResourceHandler {
 
   async deleteResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = ResourceDefinition.getInstance().findOne({ id });
+    const found = ResourceDefinition.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new Error('Resource does not exist');
     }
-    await ResourceDefinition.getInstance().deleteOne({ id });
+    await ResourceDefinition.getInstance().deleteOne({ _id: id });
     return 'Resource deleted successfully';
   }
 }

@@ -91,7 +91,7 @@ export class IndexController {
             $options: 'i',
           },
         },
-        { resource: { $regex: `${objectResource}.*#${relation}`, $options: 'i' } },
+        { entity: { $regex: `${objectResource}.*#${relation}`, $options: 'i' } },
       ],
     });
   }

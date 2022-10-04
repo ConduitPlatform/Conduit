@@ -1,12 +1,11 @@
 import ConduitGrpcSdk, {
   ConduitNumber,
   ConduitRouteActions,
-  ConduitRouteObject,
   ConduitRouteReturnDefinition,
   ConduitString,
-  constructConduitRoute,
   ParsedRouterRequest,
   Query,
+  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RelationsController } from '../controllers/relations.controller';
@@ -16,73 +15,68 @@ import { Relationship } from '../models';
 export class RelationHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  getRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/relations',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new relation.`,
-          bodyParams: {
-            subject: ConduitString.Required,
-            relation: ConduitString.Required,
-            object: ConduitString.Required,
-          },
+  registerRoutes(routingManager: RoutingManager) {
+    routingManager.route(
+      {
+        path: '/relations',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new relation.`,
+        bodyParams: {
+          subject: ConduitString.Required,
+          relation: ConduitString.Required,
+          object: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition(
-          'CreateRelation',
-          Relationship.getInstance().fields,
-        ),
-        'createRelation',
+      },
+      new ConduitRouteReturnDefinition(
+        'CreateRelation',
+        Relationship.getInstance().fields,
       ),
-      constructConduitRoute(
-        {
-          path: '/relations/:id',
-          action: ConduitRouteActions.GET,
-          description: `Returns a relation.`,
-          urlParams: {
-            id: ConduitString.Required,
-          },
+      this.createRelation.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/relations/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a relation.`,
+        urlParams: {
+          id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition(
-          'GetRelation',
-          Relationship.getInstance().fields,
-        ),
-        'getRelation',
-      ),
-      constructConduitRoute(
-        {
-          path: '/relations',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried relations.`,
-          queryParams: {
-            subject: ConduitString.Optional,
-            relation: ConduitString.Optional,
-            object: ConduitString.Optional,
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('Relation', Relationship.getInstance().fields),
+      this.getRelation.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/relations',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried relations.`,
+        queryParams: {
+          subject: ConduitString.Optional,
+          relation: ConduitString.Optional,
+          object: ConduitString.Optional,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetRelations', {
-          relations: [Relationship.getInstance().fields],
-          count: ConduitNumber.Required,
-        }),
-        'getRelations',
-      ),
-      constructConduitRoute(
-        {
-          path: '/relations/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes a relation.`,
-          urlParams: {
-            id: ConduitString.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('GetRelations', {
+        relations: [Relationship.getInstance().fields],
+        count: ConduitNumber.Required,
+      }),
+      this.getRelations.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/relations/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a relation.`,
+        urlParams: {
+          id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('DeleteRelation'),
-        'deleteRelation',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('DeleteRelation'),
+      this.deleteRelation.bind(this),
+    );
   }
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -101,7 +95,7 @@ export class RelationHandler {
 
   async getRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = await Relationship.getInstance().findOne({ id });
+    const found = await Relationship.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new Error('Relation not found');
     }
@@ -132,7 +126,7 @@ export class RelationHandler {
 
   async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = Relationship.getInstance().findOne({ id });
+    const found = Relationship.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new Error('Relation not found');
     }

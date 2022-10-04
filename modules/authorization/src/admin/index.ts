@@ -1,45 +1,30 @@
 import ConduitGrpcSdk, {
   GrpcServer,
   ConduitRouteObject,
+  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import { ResourceHandler } from './resources';
 import { RelationHandler } from './relations';
 
 export class AdminHandlers {
-  private readonly ResourceHandler: ResourceHandler;
-  private readonly RelationHandler: RelationHandler;
+  private readonly resourceHandler: ResourceHandler;
+  private readonly relationHandler: RelationHandler;
+  private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
-    this.ResourceHandler = new ResourceHandler(this.grpcSdk);
-    this.RelationHandler = new RelationHandler(this.grpcSdk);
+    this.resourceHandler = new ResourceHandler(this.grpcSdk);
+    this.relationHandler = new RelationHandler(this.grpcSdk);
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        createResource: this.ResourceHandler.createResource.bind(this),
-        getResources: this.ResourceHandler.getResources.bind(this),
-        getResource: this.ResourceHandler.getResource.bind(this),
-        patchResource: this.ResourceHandler.patchResource.bind(this),
-        deleteResource: this.ResourceHandler.deleteResource.bind(this),
-        createRelation: this.RelationHandler.createRelation.bind(this),
-        getRelation: this.RelationHandler.getRelation.bind(this),
-        getRelations: this.RelationHandler.getRelations.bind(this),
-        deleteRelation: this.RelationHandler.deleteRelation.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.log('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [...this.RelationHandler.getRoutes(), ...this.ResourceHandler.getRoutes()];
+    this.routingManager.clear();
+    this.relationHandler.registerRoutes(this.routingManager);
+    this.resourceHandler.registerRoutes(this.routingManager);
   }
 
   reconstructIndices() {

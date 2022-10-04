@@ -81,7 +81,10 @@ export class ResourceController {
     );
   }
 
-  async updateResourceDefinitionById(id: string, resource: any) {
+  async updateResourceDefinitionById(
+    id: string,
+    resource: any,
+  ): Promise<ResourceDefinition> {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       _id: id,
     });
@@ -96,11 +99,11 @@ export class ResourceController {
     }
     delete resource._id;
     delete resource.name;
-    return await ResourceDefinition.getInstance().findByIdAndUpdate(
+    return (await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
       true,
-    );
+    ))!;
   }
 
   async deleteResource(name: string) {
