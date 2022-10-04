@@ -88,6 +88,8 @@ export class EmailService {
       builder.setSender(sender);
     } else if (!isNil(templateFound!.sender)) {
       builder.setSender(templateFound!.sender);
+    } else if (!isNil(templateFound!.subject)) {
+      subjectString = templateFound!.subject;
     } else {
       throw new Error(`Sender must be provided!`);
     }
