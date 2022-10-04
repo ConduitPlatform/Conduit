@@ -69,7 +69,7 @@ export class AdminHandlers {
         bodyParams: {
           _id: ConduitString.Optional, // externally managed
           name: ConduitString.Required,
-          subject: ConduitString.Optional,
+          subject: ConduitString.Required,
           body: ConduitString.Required,
           sender: ConduitString.Optional,
           externalManaged: ConduitBoolean.Optional,
@@ -290,7 +290,7 @@ export class AdminHandlers {
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(call.request.params.id, templateDocument)
+      .findByIdAndUpdate(call.request.params.id, templateDocument, true)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -485,6 +485,17 @@ export class AdminHandlers {
         .get('email')
         .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
       sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
+    }
+    if (templateName) {
+      const templateFound = await EmailTemplate.getInstance().findOne({
+        name: templateName,
+      });
+      if (isNil(templateFound)) {
+        throw new Error(`Template ${templateName} not found`);
+      }
+      if (isNil(templateFound.subject) && isNil(subject)) {
+        throw new Error(`Subject is missing both in body params and template.`);
+      }
     }
 
     await this.emailService

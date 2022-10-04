@@ -68,8 +68,8 @@ export class EmailService {
       if (isNil(templateFound)) {
         throw new Error(`Template ${template} not found`);
       }
-      if (isNil(templateFound.subject)) {
-        throw new Error(`Template is missing subject field`);
+      if (isNil(templateFound.subject) && isNil(subject)) {
+        throw new Error(`Subject is missing both in body params and template.`);
       }
       if (templateFound.externalManaged) {
         builder.setTemplate({ id: templateFound._id, variables: variables });
