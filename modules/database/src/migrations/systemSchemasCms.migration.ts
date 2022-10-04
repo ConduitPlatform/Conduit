@@ -3,6 +3,11 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { IDeclaredSchema } from '../interfaces';
 
+/*
+ Removes 'cms' model option from Database's system schemas and deletes any registered CustomEndpoints.
+ Shouldn't require a controller refresh via bus as this runs before Router is available.
+ */
+
 export async function migrateSystemSchemasCms(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {

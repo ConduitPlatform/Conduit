@@ -13,23 +13,23 @@ export async function migrateCustomEndpoints(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
   const model = adapter.getSchemaModel('CustomEndpoints').model;
-  const customEndpoints: ICustomEndpoint[] = await model.findMany({});
+  const customEndpoints: ICustomEndpoint[] = await model.findMany({
+    $or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }],
+  });
   for (const endpoint of customEndpoints) {
-    if (!endpoint.selectedSchema) {
-      const schemaModel = adapter.getSchemaModel('_DeclaredSchema').model;
-      const selectedSchema = await schemaModel.findOne({
-        name: endpoint.selectedSchemaName,
-      });
-      if (!selectedSchema) {
-        ConduitGrpcSdk.Logger.warn(
-          `Failed to fix incomplete CustomEndpoint '${endpoint.name}` +
-            ` missing selectedSchema field, with unknown schema name '${endpoint.selectedSchemaName}'`,
-        );
-        continue;
-      }
-      await model.findByIdAndUpdate(endpoint._id, {
-        selectedSchema: selectedSchema._id.toString(),
-      });
+    const schemaModel = adapter.getSchemaModel('_DeclaredSchema').model;
+    const selectedSchema = await schemaModel.findOne({
+      name: endpoint.selectedSchemaName,
+    });
+    if (!selectedSchema) {
+      ConduitGrpcSdk.Logger.warn(
+        `Failed to fix incomplete CustomEndpoint '${endpoint.name}` +
+          ` missing selectedSchema field, with unknown schema name '${endpoint.selectedSchemaName}'`,
+      );
+      continue;
     }
+    await model.findByIdAndUpdate(endpoint._id, {
+      selectedSchema: selectedSchema._id.toString(),
+    });
   }
 }
