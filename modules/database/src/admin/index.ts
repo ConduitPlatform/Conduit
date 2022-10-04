@@ -369,21 +369,21 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
       this.schemaAdmin.finalizeSchemas.bind(this.schemaAdmin),
-    ),
-      // Documents
-      this.routingManager.route(
-        {
-          path: '/schemas/:schemaName/docs/:id',
-          action: ConduitRouteActions.GET,
-          description: `Returns a document.`,
-          urlParams: {
-            schemaName: { type: RouteOptionType.String, required: true },
-            id: { type: RouteOptionType.String, required: true },
-          },
+    );
+    // Documents
+    this.routingManager.route(
+      {
+        path: '/schemas/:schemaName/docs/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns a document.`,
+        urlParams: {
+          schemaName: { type: RouteOptionType.String, required: true },
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
-        this.documentsAdmin.getDocument.bind(this.documentsAdmin),
-      );
+      },
+      new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
+      this.documentsAdmin.getDocument.bind(this.documentsAdmin),
+    );
     this.routingManager.route(
       {
         path: '/schemas/:schemaName/query',
