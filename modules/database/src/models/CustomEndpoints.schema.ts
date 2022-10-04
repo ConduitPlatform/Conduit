@@ -14,7 +14,8 @@ export const CustomEndpoints = new ConduitSchema(
       required: true,
     },
     selectedSchema: {
-      type: TYPE.ObjectId,
+      type: TYPE.Relation,
+      model: '_DeclaredSchema',
       required: false,
     },
     selectedSchemaName: {

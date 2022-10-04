@@ -1,3 +1,5 @@
+import { ConduitDatabaseSchema } from './ConduitDatabaseSchema';
+
 export interface ICustomEndpoint {
   _id?: any;
   name: string;
@@ -25,3 +27,7 @@ export interface ICustomEndpoint {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export type PopulatedCustomEndpoint = Omit<ICustomEndpoint, 'selectedSchema'> & {
+  selectedSchema: ConduitDatabaseSchema; // @dirty-type-cast
+};

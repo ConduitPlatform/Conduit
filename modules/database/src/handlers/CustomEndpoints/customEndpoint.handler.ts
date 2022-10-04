@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
-import { ICustomEndpoint, Sort } from '../../interfaces';
+import { ICustomEndpoint, PopulatedCustomEndpoint, Sort } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
 
@@ -15,7 +15,9 @@ export class CustomEndpointHandler {
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  static addNewCustomOperationControl(endpoint: ICustomEndpoint) {
+  static addNewCustomOperationControl(
+    endpoint: ICustomEndpoint | PopulatedCustomEndpoint,
+  ) {
     CustomEndpointHandler.routeControllers[endpoint.name] = endpoint;
   }
 

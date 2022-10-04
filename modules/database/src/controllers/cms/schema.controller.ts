@@ -1,12 +1,13 @@
-import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
-import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import { CmsHandlers } from '../../handlers/cms/handler';
 import { ParsedQuery } from '../../interfaces';
+import { status } from '@grpc/grpc-js';
+import { isNil } from 'lodash';
 
 export class SchemaController {
   private router: DatabaseRoutes;
@@ -65,11 +66,21 @@ export class SchemaController {
       });
   }
 
-  async createSchema(schema: ConduitSchema): Promise<ConduitSchema> {
+  async createSchema(
+    schema: ConduitSchema,
+    operation: 'create' | 'update' = 'create',
+  ): Promise<ConduitSchema> {
+    if (this.database.schemaInSystemSchemas(schema.name)) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Cannot modify database-owned system schema.',
+      );
+    }
+    schema.ownerModule = 'database';
     const createdSchema = await this.database
-      .createCustomSchemaFromAdapter(schema)
+      .createSchemaFromAdapter(schema)
       .catch(err => {
-        ConduitGrpcSdk.Logger.error('Failed to create custom schema');
+        ConduitGrpcSdk.Logger.error(`Failed to ${operation} custom schema`);
         ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
@@ -104,7 +115,7 @@ export class SchemaController {
               r.collectionName,
             );
             promise = promise.then(() => {
-              return this.database.createCustomSchemaFromAdapter(schema);
+              return this.database.createSchemaFromAdapter(schema);
             });
           });
           promise.then(() => {
