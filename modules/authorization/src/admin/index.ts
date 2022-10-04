@@ -2,12 +2,10 @@ import ConduitGrpcSdk, {
   GrpcServer,
   ConduitRouteObject,
 } from '@conduitplatform/grpc-sdk';
-// import { RoleAdmin } from './roles';
 import { ResourceHandler } from './resources';
 import { RelationHandler } from './relations';
 
 export class AdminHandlers {
-  // private readonly roleAdmin: RoleAdmin;
   private readonly ResourceHandler: ResourceHandler;
   private readonly RelationHandler: RelationHandler;
 
@@ -15,7 +13,6 @@ export class AdminHandlers {
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
-    // this.roleAdmin = new RoleAdmin(this.grpcSdk);
     this.ResourceHandler = new ResourceHandler(this.grpcSdk);
     this.RelationHandler = new RelationHandler(this.grpcSdk);
     this.registerAdminRoutes();
@@ -25,10 +22,6 @@ export class AdminHandlers {
     const paths = this.getRegisteredRoutes();
     this.grpcSdk.admin
       .registerAdminAsync(this.server, paths, {
-        // getRoles: this.roleAdmin.getRoles.bind(this),
-        // deleteRole: this.roleAdmin.deleteRole.bind(this),
-        // createRole: this.roleAdmin.createRole.bind(this),
-        // patchRole: this.roleAdmin.patchRole.bind(this),
         createResource: this.ResourceHandler.createResource.bind(this),
         getResources: this.ResourceHandler.getResources.bind(this),
         getResource: this.ResourceHandler.getResource.bind(this),
@@ -46,7 +39,6 @@ export class AdminHandlers {
   }
 
   private getRegisteredRoutes(): ConduitRouteObject[] {
-    // return [...this.roleAdmin.getRoutes()];
     return [...this.RelationHandler.getRoutes(), ...this.ResourceHandler.getRoutes()];
   }
 
