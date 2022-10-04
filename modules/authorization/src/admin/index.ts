@@ -1,8 +1,4 @@
-import ConduitGrpcSdk, {
-  GrpcServer,
-  ConduitRouteObject,
-  RoutingManager,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcServer, RoutingManager } from '@conduitplatform/grpc-sdk';
 import { ResourceHandler } from './resources';
 import { RelationHandler } from './relations';
 
