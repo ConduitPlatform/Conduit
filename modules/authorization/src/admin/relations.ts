@@ -36,7 +36,7 @@ export class RelationHandler {
       ),
       constructConduitRoute(
         {
-          path: '/relation/:id',
+          path: '/relations/:id',
           action: ConduitRouteActions.GET,
           description: `Returns a relation.`,
           urlParams: {
@@ -65,6 +65,7 @@ export class RelationHandler {
         },
         new ConduitRouteReturnDefinition('GetRelations', {
           relations: [Relationship.getInstance().fields],
+          count: ConduitNumber.Required,
         }),
         'getRelations',
       ),
@@ -98,7 +99,7 @@ export class RelationHandler {
 
   async getRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = await Relationship.getInstance().findOne({ _id: id });
+    const found = await Relationship.getInstance().findOne({ id });
     if (isNil(found)) {
       throw new Error('Relation not found');
     }
@@ -123,12 +124,13 @@ export class RelationHandler {
     if (isNil(found)) {
       throw new Error('Relations not found');
     }
-    return found;
+    const count = await Relationship.getInstance().countDocuments({});
+    return { found, count };
   }
 
   async deleteRelation(call: ParsedRouterRequest) {
     const { id } = call.request.params;
-    const found = Relationship.getInstance().findOne({ _id: id });
+    const found = Relationship.getInstance().findOne({ id });
     if (isNil(found)) {
       throw new Error('Relation not found');
     }

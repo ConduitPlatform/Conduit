@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitJson,
   ConduitNumber,
   ConduitRouteActions,
   ConduitRouteObject,
@@ -26,8 +27,8 @@ export class ResourceHandler {
           description: `Creates a resource.`,
           bodyParams: {
             name: ConduitString.Required,
-            relations: ConduitString.Required,
-            permissions: ConduitString.Required,
+            relations: ConduitJson.Required,
+            permissions: ConduitJson.Required,
           },
         },
         new ConduitRouteReturnDefinition(
@@ -71,15 +72,15 @@ export class ResourceHandler {
       ),
       constructConduitRoute(
         {
-          path: '/resources/:name',
+          path: '/resources/:id',
           action: ConduitRouteActions.PATCH,
           description: `Updates a resource.`,
           urlParams: {
-            name: ConduitString.Required,
+            id: ConduitString.Required,
           },
           bodyParams: {
-            relations: ConduitString.Optional,
-            permissions: ConduitString.Optional,
+            relations: ConduitJson.Optional,
+            permissions: ConduitJson.Optional,
           },
         },
         new ConduitRouteReturnDefinition(
@@ -137,7 +138,7 @@ export class ResourceHandler {
     if (isNil(found)) {
       throw new Error('Resources not found');
     }
-    const count = ResourceDefinition.getInstance().countDocuments(query);
+    const count = await ResourceDefinition.getInstance().countDocuments(query);
     return { found, count };
   }
 
@@ -147,9 +148,9 @@ export class ResourceHandler {
   }
 
   async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse | null> {
-    const { name, relations, permissions } = call.request.params;
-    const resource = await ResourceController.getInstance().updateResourceDefinition(
-      name,
+    const { id, relations, permissions } = call.request.params;
+    const resource = await ResourceController.getInstance().updateResourceDefinitionById(
+      id,
       { relations, permissions },
     );
     this.grpcSdk.bus?.publish('authentication:update:resource', JSON.stringify(resource));
@@ -158,11 +159,11 @@ export class ResourceHandler {
 
   async deleteResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const found = ResourceDefinition.getInstance().findOne({ _id: id });
+    const found = ResourceDefinition.getInstance().findOne({ id });
     if (isNil(found)) {
       throw new Error('Resource does not exist');
     }
-    await ResourceDefinition.getInstance().deleteOne({ _id: id });
+    await ResourceDefinition.getInstance().deleteOne({ id });
     return 'Resource deleted successfully';
   }
 }

@@ -81,7 +81,6 @@ export default class Authorization extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
-      this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.indexController = IndexController.getInstance(this.grpcSdk);
       this.relationsController = RelationsController.getInstance(
         this.grpcSdk,
@@ -89,6 +88,7 @@ export default class Authorization extends ManagedModule<Config> {
       );
       this.indexController.relationsController = this.relationsController;
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
+      this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.updateHealth(HealthCheckStatus.SERVING);
     }
