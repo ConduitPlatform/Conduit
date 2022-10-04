@@ -106,7 +106,7 @@ export class RelationHandler {
     const { subject, relation, resource, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {};
+    const query: Query = {};
     if (subject) query['subject'] = subject;
     if (relation) query['relation'] = relation;
     if (resource) query['resource'] = resource;
