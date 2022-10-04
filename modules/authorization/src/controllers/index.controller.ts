@@ -1,14 +1,12 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ResourceDefinition, ActorIndex, ObjectIndex, Relationship } from '../models';
+import { ResourceDefinition, ActorIndex, ObjectIndex } from '../models';
 import { RelationsController } from './relations.controller';
 
 export class IndexController {
   private static _instance: IndexController;
+  private _relationsController: RelationsController;
 
-  private constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly relationsController = RelationsController.getInstance(grpcSdk),
-  ) {}
+  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
@@ -16,6 +14,10 @@ export class IndexController {
       return (IndexController._instance = new IndexController(grpcSdk));
     }
     throw new Error('No grpcSdk instance provided!');
+  }
+
+  set relationsController(relationsController: RelationsController) {
+    this._relationsController = relationsController;
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
@@ -226,7 +228,7 @@ export class IndexController {
         if (removedResources.length > 0) {
           for (const removedResource of removedResources) {
             await this.removeGeneralRelation(removedResource, relation, resource.name);
-            await this.relationsController.removeGeneralRelation(
+            await this._relationsController.removeGeneralRelation(
               removedResource,
               relation,
               resource.name,
