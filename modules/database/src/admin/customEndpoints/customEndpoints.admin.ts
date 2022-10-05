@@ -297,8 +297,11 @@ export class CustomEndpointsAdmin {
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { schemaId, operation } = call.request.params;
-    const accessibleFields = await this.getAccessibleSchemaFields(operation, schemaId);
-    return { accessibleFields };
+    const { schemaName, fields: accessibleFields } = await this.getAccessibleSchemaFields(
+      operation,
+      schemaId,
+    );
+    return { schemaId, schemaName, accessibleFields };
   }
 
   private async getAccessibleSchemaFields(
