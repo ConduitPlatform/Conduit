@@ -591,6 +591,8 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('schemaDetailsForOperation', {
+        schemaId: ConduitString.Required,
+        schemaName: ConduitString.Required,
         accessibleFields: ConduitJson.Required,
       }),
       this.customEndpointsAdmin.schemaDetailsForOperation.bind(this.customEndpointsAdmin),
