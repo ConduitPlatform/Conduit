@@ -43,7 +43,7 @@ export class SchemaAdmin {
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
     let query: ParsedQuery = {};
-    if (owner?.length !== 0) {
+    if (owner && owner?.length !== 0) {
       query = {
         $and: [query, { ownerModule: { $in: owner } }],
       };
@@ -56,6 +56,7 @@ export class SchemaAdmin {
     if (!isNil(enabled)) {
       const enabledQuery = {
         $or: [
+          { name: { $in: this.database.systemSchemas } },
           { ownerModule: { $ne: 'database' } },
           { 'modelOptions.conduit.cms.enabled': true },
         ],
