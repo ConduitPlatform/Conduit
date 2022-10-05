@@ -10,8 +10,9 @@ import {
   Router,
   SMS,
   Storage,
+  Authorization,
+  Authentication,
 } from './modules';
-import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
@@ -53,6 +54,7 @@ export default class ConduitGrpcSdk {
     email: Email,
     pushNotifications: PushNotifications,
     authentication: Authentication,
+    authorization: Authorization,
     sms: SMS,
     chat: Chat,
     forms: Forms,
@@ -261,6 +263,15 @@ export default class ConduitGrpcSdk {
       return this._modules['authentication'] as Authentication;
     } else {
       ConduitGrpcSdk.Logger.warn('Authentication module not up yet!');
+      return null;
+    }
+  }
+
+  get authorization(): Authorization | null {
+    if (this._modules['authorization']) {
+      return this._modules['authorization'] as Authorization;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Authorization module not up yet!');
       return null;
     }
   }
