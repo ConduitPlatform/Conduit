@@ -71,10 +71,13 @@ export function getAuthMiddleware(grpcSdk: ConduitGrpcSdk, conduit: ConduitCommo
       return res.status(401).json({ error: 'Invalid token' });
     }
     const { id } = decoded;
+    if (decoded.twoFaRequired && req.path !== '/verify-twofa') {
+      return res.status(401).json({ error: 'Two FA required' });
+    }
 
     Admin.getInstance()
       .findOne({ _id: id })
-      .then((admin: any) => {
+      .then(admin => {
         if (isNil(admin)) {
           return res.status(401).json({ error: 'No such user exists' });
         }

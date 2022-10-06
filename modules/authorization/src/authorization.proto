@@ -1,0 +1,65 @@
+syntax = "proto3";
+package authorization;
+
+message Empty {
+}
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+message Resource {
+  string name = 1;
+  repeated _Relation relations = 2;
+  repeated _Permission permissions = 3;
+
+  message _Relation {
+    string name = 1;
+    repeated string resourceType = 2;
+  }
+
+  message _Permission {
+    string name = 1;
+    repeated string roles = 2;
+  }
+
+}
+
+message Relation {
+  string subject = 1;
+  string relation = 2;
+  string resource = 3;
+}
+message DeleteResourceRequest {
+  string name = 1;
+}
+
+message FindRelationRequest {
+  optional string subject = 1;
+  optional string relation = 2;
+  optional string resource = 3;
+}
+
+message PermissionCheck {
+  string subject = 1;
+  string action = 2;
+  string resource = 3;
+}
+
+message Decision {
+  bool allow = 1;
+}
+
+service Authorization {
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc DefineResource(Resource) returns (Empty);
+  rpc DeleteResource(DeleteResourceRequest) returns (Empty);
+  rpc UpdateResource(Resource) returns (Empty);
+  rpc CreateRelation(Relation) returns (Empty);
+  rpc DeleteRelation(Relation) returns (Empty);
+  rpc FindRelation(FindRelationRequest) returns (Relation);
+  rpc Can(PermissionCheck) returns (Decision);
+}

@@ -24,8 +24,10 @@ export function getCreateAdminRoute() {
     new ConduitRouteReturnDefinition('Create', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { username, password } = params.params!;
+    async (req: ConduitRouteParameters) => {
+      const { username, password } = req.params!;
+      const loggedInAdmin = req.context!.admin;
+
       if (isNil(username) || isNil(password)) {
         throw new ConduitError(
           'INVALID_ARGUMENTS',
@@ -38,12 +40,20 @@ export function getCreateAdminRoute() {
       if (!isNil(admin)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Already exists');
       }
+
+      if (!loggedInAdmin.isSuperAdmin) {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Only superAdmin can create admin',
+        );
+      }
       const adminConfig = ConfigController.getInstance().config;
       const hashRounds = adminConfig.auth.hashRounds;
       const pass = await hashPassword(password, hashRounds);
       await Admin.getInstance().create({ username: username, password: pass });
 
-      return { result: { message: 'OK' } }; // unnested from result in Rest.addConduitRoute, grpc routes avoid this using wrapRouterGrpcFunction
+      return { message: 'OK' };
     },
   );
 }

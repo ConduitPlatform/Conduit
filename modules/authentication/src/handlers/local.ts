@@ -1,43 +1,37 @@
-import { isEmpty, isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
+import { isNil } from 'lodash';
+import { AuthUtils } from '../utils';
 import { TokenType } from '../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
-  SMS,
-  UnparsedRouterResponse,
-  ConfigController,
   RoutingManager,
-  ConduitRouteActions,
-  ConduitString,
-  ConduitRouteReturnDefinition,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
-import { AccessToken, Token, TwoFactorSecret, User } from '../models';
+import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
-import { TwoFactorAuth } from '../TwoFactorAuth';
+import { TokenProvider } from './tokenProvider';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
-  private smsModule: SMS;
   private initialized: boolean = false;
   private clientValidation: boolean;
 
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sendVerificationEmail: boolean,
-  ) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     grpcSdk.config.get('router').then(config => {
       this.clientValidation = config.security.clientValidation;
     });
   }
 
-  async declareRoutes(routingManager: RoutingManager, config: Config): Promise<void> {
+  async declareRoutes(routingManager: RoutingManager): Promise<void> {
     routingManager.route(
       {
         path: '/local/new',
@@ -47,7 +41,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
         },
-        middlewares: [],
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -57,24 +50,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local',
         action: ConduitRouteActions.POST,
-        description: `Login endpoint that can be used to authenticate. 
-              If 2FA is used for the user then instead of tokens 
-              you will receive a message indicating the need for a token from the 2FA mechanism.`,
+        description: `Login endpoint that can be used to authenticate.
+         Tokens are returned according to configuration.`,
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
-        userId: ConduitString.Optional,
         accessToken: ConduitString.Optional,
-        message: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
       }),
       this.authenticate.bind(this),
     );
-
-    if (this.sendVerificationEmail) {
+    const config = ConfigController.getInstance().config;
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       routingManager.route(
         {
           path: '/forgot-password',
@@ -137,10 +127,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-email',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's email but requires password first.`,
+        description: `Changes the user's email (requires sudo access).`,
         bodyParams: {
           newEmail: ConduitString.Required,
-          password: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
       },
@@ -173,112 +162,24 @@ export class LocalHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
       this.verifyChangeEmail.bind(this),
     );
-
-    if (config.twofa.enabled) {
-      routingManager.route(
-        {
-          path: '/local/twofa',
-          action: ConduitRouteActions.POST,
-          description: `Verifies the 2FA token.`,
-          bodyParams: {
-            email: ConduitString.Required,
-            code: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('VerifyTwoFaResponse', {
-          userId: ConduitString.Optional,
-          accessToken: ConduitString.Optional,
-          refreshToken: config.generateRefreshToken
-            ? ConduitString.Required
-            : ConduitString.Optional,
-          message: ConduitString.Optional,
-        }),
-        this.verify2FA.bind(this),
-      );
-
-      routingManager.route(
-        {
-          path: '/local/enable-twofa',
-          action: ConduitRouteActions.UPDATE,
-          description: `Enables a phone or qr based 2FA method for a user and 
-                requires their phone number in case of phone 2FA.`,
-          middlewares: ['authMiddleware'],
-          bodyParams: {
-            method: ConduitString.Required,
-            phoneNumber: ConduitString.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('EnableTwoFaResponse', 'String'),
-        this.enableTwoFa.bind(this),
-      );
-
-      routingManager.route(
-        {
-          path: '/local/verify-qr-code',
-          action: ConduitRouteActions.POST,
-          description: `Verifies the code the user received from scanning the QR image`,
-          middlewares: ['authMiddleware'],
-          bodyParams: {
-            code: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('VerifyQRCodeResponse', 'String'),
-        this.verifyQrCode.bind(this),
-      );
-
-      routingManager.route(
-        {
-          path: '/local/verifyPhoneNumber',
-          action: ConduitRouteActions.POST,
-          description: `Verifies the phone number provided for the 2FA mechanism.`,
-          middlewares: ['authMiddleware'],
-          bodyParams: {
-            code: ConduitString.Required,
-          },
-        },
-        new ConduitRouteReturnDefinition('VerifyPhoneNumberResponse', 'String'),
-        this.verifyPhoneNumber.bind(this),
-      );
-
-      routingManager.route(
-        {
-          path: '/local/disable-twofa',
-          action: ConduitRouteActions.UPDATE,
-          description: `Disables the user's 2FA mechanism.`,
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
-        this.disableTwoFa.bind(this),
-      );
-
-      routingManager.route(
-        {
-          path: '/local/change-password/verify',
-          action: ConduitRouteActions.POST,
-          description: `Used to provide the 2FA token for password change.`,
-          bodyParams: {
-            code: ConduitString.Required,
-          },
-          middlewares: ['authMiddleware'],
-        },
-        new ConduitRouteReturnDefinition('VerifyChangePasswordResponse', 'String'),
-        this.verifyChangePassword.bind(this),
-      );
-    }
   }
 
   async validate(): Promise<boolean> {
-    if (!this.initialized) {
+    const config = ConfigController.getInstance().config;
+    if (config.local.enabled) {
       try {
         await this.initDbAndEmail();
-        ConduitGrpcSdk.Logger.log('Local is active');
+        ConduitGrpcSdk.Logger.log('Local authentication is available');
       } catch (err) {
         ConduitGrpcSdk.Logger.error((err as Error).message);
-        ConduitGrpcSdk.Logger.log('Local not active');
+        ConduitGrpcSdk.Logger.log('Local authentication not available');
         // De-initialize the provider if the config is now invalid
         this.initialized = false;
         throw err;
       }
+    } else {
+      ConduitGrpcSdk.Logger.log('Local authentication not available');
+      this.initialized = false;
     }
     return this.initialized;
   }
@@ -306,10 +207,13 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-    if (this.sendVerificationEmail) {
+    if (
+      ConfigController.getInstance().config.local.verification.send_email &&
+      this.grpcSdk.isAvailable('email')
+    ) {
       const verificationToken: Token = await Token.getInstance().create({
         type: TokenType.VERIFICATION_TOKEN,
-        userId: user._id,
+        user: user._id,
         token: uuid(),
       });
       const result = { verificationToken, hostUrl: url };
@@ -328,25 +232,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     delete user.hashedPassword;
     return { user };
-  }
-
-  private async _authenticateChecks(password: string, config: Config, user: User) {
-    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
-    if (!user.hashedPassword)
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
-    if (!passwordsMatch)
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
-
-    if (config.local.verification.required && !user.isVerified) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'You must verify your account to login',
-      );
-    }
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -373,92 +258,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (isNil(user))
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
     await this._authenticateChecks(password, config, user);
-
-    if (user.hasTwoFA) {
-      if (user.twoFaMethod === 'phone') {
-        const verificationSid = await AuthUtils.sendVerificationCode(
-          this.smsModule,
-          user.phoneNumber!,
-        );
-        if (verificationSid === '') {
-          throw new GrpcError(status.INTERNAL, 'Could not send verification code');
-        }
-
-        await Token.getInstance()
-          .deleteMany({
-            userId: user._id,
-            type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-          })
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-          });
-
-        await Token.getInstance().create({
-          userId: user._id,
-          type: TokenType.TWO_FA_VERIFICATION_TOKEN,
-          token: verificationSid,
-        });
-
-        return {
-          message: 'Verification code sent',
-        };
-      } else if (user.twoFaMethod === 'qrcode') {
-        const secret = await TwoFactorSecret.getInstance().findOne({
-          userId: user._id,
-        });
-        if (isNil(secret))
-          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
-        return { message: 'OTP required' };
-      } else {
-        throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
-      }
-    }
-    const clientConfig = config.clients;
-    await AuthUtils.signInClientOperations(
-      this.grpcSdk,
-      clientConfig,
-      user._id,
-      clientId,
-    );
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: user._id,
-        clientId: clientId,
-        config,
-      },
-    );
-
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      if (cookieOptions.path === '') {
-        delete cookieOptions.path;
-      }
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: (accessToken as AccessToken).token,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil(refreshToken)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: refreshToken.token,
-          options: cookieOptions,
-        });
-      }
-      return {
-        userId: user._id.toString(),
-        setCookies: cookies,
-      };
-    }
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    return {
-      userId: user._id.toString(),
-      accessToken: accessToken!.token,
-      refreshToken: !isNil(refreshToken) ? refreshToken.token : undefined,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user,
+      clientId,
+      config,
+    });
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -472,19 +277,21 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const oldToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.PASSWORD_RESET_TOKEN,
-      userId: user._id,
+      user: user._id,
     });
-    if (!isNil(oldToken)) await Token.getInstance().deleteOne(oldToken);
+    if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
+      await Token.getInstance().deleteOne(oldToken);
+    }
 
     const passwordResetTokenDoc = await Token.getInstance().create({
       type: TokenType.PASSWORD_RESET_TOKEN,
-      userId: user._id,
+      user: user._id,
       token: uuid(),
     });
 
     const appUrl = config.local.forgot_password_redirect_uri;
     const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
-    if (this.sendVerificationEmail) {
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
         sender: 'no-reply',
@@ -508,7 +315,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const user: User | null = await User.getInstance().findOne(
-      { _id: passwordResetTokenDoc.userId },
+      { _id: passwordResetTokenDoc.user as string },
       '+hashedPassword',
     );
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -530,24 +337,23 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
-      user._id,
-      user,
-    );
-    const tokenPromise = Token.getInstance().deleteOne(passwordResetTokenDoc);
+    await User.getInstance().findByIdAndUpdate(user._id, user, true);
+    await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
-    await Promise.all(
-      [userPromise, tokenPromise].concat(
-        AuthUtils.deleteUserTokens(this.grpcSdk, {
-          userId: user._id,
-        }),
-      ),
-    );
+    await TokenProvider.getInstance()!.deleteUserTokens({
+      user: user._id,
+    });
 
     return 'Password reset successful';
   }
 
   async changePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
     const { oldPassword, newPassword } = call.request.params;
     const { user } = call.request.context;
 
@@ -557,67 +363,23 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'The new password can not be the same as the old password',
       );
     }
-
     const dbUser = await AuthUtils.dbUserChecks(user, oldPassword).catch(error => {
       throw error;
     });
-
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
-
-    if (dbUser.hasTwoFA) {
-      await Token.getInstance()
-        .deleteMany({
-          userId: dbUser._id,
-          type: TokenType.CHANGE_PASSWORD_TOKEN,
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-
-      if (user.twoFaMethod === 'phone') {
-        const verificationSid = await AuthUtils.sendVerificationCode(
-          this.smsModule,
-          dbUser.phoneNumber!,
-        );
-        if (verificationSid === '') {
-          throw new GrpcError(status.INTERNAL, 'Could not send verification code');
-        }
-        await Token.getInstance().create({
-          userId: dbUser._id,
-          type: TokenType.CHANGE_PASSWORD_TOKEN,
-          token: verificationSid,
-          data: {
-            password: hashedPassword,
-          },
-        });
-        return 'Verification code sent';
-      } else if (user.twoFaMethod == 'qrcode') {
-        const secret = await TwoFactorSecret.getInstance().findOne({
-          userId: user._id,
-        });
-        if (isNil(secret))
-          throw new GrpcError(status.NOT_FOUND, 'Authentication unsuccessful');
-
-        await Token.getInstance().create({
-          userId: dbUser._id,
-          type: TokenType.CHANGE_PASSWORD_TOKEN,
-          token: uuid(),
-          data: {
-            password: hashedPassword,
-          },
-        });
-        return 'OTP required';
-      } else {
-        throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
-      }
-    }
 
     await User.getInstance().findByIdAndUpdate(dbUser._id, { hashedPassword });
     return 'Password changed successfully';
   }
 
   async changeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { newEmail, password } = call.request.params;
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
+    const { newEmail } = call.request.params;
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
@@ -639,19 +401,16 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (dupEmailUser) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Email address already taken');
     }
-    const dbUser = await AuthUtils.dbUserChecks(user, password).catch(error => {
-      throw error;
-    });
 
     if (config.local.verification.required) {
       const verificationToken: Token | void = await AuthUtils.createToken(
-        dbUser._id,
+        user._id,
         { email: newEmail },
         TokenType.CHANGE_EMAIL_TOKEN,
       ).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-      if (this.sendVerificationEmail) {
+      if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const result = { verificationToken, hostUrl: url };
@@ -673,52 +432,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
       return 'Verification required';
     }
-    await User.getInstance().findByIdAndUpdate(dbUser._id, { email: newEmail });
+    await User.getInstance().findByIdAndUpdate(user._id, { email: newEmail }, true);
     return 'Email changed successfully';
-  }
-
-  async verifyChangePassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { code } = call.request.params;
-    const { user } = call.request.context;
-
-    const token: Token | null = await Token.getInstance().findOne({
-      userId: user._id,
-      type: TokenType.CHANGE_PASSWORD_TOKEN,
-    });
-    if (isNil(token)) {
-      throw new GrpcError(status.NOT_FOUND, 'Change password token does not exist');
-    }
-
-    if (user.twoFaMethod === 'phone') {
-      const verified = await this.smsModule.verify(token.token, code);
-      if (!verified.verified) {
-        throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
-      }
-    } else if (user.twoFaMethod === 'qrcode') {
-      const secret = await TwoFactorSecret.getInstance().findOne({
-        userId: user._id,
-      });
-      if (isNil(secret))
-        throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
-
-      const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-      if (isNil(verification))
-        throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
-    } else {
-      throw new GrpcError(status.FAILED_PRECONDITION, '2FA method not specified');
-    }
-
-    await Token.getInstance()
-      .deleteMany({ userId: user._id, type: TokenType.CHANGE_PASSWORD_TOKEN })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-
-    await User.getInstance().findByIdAndUpdate(user._id, {
-      hashedPassword: token.data.password,
-    });
-
-    return 'Password changed successfully';
   }
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -726,10 +441,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
 
-    const verificationTokenDoc: Token | null = await Token.getInstance().findOne({
-      type: TokenType.VERIFICATION_TOKEN,
-      token: verificationTokenParam,
-    });
+    const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
+      {
+        type: TokenType.VERIFICATION_TOKEN,
+        token: verificationTokenParam,
+      },
+      undefined,
+      ['user'],
+    );
     if (isNil(verificationTokenDoc)) {
       const redisToken = await this.grpcSdk.state!.getKey(
         'verifiedToken_' + verificationTokenParam,
@@ -744,9 +463,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
     }
 
-    const user: User | null = await User.getInstance().findOne({
-      _id: verificationTokenDoc.userId,
-    });
+    const user: User = verificationTokenDoc.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     user.isVerified = true;
@@ -774,23 +491,25 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
-    const token: Token | null = await Token.getInstance().findOne({
-      type: TokenType.CHANGE_EMAIL_TOKEN,
-      token: verificationToken,
-    });
+    const token: Token | null = await Token.getInstance().findOne(
+      {
+        type: TokenType.CHANGE_EMAIL_TOKEN,
+        token: verificationToken,
+      },
+      undefined,
+      ['user'],
+    );
     if (isNil(token)) {
       throw new GrpcError(status.NOT_FOUND, 'Change email token does not exist');
     }
-    const user: User | null = await User.getInstance().findOne({
-      _id: token.userId,
-    });
+    const user: User = token.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     await Token.getInstance()
-      .deleteMany({ userId: token.userId, type: TokenType.CHANGE_EMAIL_TOKEN })
+      .deleteMany({ user: user._id, type: TokenType.CHANGE_EMAIL_TOKEN })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-    await User.getInstance().findByIdAndUpdate(token.userId as string, {
+    await User.getInstance().findByIdAndUpdate(user._id as string, {
       email: token.data.email,
     });
     if (config.local.verification.redirect_uri) {
@@ -817,29 +536,17 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     let verificationToken: Token | null = await Token.getInstance().findOne({
       type: TokenType.VERIFICATION_TOKEN,
-      userId: user._id,
+      user: user._id,
     });
-    if (!isNil(verificationToken)) {
-      const diffInMilliSec = Math.abs(
-        new Date(verificationToken.createdAt).getTime() - Date.now(),
-      );
-      if (diffInMilliSec < 600000) {
-        const remainTime = Math.ceil((600000 - diffInMilliSec) / 60000);
-        throw new GrpcError(
-          status.RESOURCE_EXHAUSTED,
-          'Verification code not sent. You have to wait ' +
-            remainTime +
-            ' minutes to try again',
-        );
-      }
+    if (!isNil(verificationToken) && AuthUtils.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
-        userId: user._id,
+        user: user._id,
         type: TokenType.VERIFICATION_TOKEN,
       });
     }
 
     verificationToken = await Token.getInstance().create({
-      userId: user._id,
+      user: user._id,
       type: TokenType.VERIFICATION_TOKEN,
       token: uuid(),
       data: {
@@ -860,216 +567,33 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return 'Verification code sent';
   }
 
-  async verify2FA(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-
-    if (isNil(context) || isEmpty(context))
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    const clientId = context.clientId;
-    const { email, code } = call.request.params;
-
-    const user: User | null = await User.getInstance().findOne({ email });
-    if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
-
-    if (user.twoFaMethod == 'phone') {
-      return await AuthUtils.verifyCode(
-        this.grpcSdk,
-        clientId,
-        user,
-        TokenType.TWO_FA_VERIFICATION_TOKEN,
-        code,
-      );
-    } else if (user.twoFaMethod == 'qrcode') {
-      return await TwoFactorAuth.verifyCode(this.grpcSdk, clientId, user, code);
-    } else {
-      throw new GrpcError(status.FAILED_PRECONDITION, 'Method not valid');
-    }
-  }
-
-  async enableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { method, phoneNumber } = call.request.params;
-    const context = call.request.context;
-
-    if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
-    }
-    if (context.user.hasTwoFA) {
-      return '2FA already enabled';
-    }
-
-    if (method === 'phone') {
-      const verificationSid = await AuthUtils.sendVerificationCode(
-        this.smsModule,
-        phoneNumber,
-      );
-      if (verificationSid === '') {
-        throw new GrpcError(status.INTERNAL, 'Could not send verification code');
-      }
-
-      await AuthUtils.createToken(
-        context.user._id,
-        { data: phoneNumber },
-        TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      ).catch(e => ConduitGrpcSdk.Logger.error(e));
-
-      await User.getInstance().findByIdAndUpdate(context.user._id, {
-        twoFaMethod: 'phone',
-      });
-
-      return 'Verification code sent';
-    } else if (method === 'qrcode') {
-      const secret = TwoFactorAuth.generateSecret({
-        //to do: add logic for app name insertion
-        name: 'Conduit',
-        account: context.user.email,
-      });
-
-      await TwoFactorSecret.getInstance().deleteMany({
-        userId: context.user._id,
-      });
-
-      await TwoFactorSecret.getInstance().create({
-        userId: context.user._id,
-        secret: secret.secret,
-        uri: secret.uri,
-        qr: secret.qr,
-      });
-
-      await User.getInstance().findByIdAndUpdate(context.user._id, {
-        twoFaMethod: 'qrcode',
-      });
-      return secret.qr.toString();
-    }
-    throw new GrpcError(status.INVALID_ARGUMENT, 'Method not valid');
-  }
-
-  async verifyQrCode(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    const { code } = call.request.params;
-
-    if (isNil(context) || isEmpty(context)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User unauthenticated');
-    }
-    if (context.user.hasTwoFA) {
-      return '2FA already enabled';
-    }
-
-    const secret = await TwoFactorSecret.getInstance().findOne({
-      userId: context.user._id,
-    });
-    if (isNil(secret)) throw new GrpcError(status.NOT_FOUND, 'Verification unsuccessful');
-
-    const verification = TwoFactorAuth.verifyToken(secret.secret, code);
-    if (isNil(verification)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Verification unsuccessful');
-    }
-
-    await User.getInstance().findByIdAndUpdate(context.user._id, {
-      hasTwoFA: true,
-    });
-
-    this.grpcSdk.bus?.publish(
-      'authentication:enableTwofa:user',
-      JSON.stringify({ id: context.user._id }),
-    );
-    return '2FA enabled';
-  }
-
-  async verifyPhoneNumber(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    const { code } = call.request.params;
-
-    if (isNil(context) || isEmpty(context)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'No headers provided');
-    }
-
-    const verificationRecord: Token | null = await Token.getInstance().findOne({
-      userId: context.user._id,
-      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-    });
-    if (isNil(verificationRecord))
+  private async _authenticateChecks(password: string, config: Config, user: User) {
+    if (!user.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
+    if (!user.hashedPassword)
       throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'No verification record for this user',
+        status.PERMISSION_DENIED,
+        'User does not use password authentication',
       );
+    const passwordsMatch = await AuthUtils.checkPassword(password, user.hashedPassword);
+    if (!passwordsMatch)
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid login credentials');
 
-    const verified = await this.smsModule.verify(verificationRecord.token, code);
-
-    if (!verified.verified) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'email and code do not match');
+    if (config.local.verification.required && !user.isVerified) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You must verify your account to login',
+      );
     }
-
-    await Token.getInstance()
-      .deleteMany({
-        userId: context.user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-
-    await User.getInstance().findByIdAndUpdate(context.user._id, {
-      phoneNumber: verificationRecord.data.phoneNumber,
-      hasTwoFA: true,
-    });
-
-    this.grpcSdk.bus?.publish(
-      'authentication:enableTwofa:user',
-      JSON.stringify({
-        id: context.user._id,
-        phoneNumber: verificationRecord.data.phoneNumber,
-      }),
-    );
-
-    return 'twofa enabled';
-  }
-
-  async disableTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-
-    if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
-    }
-
-    await User.getInstance().findByIdAndUpdate(context.user._id, {
-      hasTwoFA: false,
-    });
-
-    this.grpcSdk.bus?.publish(
-      'authentication:disableTwofa:user',
-      JSON.stringify({ id: context.user._id }),
-    );
-
-    return 'twofa disabled';
   }
 
   private async initDbAndEmail() {
     const config = ConfigController.getInstance().config;
 
-    if (this.sendVerificationEmail) {
-      await this.grpcSdk.config.moduleExists('email');
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       this.emailModule = this.grpcSdk.emailProvider!;
     }
 
-    let errorMessage = null;
-    await this.grpcSdk.config.moduleExists('sms').catch(e => (errorMessage = e.message));
-    if (config.twofa.enabled && !errorMessage) {
-      // maybe check if verify is enabled in sms module
-      await this.grpcSdk.waitForExistence('sms');
-      this.smsModule = this.grpcSdk.sms!;
-    } else {
-      ConduitGrpcSdk.Logger.log('sms 2fa not active');
-    }
-
-    if (config.phoneAuthentication.enabled && !errorMessage) {
-      // maybe check if verify is enabled in sms module
-      await this.grpcSdk.waitForExistence('sms');
-      this.smsModule = this.grpcSdk.sms!;
-    } else {
-      ConduitGrpcSdk.Logger.log('phone authentication not active');
-    }
-
-    if (this.sendVerificationEmail) {
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       this.registerTemplates();
     }
     this.initialized = true;

@@ -34,6 +34,11 @@ export class ConduitRoutingController {
     private readonly grpcSdk: ConduitGrpcSdk,
     cleanupTimeoutMs: number = 0,
     private readonly swaggerMetadata?: SwaggerRouterMetadata,
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
   ) {
     this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
     this.start();
@@ -82,12 +87,16 @@ export class ConduitRoutingController {
 
   initRest() {
     if (this._restRouter) return;
-    this._restRouter = new RestController(this.grpcSdk, this.swaggerMetadata);
+    this._restRouter = new RestController(
+      this.grpcSdk,
+      this.swaggerMetadata,
+      this.metrics,
+    );
   }
 
   initGraphQL() {
     if (this._graphQLRouter) return;
-    this._graphQLRouter = new GraphQLController(this.grpcSdk);
+    this._graphQLRouter = new GraphQLController(this.grpcSdk, this.metrics);
   }
 
   initSockets(redisHost: string, redisPort: number) {
@@ -100,6 +109,7 @@ export class ConduitRoutingController {
         host: redisHost,
         port: redisPort,
       },
+      this.metrics,
     );
   }
 
@@ -208,7 +218,6 @@ export class ConduitRoutingController {
             ' handler url: ' +
             url,
         );
-        ConduitGrpcSdk.Metrics?.increment('registered_routes_total');
         this.registerConduitRoute(r);
       }
     });

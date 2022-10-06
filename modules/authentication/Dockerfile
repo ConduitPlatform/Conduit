@@ -3,6 +3,7 @@ FROM conduit-builder:latest
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/modules/authentication /app/modules/authentication
+COPY --from=conduit-base:latest /app/libraries/node-2fa /app/libraries/node-2fa
 
 RUN apk update && \
     apk add --no-cache --virtual .gyp python3 make g++ && \

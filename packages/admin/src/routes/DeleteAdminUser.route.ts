@@ -21,20 +21,28 @@ export function deleteAdminUserRoute() {
     new ConduitRouteReturnDefinition('DeleteAdminUser', {
       message: ConduitString.Required,
     }),
-    async (params: ConduitRouteParameters) => {
-      const { id } = params.params!;
+    async (req: ConduitRouteParameters) => {
+      const { id } = req.params!;
+      const loggedInAdmin = req.context!.admin;
       if (isNil(id)) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Id must be provided');
       }
-      let admin = await Admin.getInstance().findOne({ _id: id });
+      const admin = await Admin.getInstance().findOne({ _id: id });
       if (isNil(admin)) {
         throw new ConduitError('NOT_FOUND', 404, 'Admin not found');
       }
-      if (admin._id === params.context!.admin._id) {
+      if (admin._id === loggedInAdmin._id) {
         throw new ConduitError('INVALID_ARGUMENTS', 400, 'Admin cannot delete self');
       }
-      admin = await Admin.getInstance().deleteOne({ _id: id });
-      return { result: { message: 'Admin deleted.' } };
+      if (!loggedInAdmin.isSuperAdmin) {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          'Only superAdmin can delete admin',
+        );
+      }
+      await Admin.getInstance().deleteOne({ _id: id });
+      return { message: 'Admin deleted.' };
     },
   );
 }

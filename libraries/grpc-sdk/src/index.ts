@@ -10,8 +10,9 @@ import {
   Router,
   SMS,
   Storage,
+  Authorization,
+  Authentication,
 } from './modules';
-import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
@@ -29,7 +30,7 @@ import {
   GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
 } from './protoUtils/core';
-import { GrpcError, HealthCheckStatus, MetricConfiguration, MetricType } from './types';
+import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger } from './utilities/Logger';
@@ -37,13 +38,6 @@ import winston from 'winston';
 import path from 'path';
 import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
-import defaultMetrics from './metrics/config/defaults';
-import {
-  CounterConfiguration,
-  GaugeConfiguration,
-  HistogramConfiguration,
-  SummaryConfiguration,
-} from 'prom-client';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -60,6 +54,7 @@ export default class ConduitGrpcSdk {
     email: Email,
     pushNotifications: PushNotifications,
     authentication: Authentication,
+    authorization: Authorization,
     sms: SMS,
     chat: Chat,
     forms: Forms,
@@ -272,6 +267,15 @@ export default class ConduitGrpcSdk {
     }
   }
 
+  get authorization(): Authorization | null {
+    if (this._modules['authorization']) {
+      return this._modules['authorization'] as Authorization;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Authorization module not up yet!');
+      return null;
+    }
+  }
+
   get sms(): SMS | null {
     if (this._modules['sms']) {
       return this._modules['sms'] as SMS;
@@ -404,30 +408,6 @@ export default class ConduitGrpcSdk {
       });
   }
 
-  initializeDefaultMetrics() {
-    for (const metric of Object.values(defaultMetrics)) {
-      this.registerMetric(metric.type, metric.config);
-    }
-  }
-
-  registerMetric(type: MetricType, config: MetricConfiguration) {
-    config.name = `conduit_${config.name}`;
-    switch (type) {
-      case MetricType.Counter:
-        ConduitGrpcSdk.Metrics?.createCounter(config as CounterConfiguration<any>);
-        break;
-      case MetricType.Gauge:
-        ConduitGrpcSdk.Metrics?.createGauge(config as GaugeConfiguration<any>);
-        break;
-      case MetricType.Histogram:
-        ConduitGrpcSdk.Metrics?.createHistogram(config as HistogramConfiguration<any>);
-        break;
-      case MetricType.Summary:
-        ConduitGrpcSdk.Metrics?.createSummary(config as SummaryConfiguration<any>);
-        break;
-    }
-  }
-
   createModuleClient(moduleName: string, moduleUrl: string) {
     if (
       this._modules[moduleName] ||
@@ -501,4 +481,5 @@ export * from './classes';
 export * from './modules';
 export * from './helpers';
 export * from './constants';
+export * from './routing';
 export * from './types';

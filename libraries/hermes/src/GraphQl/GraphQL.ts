@@ -35,7 +35,14 @@ export class GraphQLController extends ConduitRouter {
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private readonly _parser: GraphQlParser;
 
-  constructor(grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    grpcSdk: ConduitGrpcSdk,
+    private readonly metrics?: {
+      registeredRoutes?: {
+        name: string;
+      };
+    },
+  ) {
     super(grpcSdk);
     this.initialize();
     this._parser = new GraphQlParser();
@@ -55,7 +62,8 @@ export class GraphQLController extends ConduitRouter {
       context: ({ req, res }: Indexable) => {
         const context = req.conduit || {};
         const headers = req.headers;
-        return { context, headers, setCookie: [], removeCookie: [], res };
+        const cookies = req.cookies || {};
+        return { context, headers, cookies, setCookie: [], removeCookie: [], res };
       },
     });
     this._apollo = server.getMiddleware();
@@ -212,6 +220,11 @@ export class GraphQLController extends ConduitRouter {
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
+      if (this.metrics?.registeredRoutes) {
+        ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
+          transport: 'graphql',
+        });
+      }
     }
   }
 
@@ -415,16 +428,18 @@ export class GraphQLController extends ConduitRouter {
             context.removeCookie = r.removeCookies;
           }
 
-          if (r.result && !(typeof route.returnTypeFields === 'string')) {
-            if (typeof r.result === 'string') {
-              // only grpc route data is stringified
-              result = JSON.parse(result);
+          try {
+            // Handle gRPC route responses
+            result = JSON.parse(result);
+          } catch {
+            if (typeof result === 'string') {
+              // Nest plain string responses
+              result = {
+                result: this.extractResult(route.returnTypeFields as string, result),
+              };
             }
-          } else {
-            result = {
-              result: this.extractResult(route.returnTypeFields as string, result),
-            };
           }
+
           return result;
         })
         .catch(errorHandler);

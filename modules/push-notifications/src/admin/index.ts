@@ -1,15 +1,14 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  GrpcError,
-  RouteOptionType,
   ConduitString,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
+  RouteOptionType,
+  RoutingManager,
   TYPE,
-  ConduitRouteObject,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -18,6 +17,7 @@ import { NotificationToken } from '../models';
 
 export class AdminHandlers {
   private provider: IPushNotificationsProvider;
+  private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
@@ -25,6 +25,7 @@ export class AdminHandlers {
     provider: IPushNotificationsProvider,
   ) {
     this.provider = provider;
+    this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
@@ -33,66 +34,53 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        sendNotification: this.sendNotification.bind(this),
-        sendNotificationToManyDevices: this.sendNotificationToManyDevices.bind(this),
-        getNotificationToken: this.getNotificationToken.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
+    this.routingManager.clear();
 
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/send',
-          action: ConduitRouteActions.POST,
-          description: `Sends a notification.`,
-          bodyParams: {
-            userId: ConduitString.Required,
-            title: ConduitString.Required,
-            body: ConduitString.Optional,
-            data: ConduitString.Optional,
-          },
+    this.routingManager.route(
+      {
+        path: '/send',
+        action: ConduitRouteActions.POST,
+        description: `Sends a notification.`,
+        bodyParams: {
+          userId: ConduitString.Required,
+          title: ConduitString.Required,
+          body: ConduitString.Optional,
+          data: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('SendNotification', 'String'),
-        'sendNotification',
-      ),
-      constructConduitRoute(
-        {
-          path: '/sendToManyDevices',
-          action: ConduitRouteActions.POST,
-          description: `Sends a notification to multiple devices.`,
-          bodyParams: {
-            userIds: { type: [TYPE.String], required: true }, // handler array check is still required
-            title: ConduitString.Required,
-            body: ConduitString.Optional,
-            data: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('SendNotification', 'String'),
+      this.sendNotification.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sendToManyDevices',
+        action: ConduitRouteActions.POST,
+        description: `Sends a notification to multiple devices.`,
+        bodyParams: {
+          userIds: { type: [TYPE.String], required: true }, // handler array check is still required
+          title: ConduitString.Required,
+          body: ConduitString.Optional,
+          data: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
-        'sendNotificationToManyDevices',
-      ),
-      constructConduitRoute(
-        {
-          path: '/token/:userId',
-          action: ConduitRouteActions.GET,
-          description: `Returns a user's notification token.`,
-          urlParams: {
-            userId: { type: RouteOptionType.String, required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
+      this.sendNotificationToManyDevices.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/token/:userId',
+        action: ConduitRouteActions.GET,
+        description: `Returns a user's notification token.`,
+        urlParams: {
+          userId: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('GetNotificationToken', {
-          tokenDocuments: ['NotificationToken'],
-        }),
-        'getNotificationToken',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('GetNotificationToken', {
+        tokenDocuments: ['NotificationToken'],
+      }),
+      this.getNotificationToken.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   async sendNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -105,9 +93,7 @@ export class AdminHandlers {
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
-      devices_count: 1,
-    });
+    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
     return 'Ok';
   }
 
@@ -130,9 +116,10 @@ export class AdminHandlers {
     await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
-    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1, {
-      devices_count: call.request.params.userIds.length,
-    });
+    ConduitGrpcSdk.Metrics?.increment(
+      'push_notifications_sent_total',
+      call.request.params.userIds.length,
+    );
     return 'Ok';
   }
 

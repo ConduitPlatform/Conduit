@@ -1,16 +1,16 @@
 import { isEmpty, isNil } from 'lodash';
-import { AuthUtils } from '../utils/auth';
+import { AuthUtils } from '../utils';
 import ConduitGrpcSdk, {
+  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConfigController,
   RoutingManager,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { AccessToken, RefreshToken, Service } from '../models';
+import { Service, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { Cookie } from '../interfaces/Cookie';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { TokenProvider } from './tokenProvider';
 
 export class ServiceHandler implements IAuthenticationStrategy {
   private initialized: boolean = false;
@@ -20,10 +20,10 @@ export class ServiceHandler implements IAuthenticationStrategy {
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
-      ConduitGrpcSdk.Logger.error('Service not active');
+      ConduitGrpcSdk.Logger.log('Service authentication not available');
       return (this.initialized = false);
     }
-    ConduitGrpcSdk.Logger.log('Service is active');
+    ConduitGrpcSdk.Logger.log('Service authentication is active');
     return (this.initialized = true);
   }
 
@@ -52,50 +52,12 @@ export class ServiceHandler implements IAuthenticationStrategy {
 
     const config = ConfigController.getInstance().config;
 
-    await Promise.all(
-      AuthUtils.deleteUserTokens(this.grpcSdk, {
-        userId: serviceUser._id,
-        clientId,
-      }),
-    );
-
-    const [accessToken, refreshToken] = await AuthUtils.createUserTokensAsPromise(
-      this.grpcSdk,
-      {
-        userId: serviceUser._id,
-        clientId: context.clientId,
-        config,
-      },
-    );
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    if (config.setCookies.enabled) {
-      const cookieOptions = config.setCookies.options;
-      const cookies: Cookie[] = [
-        {
-          name: 'accessToken',
-          value: (accessToken as AccessToken).token,
-          options: cookieOptions,
-        },
-      ];
-      if (!isNil((refreshToken as RefreshToken).token)) {
-        cookies.push({
-          name: 'refreshToken',
-          value: (refreshToken as RefreshToken).token,
-          options: cookieOptions,
-        });
-      }
-      return {
-        result: { message: 'Successfully authenticated' },
-        setCookies: cookies,
-      };
-    }
-    return {
-      serviceId: serviceUser._id.toString(),
-      accessToken: (accessToken as any).token,
-      refreshToken: !isNil(refreshToken)
-        ? (refreshToken as RefreshToken).token
-        : undefined,
-    };
+    return TokenProvider.getInstance()!.provideUserTokens({
+      user: serviceUser as unknown as User,
+      clientId,
+      config,
+    });
   }
 
   declareRoutes(routingManager: RoutingManager): void {}

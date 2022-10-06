@@ -37,6 +37,7 @@ import convict from 'convict';
 import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
+import metricsSchema from './metrics';
 
 const swaggerRouterMetadata: SwaggerRouterMetadata = {
   urlPrefix: '',
@@ -73,10 +74,15 @@ export default class AdminModule extends IConduitAdmin {
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
     adminRoutes.getCreateAdminRoute(),
-    adminRoutes.getAdminUsersRoute(),
+    adminRoutes.getAdminRoute(),
+    adminRoutes.getAdminsRoute(),
     adminRoutes.deleteAdminUserRoute(),
     adminRoutes.changePasswordRoute(),
     adminRoutes.getReadyRoute(),
+    adminRoutes.toggleTwoFaRoute(),
+    adminRoutes.verifyQrCodeRoute(),
+    adminRoutes.verifyTwoFaRoute(),
+    adminRoutes.changeUsersPasswordRoute(),
   ];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
@@ -93,8 +99,10 @@ export default class AdminModule extends IConduitAdmin {
       this.grpcSdk,
       1000,
       swaggerRouterMetadata,
+      { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
+    this.registerMetrics();
   }
 
   private getHttpPort() {
@@ -135,7 +143,9 @@ export default class AdminModule extends IConduitAdmin {
     );
     this.grpcSdk
       .waitForExistence('database')
-      .then(() => this.handleDatabase())
+      .then(async () => {
+        await this.handleDatabase();
+      })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
@@ -214,6 +224,12 @@ export default class AdminModule extends IConduitAdmin {
     } else {
       this._router.stopSockets();
     }
+  }
+
+  private registerMetrics() {
+    Object.values(metricsSchema).forEach(metric => {
+      ConduitGrpcSdk.Metrics?.registerMetric(metric.type, metric.config);
+    });
   }
 
   // grpc
@@ -384,6 +400,7 @@ export default class AdminModule extends IConduitAdmin {
           return models.Admin.getInstance().create({
             username: 'admin',
             password: result,
+            isSuperAdmin: true,
           });
         }
       })

@@ -46,6 +46,7 @@ else
 endif
 
 modules/authentication: conduit-builder
+modules/authorization: conduit-builder
 modules/database: conduit-builder
 modules/email: conduit-builder
 modules/chat: conduit-builder

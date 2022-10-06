@@ -1,8 +1,8 @@
-import ConduitGrpcSdk, {
-  ManagedModule,
-  DatabaseProvider,
+import {
   ConfigController,
+  DatabaseProvider,
   HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -24,10 +24,11 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { ISendNotification } from './interfaces/ISendNotification';
 import { runMigrations } from './migrations';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',
@@ -52,6 +53,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
       if (serving && ConfigController.getInstance().config.active) {
@@ -62,34 +64,35 @@ export default class PushNotifications extends ManagedModule<Config> {
     });
   }
 
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
-  }
-
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
-      await this.enableModule();
-      this.updateHealth(HealthCheckStatus.SERVING);
+      try {
+        await this.enableModule();
+        this.updateHealth(HealthCheckStatus.SERVING);
+      } catch (e) {
+        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      }
     }
   }
 
   private async enableModule() {
     if (!this.isRunning) {
       await this.initProvider();
-      await this.registerSchemas();
-      const self = this;
-      this.grpcSdk
-        .waitForExistence('router')
-        .then(() => {
-          self.userRouter = new PushNotificationsRoutes(self.grpcServer, self.grpcSdk);
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e.message);
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
+      if (this.grpcSdk.isAvailable('router')) {
+        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+      } else {
+        this.grpcSdk.monitorModule('router', serving => {
+          if (serving) {
+            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+            this.grpcSdk.unmonitorModule('router');
+          }
         });
+      }
 
       this.adminRouter = new AdminHandlers(
         this.grpcServer,
@@ -99,6 +102,9 @@ export default class PushNotifications extends ManagedModule<Config> {
       this.isRunning = true;
     } else {
       await this.initProvider();
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
       this.adminRouter.updateProvider(this._provider!);
     }
   }
@@ -118,14 +124,14 @@ export default class PushNotifications extends ManagedModule<Config> {
     const notificationsConfig = await this.grpcSdk.config.get('pushNotifications');
     const name = notificationsConfig.providerName;
     const settings = notificationsConfig[name];
-
     if (name === 'firebase') {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     } else {
-      // this was done just for now so that we surely initialize the _provider variable
-      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+      throw new Error('Provider not supported');
     }
   }
+
+  async initializeMetrics() {}
 
   // gRPC Service
   async setNotificationToken(

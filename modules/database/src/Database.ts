@@ -34,13 +34,14 @@ import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { convertToGrpcSchema } from './utils/grpcSchemaConverter';
+import { SchemaConverter } from './utils/SchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -79,29 +80,21 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async preServerStart() {
-    this._activeAdapter.setGrpcSdk(this.grpcSdk);
-    this._activeAdapter.connect();
-    await this._activeAdapter.ensureConnected();
+    await this._activeAdapter.init(this.grpcSdk);
+    await this.registerMetrics();
   }
 
   async onServerStart() {
-    const declaredSchemaExists = await this._activeAdapter.checkDeclaredSchemaExistence();
-    await this._activeAdapter.createSchemaFromAdapter(
-      models.DeclaredSchema,
-      false,
-      !declaredSchemaExists,
-    );
-    await this._activeAdapter.retrieveForeignSchemas();
-    this.updateHealth(HealthCheckStatus.SERVING);
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (model.name === '_DeclaredSchema') return [];
-      return this._activeAdapter.createSchemaFromAdapter(model, false, true);
+      return this._activeAdapter.registerSystemSchema(model);
     });
-
     await Promise.all(modelPromises);
-    await runMigrations(this._activeAdapter);
-
+    await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
+    await runMigrations(this._activeAdapter);
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   async onRegister() {
@@ -121,25 +114,13 @@ export default class DatabaseModule extends ManagedModule<void> {
       this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
         delete (syncSchema as any).fieldHash;
-        await this._activeAdapter.createSchemaFromAdapter(
-          syncSchema,
-          false,
-          false,
-          false,
-          true,
-        );
+        await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
       });
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
-    }
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
     }
   }
 
@@ -180,6 +161,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
+  async initializeMetrics() {
+    const customEndpointsTotal = await this._activeAdapter
+      .getSchemaModel('CustomEndpoints')
+      .model.countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('custom_endpoints_total', customEndpointsTotal);
+  }
+
   // gRPC Service
   /**
    * Should accept a JSON schema and output a .ts interface for the adapter
@@ -201,11 +189,11 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     schema.ownerModule = call.metadata!.get('module-name')![0] as string;
     await this._activeAdapter
-      .createSchemaFromAdapter(schema, false, true, true)
+      .createSchemaFromAdapter(schema, false, true)
       .then((schemaAdapter: Schema) => {
         callback(
           null,
-          convertToGrpcSchema(
+          SchemaConverter.dbToGrpc(
             this._activeAdapter,
             schemaAdapter.originalSchema as ConduitDatabaseSchema,
           ),
@@ -229,7 +217,10 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemaAdapter = this._activeAdapter.getSchema(call.request.schemaName);
       callback(
         null,
-        convertToGrpcSchema(this._activeAdapter, schemaAdapter as ConduitDatabaseSchema),
+        SchemaConverter.dbToGrpc(
+          this._activeAdapter,
+          schemaAdapter as ConduitDatabaseSchema,
+        ),
       ); // @dirty-type-cast
     } catch (err) {
       callback({
@@ -244,7 +235,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const schemas = this._activeAdapter.getSchemas();
       callback(null, {
         schemas: schemas.map(schema =>
-          convertToGrpcSchema(this._activeAdapter, schema as ConduitDatabaseSchema),
+          SchemaConverter.dbToGrpc(this._activeAdapter, schema as ConduitDatabaseSchema),
         ), // @dirty-type-cast
       });
     } catch (err) {
@@ -293,7 +284,7 @@ export default class DatabaseModule extends ManagedModule<void> {
         .then((schemaAdapter: Schema) => {
           callback(
             null,
-            convertToGrpcSchema(
+            SchemaConverter.dbToGrpc(
               this._activeAdapter,
               schemaAdapter.originalSchema as ConduitDatabaseSchema,
             ),

@@ -1,5 +1,4 @@
 import { Metadata, status } from '@grpc/grpc-js';
-import { Context, Params, Headers, Indexable } from '../interfaces';
 import {
   CounterConfiguration,
   GaugeConfiguration,
@@ -27,43 +26,8 @@ export class GrpcError extends Error {
   }
 }
 
-export type ParsedRouterRequest = GrpcRequest<{
-  params: Params;
-  path: string;
-  headers: Headers;
-  context: Context;
-}>;
-
-export type UnparsedRouterResponse =
-  | {
-      result?: Indexable;
-      redirect?: string;
-      setCookies: Indexable;
-      removeCookies: Indexable;
-    }
-  | Indexable
-  | string;
-
 export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
 export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
-
-export type ParsedSocketRequest = GrpcRequest<{
-  event: string;
-  socketId: string;
-  params: any[];
-  context: Context;
-}>;
-
-type EventResponse = {
-  event: string;
-  data: Indexable;
-  receivers?: string[];
-};
-
-type JoinRoomResponse = {
-  rooms: string[];
-};
-export type UnparsedSocketResponse = EventResponse | JoinRoomResponse;
 
 export enum HealthCheckStatus {
   UNKNOWN,

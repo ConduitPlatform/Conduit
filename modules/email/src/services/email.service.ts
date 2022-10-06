@@ -68,14 +68,17 @@ export class EmailService {
       if (isNil(templateFound)) {
         throw new Error(`Template ${template} not found`);
       }
+      if (isNil(templateFound.subject) && isNil(subject)) {
+        throw new Error(`Subject is missing both in body params and template.`);
+      }
       if (templateFound.externalManaged) {
         builder.setTemplate({ id: templateFound._id, variables: variables });
       } else {
-        const handled_body = handlebars.compile(templateFound.body);
-        bodyString = templateFound ? handled_body(variables) : body!;
+        bodyString = handlebars.compile(templateFound.body)(variables);
       }
-      const handled_subject = handlebars.compile(templateFound.subject);
-      subjectString = handled_subject(variables);
+      if (!isNil(templateFound.subject) && isNil(subject)) {
+        subjectString = handlebars.compile(templateFound.subject)(variables);
+      }
     }
 
     if (!isNil(sender)) {

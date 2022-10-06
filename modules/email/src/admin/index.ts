@@ -1,19 +1,18 @@
 import ConduitGrpcSdk, {
-  GrpcServer,
-  constructConduitRoute,
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
-  GrpcError,
-  RouteOptionType,
-  ConduitString,
-  ConduitNumber,
   ConduitBoolean,
   ConduitJson,
-  TYPE,
-  ConduitRouteObject,
+  ConduitNumber,
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  ConduitString,
+  GrpcError,
+  GrpcServer,
+  ParsedRouterRequest,
   Query,
+  RouteOptionType,
+  RoutingManager,
+  TYPE,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
@@ -28,11 +27,13 @@ const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private emailService: EmailService;
+  private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
   ) {
+    this.routingManager = new RoutingManager(grpcSdk.admin, server);
     this.registerAdminRoutes();
   }
 
@@ -41,169 +42,149 @@ export class AdminHandlers {
   }
 
   private registerAdminRoutes() {
-    const paths = this.getRegisteredRoutes();
-    this.grpcSdk.admin
-      .registerAdminAsync(this.server, paths, {
-        getTemplates: this.getTemplates.bind(this),
-        createTemplate: this.createTemplate.bind(this),
-        patchTemplate: this.patchTemplate.bind(this),
-        deleteTemplate: this.deleteTemplate.bind(this),
-        deleteTemplates: this.deleteTemplates.bind(this),
-        uploadTemplate: this.uploadTemplate.bind(this),
-        getExternalTemplates: this.getExternalTemplates.bind(this),
-        syncExternalTemplates: this.syncExternalTemplates.bind(this),
-        sendEmail: this.sendEmail.bind(this),
-      })
-      .catch((err: Error) => {
-        ConduitGrpcSdk.Logger.error('Failed to register admin routes for module!');
-        ConduitGrpcSdk.Logger.error(err);
-      });
-  }
-
-  private getRegisteredRoutes(): ConduitRouteObject[] {
-    return [
-      constructConduitRoute(
-        {
-          path: '/templates',
-          action: ConduitRouteActions.GET,
-          description: `Returns queried templates and their total count.`,
-          queryParams: {
-            skip: ConduitNumber.Optional,
-            limit: ConduitNumber.Optional,
-            sort: ConduitString.Optional,
-            search: ConduitString.Optional,
-          },
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/templates',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried templates and their total count.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('GetTemplates', {
-          templateDocuments: [EmailTemplate.name],
-          count: ConduitNumber.Required,
-        }),
-        'getTemplates',
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates',
-          action: ConduitRouteActions.POST,
-          description: `Creates a new email template.`,
-          bodyParams: {
-            _id: ConduitString.Optional, // externally managed
-            name: ConduitString.Required,
-            subject: ConduitString.Optional,
-            body: ConduitString.Required,
-            sender: ConduitString.Optional,
-            externalManaged: ConduitBoolean.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('GetTemplates', {
+        templateDocuments: [EmailTemplate.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getTemplates.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/templates',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new email template.`,
+        bodyParams: {
+          _id: ConduitString.Optional, // externally managed
+          name: ConduitString.Required,
+          subject: ConduitString.Required,
+          body: ConduitString.Required,
+          sender: ConduitString.Optional,
+          externalManaged: ConduitBoolean.Optional,
         },
-        new ConduitRouteReturnDefinition('CreateTemplate', {
-          template: EmailTemplate.getInstance().fields, // @type-inconsistency
-        }),
-        'createTemplate',
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates/:id',
-          action: ConduitRouteActions.PATCH,
-          description: `Updates an email template.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
-          bodyParams: {
-            name: ConduitString.Optional,
-            subject: ConduitString.Optional,
-            body: ConduitString.Optional,
-          },
+      },
+      new ConduitRouteReturnDefinition('CreateTemplate', {
+        template: EmailTemplate.getInstance().fields, // @type-inconsistency
+      }),
+      this.createTemplate.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/templates/:id',
+        action: ConduitRouteActions.PATCH,
+        description: `Updates an email template.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('PatchTemplate', {
-          template: EmailTemplate.getInstance().fields, // @type-inconsistency
-        }),
-        'patchTemplate',
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes queried email templates.`,
-          queryParams: {
-            ids: { type: [TYPE.String], required: true }, // handler array check is still required
-          },
+        bodyParams: {
+          name: ConduitString.Optional,
+          subject: ConduitString.Optional,
+          body: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('DeleteTemplates', {
-          template: [EmailTemplate.name],
-        }),
-        'deleteTemplates',
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates/:id',
-          action: ConduitRouteActions.DELETE,
-          description: `Deletes an email template.`,
-          urlParams: {
-            id: { type: RouteOptionType.String, required: true },
-          },
+      },
+      new ConduitRouteReturnDefinition('PatchTemplate', {
+        template: EmailTemplate.getInstance().fields, // @type-inconsistency
+      }),
+      this.patchTemplate.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/templates',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried email templates.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
         },
-        new ConduitRouteReturnDefinition('DeleteTemplate', {
-          deleted: ConduitJson.Required, // DeleteEmailTemplate
-        }),
-        'deleteTemplate',
-      ),
-      constructConduitRoute(
-        {
-          path: '/templates/upload',
-          action: ConduitRouteActions.POST,
-          description: `Uploads a local email template to remote provider.`,
-          bodyParams: {
-            _id: ConduitString.Required,
-          },
+      },
+      new ConduitRouteReturnDefinition('DeleteTemplates', {
+        template: [EmailTemplate.name],
+      }),
+      this.deleteTemplates.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/templates/:id',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes an email template.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
         },
-        new ConduitRouteReturnDefinition('UploadTemplate', {
-          created: ConduitJson.Required, // Template
-        }),
-        'uploadTemplate',
-      ),
-      constructConduitRoute(
-        {
-          path: '/externalTemplates',
-          action: ConduitRouteActions.GET,
-          description: `Returns external email templates and their total count.`,
+      },
+      new ConduitRouteReturnDefinition('DeleteTemplate', {
+        deleted: ConduitJson.Required, // DeleteEmailTemplate
+      }),
+      this.deleteTemplate.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/templates/upload',
+        action: ConduitRouteActions.POST,
+        description: `Uploads a local email template to remote provider.`,
+        bodyParams: {
+          _id: ConduitString.Required,
         },
-        new ConduitRouteReturnDefinition('GetExternalTemplates', {
-          templateDocuments: [EmailTemplate.name],
-          count: ConduitNumber.Required,
-        }),
-        'getExternalTemplates',
-      ),
-      constructConduitRoute(
-        {
-          path: '/syncExternalTemplates',
-          action: ConduitRouteActions.UPDATE,
-          description: `Synchronizes local email templates from remote provider.`,
+      },
+      new ConduitRouteReturnDefinition('UploadTemplate', {
+        created: ConduitJson.Required, // Template
+      }),
+      this.uploadTemplate.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/externalTemplates',
+        action: ConduitRouteActions.GET,
+        description: `Returns external email templates and their total count.`,
+      },
+      new ConduitRouteReturnDefinition('GetExternalTemplates', {
+        templateDocuments: [EmailTemplate.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getExternalTemplates.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/syncExternalTemplates',
+        action: ConduitRouteActions.UPDATE,
+        description: `Synchronizes local email templates from remote provider.`,
+      },
+      new ConduitRouteReturnDefinition('SyncExternalTemplates', {
+        updated: [EmailTemplate.name],
+        count: ConduitNumber.Required,
+      }),
+      this.syncExternalTemplates.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/send',
+        action: ConduitRouteActions.POST,
+        description: `Sends an email.`,
+        bodyParams: {
+          email: ConduitString.Required,
+          sender: ConduitString.Required,
+          variables: ConduitJson.Optional,
+          subject: ConduitString.Optional,
+          body: ConduitString.Optional,
+          templateName: ConduitString.Optional,
         },
-        new ConduitRouteReturnDefinition('SyncExternalTemplates', {
-          updated: [EmailTemplate.name],
-          count: ConduitNumber.Required,
-        }),
-        'syncExternalTemplates',
-      ),
-      constructConduitRoute(
-        {
-          path: '/send',
-          action: ConduitRouteActions.POST,
-          description: `Sends an email.`,
-          bodyParams: {
-            email: ConduitString.Required,
-            sender: ConduitString.Required,
-            variables: ConduitJson.Optional,
-            subject: ConduitString.Optional,
-            body: ConduitString.Optional,
-            templateName: ConduitString.Optional,
-          },
-        },
-        new ConduitRouteReturnDefinition('SendEmail', {
-          message: ConduitString.Required,
-        }),
-        'sendEmail',
-      ),
-    ];
+      },
+      new ConduitRouteReturnDefinition('SendEmail', {
+        message: ConduitString.Required,
+      }),
+      this.sendEmail.bind(this),
+    );
+    this.routingManager.registerRoutes();
   }
 
   async getTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -236,7 +217,7 @@ export class AdminHandlers {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
-    return { result: { templateDocuments, count } };
+    return { templateDocuments, count };
   }
 
   async createTemplate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -309,7 +290,7 @@ export class AdminHandlers {
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(call.request.params.id, templateDocument)
+      .findByIdAndUpdate(call.request.params.id, templateDocument, true)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -504,6 +485,17 @@ export class AdminHandlers {
         .get('email')
         .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
       sender = sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
+    }
+    if (templateName) {
+      const templateFound = await EmailTemplate.getInstance().findOne({
+        name: templateName,
+      });
+      if (isNil(templateFound)) {
+        throw new Error(`Template ${templateName} not found`);
+      }
+      if (isNil(templateFound.subject) && isNil(subject)) {
+        throw new Error(`Subject is missing both in body params and template.`);
+      }
     }
 
     await this.emailService

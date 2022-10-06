@@ -1,5 +1,5 @@
 import ConduitGrpcSdk, {
-  ConduitSchema,
+  ConduitModel,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
@@ -20,7 +20,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ConduitDatabaseSchema } from '../../interfaces';
+import { IDeclaredSchema } from '../../interfaces';
 
 export const OperationsEnum = {
   // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
@@ -87,17 +87,14 @@ export class CustomEndpointsAdmin {
         `${name} custom endpoint already exists`,
       );
     }
+    const { schemaId, schemaName, fields } = await this.getAccessibleSchemaFields(
+      operation,
+      selectedSchema,
+      selectedSchemaName,
+    );
     let error = paramValidation(call.request.params);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-    }
-    const findSchema = await this.findSchema(
-      selectedSchema,
-      selectedSchemaName,
-      operation,
-    );
-    if (isNil(findSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
     error = operationValidation(operation, query, assignments);
     if (error !== true) {
@@ -111,22 +108,17 @@ export class CustomEndpointsAdmin {
     const endpoint = {
       name,
       operation,
-      selectedSchema,
-      selectedSchemaName: findSchema.name,
+      selectedSchema: schemaId,
+      selectedSchemaName: schemaName,
       inputs,
       authentication,
       paginated: false,
       sorted: false,
-      returns: findSchema.name,
+      returns: schemaName,
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(
-      operation,
-      call,
-      findSchema as ConduitDatabaseSchema,
-      endpoint,
-    );
+    error = paginationAndSortingValidation(operation, call, fields, endpoint);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -143,7 +135,7 @@ export class CustomEndpointsAdmin {
           assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
-            findSchema,
+            fields,
             inputs,
             operation,
             r.schemaField,
@@ -171,48 +163,35 @@ export class CustomEndpointsAdmin {
   async patchCustomEndpoint(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, selectedSchema, selectedSchemaName, query, inputs, assignments } =
       call.request.params;
-
     if (isNil(selectedSchema) && isNil(selectedSchemaName)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Either selectedSchema or selectedSchemaName must be specified',
       );
     }
-
     const found = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'Custom endpoint does not exist');
     }
-
     const operation = found.operation;
 
-    const findSchema = await this.findSchema(
+    const { schemaName, fields } = await this.getAccessibleSchemaFields(
+      operation,
       selectedSchema,
       selectedSchemaName,
-      operation,
     );
-    if (isNil(findSchema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-    }
 
     let error = operationValidation(operation, query, assignments);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
     error = inputValidation(inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-
-    error = paginationAndSortingValidation(
-      operation,
-      call,
-      findSchema as ConduitDatabaseSchema,
-      null,
-    );
+    error = paginationAndSortingValidation(operation, call, fields, null);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -229,7 +208,7 @@ export class CustomEndpointsAdmin {
           assignmentField: { type: string; value: Indexable };
         }) => {
           const error = assignmentValidation(
-            findSchema,
+            fields,
             inputs,
             operation,
             r.schemaField,
@@ -249,8 +228,8 @@ export class CustomEndpointsAdmin {
       // TODO: "Bugs are Welcome", we should clean this up
       found[key] = call.request.params[key];
     });
-    found.returns = findSchema.name;
-    found.selectedSchemaName = findSchema.name;
+    found.returns = schemaName;
+    found.selectedSchemaName = schemaName;
 
     const customEndpoint = await this.database
       .getSchemaModel('CustomEndpoints')
@@ -259,7 +238,7 @@ export class CustomEndpointsAdmin {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     if (isNil(customEndpoint)) {
-      throw new GrpcError(status.INTERNAL, 'Could not update schema');
+      throw new GrpcError(status.INTERNAL, 'Could not update custom endpoint');
     }
 
     this.customEndpointController.refreshEndpoints();
@@ -314,25 +293,73 @@ export class CustomEndpointsAdmin {
     return { schemas };
   }
 
-  private async findSchema(
-    selectedSchema: string,
-    selectedSchemaName: string,
+  async schemaDetailsForOperation(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { schemaId, operation } = call.request.params;
+    const { schemaName, fields: accessibleFields } = await this.getAccessibleSchemaFields(
+      operation,
+      schemaId,
+    );
+    return { schemaId, schemaName, accessibleFields };
+  }
+
+  private async getAccessibleSchemaFields(
     operation: number,
-  ): Promise<ConduitSchema | null> {
-    if (!isNil(selectedSchema)) {
-      // Find schema using selectedSchema
-      return this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ _id: selectedSchema });
+    schemaId?: string,
+    schemaName?: string,
+  ): Promise<{
+    schemaId: string;
+    schemaName: string;
+    fields: ConduitModel;
+  }> {
+    if (!schemaId && !schemaName) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Specify schema id or name');
+    }
+    const schema: IDeclaredSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        $and: [
+          { name: { $nin: this.database.systemSchemas } },
+          schemaId ? { _id: schemaId } : { name: schemaName },
+        ],
+      });
+    if (!schema) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        `Schema does not exist or can't be used by CMS`,
+      );
+    }
+    schemaId = schema._id.toString();
+    schemaName = schema.name;
+    // Field Accessibility Checks
+    const perms = schema.modelOptions.conduit?.permissions!;
+    if (!perms && operation !== OperationsEnum.GET) {
+      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
+      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
+      ConduitGrpcSdk.Logger.error(error);
+      throw new GrpcError(status.FAILED_PRECONDITION, error);
+    }
+    if (operation === OperationsEnum.GET) {
+      return { schemaId, schemaName, fields: schema.compiledFields };
+    } else if (operation === OperationsEnum.POST) {
+      const fields = perms.canCreate ? schema.compiledFields : {};
+      return { schemaId, schemaName, fields };
+    } else if ([OperationsEnum.PATCH, OperationsEnum.PUT].includes(operation)) {
+      const fields =
+        perms.canModify === 'Everything'
+          ? schema.compiledFields
+          : perms.canModify === 'ExtensionOnly'
+          ? perms.extendable
+            ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
+            : {}
+          : {};
+      return { schemaId, schemaName, fields };
+    } else if (operation === OperationsEnum.DELETE) {
+      const fields = perms.canDelete ? schema.compiledFields : {};
+      return { schemaId, schemaName, fields };
     } else {
-      // Find schema using selectedSchemaName
-      if (operation !== OperationsEnum.GET) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Only get requests are allowed for schemas from other modules',
-        );
-      }
-      return this.database.getSchema(selectedSchemaName);
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
     }
   }
 }

@@ -2,10 +2,11 @@ import { MetricType } from '@conduitplatform/grpc-sdk';
 
 export default {
   registeredRoutes: {
-    type: MetricType.Counter,
+    type: MetricType.Gauge,
     config: {
-      name: 'registered_routes_total',
-      help: 'Tracks the total number of registered routes',
+      name: 'client_routes_total',
+      help: 'Tracks the total number of registered client routes',
+      labelNames: ['transport'],
     },
   },
   securityClients: {

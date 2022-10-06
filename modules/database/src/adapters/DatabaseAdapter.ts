@@ -12,9 +12,11 @@ import ObjectHash from 'object-hash';
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
+  private legacyDeployment = false; // unprefixed declared schema collection
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
+  private readonly _systemSchemas: Set<string> = new Set();
 
   protected constructor() {
     this.registeredSchemas = new Map();
@@ -25,15 +27,41 @@ export abstract class DatabaseAdapter<T extends Schema> {
         : this.maxConnTimeoutMs;
   }
 
+  async init(grpcSdk: ConduitGrpcSdk) {
+    this.grpcSdk = grpcSdk;
+    this.connect();
+    await this.ensureConnected();
+    this.legacyDeployment = await this.hasLegacyCollections();
+  }
+
+  async registerSystemSchema(schema: ConduitSchema) {
+    // @dirty-type-cast
+    await this.createSchemaFromAdapter(schema);
+    this._systemSchemas.add(schema.name);
+  }
+
+  get systemSchemas() {
+    return Array.from(this._systemSchemas);
+  }
+
+  schemaInSystemSchemas(schemaName: string) {
+    const systemSchemas = this.systemSchemas.map(s => s.toLowerCase());
+    return systemSchemas.includes(schemaName.toLowerCase());
+  }
+
+  protected abstract connect(): void;
+
+  protected abstract ensureConnected(): Promise<void>;
+
   /**
    * Introspects all schemas of current db connection, registers them to Conduit
    */
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
 
   /**
-   * Check Declared Schema Existence
+   * Checks whether DeclaredSchema collection name is unprefixed
    */
-  abstract checkDeclaredSchemaExistence(): Promise<boolean>;
+  protected abstract hasLegacyCollections(): Promise<boolean>;
 
   /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
@@ -44,14 +72,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * Registers a schema, creates its collection in the database and updates routing types
    * @param {ConduitSchema} schema
    * @param {boolean} imported Whether schema is an introspected schema
-   * @param {boolean} cndPrefix Whether to prefix the collection name with a Conduit system schema identifier (cnd_)
    * @param {boolean} gRPC Merge existing extensions before stitching schema from gRPC
    * @param {boolean} instanceSync Do not republish schema changes for multi-instance sync calls
    */
   async createSchemaFromAdapter(
     schema: ConduitSchema,
     imported = false,
-    cndPrefix = true,
     gRPC = false,
     instanceSync = false,
   ): Promise<Schema> {
@@ -62,11 +88,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
       this.foreignSchemaCollections.delete(schema.collectionName);
     } else {
       let collectionName = this.getCollectionName(schema);
-      if (cndPrefix && !this.models['_DeclaredSchema']) {
+      if (!this.legacyDeployment && !this.models['_DeclaredSchema']) {
         collectionName = collectionName.startsWith('_')
           ? `cnd${collectionName}`
           : `cnd_${collectionName}`;
-      } else if (cndPrefix) {
+      } else if (schema.name !== '_DeclaredSchema') {
         const declaredSchema = await this.models['_DeclaredSchema'].findOne({
           name: schema.name,
         });
@@ -75,7 +101,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
             ? `cnd${collectionName}`
             : `cnd_${collectionName}`;
         } else {
-          //recover collection name from DeclaredSchema
+          // recover collection name from DeclaredSchema
           collectionName = declaredSchema.collectionName;
         }
       }
@@ -95,9 +121,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       }
     }
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = this._createSchemaFromAdapter(schema);
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    if (!this.registeredSchemas.has(schema.name)) {
+    if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
         imported: imported ? 'true' : 'false',
       });
@@ -109,11 +136,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
   abstract getCollectionName(schema: ConduitSchema): string;
-
-  async createCustomSchemaFromAdapter(schema: ConduitSchema) {
-    schema.ownerModule = 'database';
-    return this.createSchemaFromAdapter(schema);
-  }
 
   /**
    * Given a schema name, returns the schema adapter assigned
@@ -217,18 +239,15 @@ export abstract class DatabaseAdapter<T extends Schema> {
         return schema;
       })
       .map((model: ConduitSchema) => {
-        return this.createSchemaFromAdapter(model);
+        return this.createSchemaFromAdapter(
+          model,
+          !!model.modelOptions.conduit?.imported,
+          true,
+          false,
+        );
       });
 
     await Promise.all(models);
-  }
-
-  abstract connect(): void;
-
-  abstract ensureConnected(): Promise<void>;
-
-  setGrpcSdk(grpcSdk: ConduitGrpcSdk) {
-    this.grpcSdk = grpcSdk;
   }
 
   setSchemaExtension(

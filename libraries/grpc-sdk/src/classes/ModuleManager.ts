@@ -26,7 +26,7 @@ export class ModuleManager<T> {
     this.servicePort = process.env.GRPC_PORT ?? '5000';
 
     this.serviceAddress =
-      // @compat (v0.15): SERVICE_IP -> SERVICE_IP
+      // @compat (v0.15): SERVICE_IP -> SERVICE_URL
       process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
@@ -69,9 +69,10 @@ export class ModuleManager<T> {
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.module.handleConfigSyncUpdate();
+    await this.module.registerMetrics();
     await this.module.startGrpcServer();
-    await this.initializeMetrics();
     await this.module.onServerStart();
+    await this.module.initializeMetrics();
     await this.module.preRegister();
   }
 
@@ -82,19 +83,13 @@ export class ModuleManager<T> {
       const config = await this.grpcSdk.config.configure(
         this.module.config.getProperties(),
         convictConfigParser(configSchema),
+        this.module.configOverride,
       );
 
       ConfigController.getInstance();
       if (config) ConfigController.getInstance().config = config;
       if (!config || config.active || !config.hasOwnProperty('active'))
         await this.module.onConfig();
-    }
-  }
-
-  private initializeMetrics() {
-    if (process.env['METRICS_PORT']) {
-      this.grpcSdk.initializeDefaultMetrics();
-      this.module.initializeMetrics();
     }
   }
 }

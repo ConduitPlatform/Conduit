@@ -22,10 +22,11 @@ import {
   SendEmailRequest,
   SendEmailResponse,
 } from './protoTypes/email';
-import metricsConfig from './metrics';
+import metricsSchema from './metrics';
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
+  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
     protoDescription: 'email.Email',
@@ -49,6 +50,7 @@ export default class Email extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    await this.registerSchemas();
     await runMigrations(this.grpcSdk);
   }
 
@@ -58,12 +60,6 @@ export default class Email extends ManagedModule<Config> {
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
-  }
-
-  initializeMetrics() {
-    for (const metric of Object.values(metricsConfig)) {
-      this.grpcSdk.registerMetric(metric.type, metric.config);
-    }
   }
 
   async preConfig(config: Config) {
@@ -82,7 +78,6 @@ export default class Email extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       if (!this.isRunning) {
-        await this.registerSchemas();
         await this.initEmailProvider();
         this.emailService = new EmailService(this.emailProvider);
         this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
@@ -109,6 +104,11 @@ export default class Email extends ManagedModule<Config> {
     const { transport, transportSettings } = emailConfig;
 
     this.emailProvider = new EmailProvider(transport, transportSettings);
+  }
+
+  async initializeMetrics() {
+    const templatesTotal = await models.EmailTemplate.getInstance().countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('email_templates_total', templatesTotal);
   }
 
   // gRPC Service
