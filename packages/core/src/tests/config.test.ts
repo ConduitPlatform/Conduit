@@ -28,26 +28,18 @@ beforeAll(async () => {
 
 describe('Testing Core package', () => {
   test('Getting Redis Details', async () => {
-    try {
-      const res = await testTools.client.getRedisDetails({});
-      expect(res).toMatchObject({
-        redisPort: expect.any(Number),
-        redisHost: expect.any(String),
-      });
-    } catch (e) {
-      throw e;
-    }
+    const res = await testTools.client.getRedisDetails({});
+    expect(res).toMatchObject({
+      redisPort: expect.any(Number),
+      redisHost: expect.any(String),
+    });
   });
 
   test('Getting Server Config', async () => {
     const res = await testTools.client.getServerConfig({});
-    try {
-      expect(res).toMatchObject({
-        data: expect.any(String),
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      data: expect.any(String),
+    });
   });
 });
 
@@ -58,48 +50,32 @@ describe('Testing module related rpc calls', () => {
       url: testModuleUrl,
       healthStatus: 1,
     });
-    try {
-      expect(res).toMatchObject({
-        result: expect.any(Boolean),
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      result: expect.any(Boolean),
+    });
   });
 
   test('Getting Module List', async () => {
     const res = await testTools.client.moduleList({});
-    try {
-      expect(res.modules[0]).toMatchObject({
-        moduleName: 'test',
-        url: testModuleUrl,
-        serving: expect.any(Boolean),
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res.modules[0]).toMatchObject({
+      moduleName: 'test',
+      url: testModuleUrl,
+      serving: expect.any(Boolean),
+    });
   });
 
   test('Module Exists', async () => {
     const res = await testTools.client.moduleExists({ moduleName: 'test' });
-    try {
-      expect(res).toMatchObject({
-        url: testModuleUrl,
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      url: testModuleUrl,
+    });
   });
 
   test('Get Module Url By Name', async () => {
     const res = await testTools.client.getModuleUrlByName({ name: 'test' });
-    try {
-      expect(res).toMatchObject({
-        moduleUrl: testModuleUrl,
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      moduleUrl: testModuleUrl,
+    });
   });
 
   test('Get Config Request', async () => {
@@ -110,13 +86,9 @@ describe('Testing module related rpc calls', () => {
       }),
     });
     const res = await testTools.client.get({ key: 'test' });
-    try {
-      expect(res).toMatchObject({
-        data: expect.any(String),
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      data: expect.any(String),
+    });
   });
 
   test('Configure', async () => {
@@ -127,13 +99,9 @@ describe('Testing module related rpc calls', () => {
         mockField: { format: 'String', default: '' },
       }),
     });
-    try {
-      expect(res).toMatchObject({
-        result: expect.any(String),
-      });
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({
+      result: expect.any(String),
+    });
   });
 
   test('Module Health Probe', async () => {
@@ -142,32 +110,24 @@ describe('Testing module related rpc calls', () => {
       url: testModuleUrl,
       status: 1,
     });
-    try {
-      expect(res).toMatchObject({});
-    } catch (e) {
-      throw e;
-    }
+    expect(res).toMatchObject({});
   });
 
   test('Watch Modules', async () => {
     const watchModules = testTools.client.watchModules({});
-    try {
-      await testTools.client.registerModule({
-        moduleName: 'watch-modules',
-        url: '0.0.0.0:55152',
-        healthStatus: 1,
+    await testTools.client.registerModule({
+      moduleName: 'watch-modules',
+      url: '0.0.0.0:55152',
+      healthStatus: 1,
+    });
+    for await (const modules of watchModules) {
+      expect(modules).toMatchObject({
+        modules: [
+          { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
+          { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
+        ],
       });
-      for await (const modules of watchModules) {
-        expect(modules).toMatchObject({
-          modules: [
-            { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
-            { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
-          ],
-        });
-        break;
-      }
-    } catch (e) {
-      throw e;
+      break;
     }
   });
 });

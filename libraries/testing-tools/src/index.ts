@@ -30,7 +30,7 @@ export default class TestingTools<T extends CompatServiceDefinition> {
 
   async runDependencies(dependencies: IRRunDependenciesInterface[]) {
     const processes: ChildProcess[] = [];
-    for (let dependency of dependencies) {
+    for (const dependency of dependencies) {
       const process = exec(dependency.command, dependency.options);
       processes.push(process);
       await new Promise(r => setTimeout(r, dependency.delay));
