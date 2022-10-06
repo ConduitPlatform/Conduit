@@ -16,6 +16,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
+  private readonly _systemSchemas: Set<string> = new Set();
 
   protected constructor() {
     this.registeredSchemas = new Map();
@@ -31,6 +32,21 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.connect();
     await this.ensureConnected();
     this.legacyDeployment = await this.hasLegacyCollections();
+  }
+
+  async registerSystemSchema(schema: ConduitSchema) {
+    // @dirty-type-cast
+    await this.createSchemaFromAdapter(schema);
+    this._systemSchemas.add(schema.name);
+  }
+
+  get systemSchemas() {
+    return Array.from(this._systemSchemas);
+  }
+
+  schemaInSystemSchemas(schemaName: string) {
+    const systemSchemas = this.systemSchemas.map(s => s.toLowerCase());
+    return systemSchemas.includes(schemaName.toLowerCase());
   }
 
   protected abstract connect(): void;
@@ -120,11 +136,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
   protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
 
   abstract getCollectionName(schema: ConduitSchema): string;
-
-  async createCustomSchemaFromAdapter(schema: ConduitSchema) {
-    schema.ownerModule = 'database';
-    return this.createSchemaFromAdapter(schema);
-  }
 
   /**
    * Given a schema name, returns the schema adapter assigned

@@ -1,10 +1,10 @@
 import {
+  ConduitModel,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitDatabaseSchema } from '../../interfaces';
 import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -19,7 +19,7 @@ import { status } from '@grpc/grpc-js';
  */
 export function queryValidation(
   query: any,
-  findSchema: ConduitDatabaseSchema,
+  fields: ConduitModel,
   inputs: Indexable,
 ): true | string {
   if (query.hasOwnProperty('AND')) {
@@ -34,7 +34,7 @@ export function queryValidation(
     query = query['OR'];
   } else if (query.hasOwnProperty('schemaField')) {
     const error = _queryValidation(
-      findSchema,
+      fields,
       inputs,
       query.schemaField,
       query.operation,
@@ -55,7 +55,7 @@ export function queryValidation(
   for (const q of query) {
     if (q.hasOwnProperty('schemaField')) {
       const error = _queryValidation(
-        findSchema,
+        fields,
         inputs,
         q.schemaField,
         q.operation,
@@ -65,7 +65,7 @@ export function queryValidation(
         return error;
       }
     } else if (q.hasOwnProperty('AND') || q.hasOwnProperty('OR')) {
-      const error = queryValidation(q, findSchema, inputs);
+      const error = queryValidation(q, fields, inputs);
       if (error !== true) {
         return error;
       }
@@ -78,14 +78,14 @@ export function queryValidation(
 }
 
 function _queryValidation(
-  findSchema: ConduitDatabaseSchema,
+  fields: ConduitModel,
   inputs: Indexable,
   schemaField: string,
   operation: number,
   comparisonField: Indexable,
 ) {
   if (isNil(schemaField) || isNil(operation) || isNil(comparisonField)) {
-    return 'schemaField, operation and comparisonField must be present in the input';
+    return 'schemaField, operation and comparisonField must be present/accessible in the input';
   }
   if (schemaField.length === 0) {
     return 'schemaField cannot be empty';
@@ -99,8 +99,8 @@ function _queryValidation(
     return 'comparisonField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(findSchema.compiledFields).includes(schemaField)) {
-    return 'schemaField is not present in selected schema!';
+  if (!Object.keys(fields).includes(schemaField)) {
+    return 'schemaField is not present/accessible in selected schema!';
   }
 
   if (operation < 0 || operation > 10) {
@@ -108,13 +108,13 @@ function _queryValidation(
   }
 
   if (comparisonField.type === 'Schema') {
-    if (!Object.keys(findSchema.compiledFields).includes(comparisonField.value)) {
-      return 'comparisonField value is not present in selected schema!';
+    if (!Object.keys(fields).includes(comparisonField.value)) {
+      return 'comparisonField value is not present/accessible in selected schema!';
     }
   } else if (comparisonField.type === 'Input') {
     const inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(comparisonField.value)) {
-      return 'comparisonField value is not present in provided inputs!';
+      return 'comparisonField value is not present/accessible in provided inputs!';
     }
   } else if (comparisonField.type !== 'Custom' && comparisonField.type !== 'Context') {
     return 'comparisonField type is invalid!';
@@ -182,7 +182,7 @@ export function inputValidation(inputs?: Indexable | null): boolean | string {
  * }
  */
 export function assignmentValidation(
-  findSchema: Indexable,
+  fields: ConduitModel,
   inputs: Indexable,
   operation: number,
   schemaField: string,
@@ -190,7 +190,7 @@ export function assignmentValidation(
   action: number,
 ): boolean | string {
   if (isNil(schemaField) || isNil(assignmentField) || isNil(action)) {
-    return 'schemaField, assignmentField and action must be present in the input';
+    return 'schemaField, assignmentField and action must be present/accessible in the input';
   }
   if (schemaField.length === 0) {
     return 'schemaField cannot be empty';
@@ -213,21 +213,21 @@ export function assignmentValidation(
     return 'assignmentField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(findSchema.compiledFields).includes(schemaField)) {
-    return 'schemaField is not present in selected schema!';
+  if (!Object.keys(fields).includes(schemaField)) {
+    return 'schemaField is not present/accessible in selected schema!';
   }
 
   if (assignmentField.type === 'Input') {
     const inputNames = inputs.map((r: Indexable) => r.name);
     if (!inputNames.includes(assignmentField.value)) {
-      return 'assignmentField value is not present in provided inputs!';
+      return 'assignmentField value is not present/accessible in provided inputs!';
     }
   } else if (assignmentField.type !== 'Custom' && assignmentField.type !== 'Context') {
     return 'assignmentField type is invalid!';
   }
 
   if (action === 3 || action === 4) {
-    if (!Array.isArray(findSchema.compiledFields[schemaField].type)) {
+    if (!Array.isArray((fields[schemaField] as Indexable).type)) {
       return 'append and remove actions are valid only for array schema fields';
     }
   }
@@ -300,7 +300,7 @@ export function operationValidation(
 export function paginationAndSortingValidation(
   operation: number,
   call: ParsedRouterRequest,
-  findSchema: ConduitDatabaseSchema,
+  fields: ConduitModel,
   endpoint: Indexable | null,
 ) {
   const { query, inputs, sorted, paginated } = call.request.params;
@@ -316,11 +316,7 @@ export function paginationAndSortingValidation(
     endpoint.sorted = sorted;
   }
   if (operation !== OperationsEnum.POST) {
-    const error = queryValidation(
-      query,
-      findSchema as ConduitDatabaseSchema, // @dirty-type-cast
-      inputs,
-    );
+    const error = queryValidation(query, fields, inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
