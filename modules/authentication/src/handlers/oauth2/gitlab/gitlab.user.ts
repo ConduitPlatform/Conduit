@@ -1,5 +1,4 @@
 export interface GitlabUser {
-  id: number;
   username: string;
   name: string;
   state: string;
@@ -7,7 +6,7 @@ export interface GitlabUser {
   web_url: string;
   created_at: string;
   bio?: string;
-  bot?: boolean;
+  bot: boolean;
   location?: string;
   public_email?: string;
   skype?: string;
@@ -21,16 +20,15 @@ export interface GitlabUser {
   followers: number;
   following: number;
   local_time?: string;
-  is_followed?: boolean;
-  last_sign_in_at?: string;
-  confirmed_at?: string;
-  last_activity_on?: string;
-  email: string;
-  theme_id?: number;
+  is_followed: boolean;
+  last_sign_in_at: string;
+  confirmed_at: string;
+  last_activity_on: string;
+  theme_id: number;
   color_scheme_id: number;
   projects_limit: number;
   current_sign_in_at: string;
-  identities?: [
+  identities: [
     {
       provider?: string;
       extern_uid?: string;

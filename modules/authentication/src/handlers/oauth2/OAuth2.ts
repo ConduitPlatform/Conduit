@@ -203,7 +203,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         },
       },
       new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
-        userId: ConduitString.Required,
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
       }),
