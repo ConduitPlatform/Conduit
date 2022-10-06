@@ -1,13 +1,41 @@
+# ---------------------------------------- Instructions ----------------------------------------
+# This compose file is primarily intended to be used with Conduit's CLI.
+# https://github.com/ConduitPlatform/CLI
+#
+# You may still invoke it manually, as long as you take care of the following requirements:
+# 1. Make sure you also retrieve the accompanying env file and config files.
+#    https://raw.githubusercontent.com/ConduitPlatform/Conduit/main/docker/.env
+#    https://raw.githubusercontent.com/ConduitPlatform/Conduit/main/docker/prometheus.cfg.yml
+#    https://raw.githubusercontent.com/ConduitPlatform/Conduit/main/docker/loki.cfg.yml
+# 2. Make sure the port values specified in the .env file are not currently in use.
+#    Otherwise, simply update the env values with any available port.
+# 3. Specify at least '--profile mongodb' or '--profile postgres'
+#    If you're going to use PostgreSQL, swap out 'DB_CONN_URI' in the '.env' file
+# 4. Not all Conduit modules are brought up by default.
+#    You may enable optional modules by specifying additional profiles.
+#    Optional Profiles:
+#    chat, email, forms, push-notifications, sms, storage
+#
+# Examples:
+# docker compose --profile mongodb up
+# docker compose --profile mongodb --profile chat --profile email --profile forms \
+#                --profile push-notifications --profile sms --profile storage up
+# ----------------------------------------------------------------------------------------------
+
 version: '3.9'
 networks:
   default:
-    name: 'conduit-${IMAGE_TAG}'
+    name: 'conduit'
 services:
   # Default Services
   core:
     container_name: 'conduit-${IMAGE_TAG}'
     image: 'docker.io/conduitplatform/conduit:${IMAGE_TAG}'
     restart: unless-stopped
+    depends_on:
+      - redis
+      - prometheus
+      - loki
     ports:
       - '${CORE_GRPC_PORT:-55152}:55152'
       - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
@@ -18,23 +46,28 @@ services:
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
       ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
       ADMIN_SOCKET_PORT: '${ADMIN_SOCKET_PORT:-3031}'
+      METRICS_PORT: '9091'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     networks:
       default:
         aliases:
-          - conduit-${NETWORK_SUFFIX}
-    depends_on:
-      - redis
+          - conduit
 
   ui:
     container_name: 'conduit-ui-${IMAGE_TAG}'
     image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
     restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
     ports:
       - '${UI_PORT:-8080}:8080'
     environment:
-      CONDUIT_URL: 'http://conduit-${NETWORK_SUFFIX}:${ADMIN_HTTP_PORT:-3030}'
+      CONDUIT_URL: 'http://conduit:3030'
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+      PROMETHEUS_URL: 'http://conduit-prometheus:9090'
+      LOKI_URL: 'http://conduit-loki:3100'
 
   database:
     container_name: 'conduit-database-${IMAGE_TAG}'
@@ -43,16 +76,21 @@ services:
     depends_on:
       - core
       - ${DB_TYPE:-mongodb}
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-database:55160'
+      GRPC_PORT: '55160'
+      METRICS_PORT: '9092'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
       DB_TYPE: '${DB_TYPE:-mongodb}'
-      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}' # append '/conduit' db for PostgreSQL
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}'
     networks:
       default:
         aliases:
-          - conduit-database-${NETWORK_SUFFIX}
+          - conduit-database
 
   router:
     container_name: 'conduit-router-${IMAGE_TAG}'
@@ -61,19 +99,24 @@ services:
     depends_on:
       - core
       - database
+      - prometheus
+      - loki
     ports:
       - '${CLIENT_HTTP_PORT:-3000}:3000'
       - '${CLIENT_SOCKET_PORT:-3001}:3001'
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-router:55161'
+      GRPC_PORT: '55161'
+      METRICS_PORT: '9093'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
       CLIENT_HTTP_PORT: '${CLIENT_HTTP_PORT:-3000}'
       CLIENT_SOCKET_PORT: '${CLIENT_SOCKET_PORT:-3001}'
     networks:
       default:
         aliases:
-          - conduit-router-${NETWORK_SUFFIX}
+          - conduit-router
 
   authentication:
     container_name: 'conduit-authentication-${IMAGE_TAG}'
@@ -82,16 +125,21 @@ services:
     depends_on:
       - core
       - database
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-authentication:55162'
+      GRPC_PORT: '55162'
+      METRICS_PORT: '9094'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     networks:
       default:
         aliases:
-          - conduit-authentication-${NETWORK_SUFFIX}
+          - conduit-authentication
 
-  # Optional Services
+#  # Optional Services
   chat:
     container_name: 'conduit-chat-${IMAGE_TAG}'
     image: 'docker.io/conduitplatform/chat:${IMAGE_TAG}'
@@ -100,15 +148,20 @@ services:
       - core
       - database
       - router
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-chat:55163'
+      GRPC_PORT: '55163'
+      METRICS_PORT: '9095'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['chat']
     networks:
       default:
         aliases:
-          - conduit-chat-${NETWORK_SUFFIX}
+          - conduit-chat
 
   email:
     container_name: 'conduit-email-${IMAGE_TAG}'
@@ -117,15 +170,20 @@ services:
     depends_on:
       - core
       - database
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-email:55164'
+      GRPC_PORT: '55164'
+      METRICS_PORT: '9096'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['email']
     networks:
       default:
         aliases:
-          - conduit-email-${NETWORK_SUFFIX}
+          - conduit-email
 
   forms:
     container_name: 'conduit-forms-${IMAGE_TAG}'
@@ -136,15 +194,21 @@ services:
       - database
       - router
       - email
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-forms:55165'
       REGISTER_NAME: 'true'
+      GRPC_PORT: '55165'
+      METRICS_PORT: '9097'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['forms']
     networks:
       default:
         aliases:
-          - conduit-forms-${NETWORK_SUFFIX}
+          - conduit-forms
 
   push-notifications:
     container_name: 'conduit-push-notifications-${IMAGE_TAG}'
@@ -154,15 +218,20 @@ services:
       - core
       - database
       - router
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-push-notifications:55166'
+      GRPC_PORT: '55166'
+      METRICS_PORT: '9098'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['push-notifications']
     networks:
       default:
         aliases:
-          - conduit-push-notifications-${NETWORK_SUFFIX}
+          - conduit-push-notifications
 
   sms:
     container_name: 'conduit-sms-${IMAGE_TAG}'
@@ -170,16 +239,21 @@ services:
     restart: unless-stopped
     depends_on:
       - core
-      - database # not directly, but no point starting it otherwise
+      - database
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-sms:55167'
+      GRPC_PORT: '55167'
+      METRICS_PORT: '9099'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['sms']
     networks:
       default:
         aliases:
-          - conduit-sms-${NETWORK_SUFFIX}
+          - conduit-sms
 
   storage:
     container_name: 'conduit-storage-${IMAGE_TAG}'
@@ -189,15 +263,20 @@ services:
       - core
       - database
       - router
+      - prometheus
+      - loki
     environment:
-      CONDUIT_SERVER: 'conduit-${NETWORK_SUFFIX}:55152'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:55152'
+      SERVICE_URL: 'conduit-storage:55168'
+      GRPC_PORT: '55168'
+      METRICS_PORT: '9190'
+      LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
     profiles: ['storage']
     networks:
       default:
         aliases:
-          - conduit-storage-${NETWORK_SUFFIX}
+          - conduit-storage
 
   # Dependencies
   redis:
@@ -221,6 +300,8 @@ services:
       default:
         aliases:
           - conduit-mongo
+    volumes:
+      - conduit-mongodb:/data/db
 
   postgres:
     container_name: 'conduit-postgres-${IMAGE_TAG}'
@@ -237,3 +318,47 @@ services:
       default:
         aliases:
           - conduit-postgres
+    volumes:
+      - conduit-postgres:/var/lib/postgresql
+
+  # Metrics / Logs
+  prometheus:
+    image: 'docker.io/prom/prometheus:v2.37.1'
+    container_name: 'conduit-prometheus-${IMAGE_TAG}'
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '${PROMETHEUS_PORT:-9090}:9090'
+    networks:
+      default:
+        aliases:
+          - conduit-prometheus
+    volumes:
+      - ./prometheus.cfg.yml:/etc/prometheus/prometheus.yml:Z
+      - conduit-prometheus:/prometheus
+
+  loki:
+    image: 'docker.io/grafana/loki:2.6.1'
+    container_name: 'conduit-loki-${IMAGE_TAG}'
+    restart: unless-stopped
+    ports:
+      - '${LOKI_PORT:-3100}:3100'
+    networks:
+      default:
+        aliases:
+          - conduit-loki
+    volumes:
+      - ./loki.cfg.yml:/etc/loki/loki-config.yaml:Z
+      - conduit-loki:/loki
+
+# Persistent Volumes
+volumes:
+  conduit-mongodb:
+    external: false
+  conduit-postgres:
+    external: false
+  conduit-prometheus:
+    external: false
+  conduit-loki:
+    external: false
