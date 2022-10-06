@@ -150,14 +150,24 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Watch Modules', async () => {
-    const call = testTools.client.watchModules({});
-    const res = await testTools.client.registerModule({
-      moduleName: 'test',
-      url: testModuleUrl,
-      healthStatus: 1,
-    });
-    for await (const data of call) {
-      //need to fetch the module list
+    const watchModules = testTools.client.watchModules({});
+    try {
+      await testTools.client.registerModule({
+        moduleName: 'watch-modules',
+        url: '0.0.0.0:55152',
+        healthStatus: 1,
+      });
+      for await (const modules of watchModules) {
+        expect(modules).toMatchObject({
+          modules: [
+            { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
+            { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
+          ],
+        });
+        break;
+      }
+    } catch (e) {
+      throw e;
     }
   });
 });

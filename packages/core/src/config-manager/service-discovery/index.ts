@@ -91,6 +91,9 @@ export class ServiceDiscovery {
           delete module[url];
         });
       }
+      if (removedCount === 0) {
+        this.moduleRegister.emit('serving-modules-update');
+      }
     });
     if (removedCount > 0) {
       const unhealthyModules = Object.keys(this.moduleHealth).filter(
