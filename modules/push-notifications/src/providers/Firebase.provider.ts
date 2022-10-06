@@ -10,29 +10,49 @@ import { NotificationToken } from '../models';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class FirebaseProvider implements IPushNotificationsProvider {
-  private readonly fcm: firebase.messaging.Messaging;
+  private fcm?: firebase.messaging.Messaging;
+  private _initialized: boolean = false;
 
   constructor(settings: IFirebaseSettings) {
+    this.updateProvider(settings);
+  }
+
+  get isInitialized(): boolean {
+    return this._initialized;
+  }
+
+  updateProvider(settings: IFirebaseSettings) {
     const serviceAccount: firebase.ServiceAccount = {
       projectId: settings.projectId,
       privateKey: settings.privateKey.replace(/\\n/g, '\n'),
       clientEmail: settings.clientEmail,
     };
-    const firebaseOptions: firebase.AppOptions = {
-      credential: firebase.credential.cert(serviceAccount),
-    };
     try {
       this.fcm = firebase.app(serviceAccount.projectId).messaging();
+      this._initialized = true;
     } catch (e) {
+      this._initialized = false;
+      ConduitGrpcSdk.Logger.error('Failed to initialize Firebase: method 1');
+    }
+    try {
       this.fcm = firebase
-        .initializeApp(firebaseOptions, serviceAccount.projectId)
+        .initializeApp(
+          {
+            credential: firebase.credential.cert(serviceAccount),
+          },
+          serviceAccount.projectId,
+        )
         .messaging();
+      this._initialized = true;
+    } catch (e) {
+      this._initialized = false;
+      ConduitGrpcSdk.Logger.error('Failed to initialize Firebase: method 2');
     }
   }
 
   // TODO check for disabled notifications for users
-
   async sendToDevice(params: ISendNotification) {
+    if (!this._initialized) throw new Error('Provider not initialized');
     const { sendTo, type } = params;
     const userId = sendTo;
     if (isNil(userId)) return;
@@ -55,7 +75,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
         type: type ?? '',
       },
     };
-    return this.fcm.send(message);
+    return this.fcm!.send(message);
   }
 
   async sendMany(params: ISendNotification[]) {
@@ -82,7 +102,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
         token: token.token,
       };
 
-      await this.fcm.send(message).catch(e => {
+      await this.fcm!.send(message).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     });
@@ -107,7 +127,7 @@ export class FirebaseProvider implements IPushNotificationsProvider {
           type: params.type ?? '',
         },
       };
-      await this.fcm.send(message);
+      await this.fcm!.send(message);
     });
     return Promise.all(promises);
   }

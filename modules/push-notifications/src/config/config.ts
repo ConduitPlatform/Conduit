@@ -10,15 +10,15 @@ export default {
   firebase: {
     projectId: {
       format: 'String',
-      default: 'project-id',
+      default: '',
     },
     privateKey: {
       format: 'String',
-      default: 'private-key',
+      default: '',
     },
     clientEmail: {
       format: 'String',
-      default: 'client-email',
+      default: '',
     },
   },
 };
