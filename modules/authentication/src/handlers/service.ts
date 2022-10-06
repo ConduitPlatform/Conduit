@@ -20,10 +20,10 @@ export class ServiceHandler implements IAuthenticationStrategy {
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig.service.enabled) {
-      ConduitGrpcSdk.Logger.error('Service not active');
+      ConduitGrpcSdk.Logger.log('Service authentication not available');
       return (this.initialized = false);
     }
-    ConduitGrpcSdk.Logger.log('Service is active');
+    ConduitGrpcSdk.Logger.log('Service authentication is active');
     return (this.initialized = true);
   }
 

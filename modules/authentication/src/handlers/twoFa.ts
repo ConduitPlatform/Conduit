@@ -29,16 +29,16 @@ export class TwoFa implements IAuthenticationStrategy {
   async validate(): Promise<boolean> {
     const authConfig: Config = ConfigController.getInstance().config;
     if (!authConfig.twoFa.enabled) {
-      ConduitGrpcSdk.Logger.error('TwoFa is not enabled');
+      ConduitGrpcSdk.Logger.log('TwoFactor authentication not available');
       return false;
     }
     if (authConfig.twoFa.enabled && authConfig.twoFa.methods.sms) {
       if (!this.grpcSdk.isAvailable('sms')) {
-        ConduitGrpcSdk.Logger.error('SMS module not found');
+        ConduitGrpcSdk.Logger.error('SMS module not available');
         return false;
       }
     }
-    ConduitGrpcSdk.Logger.log('Service is active');
+    ConduitGrpcSdk.Logger.log('TwoFactor authentication is available');
     return true;
   }
 

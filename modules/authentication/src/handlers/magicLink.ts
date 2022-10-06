@@ -34,8 +34,12 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
           ConduitGrpcSdk.Logger.error(e);
           return false;
         });
+      ConduitGrpcSdk.Logger.log(
+        `Magic link authentication is ${success ? '' : 'not'} available`,
+      );
       return (this.initialized = success);
     } else {
+      ConduitGrpcSdk.Logger.log('Magic link authentication not available');
       return (this.initialized = false);
     }
   }

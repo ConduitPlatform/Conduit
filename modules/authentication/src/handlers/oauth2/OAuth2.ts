@@ -41,7 +41,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   async validate(): Promise<boolean> {
     const authConfig = ConfigController.getInstance().config;
     if (!authConfig[this.providerName].enabled) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} not active`);
+      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
       return (this.initialized = false);
     }
     if (
@@ -49,11 +49,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       !authConfig[this.providerName].clientId ||
       !authConfig[this.providerName].clientSecret
     ) {
-      ConduitGrpcSdk.Logger.log(`${this.providerName} is not active`);
+      ConduitGrpcSdk.Logger.log(`${this.providerName} authentication not available`);
       return (this.initialized = false);
     }
-    ConduitGrpcSdk.Logger.log(`${this.providerName} is active`);
-
+    ConduitGrpcSdk.Logger.log(`${this.providerName} authentication is available`);
     return (this.initialized = true);
   }
 
