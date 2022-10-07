@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/node-2fa": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "axios": "0.27.2",
@@ -34,9 +35,9 @@
     "convict": "^6.2.3",
     "escape-string-regexp": "^4.0.0",
     "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^2.1.4",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
-    "@conduitplatform/node-2fa": "^1.0.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
