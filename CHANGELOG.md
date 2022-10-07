@@ -2,6 +2,96 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.15.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.14.6...v0.15.0-rc.0) (2022-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **database:** cms fixes, refactors, cleanups (#365)
+* **grpc-sdk:** cleanups & improvements (#362)
+* **authentication:** - User token renewal route now accepts refresh token through a bearer-formatted 'Authorization' header (eg: 'Bearer some-token-str') or 'refreshToken' cookie.
+- Authentication schemas: 'userId' (string) -> 'user' (relation)
+
+Co-authored-by: codefactor-io <support@codefactor.io>
+Co-authored-by: Konstantinos Feretos <konferetos@tutanota.com>
+Co-authored-by: Christina Papadogianni <59121443+ChrisPdgn@users.noreply.github.com>
+Co-authored-by: Sotiria Stefa <72135844+SotiriaSte@users.noreply.github.com>
+* metrics fixes, updates, cleanups (#338)
+* update Readmes, remove legacy env compat (#329)
+* **core,grpc-sdk:** remove deprecated gRPC functions (#328)
+* Port renames (#326)
+* **database,grpc-sdk:** compiled schema fields as gRPC schema type fields (#313)
+
+### Features
+
+* add node-2fa library ([#347](https://github.com/ConduitPlatform/Conduit/issues/347)) ([8dfea01](https://github.com/ConduitPlatform/Conduit/commit/8dfea012955c221da7a87c33f4b3cdff092eb53b))
+* **admin,router:** host url initializer envs ([#373](https://github.com/ConduitPlatform/Conduit/issues/373)) ([d932b6d](https://github.com/ConduitPlatform/Conduit/commit/d932b6d8441e21b13647ac7ba14ab193a40ff45a))
+* **admin:** admin user roles & 2FA with QR ([#327](https://github.com/ConduitPlatform/Conduit/issues/327)) ([8818c9e](https://github.com/ConduitPlatform/Conduit/commit/8818c9eee2e48ae64f7aeb2284012e107238b5d7))
+* **admin:** get admin by id, unselect admin password field ([#341](https://github.com/ConduitPlatform/Conduit/issues/341)) ([9d02f02](https://github.com/ConduitPlatform/Conduit/commit/9d02f02afe49a63fab305ff10b1591af78913033))
+* **authentication:** change verification time window for qr tokens ([#337](https://github.com/ConduitPlatform/Conduit/issues/337)) ([8d6d01e](https://github.com/ConduitPlatform/Conduit/commit/8d6d01edf5054fe576ddd3da6d8c4c97922b7dae))
+* **authentication:** gitlab provider ([#369](https://github.com/ConduitPlatform/Conduit/issues/369)) ([777f3bc](https://github.com/ConduitPlatform/Conduit/commit/777f3bc9ac29f320fa75415ac7e8d003c2226903))
+* **authentication:** passwordless login ([#346](https://github.com/ConduitPlatform/Conduit/issues/346)) ([7c9df4b](https://github.com/ConduitPlatform/Conduit/commit/7c9df4b3adc553578634f74d9def1da4dcea52a8))
+* **authorization:** new authorization module based on Google's Zanzibar([#350](https://github.com/ConduitPlatform/Conduit/issues/350)) ([f275919](https://github.com/ConduitPlatform/Conduit/commit/f275919fe70cb82c90edf1a7413d482115717b74))
+* **database,grpc-sdk:** compiled schema fields as gRPC schema type fields ([#313](https://github.com/ConduitPlatform/Conduit/issues/313)) ([da5b18a](https://github.com/ConduitPlatform/Conduit/commit/da5b18af4ccbd9e96ba3130a9e8ea98dbe09af72))
+* **grpc-sdk,hermes:** rest/graphql cookies support ([#358](https://github.com/ConduitPlatform/Conduit/issues/358)) ([1645809](https://github.com/ConduitPlatform/Conduit/commit/1645809cb121b95fd573e4df785ac3ed4753fe4a))
+* **grpc-sdk:** try/catch in wrapGrpcFunctions to wrap function calls ([#300](https://github.com/ConduitPlatform/Conduit/issues/300)) ([9e869a5](https://github.com/ConduitPlatform/Conduit/commit/9e869a5794f7e22ee6fb4747c30f36d68e345b52))
+* **hermes,grpc-sdk,database:** db model router type registration ([#286](https://github.com/ConduitPlatform/Conduit/issues/286)) ([637470c](https://github.com/ConduitPlatform/Conduit/commit/637470c050274c828a5cfaa0e2d32ae6561b03ff))
+* Prometheus Metrics Support ([#282](https://github.com/ConduitPlatform/Conduit/issues/282)) ([fa5f323](https://github.com/ConduitPlatform/Conduit/commit/fa5f3238616b50f4da69f0d4e297ac49d6524d72))
+* route doc descriptions ([#322](https://github.com/ConduitPlatform/Conduit/issues/322)) ([981643b](https://github.com/ConduitPlatform/Conduit/commit/981643ba28afaf056dc4a53789d990d1852e054a))
+
+
+### Bug Fixes
+
+* **admin:** add package node2fa ([#333](https://github.com/ConduitPlatform/Conduit/issues/333)) ([29d3eab](https://github.com/ConduitPlatform/Conduit/commit/29d3eab0c33fa593849115ca2835f5e9fca1a1a1))
+* **admin:** crashing on disabled metrics ([#339](https://github.com/ConduitPlatform/Conduit/issues/339)) ([a8b7ef5](https://github.com/ConduitPlatform/Conduit/commit/a8b7ef5f0029ea9a34ae3f86297c7ce590771075))
+* **admin:** select in query to include password ([8fd20e0](https://github.com/ConduitPlatform/Conduit/commit/8fd20e05fc07274bdac89f732f0524a72efb9e5f))
+* **admin:** super admin migration ([#334](https://github.com/ConduitPlatform/Conduit/issues/334)) ([21df3e2](https://github.com/ConduitPlatform/Conduit/commit/21df3e2e35bf447a4944314bff550b78d2f3b87d))
+* **admin:** temporary token expiration time ([#344](https://github.com/ConduitPlatform/Conduit/issues/344)) ([ce520ca](https://github.com/ConduitPlatform/Conduit/commit/ce520ca8d6cbe3adc7453ca123bb2791fb33f28e))
+* **admin:** token in verify2fa ([#340](https://github.com/ConduitPlatform/Conduit/issues/340)) ([0801ccf](https://github.com/ConduitPlatform/Conduit/commit/0801ccfb620b28b39e8669e41e3b6e3373e923cc))
+* **admin:** verifyTwoFactorToken missing window param ([#343](https://github.com/ConduitPlatform/Conduit/issues/343)) ([a465f9d](https://github.com/ConduitPlatform/Conduit/commit/a465f9d9c4c5d537cf0133a71b0acaf93665c8e3))
+* **authentication:**  twoFaMethod missing param in admin routes ([#321](https://github.com/ConduitPlatform/Conduit/issues/321)) ([4b504b9](https://github.com/ConduitPlatform/Conduit/commit/4b504b9a3f2f7824caffdc91a08dc55d5e5f0ac8))
+* **authentication,database:** admin route definition handler binds ([#363](https://github.com/ConduitPlatform/Conduit/issues/363)) ([b0db3b9](https://github.com/ConduitPlatform/Conduit/commit/b0db3b9f618f833f2251ae79510965c28c9ff620))
+* **authentication:** accidental startup errors ([#370](https://github.com/ConduitPlatform/Conduit/issues/370)) ([8fb8c53](https://github.com/ConduitPlatform/Conduit/commit/8fb8c538def2135016e6aca4c464bb6e73683f61))
+* **authentication:** add clientId in magic link token data ([7a9f776](https://github.com/ConduitPlatform/Conduit/commit/7a9f77612167d355dfc9e6f21381990da1b5fa6b))
+* **authentication:** add token to qr 2fa verification ([#336](https://github.com/ConduitPlatform/Conduit/issues/336)) ([3902d63](https://github.com/ConduitPlatform/Conduit/commit/3902d633b04a4714d75bfaf4b941f81e8a5b1393))
+* **authentication:** config loading ([08525d5](https://github.com/ConduitPlatform/Conduit/commit/08525d55db67e1af3aa946de980443dbe2a34af6))
+* **authentication:** config migration ([150dd05](https://github.com/ConduitPlatform/Conduit/commit/150dd059636828ea3335b9c19de766f71c035c78))
+* **authentication:** forgot rateLimit removal ([b8d81f3](https://github.com/ConduitPlatform/Conduit/commit/b8d81f3817e8b578f9465f28da2fb0587f0e2bfe))
+* **authentication:** get to post req on verify-qr-code endpoint ([#325](https://github.com/ConduitPlatform/Conduit/issues/325)) ([3c14e81](https://github.com/ConduitPlatform/Conduit/commit/3c14e81ebbf2559d076463cb6d295b9c574aa4d1))
+* **authentication:** node-2fa dependency ([c869a3e](https://github.com/ConduitPlatform/Conduit/commit/c869a3e165dce0b1b855d0556992f3911d69818e))
+* **authentication:** simplify monitors ([#351](https://github.com/ConduitPlatform/Conduit/issues/351)) ([24c86f5](https://github.com/ConduitPlatform/Conduit/commit/24c86f59b3265495ef81c4b6ced8b7826621d7e6))
+* **authentication:** using wrong config ([c737138](https://github.com/ConduitPlatform/Conduit/commit/c737138ab2b6cba84ca372a9b3f217fd55754f88))
+* broken discord link ([cee49c0](https://github.com/ConduitPlatform/Conduit/commit/cee49c01df9ed4eb6b002ab1bc1727033e89676e))
+* **core:** module exist grpc function return type fixed ([#324](https://github.com/ConduitPlatform/Conduit/issues/324)) ([9fcc5d4](https://github.com/ConduitPlatform/Conduit/commit/9fcc5d4459622104e95c1db933822c7c29527a99))
+* **database:** admin create schema return type regression ([#289](https://github.com/ConduitPlatform/Conduit/issues/289)) ([4f7979c](https://github.com/ConduitPlatform/Conduit/commit/4f7979c794fa0b63fdc1ad81b45796897bca2004))
+* **database:** cms fixes, refactors, cleanups ([#365](https://github.com/ConduitPlatform/Conduit/issues/365)) ([84e377c](https://github.com/ConduitPlatform/Conduit/commit/84e377cd5ac198c09349d2341b81ea1c7f555392))
+* **database:** createSchemaFromAdapter() crashing for non-registered schemas ([#315](https://github.com/ConduitPlatform/Conduit/issues/315)) ([8c17583](https://github.com/ConduitPlatform/Conduit/commit/8c175837a4dc0494eab470b94a292536d2b09114))
+* **database:** DeclaredSchema compiledFields extension field and custom endpoint generation ([#290](https://github.com/ConduitPlatform/Conduit/issues/290)) ([6b7eb84](https://github.com/ConduitPlatform/Conduit/commit/6b7eb84ea298bf59fea41d9afd5f77f019f52049))
+* **database:** getSchemas filters, declared schema collectionName uniqueness constraint ([#368](https://github.com/ConduitPlatform/Conduit/issues/368)) ([245fe13](https://github.com/ConduitPlatform/Conduit/commit/245fe13d0fa81b6958620aa61ad74f4af559c08a))
+* **database:** gRPC schema registration removing schema extensions from adapter models ([#293](https://github.com/ConduitPlatform/Conduit/issues/293)) ([47bf1c9](https://github.com/ConduitPlatform/Conduit/commit/47bf1c9b9ea0cbeeb2accbb909a73b6e67d4a9b7))
+* **database:** initial db schema registration ([#345](https://github.com/ConduitPlatform/Conduit/issues/345)) ([235955e](https://github.com/ConduitPlatform/Conduit/commit/235955e2c93ba30072e0d2baab0979e77bf96eb7))
+* **database:** modelOptions cms validation, unrebased modelSchema reference ([#305](https://github.com/ConduitPlatform/Conduit/issues/305)) ([4c18988](https://github.com/ConduitPlatform/Conduit/commit/4c189882877e97d4fe15e3d63d7e61755ec02090))
+* **database:** schema types, stitching, custom endpoints ([#311](https://github.com/ConduitPlatform/Conduit/issues/311)) ([8d5471b](https://github.com/ConduitPlatform/Conduit/commit/8d5471b8672e42350f7f69ca078775c98b29b8c5))
+* **database:** startup model recovery, deleteSchema admin route ([#332](https://github.com/ConduitPlatform/Conduit/issues/332)) ([43eb8fd](https://github.com/ConduitPlatform/Conduit/commit/43eb8fd320592129a7437c90a60539f2c154174b))
+* **email:** subject field could be missing ([#366](https://github.com/ConduitPlatform/Conduit/issues/366)) ([72907eb](https://github.com/ConduitPlatform/Conduit/commit/72907ebb8e81f5aaed68b786740bd1752552679e))
+* **forms:** getForms count not using search query ([#314](https://github.com/ConduitPlatform/Conduit/issues/314)) ([a687fda](https://github.com/ConduitPlatform/Conduit/commit/a687fda6c116d5f14f4750e9b4054d9418154405))
+* **grpc-sdk,database:** crash on unconditional Sequelize metrics ([#295](https://github.com/ConduitPlatform/Conduit/issues/295)) ([86666e0](https://github.com/ConduitPlatform/Conduit/commit/86666e00875475a119716b7a749db92cef50e4c9))
+* **grpc-sdk:** admin_grpc_requests_total metric ([#372](https://github.com/ConduitPlatform/Conduit/issues/372)) ([5af2ada](https://github.com/ConduitPlatform/Conduit/commit/5af2adac83921a0faf2b32cd1260e2cbe717aac6))
+* **hermes:** GraphQL mutation result nesting ([#342](https://github.com/ConduitPlatform/Conduit/issues/342)) ([7c49340](https://github.com/ConduitPlatform/Conduit/commit/7c493403288b61284326541b954bb3ecd9081a9d))
+* **hermes:** named route response types handled as string responses ([#331](https://github.com/ConduitPlatform/Conduit/issues/331)) ([6d86c10](https://github.com/ConduitPlatform/Conduit/commit/6d86c10d88d35009734965198c04207ba7e6071f))
+* **hermes:** not throwing an error on unavaibable route middlewares ([#308](https://github.com/ConduitPlatform/Conduit/issues/308)) ([da05bf7](https://github.com/ConduitPlatform/Conduit/commit/da05bf726cb48c31ed1e067b32b2f26707db5f54))
+* metrics fixes, updates, cleanups ([#338](https://github.com/ConduitPlatform/Conduit/issues/338)) ([9369cee](https://github.com/ConduitPlatform/Conduit/commit/9369ceedd3e91caa8245815feee50d58e61d6734))
+* **push-notifications:** crash loops ([113fcfb](https://github.com/ConduitPlatform/Conduit/commit/113fcfbc6d07403fce12ec1021d42a06290d8ef0))
+* **sms:** not starting up with invalid config ([#294](https://github.com/ConduitPlatform/Conduit/issues/294)) ([eb57231](https://github.com/ConduitPlatform/Conduit/commit/eb57231877649630ff85e038ca8135e0756e094b))
+* **storage:** initialize metrics assuming files exist ([#349](https://github.com/ConduitPlatform/Conduit/issues/349)) ([f046c7b](https://github.com/ConduitPlatform/Conduit/commit/f046c7bfb1b1840232414a9dee3cf01cb052c05e))
+
+
+* **authentication:** major code cleanup ([#354](https://github.com/ConduitPlatform/Conduit/issues/354)) ([1136a0f](https://github.com/ConduitPlatform/Conduit/commit/1136a0f49564cf6de3ba56c4c0d4d660464c2607))
+* **core,grpc-sdk:** remove deprecated gRPC functions ([#328](https://github.com/ConduitPlatform/Conduit/issues/328)) ([0fef34a](https://github.com/ConduitPlatform/Conduit/commit/0fef34a453435f56c4862390ff948ab3a7d47e1c))
+* **grpc-sdk:** cleanups & improvements ([#362](https://github.com/ConduitPlatform/Conduit/issues/362)) ([43b2787](https://github.com/ConduitPlatform/Conduit/commit/43b27877c9f4ede0f9988357a430e0e8ca35e49d))
+* Port renames ([#326](https://github.com/ConduitPlatform/Conduit/issues/326)) ([620d673](https://github.com/ConduitPlatform/Conduit/commit/620d673d6fa9c15c69a1989da07f4c5d40af6dd4))
+* update Readmes, remove legacy env compat ([#329](https://github.com/ConduitPlatform/Conduit/issues/329)) ([de0556d](https://github.com/ConduitPlatform/Conduit/commit/de0556d030d9d047e9fa687aab22a4730c8ca787))
+
 ### [0.14.7](https://github.com/ConduitPlatform/Conduit/compare/v0.14.6...v0.14.7) (2022-08-31)
 
 
