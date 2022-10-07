@@ -80,8 +80,12 @@ export class ModuleManager<T> {
     await this.module.onRegister();
     if (this.module.config) {
       const configSchema = this.module.config.getSchema();
-      const config = await this.grpcSdk.config.configure(
-        this.module.config.getProperties(),
+
+      let config: any = this.module.config.getProperties();
+      config = await this.module.preConfig(config);
+
+      config = await this.grpcSdk.config.configure(
+        config,
         convictConfigParser(configSchema),
         this.module.configOverride,
       );

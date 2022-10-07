@@ -138,36 +138,37 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     });
     return Promise.all(promises);
   }
+
   async preConfig(config: Config) {
-    if (config.hostUrl === '' || isNil(config.hostUrl)) {
-      config.hostUrl = `http://localhost:${process.env['CLIENT_HTTP_PORT'] ?? '3000'}`;
+    if (config.hostUrl === '') {
+      config.hostUrl =
+        process.env.__DEFAULT_HOST_URL ??
+        `http://localhost:${process.env['CLIENT_HTTP_PORT'] ?? '3000'}`;
     }
     return config;
   }
 
   async onConfig() {
+    const config = ConfigController.getInstance().config;
     let atLeastOne = false;
-
-    if (ConfigController.getInstance().config.transports.graphql) {
+    if (config.transports.graphql) {
       this._internalRouter.initGraphQL();
       atLeastOne = true;
     } else {
       this._internalRouter.stopGraphQL();
     }
-
-    if (ConfigController.getInstance().config.transports.rest) {
+    if (config.transports.rest) {
       this._internalRouter.initRest();
       atLeastOne = true;
     } else {
       this._internalRouter.stopRest();
     }
-
-    if (ConfigController.getInstance().config.transports.sockets) {
-      atLeastOne = true;
+    if (config.transports.sockets) {
       this._internalRouter.initSockets(
         this.grpcSdk.redisDetails.host,
         this.grpcSdk.redisDetails.port,
       );
+      atLeastOne = true;
     } else {
       this._internalRouter.stopSockets();
     }
