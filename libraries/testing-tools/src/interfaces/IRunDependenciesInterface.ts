@@ -1,4 +1,4 @@
-export interface IRRunDependenciesInterface {
+export interface IRunDependenciesInterface {
   command: string;
   options: {
     env: {

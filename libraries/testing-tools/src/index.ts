@@ -1,49 +1,37 @@
+import MockModule from './mock-module';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
-import { Client, createChannel, createClientFactory } from 'nice-grpc';
-import { getModuleNameInterceptor } from '@conduitplatform/grpc-sdk/dist/interceptors';
-import { IRRunDependenciesInterface } from './interfaces/IRRunDependenciesInterface';
-import { ChildProcess } from 'child_process';
+import { ChildProcess, exec } from 'child_process';
+import { IRunDependenciesInterface } from './interfaces/IRunDependenciesInterface';
 
-const { exec } = require('child_process');
+export function getTestModule<T extends CompatServiceDefinition>(
+  moduleName: string,
+  serverAddress: string,
+  serviceDefinition: T,
+) {
+  return new MockModule<T>(moduleName, serverAddress, serviceDefinition);
+}
 
-export default class TestingTools<T extends CompatServiceDefinition> {
-  _client: Client<T>;
+export async function startRedis() {
+  exec('docker run --name conduit-redis -d -p 6379:6379 redis:latest');
+  await new Promise(r => setTimeout(r, 3000));
+}
 
-  constructor(private readonly serverAddress: string, serviceDefinition: T) {
-    const channel = createChannel(this.serverAddress, undefined, {
-      'grpc.max _receive_message_length': 1024 * 1024 * 100,
-      'grpc.max_send_message_length': 1024 * 1024 * 100,
-    });
-    const clientFactory = createClientFactory().use(getModuleNameInterceptor('test'));
-    this._client = clientFactory.create(serviceDefinition, channel);
+export async function stopRedis() {
+  exec('docker stop conduit-redis && docker rm conduit-redis');
+  await new Promise(r => setTimeout(r, 3000));
+}
+
+export async function runDependencies(dependencies: IRunDependenciesInterface[]) {
+  const processes: ChildProcess[] = [];
+  for (const dependency of dependencies) {
+    const process = exec(dependency.command, dependency.options);
+    processes.push(process);
+    await new Promise(r => setTimeout(r, dependency.delay));
   }
+  return processes;
+}
 
-  async startRedis() {
-    exec('docker run --name conduit-redis -d -p 6379:6379 redis:latest');
-    await new Promise(r => setTimeout(r, 3000));
-  }
-
-  async stopRedis() {
-    exec('docker stop conduit-redis && docker rm conduit-redis');
-    await new Promise(r => setTimeout(r, 3000));
-  }
-
-  async runDependencies(dependencies: IRRunDependenciesInterface[]) {
-    const processes: ChildProcess[] = [];
-    for (const dependency of dependencies) {
-      const process = exec(dependency.command, dependency.options);
-      processes.push(process);
-      await new Promise(r => setTimeout(r, dependency.delay));
-    }
-    return processes;
-  }
-
-  async baseSetup() {
-    await this.stopRedis();
-    await this.startRedis();
-  }
-
-  get client() {
-    return this._client;
-  }
+export async function baseSetup() {
+  await stopRedis();
+  await startRedis();
 }
