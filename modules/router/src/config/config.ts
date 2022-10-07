@@ -1,7 +1,8 @@
 export default {
   hostUrl: {
+    // set initial value with __DEFAULT_HOST_URL, defaults to http://localhost:(CLIENT_HTTP_PORT ?? 3000)
     format: 'String',
-    default: '', //to be generated on initial configuration
+    default: '',
   },
   transports: {
     rest: {

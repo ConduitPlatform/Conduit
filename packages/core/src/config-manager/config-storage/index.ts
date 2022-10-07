@@ -1,8 +1,9 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { clearInterval } from 'timers';
 import * as models from '../models';
 import { ServiceDiscovery } from '../service-discovery';
+import { clearInterval } from 'timers';
+import { merge } from 'lodash';
 
 export class ConfigStorage {
   toBeReconciled: string[] = [];
@@ -76,7 +77,7 @@ export class ConfigStorage {
         let redisConfig;
         try {
           redisConfig = await this.getConfig(key, false);
-          redisConfig = { ...redisConfig, ...configDoc!.moduleConfigs[key] };
+          redisConfig = merge(redisConfig, configDoc!.moduleConfigs[key]);
           configDoc!.moduleConfigs[key] = redisConfig;
         } catch (e) {
           redisConfig = configDoc!.moduleConfigs[key];

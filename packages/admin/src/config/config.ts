@@ -14,8 +14,9 @@ export default {
     },
   },
   hostUrl: {
+    // set initial value with __DEFAULT_HOST_URL, defaults to http://localhost:(ADMIN_HTTP_PORT ?? 3030)
     type: 'String',
-    default: '', // to be generated in set config
+    default: '',
   },
   transports: {
     rest: {

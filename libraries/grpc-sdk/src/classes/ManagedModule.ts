@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
-import { kebabCase } from 'lodash';
+import { kebabCase, merge } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
@@ -134,7 +134,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         });
       }
       let config = JSON.parse(call.request.newConfig);
-      config = { ...this.config.getProperties(), ...config };
+      config = merge(this.config.getProperties(), config);
       config = await this.preConfig(config);
       const previousConfig = this.config.getProperties();
       try {
