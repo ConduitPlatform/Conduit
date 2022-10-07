@@ -21,7 +21,7 @@ import {
   SocketPush,
   SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
-import { isNaN, isNil } from 'lodash';
+import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { runMigrations } from './migrations';
