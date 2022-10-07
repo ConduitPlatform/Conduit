@@ -9,7 +9,8 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "publish": "npm publish"
+    "prebuild": "npm run protoc",
+    "protoc": "sh build.sh"
   },
   "directories": {
     "lib": "src"
@@ -23,5 +24,15 @@
     "@grpc/proto-loader": "^0.6.13",
     "@types/google-protobuf": "^3.15.6",
     "nice-grpc": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/convict": "^6.1.1",
+    "@types/google-protobuf": "^3.15.6",
+    "@types/lodash": "^4.14.182",
+    "@types/node": "14.14.31",
+    "copyfiles": "^2.4.1",
+    "rimraf": "^3.0.2",
+    "ts-proto": "^1.117.0",
+    "typescript": "~4.7.4"
   }
 }

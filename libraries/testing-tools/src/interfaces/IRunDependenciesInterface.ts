@@ -1,6 +1,6 @@
 export interface IRunDependenciesInterface {
   command: string;
-  options: {
+  ExecOptions: {
     env: {
       [key: string]: any;
     };

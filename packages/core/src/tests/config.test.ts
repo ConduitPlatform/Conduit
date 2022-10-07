@@ -1,18 +1,23 @@
-import TestingTools from '@conduitplatform/testing-tools';
+import * as testingTools from '@conduitplatform/testing-tools';
 import { ConfigDefinition } from '@conduitplatform/commons';
 import path from 'path';
 import { ChildProcess } from 'child_process';
 
 const testModuleUrl = '0.0.0.0:55184';
 let dependencies: ChildProcess[];
+const testModule = testingTools.getTestModule<ConfigDefinition>(
+  'test',
+  '0.0.0.0:55152',
+  ConfigDefinition,
+);
+const testClient = testModule.getModuleClient('test', ConfigDefinition);
 
-const testTools = new TestingTools<ConfigDefinition>('0.0.0.0:55152', ConfigDefinition);
 beforeAll(async () => {
-  await testTools.baseSetup();
-  dependencies = await testTools.runDependencies([
+  await testingTools.baseSetup();
+  dependencies = await testingTools.runDependencies([
     {
       command: 'node ' + path.resolve(__dirname, '../../dist/bin/www.js'),
-      options: {
+      ExecOptions: {
         env: {
           REDIS_PORT: 6379,
           REDIS_HOST: 'localhost',
@@ -28,7 +33,8 @@ beforeAll(async () => {
 
 describe('Testing Core package', () => {
   test('Getting Redis Details', async () => {
-    const res = await testTools.client.getRedisDetails({});
+    const res = await testClient.getRedisDetails({});
+    console.log(res);
     expect(res).toMatchObject({
       redisPort: expect.any(Number),
       redisHost: expect.any(String),
@@ -36,7 +42,8 @@ describe('Testing Core package', () => {
   });
 
   test('Getting Server Config', async () => {
-    const res = await testTools.client.getServerConfig({});
+    const res = await testClient.getServerConfig({});
+    console.log(res);
     expect(res).toMatchObject({
       data: expect.any(String),
     });
@@ -45,7 +52,7 @@ describe('Testing Core package', () => {
 
 describe('Testing module related rpc calls', () => {
   test('Register Module', async () => {
-    const res = await testTools.client.registerModule({
+    const res = await testClient.registerModule({
       moduleName: 'test',
       url: testModuleUrl,
       healthStatus: 1,
@@ -56,7 +63,7 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Getting Module List', async () => {
-    const res = await testTools.client.moduleList({});
+    const res = await testClient.moduleList({});
     expect(res.modules[0]).toMatchObject({
       moduleName: 'test',
       url: testModuleUrl,
@@ -65,34 +72,34 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Module Exists', async () => {
-    const res = await testTools.client.moduleExists({ moduleName: 'test' });
+    const res = await testClient.moduleExists({ moduleName: 'test' });
     expect(res).toMatchObject({
       url: testModuleUrl,
     });
   });
 
   test('Get Module Url By Name', async () => {
-    const res = await testTools.client.getModuleUrlByName({ name: 'test' });
+    const res = await testClient.getModuleUrlByName({ name: 'test' });
     expect(res).toMatchObject({
       moduleUrl: testModuleUrl,
     });
   });
 
   test('Get Config Request', async () => {
-    await testTools.client.configure({
+    await testClient.configure({
       config: JSON.stringify({ active: false }),
       schema: JSON.stringify({
         active: { format: 'Boolean', default: true },
       }),
     });
-    const res = await testTools.client.get({ key: 'test' });
+    const res = await testClient.get({ key: 'test' });
     expect(res).toMatchObject({
       data: expect.any(String),
     });
   });
 
   test('Configure', async () => {
-    const res = await testTools.client.configure({
+    const res = await testClient.configure({
       config: JSON.stringify({ active: false, mockField: 'some field' }),
       schema: JSON.stringify({
         active: { format: 'Boolean', default: true },
@@ -105,7 +112,7 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Module Health Probe', async () => {
-    const res = await testTools.client.moduleHealthProbe({
+    const res = await testClient.moduleHealthProbe({
       moduleName: 'test',
       url: testModuleUrl,
       status: 1,
@@ -114,8 +121,8 @@ describe('Testing module related rpc calls', () => {
   });
 
   test('Watch Modules', async () => {
-    const watchModules = testTools.client.watchModules({});
-    await testTools.client.registerModule({
+    const watchModules = testClient.watchModules({});
+    await testClient.registerModule({
       moduleName: 'watch-modules',
       url: '0.0.0.0:55152',
       healthStatus: 1,
@@ -136,5 +143,5 @@ afterAll(async () => {
   dependencies.forEach(dependency => {
     process.kill(dependency.pid);
   });
-  await testTools.stopRedis();
+  await testingTools.stopRedis();
 });
