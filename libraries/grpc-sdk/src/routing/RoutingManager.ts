@@ -121,7 +121,7 @@ export class RoutingManager {
     if (Object.keys(this._routeHandlers).length === 0) return;
     const modifiedFunctions: {
       [name: string]: (call: any, callback: any) => void;
-    } = wrapFunctionsAsync(this._routeHandlers);
+    } = wrapFunctionsAsync(this._routeHandlers, this.isAdmin ? 'admin' : 'client');
     const protoDescriptions = constructProtoFile(
       this._router.moduleName,
       Object.values(this._moduleRoutes),
