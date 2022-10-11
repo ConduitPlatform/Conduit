@@ -1,6 +1,5 @@
 {
   "accessTokenMethod": "POST",
-
   "providerName": "apple",
   "authorizeUrl": "https://appleid.apple.com/auth/authorize",
   "tokenUrl": "https://appleid.apple.com/auth/token",

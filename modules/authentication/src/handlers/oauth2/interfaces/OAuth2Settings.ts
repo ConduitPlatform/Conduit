@@ -15,6 +15,7 @@ export class OAuth2Settings {
   scope?: string;
   responseType?: string;
   scopeSeperator?: string;
+  privateKey?: string;
 
   constructor(
     private readonly serverUrl: string,
@@ -36,6 +37,7 @@ export class OAuth2Settings {
     this.tokenUrl = providerParams.tokenUrl;
     this.grantType = providerParams.grantType;
     this.responseType = providerParams.responseType;
+    this.privateKey = providerConfig.privateKey;
   }
 
   set provider(providerName: string) {
