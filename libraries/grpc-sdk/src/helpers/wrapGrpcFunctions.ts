@@ -46,8 +46,6 @@ export function wrapGrpcFunctions(
           code: status.INTERNAL,
           message: (error as Error).message,
         });
-      } finally {
-        postponeRestart();
       }
     };
   });
