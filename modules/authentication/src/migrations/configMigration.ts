@@ -1,7 +1,22 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
+function sleep(ms: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function configMigration(grpcSdk: ConduitGrpcSdk) {
+  await grpcSdk.waitForExistence('database');
+  let schema;
+  while (!schema) {
+    try {
+      schema = await grpcSdk.databaseProvider!.getSchema('Config');
+    } catch (e) {
+      await sleep(500);
+    }
+  }
   const authConfig = ((await grpcSdk.databaseProvider!.findOne('Config', {})) as any)
     ?.moduleConfigs?.authentication;
 

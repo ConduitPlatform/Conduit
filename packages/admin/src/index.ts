@@ -145,9 +145,7 @@ export default class AdminModule extends IConduitAdmin {
     );
     this.grpcSdk
       .waitForExistence('database')
-      .then(async () => {
-        await this.handleDatabase();
-      })
+      .then(this.handleDatabase.bind(this))
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
