@@ -20,6 +20,11 @@ export class GrpcServer {
     this._url = `0.0.0.0:${port ?? '5000'}`;
   }
 
+  private postponeRestart() {
+    if (!this.scheduledRestart) return;
+    this.scheduleRefresh();
+  }
+
   private _url: string;
 
   get url(): string {
@@ -41,7 +46,7 @@ export class GrpcServer {
     protoDescription: string,
     functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
-    functions = wrapGrpcFunctions(functions);
+    functions = wrapGrpcFunctions(functions, this.postponeRestart.bind(this));
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
@@ -111,6 +116,8 @@ export class GrpcServer {
       ConduitGrpcSdk.Logger.log('Begin refresh');
       await self.refresh();
       ConduitGrpcSdk.Logger.log('Refresh complete');
+      clearTimeout(self.scheduledRestart);
+      self.scheduledRestart = undefined;
     }, 2000);
   }
 
