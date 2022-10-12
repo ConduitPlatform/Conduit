@@ -9,6 +9,7 @@ export class GrpcServer {
   private startedOnce: boolean = false;
   private _serviceNames: string[] = [];
   private scheduledRestart: any;
+  private _postponeRequests = 0;
   private _useForce?: boolean;
   private _services: {
     protoFilePath: string;
@@ -21,7 +22,8 @@ export class GrpcServer {
   }
 
   private postponeRestart() {
-    if (!this.scheduledRestart) return;
+    if (!this.scheduledRestart || this._postponeRequests > 5) return;
+    this._postponeRequests++;
     this.scheduleRefresh();
   }
 
@@ -118,6 +120,7 @@ export class GrpcServer {
       ConduitGrpcSdk.Logger.log('Refresh complete');
       clearTimeout(self.scheduledRestart);
       self.scheduledRestart = undefined;
+      self._postponeRequests = 0;
     }, 2000);
   }
 
