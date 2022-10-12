@@ -58,8 +58,10 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
       redirect_uri: this.settings.authorizeUrl,
       client_id: details.clientId,
     });
+    const decoded = jwt.decode(authorization.data.id_token, { complete: true });
+
     return {
-      id: authorization.data.authorization.id_token.sub,
+      id: decoded!.payload.sub as string,
       email: authorization.data.user.email,
       data: { ...authorization.data },
     };
