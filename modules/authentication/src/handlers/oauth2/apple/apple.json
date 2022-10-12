@@ -4,6 +4,6 @@
   "authorizeUrl": "https://appleid.apple.com/auth/authorize",
   "tokenUrl": "https://appleid.apple.com/auth/token",
   "grantType": "authorization_code",
-  "responseType": "code",
-  "response_mode": "form_post"
+  "responseType": "code id_token",
+  "responseMode": "form_post"
 }

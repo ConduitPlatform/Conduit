@@ -15,7 +15,10 @@ export class OAuth2Settings {
   scope?: string;
   responseType?: string;
   scopeSeperator?: string;
+  responseMode?: string;
   privateKey?: string;
+  teamId?: string;
+  keyId?: string;
 
   constructor(
     private readonly serverUrl: string,
@@ -26,6 +29,10 @@ export class OAuth2Settings {
       authorizeUrl: string;
       tokenUrl: string;
       responseType: string;
+      responseMode?: string;
+      privateKey?: string;
+      teamId?: string;
+      keyId?: string;
     },
   ) {
     this.accountLinking = providerConfig.accountLinking;
@@ -37,7 +44,10 @@ export class OAuth2Settings {
     this.tokenUrl = providerParams.tokenUrl;
     this.grantType = providerParams.grantType;
     this.responseType = providerParams.responseType;
-    this.privateKey = providerConfig.privateKey;
+    this.responseMode = providerParams.responseMode ?? undefined;
+    this.privateKey = providerParams.privateKey ?? undefined;
+    this.teamId = providerParams.teamId ?? undefined;
+    this.keyId = providerParams.keyId ?? undefined;
   }
 
   set provider(providerName: string) {

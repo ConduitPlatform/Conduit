@@ -9,11 +9,6 @@ export default {
       format: 'String',
       default: '',
     },
-    clientSecret: {
-      doc: 'The client secret that is provided by apple developer console for a specific app',
-      format: 'String',
-      default: '',
-    },
     redirect_uri: {
       doc:
         'Defines the uri that the user will be redirected to, ' +
@@ -28,6 +23,11 @@ export default {
     },
     teamId: {
       doc: 'The team id that is provided by apple developer console for a specific app',
+      format: 'String',
+      default: '',
+    },
+    keyId: {
+      doc: 'The private key id that is provided by apple developer console for a specific app',
       format: 'String',
       default: '',
     },
