@@ -49,7 +49,8 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       .use(retryMiddleware);
     this._client = clientFactory.create(this.type!, this.channel, {
       '*': {
-        retryableStatuses: [14], // unavailable
+        // https://grpc.github.io/grpc/core/md_doc_statuscodes.html
+        retryableStatuses: [1, 10, 14], // handle: cancelled, aborted, unavailable
         retryBaseDelayMs: 250,
         retryMaxAttempts: 5,
         retry: true,
