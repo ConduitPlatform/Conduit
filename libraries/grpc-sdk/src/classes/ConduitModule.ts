@@ -50,6 +50,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     this._client = clientFactory.create(this.type!, this.channel, {
       '*': {
         retryableStatuses: [14], // unavailable
+        retryBaseDelayMs: 250,
         retryMaxAttempts: 5,
         retry: true,
       },
