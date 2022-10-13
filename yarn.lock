@@ -3870,6 +3870,13 @@ abort-controller-x@^0.2.4:
   dependencies:
     node-abort-controller "^1.2.1 || ^2.0.0"
 
+abort-controller-x@^0.2.6:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/abort-controller-x/-/abort-controller-x-0.2.7.tgz#6fa9be5b278b9c533d4d078d0ba660d40683907e"
+  integrity sha512-hq/lt8yODKrwuZa69GhSTl2l2kcrus2khZ7OjD6Bmqmx6tbW6dnV8cVGnkkdLCWnjXpgSx8zjQo+HUc9mvoQ/w==
+  dependencies:
+    node-abort-controller "^1.2.1 || ^2.0.0"
+
 abort-controller-x@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/abort-controller-x/-/abort-controller-x-0.4.0.tgz#fde25da52548c7ff3d8b3b32dffc943452874d5f"
@@ -9529,6 +9536,15 @@ netmask@^2.0.2:
   version "2.0.2"
   resolved "https://registry.npmmirror.com/netmask/-/netmask-2.0.2.tgz#8b01a07644065d536383835823bc52004ebac5e7"
   integrity sha512-dBpDMdxv9Irdq66304OLfEmQ9tbNRFnFTuZiLo+bD+r332bBmMJ8GBLXklIXXgxd3+v9+KUnZaUR5PJMa75Gsg==
+
+nice-grpc-client-middleware-retry@^1:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/nice-grpc-client-middleware-retry/-/nice-grpc-client-middleware-retry-1.1.2.tgz#cb4e090aa27bb7160bc14ce115210fecc0f58f43"
+  integrity sha512-7RWHpQxQ6Dq++TTaP/S/GFd4MuSd1jjeQr8q41oQ6phyPRTZmNx8gdbVQg2Q70iATFjJ9eQfj4/QysfeQ3LURQ==
+  dependencies:
+    abort-controller-x "^0.2.6"
+    nice-grpc-common "^1.1.0"
+    node-abort-controller "^2.0.0"
 
 nice-grpc-common@^1.1.0:
   version "1.1.0"

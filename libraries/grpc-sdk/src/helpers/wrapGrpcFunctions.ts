@@ -7,11 +7,15 @@ interface JWT {
   iat: number;
 }
 
-export function wrapGrpcFunctions(functions: { [name: string]: Function }) {
+export function wrapGrpcFunctions(
+  functions: { [name: string]: Function },
+  postponeRestart: () => void,
+) {
   const grpcKey = process.env.GRPC_KEY;
   const wrappedFunctions: { [name: string]: Function } = {};
   Object.keys(functions).forEach(name => {
     wrappedFunctions[name] = (call: any, callback: any) => {
+      postponeRestart();
       if (grpcKey) {
         const verify = createVerifier({ key: grpcKey });
         const grpcToken = call.metadata.get('grpc-token')[0];

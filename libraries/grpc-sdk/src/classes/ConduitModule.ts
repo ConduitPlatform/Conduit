@@ -1,6 +1,7 @@
 import { getModuleNameInterceptor, getGrpcSignedTokenInterceptor } from '../interceptors';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
+import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
 import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
 
@@ -39,12 +40,21 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
-    const clientFactory = createClientFactory().use(
-      this._grpcToken
-        ? getGrpcSignedTokenInterceptor(this._grpcToken)
-        : getModuleNameInterceptor(this._clientName),
-    );
-    this._client = clientFactory.create(this.type!, this.channel);
+    const clientFactory = createClientFactory()
+      .use(
+        this._grpcToken
+          ? getGrpcSignedTokenInterceptor(this._grpcToken)
+          : getModuleNameInterceptor(this._clientName),
+      )
+      .use(retryMiddleware);
+    this._client = clientFactory.create(this.type!, this.channel, {
+      '*': {
+        retryableStatuses: [14], // unavailable
+        retryBaseDelayMs: 250,
+        retryMaxAttempts: 5,
+        retry: true,
+      },
+    });
     this._healthClient = clientFactory.create(HealthDefinition, this.channel);
     this.active = true;
   }
