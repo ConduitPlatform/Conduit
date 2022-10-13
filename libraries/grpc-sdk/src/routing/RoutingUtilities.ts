@@ -148,7 +148,7 @@ export function wrapFunctionsAsync(
   return modifiedFunctions;
 }
 
-export function createProtoFunctions(
+function createProtoFunctions(
   paths: (ConduitRouteObject | SocketProtoDescription)[],
   isAdmin: boolean,
 ) {

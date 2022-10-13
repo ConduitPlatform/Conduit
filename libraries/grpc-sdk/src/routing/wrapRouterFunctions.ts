@@ -43,9 +43,9 @@ function generateLog(
 }
 
 function parseRequestData(data: string) {
-  if (typeof data === 'string' && data.length !== 0) {
+  if (data.length !== 0) {
     return JSON.parse(data);
-  } else if (typeof data === 'string') {
+  } else {
     return {};
   }
 }
