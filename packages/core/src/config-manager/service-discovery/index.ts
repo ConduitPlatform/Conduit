@@ -1,8 +1,4 @@
-import {
-  ConduitCommons,
-  ModuleListResponse,
-  RegisteredModule,
-} from '@conduitplatform/commons';
+import { ModuleListResponse, RegisteredModule } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
@@ -14,19 +10,19 @@ import { EventEmitter } from 'events';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
 
 export class ServiceDiscovery {
-  registeredModules: Map<string, RegisteredModule> = new Map<string, RegisteredModule>();
-  moduleHealth: {
-    [field: string]: {
+  readonly registeredModules: Map<string, RegisteredModule> = new Map<
+    string,
+    RegisteredModule
+  >();
+  private readonly moduleHealth: {
+    [module: string]: {
       [field: string]: { timestamp: number; status: HealthCheckStatus };
     };
   } = {};
-  moduleRegister: EventEmitter;
+  private readonly moduleRegister: EventEmitter;
   private servingStatusUpdate: boolean = false;
 
-  constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly sdk: ConduitCommons,
-  ) {
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.moduleRegister = new EventEmitter();
     this.moduleRegister.setMaxListeners(150);
   }

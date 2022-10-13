@@ -32,7 +32,7 @@ export default class ConfigManager implements IConfigManager {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitCommons) {
     this.grpcSdk = grpcSdk;
-    this.serviceDiscovery = new ServiceDiscovery(grpcSdk, sdk);
+    this.serviceDiscovery = new ServiceDiscovery(grpcSdk);
     this._configStorage = new ConfigStorage(sdk, grpcSdk, this.serviceDiscovery);
   }
 
