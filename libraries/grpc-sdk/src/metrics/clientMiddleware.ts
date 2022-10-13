@@ -124,7 +124,7 @@ export function clientMiddleware(): ClientMiddleware {
       if (err instanceof ClientError) {
         status = err.code;
       } else if (isAbortError(err)) {
-        status = Status.CANCELLED;
+        status = Status.ABORTED;
       } else {
         status = Status.UNKNOWN;
       }
