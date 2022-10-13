@@ -92,7 +92,8 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT yarn --cwd ./modules/MODUL
 |    `GRPC_PORT`      | Port to be used by the gRPC server                         |  False   |   `55152`   |
 |    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
 |     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
-| `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config  | False  | `true` |
+| `SERVICE_MONITOR_INTERVAL_MS` | Service discovery monitor interval in ms (default: 30000) |  False   | `5000` |
+| `DEBUG__DISABLE_SERVICE_REMOVAL` | Prevent removal of inactive module services   | False    |    `true`   |
 
 
 ### Database

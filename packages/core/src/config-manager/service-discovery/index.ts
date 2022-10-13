@@ -21,20 +21,25 @@ export class ServiceDiscovery {
   } = {};
   private readonly moduleRegister: EventEmitter;
   private servingStatusUpdate: boolean = false;
+  private readonly monitorInterval: number; // milliseconds
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.moduleRegister = new EventEmitter();
     this.moduleRegister.setMaxListeners(150);
+    const specifiedInterval = parseInt(process.env.SERVICE_MONITOR_INTERVAL_MS ?? '');
+    this.monitorInterval = !isNaN(specifiedInterval) ? specifiedInterval : 30000;
+    ConduitGrpcSdk.Logger.log(
+      `Service discovery monitoring interval set to ${this.monitorInterval}ms`,
+    );
   }
 
   beginMonitors() {
-    const disableModuleRemoval =
-      process.env.DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL === 'true';
+    const disableModuleRemoval = process.env.DEBUG__DISABLE_SERVICE_REMOVAL === 'true';
     if (!disableModuleRemoval) {
       const self = this;
       setInterval(() => {
         self.monitorModuleHealth();
-      }, 5000);
+      }, this.monitorInterval);
     }
   }
 

@@ -34,4 +34,5 @@ to find out more about Conduit's internals.
 |     `GRPC_PORT`      | The port number the gRPC server will listen to                      |  False   |  `55190`           |
 |    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
 |     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
-| `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config  | False  | `true` |
+| `SERVICE_MONITOR_INTERVAL_MS` | Service discovery monitor interval in ms (default: 30000) |  False   | `5000` |
+| `DEBUG__DISABLE_SERVICE_REMOVAL` | Prevent removal of inactive module services   | False    |    `true`   |
