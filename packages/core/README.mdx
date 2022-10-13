@@ -35,4 +35,6 @@ to find out more about Conduit's internals.
 |    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
 |     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
 | `SERVICE_MONITOR_INTERVAL_MS` | Service discovery monitor interval in ms (default: 30000) |  False   | `5000` |
+| `SERVICE_RECONN_RETRIES` | Reconnection attempts before removal of unhealthy services (default: 5) |  False   | `5` |
+| `SERVICE_RECONN_INIT_MS` | Initial delay for exponential backoff reconnection to unhealthy service in ms (default: 250) | False | `125` |
 | `DEBUG__DISABLE_SERVICE_REMOVAL` | Prevent removal of inactive module services   | False    |    `true`   |
