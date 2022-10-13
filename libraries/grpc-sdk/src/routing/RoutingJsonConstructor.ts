@@ -1,5 +1,5 @@
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { ConduitRouteOptions } from './interfaces/Route';
+import { ConduitRouteOptions } from './interfaces';
 
 export function constructConduitRoute(
   input: ConduitRouteOptions,

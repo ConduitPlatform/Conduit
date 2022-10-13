@@ -1,8 +1,7 @@
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
 import path from 'path';
 import fs from 'fs';
-import { ConduitRouteObject } from './interfaces/Route';
-import { SocketProtoDescription } from './interfaces/Socket';
+import { ConduitRouteObject, SocketProtoDescription } from './interfaces';
 import { Indexable } from '../interfaces';
 
 const protofile_template = `

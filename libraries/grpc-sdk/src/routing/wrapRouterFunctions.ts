@@ -3,7 +3,7 @@ import {
   ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
-} from './interfaces/types';
+} from './interfaces';
 
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
