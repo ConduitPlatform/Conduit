@@ -4,6 +4,7 @@ import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
 import { HealthDefinition, HealthCheckResponse } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
+import ConduitGrpcSdk from '../index';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   active: boolean = false;
@@ -12,21 +13,14 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;
   protected protoPath?: string;
   protected type?: T;
-  protected readonly _clientName: string;
-  protected readonly _serviceUrl: string;
   protected readonly healthCheckEmitter = new EventEmitter();
-  protected readonly _grpcToken?: string;
 
   constructor(
-    clientName: string,
-    serviceName: string,
-    serviceUrl: string,
-    grpcToken?: string,
-  ) {
-    this._clientName = clientName;
-    this._serviceUrl = serviceUrl;
-    this._grpcToken = grpcToken;
-  }
+    readonly _clientName: string,
+    private readonly _serviceName: string,
+    private readonly _serviceUrl: string,
+    private readonly _grpcToken?: string,
+  ) {}
 
   initializeClient(type: T): Client<T> {
     if (this._client) return this._client;
@@ -36,6 +30,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
+    ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
@@ -73,6 +68,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
 
   closeConnection() {
     if (!this.channel) return;
+    ConduitGrpcSdk.Logger.warn(`Closing connection for ${this._serviceName}`);
     this.channel.close();
     this.channel = undefined;
     this.active = false;

@@ -415,12 +415,14 @@ export default class ConduitGrpcSdk {
     )
       return;
     if (this._availableModules[moduleName]) {
+      ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
+      ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
