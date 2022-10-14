@@ -163,7 +163,7 @@ describe('Check Admin Authorization', () => {
   });
 
   test('Request with invalid masterKey', async () => {
-    let requestOptions = {
+    const requestOptions = {
       method: 'GET',
       url: 'http://localhost:3030/admins',
       headers: {
@@ -302,7 +302,8 @@ afterAll(async () => {
       process.kill(dependency.pid);
     });
   } catch {}
-  // await testingTools.stopRedis();
+  await testingTools.stopRedis();
+  await testingTools.startMongo();
   testModule.disconnect();
   db.disconnect();
 });

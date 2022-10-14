@@ -2,7 +2,6 @@ import MockModule from './mock-module';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ChildProcess, exec } from 'child_process';
 import { IRunDependenciesInterface } from './interfaces/IRunDependenciesInterface';
-import { ConfigDefinition } from './protoUtils/core';
 
 export function getTestModule<T extends CompatServiceDefinition>(
   moduleName: string,
