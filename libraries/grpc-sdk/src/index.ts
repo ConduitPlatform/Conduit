@@ -450,13 +450,13 @@ export default class ConduitGrpcSdk {
   getServiceClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<T> | undefined {
-    return this._modules[name]?.client!;
+    return this._modules[name]?.client;
   }
 
   getHealthClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<typeof HealthDefinition> | undefined {
-    return this._modules[name]?.healthClient!;
+    return this._modules[name]?.healthClient;
   }
 
   isAvailable(moduleName: string) {
