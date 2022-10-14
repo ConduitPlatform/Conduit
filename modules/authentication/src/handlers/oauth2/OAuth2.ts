@@ -22,6 +22,7 @@ import { OAuthRequest } from './interfaces/MakeRequest';
 import { TokenProvider } from '../tokenProvider';
 import { TokenType } from '../../constants/TokenType';
 import { v4 as uuid } from 'uuid';
+import moment from 'moment/moment';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -91,6 +92,15 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
+    const stateToken: Token | null = await Token.getInstance().findOne({
+      token: params.state,
+    });
+    if (isNil(stateToken))
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
+    if (moment().isAfter(moment(stateToken.data.expiresAt))) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
+    }
+
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
@@ -108,11 +118,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       providerOptions,
     );
     const access_token = providerResponse.data.access_token;
-    const stateToken: Token | null = await Token.getInstance().findOne({
-      token: params.state,
-    });
-    if (isNil(stateToken))
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
     const clientId = stateToken.data.clientId;
     const scope = stateToken.data.scope;
@@ -121,6 +126,8 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       clientId,
       scope: scope,
     });
+
+    await Token.getInstance().deleteOne(stateToken);
     const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
