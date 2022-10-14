@@ -1,11 +1,11 @@
 import * as testingTools from '@conduitplatform/testing-tools';
-import path from 'path';
+import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import { ConfigDefinition } from '@conduitplatform/testing-tools/src/protoUtils/core';
 import { DatabaseProviderDefinition } from '@conduitplatform/testing-tools/src/protoUtils/database';
 import axios from 'axios';
 import { adminRoutes } from './utils/adminRoutes';
-import { signToken, verifyToken } from '../utils/auth';
+import { signToken, verifyToken } from '../src/utils/auth';
 import { sleep } from '@conduitplatform/grpc-sdk/src/utilities';
 
 let dependencies: ChildProcess[];
@@ -27,7 +27,7 @@ beforeAll(async () => {
   await testingTools.baseSetup();
   dependencies = await testingTools.runDependencies([
     {
-      command: 'node ' + path.resolve(__dirname, '../../../core/dist/bin/www.js'),
+      command: 'node ' + path.resolve(__dirname, '../../core/dist/bin/www.js'),
       ExecOptions: {
         env: {
           REDIS_PORT: 6379,
@@ -41,7 +41,7 @@ beforeAll(async () => {
     },
     {
       command:
-        'node ' + path.resolve(__dirname, '../../../../modules/database/dist/index.js'),
+        'node ' + path.resolve(__dirname, '../../../modules/database/dist/index.js'),
       ExecOptions: {
         env: {
           _DB_CONN_URI: 'mongodb://conduit:pass@localhost',

@@ -4,6 +4,8 @@ module.exports = {
   testEnvironment: 'node',
   testTimeout: 50000,
   roots: [
-    '<rootDir>/src',
+    '<rootDir>',
   ],
+  testMatch: ["<rootDir>/tests/*.(test).{js,jsx,ts,tsx}",
+              "<rootDir>/tests/?(*.)(spec|test).{js,jsx,ts,tsx}"],
 };

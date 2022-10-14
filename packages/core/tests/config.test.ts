@@ -1,6 +1,6 @@
 import * as testingTools from '@conduitplatform/testing-tools';
 import { ConfigDefinition } from '@conduitplatform/commons';
-import path from 'path';
+import * as path from 'path';
 import { ChildProcess } from 'child_process';
 
 const testModuleUrl = '0.0.0.0:55184';
@@ -16,7 +16,7 @@ beforeAll(async () => {
   await testingTools.baseSetup();
   dependencies = await testingTools.runDependencies([
     {
-      command: 'node ' + path.resolve(__dirname, '../../dist/bin/www.js'),
+      command: 'node ' + path.resolve(__dirname, '../dist/bin/www.js'),
       ExecOptions: {
         env: {
           REDIS_PORT: 6379,
@@ -34,7 +34,6 @@ beforeAll(async () => {
 describe('Testing Core package', () => {
   test('Getting Redis Details', async () => {
     const res = await testClient.getRedisDetails({});
-    console.log(res);
     expect(res).toMatchObject({
       redisPort: expect.any(Number),
       redisHost: expect.any(String),
@@ -43,7 +42,6 @@ describe('Testing Core package', () => {
 
   test('Getting Server Config', async () => {
     const res = await testClient.getServerConfig({});
-    console.log(res);
     expect(res).toMatchObject({
       data: expect.any(String),
     });
