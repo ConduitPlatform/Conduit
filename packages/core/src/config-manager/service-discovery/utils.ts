@@ -4,10 +4,10 @@
  * Timeout can be cleared through returned clear() or inside onTry().
  */
 export function exponentialTimeout(
-  onTry: (timeout: NodeJS.Timeout) => Promise<void>,
+  onTry: (timeout: NodeJS.Timeout) => void,
   delay: number,
   reps?: number,
-  onFailure?: () => Promise<void>,
+  onFailure?: () => void,
 ) {
   const nextRep = () => reps === undefined || --reps > 0;
   let timeout: NodeJS.Timeout | null;
@@ -15,10 +15,10 @@ export function exponentialTimeout(
     delay = Math.floor(delay * 2);
     if (delay > 0 && nextRep()) {
       timeout = setTimeout(invoker, delay);
-      await onTry(timeout);
+      onTry(timeout);
     } else {
       timeout = null;
-      onFailure && (await onFailure());
+      onFailure && onFailure();
     }
   };
   timeout = setTimeout(invoker, delay);

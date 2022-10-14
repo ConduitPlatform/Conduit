@@ -12,10 +12,11 @@ import { EventEmitter } from 'events';
 import { clearTimeout } from 'timers';
 
 /*
- * - Multi-instance services are not handled individually (talk to Load Balancer)
- * - Services that are Online AND Serving are recovered on startup
- * - Services that go Offline OR Non-Serving are instantly removed from the list of exposed services
+ * - Multi-instance services are not handled individually (LoadBalancer)
+ * - Online Services are recovered on startup
+ * - Unresponsive services are instantly removed from the list of exposed services
  * - Reconnection to recently removed services is attempted using exponential backoff
+ * - Services that do not provide a gRPC health check service are assumed to be healthy
  */
 export class ServiceDiscovery {
   readonly registeredModules: Map<string, RegisteredModule> = new Map<
@@ -27,22 +28,13 @@ export class ServiceDiscovery {
   } = {};
   private readonly moduleRegister: EventEmitter;
   private servingStatusUpdate: boolean = false;
-  private readonly monitorIntervalMs: number;
-  private readonly serviceReconnRetries: number;
-  private readonly serviceReconnInitMs: number;
+  private monitorIntervalMs = 30000;
+  private serviceReconnRetries = 5;
+  private serviceReconnInitMs = 250;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.moduleRegister = new EventEmitter();
     this.moduleRegister.setMaxListeners(150);
-    const specifiedInterval = parseInt(process.env.SERVICE_MONITOR_INTERVAL_MS ?? '');
-    this.monitorIntervalMs = !isNaN(specifiedInterval) ? specifiedInterval : 30000;
-    ConduitGrpcSdk.Logger.log(
-      `Service discovery monitoring interval set to ${this.monitorIntervalMs}ms`,
-    );
-    const specifiedRetries = parseInt(process.env.SERVICE_RECONN_RETRIES ?? '');
-    this.serviceReconnRetries = !isNaN(specifiedRetries) ? specifiedRetries : 5;
-    const specifiedRetryInit = parseInt(process.env.SERVICE_RECONN_INIT_MS ?? '');
-    this.serviceReconnInitMs = !isNaN(specifiedRetryInit) ? specifiedRetryInit : 250;
   }
 
   getModuleUrlByName(name: string): string | undefined {
@@ -50,10 +42,22 @@ export class ServiceDiscovery {
   }
 
   beginMonitors() {
-    const disableModuleRemoval = process.env.DEBUG__DISABLE_SERVICE_REMOVAL === 'true';
-    if (!disableModuleRemoval) {
+    if (process.env.DEBUG__DISABLE_SERVICE_REMOVAL === 'true') {
+      ConduitGrpcSdk.Logger.warn(
+        'Service discovery module removal disabled for Debugging!',
+      );
+    } else {
+      const specifiedInterval = parseInt(process.env.SERVICE_MONITOR_INTERVAL_MS ?? '');
+      const specifiedRetries = parseInt(process.env.SERVICE_RECONN_RETRIES ?? '');
+      const specifiedRetryInit = parseInt(process.env.SERVICE_RECONN_INIT_MS ?? '');
+      if (!isNaN(specifiedRetryInit)) this.serviceReconnInitMs = specifiedRetryInit;
+      if (!isNaN(specifiedInterval)) this.monitorIntervalMs = specifiedInterval;
+      if (!isNaN(specifiedRetries)) this.serviceReconnRetries = specifiedRetries;
+      ConduitGrpcSdk.Logger.log(
+        `Service discovery monitoring interval set to ${this.monitorIntervalMs}ms`,
+      );
       setInterval(() => {
-        this.healthCheckRegisteredModules().then(() => this.deregisterDeadModules());
+        this.monitorModules().then();
       }, this.monitorIntervalMs);
     }
   }
@@ -75,11 +79,7 @@ export class ServiceDiscovery {
    * Any services that do not provide a gRPC health check service are assumed to be healthy.
    * Used by healthCheckRegisteredModules(), reviveService()
    */
-  private async healthCheckService(
-    module: string,
-    address: string,
-    updateOnlineOnly = false,
-  ) {
+  private async healthCheckService(module: string, address: string) {
     const healthClient = this.grpcSdk.getHealthClient(module);
     let status = HealthCheckStatus.SERVING;
     if (healthClient) {
@@ -87,20 +87,15 @@ export class ServiceDiscovery {
         .check({})
         .then(res => res.status as unknown as HealthCheckStatus)
         .catch(() => {
-          return HealthCheckStatus.NOT_SERVING;
+          return HealthCheckStatus.SERVICE_UNKNOWN;
         });
     }
-    if (!updateOnlineOnly || status === HealthCheckStatus.SERVING) {
-      this.updateModuleHealth(module, address, status);
-    }
+    const isRegistered = Object.keys(this.moduleHealth).includes(module);
+    if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;
+    this.updateModuleHealth(module, address, status);
   }
 
-  /*
-   * Health checks registered/recovered modules, updating their health states.
-   * Any services that do not provide a gRPC health check service are assumed to be healthy.
-   * Used by monitorModuleHealth().
-   */
-  private async healthCheckRegisteredModules() {
+  private async monitorModules() {
     for (const module of Object.keys(this.moduleHealth)) {
       const registeredModule = this.registeredModules.get(module)!;
       await this.healthCheckService(module, registeredModule.address);
@@ -132,39 +127,18 @@ export class ServiceDiscovery {
   }
 
   /*
-   * Removes unresponsive and non-serving modules, emitting events on state changes.
-   * Runs after healthCheckModules().
-   */
-  private deregisterDeadModules() {
-    Object.keys(this.moduleHealth).forEach(moduleName => {
-      const module = this.moduleHealth[moduleName];
-      if (module.status !== HealthCheckStatus.SERVING) {
-        delete this.moduleHealth[moduleName];
-        this.registeredModules.delete(moduleName);
-        this.servingStatusUpdate = true;
-        this.reviveService(moduleName, module.address);
-      }
-    });
-    if (this.servingStatusUpdate) {
-      this.moduleRegister.emit('serving-modules-update');
-      this.servingStatusUpdate = false;
-    }
-  }
-
-  /*
    * Attempt to reconnect to a recently removed module service.
    * Retries using exponential backoff.
-   * Service should be online and serving (if no gRPC health check, assumed serving)
    */
   private reviveService(name: string, address: string) {
-    const onTry = async (timeout: NodeJS.Timeout) => {
+    const onTry = (timeout: NodeJS.Timeout) => {
       if (Object.keys(this.moduleHealth).includes(name)) {
         clearTimeout(timeout);
       } else {
-        await this.healthCheckService(name, address, true);
+        this.healthCheckService(name, address).then();
       }
     };
-    const onFailure = async () => {
+    const onFailure = () => {
       this.grpcSdk.getModule(name)?.closeConnection();
     };
     exponentialTimeout(
@@ -181,6 +155,14 @@ export class ServiceDiscovery {
     moduleStatus: HealthCheckStatus,
     broadcast = true,
   ) {
+    if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
+      // Deregister Unresponsive Module
+      delete this.moduleHealth[moduleName];
+      this.registeredModules.delete(moduleName);
+      this.servingStatusUpdate = true;
+      this.reviveService(moduleName, moduleUrl);
+      return;
+    }
     let module = this.registeredModules.get(moduleName);
     if (!module) {
       module = {
@@ -189,11 +171,12 @@ export class ServiceDiscovery {
       };
       this.registeredModules.set(moduleName, module);
       this.moduleRegister.emit('serving-modules-update');
-    }
-    const prevStatus = module.serving;
-    module.serving = moduleStatus === HealthCheckStatus.SERVING;
-    if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
-      this.servingStatusUpdate = true;
+    } else {
+      const prevStatus = module.serving;
+      module.serving = moduleStatus === HealthCheckStatus.SERVING;
+      if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
+        this.servingStatusUpdate = true;
+      }
     }
     this.registeredModules.set(moduleName, module);
     this.moduleHealth[moduleName] = {
