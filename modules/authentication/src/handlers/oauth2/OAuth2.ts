@@ -98,6 +98,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     if (isNil(stateToken))
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
     if (moment().isAfter(moment(stateToken.data.expiresAt))) {
+      await Token.getInstance().deleteOne(stateToken);
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
 
