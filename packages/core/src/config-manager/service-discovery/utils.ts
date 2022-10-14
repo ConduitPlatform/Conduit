@@ -1,9 +1,9 @@
 /*
- * Registers a timeout with exponential backoff.
+ * Registers a timeout with linear backoff.
  * onFailure() only runs on rep exhaustion.
  * Timeout can be cleared through returned clear() or inside onTry().
  */
-export function exponentialTimeout(
+export function linearBackoffTimeout(
   onTry: (timeout: NodeJS.Timeout) => void,
   delay: number,
   reps?: number,

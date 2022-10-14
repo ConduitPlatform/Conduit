@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
-import { exponentialTimeout } from './utils';
+import { linearBackoffTimeout } from './utils';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
 import { clearTimeout } from 'timers';
@@ -15,7 +15,7 @@ import { clearTimeout } from 'timers';
  * - Multi-instance services are not handled individually (LoadBalancer)
  * - Online Services are recovered on startup
  * - Unresponsive services are instantly removed from the list of exposed services
- * - Reconnection to recently removed services is attempted using exponential backoff
+ * - Reconnection to recently removed services is attempted using linear backoff
  * - Services that do not provide a gRPC health check service are assumed to be healthy
  */
 export class ServiceDiscovery {
@@ -128,7 +128,7 @@ export class ServiceDiscovery {
 
   /*
    * Attempt to reconnect to a recently removed module service.
-   * Retries using exponential backoff.
+   * Retries using linear backoff.
    */
   private reviveService(name: string, address: string) {
     const onTry = (timeout: NodeJS.Timeout) => {
@@ -141,7 +141,7 @@ export class ServiceDiscovery {
     const onFailure = () => {
       this.grpcSdk.getModule(name)?.closeConnection();
     };
-    exponentialTimeout(
+    linearBackoffTimeout(
       onTry,
       this.serviceReconnInitMs,
       this.serviceReconnRetries,
