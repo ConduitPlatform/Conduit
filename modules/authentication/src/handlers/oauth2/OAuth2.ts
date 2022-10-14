@@ -62,6 +62,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       client_id: this.settings.clientId,
       redirect_uri: this.settings.callbackUrl,
       response_type: this.settings.responseType,
+      response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
     };
     const baseUrl = this.settings.authorizeUrl;
@@ -96,6 +97,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     );
     const access_token = providerResponse.data.access_token;
     let state = params.state;
+    if (!Array.isArray(state)) {
+      state = state.split(',');
+    }
     state = {
       clientId: state[0],
       scopes: this.constructScopes(state.slice(1, state.length)),
@@ -191,22 +195,41 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       this.redirect.bind(this),
     );
 
-    routingManager.route(
-      {
-        path: `/hook/${this.providerName}`,
-        action: ConduitRouteActions.GET,
-        description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
-        queryParams: {
-          code: ConduitString.Required,
-          state: [ConduitString.Required],
+    if (this.settings.responseMode === 'query') {
+      routingManager.route(
+        {
+          path: `/hook/${this.providerName}`,
+          action: ConduitRouteActions.GET,
+          description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
+          queryParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
         },
-      },
-      new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
-        accessToken: ConduitString.Optional,
-        refreshToken: ConduitString.Optional,
-      }),
-      this.authorize.bind(this),
-    );
+        new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+        }),
+        this.authorize.bind(this),
+      );
+    } else {
+      routingManager.route(
+        {
+          path: `/hook/${this.providerName}`,
+          action: ConduitRouteActions.POST,
+          description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
+          bodyParams: {
+            code: ConduitString.Required,
+            state: [ConduitString.Required],
+          },
+        },
+        new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+        }),
+        this.authorize.bind(this),
+      );
+    }
   }
 
   makeRequest(data: AuthParams): OAuthRequest {

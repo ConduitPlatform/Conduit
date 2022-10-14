@@ -48,7 +48,7 @@ export class TokenProvider {
           redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
         }
         return {
-          redirectUrl: redirectUrlWithParams.toString(),
+          redirect: redirectUrlWithParams.toString(),
           setCookies: cookies,
         };
       } else {
@@ -68,7 +68,7 @@ export class TokenProvider {
         redirectUrlWithParams.searchParams.append('refreshToken', refreshToken!.token);
       }
       return {
-        redirectUrl: redirectUrlWithParams.toString(),
+        redirect: redirectUrlWithParams.toString(),
       };
     } else {
       return {
