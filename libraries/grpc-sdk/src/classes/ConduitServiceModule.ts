@@ -14,7 +14,8 @@ import { ServerWritableStream } from '@grpc/grpc-js';
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
   protected _serviceName?: string;
-  protected _port!: string;
+  protected _address!: string; // external address:port of service (LoadBalancer)
+  protected _port!: string; // port to bring up gRPC service
   protected grpcServer!: GrpcServer;
   private _grpcSdk: ConduitGrpcSdk | undefined;
   private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.SERVING; // default for health-agnostic modules
@@ -71,6 +72,7 @@ export abstract class ConduitServiceModule {
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
       this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+      this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
     }
   }
 

@@ -32,7 +32,7 @@ export default class ConfigManager implements IConfigManager {
 
   constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitCommons) {
     this.grpcSdk = grpcSdk;
-    this.serviceDiscovery = new ServiceDiscovery(grpcSdk, sdk);
+    this.serviceDiscovery = new ServiceDiscovery(grpcSdk);
     this._configStorage = new ConfigStorage(sdk, grpcSdk, this.serviceDiscovery);
   }
 
@@ -74,11 +74,7 @@ export default class ConfigManager implements IConfigManager {
       if (state.modules) {
         for (const module of state.modules) {
           try {
-            await this.serviceDiscovery._registerModule(
-              module.name,
-              module.url,
-              module.instance,
-            );
+            await this.serviceDiscovery._registerModule(module.name, module.url);
             success.push({
               name: module.name,
               url: module.url,

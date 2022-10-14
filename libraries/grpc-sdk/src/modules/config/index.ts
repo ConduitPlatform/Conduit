@@ -92,15 +92,10 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       healthStatus: healthStatus as number,
     };
     const self = this;
-    return this.client!.registerModule(request)
-      .then(res => {
-        self.coreLive = true;
-        return res.result;
-      })
-      .then(r => {
-        setInterval(() => self.moduleHealthProbe.bind(self)(name, url), 2000);
-        return r;
-      });
+    return this.client!.registerModule(request).then(res => {
+      self.coreLive = true;
+      return res.result;
+    });
   }
 
   moduleHealthProbe(name: string, url: string) {

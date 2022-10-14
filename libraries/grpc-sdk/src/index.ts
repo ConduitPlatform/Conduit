@@ -441,14 +441,22 @@ export default class ConduitGrpcSdk {
     this._dynamicModules[name] = type;
   }
 
-  getModule<T extends CompatServiceDefinition>(name: string): Client<T> | undefined {
-    if (this._modules[name]) return this._modules[name].client!;
+  getModule<T extends CompatServiceDefinition>(
+    name: string,
+  ): ConduitModule<T> | undefined {
+    return this._modules[name];
+  }
+
+  getServiceClient<T extends CompatServiceDefinition>(
+    name: string,
+  ): Client<T> | undefined {
+    return this._modules[name]?.client;
   }
 
   getHealthClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<typeof HealthDefinition> | undefined {
-    if (this._modules[name]) return this._modules[name].healthClient!;
+    return this._modules[name]?.healthClient;
   }
 
   isAvailable(moduleName: string) {
