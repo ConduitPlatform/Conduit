@@ -1,4 +1,4 @@
-import { isNaN, isNil } from 'lodash';
+import { isNaN, isNil, merge } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
@@ -130,10 +130,12 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async initialize(server: GrpcServer) {
-    const adminConfig = await generateConfigDefaults(this.config.getProperties());
+    const previousConfig =
+      (await this.commons.getConfigManager().get('admin')) ?? this.config.getProperties();
+    await generateConfigDefaults(previousConfig);
     ConfigController.getInstance().config = await this.commons
       .getConfigManager()
-      .configurePackage('admin', adminConfig, AdminConfigRawSchema);
+      .configurePackage('admin', previousConfig, AdminConfigRawSchema);
     await server.addService(
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
@@ -143,9 +145,7 @@ export default class AdminModule extends IConduitAdmin {
     );
     this.grpcSdk
       .waitForExistence('database')
-      .then(async () => {
-        await this.handleDatabase();
-      })
+      .then(this.handleDatabase.bind(this))
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
@@ -473,9 +473,9 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   async setConfig(moduleConfig: any): Promise<any> {
-    await generateConfigDefaults(moduleConfig);
     const previousConfig = await this.commons.getConfigManager().get('admin');
-    const config = { ...previousConfig, ...moduleConfig };
+    const config = merge(previousConfig, moduleConfig);
+    await generateConfigDefaults(config);
     try {
       this.config.load(config).validate({
         allowed: 'strict',

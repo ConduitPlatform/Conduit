@@ -29,7 +29,7 @@ networks:
 services:
   # Default Services
   core:
-    container_name: 'conduit-${IMAGE_TAG}'
+    container_name: 'conduit'
     image: 'docker.io/conduitplatform/conduit:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -41,11 +41,12 @@ services:
       - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
       - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
     environment:
-      REDIS_HOST: 'conduit-redis-${IMAGE_TAG}'
+      REDIS_HOST: 'conduit-redis'
       REDIS_PORT: '${REDIS_PORT:-6379}'
       MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
       ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
       ADMIN_SOCKET_PORT: '${ADMIN_SOCKET_PORT:-3031}'
+      __DEFAULT_HOST_URL: '${ADMIN_DEFAULT_HOST_URL:-http://localhost:3030}'
       METRICS_PORT: '9091'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
@@ -55,7 +56,7 @@ services:
           - conduit
 
   ui:
-    container_name: 'conduit-ui-${IMAGE_TAG}'
+    container_name: 'conduit-ui'
     image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -70,7 +71,7 @@ services:
       LOKI_URL: 'http://conduit-loki:3100'
 
   database:
-    container_name: 'conduit-database-${IMAGE_TAG}'
+    container_name: 'conduit-database'
     image: 'docker.io/conduitplatform/database:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -93,7 +94,7 @@ services:
           - conduit-database
 
   router:
-    container_name: 'conduit-router-${IMAGE_TAG}'
+    container_name: 'conduit-router'
     image: 'docker.io/conduitplatform/router:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -108,6 +109,7 @@ services:
       CONDUIT_SERVER: 'conduit:55152'
       SERVICE_URL: 'conduit-router:55161'
       GRPC_PORT: '55161'
+      __DEFAULT_HOST_URL: '${CLIENT_DEFAULT_HOST_URL:-http://localhost:3000}'
       METRICS_PORT: '9093'
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
@@ -119,7 +121,7 @@ services:
           - conduit-router
 
   authentication:
-    container_name: 'conduit-authentication-${IMAGE_TAG}'
+    container_name: 'conduit-authentication'
     image: 'docker.io/conduitplatform/authentication:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -141,7 +143,7 @@ services:
 
 #  # Optional Services
   chat:
-    container_name: 'conduit-chat-${IMAGE_TAG}'
+    container_name: 'conduit-chat'
     image: 'docker.io/conduitplatform/chat:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -164,7 +166,7 @@ services:
           - conduit-chat
 
   email:
-    container_name: 'conduit-email-${IMAGE_TAG}'
+    container_name: 'conduit-email'
     image: 'docker.io/conduitplatform/email:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -186,7 +188,7 @@ services:
           - conduit-email
 
   forms:
-    container_name: 'conduit-forms-${IMAGE_TAG}'
+    container_name: 'conduit-forms'
     image: 'docker.io/conduitplatform/forms:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -211,7 +213,7 @@ services:
           - conduit-forms
 
   push-notifications:
-    container_name: 'conduit-push-notifications-${IMAGE_TAG}'
+    container_name: 'conduit-push-notifications'
     image: 'docker.io/conduitplatform/push-notifications:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -234,7 +236,7 @@ services:
           - conduit-push-notifications
 
   sms:
-    container_name: 'conduit-sms-${IMAGE_TAG}'
+    container_name: 'conduit-sms'
     image: 'docker.io/conduitplatform/sms:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -256,7 +258,7 @@ services:
           - conduit-sms
 
   storage:
-    container_name: 'conduit-storage-${IMAGE_TAG}'
+    container_name: 'conduit-storage'
     image: 'docker.io/conduitplatform/storage:${IMAGE_TAG}'
     restart: unless-stopped
     depends_on:
@@ -280,14 +282,14 @@ services:
 
   # Dependencies
   redis:
-    container_name: 'conduit-redis-${IMAGE_TAG}'
+    container_name: 'conduit-redis'
     image: 'docker.io/library/redis:7.0.2'
     restart: unless-stopped
     ports:
       - '${REDIS_PORT:-6379}:6379'
 
   mongodb:
-    container_name: 'conduit-mongo-${IMAGE_TAG}'
+    container_name: 'conduit-mongo'
     image: 'docker.io/library/mongo:4.4.15'
     restart: unless-stopped
     ports:
@@ -304,7 +306,7 @@ services:
       - conduit-mongodb:/data/db
 
   postgres:
-    container_name: 'conduit-postgres-${IMAGE_TAG}'
+    container_name: 'conduit-postgres'
     image: 'docker.io/library/postgres:14.4'
     restart: unless-stopped
     ports:
@@ -324,7 +326,7 @@ services:
   # Metrics / Logs
   prometheus:
     image: 'docker.io/prom/prometheus:v2.37.1'
-    container_name: 'conduit-prometheus-${IMAGE_TAG}'
+    container_name: 'conduit-prometheus'
     restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -340,7 +342,7 @@ services:
 
   loki:
     image: 'docker.io/grafana/loki:2.6.1'
-    container_name: 'conduit-loki-${IMAGE_TAG}'
+    container_name: 'conduit-loki'
     restart: unless-stopped
     ports:
       - '${LOKI_PORT:-3100}:3100'

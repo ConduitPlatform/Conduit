@@ -3,7 +3,7 @@
   "authorizeUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?",
   "providerName": "microsoft",
   "tokenUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-  "response_mode": "form_post",
+  "responseMode": "query",
   "responseType": "code",
   "grantType": "authorization_code"
 }
