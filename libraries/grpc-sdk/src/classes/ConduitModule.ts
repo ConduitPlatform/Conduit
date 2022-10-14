@@ -30,7 +30,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
-    ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
+    // ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
@@ -69,7 +69,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
 
   closeConnection() {
     if (!this.channel) return;
-    ConduitGrpcSdk.Logger.warn(`Closing connection for ${this._serviceName}`);
+    // ConduitGrpcSdk.Logger.warn(`Closing connection for ${this._serviceName}`);
     this.channel.close();
     this.channel = undefined;
     this.active = false;
