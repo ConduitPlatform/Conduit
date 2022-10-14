@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { User } from '../../models';
+import { Token, User } from '../../models';
 import axios from 'axios';
 import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
@@ -20,6 +20,8 @@ import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy
 import { ConnectionParams } from './interfaces/ConnectionParams';
 import { OAuthRequest } from './interfaces/MakeRequest';
 import { TokenProvider } from '../tokenProvider';
+import { TokenType } from '../../constants/TokenType';
+import { v4 as uuid } from 'uuid';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -66,7 +68,17 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       scope: this.constructScopes(scopes),
     };
     const baseUrl = this.settings.authorizeUrl;
-    options['state'] = call.request.context.clientId + ',' + options.scope;
+
+    const stateToken = await Token.getInstance().create({
+      type: TokenType.STATE_TOKEN,
+      token: uuid(),
+      data: {
+        clientId: call.request.context.clientId,
+        scope: options.scope,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+    options['state'] = stateToken.token;
 
     const keys = Object.keys(options) as [keyof RedirectOptions];
     const url = keys
@@ -96,20 +108,18 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       providerOptions,
     );
     const access_token = providerResponse.data.access_token;
-    let state = params.state;
-    if (!Array.isArray(state)) {
-      state = state.split(',');
-    }
-    state = {
-      clientId: state[0],
-      scopes: this.constructScopes(state.slice(1, state.length)),
-    };
+    const stateToken: Token | null = await Token.getInstance().findOne({
+      token: params.state,
+    });
+    if (isNil(stateToken))
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
 
-    const clientId = state.clientId;
+    const clientId = stateToken.data.clientId;
+    const scope = stateToken.data.scope;
     const payload = await this.connectWithProvider({
       accessToken: access_token,
       clientId,
-      scope: state.scopes,
+      scope: scope,
     });
     const user = await this.createOrUpdateUser(payload);
     const config = ConfigController.getInstance().config;
@@ -203,7 +213,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
           queryParams: {
             code: ConduitString.Required,
-            state: [ConduitString.Required],
+            state: ConduitString.Required,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -220,7 +230,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           description: `Login/register with ${this.capitalizeProvider()} using redirect.`,
           bodyParams: {
             code: ConduitString.Required,
-            state: [ConduitString.Required],
+            state: ConduitString.Required,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
