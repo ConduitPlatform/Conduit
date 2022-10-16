@@ -53,7 +53,7 @@ export class ServiceHandler implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
 
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
-    return TokenProvider.getInstance()!.provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user: serviceUser as unknown as User,
       clientId,
       config,

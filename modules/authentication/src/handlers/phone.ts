@@ -94,7 +94,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
     }
 
-    return TokenProvider.getInstance(this.grpcSdk)!.provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId: existingToken.data.clientId,
       config,
