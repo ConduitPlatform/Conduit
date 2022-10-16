@@ -25,7 +25,7 @@ export class TokenProvider {
   public static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (TokenProvider._instance) return TokenProvider._instance;
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
-    TokenProvider._instance = new TokenProvider(grpcSdk);
+    return (TokenProvider._instance = new TokenProvider(grpcSdk));
   }
 
   async provideUserTokens(tokenOptions: TokenOptions, redirectUrl?: string) {

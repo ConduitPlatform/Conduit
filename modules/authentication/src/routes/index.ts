@@ -14,7 +14,6 @@ import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { TwoFa } from '../handlers/twoFa';
-import { TokenProvider } from '../handlers/tokenProvider';
 import authMiddleware from './middleware';
 import { MagicLinkHandlers } from '../handlers/magicLink';
 import { Config } from '../config';
@@ -38,8 +37,6 @@ export class AuthenticationRoutes {
     this.localHandlers = new LocalHandlers(this.grpcSdk);
     this.twoFaHandlers = new TwoFa(this.grpcSdk);
     this.magicLinkHandlers = new MagicLinkHandlers(this.grpcSdk);
-    // initialize SDK
-    TokenProvider.getInstance(grpcSdk);
   }
 
   async registerRoutes() {

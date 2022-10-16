@@ -288,7 +288,7 @@ export class TwoFa implements IAuthenticationStrategy {
         throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
       }
       const config = ConfigController.getInstance().config;
-      return TokenProvider.getInstance(this.grpcSdk)!.provideUserTokens({
+      return TokenProvider.getInstance().provideUserTokens({
         user,
         clientId,
         config,
@@ -441,7 +441,7 @@ export class TwoFa implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Code is not correct');
     }
     const config = ConfigController.getInstance().config;
-    return TokenProvider.getInstance()!.provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user,
       clientId,
       config,
