@@ -161,7 +161,7 @@ export class User extends ConduitActiveSchema<User> {
   facebook?: {
     id: string;
     token: string;
-    //tokenExpires: string;
+    // tokenExpires: string;
     data: Indexable;
   };
   twitch?: {
@@ -195,7 +195,6 @@ export class User extends ConduitActiveSchema<User> {
     tokenExpires: Date;
     data: Indexable;
   };
-
   active: boolean;
   isVerified: boolean;
   hasTwoFA: boolean;
