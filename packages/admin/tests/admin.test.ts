@@ -73,6 +73,17 @@ describe('Dependency check', () => {
       data: expect.any(String),
     });
   });
+
+  test('Check Database', async () => {
+    const res = await testClient.moduleList({});
+    expect(res.modules).toMatchObject([
+      {
+        moduleName: 'database',
+        url: '0.0.0.0:55187',
+        serving: true,
+      },
+    ]);
+  });
 });
 
 describe('Check Admin Initialization', () => {
@@ -303,7 +314,7 @@ afterAll(async () => {
     });
   } catch {}
   await testingTools.stopRedis();
-  await testingTools.startMongo();
+  await testingTools.stopMongo();
   testModule.disconnect();
   db.disconnect();
 });
