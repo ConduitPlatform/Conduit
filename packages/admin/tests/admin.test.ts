@@ -6,7 +6,6 @@ import { DatabaseProviderDefinition } from '@conduitplatform/testing-tools/src/p
 import axios from 'axios';
 import { adminRoutes } from './utils/adminRoutes';
 import { signToken, verifyToken } from '../src/utils/auth';
-import { sleep } from '@conduitplatform/grpc-sdk/src/utilities';
 
 let dependencies: ChildProcess[];
 const testModule = testingTools.getTestModule<ConfigDefinition>(
