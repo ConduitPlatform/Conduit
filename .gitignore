@@ -10,6 +10,7 @@
 **/ProtoUtils/**
 **/protoUtils/**
 **/protoTypes/**
+**/tests/coverage
 .vscode
 **/resourceRegistry.log
 .turbo

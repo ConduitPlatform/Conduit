@@ -8,7 +8,7 @@
     "node": ">=14"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --coverage --forceExit",
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build"

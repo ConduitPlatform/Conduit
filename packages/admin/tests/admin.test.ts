@@ -235,10 +235,8 @@ describe('Check Admin Authorization', () => {
         Authorization: 'Bearer ' + expiredToken,
       },
     };
-    sleep(1000).then(async () => {
-      await axios(requestOptions).catch(e => {
-        expect(e.response.status).toEqual(401);
-      });
+    await axios(requestOptions).catch(e => {
+      expect(e.response.status).toEqual(401);
     });
 
     const twoFaToken = signToken(
