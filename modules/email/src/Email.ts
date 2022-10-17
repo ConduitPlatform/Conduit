@@ -89,11 +89,6 @@ export default class Email extends ManagedModule<Config> {
       }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
-    // TODO: Replace this:
-    this.grpcSdk.bus?.publish(
-      'email:status:onConfig',
-      this.isRunning ? 'active' : 'inactive',
-    );
   }
 
   private async initEmailProvider(newConfig?: Config) {
