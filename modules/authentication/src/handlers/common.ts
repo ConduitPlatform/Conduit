@@ -44,7 +44,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     // delete the old refresh token
     await RefreshToken.getInstance().deleteOne({ _id: oldRefreshToken._id });
 
-    return TokenProvider.getInstance()!.provideUserTokens({
+    return TokenProvider.getInstance().provideUserTokens({
       user: oldRefreshToken.user as User,
       clientId,
       config,
@@ -61,7 +61,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const authToken = call.request.headers.authorization;
     const clientConfig = config.clients;
     ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
-    await TokenProvider.getInstance()!.logOutClientOperations(
+    await TokenProvider.getInstance().logOutClientOperations(
       this.grpcSdk,
       clientConfig,
       authToken,

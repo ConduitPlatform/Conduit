@@ -415,14 +415,14 @@ export default class ConduitGrpcSdk {
     )
       return;
     if (this._availableModules[moduleName]) {
-      ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
@@ -441,14 +441,22 @@ export default class ConduitGrpcSdk {
     this._dynamicModules[name] = type;
   }
 
-  getModule<T extends CompatServiceDefinition>(name: string): Client<T> | undefined {
-    if (this._modules[name]) return this._modules[name].client!;
+  getModule<T extends CompatServiceDefinition>(
+    name: string,
+  ): ConduitModule<T> | undefined {
+    return this._modules[name];
+  }
+
+  getServiceClient<T extends CompatServiceDefinition>(
+    name: string,
+  ): Client<T> | undefined {
+    return this._modules[name]?.client;
   }
 
   getHealthClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<typeof HealthDefinition> | undefined {
-    if (this._modules[name]) return this._modules[name].healthClient!;
+    return this._modules[name]?.healthClient;
   }
 
   isAvailable(moduleName: string) {

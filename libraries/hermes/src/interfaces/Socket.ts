@@ -1,4 +1,4 @@
-import { ConduitRouteReturnDefinition } from '../classes/ConduitRouteReturn';
+import { ConduitRouteReturnDefinition } from '../classes';
 import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 
 export interface ConduitSocketParameters {

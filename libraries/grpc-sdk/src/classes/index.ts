@@ -6,4 +6,3 @@ export * from './ConduitServiceModule';
 export * from './ManagedModule';
 export * from './ModuleManager';
 export * from './ConfigController';
-export * from './ConduitParser';

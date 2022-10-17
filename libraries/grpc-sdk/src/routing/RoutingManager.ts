@@ -1,4 +1,3 @@
-import { ParsedRouterRequest, UnparsedRouterResponse } from './interfaces/types';
 import { GrpcServer } from '../index';
 import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
@@ -7,17 +6,17 @@ import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { constructProtoFile, wrapFunctionsAsync } from './RoutingUtilities';
 import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
 import {
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
   ConduitRouteActions,
   ConduitRouteObject,
   ConduitRouteOptions,
-} from './interfaces/Route';
-import {
   ConduitSocketEventHandler,
   ConduitSocketOptions,
+  ConduitMiddlewareOptions,
   EventsProtoDescription,
   SocketProtoDescription,
-} from './interfaces/Socket';
-import { ConduitMiddlewareOptions } from './interfaces/ConduitMiddleware';
+} from './interfaces';
 import { RegisterAdminRouteRequest_PathDefinition } from '../protoUtils/core';
 
 export class RoutingManager {

@@ -41,8 +41,8 @@ import { ConduitModel } from '../interfaces';
  *
  */
 export class ConduitRouteReturnDefinition {
-  private _name: string;
-  private _fields: ConduitModel | string; // object definition or well-known* type as a string
+  private readonly _name: string;
+  private readonly _fields: ConduitModel | string; // object definition or well-known* type as a string
 
   // Well-known types include:
   // - TYPE enum values

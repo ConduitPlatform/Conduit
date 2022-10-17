@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.15.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.0...v0.15.0-rc.1) (2022-10-14)
+
+
+### Features
+
+* **authentication:** allow form_post responseMode on oAuth([#381](https://github.com/ConduitPlatform/Conduit/issues/381)) ([ff34ff6](https://github.com/ConduitPlatform/Conduit/commit/ff34ff6ad88ea44cd95d683f7a1095b17e4851dd))
+* **core,grpc-sdk:** rework service discovery ([#383](https://github.com/ConduitPlatform/Conduit/issues/383)) ([321da3b](https://github.com/ConduitPlatform/Conduit/commit/321da3b519d3c3121ffe84c0a32ce8e2b4270b68))
+* **grpc-sdk:** client connection logs ([#379](https://github.com/ConduitPlatform/Conduit/issues/379)) ([22c0c6d](https://github.com/ConduitPlatform/Conduit/commit/22c0c6dafa808992633edaf5d0af8b293de2a826))
+* **grpc-sdk:** gRPC retries for unavailable services ([#377](https://github.com/ConduitPlatform/Conduit/issues/377)) ([05e6bf0](https://github.com/ConduitPlatform/Conduit/commit/05e6bf095d470ba50013643a2c898cff1fcea49f))
+
+
+### Bug Fixes
+
+* **admin:** generated config values reset on partial config update ([#375](https://github.com/ConduitPlatform/Conduit/issues/375)) ([b9da468](https://github.com/ConduitPlatform/Conduit/commit/b9da46811e87826e7e30085c9abfa3fca606bda0))
+* **authentication:** migration not waiting for Config schema ([#376](https://github.com/ConduitPlatform/Conduit/issues/376)) ([41c2161](https://github.com/ConduitPlatform/Conduit/commit/41c2161b242ccaf1145645119a8198e7d64870a3))
+* **grpc-sdk:** gRPC request retries for cancelled/aborted requests ([#380](https://github.com/ConduitPlatform/Conduit/issues/380)) ([b2d1049](https://github.com/ConduitPlatform/Conduit/commit/b2d10493630acea6e3d6884442609f77e7c4e1a8))
+
 ## [0.15.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.14.6...v0.15.0-rc.0) (2022-10-07)
 
 

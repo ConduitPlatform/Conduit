@@ -1,7 +1,7 @@
 import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 
 // having all these as optional parameters is only here,
-// to allow us not to change the route creation typing drasticaly
+// to allow us not to change the route creation typing drastically
 export interface ConduitMiddlewareOptions {
   action?: ConduitRouteActions;
   path?: string;
@@ -10,9 +10,9 @@ export interface ConduitMiddlewareOptions {
 }
 
 export class ConduitMiddleware {
-  private _input: ConduitMiddlewareOptions;
-  private _middlewareName: string;
-  private _handler: (request: ConduitRouteParameters) => Promise<any>;
+  private readonly _input: ConduitMiddlewareOptions;
+  private readonly _middlewareName: string;
+  private readonly _handler: (request: ConduitRouteParameters) => Promise<any>;
 
   constructor(
     input: ConduitMiddlewareOptions,
