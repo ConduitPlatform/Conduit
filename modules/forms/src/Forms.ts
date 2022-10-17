@@ -24,7 +24,7 @@ export default class Forms extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
     },
   };
-  private isRunning: boolean = false;
+  private isRunning = false;
   private adminRouter: AdminHandlers;
   private userRouter: FormsRoutes;
   private database: DatabaseProvider;
@@ -42,23 +42,13 @@ export default class Forms extends ManagedModule<Config> {
     await this.registerSchemas();
     await this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {
-        this.updateHealth(HealthCheckStatus.SERVING);
+        this.onConfig()
+          .then()
+          .catch(() => {
+            ConduitGrpcSdk.Logger.error('Failed to update Forms configuration');
+          });
       } else {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);
-      }
-    });
-  }
-
-  async onRegister() {
-    this.grpcSdk.bus!.subscribe('email:status:onConfig', (message: string) => {
-      if (message === 'active') {
-        this.onConfig()
-          .then(() => {
-            ConduitGrpcSdk.Logger.log('Updated forms configuration');
-          })
-          .catch(() => {
-            ConduitGrpcSdk.Logger.error('Failed to update forms config');
-          });
       }
     });
   }
