@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
@@ -205,13 +204,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
     if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = systemRequiredValidator(
-          this.registeredSchemas.get(schema.name)!,
-          schema,
-        );
-        // TODO this is a temporary solution because there was an error on updated config schema for invalid schema fields
-      }
       this.mongoose.connection.deleteModel(schema.name);
     }
 
