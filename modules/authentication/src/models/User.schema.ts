@@ -100,19 +100,6 @@ const schema = {
       type: TYPE.JSON,
     },
   },
-  kakao: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.String,
-    },
-    profile_image_url: TYPE.String,
-    thumbnail_image_url: TYPE.String,
-  },
   twitch: {
     id: {
       type: TYPE.String,
@@ -176,13 +163,6 @@ export class User extends ConduitActiveSchema<User> {
     token: string;
     //tokenExpires: string;
     data: Indexable;
-  };
-  kakao?: {
-    id: string;
-    token: string;
-    tokenExpires: string;
-    profile_image_url?: string;
-    thumbnail_image_url?: string;
   };
   twitch?: {
     id: string;

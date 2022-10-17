@@ -15,13 +15,6 @@ export class User extends ConduitActiveSchema<User> {
     token: string;
     // tokenExpires: string;
   };
-  kakao?: {
-    id: string;
-    token: string;
-    tokenExpires: string;
-    profile_image_url?: string;
-    thumbnail_image_url?: string;
-  };
   twitch?: {
     id: string;
     token: string;
