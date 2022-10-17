@@ -100,6 +100,10 @@ export class ServiceDiscovery {
       const registeredModule = this.registeredModules.get(module)!;
       await this.healthCheckService(module, registeredModule.address);
     }
+    if (this.servingStatusUpdate) {
+      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = false;
+    }
   }
 
   /*
@@ -170,7 +174,7 @@ export class ServiceDiscovery {
         serving: moduleStatus === HealthCheckStatus.SERVING,
       };
       this.registeredModules.set(moduleName, module);
-      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = true;
     } else {
       const prevStatus = module.serving;
       module.serving = moduleStatus === HealthCheckStatus.SERVING;
