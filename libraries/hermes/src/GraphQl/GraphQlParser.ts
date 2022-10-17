@@ -1,10 +1,5 @@
-import {
-  ConduitParser,
-  ConduitModel,
-  ConduitRouteOption,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
-import { TypeRegistry } from '../classes';
+import { ConduitModel, ConduitRouteOption, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitParser, TypeRegistry } from '../classes';
 
 export interface ResolverDefinition {
   [key: string]: {

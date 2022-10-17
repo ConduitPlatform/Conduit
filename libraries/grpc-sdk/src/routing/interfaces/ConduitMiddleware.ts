@@ -6,8 +6,3 @@ export interface ConduitMiddlewareOptions {
   name: string;
   description?: string;
 }
-
-export interface ConduitMiddleware {
-  _input: ConduitMiddlewareOptions;
-  _handler: string;
-}
