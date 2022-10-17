@@ -58,6 +58,7 @@ export default class Authentication extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
+    TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
   }
@@ -147,7 +148,7 @@ export default class Authentication extends ManagedModule<Config> {
     }
     const config = ConfigController.getInstance().config;
 
-    const tokens = await TokenProvider.getInstance()!.provideUserTokensInternal({
+    const tokens = await TokenProvider.getInstance().provideUserTokensInternal({
       user,
       clientId,
       config,

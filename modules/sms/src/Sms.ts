@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
   ConfigController,
-  HealthCheckStatus,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -77,7 +77,6 @@ export default class Sms extends ManagedModule<Config> {
         this._provider = new TwilioProvider(settings);
       } catch (e) {
         this._provider = undefined;
-        this.updateHealth(HealthCheckStatus.NOT_SERVING);
         ConduitGrpcSdk.Logger.error(e as Error);
         return;
       }
@@ -87,7 +86,9 @@ export default class Sms extends ManagedModule<Config> {
     }
     this.adminRouter.updateProvider(this._provider!);
     this.isRunning = true;
-    this.updateHealth(HealthCheckStatus.SERVING);
+    this.updateHealth(
+      this._provider ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
+    );
   }
 
   async initializeMetrics() {}

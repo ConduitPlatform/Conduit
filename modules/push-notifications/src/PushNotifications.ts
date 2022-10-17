@@ -39,7 +39,8 @@ export default class PushNotifications extends ManagedModule<Config> {
       sendNotification: this.sendNotification.bind(this),
     },
   };
-  private isRunning: boolean = false;
+  private isRunning = false;
+  private authServing = false;
   private adminRouter!: AdminHandlers;
   private userRouter!: PushNotificationsRoutes;
   private database!: DatabaseProvider;
@@ -56,25 +57,38 @@ export default class PushNotifications extends ManagedModule<Config> {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.grpcSdk.monitorModule('authentication', serving => {
-      if (serving && ConfigController.getInstance().config.active) {
-        this.updateHealth(HealthCheckStatus.SERVING);
-      } else {
-        this.updateHealth(HealthCheckStatus.NOT_SERVING);
-      }
+      this.updateHealthState(undefined, serving);
     });
   }
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
-      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+      this.updateHealthState(HealthCheckStatus.NOT_SERVING);
     } else {
       try {
         await this.enableModule();
-        this.updateHealth(HealthCheckStatus.SERVING);
+        this.updateHealthState(HealthCheckStatus.SERVING);
       } catch (e) {
-        this.updateHealth(HealthCheckStatus.NOT_SERVING);
+        this.updateHealthState(HealthCheckStatus.NOT_SERVING);
       }
     }
+  }
+
+  private updateHealthState(stateUpdate?: HealthCheckStatus, authServing?: boolean) {
+    if (authServing) {
+      this.authServing = authServing;
+    }
+    const moduleActive = ConfigController.getInstance().config.active;
+    const depState =
+      moduleActive && this.authServing
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
+    const requestedState = stateUpdate ?? this.healthState;
+    const nextState =
+      depState === requestedState && requestedState === HealthCheckStatus.SERVING
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
+    this.updateHealth(nextState);
   }
 
   private async enableModule() {
