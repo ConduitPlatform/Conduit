@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   ConduitString,
   ConfigController,
+  GrpcError,
   ParsedRouterRequest,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
@@ -17,6 +18,10 @@ import axios from 'axios';
 import { AppleUser } from './apple.user';
 import * as jwt from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider';
+import { Token } from '../../../models';
+import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
+import moment from 'moment';
 
 export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
   constructor(
@@ -29,7 +34,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
       'apple',
       new OAuth2Settings(serverConfig.hostUrl, config.apple, appleParameters),
     );
-    this.defaultScopes = ['.name', '.email'];
+    this.defaultScopes = ['name', 'email', 'openid'];
   }
 
   async validate(): Promise<boolean> {
@@ -52,12 +57,15 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<AppleUser>> {
-    //Request an authorization to the Sign in with Apple server
-    const authorization = await axios.post('https://appleid.apple.com/auth/authorize', {
-      response_type: this.settings.responseType,
-      redirect_uri: this.settings.authorizeUrl,
-      client_id: details.clientId,
+    // request an authorization to the Sign in with Apple server
+    const authorization = await axios.get('https://appleid.apple.com/auth/authorize?', {
+      params: {
+        response_type: this.settings.responseType,
+        redirect_uri: this.settings.authorizeUrl,
+        client_id: this.settings.clientId,
+      },
     });
+
     const decoded = jwt.decode(authorization.data.id_token, { complete: true });
 
     return {
@@ -68,16 +76,20 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
   }
 
   constructScopes(scopes: string[]): string {
-    return scopes.join(' ');
+    return scopes.join('%20');
   }
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
-    let state = params.state;
-    state = {
-      clientId: state[0],
-      scopes: this.constructScopes(state.slice(1, state.length)),
-    };
+    const stateToken: Token | null = await Token.getInstance().findOne({
+      token: params.state,
+    });
+    if (isNil(stateToken))
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
+    if (moment().isAfter(moment(stateToken.data.expiresAt))) {
+      await Token.getInstance().deleteOne(stateToken);
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
+    }
 
     const apple_private_key = this.settings.privateKey;
 
@@ -101,7 +113,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
       },
     );
 
-    const clientId = state.clientId;
+    const clientId = stateToken.data.clientId;
     // use /token request to apple to verify received code and id_token
     const token = await axios.post('https://appleid.apple.com/auth/token', {
       client_id: clientId,
@@ -117,6 +129,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
     if (decoded_token_id_token?.header.kid !== decoded_id_token?.header.kid) {
       throw new Error('Invalid token');
     }
+    await Token.getInstance().deleteOne(stateToken);
     const user = await this.createOrUpdateUser(userParams);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -151,7 +164,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
           authorization: {
             code: ConduitString.Required,
             id_token: ConduitString.Required,
-            state: [ConduitString.Required],
+            state: ConduitString.Required,
           },
           user: ConduitJson.Required,
         },

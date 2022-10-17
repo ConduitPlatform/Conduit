@@ -8,7 +8,7 @@ export class OAuth2Settings {
   finalRedirect: string;
   accountLinking: boolean;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
   accessTokenMethod: 'GET' | 'POST';
   grantType?: string;
   state?: string;
@@ -30,14 +30,11 @@ export class OAuth2Settings {
       tokenUrl: string;
       responseType: string;
       responseMode?: string;
-      privateKey?: string;
-      teamId?: string;
-      keyId?: string;
     },
   ) {
     this.accountLinking = providerConfig.accountLinking;
     this.clientId = providerConfig.clientId;
-    this.clientSecret = providerConfig.clientSecret;
+    this.clientSecret = providerConfig.clientSecret ?? undefined;
     this.finalRedirect = providerConfig.redirect_uri;
     this.accessTokenMethod = providerParams.accessTokenMethod === 'GET' ? 'GET' : 'POST';
     this.authorizeUrl = providerParams.authorizeUrl;
@@ -46,9 +43,9 @@ export class OAuth2Settings {
     this.responseType = providerParams.responseType;
     this.responseMode =
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
-    this.privateKey = providerParams.privateKey ?? undefined;
-    this.teamId = providerParams.teamId ?? undefined;
-    this.keyId = providerParams.keyId ?? undefined;
+    this.privateKey = providerConfig.privateKey ?? undefined;
+    this.teamId = providerConfig.teamId ?? undefined;
+    this.keyId = providerConfig.keyId ?? undefined;
   }
 
   set provider(providerName: string) {

@@ -1,7 +1,7 @@
 {
   "accessTokenMethod": "POST",
   "providerName": "apple",
-  "authorizeUrl": "https://appleid.apple.com/auth/authorize",
+  "authorizeUrl": "https://appleid.apple.com/auth/authorize?",
   "tokenUrl": "https://appleid.apple.com/auth/token",
   "grantType": "authorization_code",
   "responseType": "code id_token",
