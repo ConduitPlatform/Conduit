@@ -460,7 +460,7 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    return this._modules[moduleName]?.active;
+    return !!this._modules[moduleName]?.active;
   }
 
   async waitForExistence(moduleName: string) {
