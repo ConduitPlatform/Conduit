@@ -1,6 +1,6 @@
 import { createVerifier } from 'fast-jwt';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk from '../index';
+import ConduitGrpcSdk, { GrpcCallback } from '../index';
 
 interface JWT {
   moduleName: string;
@@ -20,34 +20,47 @@ export function wrapGrpcFunctions(
         const verify = createVerifier({ key: grpcKey });
         const grpcToken = call.metadata.get('grpc-token')[0];
         if (!grpcToken) {
-          callback({
-            code: status.PERMISSION_DENIED,
-            message: 'No gRPC protection token provided',
-          });
-          return;
+          return throwError(
+            callback,
+            'No gRPC protection token provided',
+            status.PERMISSION_DENIED,
+          );
         }
         try {
           const jwt: JWT = verify(grpcToken);
           call.metadata.set('module-name', jwt.moduleName);
         } catch {
-          callback({
-            code: status.PERMISSION_DENIED,
-            message: 'Failed to verify gRPC protection token. GRPC_KEY value differs',
-          });
-          return;
+          return throwError(
+            callback,
+            'Failed to verify gRPC protection token. GRPC_KEY value differs',
+            status.PERMISSION_DENIED,
+          );
         }
       }
       ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
+      let invoked: any | Promise<any>;
       try {
-        functions[name](call, callback);
+        invoked = functions[name](call, callback);
       } catch (error) {
-        ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_errors');
-        callback({
-          code: status.INTERNAL,
-          message: (error as Error).message,
+        return throwError(callback, (error as Error).message);
+      }
+      if (typeof invoked?.then === 'function') {
+        invoked.then().catch((error: Error) => {
+          return throwError(callback, error.message);
         });
       }
     };
   });
   return wrappedFunctions;
+}
+
+function throwError(
+  callback: GrpcCallback<any> | undefined,
+  message: string,
+  code: status = status.INTERNAL,
+) {
+  // Aborting server streams is not yet implemented!
+  if (callback) {
+    callback({ code, message });
+  }
 }
