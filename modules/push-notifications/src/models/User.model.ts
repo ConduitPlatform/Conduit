@@ -1,4 +1,8 @@
-import { ConduitActiveSchema, DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitActiveSchema,
+  DatabaseProvider,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;
@@ -9,28 +13,49 @@ export class User extends ConduitActiveSchema<User> {
     id: string;
     token: string;
     tokenExpires: Date;
+    data: Indexable;
   };
   facebook?: {
     id: string;
     token: string;
     // tokenExpires: string;
-  };
-  kakao?: {
-    id: string;
-    token: string;
-    tokenExpires: string;
-    profile_image_url?: string;
-    thumbnail_image_url?: string;
+    data: Indexable;
   };
   twitch?: {
     id: string;
     token: string;
     tokenExpires: string;
     profile_image_url?: string;
+    data: Indexable;
+  };
+  slack?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: Indexable;
+  };
+  figma?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: Indexable;
+  };
+  microsoft?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: Indexable;
+  };
+  github?: {
+    id: string;
+    token: string;
+    tokenExpires: Date;
+    data: Indexable;
   };
   active!: boolean;
   isVerified!: boolean;
   hasTwoFA!: boolean;
+  twoFaMethod!: string;
   phoneNumber?: string;
   createdAt!: Date;
   updatedAt!: Date;
