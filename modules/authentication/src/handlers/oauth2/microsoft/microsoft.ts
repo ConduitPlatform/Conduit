@@ -34,6 +34,7 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, OAuth2Settings> {
         },
       },
     );
+
     return {
       id: microsoftResponse.data.id,
       email: microsoftResponse.data.mail,

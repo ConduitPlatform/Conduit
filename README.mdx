@@ -92,7 +92,10 @@ CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT yarn --cwd ./modules/MODUL
 |    `GRPC_PORT`      | Port to be used by the gRPC server                         |  False   |   `55152`   |
 |    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
 |     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
-| `DEBUG__DISABLE_INACTIVE_MODULE_REMOVAL` | Prevent removal of inactive modules from Config  | False  | `true` |
+| `SERVICE_MONITOR_INTERVAL_MS` | Service discovery monitor interval in ms (default: 30000) |  False   | `5000` |
+| `SERVICE_RECONN_RETRIES` | Reconnection attempts before removal of offline services (default: 5) |  False   | `5` |
+| `SERVICE_RECONN_INIT_MS` | Initial delay for linear backoff reconnection to offline services in ms (default: 250) | False | `125` |
+| `DEBUG__DISABLE_SERVICE_REMOVAL` | Prevent removal of offline services           |  False   |    `true`   |
 
 
 ### Database

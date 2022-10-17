@@ -15,16 +15,14 @@ const convictConfigParser = (config: Indexable) => {
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
-  private readonly servicePort: string | undefined;
+  private readonly servicePort: string;
   private readonly grpcSdk: ConduitGrpcSdk;
 
   constructor(private readonly module: ManagedModule<T>) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
-
     this.servicePort = process.env.GRPC_PORT ?? '5000';
-
     this.serviceAddress =
       // @compat (v0.15): SERVICE_IP -> SERVICE_URL
       process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
@@ -43,13 +41,12 @@ export class ModuleManager<T> {
 
   async start() {
     await this.grpcSdk.initialize();
-    this.module.initialize(this.grpcSdk);
-    const self = this;
+    this.module.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
-      await self.grpcSdk.config.registerModule(
-        self.module.name,
-        this.serviceAddress,
+      await this.grpcSdk.config.registerModule(
+        this.module.name,
+        this.module.address,
         this.module.healthState,
       );
     } catch (err) {
@@ -65,7 +62,7 @@ export class ModuleManager<T> {
   }
 
   private async preRegisterLifecycle(): Promise<void> {
-    await this.module.createGrpcServer(this.servicePort);
+    await this.module.createGrpcServer();
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.module.handleConfigSyncUpdate();

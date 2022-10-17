@@ -132,7 +132,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         ConduitGrpcSdk.Logger.error(e);
       });
 
-    return TokenProvider.getInstance()!.provideUserTokens(
+    return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId: token.data.clientId,
