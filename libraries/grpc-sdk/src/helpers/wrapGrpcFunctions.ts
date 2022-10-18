@@ -15,6 +15,7 @@ export function wrapGrpcFunctions(
   const wrappedFunctions: { [name: string]: Function } = {};
   Object.keys(functions).forEach(name => {
     wrappedFunctions[name] = (call: any, callback: any) => {
+      ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
       postponeRestart();
       if (grpcKey) {
         const verify = createVerifier({ key: grpcKey });
@@ -37,7 +38,6 @@ export function wrapGrpcFunctions(
           );
         }
       }
-      ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
       let invoked: any | Promise<any>;
       try {
         invoked = functions[name](call, callback);
