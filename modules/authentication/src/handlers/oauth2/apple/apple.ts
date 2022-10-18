@@ -86,6 +86,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
     this.verifyIdentityToken(applePublicKey, params.id_token);
 
     const apple_private_key = this.settings.privateKey;
+
     const apple_client_secret = jwt.sign(
       {
         iss: this.settings.teamId,
@@ -94,7 +95,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
         aud: 'https://appleid.apple.com',
         sub: this.settings.clientId,
       },
-      apple_private_key!,
+      apple_private_key as any,
       {
         header: {
           alg: 'ES256',
