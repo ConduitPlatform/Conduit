@@ -1,4 +1,5 @@
 import { ProviderConfig } from './ProviderConfig';
+import { Secret } from 'jsonwebtoken';
 
 export class OAuth2Settings {
   providerName: string;
@@ -16,7 +17,7 @@ export class OAuth2Settings {
   responseType?: string;
   responseMode?: 'query' | 'form_post';
   scopeSeperator?: string;
-  privateKey?: string;
+  privateKey?: Secret;
   teamId?: string;
   keyId?: string;
 

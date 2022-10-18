@@ -1,7 +1,6 @@
 import { OAuth2 } from '../OAuth2';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import ConduitGrpcSdk, {
-  ConduitJson,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -22,6 +21,8 @@ import { Token } from '../../../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
+import jwksRsa from 'jwks-rsa';
+import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
 
 export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
   constructor(
@@ -56,24 +57,9 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
     return (this.initialized = true);
   }
 
-  async connectWithProvider(details: ConnectionParams): Promise<Payload<AppleUser>> {
-    // request an authorization to the Sign in with Apple server
-    const authorization = await axios.get('https://appleid.apple.com/auth/authorize?', {
-      params: {
-        response_type: this.settings.responseType,
-        redirect_uri: this.settings.authorizeUrl,
-        client_id: this.settings.clientId,
-      },
-    });
-
-    const decoded = jwt.decode(authorization.data.id_token, { complete: true });
-
-    return {
-      id: decoded!.payload.sub as string,
-      email: authorization.data.user.email,
-      data: { ...authorization.data },
-    };
-  }
+  // @ts-ignore
+  // we don't implement this method for apple provider
+  async connectWithProvider(details: ConnectionParams): Promise<Payload<AppleUser>> {}
 
   constructScopes(scopes: string[]): string {
     return scopes.join('%20');
@@ -90,22 +76,26 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
       await Token.getInstance().deleteOne(stateToken);
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
+    const decoded_id_token = jwt.decode(params.id_token, { complete: true });
+
+    const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');
+    const publicKey = publicKeys.data.keys.find(
+      (key: any) => key.kid === decoded_id_token!.header.kid,
+    );
+    const applePublicKey = await this.generateApplePublicKey(publicKey.kid);
+    this.verifyIdentityToken(applePublicKey, params.id_token);
 
     const apple_private_key = this.settings.privateKey;
-
     const apple_client_secret = jwt.sign(
       {
         iss: this.settings.teamId,
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 86400,
+        exp: Math.floor(Date.now() / 1000) + 120,
         aud: 'https://appleid.apple.com',
         sub: this.settings.clientId,
       },
       apple_private_key!,
       {
-        algorithm: 'ES256',
-        expiresIn: '180d',
-        issuer: this.settings.teamId,
         header: {
           alg: 'ES256',
           kid: this.settings.keyId,
@@ -114,23 +104,37 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
     );
 
     const clientId = stateToken.data.clientId;
-    // use /token request to apple to verify received code and id_token
-    const token = await axios.post('https://appleid.apple.com/auth/token', {
-      client_id: clientId,
-      client_secret: apple_client_secret,
-      code: params.code,
-      grant_type: this.settings.grantType,
-      redirect_uri: this.settings.tokenUrl,
-    });
+    const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+    const token = await axios
+      .post(
+        'https://appleid.apple.com/auth/token',
+        {
+          client_id: this.settings.clientId,
+          client_secret: apple_client_secret,
+          code: params.code,
+          grant_type: this.settings.grantType,
+          redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      )
+      .then(response => {
+        return response.data;
+      })
+      .catch(error => {
+        throw new GrpcError(status.INVALID_ARGUMENT, error.message);
+      });
 
-    const userParams = params.user;
-    const decoded_token_id_token = jwt.decode(token.data.id_token, { complete: true });
-    const decoded_id_token = jwt.decode(params.id_token, { complete: true });
-    if (decoded_token_id_token?.header.kid !== decoded_id_token?.header.kid) {
-      throw new Error('Invalid token');
-    }
-    await Token.getInstance().deleteOne(stateToken);
+    const userParams = {
+      id: decoded_id_token!.payload.sub as string,
+      email: params?.user.email,
+      data: { ...params?.user.name },
+    };
     const user = await this.createOrUpdateUser(userParams);
+    await Token.getInstance().deleteOne(stateToken);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -161,12 +165,16 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
         action: ConduitRouteActions.POST,
         description: `Login/register with Apple using redirect.`,
         bodyParams: {
-          authorization: {
-            code: ConduitString.Required,
-            id_token: ConduitString.Required,
-            state: ConduitString.Required,
+          code: ConduitString.Required,
+          id_token: ConduitString.Required,
+          state: ConduitString.Required,
+          user: {
+            name: {
+              firstName: ConduitString.Required,
+              lastName: ConduitString.Required,
+            },
+            email: ConduitString.Required,
           },
-          user: ConduitJson.Required,
         },
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
@@ -175,5 +183,37 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
       }),
       this.authorize.bind(this),
     );
+  }
+
+  private async generateApplePublicKey(apple_public_key_id: string) {
+    const client = jwksRsa({
+      jwksUri: 'https://appleid.apple.com/auth/keys',
+      cache: true,
+    });
+    const key = await client.getSigningKey(apple_public_key_id);
+    return key.getPublicKey();
+  }
+
+  private verifyIdentityToken(applePublicKey: string, id_token: string) {
+    const decoded = jwt.decode(id_token, { complete: true }) as Jwt;
+    const payload = decoded.payload as JwtPayload;
+    const header = decoded.header as JwtHeader;
+    const verified = jwt.verify(id_token, applePublicKey, {
+      algorithms: [header.alg as jwt.Algorithm],
+    });
+    if (!verified) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+    }
+
+    if (payload.iss !== 'https://appleid.apple.com') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid iss');
+    }
+    if (payload.aud !== this.settings.clientId) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid aud');
+    }
+
+    if (payload.exp! < moment().unix()) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
+    }
   }
 }
