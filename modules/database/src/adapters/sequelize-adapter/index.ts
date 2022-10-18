@@ -8,8 +8,8 @@ import ConduitGrpcSdk, {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
-import { systemRequiredValidator } from '../utils/validateSchemas';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { validateSchema } from '../utils/validateSchema';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -203,16 +203,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   ): Promise<SequelizeSchema> {
     if (this.registeredSchemas.has(schema.name)) {
       if (schema.name !== 'Config') {
-        schema = systemRequiredValidator(
-          this.registeredSchemas.get(schema.name)!,
-          schema,
-        );
+        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
       }
       delete this.sequelize.models[schema.collectionName];
     }
 
     const newSchema = schemaConverter(schema);
-    this.registeredSchemas.set(schema.name, schema);
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
