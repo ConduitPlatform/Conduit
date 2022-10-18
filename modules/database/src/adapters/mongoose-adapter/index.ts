@@ -212,7 +212,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     const newSchema = schemaConverter(schema);
-    this.registeredSchemas.set(schema.name, schema);
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,

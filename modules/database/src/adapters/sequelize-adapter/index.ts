@@ -209,7 +209,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
 
     const newSchema = schemaConverter(schema);
-    this.registeredSchemas.set(schema.name, schema);
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
