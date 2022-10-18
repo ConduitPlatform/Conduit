@@ -2,6 +2,7 @@ import * as testingTools from '@conduitplatform/testing-tools';
 import { ConfigDefinition } from '@conduitplatform/commons';
 import * as path from 'path';
 import { ChildProcess } from 'child_process';
+import { sleep } from '@conduitplatform/grpc-sdk/src/utilities';
 
 const testModuleUrl = '0.0.0.0:55184';
 let dependencies: ChildProcess[];
@@ -120,20 +121,22 @@ describe('Testing module related rpc calls', () => {
 
   test('Watch Modules', async () => {
     const watchModules = testClient.watchModules({});
-    await testClient.registerModule({
-      moduleName: 'watch-modules',
-      url: '0.0.0.0:55152',
-      healthStatus: 1,
-    });
-    for await (const modules of watchModules) {
-      expect(modules).toMatchObject({
-        modules: [
-          { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
-          { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
-        ],
+    sleep(6000).then(async () => {
+      await testClient.registerModule({
+        moduleName: 'watch-modules',
+        url: '0.0.0.0:55152',
+        healthStatus: 1,
       });
-      break;
-    }
+      for await (const modules of watchModules) {
+        expect(modules).toMatchObject({
+          modules: [
+            { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
+            { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
+          ],
+        });
+        break;
+      }
+    });
   });
 });
 
