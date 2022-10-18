@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { validateSchema } from '../utils/validateSchema';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
@@ -204,6 +205,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
     if (this.registeredSchemas.has(schema.name)) {
+      if (schema.name !== 'Config') {
+        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+      }
       this.mongoose.connection.deleteModel(schema.name);
     }
 

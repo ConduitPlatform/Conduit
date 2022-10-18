@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 import { DatabaseAdapter } from '../DatabaseAdapter';
+import { validateSchema } from '../utils/validateSchema';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -201,6 +202,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     schema: ConduitSchema,
   ): Promise<SequelizeSchema> {
     if (this.registeredSchemas.has(schema.name)) {
+      if (schema.name !== 'Config') {
+        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+      }
       delete this.sequelize.models[schema.collectionName];
     }
 
