@@ -269,7 +269,8 @@ export class AdminRoutes {
       query.name = { $regex: search, $options: 'i' };
     }
     if (!isNil(parent)) {
-      const regexSuffix = query.name.$regex !== '' ? query.name.$regex : '([^/]+)/?$';
+      const existingRegex = query.name?.$regex !== '' && !isNil(query.name?.$regex);
+      const regexSuffix = existingRegex ? query.name.$regex : '([^/]+)/?$';
       query.name = {
         $regex: `${parent}\/${regexSuffix}`,
         $options: 'i',
