@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.16](https://github.com/ConduitPlatform/Conduit/compare/v0.10.15...v0.10.16) (2022-10-19)
+
+
+### Bug Fixes
+
+* urlRemap param ([1fee405](https://github.com/ConduitPlatform/Conduit/commit/1fee4059019a81ab4469af7a7e6e17a0517cc778))
+
 ### [0.10.15](https://github.com/ConduitPlatform/Conduit/compare/v0.10.14...v0.10.15) (2022-10-19)
 
 
