@@ -42,7 +42,7 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
 
-  constructor(serverUrl: string, private readonly urlRemap: string | undefined = undefined, name?: string) {
+  constructor(serverUrl: string, name?: string, private readonly urlRemap: string | undefined = undefined) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
