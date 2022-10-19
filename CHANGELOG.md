@@ -14,6 +14,18 @@ All notable changes to this project will be documented in this file. See [standa
 
 * publish to npm ([a820bb8](https://github.com/ConduitPlatform/Conduit/commit/a820bb8967934a450a97c5b1f2e2063ad6c110ba))
 
+### [0.10.14](https://github.com/ConduitPlatform/Conduit/compare/v0.10.12...v0.10.14) (2022-10-19)
+
+
+### Features
+
+* **grpc-sdk:** add urlRemap for local development ([2b35928](https://github.com/ConduitPlatform/Conduit/commit/2b359280eb7b864dcf730b74988b626de46f5be7))
+
+
+### Bug Fixes
+
+* publish to npm ([a820bb8](https://github.com/ConduitPlatform/Conduit/commit/a820bb8967934a450a97c5b1f2e2063ad6c110ba))
+
 ### [0.10.14](https://github.com/ConduitPlatform/Conduit/compare/v0.10.13...v0.10.14) (2022-10-19)
 
 
