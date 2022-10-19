@@ -5,12 +5,12 @@ import {
   Config,
   DatabaseProvider,
   Email,
+  Forms,
   Payments,
   PushNotifications,
   Router,
   SMS,
   Storage,
-  Forms
 } from './modules';
 import { Authentication } from './modules/authentication';
 import Crypto from 'crypto';
@@ -42,7 +42,7 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
 
-  constructor(serverUrl: string, name?: string) {
+  constructor(serverUrl: string, private readonly urlRemap: string | undefined = undefined, name?: string) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -52,7 +52,8 @@ export default class ConduitGrpcSdk {
     this._config = new Config(this.name, this.serverUrl);
     this._admin = new Admin(this.name, this.serverUrl);
     this._router = new Router(this.name, this.serverUrl);
-    this.initializeModules().then(() => {});
+    this.initializeModules().then(() => {
+    });
     this.watchModules();
   }
 
@@ -186,7 +187,7 @@ export default class ConduitGrpcSdk {
       });
       modules.forEach((m: any) => {
         if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
+          this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, this.urlRemap ? `${this.urlRemap}:` + m.url.split(':')[0] : m.url);
         } else if (this._availableModules[m.moduleName]) {
           this._modules[m.moduleName]?.initializeClient();
         }
@@ -198,7 +199,7 @@ export default class ConduitGrpcSdk {
     return this.config
       .getRedisDetails()
       .then((r: any) => {
-        let redisManager = new RedisManager(r.redisHost, r.redisPort);
+        let redisManager = new RedisManager(this.urlRemap ? this.urlRemap : r.redisHost, r.redisPort);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;
@@ -220,7 +221,7 @@ export default class ConduitGrpcSdk {
         this.lastSearch = Date.now();
         r.forEach((m) => {
           if (!this._modules[m.moduleName] && this._availableModules[m.moduleName]) {
-            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, m.url);
+            this._modules[m.moduleName] = new this._availableModules[m.moduleName](m.moduleName, this.urlRemap ? `${this.urlRemap}:` + m.url.split(':')[0] : m.url);
           }
         });
         return 'ok';
