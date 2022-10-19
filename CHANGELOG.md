@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.10.13](https://github.com/ConduitPlatform/Conduit/compare/v0.10.12...v0.10.13) (2022-10-19)
+
+
+### Features
+
+* **grpc-sdk:** add urlRemap for local development ([2b35928](https://github.com/ConduitPlatform/Conduit/commit/2b359280eb7b864dcf730b74988b626de46f5be7))
+
 ### [0.10.12](https://github.com/ConduitPlatform/Conduit/compare/v0.10.11...v0.10.12) (2022-07-15)
 
 
