@@ -48,10 +48,8 @@ export class ConfigStorage {
 
   async firstSync() {
     this.changeState(true);
-    const configDocs: models.Config[] | null = await models.Config.getInstance().findMany(
-      {},
-    );
-    if (!configDocs || configDocs.length === 0) {
+    const configDocs = await models.Config.getInstance().findMany({});
+    if (configDocs.length === 0) {
       // flush redis stored configuration to the database
       let moduleConfig;
       for (const key of this.serviceDiscovery.registeredModules.keys()) {
