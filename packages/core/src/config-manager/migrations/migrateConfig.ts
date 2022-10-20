@@ -1,5 +1,4 @@
 import { Config } from '../models';
-import { isNil } from 'lodash';
 
 export async function migrateConfig() {
   const configs: any[] = await Config.getInstance().findMany({});
