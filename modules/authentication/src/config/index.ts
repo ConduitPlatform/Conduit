@@ -11,6 +11,7 @@ import tokenConfig from './token.config';
 import localConfig from './local.config';
 import magicLinkConfig from './magicLink.config';
 import gitlabConfig from './gitlab.config';
+import redditConfig from './reddit.config';
 
 const AppConfigSchema = {
   ...DefaultConfig,
@@ -25,6 +26,7 @@ const AppConfigSchema = {
   ...localConfig,
   ...magicLinkConfig,
   ...gitlabConfig,
+  ...redditConfig,
 };
 const config = convict(AppConfigSchema);
 const configProperties = config.getProperties();
