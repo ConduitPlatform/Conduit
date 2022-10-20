@@ -12,16 +12,8 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class SlackHandlers extends OAuth2<SlackUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { slack: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'slack',
-      new OAuth2Settings(serverConfig.hostUrl, config.slack, slackParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { slack: ProviderConfig }) {
+    super(grpcSdk, 'slack', new OAuth2Settings(config.slack, slackParameters));
     this.defaultScopes = ['users:read'];
   }
 

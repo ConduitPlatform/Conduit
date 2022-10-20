@@ -80,7 +80,6 @@ export class AuthenticationRoutes {
         const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
           this.grpcSdk,
           config,
-          serverConfig,
         );
         return handler
           .validate()

@@ -61,9 +61,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
+    const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const options: RedirectOptions = {
       client_id: this.settings.clientId,
-      redirect_uri: this.settings.callbackUrl,
+      redirect_uri: conduitUrl + this.settings.callbackUrl,
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
