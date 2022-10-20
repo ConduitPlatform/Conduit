@@ -48,7 +48,7 @@ export class ConfigStorage {
 
   async firstSync() {
     this.changeState(true);
-    let configDoc: models.Config[] | null = await models.Config.getInstance().findMany(
+    const configDoc: models.Config[] | null = await models.Config.getInstance().findMany(
       {},
     );
     if (!configDoc || configDoc.length === 0) {
