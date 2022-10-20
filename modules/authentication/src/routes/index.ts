@@ -74,13 +74,11 @@ export class AuthenticationRoutes {
     }
     errorMessage = null;
 
-    const serverConfig: { hostUrl: string } = await this.grpcSdk.config.get('router');
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
         const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
           this.grpcSdk,
           config,
-          serverConfig,
         );
         return handler
           .validate()

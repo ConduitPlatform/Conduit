@@ -11,16 +11,8 @@ import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { Payload } from '../interfaces/Payload';
 
 export class FigmaHandlers extends OAuth2<FigmaUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { figma: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'figma',
-      new OAuth2Settings(serverConfig.hostUrl, config.figma, figmaParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { figma: ProviderConfig }) {
+    super(grpcSdk, 'figma', new OAuth2Settings(config.figma, figmaParameters));
     this.defaultScopes = ['users:profile:read'];
   }
 

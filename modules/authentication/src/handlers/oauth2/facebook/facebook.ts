@@ -17,16 +17,8 @@ import { ProviderConfig } from '../interfaces/ProviderConfig';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { facebook: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'facebook',
-      new OAuth2Settings(serverConfig.hostUrl, config.facebook, facebookParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { facebook: ProviderConfig }) {
+    super(grpcSdk, 'facebook', new OAuth2Settings(config.facebook, facebookParameters));
     this.mapScopes = {
       email: 'email',
       user_birthday: 'birthday',
