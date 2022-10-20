@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.15.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.1...v0.15.0-rc.2) (2022-10-20)
+
+
+### Features
+
+* **grpc-sdk:** service address url remapping for host/docker interoperability ([#396](https://github.com/ConduitPlatform/Conduit/issues/396)) ([9cb859d](https://github.com/ConduitPlatform/Conduit/commit/9cb859ddd2a28f4e3d748134dcdcc05712f26d56))
+* **storage:** getFolders() admin search query param ([#393](https://github.com/ConduitPlatform/Conduit/issues/393)) ([08cc08e](https://github.com/ConduitPlatform/Conduit/commit/08cc08ed16a8c4c527949c0e4dfdb232286a8627))
+
+
+### Bug Fixes
+
+* **authentication:** drop Kakao login leftovers ([#386](https://github.com/ConduitPlatform/Conduit/issues/386)) ([d36360c](https://github.com/ConduitPlatform/Conduit/commit/d36360ce31dce27e5333ba12b82cc051e9c0fd56))
+* **authentication:** redirectUrl from router only set once ([#397](https://github.com/ConduitPlatform/Conduit/issues/397)) ([a81377b](https://github.com/ConduitPlatform/Conduit/commit/a81377b07b33039b4e88ae9fbba11f2e56249872))
+* **authentication:** token provider singleton init router dependency ([#385](https://github.com/ConduitPlatform/Conduit/issues/385)) ([2ae9386](https://github.com/ConduitPlatform/Conduit/commit/2ae938608b4dc2692dd677932d0a206a7d86e27a))
+* **core:** module config patch ([#388](https://github.com/ConduitPlatform/Conduit/issues/388)) ([6c9ffb2](https://github.com/ConduitPlatform/Conduit/commit/6c9ffb2458f0ad4aa50d8a88cb82e75a3e7f17c4))
+* **core:** service discovery not emitting update events on module health updates ([#389](https://github.com/ConduitPlatform/Conduit/issues/389)) ([3444637](https://github.com/ConduitPlatform/Conduit/commit/3444637e9e91b53b5123e7a3b47f2c9192300e33))
+* **database:** schema field validation ([#391](https://github.com/ConduitPlatform/Conduit/issues/391)) ([a12a921](https://github.com/ConduitPlatform/Conduit/commit/a12a9210a7d528824ce6d50425f1b41159380d4b))
+* **email,forms:** replace forms event-based email health sync ([#390](https://github.com/ConduitPlatform/Conduit/issues/390)) ([6fea812](https://github.com/ConduitPlatform/Conduit/commit/6fea81256e59ce2226f5bba4d9fd1e0d77c54366))
+* **grpc-sdk:** gRPC function wrapper async error catches ([#392](https://github.com/ConduitPlatform/Conduit/issues/392)) ([743125a](https://github.com/ConduitPlatform/Conduit/commit/743125a94007aa7d821c8b202e0868e00c009dd6))
+* **push-notifications,sms:** health status ([#387](https://github.com/ConduitPlatform/Conduit/issues/387)) ([0e93eee](https://github.com/ConduitPlatform/Conduit/commit/0e93eee10a6f2c7762be83bed4cbbed4a521528a))
+* **storage:** getFolders() admin route crash on undefined search query param ([#394](https://github.com/ConduitPlatform/Conduit/issues/394)) ([2af1dc0](https://github.com/ConduitPlatform/Conduit/commit/2af1dc05d7b48ae6fcff2e5018195817c6a41f22))
+
 ## [0.15.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.0...v0.15.0-rc.1) (2022-10-14)
 
 
