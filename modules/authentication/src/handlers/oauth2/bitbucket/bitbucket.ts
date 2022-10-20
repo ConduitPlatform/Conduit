@@ -11,15 +11,11 @@ import { isNil } from 'lodash';
 import { AuthParams } from '../interfaces/AuthParams';
 
 export class BitbucketHandlers extends OAuth2<BitbucketUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { bitbucket: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { bitbucket: ProviderConfig }) {
     super(
       grpcSdk,
       'bitbucket',
-      new OAuth2Settings(serverConfig.hostUrl, config.bitbucket, bitbucketParameters),
+      new OAuth2Settings(config.bitbucket, bitbucketParameters),
     );
     this.defaultScopes = ['account'];
   }
