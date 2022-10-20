@@ -25,10 +25,9 @@ export class ConfigStorage {
         this.changeState(false);
         this.reconcileMonitor();
       })
-      .catch(e => {
+      .catch(() => {
         this.changeState(false);
         ConduitGrpcSdk.Logger.error('Reconciliation with db failed!');
-        ConduitGrpcSdk.Logger.error(e);
       });
   }
 
