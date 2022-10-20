@@ -9,16 +9,8 @@ import axios from 'axios';
 import { GitlabUser } from './gitlab.user';
 
 export class GitlabHandlers extends OAuth2<GitlabUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { gitlab: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'gitlab',
-      new OAuth2Settings(serverConfig.hostUrl, config.gitlab, gitlabParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { gitlab: ProviderConfig }) {
+    super(grpcSdk, 'gitlab', new OAuth2Settings(config.gitlab, gitlabParameters));
     this.defaultScopes = ['read_user'];
   }
 

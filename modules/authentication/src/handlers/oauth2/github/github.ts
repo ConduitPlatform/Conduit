@@ -9,16 +9,8 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class GithubHandlers extends OAuth2<GithubUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { github: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'github',
-      new OAuth2Settings(serverConfig.hostUrl, config.github, githubParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { github: ProviderConfig }) {
+    super(grpcSdk, 'github', new OAuth2Settings(config.github, githubParameters));
     this.defaultScopes = ['read:user', 'repo'];
   }
 
