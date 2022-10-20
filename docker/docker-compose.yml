@@ -37,7 +37,7 @@ services:
       - prometheus
       - loki
     ports:
-      - '${CORE_GRPC_PORT:-55152}:55152'
+#      - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
       - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
       - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
     environment:
@@ -54,6 +54,8 @@ services:
       default:
         aliases:
           - conduit
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   ui:
     container_name: 'conduit-ui'
@@ -79,9 +81,11 @@ services:
       - ${DB_TYPE:-mongodb}
       - prometheus
       - loki
+#    ports:
+#      - '${DB_GRPC_PORT:-55160}:${DB_GRPC_PORT:-55160}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-database:55160'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-database:${DB_GRPC_PORT:-55160}'
       GRPC_PORT: '55160'
       METRICS_PORT: '9092'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -92,6 +96,8 @@ services:
       default:
         aliases:
           - conduit-database
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   router:
     container_name: 'conduit-router'
@@ -103,11 +109,12 @@ services:
       - prometheus
       - loki
     ports:
+#      - '${ROUTER_GRPC_PORT:-55161}:${ROUTER_GRPC_PORT:-55161}'
       - '${CLIENT_HTTP_PORT:-3000}:3000'
       - '${CLIENT_SOCKET_PORT:-3001}:3001'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-router:55161'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-router:${ROUTER_GRPC_PORT:-55161}'
       GRPC_PORT: '55161'
       __DEFAULT_HOST_URL: '${CLIENT_DEFAULT_HOST_URL:-http://localhost:3000}'
       METRICS_PORT: '9093'
@@ -119,6 +126,8 @@ services:
       default:
         aliases:
           - conduit-router
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   authentication:
     container_name: 'conduit-authentication'
@@ -129,9 +138,11 @@ services:
       - database
       - prometheus
       - loki
+#    ports:
+#      - '${AUTH_GRPC_PORT:-55162}:${AUTH_GRPC_PORT:-55162}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-authentication:55162'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-authentication:${AUTH_GRPC_PORT:-55162}'
       GRPC_PORT: '55162'
       METRICS_PORT: '9094'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -140,6 +151,8 @@ services:
       default:
         aliases:
           - conduit-authentication
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
 #  # Optional Services
   chat:
@@ -149,12 +162,15 @@ services:
     depends_on:
       - core
       - database
+      - authentication
       - router
       - prometheus
       - loki
+#    ports:
+#      - '${CHAT_GRPC_PORT:-55163}:${CHAT_GRPC_PORT:-55163}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-chat:55163'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-chat:${CHAT_GRPC_PORT:-55163}'
       GRPC_PORT: '55163'
       METRICS_PORT: '9095'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -164,6 +180,8 @@ services:
       default:
         aliases:
           - conduit-chat
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   email:
     container_name: 'conduit-email'
@@ -174,9 +192,11 @@ services:
       - database
       - prometheus
       - loki
+#    ports:
+#      - '${EMAIL_GRPC_PORT:-55164}:${EMAIL_GRPC_PORT:-55164}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-email:55164'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-email:${EMAIL_GRPC_PORT:-55164}'
       GRPC_PORT: '55164'
       METRICS_PORT: '9096'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -186,6 +206,8 @@ services:
       default:
         aliases:
           - conduit-email
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   forms:
     container_name: 'conduit-forms'
@@ -198,10 +220,11 @@ services:
       - email
       - prometheus
       - loki
+#    ports:
+#      - '${FORMS_GRPC_PORT:-55165}:${FORMS_GRPC_PORT:-55165}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-forms:55165'
-      REGISTER_NAME: 'true'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-forms:${FORMS_GRPC_PORT:-55165}'
       GRPC_PORT: '55165'
       METRICS_PORT: '9097'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -211,6 +234,8 @@ services:
       default:
         aliases:
           - conduit-forms
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   push-notifications:
     container_name: 'conduit-push-notifications'
@@ -222,9 +247,11 @@ services:
       - router
       - prometheus
       - loki
+#    ports:
+#      - '${PUSH_GRPC_PORT:-55166}:${PUSH_GRPC_PORT:-55166}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-push-notifications:55166'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-push-notifications:${PUSH_GRPC_PORT:-55166}'
       GRPC_PORT: '55166'
       METRICS_PORT: '9098'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -234,6 +261,8 @@ services:
       default:
         aliases:
           - conduit-push-notifications
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   sms:
     container_name: 'conduit-sms'
@@ -244,9 +273,11 @@ services:
       - database
       - prometheus
       - loki
+#    ports:
+#      - '${SMS_GRPC_PORT:-55167}:${SMS_GRPC_PORT:-55167}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-sms:55167'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-sms:${SMS_GRPC_PORT:-55167}'
       GRPC_PORT: '55167'
       METRICS_PORT: '9099'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -256,6 +287,8 @@ services:
       default:
         aliases:
           - conduit-sms
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   storage:
     container_name: 'conduit-storage'
@@ -267,9 +300,11 @@ services:
       - router
       - prometheus
       - loki
+#    ports:
+#      - '${STORAGE_GRPC_PORT:-55168}:${STORAGE_GRPC_PORT:-55168}'
     environment:
-      CONDUIT_SERVER: 'conduit:55152'
-      SERVICE_URL: 'conduit-storage:55168'
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
+      SERVICE_URL: 'conduit-storage:${STORAGE_GRPC_PORT:-55168}'
       GRPC_PORT: '55168'
       METRICS_PORT: '9190'
       LOKI_URL: 'http://conduit-loki:3100'
@@ -279,6 +314,8 @@ services:
       default:
         aliases:
           - conduit-storage
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
   # Dependencies
   redis:
