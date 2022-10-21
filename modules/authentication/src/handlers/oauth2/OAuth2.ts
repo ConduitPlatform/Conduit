@@ -102,7 +102,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       await Token.getInstance().deleteOne(stateToken);
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
-
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
