@@ -2,7 +2,8 @@ import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/gr
 
 const schema = {
   _id: TYPE.ObjectId,
-  moduleConfigs: {
+  name: TYPE.String,
+  config: {
     type: TYPE.JSON,
     default: {},
     required: true,
@@ -24,7 +25,8 @@ const collectionName = undefined;
 export class Config extends ConduitActiveSchema<Config> {
   private static _instance: Config;
   _id!: string;
-  moduleConfigs!: any;
+  name!: string;
+  config!: any;
 
   private constructor(database: DatabaseProvider) {
     super(database, Config.name, schema, modelOptions, collectionName);
