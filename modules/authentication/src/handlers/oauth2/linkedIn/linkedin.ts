@@ -9,16 +9,8 @@ import axios from 'axios';
 import { LinkedInUser } from './linkedin.user';
 
 export class LinkedInHandlers extends OAuth2<LinkedInUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { linkedin: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'linkedin',
-      new OAuth2Settings(serverConfig.hostUrl, config.linkedin, linkedInParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { linkedin: ProviderConfig }) {
+    super(grpcSdk, 'linkedin', new OAuth2Settings(config.linkedin, linkedInParameters));
     this.defaultScopes = ['r_emailaddress', 'r_liteprofile'];
   }
 
