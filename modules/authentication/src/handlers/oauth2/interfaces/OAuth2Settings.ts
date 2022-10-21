@@ -1,4 +1,5 @@
 import { ProviderConfig } from './ProviderConfig';
+import { v4 as uuid } from 'uuid';
 
 export class OAuth2Settings {
   providerName: string;
@@ -17,7 +18,6 @@ export class OAuth2Settings {
   responseMode?: 'query' | 'form_post';
   scopeSeperator?: string;
   codeChallengeMethod?: string;
-  codeChallenge?: string;
   codeVerifier?: string;
 
   constructor(
@@ -30,8 +30,6 @@ export class OAuth2Settings {
       responseType: string;
       responseMode?: string;
       codeChallengeMethod?: string;
-      codeChallenge?: string;
-      codeVerifier?: string;
     },
   ) {
     this.accountLinking = providerConfig.accountLinking;
@@ -46,8 +44,7 @@ export class OAuth2Settings {
     this.responseMode =
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
     this.codeChallengeMethod = providerParams.codeChallengeMethod;
-    this.codeChallenge = providerParams.codeChallenge;
-    this.codeVerifier = providerParams.codeVerifier;
+    this.codeVerifier = uuid();
   }
 
   set provider(providerName: string) {

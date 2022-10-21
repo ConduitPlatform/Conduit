@@ -5,7 +5,5 @@
   "tokenUrl": "https://api.twitter.com/2/oauth2/token",
   "responseType": "code",
   "grantType": "authorization_code",
-  "codeChallengeMethod": "plain",
-  "codeChallenge": "challenge",
-  "codeVerifier": "challenge"
+  "codeChallengeMethod": "S256"
 }
