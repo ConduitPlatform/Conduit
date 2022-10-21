@@ -6,8 +6,8 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   Indexable,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
-import { sleep } from '@conduitplatform/grpc-sdk/dist/utilities';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
