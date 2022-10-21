@@ -68,6 +68,8 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
+      code_challenge: this.settings.codeChallenge,
+      code_challenge_method: this.settings.codeChallengeMethod,
     };
     const baseUrl = this.settings.authorizeUrl;
 
@@ -113,6 +115,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     if (this.settings.hasOwnProperty('grantType')) {
       myParams['grant_type'] = this.settings.grantType;
+    }
+    if (this.settings.hasOwnProperty('codeVerifier')) {
+      myParams['code_verifier'] = this.settings.codeVerifier;
     }
 
     const providerOptions = this.makeRequest(myParams);
