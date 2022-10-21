@@ -1,6 +1,10 @@
-import winston, { format, LogCallback, Logger } from 'winston';
+import ConduitGrpcSdk from '../index';
 import { Indexable } from '../interfaces';
+import { linearBackoffTimeoutAsync } from '../utilities';
+import winston, { format, LogCallback, Logger } from 'winston';
 import { isEmpty } from 'lodash';
+import { get } from 'http';
+import LokiTransport from 'winston-loki';
 
 const processMeta = (meta: Indexable) => {
   if (Array.isArray(meta)) {
@@ -107,5 +111,50 @@ export class ConduitLogger {
 
   get winston() {
     return this._winston;
+  }
+}
+
+async function lokiReadyCheck(lokiUrl: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let data: any[] = [];
+    get(`${lokiUrl}/ready`, r => {
+      r.on('data', chunk => data.push(chunk));
+      r.on('end', () => {
+        if (Buffer.concat(data).toString() === 'ready\n') resolve();
+        else reject(false);
+      });
+    }).on('error', err => {
+      reject(err.message);
+    });
+  });
+}
+
+export async function setupLoki(module: string, instance: string) {
+  let lokiUrl = process.env.LOKI_URL;
+  if (lokiUrl && lokiUrl !== '') {
+    if (lokiUrl.endsWith('/')) lokiUrl = lokiUrl.slice(0, -1);
+    const onTry = async () => {
+      return await lokiReadyCheck(lokiUrl!)
+        .then(() => {
+          ConduitGrpcSdk.Logger.addTransport(
+            new LokiTransport({
+              level: 'debug',
+              host: lokiUrl!,
+              batching: false,
+              replaceTimestamp: true,
+              labels: {
+                module,
+                instance,
+              },
+            }),
+          );
+          return false;
+        })
+        .catch(() => true); // retry
+    };
+    const onFailure = () => {
+      ConduitGrpcSdk.Logger.error(`Failed to connect to Loki on '${lokiUrl}'`);
+    };
+    await linearBackoffTimeoutAsync(onTry, 250, 15, onFailure, true);
   }
 }
