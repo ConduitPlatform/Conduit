@@ -116,7 +116,7 @@ export class ConduitLogger {
 
 async function lokiReadyCheck(lokiUrl: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    let data: any[] = [];
+    const data: any[] = [];
     get(`${lokiUrl}/ready`, r => {
       r.on('data', chunk => data.push(chunk));
       r.on('end', () => {
