@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.15.0](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.2...v0.15.0) (2022-10-21)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** loki availability checks ([#402](https://github.com/ConduitPlatform/Conduit/issues/402)) ([3333b3a](https://github.com/ConduitPlatform/Conduit/commit/3333b3a69d6b6412559c36e91758ce5e97aa2b3e))
+
 ## [0.15.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.1...v0.15.0-rc.2) (2022-10-20)
 
 

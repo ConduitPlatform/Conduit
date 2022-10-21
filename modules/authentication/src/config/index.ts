@@ -11,6 +11,9 @@ import tokenConfig from './token.config';
 import localConfig from './local.config';
 import magicLinkConfig from './magicLink.config';
 import gitlabConfig from './gitlab.config';
+import redditConfig from './reddit.config';
+import bitbucketConfig from './bitbucket.config';
+import linkedInConfig from './linkedIn.config';
 import twitterConfig from './twitter.config';
 
 const AppConfigSchema = {
@@ -27,6 +30,9 @@ const AppConfigSchema = {
   ...magicLinkConfig,
   ...gitlabConfig,
   ...twitterConfig,
+  ...redditConfig,
+  ...bitbucketConfig,
+  ...linkedInConfig,
 };
 const config = convict(AppConfigSchema);
 const configProperties = config.getProperties();

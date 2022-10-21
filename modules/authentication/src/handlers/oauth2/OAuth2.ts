@@ -116,7 +116,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       await Token.getInstance().deleteOne(stateToken);
       throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
     }
-
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
@@ -135,7 +134,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const providerOptions = this.makeRequest(myParams);
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
-    );
+    ).catch(err => {
+      throw new GrpcError(status.INTERNAL, err.message);
+    });
     const access_token = providerResponse.data.access_token;
 
     const clientId = stateToken.data.clientId;

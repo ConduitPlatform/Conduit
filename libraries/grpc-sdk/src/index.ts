@@ -33,10 +33,9 @@ import {
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
-import { ConduitLogger } from './utilities/Logger';
+import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
-import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
 
 export default class ConduitGrpcSdk {
@@ -102,21 +101,7 @@ export default class ConduitGrpcSdk {
         module_instance: this.instance,
       });
     }
-    if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
-      ConduitGrpcSdk.Logger.addTransport(
-        new LokiTransport({
-          level: 'debug',
-          host: process.env.LOKI_URL,
-          batching: false,
-          replaceTimestamp: true,
-          labels: {
-            module: this.name,
-            instance: this.instance,
-          },
-        }),
-      );
-    }
-
+    setupLoki(this.name, this.instance).then();
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
@@ -494,3 +479,4 @@ export * from './helpers';
 export * from './constants';
 export * from './routing';
 export * from './types';
+export * from './utilities';

@@ -7,3 +7,6 @@ export * from './slack/slack';
 export * from './twitch/twitch';
 export * from './gitlab/gitlab';
 export * from './twitter/twitter';
+export * from './reddit/reddit';
+export * from './bitbucket/bitbucket';
+export * from './linkedIn/linkedin';
