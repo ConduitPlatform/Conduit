@@ -1,0 +1,8 @@
+{
+  "accessTokenMethod": "POST",
+  "providerName": "linkedin",
+  "responseType": "code",
+  "authorizeUrl": "https://www.linkedin.com/oauth/v2/authorization?",
+  "tokenUrl": "https://www.linkedin.com/oauth/v2/accessToken",
+  "grantType": "authorization_code"
+}
