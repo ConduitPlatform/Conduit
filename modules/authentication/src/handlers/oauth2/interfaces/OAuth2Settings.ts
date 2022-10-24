@@ -21,7 +21,6 @@ export class OAuth2Settings {
   keyId?: string;
 
   constructor(
-    private readonly serverUrl: string,
     providerConfig: ProviderConfig,
     providerParams: {
       accessTokenMethod: string;
@@ -50,6 +49,6 @@ export class OAuth2Settings {
 
   set provider(providerName: string) {
     this.providerName = providerName;
-    this.callbackUrl = `${this.serverUrl}/hook/authentication/${this.providerName}`;
+    this.callbackUrl = `/hook/authentication/${this.providerName}`;
   }
 }

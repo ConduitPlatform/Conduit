@@ -3,7 +3,7 @@ import {
   ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
-} from './interfaces/types';
+} from './interfaces';
 
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
@@ -43,9 +43,9 @@ function generateLog(
 }
 
 function parseRequestData(data: string) {
-  if (typeof data === 'string' && data.length !== 0) {
+  if (data.length !== 0) {
     return JSON.parse(data);
-  } else if (typeof data === 'string') {
+  } else {
     return {};
   }
 }

@@ -151,11 +151,12 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns queried folders.`,
         queryParams: {
-          skip: ConduitNumber.Required,
-          limit: ConduitNumber.Required,
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           container: ConduitString.Optional,
           parent: ConduitString.Optional,
+          search: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('getFolders', {
@@ -236,7 +237,9 @@ export class AdminRoutes {
   }
 
   async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, sort, folder, search } = call.request.params;
+    const { sort, folder, search } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
     const query: Query = {
       container: call.request.params.container,
     };
@@ -256,15 +259,20 @@ export class AdminRoutes {
   }
 
   async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
+    const { sort, parent, search } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query: Query = {
       container: call.request.params.container,
     };
-    if (!isNil(call.request.params.parent)) {
+    if (!isNil(search)) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+    if (!isNil(parent)) {
+      const existingRegex = query.name?.$regex !== '' && !isNil(query.name?.$regex);
+      const regexSuffix = existingRegex ? query.name.$regex : '([^/]+)/?$';
       query.name = {
-        $regex: `${call.request.params.parent}\/([^\/]+)\/?$`,
+        $regex: `${parent}\/${regexSuffix}`,
         $options: 'i',
       };
     }

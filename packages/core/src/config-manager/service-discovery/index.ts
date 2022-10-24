@@ -4,9 +4,9 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  linearBackoffTimeout,
 } from '@conduitplatform/grpc-sdk';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
-import { linearBackoffTimeout } from './utils';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
 import { clearTimeout } from 'timers';
@@ -100,6 +100,10 @@ export class ServiceDiscovery {
       const registeredModule = this.registeredModules.get(module)!;
       await this.healthCheckService(module, registeredModule.address);
     }
+    if (this.servingStatusUpdate) {
+      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = false;
+    }
   }
 
   /*
@@ -170,7 +174,7 @@ export class ServiceDiscovery {
         serving: moduleStatus === HealthCheckStatus.SERVING,
       };
       this.registeredModules.set(moduleName, module);
-      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = true;
     } else {
       const prevStatus = module.serving;
       module.serving = moduleStatus === HealthCheckStatus.SERVING;

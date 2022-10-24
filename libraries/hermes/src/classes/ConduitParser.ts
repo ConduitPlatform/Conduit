@@ -1,5 +1,10 @@
-import { Array, ConduitModel, ConduitModelField, TYPE } from '../interfaces';
-import { ConduitRouteOption } from '../routing';
+import {
+  Array,
+  ConduitModel,
+  ConduitModelField,
+  TYPE,
+  ConduitRouteOption,
+} from '@conduitplatform/grpc-sdk';
 
 const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON'];
 

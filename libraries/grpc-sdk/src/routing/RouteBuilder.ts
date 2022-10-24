@@ -1,13 +1,13 @@
-import { ConduitModel } from '../interfaces';
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { RoutingManager } from './RoutingManager';
 import { RequestHandlers } from './wrapRouterFunctions';
 import {
+  ConduitRoute,
   ConduitRouteActions,
   ConduitRouteOption,
   ConduitRouteOptions,
-} from './interfaces/Route';
-import { ConduitRoute } from './interfaces/ConduitRoute';
+} from './interfaces';
+import { ConduitModel } from '../interfaces';
 
 export class RouteBuilder {
   private readonly _options!: ConduitRouteOptions;
