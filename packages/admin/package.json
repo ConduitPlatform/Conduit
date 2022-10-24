@@ -8,7 +8,7 @@
     "node": ">=14"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --coverage --forceExit",
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build"
@@ -29,6 +29,7 @@
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/hermes": "^1.0.1",
+    "@conduitplatform/node-2fa": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "bcrypt": "^5.0.1",
@@ -36,18 +37,21 @@
     "crypto": "^1.0.1",
     "helmet": "^5.1.0",
     "jsonwebtoken": "^8.5.1",
-    "lodash": "^4.17.21",
-    "@conduitplatform/node-2fa": "^1.0.0"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
     "@types/convict": "^6.1.1",
     "@types/express": "~4.17.13",
+    "@types/jest": "^29.1.2",
     "@types/jsonwebtoken": "^8.5.8",
     "@types/lodash": "^4.14.182",
     "@types/node": "14.14.31",
     "express": "~4.18.1",
+    "jest": "^29.1.2",
     "rimraf": "^3.0.2",
+    "ts-jest": "^29.0.3",
+    "ts-proto": "^1.126.1",
     "typescript": "~4.7.4"
   }
 }
