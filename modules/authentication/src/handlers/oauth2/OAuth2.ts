@@ -64,7 +64,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
-    if (this.settings.hasOwnProperty('codeChallengeMethod')) {
+    if (!isNil(this.settings.codeChallengeMethod)) {
       codeChallenge = createHash('sha256')
         .update(this.settings.codeVerifier!)
         .digest('base64')
@@ -84,16 +84,20 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     };
     const baseUrl = this.settings.authorizeUrl;
 
-    const stateToken = await Token.getInstance().create({
-      type: TokenType.STATE_TOKEN,
-      token: uuid(),
-      data: {
-        clientId: call.request.context.clientId,
-        scope: options.scope,
-        codeChallenge: codeChallenge,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
+    const stateToken = await Token.getInstance()
+      .create({
+        type: TokenType.STATE_TOKEN,
+        token: uuid(),
+        data: {
+          clientId: call.request.context.clientId,
+          scope: options.scope,
+          codeChallenge: codeChallenge,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      })
+      .catch(err => {
+        throw new GrpcError(status.INTERNAL, err);
+      });
     options['state'] = stateToken.token;
 
     const keys = Object.keys(options) as [keyof RedirectOptions];
@@ -127,7 +131,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     if (this.settings.hasOwnProperty('grantType')) {
       myParams['grant_type'] = this.settings.grantType;
     }
-    if (this.settings.hasOwnProperty('codeChallengeMethod')) {
+    if (!isNil(this.settings.codeChallengeMethod)) {
       myParams['code_verifier'] = this.settings.codeVerifier;
     }
 

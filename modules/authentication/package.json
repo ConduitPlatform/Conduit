@@ -36,8 +36,10 @@
     "crypto": "^1.0.1",
     "escape-string-regexp": "^4.0.0",
     "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^2.1.4",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
+    "querystring": "^0.2.1",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
