@@ -10,7 +10,7 @@ export class OAuth2Settings {
   finalRedirect: string;
   accountLinking: boolean;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
   accessTokenMethod: 'GET' | 'POST';
   grantType?: string;
   state?: string;
