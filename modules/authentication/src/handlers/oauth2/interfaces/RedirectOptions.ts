@@ -5,4 +5,6 @@ export interface RedirectOptions {
   response_mode: string | undefined;
   scope: string;
   state?: string;
+  code_challenge?: string;
+  code_challenge_method?: string;
 }
