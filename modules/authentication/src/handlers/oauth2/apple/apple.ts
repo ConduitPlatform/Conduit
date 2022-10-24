@@ -1,5 +1,4 @@
 import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -9,7 +8,6 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
 import * as appleParameters from '../apple/apple.json';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { Payload } from '../interfaces/Payload';
@@ -24,10 +22,12 @@ import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
 import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
 import qs from 'querystring';
+import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
+import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
 
-export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
-  constructor(grpcSdk: ConduitGrpcSdk, config: { apple: ProviderConfig }) {
-    super(grpcSdk, 'apple', new OAuth2Settings(config.apple, appleParameters));
+export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
+  constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
+    super(grpcSdk, 'apple', new AppleOAuth2Settings(config.apple, appleParameters));
     this.defaultScopes = ['name', 'email'];
   }
 

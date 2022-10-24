@@ -18,9 +18,6 @@ export class OAuth2Settings {
   responseType?: string;
   responseMode?: 'query' | 'form_post';
   scopeSeperator?: string;
-  privateKey?: string;
-  teamId?: string;
-  keyId?: string;
   codeChallengeMethod?: string;
   codeVerifier?: string;
 
@@ -47,9 +44,6 @@ export class OAuth2Settings {
     this.responseType = providerParams.responseType;
     this.responseMode =
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
-    this.privateKey = providerConfig.privateKey;
-    this.teamId = providerConfig.teamId;
-    this.keyId = providerConfig.keyId;
     this.codeChallengeMethod = providerParams.codeChallengeMethod;
     this.codeVerifier = !isNil(this.codeChallengeMethod) ? uuid() : undefined;
   }

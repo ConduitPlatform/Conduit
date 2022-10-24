@@ -3,7 +3,4 @@ export interface ProviderConfig {
   clientId: string;
   clientSecret?: string;
   redirect_uri: string;
-  privateKey?: string;
-  teamId?: string;
-  keyId?: string;
 }
