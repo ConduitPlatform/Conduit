@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node dist/bin/www.js",
     "lint": "./node_modules/.bin/eslint .",
-    "test": "mocha -r ts-node/register --timeout 10000 --exit --reporter nyan src/test/**",
+    "test": "jest --coverage --forceExit",
     "test-with-coverage": "nyc --reporter=text mocha -r ts-node/register --timeout 10000 --exit src/test/**",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
@@ -22,6 +22,7 @@
     "@conduitplatform/admin": "^1.0.0",
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/testing-tools": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "convict": "^6.2.3",
@@ -30,11 +31,15 @@
   "devDependencies": {
     "@types/convict": "^6.1.1",
     "@types/express": "~4.17.13",
+    "@types/jest": "^29.0.1",
     "@types/lodash": "^4.14.182",
     "@types/node": "14.14.31",
     "copyfiles": "^2.4.1",
+    "jest": "^29.0.3",
     "rimraf": "^3.0.2",
+    "ts-jest": "^29.0.0",
     "ts-node": "^10.8.2",
-    "typescript": "~4.7.4"
+    "typescript": "~4.7.4",
+    "ts-proto": "^1.117.0"
   }
 }
