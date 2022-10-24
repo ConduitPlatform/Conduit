@@ -23,19 +23,12 @@ import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
 import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
+import qs from 'querystring';
 
 export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { apple: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'apple',
-      new OAuth2Settings(serverConfig.hostUrl, config.apple, appleParameters),
-    );
-    this.defaultScopes = ['name', 'email', 'openid'];
+  constructor(grpcSdk: ConduitGrpcSdk, config: { apple: ProviderConfig }) {
+    super(grpcSdk, 'apple', new OAuth2Settings(config.apple, appleParameters));
+    this.defaultScopes = ['name', 'email'];
   }
 
   async validate(): Promise<boolean> {
@@ -62,7 +55,7 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
   async connectWithProvider(details: ConnectionParams): Promise<Payload<AppleUser>> {}
 
   constructScopes(scopes: string[]): string {
-    return scopes.join('%20');
+    return scopes.join(' ');
   }
 
   async authorize(call: ParsedRouterRequest) {
@@ -87,52 +80,56 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
 
     const apple_private_key = this.settings.privateKey;
 
-    const apple_client_secret = jwt.sign(
-      {
-        iss: this.settings.teamId,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 120,
-        aud: 'https://appleid.apple.com',
-        sub: this.settings.clientId,
-      },
-      apple_private_key as any,
-      {
-        header: {
-          alg: 'ES256',
-          kid: this.settings.keyId,
-        },
-      },
-    );
+    const jwtHeader = {
+      alg: 'ES256',
+      kid: this.settings.keyId,
+    };
 
-    const clientId = stateToken.data.clientId;
+    const jwtPayload = {
+      iss: this.settings.teamId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 86400,
+      aud: 'https://appleid.apple.com',
+      sub: this.settings.clientId,
+    };
+
+    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key as any, {
+      algorithm: 'ES256',
+      header: jwtHeader,
+    });
+
+    const clientId = this.settings.clientId;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
-    const token = await axios
-      .post(
-        'https://appleid.apple.com/auth/token',
-        {
-          client_id: this.settings.clientId,
-          client_secret: apple_client_secret,
-          code: params.code,
-          grant_type: this.settings.grantType,
-          redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      )
-      .then(response => {
-        return response.data;
-      })
-      .catch(error => {
-        throw new GrpcError(status.INVALID_ARGUMENT, error.message);
-      });
+    const postData = qs.stringify({
+      client_id: clientId,
+      client_secret: apple_client_secret,
+      code: params.code,
+      grant_type: this.settings.grantType,
+      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+    });
+    const req = {
+      method: this.settings.accessTokenMethod,
+      url: this.settings.tokenUrl,
+      data: postData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    };
+    const appleResponseToken = await axios(req).catch(err => {
+      throw new GrpcError(status.INTERNAL, err.message);
+    });
 
+    const data = appleResponseToken.data;
+    const id_token = data.id_token;
+    const decoded = jwt.decode(id_token, { complete: true }) as Jwt;
+    const payload = decoded.payload as JwtPayload;
+    if (decoded_id_token!.payload.sub !== payload.sub) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token');
+    }
     const userParams = {
-      id: decoded_id_token!.payload.sub as string,
-      email: params?.user.email,
-      data: { ...params?.user.name },
+      id: payload.sub!,
+      email: payload.email,
+      data: { ...payload.email_verified },
     };
     const user = await this.createOrUpdateUser(userParams);
     await Token.getInstance().deleteOne(stateToken);
@@ -169,13 +166,6 @@ export class AppleHandlers extends OAuth2<AppleUser, OAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
-          user: {
-            name: {
-              firstName: ConduitString.Required,
-              lastName: ConduitString.Required,
-            },
-            email: ConduitString.Required,
-          },
         },
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
