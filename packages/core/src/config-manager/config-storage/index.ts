@@ -121,7 +121,7 @@ export class ConfigStorage {
         });
         if (moduleConfig) {
           await models.Config.getInstance().findByIdAndUpdate(moduleConfig._id, {
-            config: moduleConfig.config,
+            config: config,
           });
         } else {
           await models.Config.getInstance().create({ name: moduleName, config: config });
