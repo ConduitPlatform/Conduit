@@ -23,6 +23,7 @@ import { TokenProvider } from '../tokenProvider';
 import { TokenType } from '../../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment/moment';
+import { createHash } from 'crypto';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -62,24 +63,41 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   async redirect(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+    let codeChallenge;
+    if (!isNil(this.settings.codeChallengeMethod)) {
+      codeChallenge = createHash('sha256')
+        .update(this.settings.codeVerifier!)
+        .digest('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    }
+
     const options: RedirectOptions = {
       client_id: this.settings.clientId,
       redirect_uri: conduitUrl + this.settings.callbackUrl,
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
+      code_challenge: codeChallenge,
+      code_challenge_method: this.settings.codeChallengeMethod,
     };
     const baseUrl = this.settings.authorizeUrl;
 
-    const stateToken = await Token.getInstance().create({
-      type: TokenType.STATE_TOKEN,
-      token: uuid(),
-      data: {
-        clientId: call.request.context.clientId,
-        scope: options.scope,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
+    const stateToken = await Token.getInstance()
+      .create({
+        type: TokenType.STATE_TOKEN,
+        token: uuid(),
+        data: {
+          clientId: call.request.context.clientId,
+          scope: options.scope,
+          codeChallenge: codeChallenge,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      })
+      .catch(err => {
+        throw new GrpcError(status.INTERNAL, err);
+      });
     options['state'] = stateToken.token;
 
     const keys = Object.keys(options) as [keyof RedirectOptions];
@@ -112,6 +130,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     if (this.settings.hasOwnProperty('grantType')) {
       myParams['grant_type'] = this.settings.grantType;
+    }
+    if (!isNil(this.settings.codeChallengeMethod)) {
+      myParams['code_verifier'] = this.settings.codeVerifier;
     }
 
     const providerOptions = this.makeRequest(myParams);
