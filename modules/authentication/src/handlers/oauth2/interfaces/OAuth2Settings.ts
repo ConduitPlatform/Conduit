@@ -1,5 +1,6 @@
 import { ProviderConfig } from './ProviderConfig';
 import { v4 as uuid } from 'uuid';
+import { isNil } from 'lodash';
 
 export class OAuth2Settings {
   providerName: string;
@@ -44,7 +45,7 @@ export class OAuth2Settings {
     this.responseMode =
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
     this.codeChallengeMethod = providerParams.codeChallengeMethod;
-    this.codeVerifier = uuid();
+    this.codeVerifier = !isNil(this.codeChallengeMethod) ? uuid() : undefined;
   }
 
   set provider(providerName: string) {

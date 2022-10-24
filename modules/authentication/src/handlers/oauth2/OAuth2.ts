@@ -64,7 +64,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     let codeChallenge;
-    if (this.settings.providerName === 'twitter') {
+    if (this.settings.hasOwnProperty('codeChallengeMethod')) {
       codeChallenge = createHash('sha256')
         .update(this.settings.codeVerifier!)
         .digest('base64')
@@ -127,7 +127,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     if (this.settings.hasOwnProperty('grantType')) {
       myParams['grant_type'] = this.settings.grantType;
     }
-    if (this.settings.providerName === 'twitter') {
+    if (this.settings.hasOwnProperty('codeChallengeMethod')) {
       myParams['code_verifier'] = this.settings.codeVerifier;
     }
 
