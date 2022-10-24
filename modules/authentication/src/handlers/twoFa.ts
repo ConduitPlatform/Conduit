@@ -426,7 +426,7 @@ export class TwoFa implements IAuthenticationStrategy {
     }
     const instance = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
     if (isNil(instance)) {
-      throw new GrpcError(status.NOT_FOUND, 'User has not activated back up codes');
+      throw new GrpcError(status.NOT_FOUND, 'User has no back up codes');
     }
     let codeMatch;
     for (const hashedCode of instance.codes) {
