@@ -24,6 +24,12 @@ export default {
         default: true,
       },
     },
+    backUpCodes: {
+      enabled: {
+        format: 'Boolean',
+        default: true,
+      },
+    },
   },
   phoneAuthentication: {
     enabled: {
