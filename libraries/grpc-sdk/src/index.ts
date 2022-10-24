@@ -33,10 +33,9 @@ import {
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { checkModuleHealth } from './classes/HealthCheck';
-import { ConduitLogger } from './utilities/Logger';
+import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
-import LokiTransport from 'winston-loki';
 import { ConduitMetrics } from './metrics';
 
 export default class ConduitGrpcSdk {
@@ -85,6 +84,7 @@ export default class ConduitGrpcSdk {
     serviceHealthStatusGetter: Function,
     name?: string,
     watchModules = true,
+    private readonly urlRemap?: string,
   ) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
@@ -101,21 +101,7 @@ export default class ConduitGrpcSdk {
         module_instance: this.instance,
       });
     }
-    if (process.env.LOKI_URL && process.env.LOKI_URL !== '') {
-      ConduitGrpcSdk.Logger.addTransport(
-        new LokiTransport({
-          level: 'debug',
-          host: process.env.LOKI_URL,
-          batching: false,
-          replaceTimestamp: true,
-          labels: {
-            module: this.name,
-            instance: this.instance,
-          },
-        }),
-      );
-    }
-
+    setupLoki(this.name, this.instance).then();
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
@@ -375,7 +361,7 @@ export default class ConduitGrpcSdk {
     return promise
       .then(() => {
         const redisManager = new RedisManager(
-          this._redisDetails!.host,
+          this.urlRemap ?? this._redisDetails!.host,
           this._redisDetails!.port,
         );
         this._eventBus = new EventBus(redisManager);
@@ -418,7 +404,7 @@ export default class ConduitGrpcSdk {
       // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
-        moduleUrl,
+        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
@@ -426,7 +412,7 @@ export default class ConduitGrpcSdk {
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
-        moduleUrl,
+        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
@@ -460,7 +446,7 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    return !!(this._modules[moduleName] && this._modules[moduleName].active);
+    return !!this._modules[moduleName]?.active;
   }
 
   async waitForExistence(moduleName: string) {
@@ -493,3 +479,4 @@ export * from './helpers';
 export * from './constants';
 export * from './routing';
 export * from './types';
+export * from './utilities';

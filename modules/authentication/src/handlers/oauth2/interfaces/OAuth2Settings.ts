@@ -1,4 +1,6 @@
 import { ProviderConfig } from './ProviderConfig';
+import { v4 as uuid } from 'uuid';
+import { isNil } from 'lodash';
 
 export class OAuth2Settings {
   providerName: string;
@@ -16,9 +18,10 @@ export class OAuth2Settings {
   responseType?: string;
   responseMode?: 'query' | 'form_post';
   scopeSeperator?: string;
+  codeChallengeMethod?: string;
+  codeVerifier?: string;
 
   constructor(
-    private readonly serverUrl: string,
     providerConfig: ProviderConfig,
     providerParams: {
       accessTokenMethod: string;
@@ -27,6 +30,7 @@ export class OAuth2Settings {
       tokenUrl: string;
       responseType: string;
       responseMode?: string;
+      codeChallengeMethod?: string;
     },
   ) {
     this.accountLinking = providerConfig.accountLinking;
@@ -40,10 +44,12 @@ export class OAuth2Settings {
     this.responseType = providerParams.responseType;
     this.responseMode =
       providerParams.responseMode === 'form_post' ? 'form_post' : 'query';
+    this.codeChallengeMethod = providerParams.codeChallengeMethod;
+    this.codeVerifier = !isNil(this.codeChallengeMethod) ? uuid() : undefined;
   }
 
   set provider(providerName: string) {
     this.providerName = providerName;
-    this.callbackUrl = `${this.serverUrl}/hook/authentication/${this.providerName}`;
+    this.callbackUrl = `/hook/authentication/${this.providerName}`;
   }
 }

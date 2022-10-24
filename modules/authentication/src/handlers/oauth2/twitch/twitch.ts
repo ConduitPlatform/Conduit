@@ -9,16 +9,8 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
-  constructor(
-    grpcSdk: ConduitGrpcSdk,
-    config: { twitch: ProviderConfig },
-    serverConfig: { hostUrl: string },
-  ) {
-    super(
-      grpcSdk,
-      'twitch',
-      new OAuth2Settings(serverConfig.hostUrl, config.twitch, twitchParameters),
-    );
+  constructor(grpcSdk: ConduitGrpcSdk, config: { twitch: ProviderConfig }) {
+    super(grpcSdk, 'twitch', new OAuth2Settings(config.twitch, twitchParameters));
   }
 
   async connectWithProvider(details: ConnectionParams): Promise<Payload<TwitchUser>> {
