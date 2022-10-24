@@ -544,8 +544,8 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   private async codeGenerator(user: User): Promise<string[]> {
-    let codes = [];
-    let hashedCodes = [];
+    const codes = [];
+    const hashedCodes = [];
     for (let i = 0; i < 10; i++) {
       codes[i] = (randomInt(1000, 10000) + ' ' + randomInt(1000, 10000)).toString();
       hashedCodes[i] = await AuthUtils.hashPassword(codes[i]);
