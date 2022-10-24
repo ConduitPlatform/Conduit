@@ -33,6 +33,7 @@
     "axios": "0.27.2",
     "bcrypt": "^5.0.1",
     "convict": "^6.2.3",
+    "crypto": "^1.0.1",
     "escape-string-regexp": "^4.0.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^2.1.4",

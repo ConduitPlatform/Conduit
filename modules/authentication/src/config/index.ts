@@ -15,6 +15,7 @@ import redditConfig from './reddit.config';
 import bitbucketConfig from './bitbucket.config';
 import linkedInConfig from './linkedIn.config';
 import appleConfig from './apple.config';
+import twitterConfig from './twitter.config';
 
 const AppConfigSchema = {
   ...DefaultConfig,
@@ -30,6 +31,7 @@ const AppConfigSchema = {
   ...magicLinkConfig,
   ...gitlabConfig,
   ...appleConfig,
+  ...twitterConfig,
   ...redditConfig,
   ...bitbucketConfig,
   ...linkedInConfig,
