@@ -414,12 +414,8 @@ export class TwoFa implements IAuthenticationStrategy {
   }
 
   async recoverTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const context = call.request.context;
-    const { user, clientId } = context;
+    const { user, clientId } = call.request.context;
     const { code } = call.request.params;
-    if (isNil(context) || isNil(user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
-    }
     const reg = /^\d{8}$/;
     if (!reg.test(code)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
