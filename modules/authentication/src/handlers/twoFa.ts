@@ -20,6 +20,8 @@ import { v4 as uuid } from 'uuid';
 import { TokenProvider } from './tokenProvider';
 import { Config } from '../config';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { randomInt } from 'crypto';
+import { TwoFactorBackUpCodes } from '../models';
 
 export class TwoFa implements IAuthenticationStrategy {
   private smsModule: SMS;
@@ -116,6 +118,39 @@ export class TwoFa implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('DisableTwoFaResponse', 'String'),
       this.disableTwoFa.bind(this),
     );
+
+    if (ConfigController.getInstance().config.twoFa.backUpCodes) {
+      routingManager.route(
+        {
+          path: '/twoFa/generate',
+          action: ConduitRouteActions.GET,
+          description: `Generates a new set of back up codes for 2FA.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('GenerateTwoFaBackUpCodesResponse', {
+          codes: [ConduitString.Required],
+        }),
+        this.generateBackUpCodes.bind(this),
+      );
+
+      routingManager.route(
+        {
+          path: '/twoFa/recover',
+          action: ConduitRouteActions.POST,
+          description: `Recovers 2FA access with an 8 digit backup code.`,
+          middlewares: ['authMiddleware'],
+          bodyParams: {
+            code: ConduitString.Required,
+          },
+        },
+        new ConduitRouteReturnDefinition('RecoverTwoFaAccessResponse', {
+          accessToken: ConduitString.Optional,
+          refreshToken: ConduitString.Optional,
+          message: ConduitString.Optional,
+        }),
+        this.recoverTwoFa.bind(this),
+      );
+    }
   }
 
   async beginTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -364,6 +399,61 @@ export class TwoFa implements IAuthenticationStrategy {
     return '2FA enabled';
   }
 
+  async generateBackUpCodes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
+    const context = call.request.context;
+    if (isNil(context) || isNil(context.user)) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
+    }
+    return this.codeGenerator(context.user);
+  }
+
+  async recoverTwoFa(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user, clientId } = call.request.context;
+    const { code } = call.request.params;
+    const reg = /^\d{8}$/;
+    if (!reg.test(code)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
+    }
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    if (isNil(codeSet)) {
+      throw new GrpcError(status.NOT_FOUND, 'User has no back up codes');
+    }
+    let codeMatch;
+    for (const hashedCode of codeSet.codes) {
+      codeMatch = await AuthUtils.checkPassword(code, hashedCode);
+      if (codeMatch) {
+        const index = codeSet.codes.indexOf(hashedCode);
+        codeSet.codes.splice(index, 1);
+        break;
+      }
+    }
+    if (!codeMatch) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
+    }
+    if (codeSet.codes.length === 0) {
+      await TwoFactorBackUpCodes.getInstance().deleteOne({ _id: codeSet._id });
+    } else {
+      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(codeSet._id, {
+        codes: codeSet.codes,
+      });
+    }
+    const config = ConfigController.getInstance().config;
+    const result: any = await TokenProvider.getInstance().provideUserTokens({
+      user,
+      clientId,
+      config,
+      twoFaPass: true,
+    });
+    result.message = `You have ${codeSet.codes.length} back up codes left`;
+    return result;
+  }
+
   private async enableSms2Fa(
     context: Indexable,
     user: User,
@@ -447,5 +537,26 @@ export class TwoFa implements IAuthenticationStrategy {
       config,
       twoFaPass: true,
     });
+  }
+
+  private async codeGenerator(user: User): Promise<string[]> {
+    const codes = [];
+    const hashedCodes = [];
+    for (let i = 0; i < 10; i++) {
+      codes[i] = (randomInt(1000, 10000) + ' ' + randomInt(1000, 10000)).toString();
+      hashedCodes[i] = await AuthUtils.hashPassword(codes[i].split(' ').join(''));
+    }
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    if (isNil(codeSet)) {
+      await TwoFactorBackUpCodes.getInstance().create({
+        user: user._id,
+        codes: hashedCodes,
+      });
+    } else {
+      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(codeSet._id, {
+        codes: hashedCodes,
+      });
+    }
+    return codes;
   }
 }
