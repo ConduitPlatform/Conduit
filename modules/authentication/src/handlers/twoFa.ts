@@ -137,8 +137,7 @@ export class TwoFa implements IAuthenticationStrategy {
         {
           path: '/twoFa/recover',
           action: ConduitRouteActions.POST,
-          description: `Recover 2FA access with a back up code. 
-                      The format of one code is '4 digits (space) 4 digits'.`,
+          description: `Recovers 2FA access with an 8 digit backup code.`,
           middlewares: ['authMiddleware'],
           bodyParams: {
             code: ConduitString.Required,
@@ -421,30 +420,31 @@ export class TwoFa implements IAuthenticationStrategy {
     if (isNil(context) || isNil(user)) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
     }
-    if (code.indexOf(' ') === -1) {
+    const reg = /^\d{8}$/;
+    if (!reg.test(code)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Incorrect code format');
     }
-    const instance = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
-    if (isNil(instance)) {
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    if (isNil(codeSet)) {
       throw new GrpcError(status.NOT_FOUND, 'User has no back up codes');
     }
     let codeMatch;
-    for (const hashedCode of instance.codes) {
+    for (const hashedCode of codeSet.codes) {
       codeMatch = await AuthUtils.checkPassword(code, hashedCode);
       if (codeMatch) {
-        const index = instance.codes.indexOf(hashedCode);
-        instance.codes.splice(index, 1);
+        const index = codeSet.codes.indexOf(hashedCode);
+        codeSet.codes.splice(index, 1);
         break;
       }
     }
     if (!codeMatch) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Invalid code');
     }
-    if (instance.codes.length === 0) {
-      await TwoFactorBackUpCodes.getInstance().deleteOne({ _id: instance._id });
+    if (codeSet.codes.length === 0) {
+      await TwoFactorBackUpCodes.getInstance().deleteOne({ _id: codeSet._id });
     } else {
-      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(instance._id, {
-        codes: instance.codes,
+      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(codeSet._id, {
+        codes: codeSet.codes,
       });
     }
     const config = ConfigController.getInstance().config;
@@ -454,7 +454,7 @@ export class TwoFa implements IAuthenticationStrategy {
       config,
       twoFaPass: true,
     });
-    result.message = `You have ${instance.codes.length} back up codes left`;
+    result.message = `You have ${codeSet.codes.length} back up codes left`;
     return result;
   }
 
@@ -548,16 +548,16 @@ export class TwoFa implements IAuthenticationStrategy {
     const hashedCodes = [];
     for (let i = 0; i < 10; i++) {
       codes[i] = (randomInt(1000, 10000) + ' ' + randomInt(1000, 10000)).toString();
-      hashedCodes[i] = await AuthUtils.hashPassword(codes[i]);
+      hashedCodes[i] = await AuthUtils.hashPassword(codes[i].split(' ').join(''));
     }
-    const instance = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
-    if (isNil(instance)) {
+    const codeSet = await TwoFactorBackUpCodes.getInstance().findOne({ user: user._id });
+    if (isNil(codeSet)) {
       await TwoFactorBackUpCodes.getInstance().create({
         user: user._id,
         codes: hashedCodes,
       });
     } else {
-      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(instance._id, {
+      await TwoFactorBackUpCodes.getInstance().findByIdAndUpdate(codeSet._id, {
         codes: hashedCodes,
       });
     }
