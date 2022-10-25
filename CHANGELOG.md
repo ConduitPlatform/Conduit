@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.1](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0...v0.15.1) (2022-10-25)
+
+
+### Features
+
+* **authentication:** 2fa backup codes ([#404](https://github.com/ConduitPlatform/Conduit/issues/404)) ([e1d408f](https://github.com/ConduitPlatform/Conduit/commit/e1d408fcd637f751282b3ba7cd4a9416f7aadd30))
+* **authentication:** apple provider  ([#374](https://github.com/ConduitPlatform/Conduit/issues/374)) ([47ec41f](https://github.com/ConduitPlatform/Conduit/commit/47ec41f8be58e6a3c31638bc8020bd748f52f7a1))
+* **authentication:** bitbucket-provider ([#398](https://github.com/ConduitPlatform/Conduit/issues/398)) ([d093b88](https://github.com/ConduitPlatform/Conduit/commit/d093b889d3866e8536de820f8a128550888fd28f))
+* **authentication:** linkedIn-provider ([#395](https://github.com/ConduitPlatform/Conduit/issues/395)) ([f815666](https://github.com/ConduitPlatform/Conduit/commit/f81566602b47da7c1ce7fb3f244210426a24d77c))
+* **authentication:** reddit provider ([#400](https://github.com/ConduitPlatform/Conduit/issues/400)) ([fb009f7](https://github.com/ConduitPlatform/Conduit/commit/fb009f71cb2ca16c95314e23b5690e93142707f8))
+* **authentication:** twitter provider ([#401](https://github.com/ConduitPlatform/Conduit/issues/401)) ([0eaa68b](https://github.com/ConduitPlatform/Conduit/commit/0eaa68b135c315ec2e2e8afdf58c142dbb19d31c))
+* **core,admin,testing-tools:** core and admin tests  ([#317](https://github.com/ConduitPlatform/Conduit/issues/317)) ([b2a9d9d](https://github.com/ConduitPlatform/Conduit/commit/b2a9d9d39dafe682bed7c865468198c4f1d72e79))
+
+
+### Bug Fixes
+
+* **authentication:** linkedin post-merge issue ([1a1c353](https://github.com/ConduitPlatform/Conduit/commit/1a1c353931c19fcdda0fe4683b940d14ae499aa4))
+* **core:** fix config bug ([#403](https://github.com/ConduitPlatform/Conduit/issues/403)) ([efd6dbc](https://github.com/ConduitPlatform/Conduit/commit/efd6dbc4b61564914fadeea93d5e40c3947d0543))
+* **core:** move testing-tools to dev dependencies ([e6b09f6](https://github.com/ConduitPlatform/Conduit/commit/e6b09f639100df39235ea063d4530cae33dd9649))
+
 ## [0.15.0](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0-rc.2...v0.15.0) (2022-10-21)
 
 
