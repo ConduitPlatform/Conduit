@@ -3,6 +3,7 @@ export interface ISendNotification {
   title: string;
   type?: string;
   body?: string;
+  platform?: string;
   data?: { [key: string]: string };
 }
 
@@ -11,5 +12,6 @@ export interface ISendNotificationToManyDevices {
   type?: string;
   title: string;
   body?: string;
+  platform?: string;
   data?: { [key: string]: string };
 }

@@ -21,4 +21,14 @@ export default {
       default: '',
     },
   },
+  onesignal: {
+    appId: {
+      format: 'String',
+      default: '',
+    },
+    apiKey: {
+      format: 'String',
+      default: '',
+    },
+  },
 };

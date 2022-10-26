@@ -25,6 +25,8 @@ import { status } from '@grpc/grpc-js';
 import { ISendNotification } from './interfaces/ISendNotification';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
+import { OneSignalProvider } from './providers/OneSignal.provider';
+import { IOneSignalSettings } from './interfaces/IOneSignalSettings';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -140,6 +142,8 @@ export default class PushNotifications extends ManagedModule<Config> {
     const settings = notificationsConfig[name];
     if (name === 'firebase') {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+    } else if (name === 'onesignal') {
+      this._provider = new OneSignalProvider(settings as IOneSignalSettings);
     } else {
       throw new Error('Provider not supported');
     }
