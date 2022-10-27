@@ -72,15 +72,16 @@ export class OneSignalProvider implements IPushNotificationsProvider {
   }
 
   async sendToDevice(params: ISendNotification) {
-    const { sendTo, platform } = params;
-    const userId = sendTo;
+    const userId = params.sendTo;
+    const platform = params.platform;
     if (isNil(userId)) return;
     const notificationToken = await NotificationToken.getInstance().findOne({
       userId,
       platform,
     });
+
     if (isNil(notificationToken)) {
-      return;
+      throw new Error('Notification token not found');
     }
     const { title, body, data } = params;
     const notification = {
@@ -88,7 +89,7 @@ export class OneSignalProvider implements IPushNotificationsProvider {
       contents: { en: body ?? '' },
       headings: { en: title },
       data,
-      include_player_ids: [userId],
+      include_player_ids: [notificationToken.token],
     };
     return this.client!.createNotification(notification);
   }

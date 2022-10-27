@@ -215,6 +215,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         body: call.request.body,
         data: data ? JSON.parse(data) : {},
         type: call.request.type,
+        platform: call.request.platform,
       };
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });

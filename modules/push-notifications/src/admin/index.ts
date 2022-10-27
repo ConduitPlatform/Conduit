@@ -46,6 +46,7 @@ export class AdminHandlers {
           title: ConduitString.Required,
           body: ConduitString.Optional,
           data: ConduitString.Optional,
+          platform: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendNotification', 'String'),
@@ -89,6 +90,7 @@ export class AdminHandlers {
       title: call.request.params.title,
       body: call.request.params.body,
       data: call.request.params.data,
+      platform: call.request.params.platform,
     };
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);

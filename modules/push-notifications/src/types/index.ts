@@ -24,6 +24,7 @@ export type SendNotificationRequest = GrpcRequest<{
   body?: string;
   data?: string;
   type?: string;
+  platform?: string;
 }>;
 
 export type SendNotificationResponse = GrpcResponse<{
