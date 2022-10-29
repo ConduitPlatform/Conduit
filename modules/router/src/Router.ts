@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
-  Indexable,
   HealthCheckStatus,
   ManagedModule,
   ConduitRouteObject,
@@ -22,12 +21,11 @@ import {
   ProtoGenerator,
   RouteT,
   SocketPush,
-  SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
-import { protoTemplate } from './hermes';
+import { protoTemplate, swaggerMetadata } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
@@ -40,43 +38,6 @@ import {
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
-
-const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '',
-  securitySchemes: {
-    clientId: {
-      name: 'clientid',
-      type: 'apiKey',
-      in: 'header',
-      description: 'A security client id, retrievable through [POST] /security/client',
-    },
-    clientSecret: {
-      name: 'clientSecret',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'A security client secret, retrievable through [POST] /security/client',
-    },
-    userToken: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'Bearer',
-      description:
-        'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
-    },
-  },
-  globalSecurityHeaders: [
-    {
-      clientId: [],
-      clientSecret: [],
-    },
-  ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      swaggerRouteDoc.security[0].userToken = [];
-    }
-  },
-};
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -121,7 +82,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
       1000,
-      swaggerRouterMetadata,
+      swaggerMetadata,
       { registeredRoutes: { name: 'client_routes_total' } },
     );
     this.registerGlobalMiddleware(

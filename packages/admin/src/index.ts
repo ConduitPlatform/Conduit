@@ -25,7 +25,7 @@ import AdminConfigRawSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
-import { protoTemplate } from './hermes';
+import { protoTemplate, swaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -35,7 +35,6 @@ import {
   ConduitSocket,
   grpcToConduitRoute,
   RouteT,
-  SwaggerRouterMetadata,
   ProtoGenerator,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
@@ -44,35 +43,6 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-
-const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '',
-  securitySchemes: {
-    masterKey: {
-      name: 'masterkey',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
-    },
-    adminToken: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'Bearer',
-      description: 'An admin authentication token, retrievable through [POST] /login',
-    },
-  },
-  globalSecurityHeaders: [
-    {
-      masterKey: [],
-    },
-  ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.path !== '/login' && route.input.path !== '/modules') {
-      swaggerRouteDoc.security[0].adminToken = [];
-    }
-  },
-};
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -105,7 +75,7 @@ export default class AdminModule extends IConduitAdmin {
       '/',
       this.grpcSdk,
       1000,
-      swaggerRouterMetadata,
+      swaggerMetadata,
       { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
