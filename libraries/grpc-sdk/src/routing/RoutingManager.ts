@@ -3,7 +3,7 @@ import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { constructProtoFile, wrapFunctionsAsync } from './RoutingUtilities';
+import { wrapFunctionsAsync } from './RoutingUtilities';
 import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
 import {
   ParsedRouterRequest,
@@ -121,14 +121,14 @@ export class RoutingManager {
     const modifiedFunctions: {
       [name: string]: (call: any, callback: any) => void;
     } = wrapFunctionsAsync(this._routeHandlers, this.isAdmin ? 'admin' : 'client');
-    const protoDescriptions = constructProtoFile(
+    const protoDescriptions = await this._router.generateProtoFile(
       this._router.moduleName,
       Object.values(this._moduleRoutes),
-      this.isAdmin,
     );
     await this._server.addService(
-      protoDescriptions.path,
-      protoDescriptions.name + (this.isAdmin ? '.admin.Admin' : '.router.Router'),
+      protoDescriptions.protoPath,
+      protoDescriptions.formattedModuleName +
+        (this.isAdmin ? '.admin.Admin' : '.router.Router'),
       modifiedFunctions,
     );
     const paths = Object.values(this._moduleRoutes);
@@ -136,7 +136,7 @@ export class RoutingManager {
       this.isAdmin
         ? (paths as RegisterAdminRouteRequest_PathDefinition[])
         : (paths as RegisterConduitRouteRequest_PathDefinition[]),
-      protoDescriptions.file,
+      protoDescriptions.protoFile,
     );
   }
 

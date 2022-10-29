@@ -8,10 +8,14 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   Indexable,
+  ConduitRouteObject,
+  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
   IConduitAdmin,
+  GenerateProtoRequest,
+  GenerateProtoResponse,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
@@ -21,6 +25,7 @@ import AdminConfigRawSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
+import { protoTemplate } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -31,6 +36,7 @@ import {
   grpcToConduitRoute,
   RouteT,
   SwaggerRouterMetadata,
+  ProtoGenerator,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -92,6 +98,7 @@ export default class AdminModule extends IConduitAdmin {
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
     this.grpcSdk = grpcSdk;
+    ProtoGenerator.getInstance(protoTemplate);
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
@@ -140,6 +147,7 @@ export default class AdminModule extends IConduitAdmin {
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
       {
+        generateProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
@@ -233,6 +241,25 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   // grpc
+  async generateProto(
+    call: GrpcRequest<GenerateProtoRequest>,
+    callback: GrpcCallback<GenerateProtoResponse>,
+  ) {
+    const moduleName = call.request.moduleName;
+    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
+      call.request.routes.map(r => JSON.parse(r));
+    try {
+      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
+        moduleName,
+        routes,
+      );
+      return callback(null, generatedProto);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
+  }
+
   async registerAdminRoute(
     call: GrpcRequest<RegisterAdminRouteRequest>,
     callback: GrpcCallback<null>,

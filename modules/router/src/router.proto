@@ -3,8 +3,20 @@ package router;
 
 service Router {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
+}
+
+message GenerateProtoRequest {
+  string moduleName = 1;
+  repeated string routes = 2;
+}
+
+message GenerateProtoResponse {
+  string protoPath = 1;
+  string protoFile = 2;
+  string formattedModuleName = 3;
 }
 
 message SetConfigRequest {

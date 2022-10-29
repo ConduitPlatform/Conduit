@@ -8,6 +8,8 @@ import ConduitGrpcSdk, {
   Indexable,
   HealthCheckStatus,
   ManagedModule,
+  ConduitRouteObject,
+  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -17,6 +19,7 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
+  ProtoGenerator,
   RouteT,
   SocketPush,
   SwaggerRouterMetadata,
@@ -24,10 +27,13 @@ import {
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
+import { protoTemplate } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
 import {
+  GenerateProtoRequest,
+  GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
@@ -80,6 +86,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     protoDescription: 'router.Router',
     functions: {
       setConfig: this.setConfig.bind(this),
+      generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     },
@@ -107,6 +114,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+    ProtoGenerator.getInstance(protoTemplate);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
@@ -303,6 +311,25 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         platform: platformName,
       });
     });
+  }
+
+  async generateProto(
+    call: GrpcRequest<GenerateProtoRequest>,
+    callback: GrpcCallback<GenerateProtoResponse>,
+  ) {
+    const moduleName = call.request.moduleName;
+    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
+      call.request.routes.map(r => JSON.parse(r));
+    try {
+      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
+        moduleName,
+        routes,
+      );
+      return callback(null, generatedProto);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
   }
 
   async registerGrpcRoute(
