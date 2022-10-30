@@ -18,6 +18,8 @@ import {
   SocketProtoDescription,
 } from './interfaces';
 import { RegisterAdminRouteRequest_PathDefinition } from '../protoUtils/core';
+import fs from 'fs';
+import path from 'path';
 
 export class RoutingManager {
   private _moduleRoutes: {
@@ -125,8 +127,10 @@ export class RoutingManager {
       this._router.moduleName,
       Object.values(this._moduleRoutes),
     );
+    const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
+    fs.writeFileSync(protoPath, protoDescriptions.protoFile);
     await this._server.addService(
-      protoDescriptions.protoPath,
+      protoPath,
       protoDescriptions.formattedModuleName +
         (this.isAdmin ? '.admin.Admin' : '.router.Router'),
       modifiedFunctions,

@@ -14,9 +14,8 @@ message GenerateProtoRequest {
 }
 
 message GenerateProtoResponse {
-  string protoPath = 1;
-  string protoFile = 2;
-  string formattedModuleName = 3;
+  string protoFile = 1;
+  string formattedModuleName = 2;
 }
 
 message SetConfigRequest {

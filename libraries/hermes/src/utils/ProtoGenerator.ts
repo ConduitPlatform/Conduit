@@ -1,6 +1,4 @@
 import { ConduitRouteObject, SocketProtoDescription } from '@conduitplatform/grpc-sdk';
-import path from 'path';
-import fs from 'fs';
 
 type ProtoTemplate = {
   request: string;
@@ -30,10 +28,7 @@ export class ProtoGenerator {
       protoFunctions,
     );
     protoFile = protoFile.replace('MODULE_NAME', formattedModuleName);
-
-    const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, protoFile);
-    return { protoPath, protoFile, formattedModuleName };
+    return { protoFile, formattedModuleName };
   }
 
   private getFormattedModuleName(moduleName: string) {
