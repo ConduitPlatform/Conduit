@@ -364,14 +364,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    let parsedFilter: ParsedQuery | ParsedQuery[];
+    let parsedFilter: ParsedQuery | ParsedQuery[] | undefined;
     if (typeof filterQuery === 'string') {
       parsedFilter = JSON.parse(filterQuery);
     } else {
       parsedFilter = filterQuery;
     }
 
-    parsedFilter = parseQuery(parsedFilter);
+    parsedFilter = parseQuery(parsedFilter as ParsedQuery | ParsedQuery[]);
     incrementDbQueries();
     if (query.hasOwnProperty('$inc')) {
       await this.model
