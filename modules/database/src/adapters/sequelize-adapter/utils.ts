@@ -78,7 +78,7 @@ export function parseQuery(query: ParsedQuery) {
     } else if (key === '$options') {
       continue;
     } else {
-      let subQuery = parseQuery(query[key]);
+      const subQuery = parseQuery(query[key]);
       if (subQuery === undefined) continue;
       const matched = matchOperation(key, subQuery);
       if (key.indexOf('$') !== -1) {
