@@ -30,8 +30,21 @@ message GetNotificationTokensResponse {
 message SendNotificationRequest {
   string sendTo = 1;
   string title = 2;
+  optional string platform = 3;
+  optional string body = 4;
+  optional string data = 5;
+}
+
+message SendToManyDevicesRequest {
+  repeated string sendTo = 1;
+  string title = 2;
   optional string body = 3;
   optional string data = 4;
+  optional string platform = 5;
+}
+
+message SendManyNotificationsRequest {
+  repeated SendNotificationRequest notifications = 1;
 }
 
 message SendNotificationResponse {
@@ -43,4 +56,6 @@ service PushNotifications {
   rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
   rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
   rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc SendToManyDevices(SendToManyDevicesRequest) returns (SendNotificationResponse);
+  rpc SendMany(SendManyNotificationsRequest) returns (SendNotificationResponse);
 }
