@@ -27,6 +27,15 @@ export type SendNotificationRequest = GrpcRequest<{
   platform?: string;
 }>;
 
+export type SendToManyDevicesNotificationRequest = GrpcRequest<{
+  sendTo: string[];
+  title: string;
+  body?: string;
+  data?: string;
+  type?: string;
+  platform?: string;
+}>;
+
 export type SendNotificationResponse = GrpcResponse<{
   message: string;
 }>;

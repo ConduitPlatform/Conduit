@@ -44,6 +44,47 @@ export class OneSignalProvider implements IPushNotificationsProvider {
       ConduitGrpcSdk.Logger.error('Failed to initialize OneSignal');
     }
   }
+  async sendToDevice(params: ISendNotification) {
+    const userId = params.sendTo;
+    const platform = params.platform;
+    if (isNil(userId)) return;
+    const notificationToken = await NotificationToken.getInstance().findOne({
+      userId,
+      platform,
+    });
+
+    if (isNil(notificationToken)) {
+      throw new Error('Notification token not found');
+    }
+    const { title, body, data } = params;
+    const notification = {
+      app_id: this.appId,
+      contents: { en: body ?? '' },
+      headings: { en: title },
+      data: { ...data, userId },
+      include_player_ids: [notificationToken.token],
+    };
+    return this.client!.createNotification(notification).catch(e => {
+      ConduitGrpcSdk.Logger.error(e);
+    });
+  }
+
+  async sendToManyDevices(params: ISendNotificationToManyDevices) {
+    const notificationTokens = await NotificationToken.getInstance().findMany({
+      userId: { $in: params.sendTo },
+    });
+    if (isEmpty(notificationTokens)) return;
+    const playerIds = notificationTokens.map(token => token.token);
+    const notification = {
+      app_id: this.appId,
+      contents: { en: params.body ?? '' },
+      headings: { en: params.title },
+      data: { ...params.data },
+      include_player_ids: playerIds,
+    };
+
+    return this.client!.createNotification(notification);
+  }
 
   async sendMany(params: ISendNotification[]) {
     const userIds = params.map(param => param.sendTo);
@@ -62,52 +103,12 @@ export class OneSignalProvider implements IPushNotificationsProvider {
         contents: { en: data.body ?? '' },
         headings: { en: data.title },
         data,
-        include_player_ids: userIds,
+        include_player_ids: [token.token],
       };
       await this.client!.createNotification(notification).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
     });
     return Promise.all(promises);
-  }
-
-  async sendToDevice(params: ISendNotification) {
-    const userId = params.sendTo;
-    const platform = params.platform;
-    if (isNil(userId)) return;
-    const notificationToken = await NotificationToken.getInstance().findOne({
-      userId,
-      platform,
-    });
-
-    if (isNil(notificationToken)) {
-      throw new Error('Notification token not found');
-    }
-    const { title, body, data } = params;
-    const notification = {
-      app_id: this.appId,
-      contents: { en: body ?? '' },
-      headings: { en: title },
-      data,
-      include_player_ids: [notificationToken.token],
-    };
-    return this.client!.createNotification(notification);
-  }
-
-  async sendToManyDevices(params: ISendNotificationToManyDevices) {
-    const notificationTokens = await NotificationToken.getInstance().findMany({
-      userId: { $in: params.sendTo },
-    });
-    if (isEmpty(notificationTokens)) return;
-
-    const notification = {
-      app_id: this.appId,
-      contents: { en: params.body ?? '' },
-      headings: { en: params.title },
-      data: params.data,
-      include_player_ids: params.sendTo,
-    };
-
-    return this.client!.createNotification(notification);
   }
 }
