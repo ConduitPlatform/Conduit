@@ -55,7 +55,7 @@ service PushNotifications {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
   rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
-  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  rpc Send(SendNotificationRequest) returns (SendNotificationResponse);
   rpc SendToManyDevices(SendToManyDevicesRequest) returns (SendNotificationResponse);
   rpc SendMany(SendManyNotificationsRequest) returns (SendNotificationResponse);
 }
