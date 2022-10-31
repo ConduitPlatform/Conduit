@@ -60,7 +60,8 @@ async function handleAuthentication(
   if (
     !(payload as JwtPayload).authorized &&
     path !== '/authentication/twoFa/verify' &&
-    path !== '/authentication/twoFa/begin'
+    path !== '/authentication/twoFa/authorize' &&
+    path !== '/authentication/twoFa/recover'
   ) {
     throw new GrpcError(status.UNAUTHENTICATED, '2FA is required');
   }
