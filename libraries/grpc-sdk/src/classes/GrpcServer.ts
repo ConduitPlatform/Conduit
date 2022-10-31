@@ -12,7 +12,7 @@ export class GrpcServer {
   private _postponeRequests = 0;
   private _useForce?: boolean;
   private _services: {
-    protoFilePath: string;
+    protoPath: string;
     protoDescription: string;
     functions: { [name: string]: Function };
   }[] = [];
@@ -44,7 +44,7 @@ export class GrpcServer {
   }
 
   async addService(
-    protoFilePath: string,
+    protoPath: string,
     protoDescription: string,
     functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
@@ -52,14 +52,14 @@ export class GrpcServer {
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
       ConduitGrpcSdk.Logger.log('Service already exists, performing replace');
       this._services[this._serviceNames.indexOf(protoDescription)] = {
-        protoFilePath,
+        protoPath,
         protoDescription,
         functions,
       };
       this.scheduleRefresh();
       return this;
     } else {
-      this._services.push({ protoFilePath, protoDescription, functions });
+      this._services.push({ protoPath, protoDescription, functions });
       this._serviceNames.push(protoDescription);
       if (this.started) {
         ConduitGrpcSdk.Logger.log('Server already started, scheduling refresh..');
@@ -69,7 +69,7 @@ export class GrpcServer {
         if (!this.grpcServer) {
           await this.wait(1000);
         }
-        addServiceToServer(this.grpcServer!, protoFilePath, protoDescription, functions);
+        addServiceToServer(this.grpcServer!, protoPath, protoDescription, functions);
         return this;
       }
     }
@@ -98,7 +98,7 @@ export class GrpcServer {
     this._services.forEach(service => {
       addServiceToServer(
         this.grpcServer!,
-        service.protoFilePath,
+        service.protoPath,
         service.protoDescription,
         service.functions,
       );

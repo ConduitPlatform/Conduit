@@ -5,9 +5,10 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
-  Indexable,
   HealthCheckStatus,
   ManagedModule,
+  ConduitRouteObject,
+  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -17,60 +18,26 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
+  ProtoGenerator,
   RouteT,
   SocketPush,
-  SwaggerRouterMetadata,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
+import { protoTemplate, swaggerMetadata } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
 import {
+  GenerateProtoRequest,
+  GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
-
-const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '',
-  securitySchemes: {
-    clientId: {
-      name: 'clientid',
-      type: 'apiKey',
-      in: 'header',
-      description: 'A security client id, retrievable through [POST] /security/client',
-    },
-    clientSecret: {
-      name: 'clientSecret',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'A security client secret, retrievable through [POST] /security/client',
-    },
-    userToken: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'Bearer',
-      description:
-        'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
-    },
-  },
-  globalSecurityHeaders: [
-    {
-      clientId: [],
-      clientSecret: [],
-    },
-  ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.middlewares?.includes('authMiddleware')) {
-      swaggerRouteDoc.security[0].userToken = [];
-    }
-  },
-};
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -80,6 +47,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     protoDescription: 'router.Router',
     functions: {
       setConfig: this.setConfig.bind(this),
+      generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     },
@@ -107,13 +75,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+    ProtoGenerator.getInstance(protoTemplate);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
       '',
       this.grpcSdk,
       1000,
-      swaggerRouterMetadata,
+      swaggerMetadata,
       { registeredRoutes: { name: 'client_routes_total' } },
     );
     this.registerGlobalMiddleware(
@@ -303,6 +272,25 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         platform: platformName,
       });
     });
+  }
+
+  async generateProto(
+    call: GrpcRequest<GenerateProtoRequest>,
+    callback: GrpcCallback<GenerateProtoResponse>,
+  ) {
+    const moduleName = call.request.moduleName;
+    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
+      call.request.routes.map(r => JSON.parse(r));
+    try {
+      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
+        moduleName,
+        routes,
+      );
+      return callback(null, generatedProto);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
   }
 
   async registerGrpcRoute(

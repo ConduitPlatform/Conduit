@@ -17,7 +17,18 @@ service Config {
 }
 
 service Admin {
+  rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+}
+
+message GenerateProtoRequest {
+  string moduleName = 1;
+  repeated string routes = 2;
+}
+
+message GenerateProtoResponse {
+  string protoFile = 1;
+  string formattedModuleName = 2;
 }
 
 message RegisterAdminRouteRequest {
