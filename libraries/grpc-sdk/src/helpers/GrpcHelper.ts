@@ -23,11 +23,11 @@ export function createServer(port: string): Promise<{ server: Server; port: numb
 
 export function addServiceToServer(
   server: Server,
-  protoFilePath: string,
+  protoPath: string,
   descriptorObject: string,
   functions: { [name: string]: Function },
 ) {
-  const packageDefinition = protoLoader.loadSync(protoFilePath, {
+  const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
     longs: String,
     enums: String,

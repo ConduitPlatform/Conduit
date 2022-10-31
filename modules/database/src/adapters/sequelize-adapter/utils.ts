@@ -1,9 +1,8 @@
 import { Op } from 'sequelize';
-import _, { isArray, isObject, isString } from 'lodash';
-import ConduitGrpcSdk, { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
+import _, { isArray, isBoolean, isObject, isString } from 'lodash';
+import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
-import { isBoolean } from 'lodash';
 import { ParsedQuery } from '../../interfaces';
 
 function arrayHandler(value: any) {
@@ -18,6 +17,8 @@ function matchOperation(operator: string, value: any) {
   switch (operator) {
     case '$eq':
       return { [Op.eq]: value };
+    case '$exists':
+      return value ? { [Op.ne]: null } : { [Op.eq]: null };
     case '$ne':
       // replace the parsed query with the sequelize-native equivalent
       if (value[Op.regexp]) {
@@ -77,7 +78,9 @@ export function parseQuery(query: ParsedQuery) {
     } else if (key === '$options') {
       continue;
     } else {
-      const matched = matchOperation(key, parseQuery(query[key]));
+      const subQuery = parseQuery(query[key]);
+      if (subQuery === undefined) continue;
+      const matched = matchOperation(key, subQuery);
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
       } else {
@@ -85,7 +88,11 @@ export function parseQuery(query: ParsedQuery) {
       }
     }
   }
-  ConduitGrpcSdk.Logger.log('Sequelize Parse Debug: ' + parsed);
+  if (
+    Object.keys(parsed).length === 0 &&
+    Object.getOwnPropertySymbols(parsed).length === 0
+  )
+    return undefined;
   return parsed;
 }
 

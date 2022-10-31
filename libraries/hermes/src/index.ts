@@ -281,3 +281,4 @@ export * from './interfaces';
 export * from './types';
 export * from './classes';
 export * from './utils/GrpcConverter';
+export * from './utils/ProtoGenerator';

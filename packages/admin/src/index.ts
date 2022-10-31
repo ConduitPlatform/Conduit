@@ -8,10 +8,14 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   Indexable,
+  ConduitRouteObject,
+  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
   IConduitAdmin,
+  GenerateProtoRequest,
+  GenerateProtoResponse,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
@@ -21,6 +25,7 @@ import AdminConfigRawSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
+import { protoTemplate, swaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -30,7 +35,7 @@ import {
   ConduitSocket,
   grpcToConduitRoute,
   RouteT,
-  SwaggerRouterMetadata,
+  ProtoGenerator,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -38,35 +43,6 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-
-const swaggerRouterMetadata: SwaggerRouterMetadata = {
-  urlPrefix: '',
-  securitySchemes: {
-    masterKey: {
-      name: 'masterkey',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'Your administrative secret key, configurable through MASTER_KEY env var in Conduit Core',
-    },
-    adminToken: {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'Bearer',
-      description: 'An admin authentication token, retrievable through [POST] /login',
-    },
-  },
-  globalSecurityHeaders: [
-    {
-      masterKey: [],
-    },
-  ],
-  setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.path !== '/login' && route.input.path !== '/modules') {
-      swaggerRouteDoc.security[0].adminToken = [];
-    }
-  },
-};
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -92,13 +68,14 @@ export default class AdminModule extends IConduitAdmin {
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
     this.grpcSdk = grpcSdk;
+    ProtoGenerator.getInstance(protoTemplate);
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
       '/',
       this.grpcSdk,
       1000,
-      swaggerRouterMetadata,
+      swaggerMetadata,
       { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
@@ -140,6 +117,7 @@ export default class AdminModule extends IConduitAdmin {
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
       {
+        generateProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
@@ -233,6 +211,25 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   // grpc
+  async generateProto(
+    call: GrpcRequest<GenerateProtoRequest>,
+    callback: GrpcCallback<GenerateProtoResponse>,
+  ) {
+    const moduleName = call.request.moduleName;
+    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
+      call.request.routes.map(r => JSON.parse(r));
+    try {
+      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
+        moduleName,
+        routes,
+      );
+      return callback(null, generatedProto);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
+  }
+
   async registerAdminRoute(
     call: GrpcRequest<RegisterAdminRouteRequest>,
     callback: GrpcCallback<null>,
