@@ -14,6 +14,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
 import { NotificationToken } from '../models';
+import { ISendNotification } from '../interfaces/ISendNotification';
 
 export class AdminHandlers {
   private provider: IPushNotificationsProvider;
@@ -46,6 +47,7 @@ export class AdminHandlers {
           title: ConduitString.Required,
           body: ConduitString.Optional,
           data: ConduitString.Optional,
+          platform: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendNotification', 'String'),
@@ -61,10 +63,34 @@ export class AdminHandlers {
           title: ConduitString.Required,
           body: ConduitString.Optional,
           data: ConduitString.Optional,
+          platform: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
       this.sendNotificationToManyDevices.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/sendMany',
+        action: ConduitRouteActions.POST,
+        description: `Sends many notifications to many devices.`,
+        bodyParams: {
+          notifications: {
+            type: [
+              {
+                sendTo: ConduitString.Required,
+                title: ConduitString.Required,
+                body: ConduitString.Optional,
+                data: ConduitString.Optional,
+                platform: ConduitString.Optional,
+              },
+            ],
+            required: true,
+          },
+        },
+      },
+      new ConduitRouteReturnDefinition('SendManyNotifications', 'String'),
+      this.sendManyNotifications.bind(this),
     );
     this.routingManager.route(
       {
@@ -89,6 +115,7 @@ export class AdminHandlers {
       title: call.request.params.title,
       body: call.request.params.body,
       data: call.request.params.data,
+      platform: call.request.params.platform,
     };
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
@@ -114,6 +141,20 @@ export class AdminHandlers {
       data: call.request.params.data,
     };
     await this.provider.sendToManyDevices(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    ConduitGrpcSdk.Metrics?.increment(
+      'push_notifications_sent_total',
+      call.request.params.userIds.length,
+    );
+    return 'Ok';
+  }
+
+  async sendManyNotifications(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const params: ISendNotification[] = call.request.params.notifications;
+    await this.provider.sendMany(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
     ConduitGrpcSdk.Metrics?.increment(

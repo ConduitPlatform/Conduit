@@ -11,8 +11,10 @@ import * as models from './models';
 import {
   GetNotificationTokensRequest,
   GetNotificationTokensResponse,
+  SendManyNotificationsRequest,
   SendNotificationRequest,
   SendNotificationResponse,
+  SendToManyDevicesNotificationRequest,
   SetNotificationTokenRequest,
   SetNotificationTokenResponse,
 } from './types';
@@ -22,9 +24,14 @@ import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvi
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { ISendNotification } from './interfaces/ISendNotification';
+import {
+  ISendNotification,
+  ISendNotificationToManyDevices,
+} from './interfaces/ISendNotification';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
+import { OneSignalProvider } from './providers/OneSignal.provider';
+import { IOneSignalSettings } from './interfaces/IOneSignalSettings';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -37,6 +44,8 @@ export default class PushNotifications extends ManagedModule<Config> {
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this),
       sendNotification: this.sendNotification.bind(this),
+      SendNotificationToManyDevices: this.sendToManyDevices.bind(this),
+      sendManyNotifications: this.sendMany.bind(this),
     },
   };
   private isRunning = false;
@@ -140,6 +149,8 @@ export default class PushNotifications extends ManagedModule<Config> {
     const settings = notificationsConfig[name];
     if (name === 'firebase') {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+    } else if (name === 'onesignal') {
+      this._provider = new OneSignalProvider(settings as IOneSignalSettings);
     } else {
       throw new Error('Provider not supported');
     }
@@ -211,12 +222,66 @@ export default class PushNotifications extends ManagedModule<Config> {
         body: call.request.body,
         data: data ? JSON.parse(data) : {},
         type: call.request.type,
+        platform: call.request.platform,
       };
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
     let errorMessage: string | null = null;
     await this._provider!.sendToDevice(params).catch(e => {
+      errorMessage = e;
+    });
+    if (errorMessage) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+    return callback(null, { message: 'Ok' });
+  }
+
+  async sendToManyDevices(
+    call: SendToManyDevicesNotificationRequest,
+    callback: SendNotificationResponse,
+  ) {
+    const data = call.request.data;
+    let params: ISendNotificationToManyDevices;
+
+    try {
+      params = {
+        sendTo: call.request.sendTo,
+        title: call.request.title,
+        body: call.request.body,
+        data: data ? JSON.parse(data) : {},
+        type: call.request.type,
+        platform: call.request.platform,
+      };
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+    let errorMessage: string | null = null;
+    await this._provider!.sendToManyDevices(params).catch(e => {
+      errorMessage = e;
+    });
+    if (errorMessage) {
+      return callback({ code: status.INTERNAL, message: errorMessage });
+    }
+    return callback(null, { message: 'Ok' });
+  }
+
+  async sendMany(call: SendManyNotificationsRequest, callback: SendNotificationResponse) {
+    let params: ISendNotification[];
+    try {
+      params = call.request.notifications.map(notification => ({
+        sendTo: notification.sendTo,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data ? JSON.parse(notification.data) : {},
+        type: notification.type,
+        platform: notification.platform,
+      }));
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+    let errorMessage: string | null = null;
+    await this._provider!.sendMany(params).catch(e => {
       errorMessage = e;
     });
     if (errorMessage) {

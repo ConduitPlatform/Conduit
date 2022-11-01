@@ -30,6 +30,7 @@
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
+    "@onesignal/node-onesignal": "^1.0.0-beta4",
     "convict": "^6.2.3",
     "firebase-admin": "^11.0.0",
     "lodash": "^4.17.21"
