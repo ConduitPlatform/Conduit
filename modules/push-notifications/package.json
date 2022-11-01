@@ -33,9 +33,7 @@
     "@onesignal/node-onesignal": "^1.0.0-beta4",
     "convict": "^6.2.3",
     "firebase-admin": "^11.0.0",
-    "lodash": "^4.17.21",
-    "onesignal-node": "^3.4.0",
-    "v": "^0.3.0"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/convict": "^6.1.1",
