@@ -43,9 +43,9 @@ export default class PushNotifications extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this),
-      send: this.sendNotification.bind(this),
-      sendToManyDevices: this.sendToManyDevices.bind(this),
-      sendMany: this.sendMany.bind(this),
+      sendNotification: this.sendNotification.bind(this),
+      SendNotificationToManyDevices: this.sendToManyDevices.bind(this),
+      sendManyNotifications: this.sendMany.bind(this),
     },
   };
   private isRunning = false;
