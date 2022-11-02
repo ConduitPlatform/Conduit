@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.2](https://github.com/ConduitPlatform/Conduit/compare/v0.15.1...v0.15.2) (2022-11-02)
+
+
+### Features
+
+* **push-notifications:** one signal provider ([#406](https://github.com/ConduitPlatform/Conduit/issues/406)) ([df63eb3](https://github.com/ConduitPlatform/Conduit/commit/df63eb38acb7a662d1720a8a51c49271410d84ed))
+
+
+### Bug Fixes
+
+* **authentication:** auth middleware excluded paths ([#405](https://github.com/ConduitPlatform/Conduit/issues/405)) ([4083491](https://github.com/ConduitPlatform/Conduit/commit/4083491cc1945dd3326aa20215800f038c140aa1))
+* **database:** failing $exists and nullity queries in postgres ([#409](https://github.com/ConduitPlatform/Conduit/issues/409)) ([30bfde3](https://github.com/ConduitPlatform/Conduit/commit/30bfde3794d0385a1d49f4b41d4c35be0c4df88e))
+
 ### [0.15.1](https://github.com/ConduitPlatform/Conduit/compare/v0.15.0...v0.15.1) (2022-10-25)
 
 
