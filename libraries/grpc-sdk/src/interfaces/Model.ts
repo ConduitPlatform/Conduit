@@ -19,6 +19,7 @@ export interface ConduitModelField {
   select?: boolean;
   required?: boolean;
   systemRequired?: boolean;
+  index?: any;
 }
 
 export interface ConduitModel {
@@ -49,4 +50,5 @@ export interface ConduitSchemaOptions {
       canDelete: boolean;
     };
   };
+  indexes?: any;
 }

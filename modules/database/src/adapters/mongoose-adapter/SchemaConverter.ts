@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitModelField, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil, isObject, cloneDeep } from 'lodash';
 const deepdash = require('deepdash/standalone');
 
@@ -8,13 +8,15 @@ const deepdash = require('deepdash/standalone');
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  const copy = cloneDeep(jsonSchema);
+  let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
-
+  deepdash.eachDeep(copy.fields, convertSchemaFieldIndexes);
   deepdash.eachDeep(copy.fields, convert);
-
+  if (copy.modelOptions.indexes) {
+    copy = convertModelOptionsIndexes(copy);
+  }
   return copy;
 }
 
@@ -51,4 +53,35 @@ function convert(value: any, key: any, parentValue: any, context: any) {
     // Remove this after custom modules are updated
     delete parentValue[key].systemRequired;
   }
+}
+
+function convertSchemaFieldIndexes(value: any, key: any) {
+  if (key == 'index') {
+    for (const [option, optionValue] of Object.entries(value.options)) {
+      value[option] = optionValue;
+    }
+    delete value.options;
+    return false;
+  }
+}
+
+function convertModelOptionsIndexes(copy: ConduitSchema) {
+  for (const index of copy.modelOptions.indexes) {
+    if (index.fields.length === 1) {
+      const modelField = copy.fields[index.fields[0]] as ConduitModelField;
+      if (modelField.index) {
+        throw new Error(`Field ${modelField} already has an index defined`);
+      }
+      modelField.index = {
+        type: index.type,
+      };
+      for (const [option, optionValue] of Object.entries(index.options)) {
+        modelField.index[option] = optionValue;
+      }
+    } else {
+      throw new Error("You can't create compound indexes at mongoose path level");
+    }
+  }
+  delete copy.modelOptions.indexes;
+  return copy;
 }

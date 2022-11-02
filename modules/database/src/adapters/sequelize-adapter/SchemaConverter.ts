@@ -8,14 +8,15 @@ import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  const copy = _.cloneDeep(jsonSchema) as any;
-
+  let copy = _.cloneDeep(jsonSchema) as any;
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
-
   iterDeep(jsonSchema.fields, copy.fields);
-
+  if (copy.modelOptions.indexes) {
+    copy = convertModelOptionsIndexes(copy);
+  }
+  copy = convertSchemaFieldIndexes(copy);
   return copy;
 }
 
@@ -103,4 +104,43 @@ function checkDefaultValue(type: string, value: string) {
     default:
       return value;
   }
+}
+
+function convertModelOptionsIndexes(copy: any) {
+  for (const index of copy.modelOptions.indexes) {
+    if (index.type) {
+      index.using = index.type;
+      delete index.type;
+    }
+    for (const [option, value] of Object.entries(index.options)) {
+      index[option] = value;
+      delete index.options.option;
+    }
+  }
+  return copy;
+}
+
+function convertSchemaFieldIndexes(copy: any) {
+  const indexes = [];
+  for (const [fieldName, fieldValue] of copy.fields) {
+    if (fieldValue.index) {
+      let newIndex: any = {
+        fields: [fieldName],
+      };
+      if (fieldValue.index.type) {
+        newIndex.using = fieldValue.index.type;
+      }
+      for (const [option, value] of Object.entries(fieldValue.index.options)) {
+        newIndex[option] = value;
+      }
+      indexes.push(newIndex);
+      delete copy.fields[fieldName];
+    }
+  }
+  if (copy.modelOptions.indexes) {
+    copy.modelOptions.indexes = [...copy.modelOptions.indexes, ...indexes];
+  } else {
+    copy.modelOptions.indexes = indexes;
+  }
+  return copy;
 }

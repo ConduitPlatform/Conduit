@@ -282,4 +282,13 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
+
+  async createIndexes(schemaName: string, indexes: any): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const fields = this.models[schemaName].originalSchema.fields;
+    const schema = this.sequelize.define(schemaName, fields as Indexable, indexes);
+    await schema.sync({ alter: true });
+    return 'Indexes created!';
+  }
 }

@@ -278,4 +278,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
+
+  async createIndexes(schemaName: string, indexes: any): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const schema = this.mongoose.model(schemaName).schema;
+
+    for (const index of indexes) {
+      try {
+        schema.index(index.fields, index.options);
+      } catch (e: any) {
+        throw new GrpcError(status.INTERNAL, e.message);
+      }
+    }
+    return 'Indexes created!';
+  }
 }

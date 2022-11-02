@@ -167,6 +167,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
+  abstract createIndexes(schemaName: string, indexes: any): Promise<string>;
+
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
     if (dbSchemas.includes(schema.name)) {
