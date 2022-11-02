@@ -24,6 +24,7 @@ import { TokenType } from '../../constants/TokenType';
 import { v4 as uuid } from 'uuid';
 import moment from 'moment/moment';
 import { createHash } from 'crypto';
+import { TeamsHandler } from '../team';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -89,6 +90,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         type: TokenType.STATE_TOKEN,
         token: uuid(),
         data: {
+          inviteId: call.request.params?.inviteId,
           clientId: call.request.context.clientId,
           scope: options.scope,
           codeChallenge: codeChallenge,
@@ -184,7 +186,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
   }
 
-  async createOrUpdateUser(payload: Payload<T>): Promise<User> {
+  async createOrUpdateUser(payload: Payload<T>, inviteId?: string): Promise<User> {
     let user: User | null = null;
     if (payload.hasOwnProperty('email')) {
       user = await User.getInstance().findOne({
@@ -215,6 +217,13 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         [this.providerName]: payload,
         isVerified: true,
       });
+      if (inviteId) {
+        await TeamsHandler.getInstance()
+          .addUserToTeam(user, inviteId)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
     }
     return user!;
   }
@@ -227,6 +236,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         action: ConduitRouteActions.GET,
         queryParams: {
           scopes: [ConduitString.Optional],
+          inviteId: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(

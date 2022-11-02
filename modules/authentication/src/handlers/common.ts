@@ -15,6 +15,7 @@ import { RefreshToken, User } from '../models';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
 import { TokenProvider } from './tokenProvider';
+import { TeamsHandler } from './team';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -107,6 +108,37 @@ export class CommonHandlers implements IAuthenticationStrategy {
     return this.logOut(call);
   }
 
+  async acceptInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { inviteId } = call.request.params;
+    await TeamsHandler.getInstance().addUserToTeam(user, inviteId);
+    return 'OK';
+  }
+
+  async userInvite(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId, email, role } = call.request.params;
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      action: 'invite',
+      resource: 'Team:' + teamId,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'You do not have permission to invite users to this team',
+      );
+    }
+
+    let invitation = await TeamsHandler.getInstance().createUserInvitation({
+      teamId,
+      email,
+      role,
+      inviter: user,
+    });
+    return invitation.token;
+  }
+
   declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
@@ -117,6 +149,34 @@ export class CommonHandlers implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition(User.name),
       this.getUser.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user/accept-invite/:inviteId',
+        description: `Accepts an invite from another user.`,
+        urlParams: {
+          inviteId: ConduitString.Required,
+        },
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('InviteAccepted', 'String'),
+      this.acceptInvite.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/user/create-invite',
+        description: `Creates a new invite to join a user to a team.`,
+        bodyParams: {
+          teamId: ConduitString.Required,
+          role: ConduitString.Optional,
+          email: ConduitString.Optional,
+        },
+        action: ConduitRouteActions.POST,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('InvitationToken', 'String'),
+      this.userInvite.bind(this),
     );
     routingManager.route(
       {

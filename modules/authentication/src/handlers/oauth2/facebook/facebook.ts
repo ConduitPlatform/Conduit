@@ -79,6 +79,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
         description: `Login/register with Facebook by providing a token from the client.`,
         bodyParams: {
           access_token: ConduitString.Required,
+          inviteId: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {

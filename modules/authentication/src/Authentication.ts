@@ -29,7 +29,7 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
-import { Team, User } from './authz';
+import { TeamsHandler } from './handlers/team';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -281,8 +281,7 @@ export default class Authentication extends ManagedModule<Config> {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });
-    promises.push(this.grpcSdk.authorization!.defineResource(User));
-    promises.push(this.grpcSdk.authorization!.defineResource(Team));
+    TeamsHandler.getInstance(this.grpcSdk).initialize();
     return Promise.all(promises);
   }
 

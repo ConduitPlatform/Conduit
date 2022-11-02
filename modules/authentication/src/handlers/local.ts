@@ -19,6 +19,8 @@ import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
+import { Team } from '../models/Team.schema';
+import { TeamsHandler } from './team';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -40,6 +42,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
+          inviteId: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
@@ -228,6 +231,14 @@ export class LocalHandlers implements IAuthenticationStrategy {
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
+        });
+    }
+
+    if (call.request.params.inviteId) {
+      await TeamsHandler.getInstance()
+        .addUserToTeam(user, call.request.params.inviteId)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
         });
     }
     delete user.hashedPassword;
