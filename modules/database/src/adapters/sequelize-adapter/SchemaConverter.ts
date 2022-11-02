@@ -122,15 +122,18 @@ function convertModelOptionsIndexes(copy: any) {
 
 function convertSchemaFieldIndexes(copy: any) {
   const indexes = [];
-  for (const [fieldName, fieldValue] of copy.fields) {
-    if (fieldValue.index) {
-      let newIndex: any = {
+  for (const field of Object.entries(copy.fields)) {
+    const fieldName = field[0];
+    if (copy.fields[fieldName].index) {
+      const newIndex: any = {
         fields: [fieldName],
       };
-      if (fieldValue.index.type) {
-        newIndex.using = fieldValue.index.type;
+      if (copy.fields[fieldName].index.type) {
+        newIndex.using = copy.fields[fieldName].index.type;
       }
-      for (const [option, value] of Object.entries(fieldValue.index.options)) {
+      for (const [option, value] of Object.entries(
+        copy.fields[fieldName].index.options,
+      )) {
         newIndex[option] = value;
       }
       indexes.push(newIndex);
