@@ -17,6 +17,7 @@ import { TwoFa } from '../handlers/twoFa';
 import authMiddleware from './middleware';
 import { MagicLinkHandlers } from '../handlers/magicLink';
 import { Config } from '../config';
+import { TeamsHandler } from '../handlers/team';
 
 type OAuthHandler = typeof oauth2;
 
@@ -62,6 +63,14 @@ export class AuthenticationRoutes {
     let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
       await this.localHandlers.declareRoutes(this._routingManager);
+      enabled = true;
+    }
+
+    let teamsActivated = await TeamsHandler.getInstance(this.grpcSdk)
+      .validate()
+      .catch(e => (errorMessage = e));
+    if (!errorMessage && teamsActivated) {
+      await TeamsHandler.getInstance().declareRoutes(this._routingManager);
       enabled = true;
     }
     errorMessage = null;

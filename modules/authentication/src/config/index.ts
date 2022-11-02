@@ -16,9 +16,11 @@ import bitbucketConfig from './bitbucket.config';
 import linkedInConfig from './linkedIn.config';
 import appleConfig from './apple.config';
 import twitterConfig from './twitter.config';
+import teamsConfig from './teams.config';
 
 const AppConfigSchema = {
   ...DefaultConfig,
+  ...teamsConfig,
   ...figmaConfig,
   ...githubConfig,
   ...microsoftConfig,

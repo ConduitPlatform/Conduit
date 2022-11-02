@@ -1,5 +1,7 @@
 import {
   Admin,
+  Authentication,
+  Authorization,
   Chat,
   Config,
   Core,
@@ -10,8 +12,6 @@ import {
   Router,
   SMS,
   Storage,
-  Authorization,
-  Authentication,
 } from './modules';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
@@ -454,6 +454,21 @@ export default class ConduitGrpcSdk {
       await sleep(1000);
     }
     return true;
+  }
+
+  onceModuleUp(moduleName: string, callback: () => void) {
+    if (this.isAvailable(moduleName)) callback();
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? callback() : null,
+    );
+  }
+
+  onceModuleDown(moduleName: string, callback: () => void) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? null : callback(),
+    );
   }
 
   /**
