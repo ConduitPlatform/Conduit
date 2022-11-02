@@ -29,6 +29,7 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
+import { Team, User } from './authz';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -276,10 +277,12 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
+    const promises: Promise<any>[] = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });
+    promises.push(this.grpcSdk.authorization!.defineResource(User));
+    promises.push(this.grpcSdk.authorization!.defineResource(Team));
     return Promise.all(promises);
   }
 

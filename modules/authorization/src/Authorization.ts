@@ -168,12 +168,12 @@ export default class Authorization extends ManagedModule<Config> {
         message: 'At least 2 of subject, relation, resource must be provided',
       });
     }
-    await this.relationsController.findRelations({
+    const relations = await this.relationsController.findRelations({
       relation,
       resource,
       subject,
     });
-    callback(null, {});
+    callback(null, { relations });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

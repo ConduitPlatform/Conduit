@@ -42,6 +42,9 @@ message FindRelationRequest {
   optional string relation = 2;
   optional string resource = 3;
 }
+message FindRelationResponse {
+  repeated Relation relations = 1;
+}
 
 message PermissionCheck {
   string subject = 1;
@@ -60,6 +63,6 @@ service Authorization {
   rpc UpdateResource(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc DeleteRelation(Relation) returns (Empty);
-  rpc FindRelation(FindRelationRequest) returns (Relation);
+  rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
 }

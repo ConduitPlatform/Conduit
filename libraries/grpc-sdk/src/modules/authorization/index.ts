@@ -4,6 +4,7 @@ import {
   Decision,
   Empty,
   FindRelationRequest,
+  FindRelationResponse,
   PermissionCheck,
   Relation,
   Resource,
@@ -35,7 +36,7 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.createRelation(data);
   }
 
-  findRelation(data: FindRelationRequest): Promise<Relation> {
+  findRelation(data: FindRelationRequest): Promise<FindRelationResponse> {
     return this.client!.findRelation(data);
   }
 
