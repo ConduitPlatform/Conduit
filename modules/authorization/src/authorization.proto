@@ -35,8 +35,8 @@ message Relation {
 }
 
 message DeleteAllRelationsRequest {
-  string subject = 1;
-  string resource = 2;
+  optional string subject = 1;
+  optional string resource = 2;
 }
 message DeleteResourceRequest {
   string name = 1;

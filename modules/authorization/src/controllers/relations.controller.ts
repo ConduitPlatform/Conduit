@@ -72,16 +72,10 @@ export class RelationsController {
     return;
   }
 
-  async deleteAllRelations(subject: string, object: string) {
-    const relationResources = await Relationship.getInstance().findMany({
-      subject: subject,
-      resource: object,
-    });
+  async deleteAllRelations(query: { subject?: string; resource?: string }) {
+    const relationResources = await Relationship.getInstance().findMany(query);
     if (relationResources.length === 0) throw new Error('No relations found');
-    await Relationship.getInstance().deleteMany({
-      subject: subject,
-      resource: object,
-    });
+    await Relationship.getInstance().deleteMany(query);
     for (const relationResource of relationResources) {
       await this.indexController.removeRelation(
         relationResource.subject,

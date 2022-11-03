@@ -159,8 +159,8 @@ export default class Authorization extends ManagedModule<Config> {
   }
 
   async deleteAllRelations(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
-    const { relation, resource, subject } = call.request;
-    await this.relationsController.deleteAllRelations(subject, resource);
+    const { resource, subject } = call.request;
+    await this.relationsController.deleteAllRelations({ subject, resource });
     callback(null, {});
   }
 
