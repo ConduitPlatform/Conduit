@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   RoutingManager,
+  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -92,6 +93,45 @@ export class TeamsAdmin {
         count: ConduitNumber.Required,
       }),
       this.getTeamMembers.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: '/teams/members/:id',
+        action: ConduitRouteActions.POST,
+        urlParams: {
+          id: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          members: {
+            type: [TYPE.ObjectId],
+            required: true,
+          },
+        },
+        name: 'AddTeamMembers',
+        description: 'Add users as members to a team',
+      },
+      new ConduitRouteReturnDefinition('AddTeamMembers', 'String'),
+      this.addTeamMembers.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/members/:id',
+        action: ConduitRouteActions.DELETE,
+        urlParams: {
+          id: ConduitObjectId.Required,
+        },
+        queryParams: {
+          members: {
+            type: [TYPE.ObjectId],
+            required: true,
+          },
+        },
+        name: 'RemoveTeamMembers',
+        description: 'Remove members from a team',
+      },
+      new ConduitRouteReturnDefinition('RemoveTeamMembers', 'String'),
+      this.removeTeamMembers.bind(this),
     );
     routingManager.route(
       {
@@ -210,43 +250,52 @@ export class TeamsAdmin {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Default team cannot be deleted');
     }
     await Team.getInstance().deleteOne({ _id: id });
+    await this.grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + id });
+    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + id });
     return 'Team deleted';
   }
 
-  async addTeamMember(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { userId, teamId, role } = call.request.params;
-    let team = await Team.getInstance().findOne({ _id: teamId });
+  async addTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { members, id } = call.request.params;
+    let team = await Team.getInstance().findOne({ _id: id });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
-    let user = await User.getInstance().findOne({ _id: userId });
-    if (!user) {
+    let users = await User.getInstance().findMany({ _id: { $in: members } });
+    if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'User not found');
     }
-    await this.grpcSdk.authorization!.createRelation({
-      subject: 'User:' + userId,
-      resource: 'Team:' + teamId,
-      relation: role,
-    });
-    return 'User added to team';
+    for (let user of users) {
+      await this.grpcSdk.authorization!.createRelation({
+        subject: 'User:' + user._id,
+        resource: 'Team:' + team._id,
+        relation: 'member',
+      });
+    }
+    return 'Users added to team';
   }
 
-  async removeTeamMember(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { userId, teamId, role } = call.request.params;
-    let team = await Team.getInstance().findOne({ _id: teamId });
+  async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { members, id } = call.request.params;
+    if (members.length === 0) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'No members to remove');
+    }
+    let team = await Team.getInstance().findOne({ _id: id });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
-    let user = await User.getInstance().findOne({ _id: userId });
-    if (!user) {
-      throw new GrpcError(status.NOT_FOUND, 'User not found');
+    let users = await User.getInstance().findMany({ _id: { $in: members } });
+    if (!users || users.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'Users not found');
     }
-    await this.grpcSdk.authorization!.deleteRelation({
-      subject: 'User:' + userId,
-      resource: 'Team:' + teamId,
-      relation: role,
-    });
-    return 'User removed from team';
+    for (let user of users) {
+      await this.grpcSdk.authorization!.deleteAllRelations({
+        subject: 'User:' + user._id,
+        resource: 'Team:' + id,
+      });
+    }
+
+    return 'Users removed from team';
   }
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
