@@ -15,7 +15,6 @@ import { RefreshToken, User } from '../models';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { Config } from '../config';
 import { TokenProvider } from './tokenProvider';
-import { TeamsHandler } from './team';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -104,6 +103,12 @@ export class CommonHandlers implements IAuthenticationStrategy {
       );
     }
     await User.getInstance().deleteOne({ _id: user._id });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      resource: 'User:' + user._id,
+    });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      subject: 'User:' + user._id,
+    });
 
     return this.logOut(call);
   }
