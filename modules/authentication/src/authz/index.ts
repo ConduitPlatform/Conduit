@@ -11,6 +11,7 @@ export const Team = new ConduitAuthorizedResource(
   {
     read: ['members', 'owner->read', 'owner'],
     edit: ['owner', 'owner->edit'],
+    delete: ['owner', 'owner->delete'],
     invite: ['owner'],
   },
 );

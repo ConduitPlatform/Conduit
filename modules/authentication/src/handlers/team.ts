@@ -149,6 +149,41 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return team;
   }
 
+  async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { id } = call.request.params;
+    if (!call.request.context.jwtPayload.sudo) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'Re-login required to enter sudo mode',
+      );
+    }
+    let existingTeam = await Team.getInstance().findOne({ _id: id });
+    if (!existingTeam) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Team does not exist');
+    }
+
+    const can = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['delete'],
+      resource: 'Team:' + id,
+    });
+    if (!can.allow) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to delete this team',
+      );
+    }
+    await Team.getInstance().deleteOne({ _id: id });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      resource: 'Team:' + id,
+    });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      subject: 'Team:' + id,
+    });
+    return 'Deleted';
+  }
+
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { team, members } = call.request.params;
@@ -294,6 +329,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition(Team.name),
       this.createTeam.bind(this),
     );
+
     routingManager.route(
       {
         path: '/team/members',
@@ -307,6 +343,19 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('DeleteTeamMembersResponse', 'String'),
       this.removeTeamMembers.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/team/:id',
+        description: `Deletes a team.`,
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        action: ConduitRouteActions.DELETE,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
+      this.deleteTeam.bind(this),
     );
     routingManager.route(
       {
