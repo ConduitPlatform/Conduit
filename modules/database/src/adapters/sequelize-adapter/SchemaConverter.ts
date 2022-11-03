@@ -1,22 +1,21 @@
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
-import * as _ from 'lodash';
-import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash';
+import { isBoolean, isNumber, isString, isArray, isObject, cloneDeep } from 'lodash';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  let copy = _.cloneDeep(jsonSchema) as any;
+  let copy = cloneDeep(jsonSchema) as any;
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
-  iterDeep(jsonSchema.fields, copy.fields);
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
   copy = convertSchemaFieldIndexes(copy);
+  iterDeep(jsonSchema.fields, copy.fields);
   return copy;
 }
 
@@ -114,8 +113,8 @@ function convertModelOptionsIndexes(copy: any) {
     }
     for (const [option, value] of Object.entries(index.options)) {
       index[option] = value;
-      delete index.options.option;
     }
+    delete index.options;
   }
   return copy;
 }
