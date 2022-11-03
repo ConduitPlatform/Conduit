@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   GrpcRequest,
@@ -160,8 +160,13 @@ export default class Authorization extends ManagedModule<Config> {
 
   async deleteAllRelations(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
     const { resource, subject } = call.request;
-    await this.relationsController.deleteAllRelations({ subject, resource });
-    callback(null, {});
+    try {
+      await this.relationsController.deleteAllRelations({ subject, resource });
+    } catch (e) {
+      ConduitGrpcSdk.Logger.warn((e as Error).message);
+    } finally {
+      callback(null, {});
+    }
   }
 
   async findRelation(
