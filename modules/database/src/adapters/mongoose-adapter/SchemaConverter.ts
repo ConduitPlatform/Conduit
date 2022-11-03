@@ -1,5 +1,9 @@
 import { Schema } from 'mongoose';
-import { ConduitModelField, ConduitSchema } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModelField,
+  ConduitSchema,
+  SchemaFieldIndex,
+} from '@conduitplatform/grpc-sdk';
 import { isNil, isObject, cloneDeep } from 'lodash';
 const deepdash = require('deepdash/standalone');
 
@@ -66,17 +70,19 @@ function convertSchemaFieldIndexes(value: any, key: any) {
 }
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
-  for (const index of copy.modelOptions.indexes) {
+  for (const index of copy.modelOptions.indexes!) {
     if (index.fields.length === 1) {
       const modelField = copy.fields[index.fields[0]] as ConduitModelField;
       if (modelField.index) {
         throw new Error(`Field ${modelField} already has an index defined`);
       }
       modelField.index = {
-        type: index.type,
+        indexType: index.indexType,
       };
-      for (const [option, optionValue] of Object.entries(index.options)) {
-        modelField.index[option] = optionValue;
+      if (index.options) {
+        for (const [option, optionValue] of Object.entries(index.options)) {
+          modelField.index[option as keyof SchemaFieldIndex] = optionValue;
+        }
       }
     } else {
       throw new Error("You can't create compound indexes at mongoose path level");

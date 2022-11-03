@@ -107,14 +107,16 @@ function checkDefaultValue(type: string, value: string) {
 
 function convertModelOptionsIndexes(copy: any) {
   for (const index of copy.modelOptions.indexes) {
-    if (index.type) {
-      index.using = index.type;
-      delete index.type;
+    if (index.indexType) {
+      index.using = index.indexType;
+      delete index.indexType;
     }
-    for (const [option, value] of Object.entries(index.options)) {
-      index[option] = value;
+    if (index.options) {
+      for (const [option, value] of Object.entries(index.options)) {
+        index[option] = value;
+      }
+      delete index.options;
     }
-    delete index.options;
   }
   return copy;
 }
@@ -127,13 +129,15 @@ function convertSchemaFieldIndexes(copy: any) {
       const newIndex: any = {
         fields: [fieldName],
       };
-      if (copy.fields[fieldName].index.type) {
-        newIndex.using = copy.fields[fieldName].index.type;
+      if (copy.fields[fieldName].index.indexType) {
+        newIndex.using = copy.fields[fieldName].index.indexType;
       }
-      for (const [option, value] of Object.entries(
-        copy.fields[fieldName].index.options,
-      )) {
-        newIndex[option] = value;
+      if (copy.fields[fieldName].index.options) {
+        for (const [option, value] of Object.entries(
+          copy.fields[fieldName].index.options,
+        )) {
+          newIndex[option] = value;
+        }
       }
       indexes.push(newIndex);
       delete copy.fields[fieldName];
