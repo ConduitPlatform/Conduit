@@ -2,6 +2,9 @@ import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/gr
 
 const schema = {
   _id: TYPE.ObjectId,
+  parentTeam: {
+    type: TYPE.ObjectId,
+  },
   name: {
     type: TYPE.String,
     required: true,
@@ -30,6 +33,7 @@ export class Team extends ConduitActiveSchema<Team> {
   private static _instance: Team;
   _id: string;
   name: string;
+  parentTeam: string;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -42,7 +42,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
-          inviteId: ConduitString.Optional,
+          invitationToken: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
@@ -234,9 +234,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         });
     }
 
-    if (call.request.params.inviteId) {
+    if (call.request.params.invitationToken) {
       await TeamsHandler.getInstance()
-        .addUserToTeam(user, call.request.params.inviteId)
+        .addUserToTeam(user, call.request.params.invitationToken)
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });

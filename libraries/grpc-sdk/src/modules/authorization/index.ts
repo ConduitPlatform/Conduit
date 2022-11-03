@@ -2,6 +2,7 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import {
   AuthorizationDefinition,
   Decision,
+  DeleteAllRelationsRequest,
   Empty,
   FindRelationRequest,
   FindRelationResponse,
@@ -30,6 +31,9 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
 
   deleteRelation(data: Relation): Promise<Empty> {
     return this.client!.deleteRelation(data);
+  }
+  deleteAllRelations(data: DeleteAllRelationsRequest): Promise<Empty> {
+    return this.client!.deleteAllRelations(data);
   }
 
   createRelation(data: Relation): Promise<Empty> {

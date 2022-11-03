@@ -72,6 +72,26 @@ export class RelationsController {
     return;
   }
 
+  async deleteAllRelations(subject: string, object: string) {
+    const relationResources = await Relationship.getInstance().findMany({
+      subject: subject,
+      resource: object,
+    });
+    if (relationResources.length === 0) throw new Error('No relations found');
+    await Relationship.getInstance().deleteMany({
+      subject: subject,
+      resource: object,
+    });
+    for (const relationResource of relationResources) {
+      await this.indexController.removeRelation(
+        relationResource.subject,
+        relationResource.relation,
+        relationResource.resource,
+      );
+    }
+    return;
+  }
+
   async deleteRelationById(id: string) {
     const relationResource = await Relationship.getInstance().findOne({ _id: id });
     if (!relationResource) throw new Error('Relation does not exist');

@@ -63,7 +63,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           id_token: ConduitString.Required,
           access_token: ConduitString.Required,
           expires_in: ConduitString.Optional,
-          inviteId: ConduitString.Optional,
+          invitationToken: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {

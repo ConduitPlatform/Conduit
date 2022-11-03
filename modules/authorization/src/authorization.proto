@@ -33,6 +33,11 @@ message Relation {
   string relation = 2;
   string resource = 3;
 }
+
+message DeleteAllRelationsRequest {
+  string subject = 1;
+  string resource = 2;
+}
 message DeleteResourceRequest {
   string name = 1;
 }
@@ -48,7 +53,7 @@ message FindRelationResponse {
 
 message PermissionCheck {
   string subject = 1;
-  string action = 2;
+  repeated string actions = 2;
   string resource = 3;
 }
 
@@ -63,6 +68,7 @@ service Authorization {
   rpc UpdateResource(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc DeleteRelation(Relation) returns (Empty);
+  rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (Empty);
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
 }

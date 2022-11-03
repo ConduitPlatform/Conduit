@@ -40,6 +40,7 @@ export default class Authorization extends ManagedModule<Config> {
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
       deleteRelation: this.deleteRelation.bind(this),
+      deleteAllRelations: this.deleteAllRelations.bind(this),
       findRelation: this.findRelation.bind(this),
       can: this.can.bind(this),
     },
@@ -157,6 +158,12 @@ export default class Authorization extends ManagedModule<Config> {
     callback(null, {});
   }
 
+  async deleteAllRelations(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
+    const { relation, resource, subject } = call.request;
+    await this.relationsController.deleteAllRelations(subject, resource);
+    callback(null, {});
+  }
+
   async findRelation(
     call: GrpcRequest<FindRelationRequest>,
     callback: GrpcResponse<Empty>,
@@ -177,8 +184,12 @@ export default class Authorization extends ManagedModule<Config> {
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
-    const { subject, resource, action } = call.request;
-    const allow = await this.permissionsController.can(subject, action, resource);
+    const { subject, resource, actions } = call.request;
+    let allow = false;
+    for (const action of actions) {
+      allow = await this.permissionsController.can(subject, action, resource);
+      if (allow) break;
+    }
     callback(null, { allow });
   }
 
