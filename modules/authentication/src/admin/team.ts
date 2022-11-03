@@ -45,6 +45,7 @@ export class TeamsAdmin {
         action: ConduitRouteActions.POST,
         bodyParams: {
           name: ConduitString.Required,
+          parentTeam: ConduitObjectId.Optional,
           isDefault: ConduitBoolean.Optional,
         },
         name: 'CreateTeam',
@@ -153,18 +154,31 @@ export class TeamsAdmin {
   }
 
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, isDefault } = call.request.params;
+    const { name, isDefault, parentTeam } = call.request.params;
     if (isDefault) {
       let found = await Team.getInstance().findOne({ isDefault: true });
       if (found) {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
+    let found = await Team.getInstance().findOne({ name });
+    if (found) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Team already exists');
+    }
 
-    return await Team.getInstance().create({
+    let team = await Team.getInstance().create({
       name,
+      parentTeam: parentTeam || null,
       isDefault: isNil(isDefault) ? false : isDefault,
     });
+    if (parentTeam) {
+      await this.grpcSdk.authorization!.createRelation({
+        subject: 'Team:' + parentTeam,
+        resource: 'Team:' + team._id,
+        relation: 'owner',
+      });
+    }
+    return team;
   }
 
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
