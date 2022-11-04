@@ -15,7 +15,7 @@ export class CustomEndpointController {
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
   ) {
-    this.handler = new CustomEndpointHandler(this.grpcSdk);
+    this.handler = new CustomEndpointHandler(database);
     this.refreshRoutes();
     this.initializeState();
   }
