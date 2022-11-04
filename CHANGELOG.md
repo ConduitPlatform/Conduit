@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.3](https://github.com/ConduitPlatform/Conduit/compare/v0.15.2...v0.15.3) (2022-11-04)
+
+
+### Bug Fixes
+
+* **database:** route declare order for crud ([#412](https://github.com/ConduitPlatform/Conduit/issues/412)) ([635cdb2](https://github.com/ConduitPlatform/Conduit/commit/635cdb2bf54138c037d68b0da778010ed943dd22))
+
 ### [0.15.2](https://github.com/ConduitPlatform/Conduit/compare/v0.15.1...v0.15.2) (2022-11-02)
 
 
