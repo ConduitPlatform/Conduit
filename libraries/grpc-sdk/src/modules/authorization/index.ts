@@ -7,6 +7,7 @@ import {
   FindRelationRequest,
   FindRelationResponse,
   PermissionCheck,
+  PermissionRequest,
   Relation,
   Resource,
 } from '../../protoUtils/authorization';
@@ -46,5 +47,11 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
 
   can(data: PermissionCheck): Promise<Decision> {
     return this.client!.can(data);
+  }
+  grantPermission(data: PermissionRequest): Promise<Empty> {
+    return this.client!.grantPermission(data);
+  }
+  removePermission(data: PermissionRequest): Promise<Empty> {
+    return this.client!.removePermission(data);
   }
 }
