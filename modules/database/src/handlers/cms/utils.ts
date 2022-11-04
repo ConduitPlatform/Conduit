@@ -9,8 +9,6 @@ export async function findSchema(
   call: ParsedRouterRequest,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
-  const { params, populate, inputDocument } = call.request.params;
-  const id = params.id;
   const schemaName = call.request.path.split('/')[2];
   const schema = await database
     .getSchemaModel('_DeclaredSchema')
@@ -21,7 +19,7 @@ export async function findSchema(
   if (!schema) {
     throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
   }
-  return { params, schemaName, id, populate, inputDocument };
+  return schemaName;
 }
 
 export async function getUpdatedDocument(

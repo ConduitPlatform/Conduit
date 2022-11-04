@@ -84,17 +84,6 @@ export function getOps(
     actualSchema.modelOptions.conduit!.cms.crudOperations.read.enabled;
   if (readIsEnabled) {
     let route = new RouteBuilder()
-      .path(`/${schemaName}/:id`)
-      .method(ConduitRouteActions.GET)
-      .urlParams({
-        id: { type: TYPE.String, required: true },
-      })
-      .cacheControl(authenticatedRead ? 'private, max-age=10' : 'public, max-age=10')
-      .return(`${schemaName}`, actualSchema.fields)
-      .handler(handlers.getDocumentById.bind(handlers));
-    if (authenticatedRead) route.middleware('authMiddleware');
-    routesArray.push(route.build());
-    route = new RouteBuilder()
       .path(`/${schemaName}`)
       .method(ConduitRouteActions.GET)
       .queryParams({
@@ -108,6 +97,17 @@ export function getOps(
         count: TYPE.Number,
       })
       .handler(handlers.getDocuments.bind(handlers));
+    if (authenticatedRead) route.middleware('authMiddleware');
+    routesArray.push(route.build());
+    route = new RouteBuilder()
+      .path(`/${schemaName}/:id`)
+      .method(ConduitRouteActions.GET)
+      .urlParams({
+        id: { type: TYPE.String, required: true },
+      })
+      .cacheControl(authenticatedRead ? 'private, max-age=10' : 'public, max-age=10')
+      .return(`${schemaName}`, actualSchema.fields)
+      .handler(handlers.getDocumentById.bind(handlers));
     if (authenticatedRead) route.middleware('authMiddleware');
     routesArray.push(route.build());
   }
