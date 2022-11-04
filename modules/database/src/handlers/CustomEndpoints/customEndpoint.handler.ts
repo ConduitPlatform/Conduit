@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, {
+import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
   GrpcError,
@@ -6,14 +6,19 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { status } from '@grpc/grpc-js';
-import { ICustomEndpoint, PopulatedCustomEndpoint, Sort } from '../../interfaces';
+import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 
 export class CustomEndpointHandler {
   private static routeControllers: Indexable = {};
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  constructor(
+    private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
+  ) {}
 
   static addNewCustomOperationControl(
     endpoint: ICustomEndpoint | PopulatedCustomEndpoint,
@@ -106,72 +111,57 @@ export class CustomEndpointHandler {
       );
     }
 
-    let sortObj: Sort | null = null;
+    let sort: string | undefined = undefined;
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
-      const sort = params.sort;
-      sortObj = {};
-      sort.forEach((sortVal: string) => {
-        sortVal = sortVal.trim();
-        if (sortVal.indexOf('-') !== -1) {
-          (sortObj as Indexable)[sortVal.substr(1)] = -1;
-        } else {
-          (sortObj as Indexable)[sortVal] = 1;
-        }
-      });
+      sort = params.sort;
     }
 
     const createObj = this.parseCreateQuery(createString);
     let promise;
     if (endpoint.operation === OperationsEnum.GET) {
       if (endpoint.paginated) {
-        const documentsPromise = this.grpcSdk.databaseProvider!.findMany(
-          endpoint.selectedSchemaName,
-          searchQuery,
-          undefined,
-          params['skip'],
-          params['limit'],
-          sortObj as Sort,
-          params['populate'],
-        );
-        const countPromise = this.grpcSdk.databaseProvider!.countDocuments(
-          endpoint.selectedSchemaName,
-          searchQuery,
-        );
+        const documentsPromise = this.database
+          .getSchemaModel(endpoint.selectedSchemaName)
+          .model.findMany(
+            searchQuery,
+            params['skip'],
+            params['limit'],
+            undefined,
+            sort,
+            params['populate'],
+          );
+        const countPromise = this.database
+          .getSchemaModel(endpoint.selectedSchemaName)
+          .model.countDocuments(searchQuery);
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
-        promise = this.grpcSdk.databaseProvider!.findMany(
-          endpoint.selectedSchemaName,
-          searchQuery,
-          undefined,
-          undefined,
-          undefined,
-          sortObj as Sort,
-          params['populate'],
-        );
+        promise = this.database
+          .getSchemaModel(endpoint.selectedSchemaName)
+          .model.findMany(
+            searchQuery,
+            undefined,
+            undefined,
+            undefined,
+            sort,
+            params['populate'],
+          );
       }
     } else if (endpoint.operation === OperationsEnum.POST) {
-      promise = this.grpcSdk.databaseProvider!.create(
-        endpoint.selectedSchemaName,
-        createObj,
-      );
+      promise = this.database
+        .getSchemaModel(endpoint.selectedSchemaName)
+        .model.create(createObj);
     } else if (endpoint.operation === OperationsEnum.PUT) {
-      promise = this.grpcSdk.databaseProvider!.updateMany(
-        endpoint.selectedSchemaName,
-        searchQuery,
-        createObj,
-      );
+      promise = this.database
+        .getSchemaModel(endpoint.selectedSchemaName)
+        .model.updateMany(searchQuery, createObj);
     } else if (endpoint.operation === OperationsEnum.DELETE) {
-      promise = this.grpcSdk.databaseProvider!.deleteMany(
-        endpoint.selectedSchemaName,
-        searchQuery,
-      );
+      promise = this.database
+        .getSchemaModel(endpoint.selectedSchemaName)
+        .model.deleteMany(searchQuery);
     } else if (endpoint.operation === OperationsEnum.PATCH) {
-      promise = this.grpcSdk.databaseProvider!.updateMany(
-        endpoint.selectedSchemaName,
-        searchQuery,
-        createObj,
-        true,
-      );
+      promise = this.database
+        .getSchemaModel(endpoint.selectedSchemaName)
+        .model.updateMany(searchQuery, createObj, true);
     } else {
       process.exit(-1);
     }

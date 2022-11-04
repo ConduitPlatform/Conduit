@@ -4,7 +4,6 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelCtor,
-  Order,
   Sequelize,
 } from 'sequelize';
 import {
@@ -179,7 +178,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: Order,
+    sort?: string,
     populate?: string[],
     relations?: Indexable,
   ): Promise<any> {
@@ -202,9 +201,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
-    if (!isNil(sort)) {
-      options.order = sort;
-    }
+    // if (!isNil(sort)) {
+    // TODO: parse sort str
+    //   options.order = new Literal(sort);
+    // }
 
     const documents = await this.model.findAll(options);
 
