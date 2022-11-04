@@ -1,10 +1,11 @@
-import { ConnectOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndexes,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
@@ -212,6 +213,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     const newSchema = schemaConverter(schema);
+    const indexes = newSchema.modelOptions.indexes;
+    delete newSchema.modelOptions.indexes;
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -224,7 +227,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this,
     );
     await this.saveSchemaToDatabase(schema);
-
+    if (indexes) {
+      await this.createIndexes(schema.name, indexes);
+    }
     return this.models[schema.name];
   }
 
@@ -279,18 +284,25 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Schema deleted!';
   }
 
-  async createIndexes(schemaName: string, indexes: any): Promise<string> {
+  async createIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+  ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const schema = this.mongoose.model(schemaName).schema;
-
     for (const index of indexes) {
+      let fields: any = {};
+      for (let i = 0; i < index.fields.length; i++) {
+        fields[index.fields[i]] = index.types![i];
+      }
       try {
-        schema.index(index.fields, index.options);
+        schema.index(fields, index.options as IndexOptions);
       } catch (e: any) {
         throw new GrpcError(status.INTERNAL, e.message);
       }
     }
+    console.log(schema.indexes());
     return 'Indexes created!';
   }
 }
