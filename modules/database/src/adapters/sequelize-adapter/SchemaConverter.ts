@@ -107,9 +107,9 @@ function checkDefaultValue(type: string, value: string) {
 
 function convertModelOptionsIndexes(copy: any) {
   for (const index of copy.modelOptions.indexes) {
-    if (index.indexType) {
-      index.using = index.indexType;
-      delete index.indexType;
+    if (index.types) {
+      index.using = index.types;
+      delete index.types;
     }
     if (index.options) {
       for (const [option, value] of Object.entries(index.options)) {
@@ -129,8 +129,8 @@ function convertSchemaFieldIndexes(copy: any) {
       const newIndex: any = {
         fields: [fieldName],
       };
-      if (copy.fields[fieldName].index.indexType) {
-        newIndex.using = copy.fields[fieldName].index.indexType;
+      if (copy.fields[fieldName].index.types) {
+        newIndex.using = copy.fields[fieldName].index.types;
       }
       if (copy.fields[fieldName].index.options) {
         for (const [option, value] of Object.entries(

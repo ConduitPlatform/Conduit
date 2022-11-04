@@ -2,9 +2,12 @@ import { Schema } from 'mongoose';
 import {
   ConduitModelField,
   ConduitSchema,
+  MongoIndexType,
+  MongoIndexOptions,
   SchemaFieldIndex,
+  PostgresIndexOptions,
 } from '@conduitplatform/grpc-sdk';
-import { isNil, isObject, cloneDeep } from 'lodash';
+import { isNil, isObject, cloneDeep, values } from 'lodash';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -16,7 +19,7 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
-  deepdash.eachDeep(copy.fields, convertSchemaFieldIndexes);
+  copy = convertSchemaFieldIndexes(copy);
   deepdash.eachDeep(copy.fields, convert);
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
@@ -59,35 +62,89 @@ function convert(value: any, key: any, parentValue: any, context: any) {
   }
 }
 
-function convertSchemaFieldIndexes(value: any, key: any) {
-  if (key == 'index') {
-    for (const [option, optionValue] of Object.entries(value.options)) {
-      value[option] = optionValue;
+function convertSchemaFieldIndexes(copy: ConduitSchema) {
+  for (const field of Object.entries(copy.fields)) {
+    const index = (field[1] as ConduitModelField).index;
+    if (!index) continue;
+    const indexType = index.type;
+    const options = index.options;
+    if (!indexType && !options) {
+      throw new Error('Index should have at least a type or some options');
     }
-    delete value.options;
-    return false;
+    if (indexType && !Object.values(MongoIndexType).includes(indexType)) {
+      throw new Error('Incorrect index type for MongoDB');
+    }
+    if (options) {
+      if (!checkIfMongoOptions(options)) {
+        throw new Error('Incorrect index options for MongoDB');
+      }
+      for (const [option, optionValue] of Object.entries(options)) {
+        index[option as keyof SchemaFieldIndex] = optionValue;
+      }
+      delete index.options;
+    }
   }
+  return copy;
 }
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
+    // compound indexes are maintained in modelOptions in order to be created after schema creation
+    //single field index => add it to specified field
     if (index.fields.length === 1) {
       const modelField = copy.fields[index.fields[0]] as ConduitModelField;
-      if (modelField.index) {
-        throw new Error(`Field ${modelField} already has an index defined`);
+      if (!modelField) {
+        throw new Error(`Field ${modelField} in index definition doesn't exist`);
       }
-      modelField.index = {
-        indexType: index.indexType,
-      };
+      if (index.types) {
+        if (index.fields.length !== index.types.length) {
+          throw new Error("Number of index types doesn't match number of fields");
+        }
+        if (!Object.values(MongoIndexType).includes(index.types[0])) {
+          throw new Error('Incorrect index type for MongoDB');
+        }
+        const indexType = index.types[0] as MongoIndexType;
+        modelField.index = {
+          type: indexType,
+        };
+      }
       if (index.options) {
+        if (!checkIfMongoOptions(index.options)) {
+          throw new Error('Incorrect index options for MongoDB');
+        }
         for (const [option, optionValue] of Object.entries(index.options)) {
-          modelField.index[option as keyof SchemaFieldIndex] = optionValue;
+          modelField.index![option as keyof SchemaFieldIndex] = optionValue;
         }
       }
-    } else {
-      throw new Error("You can't create compound indexes at mongoose path level");
+      copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);
     }
   }
-  delete copy.modelOptions.indexes;
   return copy;
+}
+
+function checkIfMongoOptions(options: MongoIndexOptions | PostgresIndexOptions) {
+  const mongoOptions = [
+    'background',
+    'unique',
+    'name',
+    'partialFilterExpression',
+    'sparse',
+    'expireAfterSeconds',
+    'storageEngine',
+    'commitQuorum',
+    'version',
+    'weights',
+    'default_language',
+    'language_override',
+    'textIndexVersion',
+    '2dsphereIndexVersion',
+    'bits',
+    'min',
+    'max',
+    'bucketSize',
+    'wildcardProjection',
+    'hidden',
+  ];
+  const result = Object.keys(options).some(option => !mongoOptions.includes(option));
+  return !result;
 }

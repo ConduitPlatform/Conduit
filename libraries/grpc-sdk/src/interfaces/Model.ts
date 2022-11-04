@@ -13,8 +13,8 @@ export enum TYPE {
 export enum MongoIndexType {
   Ascending = 1,
   Descending = -1,
-  '2d' = '2d',
-  '2dsphere' = '2dsphere',
+  GeoSpatial2d = '2d',
+  GeoSpatial2dSphere = '2dsphere',
   GeoHaystack = 'geoHaystack',
   Hashed = 'hashed',
   Text = 'text',
@@ -75,13 +75,13 @@ export interface ConduitSchemaOptions {
 }
 
 export interface SchemaFieldIndex extends MongoIndexOptions, PostgresIndexOptions {
-  indexType?: MongoIndexType | PostgresIndexType;
+  type?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 }
 
 export interface ModelOptionsIndexes extends MongoIndexOptions, PostgresIndexOptions {
   fields: string[];
-  indexType?: MongoIndexType | PostgresIndexType;
+  types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 }
 
