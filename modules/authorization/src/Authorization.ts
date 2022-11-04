@@ -17,6 +17,7 @@ import {
   Empty,
   FindRelationRequest,
   PermissionCheck,
+  PermissionRequest,
   Relation,
   Resource,
 } from './protoTypes/authorization';
@@ -39,6 +40,8 @@ export default class Authorization extends ManagedModule<Config> {
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
+      grantPermission: this.grantPermission.bind(this),
+      removePermission: this.removePermission.bind(this),
       deleteRelation: this.deleteRelation.bind(this),
       deleteAllRelations: this.deleteAllRelations.bind(this),
       findRelation: this.findRelation.bind(this),
@@ -196,6 +199,25 @@ export default class Authorization extends ManagedModule<Config> {
       if (allow) break;
     }
     callback(null, { allow });
+  }
+
+  async grantPermission(
+    call: GrpcRequest<PermissionRequest>,
+    callback: GrpcResponse<Decision>,
+  ) {
+    const { subject, resource, action } = call.request;
+    await this.permissionsController.grantPermission(subject, action, resource);
+    callback(null);
+  }
+
+  async removePermission(
+    call: GrpcRequest<PermissionRequest>,
+    callback: GrpcResponse<Decision>,
+  ) {
+    const { subject, resource, action } = call.request;
+    await this.permissionsController.removePermission(subject, action, resource);
+
+    callback(null);
   }
 
   async initializeMetrics() {

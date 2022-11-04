@@ -3,6 +3,7 @@ import { checkRelation, computePermissionTuple } from '../utils';
 import { IndexController } from './index.controller';
 import { RuleCache } from './cache.controller';
 import { isNil } from 'lodash';
+import { Permission } from '../models';
 
 export class PermissionsController {
   private static _instance: PermissionsController;
@@ -20,6 +21,31 @@ export class PermissionsController {
     throw new Error('Missing grpcSdk or indexController!');
   }
 
+  async grantPermission(subject: string, action: string, resource: string) {
+    // action is not a relation but still validates the input
+    checkRelation(subject, action, resource);
+    const computedTuple = computePermissionTuple(subject, action, resource);
+    await Permission.getInstance().create({
+      subject,
+      permission: action,
+      resource,
+      computedTuple,
+    });
+  }
+
+  async removePermission(subject: string, action: string, resource: string) {
+    // action is not a relation but still validates the input
+    checkRelation(subject, action, resource);
+    const computedTuple = computePermissionTuple(subject, action, resource);
+    let permission = await Permission.getInstance().findOne({
+      computedTuple,
+    });
+    if (!permission) {
+      throw new Error(`Permission does not exist!`);
+    }
+    await Permission.getInstance().deleteOne({ _id: permission._id });
+  }
+
   async can(subject: string, action: string, object: string) {
     checkRelation(subject, action, object);
     const computedTuple = computePermissionTuple(subject, action, object);
@@ -29,6 +55,14 @@ export class PermissionsController {
     }
     // if the actor is the object itself, all permissions are provided
     if (subject === object) {
+      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+      return true;
+    }
+
+    const permission = await Permission.getInstance().findOne({
+      computedTuple,
+    });
+    if (permission) {
       await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }

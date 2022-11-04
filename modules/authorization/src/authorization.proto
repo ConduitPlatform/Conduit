@@ -56,6 +56,11 @@ message PermissionCheck {
   repeated string actions = 2;
   string resource = 3;
 }
+message PermissionRequest {
+  string subject = 1;
+  string action = 2;
+  string resource = 3;
+}
 
 message Decision {
   bool allow = 1;
@@ -68,6 +73,8 @@ service Authorization {
   rpc UpdateResource(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc DeleteRelation(Relation) returns (Empty);
+  rpc GrantPermission(PermissionRequest) returns (Empty);
+  rpc RemovePermission(PermissionRequest) returns (Empty);
   rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (Empty);
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
