@@ -292,7 +292,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const schema = this.mongoose.model(schemaName).schema;
     for (const index of indexes) {
-      let fields: any = {};
+      const fields: any = {};
       for (let i = 0; i < index.fields.length; i++) {
         fields[index.fields[i]] = index.types![i];
       }

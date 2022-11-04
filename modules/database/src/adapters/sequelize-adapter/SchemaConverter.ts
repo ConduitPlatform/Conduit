@@ -1,4 +1,10 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModelField,
+  ConduitSchema,
+  ModelOptionsIndexes,
+  PostgresIndexOptions,
+  PostgresIndexType,
+} from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { isBoolean, isNumber, isString, isArray, isObject, cloneDeep } from 'lodash';
 
@@ -7,7 +13,7 @@ import { isBoolean, isNumber, isString, isArray, isObject, cloneDeep } from 'lod
  * @param jsonSchema
  */
 export function schemaConverter(jsonSchema: ConduitSchema) {
-  let copy = cloneDeep(jsonSchema) as any;
+  let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
   }
@@ -105,15 +111,15 @@ function checkDefaultValue(type: string, value: string) {
   }
 }
 
-function convertModelOptionsIndexes(copy: any) {
-  for (const index of copy.modelOptions.indexes) {
+function convertModelOptionsIndexes(copy: ConduitSchema) {
+  for (const index of copy.modelOptions.indexes!) {
     if (index.types) {
-      index.using = index.types;
+      index.using = index.types as PostgresIndexType;
       delete index.types;
     }
     if (index.options) {
       for (const [option, value] of Object.entries(index.options)) {
-        index[option] = value;
+        index[option as keyof PostgresIndexOptions] = value;
       }
       delete index.options;
     }
@@ -121,21 +127,20 @@ function convertModelOptionsIndexes(copy: any) {
   return copy;
 }
 
-function convertSchemaFieldIndexes(copy: any) {
+function convertSchemaFieldIndexes(copy: ConduitSchema) {
   const indexes = [];
   for (const field of Object.entries(copy.fields)) {
     const fieldName = field[0];
-    if (copy.fields[fieldName].index) {
+    const index = (copy.fields[fieldName] as ConduitModelField).index;
+    if (index) {
       const newIndex: any = {
         fields: [fieldName],
       };
-      if (copy.fields[fieldName].index.types) {
-        newIndex.using = copy.fields[fieldName].index.types;
+      if (index.type) {
+        newIndex.using = index.type;
       }
-      if (copy.fields[fieldName].index.options) {
-        for (const [option, value] of Object.entries(
-          copy.fields[fieldName].index.options,
-        )) {
+      if (index.options) {
+        for (const [option, value] of Object.entries(index.options)) {
           newIndex[option] = value;
         }
       }

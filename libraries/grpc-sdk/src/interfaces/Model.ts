@@ -115,6 +115,6 @@ export interface PostgresIndexOptions {
   parser?: null | string;
   prefix?: string;
   unique?: boolean;
-  using?: string;
+  using?: PostgresIndexType;
   where?: WhereOptions;
 }
