@@ -10,6 +10,25 @@ export enum TYPE {
   Relation = 'Relation',
 }
 
+export enum MongoIndexType {
+  Ascending = 1,
+  Descending = -1,
+  '2d' = '2d',
+  '2dsphere' = '2dsphere',
+  GeoHaystack = 'geoHaystack',
+  Hashed = 'hashed',
+  Text = 'text',
+}
+
+export enum PostgresIndexType {
+  BTREE = 'BTREE',
+  HASH = 'HASH',
+  GIST = 'GIST',
+  SPGIST = 'SPGIST',
+  GIN = 'GIN',
+  BRIN = 'BRIN',
+}
+
 export type Array = any[];
 
 export interface ConduitModelField {
@@ -56,25 +75,15 @@ export interface ConduitSchemaOptions {
 }
 
 export interface SchemaFieldIndex extends MongoIndexOptions, PostgresIndexOptions {
-  indexType?: string | number;
+  indexType?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 }
 
 export interface ModelOptionsIndexes extends MongoIndexOptions, PostgresIndexOptions {
   fields: string[];
-  indexType?: string | number;
+  indexType?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
 }
-
-export type MongoIndexTypes =
-  | 1
-  | -1
-  | '2d'
-  | '2dsphere'
-  | 'geoHaystack'
-  | 'hashed'
-  | 'text';
-export type PostgresIndexTypes = 'BTREE' | 'HASH' | 'GIST' | 'SPGIST' | 'GIN' | 'BRIN';
 
 export interface MongoIndexOptions {
   background?: boolean;
