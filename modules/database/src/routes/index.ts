@@ -50,9 +50,8 @@ export class DatabaseRoutes {
   }
 
   requestRefresh() {
-    if (this.crudRoutes && this.crudRoutes.length !== 0) {
-      this._scheduleTimeout();
-    }
+    if (this.crudRoutes.length == 0 && this.customRoutes.length == 0) return;
+    this._scheduleTimeout();
   }
 
   private _scheduleTimeout() {
