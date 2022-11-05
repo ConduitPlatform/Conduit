@@ -12,7 +12,9 @@ body:
           required: true
         - label: I have searched the [Issue Tracker](https://github.com/ConduitPlatform/Conduit/issues) for a bug that matches the one I want to file, without success.
           required: true
-        - label: This issue is not related to the [Conduit Admin Panel](https://github.com/ConduitPlatform/Conduit-UI) user interface.
+        - label: This issue is not related to [Conduit Admin Panel](https://github.com/ConduitPlatform/Conduit-UI).
+          required: true
+        - label: This issue is not related to [Conduit CLI](https://github.com/ConduitPlatform/CLI).
           required: true
  #       - label: This issue is not a report of a security vulnerability (see [here](https://github.com/ConduitPlatform/Conduit/security/policy) if you need to report a security issue).
  #         required: true
@@ -20,7 +22,7 @@ body:
     attributes:
       label: Conduit version
       description: What version of Conduit are you using?
-      placeholder: 0.12.5
+      placeholder: 0.15.3
     validations:
       required: true
   - type: textarea
@@ -56,6 +58,6 @@ body:
     attributes:
       label: Environment
       description: What is your operating system
-      placeholder: "e.g. Fedora Silverblue 36"
+      placeholder: "e.g. Fedora Silverblue 37"
     validations:
       required: false
