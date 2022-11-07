@@ -1,4 +1,4 @@
-import { ModelOptions, Sequelize } from 'sequelize';
+import { Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
