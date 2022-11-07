@@ -1,6 +1,11 @@
 import { Op } from 'sequelize';
 import _, { isArray, isBoolean, isObject, isString } from 'lodash';
-import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  Indexable,
+  MongoIndexOptions,
+  PostgresIndexOptions,
+} from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from './index';
 import { SequelizeSchema } from './SequelizeSchema';
 import { ParsedQuery } from '../../interfaces';
@@ -162,6 +167,23 @@ async function _createWithPopulations(
       }
     }
   }
+}
+
+export function checkIfPostgresOptions(
+  options: MongoIndexOptions | PostgresIndexOptions,
+) {
+  const postgresOptions = [
+    'concurrently',
+    'name',
+    'operator',
+    'parser',
+    'prefix',
+    'unique',
+    'using',
+    'where',
+  ];
+  const result = Object.keys(options).some(option => !postgresOptions.includes(option));
+  return !result;
 }
 
 /**

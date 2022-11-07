@@ -6,12 +6,14 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
+  MongoIndexType,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
+import { checkIfMongoOptions } from './utils';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -290,19 +292,39 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    this.checkIndexes(indexes);
     const schema = this.mongoose.model(schemaName).schema;
     for (const index of indexes) {
       const fields: any = {};
       for (let i = 0; i < index.fields.length; i++) {
         fields[index.fields[i]] = index.types![i];
       }
-      try {
-        schema.index(fields, index.options as IndexOptions);
-      } catch (e: any) {
-        throw new GrpcError(status.INTERNAL, e.message);
+      schema.index(fields, index.options as IndexOptions);
+    }
+    return 'Indexes created!';
+  }
+
+  private checkIndexes(indexes: ModelOptionsIndexes[]) {
+    for (const index of indexes) {
+      if (index.types) {
+        if (!Array.isArray(index.types)) {
+          throw new GrpcError(status.INTERNAL, 'Index types should be an array');
+        }
+        if (index.fields.length !== index.types.length) {
+          throw new GrpcError(
+            status.INTERNAL,
+            "Number of index types doesn't match number of fields",
+          );
+        }
+        for (const type of index.types) {
+          if (!Object.values(MongoIndexType).includes(type)) {
+            throw new GrpcError(status.INTERNAL, 'Invalid index type for mongoDB');
+          }
+        }
+      }
+      if (index.options && !checkIfMongoOptions(index.options)) {
+        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
       }
     }
-    console.log(schema.indexes());
-    return 'Indexes created!';
   }
 }

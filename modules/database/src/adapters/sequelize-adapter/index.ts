@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize';
+import { ModelOptions, Sequelize } from 'sequelize';
 import { SequelizeSchema } from './SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
@@ -6,6 +6,8 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndexes,
+  PostgresIndexType,
   sleep,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
@@ -14,6 +16,7 @@ import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
+import { checkIfPostgresOptions } from './utils';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -283,12 +286,51 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  async createIndexes(schemaName: string, indexes: any): Promise<string> {
+  async createIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+  ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const fields = this.models[schemaName].originalSchema.fields;
-    const schema = this.sequelize.define(schemaName, fields as Indexable, indexes);
+    indexes = this.checkAndConvertIndexes(indexes);
+    const schema = this.sequelize.define(
+      schemaName,
+      fields as Indexable,
+      indexes as ModelOptions,
+    );
     await schema.sync({ alter: true });
     return 'Indexes created!';
+  }
+
+  private checkAndConvertIndexes(indexes: ModelOptionsIndexes[]) {
+    for (const index of indexes) {
+      if (index.types) {
+        if (
+          Array.isArray(index.types) ||
+          !Object.values(PostgresIndexType).includes(index.types)
+        ) {
+          throw new GrpcError(
+            status.INVALID_ARGUMENT,
+            'Invalid index type for PostgreSQL',
+          );
+        }
+        index.using = index.types;
+        delete index.types;
+      }
+      if (index.options) {
+        if (!checkIfPostgresOptions(index.options)) {
+          throw new GrpcError(
+            status.INVALID_ARGUMENT,
+            'Invalid index options for PostgreSQL',
+          );
+        }
+        for (const [option, value] of Object.entries(index.options)) {
+          index[option] = value;
+        }
+        delete index.options;
+      }
+    }
+    return indexes;
   }
 }

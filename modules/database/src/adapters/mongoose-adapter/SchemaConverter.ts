@@ -3,11 +3,10 @@ import {
   ConduitModelField,
   ConduitSchema,
   MongoIndexType,
-  MongoIndexOptions,
   SchemaFieldIndex,
-  PostgresIndexOptions,
 } from '@conduitplatform/grpc-sdk';
-import { isNil, isObject, cloneDeep, values } from 'lodash';
+import { isNil, isObject, cloneDeep, isArray } from 'lodash';
+import { checkIfMongoOptions } from './utils';
 const deepdash = require('deepdash/standalone');
 
 /**
@@ -68,9 +67,6 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
     if (!index) continue;
     const indexType = index.type;
     const options = index.options;
-    if (!indexType && !options) {
-      throw new Error('Index should have at least a type or some options');
-    }
     if (indexType && !Object.values(MongoIndexType).includes(indexType)) {
       throw new Error('Incorrect index type for MongoDB');
     }
@@ -90,18 +86,21 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
     // compound indexes are maintained in modelOptions in order to be created after schema creation
-    //single field index => add it to specified field
+    // single field index => add it to specified schema field
     if (index.fields.length === 1) {
       const modelField = copy.fields[index.fields[0]] as ConduitModelField;
       if (!modelField) {
         throw new Error(`Field ${modelField} in index definition doesn't exist`);
       }
       if (index.types) {
+        if (
+          !isArray(index.types) ||
+          !Object.values(MongoIndexType).includes(index.types[0])
+        ) {
+          throw new Error('Invalid index type for MongoDB');
+        }
         if (index.fields.length !== index.types.length) {
           throw new Error("Number of index types doesn't match number of fields");
-        }
-        if (!Object.values(MongoIndexType).includes(index.types[0])) {
-          throw new Error('Incorrect index type for MongoDB');
         }
         const indexType = index.types[0] as MongoIndexType;
         modelField.index = {
@@ -120,31 +119,4 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
     }
   }
   return copy;
-}
-
-function checkIfMongoOptions(options: MongoIndexOptions | PostgresIndexOptions) {
-  const mongoOptions = [
-    'background',
-    'unique',
-    'name',
-    'partialFilterExpression',
-    'sparse',
-    'expireAfterSeconds',
-    'storageEngine',
-    'commitQuorum',
-    'version',
-    'weights',
-    'default_language',
-    'language_override',
-    'textIndexVersion',
-    '2dsphereIndexVersion',
-    'bits',
-    'min',
-    'max',
-    'bucketSize',
-    'wildcardProjection',
-    'hidden',
-  ];
-  const result = Object.keys(options).some(option => !mongoOptions.includes(option));
-  return !result;
 }

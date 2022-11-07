@@ -74,15 +74,17 @@ export interface ConduitSchemaOptions {
   indexes?: ModelOptionsIndexes[];
 }
 
-export interface SchemaFieldIndex extends MongoIndexOptions, PostgresIndexOptions {
+export interface SchemaFieldIndex {
   type?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+  [field: string]: any;
 }
 
-export interface ModelOptionsIndexes extends MongoIndexOptions, PostgresIndexOptions {
+export interface ModelOptionsIndexes {
   fields: string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+  [field: string]: any;
 }
 
 export interface MongoIndexOptions {

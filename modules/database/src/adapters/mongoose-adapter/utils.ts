@@ -1,4 +1,8 @@
-import { ConduitModel } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  MongoIndexOptions,
+  PostgresIndexOptions,
+} from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from './index';
 import _, { isArray, isObject } from 'lodash';
 import { MongooseSchema } from './MongooseSchema';
@@ -72,6 +76,33 @@ async function _createWithPopulations(
       }
     }
   }
+}
+
+export function checkIfMongoOptions(options: MongoIndexOptions | PostgresIndexOptions) {
+  const mongoOptions = [
+    'background',
+    'unique',
+    'name',
+    'partialFilterExpression',
+    'sparse',
+    'expireAfterSeconds',
+    'storageEngine',
+    'commitQuorum',
+    'version',
+    'weights',
+    'default_language',
+    'language_override',
+    'textIndexVersion',
+    '2dsphereIndexVersion',
+    'bits',
+    'min',
+    'max',
+    'bucketSize',
+    'wildcardProjection',
+    'hidden',
+  ];
+  const result = Object.keys(options).some(option => !mongoOptions.includes(option));
+  return !result;
 }
 
 /**
