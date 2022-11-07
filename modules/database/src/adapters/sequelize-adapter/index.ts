@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
+  PostgresIndexOptions,
   PostgresIndexType,
   sleep,
 } from '@conduitplatform/grpc-sdk';
@@ -292,14 +293,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    const fields = this.models[schemaName].originalSchema.fields;
     indexes = this.checkAndConvertIndexes(indexes);
-    const schema = this.sequelize.define(
-      schemaName,
-      fields as Indexable,
-      indexes as ModelOptions,
-    );
-    await schema.sync({ alter: true });
+    const queryInterface = this.sequelize.getQueryInterface();
+    for (const index of indexes) {
+      await queryInterface.addIndex('cnd_' + schemaName, index.fields, index.options);
+    }
+    await this.models[schemaName].sync();
     return 'Indexes created!';
   }
 
@@ -315,7 +314,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
             'Invalid index type for PostgreSQL',
           );
         }
-        index.using = index.types;
+        (index.options as PostgresIndexOptions).using = index.types;
         delete index.types;
       }
       if (index.options) {
@@ -325,10 +324,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
             'Invalid index options for PostgreSQL',
           );
         }
-        for (const [option, value] of Object.entries(index.options)) {
-          index[option] = value;
-        }
-        delete index.options;
       }
     }
     return indexes;
