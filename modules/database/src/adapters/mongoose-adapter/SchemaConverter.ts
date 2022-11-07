@@ -65,9 +65,9 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
   for (const field of Object.entries(copy.fields)) {
     const index = (field[1] as ConduitModelField).index;
     if (!index) continue;
-    const indexType = index.type;
+    const type = index.type;
     const options = index.options;
-    if (indexType && !Object.values(MongoIndexType).includes(indexType)) {
+    if (type && !Object.values(MongoIndexType).includes(type)) {
       throw new Error('Incorrect index type for MongoDB');
     }
     if (options) {
@@ -87,36 +87,33 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
     // compound indexes are maintained in modelOptions in order to be created after schema creation
     // single field index => add it to specified schema field
-    if (index.fields.length === 1) {
-      const modelField = copy.fields[index.fields[0]] as ConduitModelField;
-      if (!modelField) {
-        throw new Error(`Field ${modelField} in index definition doesn't exist`);
-      }
-      if (index.types) {
-        if (
-          !isArray(index.types) ||
-          !Object.values(MongoIndexType).includes(index.types[0])
-        ) {
-          throw new Error('Invalid index type for MongoDB');
-        }
-        if (index.fields.length !== index.types.length) {
-          throw new Error("Number of index types doesn't match number of fields");
-        }
-        const indexType = index.types[0] as MongoIndexType;
-        modelField.index = {
-          type: indexType,
-        };
-      }
-      if (index.options) {
-        if (!checkIfMongoOptions(index.options)) {
-          throw new Error('Incorrect index options for MongoDB');
-        }
-        for (const [option, optionValue] of Object.entries(index.options)) {
-          modelField.index![option as keyof SchemaFieldIndex] = optionValue;
-        }
-      }
-      copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);
+    if (index.fields.length !== 1) continue;
+    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
+    if (!modelField) {
+      throw new Error(`Field ${modelField} in index definition doesn't exist`);
     }
+    if (index.types) {
+      if (
+        !isArray(index.types) ||
+        !Object.values(MongoIndexType).includes(index.types[0]) ||
+        index.fields.length !== index.types.length
+      ) {
+        throw new Error('Invalid index type for MongoDB');
+      }
+      const type = index.types[0] as MongoIndexType;
+      modelField.index = {
+        type: type,
+      };
+    }
+    if (index.options) {
+      if (!checkIfMongoOptions(index.options)) {
+        throw new Error('Incorrect index options for MongoDB');
+      }
+      for (const [option, optionValue] of Object.entries(index.options)) {
+        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
+      }
+    }
+    copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);
   }
   return copy;
 }

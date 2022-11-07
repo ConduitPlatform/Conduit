@@ -141,27 +141,26 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
   for (const field of Object.entries(copy.fields)) {
     const fieldName = field[0];
     const index = (copy.fields[fieldName] as ConduitModelField).index;
-    if (index) {
-      const newIndex: any = {
-        fields: [fieldName],
-      };
-      if (index.type) {
-        if (!Object.values(PostgresIndexType).includes(index.type as PostgresIndexType)) {
-          throw new Error('Invalid index type for PostgreSQL');
-        }
-        newIndex.using = index.type;
+    if (!index) continue;
+    const newIndex: any = {
+      fields: [fieldName],
+    };
+    if (index.type) {
+      if (!Object.values(PostgresIndexType).includes(index.type as PostgresIndexType)) {
+        throw new Error('Invalid index type for PostgreSQL');
       }
-      if (index.options) {
-        if (!checkIfPostgresOptions(index.options)) {
-          throw new Error('Invalid index options for PostgreSQL');
-        }
-        for (const [option, value] of Object.entries(index.options)) {
-          newIndex[option] = value;
-        }
-      }
-      indexes.push(newIndex);
-      delete copy.fields[fieldName];
+      newIndex.using = index.type;
     }
+    if (index.options) {
+      if (!checkIfPostgresOptions(index.options)) {
+        throw new Error('Invalid index options for PostgreSQL');
+      }
+      for (const [option, value] of Object.entries(index.options)) {
+        newIndex[option] = value;
+      }
+    }
+    indexes.push(newIndex);
+    delete copy.fields[fieldName];
   }
   if (copy.modelOptions.indexes) {
     copy.modelOptions.indexes = [...copy.modelOptions.indexes, ...indexes];

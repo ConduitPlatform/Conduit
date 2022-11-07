@@ -306,24 +306,21 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   private checkIndexes(indexes: ModelOptionsIndexes[]) {
     for (const index of indexes) {
-      if (index.types) {
-        if (!Array.isArray(index.types)) {
-          throw new GrpcError(status.INTERNAL, 'Index types should be an array');
+      const options = index.options;
+      const types = index.types;
+      if (!options && !types) continue;
+      if (options && !checkIfMongoOptions(options)) {
+        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+      }
+      if (types) {
+        if (!Array.isArray(types) || types.length !== index.fields.length) {
+          throw new GrpcError(status.INTERNAL, 'Invalid index types format');
         }
-        if (index.fields.length !== index.types.length) {
-          throw new GrpcError(
-            status.INTERNAL,
-            "Number of index types doesn't match number of fields",
-          );
-        }
-        for (const type of index.types) {
+        for (const type of types) {
           if (!Object.values(MongoIndexType).includes(type)) {
             throw new GrpcError(status.INTERNAL, 'Invalid index type for mongoDB');
           }
         }
-      }
-      if (index.options && !checkIfMongoOptions(index.options)) {
-        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
       }
     }
   }
