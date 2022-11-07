@@ -282,6 +282,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
     delete this.models[schemaName];
     this.mongoose.connection.deleteModel(schemaName);
+    this.registeredSchemas.delete(schemaName);
     this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
