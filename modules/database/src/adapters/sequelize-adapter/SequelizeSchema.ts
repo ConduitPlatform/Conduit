@@ -5,7 +5,6 @@ import {
   FindOptions,
   ModelCtor,
   Sequelize,
-  literal,
   OrderItem,
 } from 'sequelize';
 import {
