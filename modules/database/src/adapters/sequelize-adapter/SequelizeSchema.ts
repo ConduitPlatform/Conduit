@@ -5,6 +5,7 @@ import {
   FindOptions,
   ModelCtor,
   Sequelize,
+  OrderItem,
 } from 'sequelize';
 import {
   MultiDocQuery,
@@ -201,10 +202,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     }
-    // if (!isNil(sort)) {
-    // TODO: parse sort str
-    //   options.order = new Literal(sort);
-    // }
+    if (!isNil(sort)) {
+      options.order = this.parseSort(sort);
+    }
 
     const documents = await this.model.findAll(options);
 
@@ -489,5 +489,20 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     return { exclude };
+  }
+
+  private parseSort(sort: string) {
+    const fields = sort.split(' ');
+    const order = [];
+    for (const field of fields) {
+      let tmp;
+      if (field[0] === '-') {
+        tmp = [field.slice(1), 'DESC'] as OrderItem;
+      } else {
+        tmp = [field, 'ASC'] as OrderItem;
+      }
+      order.push(tmp);
+    }
+    return order;
   }
 }
