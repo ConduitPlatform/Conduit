@@ -282,6 +282,7 @@ export class RestController extends ConduitRouter {
 
   protected _refreshRouter() {
     this.initializeRouter();
+    this._swagger?.cleanup();
     this._registeredLocalRoutes.forEach((route, key) => {
       const [method, path] = key.split('-');
       this.addRoute(path, route);

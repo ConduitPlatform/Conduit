@@ -1,17 +1,17 @@
 import { SwaggerParser } from './SwaggerParser';
-import { isNil } from 'lodash';
+import { isNil, cloneDeep } from 'lodash';
 import { ConduitRouteActions, Indexable, ConduitModel } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
 import { importDbTypes } from '../utils/types';
 
 export class SwaggerGenerator {
-  private readonly _swaggerDoc: Indexable;
-  private readonly _routerMetadata: SwaggerRouterMetadata;
+  private _swaggerDoc: Indexable;
+  private _routerMetadata: SwaggerRouterMetadata;
   private readonly _stringifiedGlobalSecurityHeaders: string;
   private readonly _parser: SwaggerParser;
 
-  constructor(routerMetadata: SwaggerRouterMetadata) {
+  constructor(private readonly routerMetadata: SwaggerRouterMetadata) {
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
@@ -30,10 +30,31 @@ export class SwaggerGenerator {
       },
     };
     this._parser = new SwaggerParser();
-    this._routerMetadata = routerMetadata;
+    this._routerMetadata = cloneDeep(routerMetadata);
     this._stringifiedGlobalSecurityHeaders = JSON.stringify(
       this._routerMetadata.globalSecurityHeaders,
     );
+  }
+
+  cleanup() {
+    this._swaggerDoc = {
+      openapi: '3.0.0',
+      info: {
+        version: '1.0.0',
+        title: 'Conduit',
+      },
+      paths: {},
+      components: {
+        schemas: {
+          ModelId: {
+            type: 'string',
+            format: 'uuid',
+          },
+        },
+        securitySchemes: this.routerMetadata.securitySchemes,
+      },
+    };
+    this._routerMetadata = cloneDeep(this.routerMetadata);
   }
 
   get swaggerDoc() {
