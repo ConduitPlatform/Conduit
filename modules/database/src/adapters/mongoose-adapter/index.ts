@@ -301,6 +301,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       }
       schema.index(fields, index.options as IndexOptions);
     }
+    await this.mongoose.syncIndexes();
     return 'Indexes created!';
   }
 
