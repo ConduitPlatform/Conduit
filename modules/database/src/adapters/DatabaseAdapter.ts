@@ -2,6 +2,7 @@ import ConduitGrpcSdk, {
   ConduitModel,
   ConduitSchema,
   GrpcError,
+  ModelOptionsIndexes,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -166,6 +167,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   ): Promise<string>;
 
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
+
+  abstract createIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+  ): Promise<string>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];

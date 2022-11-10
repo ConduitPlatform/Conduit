@@ -597,6 +597,21 @@ export class AdminHandlers {
       }),
       this.customEndpointsAdmin.schemaDetailsForOperation.bind(this.customEndpointsAdmin),
     );
+    this.routingManager.route(
+      {
+        path: 'schemas/:id/indexes',
+        action: ConduitRouteActions.POST,
+        description: `Creates indexes for a schema.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+        bodyParams: {
+          indexes: [ConduitJson.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateSchemaIndexes', 'String'),
+      this.schemaAdmin.createIndexes.bind(this.schemaAdmin),
+    );
     this.routingManager.registerRoutes();
   }
 }

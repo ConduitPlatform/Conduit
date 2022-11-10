@@ -545,4 +545,15 @@ export class SchemaAdmin {
       databaseSystemSchemas: this.database.systemSchemas,
     };
   }
+
+  async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, indexes } = call.request.params;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return await this.database.createIndexes(requestedSchema.name, indexes);
+  }
 }

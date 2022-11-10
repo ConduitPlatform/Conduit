@@ -1,16 +1,19 @@
-import { ConnectOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   Indexable,
+  ModelOptionsIndexes,
+  MongoIndexType,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
+import { checkIfMongoOptions } from './utils';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -212,6 +215,8 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
 
     const newSchema = schemaConverter(schema);
+    const indexes = newSchema.modelOptions.indexes;
+    delete newSchema.modelOptions.indexes;
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -224,7 +229,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       this,
     );
     await this.saveSchemaToDatabase(schema);
-
+    if (indexes) {
+      await this.createIndexes(schema.name, indexes);
+    }
     return this.models[schema.name];
   }
 
@@ -277,5 +284,45 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.mongoose.connection.deleteModel(schemaName);
     this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
+  }
+
+  async createIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+  ): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    this.checkIndexes(indexes);
+    const schema = this.mongoose.model(schemaName).schema;
+    for (const index of indexes) {
+      const fields: any = {};
+      for (let i = 0; i < index.fields.length; i++) {
+        fields[index.fields[i]] = index.types![i];
+      }
+      schema.index(fields, index.options as IndexOptions);
+    }
+    await this.mongoose.syncIndexes();
+    return 'Indexes created!';
+  }
+
+  private checkIndexes(indexes: ModelOptionsIndexes[]) {
+    for (const index of indexes) {
+      const options = index.options;
+      const types = index.types;
+      if (!options && !types) continue;
+      if (options && !checkIfMongoOptions(options)) {
+        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+      }
+      if (types) {
+        if (!Array.isArray(types) || types.length !== index.fields.length) {
+          throw new GrpcError(status.INTERNAL, 'Invalid index types format');
+        }
+        for (const type of types) {
+          if (!Object.values(MongoIndexType).includes(type)) {
+            throw new GrpcError(status.INTERNAL, 'Invalid index type for mongoDB');
+          }
+        }
+      }
+    }
   }
 }
