@@ -318,7 +318,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/team',
-        description: `Accepts an invite from another user.`,
+        description: `Creates a new team.`,
         bodyParams: {
           name: ConduitString.Required,
           parentTeam: ConduitString.Optional,
