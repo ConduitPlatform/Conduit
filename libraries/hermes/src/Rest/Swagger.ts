@@ -11,26 +11,9 @@ export class SwaggerGenerator {
   private readonly _stringifiedGlobalSecurityHeaders: string;
   private readonly _parser: SwaggerParser;
 
-  constructor(private readonly routerMetadata: SwaggerRouterMetadata) {
-    this._swaggerDoc = {
-      openapi: '3.0.0',
-      info: {
-        version: '1.0.0',
-        title: 'Conduit',
-      },
-      paths: {},
-      components: {
-        schemas: {
-          ModelId: {
-            type: 'string',
-            format: 'uuid',
-          },
-        },
-        securitySchemes: routerMetadata.securitySchemes,
-      },
-    };
+  constructor(private readonly initialRouterMetadata: SwaggerRouterMetadata) {
+    this.cleanup();
     this._parser = new SwaggerParser();
-    this._routerMetadata = cloneDeep(routerMetadata);
     this._stringifiedGlobalSecurityHeaders = JSON.stringify(
       this._routerMetadata.globalSecurityHeaders,
     );
@@ -51,10 +34,10 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes: this.routerMetadata.securitySchemes,
+        securitySchemes: this.initialRouterMetadata.securitySchemes,
       },
     };
-    this._routerMetadata = cloneDeep(this.routerMetadata);
+    this._routerMetadata = cloneDeep(this.initialRouterMetadata);
   }
 
   get swaggerDoc() {
