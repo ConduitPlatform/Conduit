@@ -135,6 +135,26 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
+        path: '/teams/members/:id',
+        action: ConduitRouteActions.PATCH,
+        urlParams: {
+          id: ConduitObjectId.Required,
+        },
+        queryParams: {
+          members: {
+            type: [TYPE.ObjectId],
+            required: true,
+          },
+          role: { type: TYPE.String, required: true },
+        },
+        name: 'ChangeMemberRole',
+        description: 'Changes the roles of members in a team',
+      },
+      new ConduitRouteReturnDefinition('ChangeMemberRole', 'String'),
+      this.modifyRoles.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/teams/:id',
         action: ConduitRouteActions.PATCH,
         urlParams: {
@@ -219,6 +239,35 @@ export class TeamsAdmin {
       });
     }
     return team;
+  }
+
+  async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { members, id, role } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: id });
+
+    if (!team) {
+      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+    }
+
+    for (const member of members) {
+      let relation = await this.grpcSdk.authorization!.findRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+      });
+      if (!relation || relation.relations.length === 0) {
+        continue;
+      }
+      await this.grpcSdk.authorization!.deleteAllRelations({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+      });
+      await this.grpcSdk.authorization!.createRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+        relation: role,
+      });
+    }
+    return 'ok';
   }
 
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
