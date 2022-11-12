@@ -140,7 +140,7 @@ export class TeamsAdmin {
         urlParams: {
           id: ConduitObjectId.Required,
         },
-        queryParams: {
+        bodyParams: {
           members: {
             type: [TYPE.ObjectId],
             required: true,

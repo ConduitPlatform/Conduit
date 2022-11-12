@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitNumber,
+  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -314,6 +315,49 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return invitation.token;
   }
 
+  async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { team, members, role } = call.request.params;
+    let targetTeam = await Team.getInstance().findOne({ _id: team });
+    if (!targetTeam) {
+      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+    }
+    if (members.indexOf(user._id) !== -1) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot change self role');
+    }
+    const allowed = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['edit'],
+      resource: 'Team:' + team,
+    });
+    if (!allowed) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to remove team members',
+      );
+    }
+
+    for (const member of members) {
+      let relation = await this.grpcSdk.authorization!.findRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+      });
+      if (!relation || relation.relations.length === 0) {
+        continue;
+      }
+      await this.grpcSdk.authorization!.deleteAllRelations({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+      });
+      await this.grpcSdk.authorization!.createRelation({
+        subject: 'User:' + member,
+        resource: 'Team:' + team._id,
+        relation: role,
+      });
+    }
+    return 'ok';
+  }
+
   declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
@@ -372,6 +416,26 @@ export class TeamsHandler implements IAuthenticationStrategy {
         count: ConduitNumber.Required,
       }),
       this.getTeamMembers.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/members/:team',
+        action: ConduitRouteActions.PATCH,
+        urlParams: {
+          team: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          members: {
+            type: [TYPE.ObjectId],
+            required: true,
+          },
+          role: { type: TYPE.String, required: true },
+        },
+        name: 'ChangeMemberRole',
+        description: 'Changes the roles of members in a team',
+      },
+      new ConduitRouteReturnDefinition('ChangeMemberRole', 'String'),
+      this.modifyRoles.bind(this),
     );
     routingManager.route(
       {
