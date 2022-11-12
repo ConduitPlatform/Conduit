@@ -252,6 +252,7 @@ export class TeamsAdmin {
     await Team.getInstance().deleteOne({ _id: id });
     await this.grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + id });
     await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + id });
+    await Team.getInstance().updateMany({ parentTeam: id }, { parentTeam: undefined });
     return 'Team deleted';
   }
 
