@@ -13,10 +13,22 @@ import ConduitGrpcSdk from '../index';
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
 ) => Promise<UnparsedRouterResponse>;
+export type RouterRequestHandlerCallback = (
+  call: ParsedRouterRequest,
+  callback: (response: UnparsedRouterResponse) => void,
+) => Promise<UnparsedRouterResponse | undefined | void>;
 export type SocketRequestHandler = (
   call: ParsedSocketRequest,
 ) => Promise<UnparsedSocketResponse>;
-export type RequestHandlers = RouterRequestHandler | SocketRequestHandler;
+export type SocketRequestHandlerCallback = (
+  call: ParsedSocketRequest,
+  callback: (response: UnparsedRouterResponse) => void,
+) => Promise<UnparsedSocketResponse | undefined | void>;
+export type RequestHandlers =
+  | RouterRequestHandler
+  | RouterRequestHandlerCallback
+  | SocketRequestHandler
+  | SocketRequestHandlerCallback;
 
 function generateLog(
   routerRequest: boolean,
@@ -50,6 +62,44 @@ function parseRequestData(data: string) {
   }
 }
 
+function parseResponseData(
+  r: any,
+  routerRequest: boolean,
+  requestReceive: number,
+  call: any,
+  callback: any,
+  responded: { did: boolean },
+) {
+  if (!r || responded.did) return;
+  responded.did = true;
+  if (routerRequest) {
+    if (typeof r === 'string') {
+      callback(null, { result: r });
+    } else {
+      let respObject;
+      if (r.removeCookies || r.setCookies) {
+        respObject = {
+          removeCookies: r.removeCookies,
+          setCookies: r.setCookies,
+        };
+      }
+      if (r.result || r.redirect) {
+        callback(null, {
+          ...respObject,
+          redirect: r.redirect ?? undefined,
+          result: r.result ? JSON.stringify(r.result) : undefined,
+        });
+      } else {
+        callback(null, { ...respObject, result: JSON.stringify(r) });
+      }
+    }
+  } else {
+    if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);
+    callback(null, r);
+  }
+  generateLog(routerRequest, requestReceive, call, undefined);
+}
+
 export function wrapRouterGrpcFunction(
   fun: RequestHandlers,
   routerType: string,
@@ -77,36 +127,14 @@ export function wrapRouterGrpcFunction(
       });
     }
 
-    fun(call)
-      .then(r => {
-        if (!r) return;
-        if (routerRequest) {
-          if (typeof r === 'string') {
-            callback(null, { result: r });
-          } else {
-            let respObject;
-            if (r.removeCookies || r.setCookies) {
-              respObject = {
-                removeCookies: r.removeCookies,
-                setCookies: r.setCookies,
-              };
-            }
-            if (r.result || r.redirect) {
-              callback(null, {
-                ...respObject,
-                redirect: r.redirect ?? undefined,
-                result: r.result ? JSON.stringify(r.result) : undefined,
-              });
-            } else {
-              callback(null, { ...respObject, result: JSON.stringify(r) });
-            }
-          }
-        } else {
-          if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);
-          callback(null, r);
-        }
-        generateLog(routerRequest, requestReceive, call, undefined);
-      })
+    let responded = { did: false };
+
+    fun(call, (r: any) => {
+      parseResponseData(r, routerRequest, requestReceive, call, callback, responded);
+    })
+      .then(r =>
+        parseResponseData(r, routerRequest, requestReceive, call, callback, responded),
+      )
       .catch(error => {
         ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
         generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
