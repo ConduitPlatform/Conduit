@@ -87,11 +87,8 @@ export class CustomEndpointsAdmin {
         `${name} custom endpoint already exists`,
       );
     }
-    const { schemaId, schemaName, fields } = await this.getAccessibleSchemaFields(
-      operation,
-      selectedSchema,
-      selectedSchemaName,
-    );
+    const { schemaId, schemaName, fields, compiledFields } =
+      await this.getAccessibleSchemaFields(operation, selectedSchema, selectedSchemaName);
     let error = paramValidation(call.request.params);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
@@ -118,7 +115,7 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(operation, call, fields, endpoint);
+    error = paginationAndSortingValidation(operation, call, compiledFields, endpoint);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -177,7 +174,7 @@ export class CustomEndpointsAdmin {
     }
     const operation = found.operation;
 
-    const { schemaName, fields } = await this.getAccessibleSchemaFields(
+    const { schemaName, fields, compiledFields } = await this.getAccessibleSchemaFields(
       operation,
       selectedSchema,
       selectedSchemaName,
@@ -191,7 +188,7 @@ export class CustomEndpointsAdmin {
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    error = paginationAndSortingValidation(operation, call, fields, null);
+    error = paginationAndSortingValidation(operation, call, compiledFields, null);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -312,6 +309,7 @@ export class CustomEndpointsAdmin {
     schemaId: string;
     schemaName: string;
     fields: ConduitModel;
+    compiledFields: ConduitModel;
   }> {
     if (!schemaId && !schemaName) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Specify schema id or name');
@@ -341,10 +339,15 @@ export class CustomEndpointsAdmin {
       throw new GrpcError(status.FAILED_PRECONDITION, error);
     }
     if (operation === OperationsEnum.GET) {
-      return { schemaId, schemaName, fields: schema.compiledFields };
+      return {
+        schemaId,
+        schemaName,
+        fields: schema.compiledFields,
+        compiledFields: schema.compiledFields,
+      };
     } else if (operation === OperationsEnum.POST) {
       const fields = perms.canCreate ? schema.compiledFields : {};
-      return { schemaId, schemaName, fields };
+      return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if ([OperationsEnum.PATCH, OperationsEnum.PUT].includes(operation)) {
       const fields =
         perms.canModify === 'Everything'
@@ -354,10 +357,10 @@ export class CustomEndpointsAdmin {
             ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
             : {}
           : {};
-      return { schemaId, schemaName, fields };
+      return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if (operation === OperationsEnum.DELETE) {
       const fields = perms.canDelete ? schema.compiledFields : {};
-      return { schemaId, schemaName, fields };
+      return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
     }
