@@ -216,17 +216,17 @@ export class TeamsAdmin {
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, isDefault, parentTeam } = call.request.params;
     if (isDefault) {
-      let found = await Team.getInstance().findOne({ isDefault: true });
+      const found = await Team.getInstance().findOne({ isDefault: true });
       if (found) {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
-    let found = await Team.getInstance().findOne({ name });
+    const found = await Team.getInstance().findOne({ name });
     if (found) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Team already exists');
     }
 
-    let team = await Team.getInstance().create({
+    const team = await Team.getInstance().create({
       name,
       parentTeam: parentTeam || null,
       isDefault: isNil(isDefault) ? false : isDefault,
@@ -250,7 +250,7 @@ export class TeamsAdmin {
     }
 
     for (const member of members) {
-      let relation = await this.grpcSdk.authorization!.findRelation({
+      const relation = await this.grpcSdk.authorization!.findRelation({
         subject: 'User:' + member,
         resource: 'Team:' + team._id,
       });
@@ -273,13 +273,13 @@ export class TeamsAdmin {
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, name, isDefault } = call.request.params;
     if (isDefault) {
-      let found = await Team.getInstance().findOne({ isDefault: true });
+      const found = await Team.getInstance().findOne({ isDefault: true });
       if (found && found._id !== id) {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
 
-    let updatedTeam = await Team.getInstance().findByIdAndUpdate(id, {
+    const updatedTeam = await Team.getInstance().findByIdAndUpdate(id, {
       name,
       isDefault: isNil(isDefault) ? false : isDefault,
     });
@@ -291,7 +291,7 @@ export class TeamsAdmin {
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    let team = await Team.getInstance().findOne({ _id: id });
+    const team = await Team.getInstance().findOne({ _id: id });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -307,15 +307,15 @@ export class TeamsAdmin {
 
   async addTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { members, id } = call.request.params;
-    let team = await Team.getInstance().findOne({ _id: id });
+    const team = await Team.getInstance().findOne({ _id: id });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
-    let users = await User.getInstance().findMany({ _id: { $in: members } });
+    const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'User not found');
     }
-    for (let user of users) {
+    for (const user of users) {
       await this.grpcSdk.authorization!.createRelation({
         subject: 'User:' + user._id,
         resource: 'Team:' + team._id,
@@ -330,15 +330,15 @@ export class TeamsAdmin {
     if (members.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'No members to remove');
     }
-    let team = await Team.getInstance().findOne({ _id: id });
+    const team = await Team.getInstance().findOne({ _id: id });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
-    let users = await User.getInstance().findMany({ _id: { $in: members } });
+    const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'Users not found');
     }
-    for (let user of users) {
+    for (const user of users) {
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + user._id,
         resource: 'Team:' + id,

@@ -38,7 +38,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async initialize() {
     await this.grpcSdk.authorization!.defineResource(UserAuthz);
     await this.grpcSdk.authorization!.defineResource(TeamAuthz);
-    let existingTeam = await Team.getInstance().findOne({ isDefault: true });
+    const existingTeam = await Team.getInstance().findOne({ isDefault: true });
     if (!existingTeam) {
       await Team.getInstance().create({
         name: 'Default Team',
@@ -48,7 +48,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async addUserToTeam(user: User, invitationToken: string) {
-    let inviteToken = await Token.getInstance().findOne({
+    const inviteToken = await Token.getInstance().findOne({
       type: TokenType.TEAM_INVITE_TOKEN,
       token: invitationToken,
     });
@@ -123,12 +123,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
         );
       }
     }
-    let existingTeam = await Team.getInstance().findOne({ name });
+    const existingTeam = await Team.getInstance().findOne({ name });
     if (existingTeam) {
       throw new GrpcError(status.ALREADY_EXISTS, 'A team with that name already exists');
     }
 
-    let team = await Team.getInstance().create({
+    const team = await Team.getInstance().create({
       name,
       parentTeam: parentTeam || null,
       isDefault: false,
@@ -159,7 +159,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    let existingTeam = await Team.getInstance().findOne({ _id: id });
+    const existingTeam = await Team.getInstance().findOne({ _id: id });
     if (!existingTeam) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Team does not exist');
     }
@@ -188,7 +188,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { team, members } = call.request.params;
-    let targetTeam = await Team.getInstance().findOne({ _id: team });
+    const targetTeam = await Team.getInstance().findOne({ _id: team });
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -206,7 +206,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to remove team members',
       );
     }
-    for (let member of members) {
+    for (const member of members) {
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + member,
         resource: 'Team:' + team,
@@ -290,7 +290,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
 
-    let invitation = await this.createUserInvitation({
+    const invitation = await this.createUserInvitation({
       teamId,
       email,
       role,
@@ -318,7 +318,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { team, members, role } = call.request.params;
-    let targetTeam = await Team.getInstance().findOne({ _id: team });
+    const targetTeam = await Team.getInstance().findOne({ _id: team });
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -338,7 +338,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
 
     for (const member of members) {
-      let relation = await this.grpcSdk.authorization!.findRelation({
+      const relation = await this.grpcSdk.authorization!.findRelation({
         subject: 'User:' + member,
         resource: 'Team:' + team._id,
       });

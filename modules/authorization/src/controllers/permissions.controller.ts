@@ -37,7 +37,7 @@ export class PermissionsController {
     // action is not a relation but still validates the input
     checkRelation(subject, action, resource);
     const computedTuple = computePermissionTuple(subject, action, resource);
-    let permission = await Permission.getInstance().findOne({
+    const permission = await Permission.getInstance().findOne({
       computedTuple,
     });
     if (!permission) {

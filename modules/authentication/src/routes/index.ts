@@ -66,7 +66,7 @@ export class AuthenticationRoutes {
       enabled = true;
     }
 
-    let teamsActivated = await TeamsHandler.getInstance(this.grpcSdk)
+    const teamsActivated = await TeamsHandler.getInstance(this.grpcSdk)
       .validate()
       .catch(e => (errorMessage = e));
     if (!errorMessage && teamsActivated) {
@@ -107,7 +107,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.serviceHandler.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
-      let returnField = {
+      const returnField = {
         serviceId: ConduitString.Required,
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,
