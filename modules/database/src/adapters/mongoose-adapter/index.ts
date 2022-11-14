@@ -1,4 +1,4 @@
-import { ConnectOptions, IndexDefinition, IndexOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
