@@ -301,7 +301,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     for (const index of indexes) {
       const fields: any = {};
       for (let i = 0; i < index.fields.length; i++) {
-        fields[index.fields[i]] = index.types![i];
+        fields[index.fields[i]] = index.types ? index.types[i] : 1;
       }
       try {
         schema.index(fields, index.options as IndexOptions);
