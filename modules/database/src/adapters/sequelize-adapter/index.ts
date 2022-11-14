@@ -270,6 +270,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
+    this.registeredSchemas.delete(schemaName);
     this.grpcSdk.bus!.publish('database:delete:schema', schemaName);
     return 'Schema deleted!';
   }
