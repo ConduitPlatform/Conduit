@@ -1,4 +1,4 @@
-import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, IndexDefinition, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
@@ -286,6 +286,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Schema deleted!';
   }
 
+  getDatabaseType(): string {
+    return 'MongoDB';
+  }
+
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
@@ -303,6 +307,45 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     await this.mongoose.syncIndexes();
     return 'Indexes created!';
+  }
+
+  async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection = this.mongoose.model(schemaName).collection;
+    const result = await collection.indexes();
+    result.filter(index => {
+      index.options = {};
+      for (const indexEntry of Object.entries(index)) {
+        if (indexEntry[0] === 'key' || indexEntry[0] === 'options') {
+          continue;
+        }
+        if (indexEntry[0] === 'v') {
+          delete index.v;
+          continue;
+        }
+        index.options[indexEntry[0]] = indexEntry[1];
+        delete index[indexEntry[0]];
+      }
+      index.fields = [];
+      index.types = [];
+      for (const keyEntry of Object.entries(index.key)) {
+        index.fields.push(keyEntry[0]);
+        index.types.push(keyEntry[1]);
+        delete index.key;
+      }
+    });
+    return result as ModelOptionsIndexes[];
+  }
+
+  async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection = this.mongoose.model(schemaName).collection;
+    for (const name of indexNames) {
+      collection.dropIndex(name).then();
+    }
+    return 'Indexes deleted';
   }
 
   private checkIndexes(indexes: ModelOptionsIndexes[]) {

@@ -546,6 +546,10 @@ export class SchemaAdmin {
     };
   }
 
+  async getDatabaseType(): Promise<UnparsedRouterResponse> {
+    return this.database.getDatabaseType();
+  }
+
   async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, indexes } = call.request.params;
     const requestedSchema = await this.database
@@ -555,5 +559,33 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
     return await this.database.createIndexes(requestedSchema.name, indexes);
+  }
+
+  async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const id = call.request.params.id;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    return this.database.getIndexes(requestedSchema.name);
+  }
+
+  async deleteIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, indexNames } = call.request.params;
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ _id: id });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+    }
+    if (isNil(indexNames) || indexNames.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Index names should be a string array',
+      );
+    }
+    return this.database.deleteIndexes(requestedSchema.name, indexNames);
   }
 }

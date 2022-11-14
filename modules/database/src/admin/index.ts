@@ -599,7 +599,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: 'schemas/:id/indexes',
+        path: '/schemas/:id/indexes',
         action: ConduitRouteActions.POST,
         description: `Creates indexes for a schema.`,
         urlParams: {
@@ -611,6 +611,42 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('CreateSchemaIndexes', 'String'),
       this.schemaAdmin.createIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/indexes',
+        action: ConduitRouteActions.GET,
+        description: `Returns indexes of a schema.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('getSchemaIndexes', 'String'), //fields??
+      this.schemaAdmin.getIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/indexes',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes indexes of a schema.`,
+        urlParams: {
+          id: { type: RouteOptionType.String, required: true },
+        },
+        bodyParams: {
+          indexNames: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('deleteIndexes', 'String'),
+      this.schemaAdmin.deleteIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/database-type',
+        action: ConduitRouteActions.GET,
+        description: `Returns the type of the database.`,
+      },
+      new ConduitRouteReturnDefinition('getDatabaseType', 'String'),
+      this.schemaAdmin.getDatabaseType.bind(this.schemaAdmin),
     );
     this.routingManager.registerRoutes();
   }
