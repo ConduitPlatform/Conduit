@@ -621,7 +621,9 @@ export class AdminHandlers {
           id: { type: RouteOptionType.String, required: true },
         },
       },
-      new ConduitRouteReturnDefinition('getSchemaIndexes', 'String'), //fields??
+      new ConduitRouteReturnDefinition('getSchemaIndexes', {
+        indexes: [ConduitJson.Required],
+      }),
       this.schemaAdmin.getIndexes.bind(this.schemaAdmin),
     );
     this.routingManager.route(
