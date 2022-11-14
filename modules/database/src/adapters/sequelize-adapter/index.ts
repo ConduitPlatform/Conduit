@@ -300,7 +300,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     indexes = this.checkAndConvertIndexes(indexes);
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
-      await queryInterface.addIndex('cnd_' + schemaName, index.fields, index.options);
+      await queryInterface
+        .addIndex('cnd_' + schemaName, index.fields, index.options)
+        .catch(() => {
+          throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+        });
     }
     await this.models[schemaName].sync();
     return 'Indexes created!';
@@ -347,7 +351,9 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const queryInterface = this.sequelize.getQueryInterface();
     for (const name of indexNames) {
-      queryInterface.removeIndex('cnd_' + schemaName, name).then();
+      queryInterface.removeIndex('cnd_' + schemaName, name).catch(() => {
+        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      });
     }
     return 'Indexes deleted';
   }

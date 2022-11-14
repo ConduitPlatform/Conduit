@@ -303,7 +303,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       for (let i = 0; i < index.fields.length; i++) {
         fields[index.fields[i]] = index.types![i];
       }
-      schema.index(fields, index.options as IndexOptions);
+      try {
+        schema.index(fields, index.options as IndexOptions);
+      } catch {
+        throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+      }
     }
     await this.mongoose.syncIndexes();
     return 'Indexes created!';
@@ -343,7 +347,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
     for (const name of indexNames) {
-      collection.dropIndex(name).then();
+      collection.dropIndex(name).catch(() => {
+        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      });
     }
     return 'Indexes deleted';
   }
