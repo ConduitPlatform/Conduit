@@ -70,8 +70,14 @@ function parseResponseData(
   callback: any,
   responded: { did: boolean },
 ) {
-  if (!r || responded.did) return;
+  if (responded.did) return;
   responded.did = true;
+  if (!r) {
+    callback({
+      code: status.INTERNAL,
+      message: 'Handler did not return a response',
+    });
+  }
   if (routerRequest) {
     if (typeof r === 'string') {
       callback(null, { result: r });
