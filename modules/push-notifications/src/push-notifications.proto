@@ -1,6 +1,16 @@
 syntax = 'proto3';
 package pushnotifications;
 
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -52,6 +62,7 @@ message SendNotificationResponse {
 }
 
 service PushNotifications {
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
   rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);

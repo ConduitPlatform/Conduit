@@ -36,7 +36,6 @@ export default class Authentication extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
     functions: {
-      setConfig: this.setConfig.bind(this),
       userLogin: this.userLogin.bind(this),
       userCreate: this.userCreate.bind(this),
       changePass: this.changePass.bind(this),

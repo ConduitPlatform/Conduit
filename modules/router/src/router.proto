@@ -2,10 +2,21 @@ syntax = "proto3";
 package router;
 
 service Router {
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
+}
+
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
 }
 
 message GenerateProtoRequest {
@@ -63,7 +74,4 @@ message RegisterConduitRouteRequest {
     string name = 1;
     string fields = 2;
   }
-}
-
-message Empty {
 }

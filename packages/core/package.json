@@ -1,6 +1,6 @@
 {
   "name": "@conduitplatform/core",
-  "version": "1.0.1",
+  "version": "0.16.0-rc.0",
   "main": "dist/bin/www.js",
   "types": "dist/bin/www.d.ts",
   "private": true,
@@ -41,5 +41,6 @@
     "ts-node": "^10.8.2",
     "typescript": "~4.7.4",
     "ts-proto": "^1.117.0"
-  }
+  },
+  "conduit": {}
 }

@@ -40,7 +40,6 @@ export default class PushNotifications extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',
     functions: {
-      setConfig: this.setConfig.bind(this),
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this),
       sendNotification: this.sendNotification.bind(this),

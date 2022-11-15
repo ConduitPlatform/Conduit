@@ -53,7 +53,8 @@ describe('Testing module related rpc calls', () => {
   test('Register Module', async () => {
     const res = await testClient.registerModule({
       moduleName: 'test',
-      url: testModuleUrl,
+      moduleUrl: testModuleUrl,
+      moduleVersion: '0.16.0',
       healthStatus: 1,
     });
     expect(res).toMatchObject({
@@ -124,7 +125,7 @@ describe('Testing module related rpc calls', () => {
     sleep(6000).then(async () => {
       await testClient.registerModule({
         moduleName: 'watch-modules',
-        url: '0.0.0.0:55152',
+        moduleUrl: '0.0.0.0:55152',
         healthStatus: 1,
       });
       for await (const modules of watchModules) {

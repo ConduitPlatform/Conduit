@@ -1,6 +1,6 @@
 {
   "name": "@conduitplatform/database",
-  "version": "1.0.1",
+  "version": "0.16.0-rc.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
@@ -51,5 +51,12 @@
     "rimraf": "^3.0.2",
     "ts-proto": "^1.117.0",
     "typescript": "~4.7.4"
+  },
+  "conduit": {
+    "dependencies": {
+      "conduit": {
+        "version": "^0.16"
+      }
+    }
   }
 }

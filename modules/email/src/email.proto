@@ -1,6 +1,16 @@
 syntax = 'proto3';
 package email;
 
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -38,7 +48,10 @@ message SendEmailResponse {
 }
 
 service Email {
+  // Conduit
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  // Service
   rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
   rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
 }

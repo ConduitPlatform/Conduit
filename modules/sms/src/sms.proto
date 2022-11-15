@@ -1,6 +1,16 @@
 syntax = 'proto3';
 package sms;
 
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -36,7 +46,10 @@ message VerifyResponse {
 }
 
 service Sms {
+  // Conduit
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  // Service
   rpc SendSms(SendSmsRequest) returns (SendSmsResponse);
   rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
   rpc Verify(VerifyRequest) returns (VerifyResponse);

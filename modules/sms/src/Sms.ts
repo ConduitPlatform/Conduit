@@ -29,7 +29,6 @@ export default class Sms extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'sms.proto'),
     protoDescription: 'sms.Sms',
     functions: {
-      setConfig: this.setConfig.bind(this),
       sendSms: this.sendSms.bind(this),
       sendVerificationCode: this.sendVerificationCode.bind(this),
       verify: this.verify.bind(this),

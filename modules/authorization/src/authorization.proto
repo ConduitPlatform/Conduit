@@ -1,7 +1,14 @@
 syntax = "proto3";
 package authorization;
 
-message Empty {
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
 }
 
 message SetConfigRequest {
@@ -54,7 +61,10 @@ message Decision {
 }
 
 service Authorization {
+  // Conduit
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  // Service
   rpc DefineResource(Resource) returns (Empty);
   rpc DeleteResource(DeleteResourceRequest) returns (Empty);
   rpc UpdateResource(Resource) returns (Empty);

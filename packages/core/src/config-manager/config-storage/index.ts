@@ -49,13 +49,19 @@ export class ConfigStorage {
   async firstSync() {
     this.changeState(true);
     const configDocs = await models.Config.getInstance().findMany({});
+    const registeredModules = [...this.serviceDiscovery.registeredModules.keys()].filter(
+      m => m !== 'conduit',
+    );
     if (configDocs.length === 0) {
-      // flush redis stored configuration to the database
+      // flush Redis-stored configuration to the database
       let moduleConfig;
-      for (const key of this.serviceDiscovery.registeredModules.keys()) {
+      for (const moduleName of registeredModules) {
         try {
-          moduleConfig = await this.getConfig(key, false);
-          await models.Config.getInstance().create({ name: key, config: moduleConfig });
+          moduleConfig = await this.getConfig(moduleName, false);
+          await models.Config.getInstance().create({
+            name: moduleName,
+            config: moduleConfig,
+          });
         } catch {}
       }
       for (const key of ['core', 'admin']) {
@@ -81,7 +87,6 @@ export class ConfigStorage {
       }
     }
     // Update Admin and all active modules
-    const registeredModules = Array.from(this.serviceDiscovery.registeredModules.keys());
     const moduleConfigs = await models.Config.getInstance().findMany({});
     for (const config of moduleConfigs) {
       if (config.name === 'core') continue;

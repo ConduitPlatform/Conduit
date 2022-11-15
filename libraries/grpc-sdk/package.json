@@ -25,6 +25,7 @@
     "fast-jwt": "^1.6.0",
     "fs-extra": "^10.1.0",
     "ioredis": "^5.1.0",
+    "jsonschema": "^1.4.1",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.2.0",
     "nice-grpc-client-middleware-retry": "^1",

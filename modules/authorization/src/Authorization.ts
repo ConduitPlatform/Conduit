@@ -34,7 +34,6 @@ export default class Authorization extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'authorization.proto'),
     protoDescription: 'authorization.Authorization',
     functions: {
-      setConfig: this.setConfig.bind(this),
       defineResource: this.defineResource.bind(this),
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),

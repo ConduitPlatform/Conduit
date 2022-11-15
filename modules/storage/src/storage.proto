@@ -1,6 +1,16 @@
 syntax = "proto3";
 package storage;
 
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -39,12 +49,11 @@ message GetFileDataResponse {
   string data = 1;
 }
 
-
-message Empty {
-}
-
 service Storage {
+  // Conduit
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  // Service
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);

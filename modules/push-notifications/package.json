@@ -1,6 +1,6 @@
 {
   "name": "@conduitplatform/push-notifications",
-  "version": "1.0.1",
+  "version": "0.16.0-rc.0",
   "description": "Handles sending push notifications to users",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -42,5 +42,15 @@
     "copyfiles": "^2.4.1",
     "rimraf": "^3.0.2",
     "typescript": "~4.7.4"
+  },
+  "conduit": {
+    "dependencies": {
+      "conduit": {
+        "version": "^0.16"
+      },
+      "database": {
+        "version": "^0.16"
+      }
+    }
   }
 }

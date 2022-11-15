@@ -1,6 +1,16 @@
 syntax = "proto3";
 package chat;
 
+message Empty {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -33,11 +43,12 @@ message Room {
 message GetRoomResponse {
   repeated Room rooms = 1;
 }
-message Empty {
-}
 
 service Chat {
+  // Conduit
+  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+  // Service
   rpc CreateRoom(CreateRoomRequest) returns (Room);
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
   rpc SendMessage(SendMessageRequest) returns (Empty);

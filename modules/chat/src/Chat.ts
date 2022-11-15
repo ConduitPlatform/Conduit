@@ -33,7 +33,6 @@ export default class Chat extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'chat.proto'),
     protoDescription: 'chat.Chat',
     functions: {
-      setConfig: this.setConfig.bind(this),
       createRoom: this.createRoom.bind(this),
       deleteRoom: this.deleteRoom.bind(this),
       sendMessage: this.sendMessage.bind(this),

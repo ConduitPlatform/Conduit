@@ -1,24 +1,14 @@
-import ConduitGrpcSdk, { ManagedModule, ConfigController, Indexable } from '..';
-
-const convictConfigParser = (config: Indexable) => {
-  if (typeof config === 'object') {
-    Object.keys(config).forEach(key => {
-      if (key === '_cvtProperties') {
-        config = convictConfigParser(config._cvtProperties);
-      } else {
-        config[key] = convictConfigParser(config[key]);
-      }
-    });
-  }
-  return config;
-};
+import ConduitGrpcSdk, { ManagedModule, ManifestManager } from '..';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
   private readonly servicePort: string;
   private readonly grpcSdk: ConduitGrpcSdk;
 
-  constructor(private readonly module: ManagedModule<T>) {
+  constructor(
+    private readonly module: ManagedModule<T>,
+    private readonly packageJsonPath: string,
+  ) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
@@ -43,12 +33,11 @@ export class ModuleManager<T> {
   }
 
   async start() {
-    await this.grpcSdk.initialize();
+    await this.grpcSdk.initialize(this.packageJsonPath);
     this.module.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
       await this.grpcSdk.config.registerModule(
-        this.module.name,
         this.module.address,
         this.module.healthState,
       );
@@ -57,11 +46,6 @@ export class ModuleManager<T> {
       ConduitGrpcSdk.Logger.error(err as Error);
       process.exit(-1);
     }
-    await this.postRegisterLifecycle().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.error('Failed to activate module');
-      ConduitGrpcSdk.Logger.error(err);
-      process.exit(-1);
-    });
   }
 
   private async preRegisterLifecycle(): Promise<void> {
@@ -74,26 +58,5 @@ export class ModuleManager<T> {
     await this.module.onServerStart();
     await this.module.initializeMetrics();
     await this.module.preRegister();
-  }
-
-  private async postRegisterLifecycle(): Promise<void> {
-    await this.module.onRegister();
-    if (this.module.config) {
-      const configSchema = this.module.config.getSchema();
-
-      let config: any = this.module.config.getProperties();
-      config = await this.module.preConfig(config);
-
-      config = await this.grpcSdk.config.configure(
-        config,
-        convictConfigParser(configSchema),
-        this.module.configOverride,
-      );
-
-      ConfigController.getInstance();
-      if (config) ConfigController.getInstance().config = config;
-      if (!config || config.active || !config.hasOwnProperty('active'))
-        await this.module.onConfig();
-    }
   }
 }

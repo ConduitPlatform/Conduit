@@ -6,14 +6,24 @@ service Core {}
 service Config {
   rpc Get (GetConfigRequest) returns (GetConfigResponse);
   rpc Configure (UpdateRequest) returns (UpdateResponse);
-  rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
-  rpc ModuleList (Empty) returns (ModuleListResponse);
-  rpc WatchModules (Empty) returns (stream ModuleListResponse);
-  rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
+  rpc GetDeploymentState (Empty) returns (DeploymentState);
+  rpc WatchDeploymentState (Empty) returns (stream DeploymentState);
+  rpc RegisterModule (RegisterModuleRequest) returns (Empty);
   rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
   rpc GetServerConfig (Empty) returns (GetConfigResponse);
   rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
   rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
+}
+
+message DeploymentState {
+  message ModuleStateInfo {
+    string moduleName = 1;
+    string moduleVersion = 2;
+    string moduleUrl = 3;
+    bool pending = 4;
+    bool serving = 5;
+  }
+  repeated ModuleStateInfo modules = 1;
 }
 
 service Admin {
@@ -62,13 +72,13 @@ message RegisterAdminRouteRequest {
   }
 }
 
-message Empty {
-}
+message Empty {}
 
 message ModuleHealthRequest {
   string moduleName = 1;
-  string url = 2;
-  int32 status = 3; // [0, 1, 2]
+  string moduleVersion = 2;
+  string moduleUrl = 3;
+  int32 status = 4; // [0, 1, 2]
 }
 
 message ModuleByNameRequest {
@@ -80,30 +90,19 @@ message ModuleByNameResponse {
 }
 
 message RegisterModuleRequest {
-  string moduleName = 1;
-  string url = 2;
-  int32 healthStatus = 3; // [0, 1, 2]
-}
-
-message RegisterModuleResponse {
-  bool result = 1;
-}
-
-message ModuleListResponse {
-  repeated ModuleResponse modules = 1;
-  message ModuleResponse {
+  message ConduitManifest {
+    message Dependency {
+      string name = 1;
+      string version = 2;
+    }
     string moduleName = 1;
-    string url = 2;
-    bool serving = 3;
+    string moduleVersion = 2;
+    repeated Dependency dependencies = 3;
   }
-}
 
-message ModuleExistsRequest {
-  string moduleName = 1;
-}
-
-message ModuleExistsResponse {
-  string url = 1;
+  ConduitManifest manifest = 1;
+  string url = 3;
+  int32 healthStatus = 4; // [0, 1, 2]
 }
 
 message GetConfigRequest {
