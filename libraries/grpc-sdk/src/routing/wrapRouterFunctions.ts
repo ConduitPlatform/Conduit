@@ -133,8 +133,7 @@ export function wrapRouterGrpcFunction(
       });
     }
 
-    let responded = { did: false };
-
+    const responded = { did: false };
     fun(call, (r: any) => {
       parseResponseData(r, routerRequest, requestReceive, call, callback, responded);
     })
