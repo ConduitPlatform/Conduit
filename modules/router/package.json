@@ -22,7 +22,7 @@
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "bcrypt": "^5.0.1",
-    "deep-object-diff": "^1.1.7",
+    "deep-object-diff": "^1.1.9",
     "deepdash": "^5.3.9",
     "graphql-parse-resolve-info": "^4.5.0",
     "graphql-type-json": "^0.3.1",
