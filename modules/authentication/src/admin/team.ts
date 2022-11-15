@@ -57,29 +57,12 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
-        path: '/teams',
+        path: '/teams/:teamId/members',
         action: ConduitRouteActions.GET,
         urlParams: {
-          skip: ConduitNumber.Optional,
-          limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
-          search: ConduitString.Optional,
+          teamId: ConduitObjectId.Required,
         },
-        name: 'GetTeams',
-        description: 'Gets all available teams',
-      },
-      new ConduitRouteReturnDefinition('GetTeams', {
-        teams: [Team.name],
-        count: ConduitNumber.Required,
-      }),
-      this.getTeams.bind(this),
-    );
-    routingManager.route(
-      {
-        path: '/teams/members/:id',
-        action: ConduitRouteActions.GET,
-        urlParams: {
-          id: ConduitObjectId.Required,
+        queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
@@ -94,13 +77,12 @@ export class TeamsAdmin {
       }),
       this.getTeamMembers.bind(this),
     );
-
     routingManager.route(
       {
-        path: '/teams/members/:id',
+        path: '/teams/:teamId/members',
         action: ConduitRouteActions.POST,
         urlParams: {
-          id: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         bodyParams: {
           members: {
@@ -116,10 +98,10 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
-        path: '/teams/members/:id',
+        path: '/teams/:teamId/members',
         action: ConduitRouteActions.DELETE,
         urlParams: {
-          id: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         queryParams: {
           members: {
@@ -135,10 +117,10 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
-        path: '/teams/members/:id',
+        path: '/teams/:teamId/members',
         action: ConduitRouteActions.PATCH,
         urlParams: {
-          id: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         bodyParams: {
           members: {
@@ -155,10 +137,10 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
-        path: '/teams/:id',
+        path: '/teams/:teamId',
         action: ConduitRouteActions.PATCH,
         urlParams: {
-          id: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         bodyParams: {
           name: ConduitString.Optional,
@@ -170,13 +152,12 @@ export class TeamsAdmin {
       new ConduitRouteReturnDefinition('Team', Team.name),
       this.updateTeam.bind(this),
     );
-
     routingManager.route(
       {
-        path: '/teams/:id',
+        path: '/teams/:teamId',
         action: ConduitRouteActions.DELETE,
         urlParams: {
-          id: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         name: 'DeleteTeam',
         description: 'Deletes a team',
@@ -242,8 +223,8 @@ export class TeamsAdmin {
   }
 
   async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { members, id, role } = call.request.params;
-    const team = await Team.getInstance().findOne({ _id: id });
+    const { members, teamId, role } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: teamId });
 
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
@@ -271,15 +252,15 @@ export class TeamsAdmin {
   }
 
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, isDefault } = call.request.params;
+    const { teamId, name, isDefault } = call.request.params;
     if (isDefault) {
       const found = await Team.getInstance().findOne({ isDefault: true });
-      if (found && found._id !== id) {
+      if (found && found._id !== teamId) {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
 
-    const updatedTeam = await Team.getInstance().findByIdAndUpdate(id, {
+    const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
       name,
       isDefault: isNil(isDefault) ? false : isDefault,
     });
@@ -290,24 +271,27 @@ export class TeamsAdmin {
   }
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-    const team = await Team.getInstance().findOne({ _id: id });
+    const { teamId } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
     if (team.isDefault) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Default team cannot be deleted');
     }
-    await Team.getInstance().deleteOne({ _id: id });
-    await this.grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + id });
-    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + id });
-    await Team.getInstance().updateMany({ parentTeam: id }, { parentTeam: undefined });
+    await Team.getInstance().deleteOne({ _id: teamId });
+    await this.grpcSdk.authorization!.deleteAllRelations({ resource: 'Team:' + teamId });
+    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'Team:' + teamId });
+    await Team.getInstance().updateMany(
+      { parentTeam: teamId },
+      { parentTeam: undefined },
+    );
     return 'Team deleted';
   }
 
   async addTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { members, id } = call.request.params;
-    const team = await Team.getInstance().findOne({ _id: id });
+    const { members, teamId } = call.request.params;
+    const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -326,11 +310,11 @@ export class TeamsAdmin {
   }
 
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { members, id } = call.request.params;
+    const { members, teamId } = call.request.params;
     if (members.length === 0) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'No members to remove');
     }
-    const team = await Team.getInstance().findOne({ _id: id });
+    const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -341,7 +325,7 @@ export class TeamsAdmin {
     for (const user of users) {
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + user._id,
-        resource: 'Team:' + id,
+        resource: 'Team:' + teamId,
       });
     }
 
@@ -349,13 +333,12 @@ export class TeamsAdmin {
   }
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-    const { search, sort } = call.request.params;
+    const { teamId, search, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
     const relations = await this.grpcSdk.authorization!.findRelation({
-      resource: 'Team:' + id,
+      resource: 'Team:' + teamId,
       relation: 'member',
     });
     let query: any = {

@@ -19,7 +19,6 @@ import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
-import { Team } from '../models/Team.schema';
 import { TeamsHandler } from './team';
 
 export class LocalHandlers implements IAuthenticationStrategy {

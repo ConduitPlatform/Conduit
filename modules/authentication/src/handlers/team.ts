@@ -152,14 +152,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { id } = call.request.params;
+    const { teamId } = call.request.params;
     if (!call.request.context.jwtPayload.sudo) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'Re-login required to enter sudo mode',
       );
     }
-    const existingTeam = await Team.getInstance().findOne({ _id: id });
+    const existingTeam = await Team.getInstance().findOne({ _id: teamId });
     if (!existingTeam) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Team does not exist');
     }
@@ -167,7 +167,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const can = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
       actions: ['delete'],
-      resource: 'Team:' + id,
+      resource: 'Team:' + teamId,
     });
     if (!can.allow) {
       throw new GrpcError(
@@ -175,20 +175,20 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'User does not have permission to delete this team',
       );
     }
-    await Team.getInstance().deleteOne({ _id: id });
+    await Team.getInstance().deleteOne({ _id: teamId });
     await this.grpcSdk.authorization!.deleteAllRelations({
-      resource: 'Team:' + id,
+      resource: 'Team:' + teamId,
     });
     await this.grpcSdk.authorization!.deleteAllRelations({
-      subject: 'Team:' + id,
+      subject: 'Team:' + teamId,
     });
     return 'Deleted';
   }
 
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { team, members } = call.request.params;
-    const targetTeam = await Team.getInstance().findOne({ _id: team });
+    const { teamId, members } = call.request.params;
+    const targetTeam = await Team.getInstance().findOne({ _id: teamId });
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -198,7 +198,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
       actions: ['edit'],
-      resource: 'Team:' + team,
+      resource: 'Team:' + teamId,
     });
     if (!allowed) {
       throw new GrpcError(
@@ -209,7 +209,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     for (const member of members) {
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + member,
-        resource: 'Team:' + team,
+        resource: 'Team:' + teamId,
       });
     }
     return 'Users removed from team';
@@ -217,15 +217,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { team } = call.request.params;
-    const { search, sort } = call.request.params;
+    const { teamId, search, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
       actions: ['read'],
-      resource: 'Team:' + team,
+      resource: 'Team:' + teamId,
     });
     if (!allowed) {
       throw new GrpcError(
@@ -234,7 +233,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       );
     }
     const relations = await this.grpcSdk.authorization!.findRelation({
-      resource: 'Team:' + team,
+      resource: 'Team:' + teamId,
       relation: 'member',
     });
     if (!relations || relations.relations.length === 0) {
@@ -317,8 +316,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { team, members, role } = call.request.params;
-    const targetTeam = await Team.getInstance().findOne({ _id: team });
+    const { teamId, members, role } = call.request.params;
+    const targetTeam = await Team.getInstance().findOne({ _id: teamId });
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team not found');
     }
@@ -328,7 +327,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
       actions: ['edit'],
-      resource: 'Team:' + team,
+      resource: 'Team:' + teamId,
     });
     if (!allowed) {
       throw new GrpcError(
@@ -340,18 +339,18 @@ export class TeamsHandler implements IAuthenticationStrategy {
     for (const member of members) {
       const relation = await this.grpcSdk.authorization!.findRelation({
         subject: 'User:' + member,
-        resource: 'Team:' + team._id,
+        resource: 'Team:' + teamId,
       });
       if (!relation || relation.relations.length === 0) {
         continue;
       }
       await this.grpcSdk.authorization!.deleteAllRelations({
         subject: 'User:' + member,
-        resource: 'Team:' + team._id,
+        resource: 'Team:' + teamId,
       });
       await this.grpcSdk.authorization!.createRelation({
         subject: 'User:' + member,
-        resource: 'Team:' + team._id,
+        resource: 'Team:' + teamId,
         relation: role,
       });
     }
@@ -361,7 +360,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   declareRoutes(routingManager: RoutingManager): void {
     routingManager.route(
       {
-        path: '/team',
+        path: '/teams',
         description: `Creates a new team.`,
         bodyParams: {
           name: ConduitString.Required,
@@ -376,10 +375,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
     routingManager.route(
       {
-        path: '/team/members',
+        path: '/teams/:teamId/members',
         description: `Deletes the specified users from a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
         queryParams: {
-          team: ConduitString.Required,
           members: { type: [TYPE.ObjectId], required: true },
         },
         action: ConduitRouteActions.DELETE,
@@ -390,10 +391,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
-        path: '/team/:id',
+        path: '/teams/:teamId',
         description: `Deletes a team.`,
         urlParams: {
-          id: ConduitString.Required,
+          teamId: ConduitObjectId.Required,
         },
         action: ConduitRouteActions.DELETE,
         middlewares: ['authMiddleware'],
@@ -403,10 +404,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
-        path: '/team/members/:team',
+        path: '/teams/:teamId/members',
         description: `Retrieves members of a team`,
         urlParams: {
-          team: ConduitString.Required,
+          teamId: ConduitObjectId.Required,
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
@@ -419,10 +420,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
-        path: '/teams/members/:team',
+        path: '/teams/:teamId/members',
         action: ConduitRouteActions.PATCH,
         urlParams: {
-          team: ConduitObjectId.Required,
+          teamId: ConduitObjectId.Required,
         },
         bodyParams: {
           members: {
@@ -439,7 +440,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
-        path: '/team/invite/accept',
+        path: '/teams/invite/accept',
         description: `Accepts an invite from another user.`,
         queryParams: {
           invitationToken: ConduitString.Required,
@@ -452,10 +453,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
-        path: '/team/invite',
+        path: '/teams/:teamId/invite',
         description: `Creates a new invite to join a user to a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
         bodyParams: {
-          teamId: ConduitString.Required,
           role: ConduitString.Optional,
           email: ConduitString.Optional,
         },
