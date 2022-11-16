@@ -230,7 +230,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,
-      compiledSchema,
+      schema,
       deepPopulate,
       this,
     );
