@@ -149,7 +149,7 @@ export class AdminHandlers {
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
+          sortByName: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetExternalTemplates', {
@@ -420,13 +420,12 @@ export class AdminHandlers {
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const { sort } = call.request.params;
-    if (!isNil(sort) && sort !== 'name' && sort !== '-name')
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid value for sort parameter.');
+    const { sortByName } = call.request.params;
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
-    if (sort === 'name') externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sort === '-name')
-      externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
+    if (!isNil(sortByName)) {
+      if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
+      else externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
+    }
 
     if (!isNil(err)) {
       throw new GrpcError(status.INTERNAL, err.message);

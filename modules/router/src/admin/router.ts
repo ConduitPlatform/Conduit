@@ -14,9 +14,7 @@ export class RouterAdmin {
   ) {}
 
   async getMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    if (!isNil(sort) && sort !== 'name' && sort !== '-name')
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid value for sort parameter.');
+    const { sortByName } = call.request.params;
     let response: string[] = [];
     const module = this.router.getGrpcRoutes();
     Object.keys(module).forEach((url: string) => {
@@ -30,16 +28,16 @@ export class RouterAdmin {
         }
       });
     });
-    if (sort === 'name') response = response.sort((a, b) => a.localeCompare(b));
-    else if (sort === '-name') response = response.sort((a, b) => b.localeCompare(a));
+    if (!isNil(sortByName)) {
+      if (sortByName) response = response.sort((a, b) => a.localeCompare(b));
+      else response = response.sort((a, b) => b.localeCompare(a));
+    }
     return Array.from(new Set(response));
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
+    const { sortByName } = call.request.params;
     let response: any[] = [];
-    if (!isNil(sort) && sort !== 'name' && sort !== '-name')
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid value for sort parameter.');
     const module = this.router.getGrpcRoutes();
     ConduitGrpcSdk.Logger.logObject(module);
 
@@ -52,9 +50,10 @@ export class RouterAdmin {
         });
       });
     });
-    if (sort === 'name') response = response.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sort === '-name')
-      response = response.sort((a, b) => b.name.localeCompare(a.name));
+    if (!isNil(sortByName)) {
+      if (sortByName) response = response.sort((a, b) => a.localeCompare(b));
+      else response = response.sort((a, b) => b.localeCompare(a));
+    }
     return response;
   }
 }
