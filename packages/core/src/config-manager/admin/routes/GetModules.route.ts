@@ -4,12 +4,10 @@ import {
   ConduitError,
   ConduitString,
   ConduitBoolean,
-  GrpcError,
   ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
-import { status } from '@grpc/grpc-js';
 
 export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(

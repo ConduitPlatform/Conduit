@@ -1,11 +1,9 @@
 import ConduitGrpcSdk, {
-  GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
-import { status } from '@grpc/grpc-js';
 
 export class RouterAdmin {
   constructor(
