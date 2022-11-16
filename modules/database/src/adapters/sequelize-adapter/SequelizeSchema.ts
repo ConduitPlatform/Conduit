@@ -5,6 +5,7 @@ import {
   FindOptions,
   ModelCtor,
   Sequelize,
+  Order,
   OrderItem,
 } from 'sequelize';
 import {
@@ -179,7 +180,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: string,
+    sort?: { [key: string]: number },
     populate?: string[],
     relations?: Indexable,
   ): Promise<any> {
@@ -491,18 +492,15 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return { exclude };
   }
 
-  private parseSort(sort: string) {
-    const fields = sort.split(' ');
-    const order = [];
-    for (const field of fields) {
-      let tmp;
+  private parseSort(sort: { [key: string]: number }): Order {
+    const order: Order = [];
+    Object.keys(sort).forEach(field => {
       if (field[0] === '-') {
-        tmp = [field.slice(1), 'DESC'] as OrderItem;
+        order.push([field.slice(1), 'DESC'] as OrderItem);
       } else {
-        tmp = [field, 'ASC'] as OrderItem;
+        order.push([field, 'ASC'] as OrderItem);
       }
-      order.push(tmp);
-    }
+    });
     return order;
   }
 }
