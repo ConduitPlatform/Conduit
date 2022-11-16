@@ -434,7 +434,7 @@ export class AdminHandlers {
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
-    const templateDocuments: any = [];
+    let templateDocuments: any = [];
     (externalTemplates as Template[]).forEach((element: Template) => {
       templateDocuments.push({
         _id: element.id,
@@ -446,6 +446,7 @@ export class AdminHandlers {
       });
     });
     const count = templateDocuments.length;
+    templateDocuments = templateDocuments.slice(skip, limit + skip);
     return { templateDocuments, count };
   }
 
