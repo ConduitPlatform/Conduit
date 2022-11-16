@@ -18,7 +18,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
       action: ConduitRouteActions.GET,
       description: `Returns as array of currently available modules, providing information about their service.`,
       queryParams: {
-        sort: ConduitString.Optional,
+        sortByName: ConduitBoolean.Optional,
       },
     },
     new ConduitRouteReturnDefinition('GetModules', {
@@ -31,9 +31,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
       ],
     }),
     async (call: ConduitRouteParameters) => {
-      const sort = call.params!.sort;
-      if (!isNil(sort) && sort !== 'name' && sort !== '-name')
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid value for sort parameter.');
+      const sortByName = call.params!.sortByName;
       if (registeredModules.size !== 0) {
         const modules: any[] = [];
         registeredModules.forEach((value: RegisteredModule, key: string) => {
@@ -43,10 +41,11 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
             serving: value.serving,
           });
         });
-        if (sort === 'name')
-          modules.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
-        else if (sort === '-name')
-          modules.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
+        if (!isNil(sortByName)) {
+          if (sortByName)
+            modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+          else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
+        }
         return { modules };
       } else {
         throw new ConduitError('INTERNAL', 500, 'Modules not available yet');

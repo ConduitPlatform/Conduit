@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitBoolean,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -37,7 +38,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns middleware.`,
         queryParams: {
-          sort: ConduitString.Optional,
+          sortByName: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetMiddlewares', {
@@ -51,7 +52,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns available routes.`,
         queryParams: {
-          sort: ConduitString.Optional,
+          sortByName: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('GetRoutes', {
