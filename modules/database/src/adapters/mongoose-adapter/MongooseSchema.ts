@@ -1,4 +1,4 @@
-import { Model, Mongoose, Schema } from 'mongoose';
+import { Model, Mongoose, Schema, SortOrder } from 'mongoose';
 import {
   MultiDocQuery,
   ParsedQuery,
@@ -166,7 +166,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: string,
+    sort?: { [key: string]: number },
     populate?: string[],
   ) {
     let parsedQuery: ParsedQuery | ParsedQuery[];
@@ -176,17 +176,17 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       parsedQuery = query;
     }
     let finalQuery = this.model.find(this.parseQuery(parsedQuery), select);
-    if (skip !== null) {
+    if (!isNil(skip)) {
       finalQuery = finalQuery.skip(skip!);
     }
-    if (limit !== null) {
+    if (!isNil(limit)) {
       finalQuery = finalQuery.limit(limit!);
     }
-    if (populate != null) {
+    if (!isNil(populate)) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
-    if (sort !== null) {
-      finalQuery = finalQuery.sort(sort);
+    if (!isNil(sort)) {
+      finalQuery = finalQuery.sort(this.parseSort(sort));
     }
     // } else {
     //   finalQuery = finalQuery.sort({ createdAt: -1 });
@@ -234,5 +234,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     });
 
     return parsed;
+  }
+
+  private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {
+    return sort as { [p: string]: SortOrder };
   }
 }

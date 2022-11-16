@@ -7,8 +7,8 @@ import { v4 as uuid } from 'uuid';
 export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) {
   const uniqueUsers = Array.from(new Set(users));
   let errorMessage: string | null = null;
-  const usersToBeAdded = (await grpcSdk
-    .databaseProvider!.findMany('User', { _id: { $in: uniqueUsers } })
+  const usersToBeAdded = (await User.getInstance()
+    .findMany({ _id: { $in: uniqueUsers } })
     .catch((e: Error) => {
       errorMessage = e.message;
     })) as any[];
