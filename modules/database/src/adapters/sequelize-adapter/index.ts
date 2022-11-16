@@ -226,7 +226,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
-      compiledSchema,
+      schema,
       this,
     );
 
