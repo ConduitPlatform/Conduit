@@ -36,6 +36,9 @@ export class AdminHandlers {
         path: '/router/middlewares',
         action: ConduitRouteActions.GET,
         description: `Returns middleware.`,
+        queryParams: {
+          sort: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('GetMiddlewares', {
         response: TYPE.JSON,
@@ -47,6 +50,9 @@ export class AdminHandlers {
         path: '/routes',
         action: ConduitRouteActions.GET,
         description: `Returns available routes.`,
+        queryParams: {
+          sort: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('GetRoutes', {
         response: TYPE.JSON,
