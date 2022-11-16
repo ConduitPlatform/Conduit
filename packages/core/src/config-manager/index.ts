@@ -151,6 +151,8 @@ export default class ConfigManager implements IConfigManager {
     callback(null, {
       redisHost: process.env.REDIS_HOST!,
       redisPort: parseInt(process.env.REDIS_PORT!),
+      redisUsername: process.env.REDIS_USERNAME,
+      redisPassword: process.env.REDIS_PASSWORD,
     });
   }
 

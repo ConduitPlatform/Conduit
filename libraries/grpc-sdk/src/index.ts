@@ -44,7 +44,12 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private _redisDetails?: { host: string; port: number };
+  private _redisDetails?: {
+    host: string;
+    port: number;
+    username?: string;
+    password?: string;
+  };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -350,12 +355,19 @@ export default class ConduitGrpcSdk {
       this._redisDetails = {
         host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT, 10),
+        username: process.env.REDIS_USERNAME,
+        password: process.env.REDIS_PASSWORD,
       };
     } else {
       promise = promise
         .then(() => this.config.getRedisDetails())
         .then((r: GetRedisDetailsResponse) => {
-          this._redisDetails = { host: r.redisHost, port: r.redisPort };
+          this._redisDetails = {
+            host: r.redisHost,
+            port: r.redisPort,
+            username: r.redisUsername,
+            password: r.redisPassword,
+          };
         });
     }
     return promise
@@ -363,6 +375,8 @@ export default class ConduitGrpcSdk {
         const redisManager = new RedisManager(
           this.urlRemap ?? this._redisDetails!.host,
           this._redisDetails!.port,
+          this._redisDetails?.username,
+          this._redisDetails?.password,
         );
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
