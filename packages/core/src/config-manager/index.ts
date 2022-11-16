@@ -24,6 +24,8 @@ import { ConfigStorage } from './config-storage';
 import parseConfigSchema from '../utils';
 import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
+import * as fs from 'fs';
+import { isNil } from 'lodash';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -148,11 +150,17 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<null>,
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
+    const redisConfigPath = process.env.REDIS_CONFIG_PATH as string;
+    const redisConfig = JSON.parse(fs.readFileSync(redisConfigPath, 'utf8'));
     callback(null, {
-      redisHost: process.env.REDIS_HOST!,
-      redisPort: parseInt(process.env.REDIS_PORT!),
+      redisHost: process.env.REDIS_HOST,
+      redisPort: isNil(process.env.REDIS_PORT)
+        ? undefined
+        : parseInt(process.env.REDIS_PORT),
       redisUsername: process.env.REDIS_USERNAME,
       redisPassword: process.env.REDIS_PASSWORD,
+      sentinels: redisConfig.sentinels,
+      name: redisConfig.name,
     });
   }
 

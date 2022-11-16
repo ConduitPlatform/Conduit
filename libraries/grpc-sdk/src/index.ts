@@ -37,6 +37,8 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
+import fs from 'fs';
+import { isEmpty } from 'lodash';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -45,10 +47,12 @@ export default class ConduitGrpcSdk {
   private readonly _config?: Config;
   private readonly _admin?: Admin;
   private _redisDetails?: {
-    host: string;
-    port: number;
+    host?: string;
+    port?: number;
     username?: string;
     password?: string;
+    sentinels?: { host: string; port: number }[];
+    name?: string;
   };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
@@ -285,7 +289,13 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get redisDetails(): { host: string; port: number } {
+  get redisDetails(): {
+    host?: string;
+    port?: number;
+    password?: string;
+    name?: string;
+    sentinels?: any[];
+  } {
     if (this._redisDetails) {
       return this._redisDetails;
     } else {
@@ -351,7 +361,27 @@ export default class ConduitGrpcSdk {
 
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
-    if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+    if (process.env.REDIS_CONFIG_PATH) {
+      const configFile = JSON.parse(fs.readFileSync('/config-redis.json', 'utf8'));
+      if (
+        isEmpty(configFile.sentinels) ||
+        !configFile.sentinels.includes('host') ||
+        !configFile.sentinels.includes('port')
+      ) {
+        throw new Error(
+          'Redis config file must have a sentinels field witch is an array of objects with host and port fields',
+        );
+      }
+      this._redisDetails = {
+        sentinels: configFile.sentinels,
+        name: configFile.name,
+      };
+    }
+    if (
+      process.env.REDIS_HOST &&
+      process.env.REDIS_PORT &&
+      !process.env.REDIS_CONFIG_PATH
+    ) {
       this._redisDetails = {
         host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT, 10),
@@ -367,16 +397,20 @@ export default class ConduitGrpcSdk {
             port: r.redisPort,
             username: r.redisUsername,
             password: r.redisPassword,
+            sentinels: r.sentinels,
+            name: r.name,
           };
         });
     }
     return promise
       .then(() => {
         const redisManager = new RedisManager(
-          this.urlRemap ?? this._redisDetails!.host,
-          this._redisDetails!.port,
+          this.urlRemap ?? this._redisDetails?.host,
+          this._redisDetails?.port,
           this._redisDetails?.username,
           this._redisDetails?.password,
+          this._redisDetails?.sentinels,
+          this._redisDetails?.name,
         );
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
