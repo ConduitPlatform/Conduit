@@ -14,6 +14,7 @@ import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -207,14 +208,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
-    if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
       }
-      this.mongoose.connection.deleteModel(schema.name);
+      this.mongoose.connection.deleteModel(compiledSchema.name);
     }
 
-    const newSchema = schemaConverter(schema);
+    const newSchema = schemaConverter(compiledSchema);
     const indexes = newSchema.modelOptions.indexes;
     delete newSchema.modelOptions.indexes;
     this.registeredSchemas.set(
@@ -224,7 +230,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.models[schema.name] = new MongooseSchema(
       this.mongoose,
       newSchema,
-      schema,
+      compiledSchema,
       deepPopulate,
       this,
     );

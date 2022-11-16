@@ -18,6 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -205,14 +206,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
   ): Promise<SequelizeSchema> {
-    if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
       }
-      delete this.sequelize.models[schema.collectionName];
+      delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const newSchema = schemaConverter(schema);
+    const newSchema = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -220,7 +226,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
-      schema,
+      compiledSchema,
       this,
     );
 
