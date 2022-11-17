@@ -10,6 +10,7 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import { Doc } from '../../interfaces';
 import { findSchema, getUpdatedDocument, getUpdatedDocuments } from './utils';
+import { constructSortObj } from '../utils';
 
 export class CmsHandlers {
   constructor(
@@ -31,9 +32,14 @@ export class CmsHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
+    let parsedSort: { [key: string]: number } | undefined = undefined;
+    if (sort && sort.length > 0) {
+      parsedSort = constructSortObj(sort);
+    }
+
     const documentsPromise = this.database
       .getSchemaModel(schemaName)
-      .model.findMany({}, skipNumber, limitNumber, undefined, sort, populate);
+      .model.findMany({}, skipNumber, limitNumber, undefined, parsedSort, populate);
     const countPromise = this.database
       .getSchemaModel(schemaName)
       .model.countDocuments({});

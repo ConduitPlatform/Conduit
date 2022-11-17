@@ -330,7 +330,9 @@ export default class DatabaseModule extends ManagedModule<void> {
       const skip = call.request.skip;
       const limit = call.request.limit;
       const select = call.request.select;
-      const sort = call.request.sort ? JSON.parse(call.request.sort) : null;
+      const sort: { [key: string]: number } = call.request.sort
+        ? JSON.parse(call.request.sort)
+        : null;
       const populate = call.request.populate;
 
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
