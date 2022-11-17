@@ -1,4 +1,4 @@
-import { WhereOptions } from 'sequelize';
+import type { WhereOptions } from 'sequelize';
 
 export enum TYPE {
   String = 'String',
