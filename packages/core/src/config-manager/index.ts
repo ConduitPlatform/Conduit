@@ -150,13 +150,17 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<null>,
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
-    const redisConfigPath = process.env.REDIS_CONFIG_PATH as string;
-    const redisConfig = JSON.parse(fs.readFileSync(redisConfigPath, 'utf8'));
+    let redisConfig, redisPort;
+    if (process.env.REDIS_CONFIG_PATH) {
+      const configFile = fs.readFileSync(process.env.REDIS_CONFIG_PATH, 'utf8');
+      redisConfig = JSON.parse(configFile.toString());
+    }
+    if (process.env.REDIS_PORT) {
+      redisPort = parseInt(process.env.REDIS_PORT);
+    }
     callback(null, {
       redisHost: process.env.REDIS_HOST,
-      redisPort: isNil(process.env.REDIS_PORT)
-        ? undefined
-        : parseInt(process.env.REDIS_PORT),
+      redisPort: redisPort,
       redisUsername: process.env.REDIS_USERNAME,
       redisPassword: process.env.REDIS_PASSWORD,
       sentinels: redisConfig.sentinels,

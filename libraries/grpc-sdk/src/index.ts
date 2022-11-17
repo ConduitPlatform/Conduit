@@ -37,8 +37,8 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
-import fs from 'fs';
 import { isEmpty } from 'lodash';
+import fs from 'fs-extra';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -292,6 +292,7 @@ export default class ConduitGrpcSdk {
   get redisDetails(): {
     host?: string;
     port?: number;
+    username?: string;
     password?: string;
     name?: string;
     sentinels?: any[];
@@ -362,19 +363,22 @@ export default class ConduitGrpcSdk {
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
     if (process.env.REDIS_CONFIG_PATH) {
-      const configFile = JSON.parse(fs.readFileSync('/config-redis.json', 'utf8'));
-      if (
-        isEmpty(configFile.sentinels) ||
-        !configFile.sentinels.includes('host') ||
-        !configFile.sentinels.includes('port')
-      ) {
-        throw new Error(
-          'Redis config file must have a sentinels field witch is an array of objects with host and port fields',
-        );
+      const configFile = fs.readFileSync(process.env.REDIS_CONFIG_PATH, 'utf8');
+      const config = JSON.parse(configFile.toString());
+      if (isEmpty(config.sentinels)) {
+        throw new Error('Redis config file must have a sentinels field.');
+      } else {
+        config.sentinels.forEach((sentinel: any) => {
+          if (!sentinel.host || !sentinel.port) {
+            throw new Error(
+              'Redis config file must have a sentinels field witch is an array of objects with host and port fields',
+            );
+          }
+        });
       }
       this._redisDetails = {
-        sentinels: configFile.sentinels,
-        name: configFile.name,
+        sentinels: config.sentinels,
+        name: config.name,
       };
     }
     if (
