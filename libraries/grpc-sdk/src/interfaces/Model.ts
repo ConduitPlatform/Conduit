@@ -39,6 +39,7 @@ export interface ConduitModelField {
   unique?: boolean;
   select?: boolean;
   required?: boolean;
+  description?: string;
   systemRequired?: boolean;
   index?: SchemaFieldIndex;
 }
