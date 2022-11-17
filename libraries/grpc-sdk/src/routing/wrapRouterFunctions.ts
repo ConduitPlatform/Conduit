@@ -55,10 +55,10 @@ function generateLog(
 }
 
 function parseRequestData(data?: string) {
-  if (!data?.length) {
-    return {};
-  } else {
+  if (data && data.length !== 0) {
     return JSON.parse(data);
+  } else {
+    return {};
   }
 }
 
