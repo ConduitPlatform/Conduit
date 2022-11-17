@@ -370,15 +370,14 @@ export default class ConduitGrpcSdk {
       } else {
         redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
       }
-      if (isEmpty(redisJson.sentinels) || !redisJson.port || !redisJson.host) {
-        throw new Error(
-          'Redis config file must have a sentinels,a host and a port field.',
-        );
-      } else {
+      if (!redisJson.port || !redisJson.host) {
+        throw new Error('Redis config must have a host and a port field.');
+      }
+      if (!isEmpty(redisJson.sentinels)) {
         redisJson.sentinels.forEach((sentinel: any) => {
           if (!sentinel.host || !sentinel.port) {
             throw new Error(
-              'Redis config file must have a sentinels field witch is an array of objects with host and port fields',
+              'Redis sentinel must be an array of objects with host and port fields',
             );
           }
         });
