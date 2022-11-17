@@ -118,5 +118,5 @@ export interface PostgresIndexOptions {
   prefix?: string;
   unique?: boolean;
   using?: PostgresIndexType;
-  where?: WhereOptions;
+  where?: WhereOptions<any>;
 }
