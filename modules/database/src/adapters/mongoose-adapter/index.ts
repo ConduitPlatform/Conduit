@@ -310,13 +310,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       for (let i = 0; i < index.fields.length; i++) {
         fields[index.fields[i]] = index.types ? index.types[i] : 1;
       }
-      try {
-        schema.index(fields, index.options as IndexOptions);
-      } catch {
-        throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
-      }
+      schema.index(fields, index.options as IndexOptions);
     }
-    await this.mongoose.syncIndexes();
+    await this.mongoose
+      .model(schemaName)
+      .syncIndexes()
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
     return 'Indexes created!';
   }
 
