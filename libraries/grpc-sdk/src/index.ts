@@ -362,13 +362,20 @@ export default class ConduitGrpcSdk {
 
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
-    if (process.env.REDIS_CONFIG_PATH) {
-      const configFile = fs.readFileSync(process.env.REDIS_CONFIG_PATH, 'utf8');
-      const config = JSON.parse(configFile.toString());
-      if (isEmpty(config.sentinels)) {
-        throw new Error('Redis config file must have a sentinels field.');
+    if (process.env.REDIS_CONFIG) {
+      let redisConfig = process.env.REDIS_CONFIG;
+      let redisJson;
+      if (redisConfig.startsWith('{')) {
+        redisJson = JSON.parse(redisConfig);
       } else {
-        config.sentinels.forEach((sentinel: any) => {
+        redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
+      }
+      if (isEmpty(redisJson.sentinels) || !redisJson.port || !redisJson.host) {
+        throw new Error(
+          'Redis config file must have a sentinels,a host and a port field.',
+        );
+      } else {
+        redisJson.sentinels.forEach((sentinel: any) => {
           if (!sentinel.host || !sentinel.port) {
             throw new Error(
               'Redis config file must have a sentinels field witch is an array of objects with host and port fields',
@@ -377,8 +384,10 @@ export default class ConduitGrpcSdk {
         });
       }
       this._redisDetails = {
-        sentinels: config.sentinels,
-        name: config.name,
+        host: redisJson.host,
+        port: redisJson.port,
+        sentinels: redisJson.sentinels,
+        name: redisJson.name,
       };
     }
     if (
@@ -401,8 +410,6 @@ export default class ConduitGrpcSdk {
             port: r.redisPort,
             username: r.redisUsername,
             password: r.redisPassword,
-            sentinels: r.sentinels,
-            name: r.name,
           };
         });
     }
