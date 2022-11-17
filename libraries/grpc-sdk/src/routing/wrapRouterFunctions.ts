@@ -54,11 +54,11 @@ function generateLog(
   });
 }
 
-function parseRequestData(data: string) {
-  if (data.length !== 0) {
-    return JSON.parse(data);
-  } else {
+function parseRequestData(data?: string) {
+  if (!data?.length) {
     return {};
+  } else {
+    return JSON.parse(data);
   }
 }
 
