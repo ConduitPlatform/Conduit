@@ -304,19 +304,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     this.checkIndexes(indexes);
-    const schema = this.mongoose.model(schemaName).schema;
+    const collection = this.mongoose.model(schemaName).collection;
     for (const index of indexes) {
-      const fields: any = {};
+      const indexSpecs = [];
       for (let i = 0; i < index.fields.length; i++) {
-        fields[index.fields[i]] = index.types ? index.types[i] : 1;
+        const spec: any = {};
+        spec[index.fields[i]] = index.types ? index.types[i] : 1;
+        indexSpecs.push(spec);
       }
-      try {
-        schema.index(fields, index.options as IndexOptions);
-      } catch {
-        throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
-      }
+      await collection
+        .createIndex(indexSpecs, index.options as IndexOptions)
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
     }
-    await this.mongoose.syncIndexes();
     return 'Indexes created!';
   }
 
