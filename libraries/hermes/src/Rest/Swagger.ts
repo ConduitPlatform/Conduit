@@ -101,7 +101,7 @@ export class SwaggerGenerator {
           in: 'query',
           schema: this._parser.extractTypes('query', route.input.queryParams, true),
           // @ts-ignore
-          description: route.input.urlParams[name].description,
+          description: route.input.queryParams[name].description,
         });
       }
     }
@@ -115,34 +115,32 @@ export class SwaggerGenerator {
         content: {
           'application/json': {
             schema: this._parser.extractTypes('body', route.input.bodyParams, true),
-            // @ts-ignore
-            description: route.input.urlParams[name].description,
           },
         },
         required: true,
       };
-    }
 
-    this._routerMetadata.setExtraRouteHeaders(route, routeDoc);
+      this._routerMetadata.setExtraRouteHeaders(route, routeDoc);
 
-    const returnDefinition = this._parser.extractTypes(
-      route.returnTypeName,
-      route.returnTypeFields,
-      false,
-    );
-    routeDoc.responses[200].content['application/json'].schema = {
-      $ref: `#/components/schemas/${route.returnTypeName}`,
-    };
-    if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
-      this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
-    }
-    const path =
-      this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
-    if (this._swaggerDoc.paths.hasOwnProperty(path)) {
-      this._swaggerDoc.paths[path][method] = routeDoc;
-    } else {
-      this._swaggerDoc.paths[path] = {};
-      this._swaggerDoc.paths[path][method] = routeDoc;
+      const returnDefinition = this._parser.extractTypes(
+        route.returnTypeName,
+        route.returnTypeFields,
+        false,
+      );
+      routeDoc.responses[200].content['application/json'].schema = {
+        $ref: `#/components/schemas/${route.returnTypeName}`,
+      };
+      if (!this._swaggerDoc.components['schemas'][route.returnTypeName]) {
+        this._swaggerDoc.components['schemas'][route.returnTypeName] = returnDefinition;
+      }
+      const path =
+        this._routerMetadata.urlPrefix + route.input.path.replace(/(:)(\w+)/g, '{$2}');
+      if (this._swaggerDoc.paths.hasOwnProperty(path)) {
+        this._swaggerDoc.paths[path][method] = routeDoc;
+      } else {
+        this._swaggerDoc.paths[path] = {};
+        this._swaggerDoc.paths[path][method] = routeDoc;
+      }
     }
   }
 

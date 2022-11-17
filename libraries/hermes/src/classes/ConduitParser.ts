@@ -54,6 +54,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any,
     isRequired: boolean,
     isArray: boolean,
+    description?: string,
   ): void;
 
   protected abstract getResultFromArray(
@@ -113,6 +114,8 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           );
         } else if (typeof fields[field] === 'object') {
           // if it has "type" as a property we assume that the value is a string
+          if ((fields[field] as ConduitModelField).description) {
+          }
           if ((fields[field] as any).type) {
             // if type is simply a type
             if (typeof (fields[field] as ConduitModelField).type === 'string') {
@@ -154,6 +157,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 (fields[field] as ConduitModelField).type,
                 (fields[field] as ConduitModelField).required!,
                 false,
+                (fields[field] as ConduitModelField).description!,
               );
             }
           } else {
