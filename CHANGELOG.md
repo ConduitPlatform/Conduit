@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.5](https://github.com/ConduitPlatform/Conduit/compare/v0.15.4...v0.15.5) (2022-11-17)
+
+
+### Bug Fixes
+
+* **database:** fix index creation bugs ([#431](https://github.com/ConduitPlatform/Conduit/issues/431)) ([5ce7483](https://github.com/ConduitPlatform/Conduit/commit/5ce74836b043d810245166704f8ef49a483fa5b0))
+* **grpc-sdk:** router function wrappers crashes ([#433](https://github.com/ConduitPlatform/Conduit/issues/433)) ([e9e6383](https://github.com/ConduitPlatform/Conduit/commit/e9e638382b9490f48999b82ceeaeb008a83f30fd))
+
 ### [0.15.4](https://github.com/ConduitPlatform/Conduit/compare/v0.15.3...v0.15.4) (2022-11-17)
 
 
