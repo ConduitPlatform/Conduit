@@ -59,7 +59,7 @@ export class CustomEndpointHandler {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          if (createString.length !== OperationsEnum.GET) createString += ',';
+          if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
               const res = endpoint.inputs.filter(input => {
