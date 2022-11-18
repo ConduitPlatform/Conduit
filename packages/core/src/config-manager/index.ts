@@ -154,9 +154,23 @@ export default class ConfigManager implements IConfigManager {
     if (process.env.REDIS_CONFIG) {
       let redisConfig = process.env.REDIS_CONFIG;
       if (redisConfig.startsWith('{')) {
-        redisJson = JSON.parse(redisConfig);
+        try {
+          redisJson = JSON.parse(redisConfig);
+        } catch (e) {
+          return callback({
+            code: status.INTERNAL,
+            message: 'Failed to parse redis config',
+          });
+        }
       } else {
-        redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
+        try {
+          redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
+        } catch (e) {
+          return callback({
+            code: status.INTERNAL,
+            message: 'Failed to parse redis config',
+          });
+        }
       }
     }
     if (!isNil(redisJson)) {

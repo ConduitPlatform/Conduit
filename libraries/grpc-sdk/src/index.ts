@@ -37,7 +37,6 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
-import { isEmpty } from 'lodash';
 import fs from 'fs-extra';
 
 export default class ConduitGrpcSdk {
@@ -364,22 +363,19 @@ export default class ConduitGrpcSdk {
       let redisConfig = process.env.REDIS_CONFIG;
       let redisJson;
       if (redisConfig.startsWith('{')) {
-        redisJson = JSON.parse(redisConfig);
+        try {
+          redisJson = JSON.parse(redisConfig);
+        } catch (e) {
+          throw new Error('Invalid JSON in REDIS_CONFIG');
+        }
       } else {
-        redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
+        try {
+          redisJson = JSON.parse(fs.readFileSync(redisConfig).toString());
+        } catch (e) {
+          throw new Error('Invalid JSON in REDIS_CONFIG');
+        }
       }
-      if (!redisJson.port || !redisJson.host) {
-        throw new Error('Redis config must have a host and a port field.');
-      }
-      if (!isEmpty(redisJson.sentinels)) {
-        redisJson.sentinels.forEach((sentinel: any) => {
-          if (!sentinel.host || !sentinel.port) {
-            throw new Error(
-              'Redis sentinel must be an array of objects with host and port fields',
-            );
-          }
-        });
-      }
+
       this._redisDetails = redisJson;
     } else if (
       process.env.REDIS_HOST &&
@@ -396,13 +392,18 @@ export default class ConduitGrpcSdk {
       promise = promise
         .then(() => this.config.getRedisDetails())
         .then((r: GetRedisDetailsResponse) => {
-          this._redisDetails = {
-            host: r.redisHost,
-            port: r.redisPort,
-            username: r.redisUsername,
-            password: r.redisPassword,
-            redisConfig: r.redisConfig,
-          };
+          if (r.redisConfig) {
+            this._redisDetails = {
+              redisConfig: r.redisConfig,
+            };
+          } else {
+            this._redisDetails = {
+              host: r.redisHost,
+              port: r.redisPort,
+              username: r.redisUsername,
+              password: r.redisPassword,
+            };
+          }
         });
     }
     return promise
