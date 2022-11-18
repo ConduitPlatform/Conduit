@@ -3,7 +3,7 @@ import IORedis, { Redis, RedisOptions } from 'ioredis';
 export class RedisManager {
   redisConnection: RedisOptions;
 
-  constructor(redisDetails?: any) {
+  constructor(redisDetails?: RedisOptions) {
     this.redisConnection = {
       ...redisDetails,
     };
