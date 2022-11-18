@@ -301,10 +301,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
+    callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    indexes = this.checkAndConvertIndexes(indexes);
+    indexes = this.checkAndConvertIndexes(schemaName, indexes, callerModule);
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
       await queryInterface
@@ -365,8 +366,13 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Indexes deleted';
   }
 
-  private checkAndConvertIndexes(indexes: ModelOptionsIndexes[]) {
+  private checkAndConvertIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+    callerModule: string,
+  ) {
     for (const index of indexes) {
+      if (!index.types && !index.options) continue;
       if (index.types) {
         if (
           Array.isArray(index.types) ||
@@ -385,6 +391,15 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             'Invalid index options for PostgreSQL',
+          );
+        }
+        if (
+          Object.keys(index.options).includes('unique') &&
+          this.models[schemaName].originalSchema.ownerModule !== callerModule
+        ) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Not authorized to create unique index',
           );
         }
       }

@@ -173,6 +173,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
+    callerModule: string,
   ): Promise<string>;
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
