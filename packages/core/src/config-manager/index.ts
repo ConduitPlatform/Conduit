@@ -151,8 +151,8 @@ export default class ConfigManager implements IConfigManager {
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
     let redisJson;
-    if (process.env.REDIS_CONFIG) {
-      let redisConfig = process.env.REDIS_CONFIG;
+    const redisConfig = process.env.REDIS_CONFIG;
+    if (redisConfig) {
       if (redisConfig.startsWith('{')) {
         try {
           redisJson = JSON.parse(redisConfig);
@@ -175,7 +175,7 @@ export default class ConfigManager implements IConfigManager {
     }
     if (!isNil(redisJson)) {
       callback(null, {
-        redisConfig: redisJson,
+        redisConfig: JSON.stringify(redisJson),
       });
     } else {
       callback(null, {

@@ -38,6 +38,7 @@ import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
 import fs from 'fs-extra';
+import { RedisOptions } from 'ioredis';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -45,13 +46,7 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private _redisDetails?: {
-    host?: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    redisConfig?: any;
-  };
+  private _redisDetails?: RedisOptions;
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -287,13 +282,7 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get redisDetails(): {
-    host?: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    redisConfig?: any;
-  } {
+  get redisDetails(): RedisOptions {
     if (this._redisDetails) {
       return this._redisDetails;
     } else {
@@ -393,9 +382,7 @@ export default class ConduitGrpcSdk {
         .then(() => this.config.getRedisDetails())
         .then((r: GetRedisDetailsResponse) => {
           if (r.redisConfig) {
-            this._redisDetails = {
-              redisConfig: r.redisConfig,
-            };
+            this._redisDetails = JSON.parse(r.redisConfig);
           } else {
             this._redisDetails = {
               host: r.redisHost,
