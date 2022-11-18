@@ -558,7 +558,7 @@ export class SchemaAdmin {
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return await this.database.createIndexes(requestedSchema.name, indexes);
+    return await this.database.createIndexes(requestedSchema.name, indexes, 'database');
   }
 
   async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

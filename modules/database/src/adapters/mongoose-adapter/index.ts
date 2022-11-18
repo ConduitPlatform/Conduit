@@ -236,7 +236,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     );
     await this.saveSchemaToDatabase(schema);
     if (indexes) {
-      await this.createIndexes(schema.name, indexes);
+      await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
     return this.models[schema.name];
   }
@@ -300,10 +300,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
+    callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    this.checkIndexes(indexes);
+    this.checkIndexes(schemaName, indexes, callerModule);
     const collection = this.mongoose.model(schemaName).collection;
     for (const index of indexes) {
       const indexSpecs = [];
@@ -362,13 +363,28 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Indexes deleted';
   }
 
-  private checkIndexes(indexes: ModelOptionsIndexes[]) {
+  private checkIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+    callerModule: string,
+  ) {
     for (const index of indexes) {
       const options = index.options;
       const types = index.types;
       if (!options && !types) continue;
-      if (options && !checkIfMongoOptions(options)) {
-        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+      if (options) {
+        if (!checkIfMongoOptions(options)) {
+          throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+        }
+        if (
+          Object.keys(options).includes('unique') &&
+          this.models[schemaName].originalSchema.ownerModule !== callerModule
+        ) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Not authorized to create unique index',
+          );
+        }
       }
       if (types) {
         if (!Array.isArray(types) || types.length !== index.fields.length) {
