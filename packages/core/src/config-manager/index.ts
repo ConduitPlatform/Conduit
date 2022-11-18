@@ -24,6 +24,8 @@ import { ConfigStorage } from './config-storage';
 import parseConfigSchema from '../utils';
 import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
+import fs from 'fs-extra';
+import { isNil } from 'lodash';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -148,13 +150,34 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<null>,
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
-    // TODO - get redis details from config
-    callback(null, {
-      redisHost: process.env.REDIS_HOST,
-      redisPort: parseInt(process.env.REDIS_PORT!),
-      redisUsername: process.env.REDIS_USERNAME,
-      redisPassword: process.env.REDIS_PASSWORD,
-    });
+    let redisJson;
+    if (process.env.REDIS_CONFIG) {
+      let redisConfig = process.env.REDIS_CONFIG;
+      if (redisConfig.startsWith('{')) {
+        redisJson = JSON.parse(redisConfig);
+      } else {
+        redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
+      }
+    }
+    if (!isNil(redisJson)) {
+      callback(null, {
+        redisHost: redisJson.host,
+        redisPort: redisJson.port,
+        redisPassword: redisJson.password,
+        redisUsername: redisJson.username,
+        sentinels: redisJson.sentinels,
+        redisName: redisJson.name,
+      });
+    } else {
+      callback(null, {
+        redisName: undefined,
+        sentinels: [],
+        redisHost: process.env.REDIS_HOST!,
+        redisPort: parseInt(process.env.REDIS_PORT!),
+        redisPassword: process.env.REDIS_PASSWORD,
+        redisUsername: process.env.REDIS_USERNAME,
+      });
+    }
   }
 
   initConfigAdminRoutes() {

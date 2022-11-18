@@ -12,7 +12,7 @@ export class ConduitCommons {
   private constructor(name: string) {
     this.name = name;
     if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
-      if (!process.env.REDIS_CONFIG_PATH) {
+      if (!process.env.REDIS_CONFIG) {
         ConduitGrpcSdk.Logger.error('Redis IP not defined');
         process.exit(-1);
       }

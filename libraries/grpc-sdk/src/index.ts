@@ -385,15 +385,13 @@ export default class ConduitGrpcSdk {
       this._redisDetails = {
         host: redisJson.host,
         port: redisJson.port,
+        username: redisJson.username,
+        password: redisJson.password,
         sentinels: redisJson.sentinels,
         name: redisJson.name,
       };
     }
-    if (
-      process.env.REDIS_HOST &&
-      process.env.REDIS_PORT &&
-      !process.env.REDIS_CONFIG_PATH
-    ) {
+    if (process.env.REDIS_HOST && process.env.REDIS_PORT && !process.env.REDIS_CONFIG) {
       this._redisDetails = {
         host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT, 10),
@@ -409,6 +407,8 @@ export default class ConduitGrpcSdk {
             port: r.redisPort,
             username: r.redisUsername,
             password: r.redisPassword,
+            sentinels: r.sentinels,
+            name: r.redisName,
           };
         });
     }
