@@ -1,4 +1,4 @@
-import { CmsHandlers } from '../handlers/cms/handler';
+import { CmsHandlers } from '../handlers/cms/crud.handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
@@ -50,7 +50,7 @@ export class DatabaseRoutes {
   }
 
   requestRefresh() {
-    if (this.crudRoutes.length == 0 && this.customRoutes.length == 0) return;
+    if (this.crudRoutes.length === 0 && this.customRoutes.length === 0) return;
     this._scheduleTimeout();
   }
 
@@ -71,13 +71,22 @@ export class DatabaseRoutes {
   }
 
   private _refreshRoutes() {
+    ConduitGrpcSdk.Logger.verbose(`${this.crudRoutes.length} CRUD routes to register`);
+    ConduitGrpcSdk.Logger.verbose(
+      `${this.customRoutes.length} custom routes to register`,
+    );
     this._routingManager.clear();
     this.crudRoutes.concat(this.customRoutes).forEach(route => {
       this._routingManager.route(route.input, route.returnType, route.handler);
     });
-    this._routingManager.registerRoutes().catch((err: Error) => {
-      ConduitGrpcSdk.Logger.error('Failed to register routes for module');
-      ConduitGrpcSdk.Logger.error(err);
-    });
+    this._routingManager
+      .registerRoutes()
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Refreshed routes');
+      })
+      .catch((err: Error) => {
+        ConduitGrpcSdk.Logger.error('Failed to register routes for module');
+        ConduitGrpcSdk.Logger.error(err);
+      });
   }
 }

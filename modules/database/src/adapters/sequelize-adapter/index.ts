@@ -18,6 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -205,14 +206,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
   ): Promise<SequelizeSchema> {
-    if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
       }
-      delete this.sequelize.models[schema.collectionName];
+      delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const newSchema = schemaConverter(schema);
+    const newSchema = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -288,6 +294,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
+  getDatabaseType(): string {
+    return 'PostgreSQL';
+  }
+
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
@@ -297,10 +307,62 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     indexes = this.checkAndConvertIndexes(indexes);
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
-      await queryInterface.addIndex('cnd_' + schemaName, index.fields, index.options);
+      await queryInterface
+        .addIndex('cnd_' + schemaName, index.fields, index.options)
+        .catch(() => {
+          throw new GrpcError(status.INTERNAL, 'Unsuccessful index creation');
+        });
     }
     await this.models[schemaName].sync();
     return 'Indexes created!';
+  }
+
+  async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const queryInterface = this.sequelize.getQueryInterface();
+    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as Array<any>;
+    result.filter(index => {
+      const fieldNames = [];
+      for (const field of index.fields) {
+        fieldNames.push(field.attribute);
+      }
+      index.fields = fieldNames;
+      // extract index type from index definition
+      let tmp = index.definition.split('USING ');
+      tmp = tmp[1].split(' ');
+      index.types = tmp[0];
+      delete index.definition;
+      index.options = {};
+      for (const indexEntry of Object.entries(index)) {
+        if (
+          indexEntry[0] === 'options' ||
+          indexEntry[0] === 'types' ||
+          indexEntry[0] === 'fields'
+        ) {
+          continue;
+        }
+        if (indexEntry[0] === 'indkey') {
+          delete index.indkey;
+          continue;
+        }
+        index.options[indexEntry[0]] = indexEntry[1];
+        delete index[indexEntry[0]];
+      }
+    });
+    return result;
+  }
+
+  async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const queryInterface = this.sequelize.getQueryInterface();
+    for (const name of indexNames) {
+      queryInterface.removeIndex('cnd_' + schemaName, name).catch(() => {
+        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      });
+    }
+    return 'Indexes deleted';
   }
 
   private checkAndConvertIndexes(indexes: ModelOptionsIndexes[]) {

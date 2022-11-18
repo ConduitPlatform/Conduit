@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { UnparsedRouterResponse } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+} from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
 
@@ -8,8 +11,9 @@ export class RouterAdmin {
     private readonly router: ConduitDefaultRouter,
   ) {}
 
-  async getMiddlewares(): Promise<UnparsedRouterResponse> {
-    const response: string[] = [];
+  async getMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sortByName } = call.request.params;
+    let response: string[] = [];
     const module = this.router.getGrpcRoutes();
     Object.keys(module).forEach((url: string) => {
       module[url].forEach((item: any) => {
@@ -22,13 +26,19 @@ export class RouterAdmin {
         }
       });
     });
+    if (!isNil(sortByName)) {
+      if (sortByName) response = response.sort((a, b) => a.localeCompare(b));
+      else response = response.sort((a, b) => b.localeCompare(a));
+    }
     return Array.from(new Set(response));
   }
 
-  async getRoutes(): Promise<UnparsedRouterResponse> {
-    const response: any[] = [];
+  async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sortByName } = call.request.params;
+    let response: any[] = [];
     const module = this.router.getGrpcRoutes();
     ConduitGrpcSdk.Logger.logObject(module);
+
     Object.keys(module).forEach((url: string) => {
       module[url].forEach((item: any) => {
         response.push({
@@ -38,6 +48,10 @@ export class RouterAdmin {
         });
       });
     });
+    if (!isNil(sortByName)) {
+      if (sortByName) response = response.sort((a, b) => a.localeCompare(b));
+      else response = response.sort((a, b) => b.localeCompare(a));
+    }
     return response;
   }
 }

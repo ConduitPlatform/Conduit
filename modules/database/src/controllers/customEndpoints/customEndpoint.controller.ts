@@ -58,9 +58,6 @@ export class CustomEndpointController {
         this.router!.addRoutes(routes, false);
         this.router!.requestRefresh();
       })
-      .then(() => {
-        ConduitGrpcSdk.Logger.log('Refreshed routes');
-      })
       .catch((err: Error) => {
         ConduitGrpcSdk.Logger.error(
           'Something went wrong when loading custom endpoints to the router',

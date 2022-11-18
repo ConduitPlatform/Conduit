@@ -14,6 +14,7 @@ import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -207,14 +208,19 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
-    if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
       }
-      this.mongoose.connection.deleteModel(schema.name);
+      this.mongoose.connection.deleteModel(compiledSchema.name);
     }
 
-    const newSchema = schemaConverter(schema);
+    const newSchema = schemaConverter(compiledSchema);
     const indexes = newSchema.modelOptions.indexes;
     delete newSchema.modelOptions.indexes;
     this.registeredSchemas.set(
@@ -287,6 +293,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Schema deleted!';
   }
 
+  getDatabaseType(): string {
+    return 'MongoDB';
+  }
+
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
@@ -294,16 +304,62 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     this.checkIndexes(indexes);
-    const schema = this.mongoose.model(schemaName).schema;
+    const collection = this.mongoose.model(schemaName).collection;
     for (const index of indexes) {
-      const fields: any = {};
+      const indexSpecs = [];
       for (let i = 0; i < index.fields.length; i++) {
-        fields[index.fields[i]] = index.types![i];
+        const spec: any = {};
+        spec[index.fields[i]] = index.types ? index.types[i] : 1;
+        indexSpecs.push(spec);
       }
-      schema.index(fields, index.options as IndexOptions);
+      await collection
+        .createIndex(indexSpecs, index.options as IndexOptions)
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
     }
-    await this.mongoose.syncIndexes();
     return 'Indexes created!';
+  }
+
+  async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection = this.mongoose.model(schemaName).collection;
+    const result = await collection.indexes();
+    result.filter(index => {
+      index.options = {};
+      for (const indexEntry of Object.entries(index)) {
+        if (indexEntry[0] === 'key' || indexEntry[0] === 'options') {
+          continue;
+        }
+        if (indexEntry[0] === 'v') {
+          delete index.v;
+          continue;
+        }
+        index.options[indexEntry[0]] = indexEntry[1];
+        delete index[indexEntry[0]];
+      }
+      index.fields = [];
+      index.types = [];
+      for (const keyEntry of Object.entries(index.key)) {
+        index.fields.push(keyEntry[0]);
+        index.types.push(keyEntry[1]);
+        delete index.key;
+      }
+    });
+    return result as ModelOptionsIndexes[];
+  }
+
+  async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
+    if (!this.models[schemaName])
+      throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
+    const collection = this.mongoose.model(schemaName).collection;
+    for (const name of indexNames) {
+      collection.dropIndex(name).catch(() => {
+        throw new GrpcError(status.INTERNAL, 'Unsuccessful index deletion');
+      });
+    }
+    return 'Indexes deleted';
   }
 
   private checkIndexes(indexes: ModelOptionsIndexes[]) {

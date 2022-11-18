@@ -146,6 +146,11 @@ export class AdminHandlers {
         path: '/externalTemplates',
         action: ConduitRouteActions.GET,
         description: `Returns external email templates and their total count.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sortByName: ConduitBoolean.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('GetExternalTemplates', {
         templateDocuments: [EmailTemplate.name],
@@ -413,14 +418,22 @@ export class AdminHandlers {
   }
 
   async getExternalTemplates(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const { sortByName } = call.request.params;
     const [err, externalTemplates] = await to(this.emailService.getExternalTemplates()!);
+    if (!isNil(sortByName)) {
+      if (sortByName) externalTemplates!.sort((a, b) => a.name.localeCompare(b.name));
+      else externalTemplates!.sort((a, b) => b.name.localeCompare(a.name));
+    }
+
     if (!isNil(err)) {
       throw new GrpcError(status.INTERNAL, err.message);
     }
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
-    const templateDocuments: any = [];
+    let templateDocuments: any = [];
     (externalTemplates as Template[]).forEach((element: Template) => {
       templateDocuments.push({
         _id: element.id,
@@ -432,6 +445,7 @@ export class AdminHandlers {
       });
     });
     const count = templateDocuments.length;
+    templateDocuments = templateDocuments.slice(skip, limit + skip);
     return { templateDocuments, count };
   }
 

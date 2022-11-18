@@ -168,10 +168,16 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
 
+  abstract getDatabaseType(): string;
+
   abstract createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
   ): Promise<string>;
+
+  abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
+
+  abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
@@ -280,14 +286,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     validateExtensionFields(schema, extFields, extOwner);
     const extIndex = schema.extensions.findIndex(ext => ext.ownerModule === extOwner);
-    if (extIndex === -1) {
+    const extFieldsCount = Object.keys(extFields).length;
+    if (extIndex === -1 && extFieldsCount === 0) {
+      return Promise.resolve(schema as unknown as Schema); // @dirty-type-cast
+    } else if (extIndex === -1) {
       // Create Extension
-      if (Object.keys(extFields).length === 0) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Could not create schema extension with no custom fields',
-        );
-      }
       schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
@@ -295,7 +298,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         updatedAt: new Date(), // TODO FORMAT
       });
     } else {
-      if (Object.keys(extFields).length === 0) {
+      if (extFieldsCount === 0) {
         // Remove Extension
         schema.extensions.splice(extIndex, 1);
       } else {

@@ -1,4 +1,4 @@
-import { WhereOptions } from 'sequelize';
+import type { WhereOptions } from 'sequelize';
 
 export enum TYPE {
   String = 'String',
@@ -118,5 +118,5 @@ export interface PostgresIndexOptions {
   prefix?: string;
   unique?: boolean;
   using?: PostgresIndexType;
-  where?: WhereOptions;
+  where?: WhereOptions<any>;
 }
