@@ -161,17 +161,10 @@ export default class ConfigManager implements IConfigManager {
     }
     if (!isNil(redisJson)) {
       callback(null, {
-        redisHost: redisJson.host,
-        redisPort: redisJson.port,
-        redisPassword: redisJson.password,
-        redisUsername: redisJson.username,
-        sentinels: redisJson.sentinels,
-        redisName: redisJson.name,
+        redisConfig: redisJson,
       });
     } else {
       callback(null, {
-        redisName: undefined,
-        sentinels: [],
         redisHost: process.env.REDIS_HOST!,
         redisPort: parseInt(process.env.REDIS_PORT!),
         redisPassword: process.env.REDIS_PASSWORD,

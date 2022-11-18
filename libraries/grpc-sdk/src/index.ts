@@ -51,8 +51,7 @@ export default class ConduitGrpcSdk {
     port?: number;
     username?: string;
     password?: string;
-    sentinels?: { host: string; port: number }[];
-    name?: string;
+    redisConfig?: any;
   };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
@@ -294,8 +293,7 @@ export default class ConduitGrpcSdk {
     port?: number;
     username?: string;
     password?: string;
-    name?: string;
-    sentinels?: any[];
+    redisConfig?: any;
   } {
     if (this._redisDetails) {
       return this._redisDetails;
@@ -382,19 +380,15 @@ export default class ConduitGrpcSdk {
           }
         });
       }
+      this._redisDetails = redisJson;
+    } else if (
+      process.env.REDIS_HOST &&
+      process.env.REDIS_PORT &&
+      !process.env.REDIS_CONFIG
+    ) {
       this._redisDetails = {
-        host: redisJson.host,
-        port: redisJson.port,
-        username: redisJson.username,
-        password: redisJson.password,
-        sentinels: redisJson.sentinels,
-        name: redisJson.name,
-      };
-    }
-    if (process.env.REDIS_HOST && process.env.REDIS_PORT && !process.env.REDIS_CONFIG) {
-      this._redisDetails = {
-        host: process.env.REDIS_HOST,
-        port: parseInt(process.env.REDIS_PORT, 10),
+        host: process.env.REDIS_HOST!,
+        port: parseInt(process.env.REDIS_PORT!, 10),
         username: process.env.REDIS_USERNAME,
         password: process.env.REDIS_PASSWORD,
       };
@@ -407,21 +401,13 @@ export default class ConduitGrpcSdk {
             port: r.redisPort,
             username: r.redisUsername,
             password: r.redisPassword,
-            sentinels: r.sentinels,
-            name: r.redisName,
+            redisConfig: r.redisConfig,
           };
         });
     }
     return promise
       .then(() => {
-        const redisManager = new RedisManager(
-          this.urlRemap ?? this._redisDetails?.host,
-          this._redisDetails?.port,
-          this._redisDetails?.username,
-          this._redisDetails?.password,
-          this._redisDetails?.sentinels,
-          this._redisDetails?.name,
-        );
+        const redisManager = new RedisManager(this._redisDetails);
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;

@@ -3,21 +3,9 @@ import IORedis, { Redis, RedisOptions } from 'ioredis';
 export class RedisManager {
   redisConnection: RedisOptions;
 
-  constructor(
-    redisIp?: string,
-    redisPort?: any,
-    redisUsername?: string,
-    redisPassword?: string,
-    sentinels?: any[],
-    name?: string,
-  ) {
+  constructor(redisDetails?: any) {
     this.redisConnection = {
-      host: redisIp,
-      port: redisPort,
-      username: redisUsername,
-      password: redisPassword,
-      sentinels: sentinels,
-      name: name,
+      ...redisDetails,
     };
   }
   getClient(connectionOps?: RedisOptions): Redis {
