@@ -91,7 +91,7 @@ services:
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
       DB_TYPE: '${DB_TYPE:-mongodb}'
-      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}'
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017/conduit?authSource=admin}'
     networks:
       default:
         aliases:
@@ -332,6 +332,7 @@ services:
     ports:
       - '${DB_PORT:-27017}:27017'
     environment:
+      MONGO_INITDB_DATABASE: 'conduit'
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
     profiles: ['mongodb']
