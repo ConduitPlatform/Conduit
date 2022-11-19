@@ -341,7 +341,7 @@ services:
         aliases:
           - conduit-mongo
     volumes:
-      - conduit-mongodb:/data/db
+      - mongo:/data/db
 
   postgres:
     container_name: 'conduit-postgres'
@@ -359,7 +359,7 @@ services:
         aliases:
           - conduit-postgres
     volumes:
-      - conduit-postgres:/var/lib/postgresql
+      - postgres:/var/lib/postgresql
 
   # Metrics / Logs
   prometheus:
@@ -376,7 +376,7 @@ services:
           - conduit-prometheus
     volumes:
       - ./prometheus.cfg.yml:/etc/prometheus/prometheus.yml:Z
-      - conduit-prometheus:/prometheus
+      - prometheus:/prometheus
 
   loki:
     image: 'docker.io/grafana/loki:2.6.1'
@@ -390,15 +390,15 @@ services:
           - conduit-loki
     volumes:
       - ./loki.cfg.yml:/etc/loki/loki-config.yaml:Z
-      - conduit-loki:/loki
+      - loki:/loki
 
 # Persistent Volumes
 volumes:
-  conduit-mongodb:
+  mongo:
     external: false
-  conduit-postgres:
+  postgres:
     external: false
-  conduit-prometheus:
+  prometheus:
     external: false
-  conduit-loki:
+  loki:
     external: false
