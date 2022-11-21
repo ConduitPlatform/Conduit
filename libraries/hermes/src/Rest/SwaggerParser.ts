@@ -139,7 +139,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       // @ts-ignore
       processingObject.properties[fieldName] = {
         type: 'string',
-        description: description,
+        description,
       };
     } else {
       // @ts-ignore
@@ -163,7 +163,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     // @ts-ignore
     processingObject.properties[name] = {
       type: 'array',
-      description: description,
+      description,
       // @ts-ignore
       items: super.arrayHandler(resolverName, name, value).properties[name],
     };
