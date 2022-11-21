@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.6](https://github.com/ConduitPlatform/Conduit/compare/v0.15.5...v0.15.6) (2022-11-18)
+
+
+### Bug Fixes
+
+* **database:** check for schema ownership in case of unique index creation ([#434](https://github.com/ConduitPlatform/Conduit/issues/434)) ([cf66de9](https://github.com/ConduitPlatform/Conduit/commit/cf66de92097555e3135d188e6dc8ee222e856a26))
+* **database:** custom endpoint handler createString length check ([#436](https://github.com/ConduitPlatform/Conduit/issues/436)) ([54b03cc](https://github.com/ConduitPlatform/Conduit/commit/54b03cc879868e9edd7aa4bbdf833873f9191993))
+
 ### [0.15.5](https://github.com/ConduitPlatform/Conduit/compare/v0.15.4...v0.15.5) (2022-11-17)
 
 
