@@ -109,11 +109,13 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: string | ConduitModel | ConduitRouteOption,
     isRequired: boolean = false,
     isArray: boolean,
+    description?: string,
   ): void {
     // object of some kind
     const nestedName = this.constructName(name, fieldName);
     this.constructResolver(name, fieldName);
     processingObject.typeString +=
+      (description ? `""" ${description} """ ` : '') +
       fieldName +
       ': ' +
       `${isArray ? '[' : ''}` +
@@ -130,10 +132,12 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any[],
     isRequired: boolean = false,
     nestedType?: boolean,
+    description?: string,
   ): void {
     const arrayProcessing = super.arrayHandler(resolverName, name, value);
     if (nestedType) {
       processingObject.typeString +=
+        `""" ${description} """ ` +
         arrayProcessing.typeString.slice(0, arrayProcessing.typeString.length - 1) +
         (isRequired ? '!' : '') +
         ' ';

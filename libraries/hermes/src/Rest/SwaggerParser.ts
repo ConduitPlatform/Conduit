@@ -158,10 +158,12 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any[],
     isRequired: boolean = false,
     nestedType?: boolean,
+    description?: string,
   ): void {
     // @ts-ignore
     processingObject.properties[name] = {
       type: 'array',
+      description: description,
       // @ts-ignore
       items: super.arrayHandler(resolverName, name, value).properties[name],
     };

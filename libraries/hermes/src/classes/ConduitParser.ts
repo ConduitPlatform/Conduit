@@ -64,6 +64,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any[],
     isRequired: boolean,
     nestedType?: boolean,
+    description?: string,
   ): void;
 
   protected abstract getResultFromRelation(
@@ -146,6 +147,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 (fields[field] as ConduitModelField).type as Array,
                 (fields[field] as ConduitModelField).required!,
                 true,
+                (fields[field] as ConduitModelField).description,
               );
             } else {
               this.getResultFromObject(
