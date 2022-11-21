@@ -349,7 +349,7 @@ export default class ConduitGrpcSdk {
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
     if (process.env.REDIS_CONFIG) {
-      let redisConfig = process.env.REDIS_CONFIG;
+      const redisConfig = process.env.REDIS_CONFIG;
       let redisJson;
       if (redisConfig.startsWith('{')) {
         try {
