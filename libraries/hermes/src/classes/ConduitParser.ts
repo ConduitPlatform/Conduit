@@ -155,6 +155,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 (fields[field] as ConduitModelField).type,
                 (fields[field] as ConduitModelField).required!,
                 false,
+                (fields[field] as ConduitModelField).description!,
               );
             }
           } else {

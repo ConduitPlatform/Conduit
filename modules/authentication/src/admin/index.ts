@@ -36,7 +36,10 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns queried users and their total count.`,
         queryParams: {
-          skip: ConduitNumber.Optional,
+          skip: {
+            type: ConduitNumber.Optional,
+            description: 'Used for pagination',
+          },
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
@@ -56,7 +59,10 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Creates a new user using email/password.`,
         bodyParams: {
-          email: ConduitString.Required,
+          email: {
+            type: ConduitString.Required,
+            description: 'User email',
+          },
           password: ConduitString.Required,
         },
       },

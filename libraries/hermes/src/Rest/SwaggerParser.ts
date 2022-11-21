@@ -141,13 +141,14 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         type: 'string',
         description: description,
       };
+    } else {
       // @ts-ignore
       processingObject.properties[fieldName] = {
         type: 'object',
         properties: this.extractTypes(name, value, this.isInput).properties,
       };
-      this.addFieldToRequired(processingObject, fieldName, isRequired);
     }
+    this.addFieldToRequired(processingObject, fieldName, isRequired);
   }
 
   protected getResultFromArray(
