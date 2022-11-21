@@ -39,6 +39,7 @@ export interface ConduitModelField {
   unique?: boolean;
   select?: boolean;
   required?: boolean;
+  description?: string;
   systemRequired?: boolean;
   index?: SchemaFieldIndex;
 }
@@ -77,6 +78,7 @@ export interface ConduitSchemaOptions {
 export interface SchemaFieldIndex {
   type?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 
@@ -84,6 +86,7 @@ export interface ModelOptionsIndexes {
   fields: string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 

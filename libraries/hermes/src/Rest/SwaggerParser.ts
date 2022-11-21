@@ -133,13 +133,21 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any,
     isRequired: boolean = false,
     isArray: boolean,
+    description?: string,
   ): void {
-    // @ts-ignore
-    processingObject.properties[fieldName] = {
-      type: 'object',
-      properties: this.extractTypes(name, value, this.isInput).properties,
-    };
-    this.addFieldToRequired(processingObject, fieldName, isRequired);
+    if (description && name === 'body') {
+      // @ts-ignore
+      processingObject.properties[fieldName] = {
+        type: 'string',
+        description: description,
+      };
+      // @ts-ignore
+      processingObject.properties[fieldName] = {
+        type: 'object',
+        properties: this.extractTypes(name, value, this.isInput).properties,
+      };
+      this.addFieldToRequired(processingObject, fieldName, isRequired);
+    }
   }
 
   protected getResultFromArray(

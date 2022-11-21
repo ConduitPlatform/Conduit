@@ -54,6 +54,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any,
     isRequired: boolean,
     isArray: boolean,
+    description?: string,
   ): void;
 
   protected abstract getResultFromArray(
