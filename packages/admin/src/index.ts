@@ -195,10 +195,7 @@ export default class AdminModule extends IConduitAdmin {
       this._router.stopGraphQL();
     }
     if (ConfigController.getInstance().config.transports.sockets) {
-      this._router.initSockets(
-        this.grpcSdk.redisDetails.host,
-        this.grpcSdk.redisDetails.port,
-      );
+      this._router.initSockets();
     } else {
       this._router.stopSockets();
     }

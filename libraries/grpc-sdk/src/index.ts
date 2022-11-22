@@ -1,5 +1,7 @@
 import {
   Admin,
+  Authentication,
+  Authorization,
   Chat,
   Config,
   Core,
@@ -10,8 +12,6 @@ import {
   Router,
   SMS,
   Storage,
-  Authorization,
-  Authentication,
 } from './modules';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
@@ -46,6 +46,7 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
+  private _redisManager: RedisManager | null = null;
   private _redisDetails?:
     | RedisOptions
     | { nodes: { host: string; port: number }[]; options: ClusterOptions };
@@ -398,24 +399,31 @@ export default class ConduitGrpcSdk {
     }
     return promise
       .then(() => {
-        let redisManager: RedisManager;
         if (this._redisDetails!.hasOwnProperty('nodes')) {
-          redisManager = new RedisManager(this._redisDetails);
+          this._redisManager = new RedisManager(this._redisDetails);
         } else {
           const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
-          redisManager = new RedisManager({
+          this._redisManager = new RedisManager({
             host: redisHost,
             ...this._redisDetails,
           });
         }
-        this._eventBus = new EventBus(redisManager);
-        this._stateManager = new StateManager(redisManager, this.name);
+        this._eventBus = new EventBus(this._redisManager);
+        this._stateManager = new StateManager(this._redisManager, this.name);
         return this._eventBus;
       })
       .catch((err: Error) => {
         ConduitGrpcSdk.Logger.error('Failed to initialize event bus');
         throw err;
       });
+  }
+
+  get redisManager(): RedisManager {
+    if (this._redisManager) {
+      return this._redisManager;
+    } else {
+      throw new Error('Redis not available');
+    }
   }
 
   /**
