@@ -45,6 +45,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     isArray: boolean,
     parentField: string,
+    description?: string,
   ): void;
 
   protected abstract getResultFromObject(
@@ -54,6 +55,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any,
     isRequired: boolean,
     isArray: boolean,
+    description?: string,
   ): void;
 
   protected abstract getResultFromArray(
@@ -63,6 +65,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     value: any[],
     isRequired: boolean,
     nestedType?: boolean,
+    description?: string,
   ): void;
 
   protected abstract getResultFromRelation(
@@ -100,6 +103,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             false,
             false,
             name,
+            (fields[field] as ConduitModelField).description!,
           );
         }
         // if field is an array
@@ -133,6 +137,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   (fields[field] as ConduitModelField).required!,
                   false,
                   name,
+                  (fields[field] as ConduitModelField).description!,
                 );
               }
             }
@@ -145,6 +150,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 (fields[field] as ConduitModelField).type as Array,
                 (fields[field] as ConduitModelField).required!,
                 true,
+                (fields[field] as ConduitModelField).description,
               );
             } else {
               this.getResultFromObject(
@@ -154,6 +160,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                 (fields[field] as ConduitModelField).type,
                 (fields[field] as ConduitModelField).required!,
                 false,
+                (fields[field] as ConduitModelField).description!,
               );
             }
           } else {
@@ -164,6 +171,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               fields[field] as ConduitModelField,
               false,
               false,
+              (fields[field] as ConduitModelField).description!,
             );
           }
         }
