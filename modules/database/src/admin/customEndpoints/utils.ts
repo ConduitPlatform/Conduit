@@ -131,6 +131,7 @@ function _queryValidation(
  * }
  */
 function _inputValidation(
+  operation: number,
   name: string,
   type: any,
   location: number,
@@ -155,20 +156,37 @@ function _inputValidation(
   }
 
   if (location === 2 && isArray) {
-    return 'Url params cant have an array input';
+    return "Url params can't have an array input";
+  }
+
+  if (
+    (operation === OperationsEnum.GET || operation === OperationsEnum.DELETE) &&
+    location === 0
+  ) {
+    return 'GET or DELETE requests can not have body parameters';
   }
 
   return true;
 }
 
-export function inputValidation(inputs?: Indexable | null): boolean | string {
+export function inputValidation(
+  operation: number,
+  inputs?: Indexable | null,
+): boolean | string {
   if (!isNil(inputs) && inputs.length) {
-    inputs.forEach((r: Indexable) => {
-      const error = _inputValidation(r.name, r.type, r.location, r.array);
+    for (const r of Object.keys(inputs)) {
+      const input = inputs[r];
+      const error = _inputValidation(
+        operation,
+        input.name,
+        input.type,
+        input.location,
+        input.array,
+      );
       if (error !== true) {
         return error as string;
       }
-    });
+    }
   }
   return true;
 }
