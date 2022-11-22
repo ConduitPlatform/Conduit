@@ -82,6 +82,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean,
     isArray: boolean,
     parentField: string,
+    description?: string,
   ): void {
     if (!isArray && name === parentField) {
       const typeFields = TypeRegistry.getInstance().getType(value);
@@ -96,6 +97,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
       }
     } else {
       processingObject.typeString +=
+        (description ? `""" ${description} """ ` : '') +
         `${name}: ${isArray ? '[' : ''}` +
         this.getType(value) +
         `${isArray ? `${isRequired ? '!' : ''}]` : ''} `;
