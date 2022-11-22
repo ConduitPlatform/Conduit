@@ -45,6 +45,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     isRequired: boolean,
     isArray: boolean,
     parentField: string,
+    description?: string,
   ): void;
 
   protected abstract getResultFromObject(
@@ -102,6 +103,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
             false,
             false,
             name,
+            (fields[field] as ConduitModelField).description!,
           );
         }
         // if field is an array
@@ -135,6 +137,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
                   (fields[field] as ConduitModelField).required!,
                   false,
                   name,
+                  (fields[field] as ConduitModelField).description!,
                 );
               }
             }
@@ -168,6 +171,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
               fields[field] as ConduitModelField,
               false,
               false,
+              (fields[field] as ConduitModelField).description!,
             );
           }
         }
