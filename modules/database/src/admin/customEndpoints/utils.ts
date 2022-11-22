@@ -156,11 +156,14 @@ function _inputValidation(
   }
 
   if (location === 2 && isArray) {
-    return 'Url params cant have an array input';
+    return "Url params can't have an array input";
   }
 
-  if (operation === OperationsEnum.GET && location === 0) {
-    return 'GET requests can not have body parameters';
+  if (
+    (operation === OperationsEnum.GET || operation === OperationsEnum.DELETE) &&
+    location === 0
+  ) {
+    return 'GET or DELETE requests can not have body parameters';
   }
 
   return true;
