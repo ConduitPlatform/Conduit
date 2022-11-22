@@ -97,7 +97,7 @@ export class CustomEndpointsAdmin {
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    error = inputValidation(inputs);
+    error = inputValidation(operation, inputs);
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
