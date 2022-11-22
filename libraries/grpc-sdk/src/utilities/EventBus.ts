@@ -1,13 +1,14 @@
 import { RedisManager } from './RedisManager';
-import { Redis } from 'ioredis';
+import { Cluster, Redis } from 'ioredis';
 import crypto from 'crypto';
 import ConduitGrpcSdk from '../index';
 
 export class EventBus {
-  private _clientSubscriber: Redis;
-  private _clientPublisher: Redis;
+  private _clientSubscriber: Redis | Cluster;
+  private _clientPublisher: Redis | Cluster;
   private _subscribedChannels: { [listener: string]: ((message: string) => void)[] };
   private _signature: string;
+
   constructor(redisManager: RedisManager) {
     this._subscribedChannels = {};
     this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });

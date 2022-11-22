@@ -38,7 +38,7 @@ import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
 import fs from 'fs-extra';
-import { RedisOptions } from 'ioredis';
+import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -46,7 +46,9 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private _redisDetails?: RedisOptions;
+  private _redisDetails?:
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -282,7 +284,9 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get redisDetails(): RedisOptions {
+  get redisDetails():
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
     if (this._redisDetails) {
       return this._redisDetails;
     } else {
@@ -364,7 +368,6 @@ export default class ConduitGrpcSdk {
           throw new Error('Invalid JSON in REDIS_CONFIG');
         }
       }
-
       this._redisDetails = redisJson;
     } else if (
       process.env.REDIS_HOST &&
@@ -395,7 +398,16 @@ export default class ConduitGrpcSdk {
     }
     return promise
       .then(() => {
-        const redisManager = new RedisManager(this._redisDetails);
+        let redisManager: RedisManager;
+        if (this._redisDetails!.hasOwnProperty('nodes')) {
+          redisManager = new RedisManager(this._redisDetails);
+        } else {
+          const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
+          redisManager = new RedisManager({
+            host: redisHost,
+            ...this._redisDetails,
+          });
+        }
         this._eventBus = new EventBus(redisManager);
         this._stateManager = new StateManager(redisManager, this.name);
         return this._eventBus;

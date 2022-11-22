@@ -1,14 +1,32 @@
-import IORedis, { Redis, RedisOptions } from 'ioredis';
+import IORedis, { Cluster, ClusterOptions, Redis, RedisOptions } from 'ioredis';
 
 export class RedisManager {
-  redisConnection: RedisOptions;
+  redisConnection:
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
 
-  constructor(redisDetails?: RedisOptions) {
+  constructor(
+    redisDetails?:
+      | RedisOptions
+      | { nodes: { host: string; port: number }[]; options: ClusterOptions },
+  ) {
     this.redisConnection = {
       ...redisDetails,
     };
   }
-  getClient(connectionOps?: RedisOptions): Redis {
-    return new IORedis({ ...this.redisConnection, ...connectionOps });
+  getClient(
+    options?:
+      | RedisOptions
+      | { nodes: { host: string; port: number }[]; options: ClusterOptions },
+  ): Redis | Cluster {
+    if (this.redisConnection.hasOwnProperty('nodes')) {
+      const clusterOptions = this.redisConnection as {
+        nodes: { host: string; port: number }[];
+        options: ClusterOptions;
+      };
+      return new IORedis.Cluster(clusterOptions.nodes, clusterOptions.options);
+    } else {
+      return new IORedis({ ...(this.redisConnection as RedisOptions), ...options });
+    }
   }
 }
