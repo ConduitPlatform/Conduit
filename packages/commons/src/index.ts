@@ -1,5 +1,4 @@
-import { IConduitCore, IConduitAdmin } from './modules';
-import { IConfigManager } from './modules';
+import { IConduitAdmin, IConduitCore, IConfigManager } from './modules';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class ConduitCommons {
@@ -11,11 +10,12 @@ export class ConduitCommons {
 
   private constructor(name: string) {
     this.name = name;
-    if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
-      if (!process.env.REDIS_CONFIG) {
-        ConduitGrpcSdk.Logger.error('Redis IP not defined');
-        process.exit(-1);
-      }
+    if (
+      (!process.env.REDIS_HOST || !process.env.REDIS_PORT) &&
+      !process.env.REDIS_CONFIG
+    ) {
+      ConduitGrpcSdk.Logger.error('Redis config not provided');
+      process.exit(-1);
     }
   }
 
