@@ -133,10 +133,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this._internalRouter.stopRest();
     }
     if (config.transports.sockets) {
-      this._internalRouter.initSockets(
-        this.grpcSdk.redisDetails.host,
-        this.grpcSdk.redisDetails.port,
-      );
+      this._internalRouter.initSockets();
       atLeastOne = true;
     } else {
       this._internalRouter.stopSockets();
