@@ -1,4 +1,4 @@
-import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
+import { Collection, ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
@@ -15,6 +15,8 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
+import { RawMongoQuery } from '@conduitplatform/grpc-sdk/src/types/db';
+import { isNil } from 'lodash';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -361,6 +363,18 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
     }
     return 'Indexes deleted';
+  }
+
+  async execRawQuery(schemaName: string, rawQuery: RawMongoQuery): Promise<any> {
+    const collection = this.models[schemaName].model.collection;
+    let result;
+    try {
+      // @ts-ignore
+      result = await collection[rawQuery.query](JSON.parse(rawQuery.queryBody));
+    } catch (e: any) {
+      throw new GrpcError(status.INTERNAL, e.message);
+    }
+    return result;
   }
 
   private checkIndexes(

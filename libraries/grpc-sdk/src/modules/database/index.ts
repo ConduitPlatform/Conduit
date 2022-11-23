@@ -6,7 +6,7 @@ import {
   Schema,
 } from '../../protoUtils/database';
 import { ConduitSchemaExtension } from '../../interfaces';
-import { Query } from '../../types/db';
+import { Query, RawQuery } from '../../types/db';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -238,6 +238,22 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       query: this.processQuery(query),
     }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  rawQuery(schemaName: string, query: RawQuery) {
+    const processed = {
+      mongoQuery: {
+        query: query.rawMongoQuery?.query,
+        queryBody: JSON.stringify(query.rawMongoQuery?.queryBody),
+      },
+      sqlQuery: {
+        query: query.rawSqlQuery?.query,
+        options: JSON.stringify(query.rawSqlQuery?.options),
+      },
+    };
+    return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
   }

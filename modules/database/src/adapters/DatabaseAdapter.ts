@@ -9,6 +9,7 @@ import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import ObjectHash from 'object-hash';
+import { RawMongoQuery, RawSQLQuery } from '@conduitplatform/grpc-sdk/src/types/db';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -179,6 +180,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
+
+  abstract execRawQuery(
+    schemaName: string,
+    rawQuery: RawMongoQuery | RawSQLQuery,
+  ): Promise<any>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];

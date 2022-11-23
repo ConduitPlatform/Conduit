@@ -22,6 +22,7 @@ import {
   QueryResponse,
   UpdateManyRequest,
   UpdateRequest,
+  CombinedRawQueryRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -38,6 +39,7 @@ import { SchemaConverter } from './utils/SchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
+import { isNil } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -60,6 +62,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
+      rawQuery: this.rawQuery.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -549,6 +552,50 @@ export default class DatabaseModule extends ManagedModule<void> {
         code: status.INTERNAL,
         message: (err as Error).message,
       });
+    }
+  }
+
+  async rawQuery(
+    call: GrpcRequest<CombinedRawQueryRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const { schemaName, query } = call.request;
+    const dbType = this._activeAdapter.getDatabaseType();
+    const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    if (
+      !(await canCreate(moduleName, schemaAdapter.model)) ||
+      !(await canModify(moduleName, schemaAdapter.model)) ||
+      !(await canDelete(moduleName, schemaAdapter.model))
+    ) {
+      return callback({
+        code: status.PERMISSION_DENIED,
+        message: `Module ${moduleName} is not authorized to raw query ${schemaName}!`,
+      });
+    }
+    if (
+      (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
+      (dbType === 'PostgreSQL' && isNil(query?.sqlQuery))
+    ) {
+      callback({ code: status.INVALID_ARGUMENT, message: 'Invalid query format' });
+    }
+    try {
+      let result;
+      if (dbType === 'MongoDB') {
+        result = await this._activeAdapter.execRawQuery(schemaName, query!.mongoQuery!);
+      } else {
+        let options;
+        if (query!.sqlQuery!.options) {
+          options = JSON.parse(query!.sqlQuery!.options);
+        }
+        result = await this._activeAdapter.execRawQuery(schemaName, {
+          query: query!.sqlQuery!.query,
+          options: options,
+        });
+      }
+      callback(null, { result: JSON.stringify(result) });
+    } catch (e) {
+      callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 }

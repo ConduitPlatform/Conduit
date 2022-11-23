@@ -19,6 +19,7 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
+import { RawSQLQuery } from '@conduitplatform/grpc-sdk/src/types/db';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -364,6 +365,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     }
     return 'Indexes deleted';
+  }
+
+  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery): Promise<any> {
+    return await this.sequelize
+      .query(rawQuery.query, rawQuery.options)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   private checkAndConvertIndexes(

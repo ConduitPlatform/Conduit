@@ -62,6 +62,26 @@ message QueryRequest {
     string query = 2;
 }
 
+message CombinedRawQueryRequest {
+    string schemaName = 1;
+    rawQuery query = 2;
+}
+
+message rawQuery {
+    optional rawMongoQuery mongoQuery = 1;
+    optional rawSQLQuery sqlQuery = 2;
+};
+
+message rawMongoQuery {
+    string query = 1;
+    string queryBody = 2;
+}
+
+message rawSQLQuery {
+    string query = 1;
+    optional string options = 2;
+}
+
 message UpdateRequest {
     string schemaName = 1;
     string id = 2;
@@ -98,4 +118,5 @@ service DatabaseProvider {
     rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments(QueryRequest) returns (QueryResponse);
+    rpc rawQuery(CombinedRawQueryRequest) returns (QueryResponse);
 }

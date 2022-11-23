@@ -31,3 +31,32 @@ export type Query<T> =
   | setQuery<T>
   // | arrayQuery<T>
   | conditionalQuery<T>;
+
+export interface RawQuery {
+  rawMongoQuery?: RawMongoQuery;
+  rawSqlQuery?: RawSQLQuery;
+}
+
+export type RawMongoQuery = {
+  query: MongoQueryOperations;
+  queryBody: object | object[];
+};
+
+export type RawSQLQuery = {
+  query: string;
+  options?: object;
+};
+
+export type MongoQueryOperations =
+  | 'aggregate'
+  | 'count'
+  | 'deleteOne'
+  | 'deleteMany'
+  | 'distinct'
+  | 'drop'
+  | 'explain'
+  | 'find'
+  | 'insertOne'
+  | 'insertMany'
+  | 'updateOne'
+  | 'updateMany';
