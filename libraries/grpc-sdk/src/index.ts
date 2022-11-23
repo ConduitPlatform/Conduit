@@ -29,7 +29,7 @@ import {
   DeploymentState_ModuleStateInfo,
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
-import { checkModuleHealth } from './classes/HealthCheck';
+import { checkServiceHealth } from './classes/HealthCheck';
 import { ConduitLogger, setupLoki } from './utilities/Logger';
 import { ConduitMetrics } from './metrics';
 import { ManifestManager } from './classes';
@@ -477,8 +477,8 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  isModuleUp(moduleName: string, moduleUrl: string, service: string = '') {
-    return checkModuleHealth(moduleName, moduleUrl, service, this._grpcToken);
+  checkServiceHealth(moduleUrl: string, service: string = '') {
+    return checkServiceHealth(this.name, moduleUrl, service, this._grpcToken);
   }
 
   moduleClient(name: string, type: CompatServiceDefinition): void {
