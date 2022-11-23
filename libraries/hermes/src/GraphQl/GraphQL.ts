@@ -349,7 +349,7 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
-          const { urlParams, queryParams } = this.splitParamsToPathAnUrlParams(
+          const { urlParams, queryParams } = this.splitParamsToPathAndUrlParams(
             args,
             route.input.urlParams,
           );
@@ -434,7 +434,7 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
-          const { urlParams, queryParams } = this.splitParamsToPathAnUrlParams(
+          const { urlParams, queryParams } = this.splitParamsToPathAndUrlParams(
             args,
             route.input.urlParams,
           );
@@ -524,16 +524,17 @@ export class GraphQLController extends ConduitRouter {
     }
   }
 
-  private splitParamsToPathAnUrlParams(params: Indexable, urlParams?: Indexable) {
+  private splitParamsToPathAndUrlParams(params: Indexable, urlParameters?: Indexable) {
     const queryParams: Indexable = {};
-    const urlParamsResult: Indexable = {};
+    const urlParams: Indexable = {};
     for (const key in params) {
-      if (key !== 'params') {
-        if (!urlParams?.[key]) {
-          queryParams[key] = params[key];
-        } else {
-          urlParamsResult[key] = params[key];
-        }
+      if (key === 'params') {
+        continue;
+      }
+      if (!urlParameters?.[key]) {
+        queryParams[key] = params[key];
+      } else {
+        urlParams[key] = params[key];
       }
     }
     return { urlParams, queryParams };
