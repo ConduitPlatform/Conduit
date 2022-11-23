@@ -85,6 +85,8 @@ export class SwaggerGenerator {
           in: 'path',
           required: true,
           schema: this._parser.extractTypes('url', route.input.urlParams, true),
+          //@ts-ignore
+          description: route.input.urlParams[name].description,
         });
       }
     }
@@ -98,6 +100,8 @@ export class SwaggerGenerator {
           name,
           in: 'query',
           schema: this._parser.extractTypes('query', route.input.queryParams, true),
+          //@ts-ignore
+          description: route.input.queryParams[name].description,
         });
       }
     }

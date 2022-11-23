@@ -99,16 +99,12 @@ export class ConduitRoutingController {
     this._graphQLRouter = new GraphQLController(this.grpcSdk, this.metrics);
   }
 
-  initSockets(redisHost: string, redisPort: number) {
+  initSockets() {
     if (this._socketRouter) return;
     this._socketRouter = new SocketController(
       this.socketPort,
       this.grpcSdk,
       this.expressApp,
-      {
-        host: redisHost,
-        port: redisPort,
-      },
       this.metrics,
     );
   }

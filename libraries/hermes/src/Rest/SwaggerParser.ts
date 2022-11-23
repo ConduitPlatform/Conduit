@@ -109,6 +109,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean,
     parentField: string,
+    description?: string,
   ): void {
     if (!isArray && (name === value || name === parentField)) {
       Object.keys(processingObject).forEach(field => {
@@ -122,6 +123,9 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       }
       // @ts-ignore
       processingObject.properties[name] = this.getType(value);
+      if (description)
+        // @ts-ignore
+        processingObject.properties[name].description = description;
     }
     this.addFieldToRequired(processingObject, name, isRequired);
   }
@@ -133,12 +137,21 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any,
     isRequired: boolean = false,
     isArray: boolean,
+    description?: string,
   ): void {
-    // @ts-ignore
-    processingObject.properties[fieldName] = {
-      type: 'object',
-      properties: this.extractTypes(name, value, this.isInput).properties,
-    };
+    if (description && name === 'body') {
+      // @ts-ignore
+      processingObject.properties[fieldName] = {
+        type: 'string',
+        description,
+      };
+    } else {
+      // @ts-ignore
+      processingObject.properties[fieldName] = {
+        type: 'object',
+        properties: this.extractTypes(name, value, this.isInput).properties,
+      };
+    }
     this.addFieldToRequired(processingObject, fieldName, isRequired);
   }
 
@@ -149,10 +162,12 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     value: any[],
     isRequired: boolean = false,
     nestedType?: boolean,
+    description?: string,
   ): void {
     // @ts-ignore
     processingObject.properties[name] = {
       type: 'array',
+      description,
       // @ts-ignore
       items: super.arrayHandler(resolverName, name, value).properties[name],
     };

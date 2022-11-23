@@ -23,6 +23,7 @@
     "convict": "^6.2.3",
     "express": "^4.18.1",
     "fast-jwt": "^1.6.0",
+    "fs-extra": "^10.1.0",
     "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.2.0",
@@ -47,6 +48,7 @@
   "devDependencies": {
     "@types/convict": "^6.1.1",
     "@types/express": "^4.17.13",
+    "@types/fs-extra": "^9.0.13",
     "@types/google-protobuf": "^3.15.6",
     "@types/ioredis": "^4.28.10",
     "@types/lodash": "^4.14.182",

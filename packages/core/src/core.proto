@@ -110,9 +110,13 @@ message GetConfigRequest {
   string key = 1;
 }
 
+
 message GetRedisDetailsResponse {
-  string redisHost = 1;
-  int32 redisPort = 2;
+    optional string redisHost = 1;
+    optional int32 redisPort = 2;
+    optional string redisUsername = 3;
+    optional string redisPassword = 4;
+    optional string redisConfig = 5;
 }
 
 message GetConfigResponse {
