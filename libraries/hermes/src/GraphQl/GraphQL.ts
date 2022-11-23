@@ -349,7 +349,10 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
-          const { urlParams, queryParams } = this.splitParamsToPathAnUrlParams(args);
+          const { urlParams, queryParams } = this.splitParamsToPathAnUrlParams(
+            args,
+            route.input.urlParams,
+          );
           const params = Object.assign(args, args.params);
           delete params.params;
           if (caching) {
@@ -524,11 +527,14 @@ export class GraphQLController extends ConduitRouter {
     }
   }
 
-  private splitParamsToPathAnUrlParams(params: Indexable) {
-    const urlParams: Indexable = {};
+  private splitParamsToPathAnUrlParams(params: Indexable, urlParams?: Indexable) {
     const queryParams: Indexable = {};
     const bodyParams = params?.params;
-
+    for (const key in params) {
+      if (!urlParams?.[key] && !bodyParams?.[key]) {
+        queryParams[key] = params[key];
+      }
+    }
     return { urlParams, queryParams };
   }
 }
