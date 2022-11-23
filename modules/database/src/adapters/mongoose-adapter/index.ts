@@ -1,4 +1,4 @@
-import { Collection, ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
+import { ConnectOptions, IndexOptions, Mongoose } from 'mongoose';
 import { MongooseSchema } from './MongooseSchema';
 import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
@@ -16,7 +16,6 @@ import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
 import { RawMongoQuery } from '@conduitplatform/grpc-sdk/src/types/db';
-import { isNil } from 'lodash';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
