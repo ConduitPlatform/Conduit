@@ -4,20 +4,8 @@ import { ConduitRoute } from './classes';
 
 const crypto = require('crypto');
 
-export function createHashKey(
-  path: string,
-  context: Indexable,
-  params: Indexable,
-  urlParams?: Indexable,
-  queryParams?: Indexable,
-) {
+export function createHashKey(path: string, context: Indexable, params: Indexable) {
   let hashKey: string = path + JSON.stringify(context) + JSON.stringify(params);
-  if (urlParams) {
-    hashKey += JSON.stringify(urlParams);
-  }
-  if (queryParams) {
-    hashKey += JSON.stringify(queryParams);
-  }
   hashKey = crypto.createHash('md5').update(hashKey).digest('hex');
   return hashKey;
 }
