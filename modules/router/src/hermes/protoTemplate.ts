@@ -14,6 +14,9 @@ message RouterRequest {
   string headers = 3;
   string context = 4;
   string cookies = 5;
+  string bodyParams = 6;
+  string urlParams = 7;
+  string queryParams = 8;
 }
 
 message RouterResponse {
