@@ -1,4 +1,5 @@
 import { ConduitModel } from '../../interfaces';
+import { FieldConstructor } from '../../helpers';
 
 export interface ConduitRouteParameters {
   params?: { [field: string]: any };
@@ -27,6 +28,7 @@ export interface ConduitRouteOption {
     | string
     | string[]
     | ConduitRouteOptionExtended
+    | FieldConstructor
     | RouteOptionType
     | RouteOptionType[];
 }

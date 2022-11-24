@@ -1,4 +1,4 @@
-import { GrpcServer } from '../index';
+import { buildParameters, GrpcServer } from '../index';
 import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
@@ -82,7 +82,7 @@ export class RoutingManager {
     handler: RequestHandlers,
   ) {
     const routeObject: ConduitRouteObject = this.parseRouteObject({
-      options: input,
+      options: buildParameters(input),
       returns: {
         name: type.name,
         fields: JSON.stringify(type.fields),

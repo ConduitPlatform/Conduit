@@ -1,4 +1,5 @@
 import type { WhereOptions } from 'sequelize';
+import { FieldConstructor } from '../helpers';
 
 export enum TYPE {
   String = 'String',
@@ -49,6 +50,7 @@ export interface ConduitModel {
     | ConduitModelField
     | ConduitModelField[]
     | ConduitModel
+    | FieldConstructor
     | TYPE
     | TYPE[]
     | any[]; // removing this caused multiple issues
