@@ -74,7 +74,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       healthStatus: healthStatus as number,
     };
     const self = this;
-    return this.client!.registerModule(request).then(res => {
+    return this.client!.registerModule(request).then(() => {
       self.coreLive = true;
     });
   }

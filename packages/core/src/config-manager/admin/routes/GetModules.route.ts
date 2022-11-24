@@ -1,7 +1,6 @@
 import { DeploymentState_ModuleStateInfo as ModuleStateInfo } from '@conduitplatform/commons';
 import {
   ConduitRouteActions,
-  ConduitError,
   ConduitString,
   ConduitBoolean,
   ConduitRouteParameters,

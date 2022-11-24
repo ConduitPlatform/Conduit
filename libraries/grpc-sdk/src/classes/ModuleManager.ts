@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ManagedModule, ManifestManager } from '..';
+import ConduitGrpcSdk, { ManagedModule } from '..';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
