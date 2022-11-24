@@ -65,17 +65,19 @@ message QueryRequest {
 message RawQueryRequest {
     message RawQuery {
         message MongoQuery {
-            optional string aggregate = 1;
-            optional string count = 2;
-            optional string deleteOne = 3;
-            optional string deleteMany = 4;
-            optional string drop = 5;
-            optional string explain = 6;
-            optional string find = 7;
-            optional string insertOne = 8;
-            optional string insertMany = 9;
-            optional string updateOne = 10;
-            optional string updateMany = 11;
+            oneof operation {
+                string aggregate = 1;
+                string count = 2;
+                string deleteOne = 3;
+                string deleteMany = 4;
+                string drop = 5;
+                string explain = 6;
+                string find = 7;
+                string insertOne = 8;
+                string insertMany = 9;
+                string updateOne = 10;
+                string updateMany = 11;
+            }
             optional string options = 12;
         }
         message SQLQuery {

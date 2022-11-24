@@ -584,7 +584,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       if (dbType === 'MongoDB') {
         const processed: any = query!.mongoQuery!;
         for (const key of Object.keys(query!.mongoQuery!)) {
-          if (key[0] === '_') {
+          if (key === 'operation' || key[0] === '_') {
             delete processed[key];
             continue;
           }
