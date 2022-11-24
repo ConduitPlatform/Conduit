@@ -368,8 +368,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const collection = this.models[schemaName].model.collection;
     let result;
     try {
+      const queryOperation = Object.keys(rawQuery)[0];
       // @ts-ignore
-      result = await collection[rawQuery.query](JSON.parse(rawQuery.queryBody));
+      result = await collection[queryOperation](
+        rawQuery[queryOperation as keyof RawMongoQuery],
+        rawQuery.options,
+      );
     } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message);
     }

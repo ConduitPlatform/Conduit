@@ -62,24 +62,31 @@ message QueryRequest {
     string query = 2;
 }
 
-message CombinedRawQueryRequest {
+message RawQueryRequest {
+    message RawQuery {
+        message MongoQuery {
+            optional string aggregate = 1;
+            optional string count = 2;
+            optional string deleteOne = 3;
+            optional string deleteMany = 4;
+            optional string drop = 5;
+            optional string explain = 6;
+            optional string find = 7;
+            optional string insertOne = 8;
+            optional string insertMany = 9;
+            optional string updateOne = 10;
+            optional string updateMany = 11;
+            optional string options = 12;
+        }
+        message SQLQuery {
+            string query = 1;
+            optional string options = 2;
+        };
+        optional MongoQuery mongoQuery = 1;
+        optional SQLQuery sqlQuery = 2;
+    };
     string schemaName = 1;
-    rawQuery query = 2;
-}
-
-message rawQuery {
-    optional rawMongoQuery mongoQuery = 1;
-    optional rawSQLQuery sqlQuery = 2;
-};
-
-message rawMongoQuery {
-    string query = 1;
-    string queryBody = 2;
-}
-
-message rawSQLQuery {
-    string query = 1;
-    optional string options = 2;
+    RawQuery query = 2;
 }
 
 message UpdateRequest {
@@ -118,5 +125,5 @@ service DatabaseProvider {
     rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments(QueryRequest) returns (QueryResponse);
-    rpc rawQuery(CombinedRawQueryRequest) returns (QueryResponse);
+    rpc rawQuery(RawQueryRequest) returns (QueryResponse);
 }

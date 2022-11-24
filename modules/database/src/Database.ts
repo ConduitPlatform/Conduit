@@ -22,7 +22,7 @@ import {
   QueryResponse,
   UpdateManyRequest,
   UpdateRequest,
-  CombinedRawQueryRequest,
+  RawQueryRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -556,7 +556,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async rawQuery(
-    call: GrpcRequest<CombinedRawQueryRequest>,
+    call: GrpcRequest<RawQueryRequest>,
     callback: GrpcResponse<QueryResponse>,
   ) {
     const { schemaName, query } = call.request;
@@ -582,7 +582,15 @@ export default class DatabaseModule extends ManagedModule<void> {
     try {
       let result;
       if (dbType === 'MongoDB') {
-        result = await this._activeAdapter.execRawQuery(schemaName, query!.mongoQuery!);
+        const processed: any = query!.mongoQuery!;
+        for (const key of Object.keys(query!.mongoQuery!)) {
+          if (key[0] === '_') {
+            delete processed[key];
+            continue;
+          }
+          processed[key] = JSON.parse(processed[key]);
+        }
+        result = await this._activeAdapter.execRawQuery(schemaName, processed);
       } else {
         let options;
         if (query!.sqlQuery!.options) {

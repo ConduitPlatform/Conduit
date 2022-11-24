@@ -33,30 +33,26 @@ export type Query<T> =
   | conditionalQuery<T>;
 
 export interface RawQuery {
-  rawMongoQuery?: RawMongoQuery;
-  rawSqlQuery?: RawSQLQuery;
+  mongoQuery?: RawMongoQuery;
+  sqlQuery?: RawSQLQuery;
 }
 
 export type RawMongoQuery = {
-  query: MongoQueryOperations;
-  queryBody: object | object[];
+  aggregate?: object[];
+  count?: object;
+  deleteOne?: object;
+  deleteMany?: object | object[];
+  drop?: object;
+  explain?: object;
+  find?: object;
+  insertOne?: object;
+  insertMany?: object | object[];
+  updateOne?: object;
+  updateMany?: object | object[];
+  options?: object;
 };
 
 export type RawSQLQuery = {
   query: string;
   options?: object;
 };
-
-export type MongoQueryOperations =
-  | 'aggregate'
-  | 'count'
-  | 'deleteOne'
-  | 'deleteMany'
-  | 'distinct'
-  | 'drop'
-  | 'explain'
-  | 'find'
-  | 'insertOne'
-  | 'insertMany'
-  | 'updateOne'
-  | 'updateMany';

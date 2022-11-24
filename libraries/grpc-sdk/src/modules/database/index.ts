@@ -243,16 +243,15 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   rawQuery(schemaName: string, query: RawQuery) {
-    const processed = {
-      mongoQuery: {
-        query: query.rawMongoQuery?.query,
-        queryBody: JSON.stringify(query.rawMongoQuery?.queryBody),
-      },
-      sqlQuery: {
-        query: query.rawSqlQuery?.query,
-        options: JSON.stringify(query.rawSqlQuery?.options),
-      },
-    };
+    const processed: any = query;
+    if (query.mongoQuery) {
+      for (const key of Object.keys(query.mongoQuery)) {
+        processed.mongoQuery[key] = JSON.stringify(processed.mongoQuery[key]);
+      }
+    }
+    if (query.sqlQuery?.options) {
+      processed.sqlQuery.options = JSON.stringify(processed.sqlQuery.options);
+    }
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
