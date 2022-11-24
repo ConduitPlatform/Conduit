@@ -66,7 +66,7 @@ describe('Testing Config Service', () => {
     expect(res).toMatchObject({
       modules: [
         {
-          moduleName: 'conduit',
+          moduleName: 'core',
           moduleVersion: expect.any(String),
           moduleUrl: expect.any(String),
           pending: false,
@@ -115,7 +115,7 @@ describe('Testing Config Service', () => {
         expect(modules).toMatchObject({
           modules: [
             {
-              moduleName: 'conduit',
+              moduleName: 'core',
               moduleVersion: expect.any(String),
               moduleUrl: expect.any(String),
               pending: false,

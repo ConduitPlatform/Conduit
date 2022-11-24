@@ -98,7 +98,7 @@ export default class ConduitGrpcSdk {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
-      this.isModule = this.name !== 'conduit';
+      this.isModule = this.name !== 'core';
     }
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
@@ -157,7 +157,7 @@ export default class ConduitGrpcSdk {
       this._grpcToken,
     );
     (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    if (this.name !== 'conduit') {
+    if (this.name !== 'core') {
       this.initializeModules().then();
     }
     if (this._watchModules) {

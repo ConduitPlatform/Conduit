@@ -51,9 +51,9 @@ export class ServiceDiscovery {
     this.moduleRegister.setMaxListeners(150);
     this.registeredModules = new Map([
       [
-        'conduit',
+        'core',
         {
-          moduleName: 'conduit',
+          moduleName: 'core',
           moduleVersion: ManifestManager.getInstance().moduleVersion,
           moduleUrl: 'unknown', // TODO
           pending: false,
@@ -88,7 +88,7 @@ export class ServiceDiscovery {
       setInterval(() => {
         if (!this.deploymentStateModified) return;
         [...this.registeredModules.values()]
-          .filter(m => m.moduleName !== 'conduit' && m.pending)
+          .filter(m => m.moduleName !== 'core' && m.pending)
           .forEach(m => this.attemptModuleActivation(m));
       }, 500);
     }

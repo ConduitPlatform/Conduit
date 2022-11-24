@@ -48,7 +48,7 @@ export class GrpcServer {
           () => {
             return this._serviceHealthState;
           },
-          'conduit',
+          'core',
           false,
         );
         const packageJsonPath = path.resolve(__dirname, '..', 'package.json');

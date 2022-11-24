@@ -50,7 +50,7 @@ export class ConfigStorage {
     this.changeState(true);
     const configDocs = await models.Config.getInstance().findMany({});
     const registeredModules = [...this.serviceDiscovery.registeredModules.keys()].filter(
-      m => m !== 'conduit',
+      m => m !== 'core',
     );
     if (configDocs.length === 0) {
       // flush Redis-stored configuration to the database

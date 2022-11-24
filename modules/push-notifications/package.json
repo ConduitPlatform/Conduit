@@ -45,7 +45,7 @@
   },
   "conduit": {
     "dependencies": {
-      "conduit": {
+      "core": {
         "version": "^0.16"
       },
       "database": {

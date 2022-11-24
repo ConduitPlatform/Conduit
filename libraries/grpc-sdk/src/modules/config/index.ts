@@ -33,7 +33,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   getModuleUrlByName(name: string): Promise<{ url: string }> {
-    if (name === 'conduit') return Promise.resolve({ url: this.url });
+    if (name === 'core') return Promise.resolve({ url: this.url });
     return this.client!.getModuleUrlByName({ name }).then(res => {
       return { url: res.moduleUrl };
     });
