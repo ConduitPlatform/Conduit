@@ -6,6 +6,11 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
+export const LocationEnum = {
+  BODY: 0,
+  QUERY: 1,
+  URL: 2,
+};
 
 function getOperation(op: number) {
   switch (op) {
@@ -44,18 +49,13 @@ function extractParams(
       array?: boolean;
     }) => {
       let placement = '';
-      //body
-      if (r.location === 0) {
+      if (r.location === LocationEnum.BODY) {
         if (!resultingObject['bodyParams']) resultingObject['bodyParams'] = {};
         placement = 'bodyParams';
-      }
-      // query params
-      else if (r.location === 1) {
+      } else if (r.location === LocationEnum.QUERY) {
         if (!resultingObject['queryParams']) resultingObject['queryParams'] = {};
         placement = 'queryParams';
-      }
-      // urlParams
-      else {
+      } else {
         if (!resultingObject['urlParams']) resultingObject['urlParams'] = {};
         placement = 'urlParams';
       }
@@ -90,12 +90,12 @@ export function createCustomEndpointRoute(
     inputs.push({
       name: 'skip',
       type: TYPE.Number,
-      location: 1,
+      location: LocationEnum.QUERY,
     });
     inputs.push({
       name: 'limit',
       type: TYPE.Number,
-      location: 1,
+      location: LocationEnum.QUERY,
     });
     returns = {
       documents: [endpoint.returns],
@@ -106,7 +106,7 @@ export function createCustomEndpointRoute(
     inputs.push({
       name: 'sort',
       type: TYPE.String,
-      location: 1,
+      location: LocationEnum.QUERY,
       optional: true,
       array: true,
     });
