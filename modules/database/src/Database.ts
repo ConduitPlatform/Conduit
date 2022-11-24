@@ -22,6 +22,7 @@ import {
   QueryResponse,
   UpdateManyRequest,
   UpdateRequest,
+  RawQueryRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -38,6 +39,7 @@ import { SchemaConverter } from './utils/SchemaConverter';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
+import { isNil } from 'lodash';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -60,6 +62,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
+      rawQuery: this.rawQuery.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -549,6 +552,49 @@ export default class DatabaseModule extends ManagedModule<void> {
         code: status.INTERNAL,
         message: (err as Error).message,
       });
+    }
+  }
+
+  async rawQuery(
+    call: GrpcRequest<RawQueryRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const { schemaName, query } = call.request;
+    const dbType = this._activeAdapter.getDatabaseType();
+    if (
+      (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
+      (dbType === 'PostgreSQL' && isNil(query?.sqlQuery))
+    ) {
+      callback({
+        code: status.INVALID_ARGUMENT,
+        message: `Invalid raw query format for ${dbType}`,
+      });
+    }
+    try {
+      let result;
+      if (dbType === 'MongoDB') {
+        const processed: any = query!.mongoQuery!;
+        for (const key of Object.keys(query!.mongoQuery!)) {
+          if (key === 'operation' || key[0] === '_') {
+            delete processed[key];
+            continue;
+          }
+          processed[key] = JSON.parse(processed[key]);
+        }
+        result = await this._activeAdapter.execRawQuery(schemaName, processed);
+      } else {
+        let options;
+        if (query!.sqlQuery!.options) {
+          options = JSON.parse(query!.sqlQuery!.options);
+        }
+        result = await this._activeAdapter.execRawQuery(schemaName, {
+          query: query!.sqlQuery!.query,
+          options: options,
+        });
+      }
+      callback(null, { result: JSON.stringify(result) });
+    } catch (e) {
+      callback({ code: status.INTERNAL, message: (e as Error).message });
     }
   }
 }
