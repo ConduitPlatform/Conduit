@@ -561,23 +561,14 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     const { schemaName, query } = call.request;
     const dbType = this._activeAdapter.getDatabaseType();
-    const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-    const moduleName = call.metadata!.get('module-name')![0] as string;
-    if (
-      !(await canCreate(moduleName, schemaAdapter.model)) ||
-      !(await canModify(moduleName, schemaAdapter.model)) ||
-      !(await canDelete(moduleName, schemaAdapter.model))
-    ) {
-      return callback({
-        code: status.PERMISSION_DENIED,
-        message: `Module ${moduleName} is not authorized to raw query ${schemaName}!`,
-      });
-    }
     if (
       (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
       (dbType === 'PostgreSQL' && isNil(query?.sqlQuery))
     ) {
-      callback({ code: status.INVALID_ARGUMENT, message: 'Invalid query format' });
+      callback({
+        code: status.INVALID_ARGUMENT,
+        message: `Invalid raw query format for ${dbType}`,
+      });
     }
     try {
       let result;

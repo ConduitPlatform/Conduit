@@ -5,8 +5,8 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { ConduitSchemaExtension } from '../../interfaces';
-import { Query, RawQuery } from '../../types/db';
+import { ConduitSchemaExtension, RawQuery } from '../../interfaces';
+import { Query } from '../../types/db';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {

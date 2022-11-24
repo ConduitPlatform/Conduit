@@ -3,13 +3,14 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   ModelOptionsIndexes,
+  RawMongoQuery,
+  RawSQLQuery,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import ObjectHash from 'object-hash';
-import { RawMongoQuery, RawSQLQuery } from '@conduitplatform/grpc-sdk/src/types/db';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;

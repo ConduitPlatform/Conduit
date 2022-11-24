@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   Indexable,
   ModelOptionsIndexes,
   MongoIndexType,
+  RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
@@ -15,7 +16,6 @@ import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
-import { RawMongoQuery } from '@conduitplatform/grpc-sdk/src/types/db';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -368,7 +368,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     const collection = this.models[schemaName].model.collection;
     let result;
     try {
-      const queryOperation = Object.keys(rawQuery)[0];
+      const queryOperation = Object.keys(rawQuery).filter(v => {
+        if (v !== 'options') return v;
+      })[0];
       // @ts-ignore
       result = await collection[queryOperation](
         rawQuery[queryOperation as keyof RawMongoQuery],

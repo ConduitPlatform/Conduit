@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   PostgresIndexOptions,
   PostgresIndexType,
+  RawSQLQuery,
   sleep,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
@@ -19,7 +20,6 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
-import { RawSQLQuery } from '@conduitplatform/grpc-sdk/src/types/db';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
