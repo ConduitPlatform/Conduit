@@ -28,6 +28,7 @@ export default class SecurityModule {
           req.method === 'GET'
         ) {
           res.removeHeader('Content-Security-Policy');
+          res.removeHeader('Cross-Origin-Embedder-Policy');
         }
         next();
       },

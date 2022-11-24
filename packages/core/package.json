@@ -25,6 +25,7 @@
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "convict": "^6.2.3",
+    "fs-extra": "^10.1.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
@@ -39,8 +40,8 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.8.2",
-    "typescript": "~4.7.4",
-    "ts-proto": "^1.117.0"
+    "ts-proto": "^1.117.0",
+    "typescript": "~4.7.4"
   },
   "conduit": {}
 }
