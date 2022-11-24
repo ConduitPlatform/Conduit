@@ -3,6 +3,8 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   ModelOptionsIndexes,
+  RawMongoQuery,
+  RawSQLQuery,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -179,6 +181,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
+
+  abstract execRawQuery(
+    schemaName: string,
+    rawQuery: RawMongoQuery | RawSQLQuery,
+  ): Promise<any>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];

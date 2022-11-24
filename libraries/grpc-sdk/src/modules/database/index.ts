@@ -5,7 +5,7 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { ConduitSchemaExtension } from '../../interfaces';
+import { ConduitSchemaExtension, RawQuery } from '../../interfaces';
 import { Query } from '../../types/db';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
@@ -238,6 +238,21 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       query: this.processQuery(query),
     }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  rawQuery(schemaName: string, query: RawQuery) {
+    const processed: any = query;
+    if (query.mongoQuery) {
+      for (const key of Object.keys(query.mongoQuery)) {
+        processed.mongoQuery[key] = JSON.stringify(processed.mongoQuery[key]);
+      }
+    }
+    if (query.sqlQuery?.options) {
+      processed.sqlQuery.options = JSON.stringify(processed.sqlQuery.options);
+    }
+    return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
   }

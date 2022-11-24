@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   Indexable,
   ModelOptionsIndexes,
   MongoIndexType,
+  RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { validateSchema } from '../utils/validateSchema';
@@ -361,6 +362,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       });
     }
     return 'Indexes deleted';
+  }
+
+  async execRawQuery(schemaName: string, rawQuery: RawMongoQuery): Promise<any> {
+    const collection = this.models[schemaName].model.collection;
+    let result;
+    try {
+      const queryOperation = Object.keys(rawQuery).filter(v => {
+        if (v !== 'options') return v;
+      })[0];
+      // @ts-ignore
+      result = await collection[queryOperation](
+        rawQuery[queryOperation as keyof RawMongoQuery],
+        rawQuery.options,
+      );
+    } catch (e: any) {
+      throw new GrpcError(status.INTERNAL, e.message);
+    }
+    return result;
   }
 
   private checkIndexes(
