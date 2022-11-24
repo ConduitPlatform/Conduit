@@ -49,18 +49,13 @@ function extractParams(
       array?: boolean;
     }) => {
       let placement = '';
-      //body
       if (r.location === LocationEnum.BODY) {
         if (!resultingObject['bodyParams']) resultingObject['bodyParams'] = {};
         placement = 'bodyParams';
-      }
-      // query params
-      else if (r.location === LocationEnum.QUERY) {
+      } else if (r.location === LocationEnum.QUERY) {
         if (!resultingObject['queryParams']) resultingObject['queryParams'] = {};
         placement = 'queryParams';
-      }
-      // urlParams
-      else {
+      } else {
         if (!resultingObject['urlParams']) resultingObject['urlParams'] = {};
         placement = 'urlParams';
       }
