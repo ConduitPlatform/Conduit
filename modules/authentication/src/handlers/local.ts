@@ -239,6 +239,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
         .catch(err => {
           ConduitGrpcSdk.Logger.error(err);
         });
+    } else {
+      await TeamsHandler.getInstance()
+        .addUserToDefault(user)
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(err);
+        });
     }
     delete user.hashedPassword;
     return { user };

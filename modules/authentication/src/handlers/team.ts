@@ -12,8 +12,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
-import { Team } from '../models/Team.schema';
-import { Token, User } from '../models';
+import { Team, Token, User } from '../models';
 import { TokenType } from '../constants/TokenType';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config';
@@ -38,6 +37,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async initialize() {
     await this.grpcSdk.authorization!.defineResource(UserAuthz);
     await this.grpcSdk.authorization!.defineResource(TeamAuthz);
+    const config: Config = ConfigController.getInstance().config;
+    if (!config.teams.enableDefaultTeam) return;
     const existingTeam = await Team.getInstance().findOne({ isDefault: true });
     if (!existingTeam) {
       await Team.getInstance().create({
@@ -48,6 +49,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async addUserToTeam(user: User, invitationToken: string) {
+    if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({
       type: TokenType.TEAM_INVITE_TOKEN,
       token: invitationToken,
@@ -80,6 +82,21 @@ export class TeamsHandler implements IAuthenticationStrategy {
       resource: 'Team:' + team._id,
     });
     await Token.getInstance().deleteOne({ _id: inviteToken!._id });
+  }
+
+  async addUserToDefault(user: User) {
+    if (!this.initialized) return;
+    const config: Config = ConfigController.getInstance().config;
+    if (!config.teams.enableDefaultTeam) return;
+    const team = await Team.getInstance().findOne({ isDefault: true });
+    if (!team) {
+      return;
+    }
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'User:' + user._id,
+      relation: 'member',
+      resource: 'Team:' + team._id,
+    });
   }
 
   createUserInvitation(invite: {
@@ -472,7 +489,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async validate(): Promise<boolean> {
     const config: Config = ConfigController.getInstance().config;
-    if (!config.teams.enabled) {
+    if (!config.teams.enabled || !this.grpcSdk.isAvailable('authorization')) {
       return (this.initialized = false);
     }
     await this.initialize();
@@ -489,6 +506,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
       }
     }
     ConduitGrpcSdk.Logger.log('Teams are available');
-    return this.initialized;
+    return (this.initialized = true);
   }
 }

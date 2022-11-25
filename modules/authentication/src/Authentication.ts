@@ -112,6 +112,9 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.monitorModule('email', async () => {
       this.refreshAppRoutes();
     });
+    this.grpcSdk.monitorModule('authorization', async () => {
+      this.refreshAppRoutes();
+    });
     this.grpcSdk.monitorModule('sms', async () => {
       this.refreshAppRoutes();
     });
@@ -281,7 +284,6 @@ export default class Authentication extends ManagedModule<Config> {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });
-    TeamsHandler.getInstance(this.grpcSdk).initialize();
     return Promise.all(promises);
   }
 

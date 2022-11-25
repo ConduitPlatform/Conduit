@@ -4,6 +4,10 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    enableDefaultTeam: {
+      format: 'Boolean',
+      default: false,
+    },
     invites: {
       enabled: {
         format: 'Boolean',

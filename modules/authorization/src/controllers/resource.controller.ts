@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { ResourceDefinition, Relationship } from '../models';
+import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { RelationsController } from './relations.controller';
 
@@ -25,17 +25,26 @@ export class ResourceController {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       name: resource.name,
     });
-    if (resourceDefinition) throw new Error('Resource already exists');
-    await this.validateResourceRelations(resource.relations);
+    if (resourceDefinition) {
+      return await this.updateResourceDefinition(resource.name, resource);
+    }
+    await this.validateResourceRelations(resource.relations, resource.name);
     await this.validateResourcePermissions(resource);
 
     return await ResourceDefinition.getInstance().create(resource);
   }
 
-  async validateResourceRelations(relations: { [key: string]: string[] }) {
+  async validateResourceRelations(
+    relations: { [key: string]: string[] },
+    resourceName: string,
+  ) {
     const relationResources = [];
     for (const relation of Object.keys(relations)) {
-      relationResources.push(...relations[relation]);
+      for (const resource of relations[relation]) {
+        if (resourceName === resource || relationResources.indexOf(resource) !== -1)
+          continue;
+        relationResources.push(resource);
+      }
     }
     const found = await ResourceDefinition.getInstance().countDocuments({
       name: { $in: relationResources },
@@ -61,15 +70,28 @@ export class ResourceController {
     }
   }
 
+  attributeCheck(attr: any) {
+    return attr && Object.keys(attr).length !== 0;
+  }
+
   async updateResourceDefinition(name: string, resource: any) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
-    if (resource.permissions !== resourceDefinition.permissions) {
+
+    if (
+      this.attributeCheck(resource.permissions) &&
+      this.attributeCheck(resourceDefinition.permissions) &&
+      resource.permissions !== resourceDefinition.permissions
+    ) {
       await this.validateResourcePermissions(resource);
       await this.indexController.modifyPermission(resourceDefinition, resource);
     }
-    if (resource.relations !== resourceDefinition.relations) {
-      await this.validateResourceRelations(resource.relations);
+    if (
+      this.attributeCheck(resource.relations) &&
+      this.attributeCheck(resourceDefinition.relations) &&
+      resource.relations !== resourceDefinition.relations
+    ) {
+      await this.validateResourceRelations(resource.relations, resource.name);
       await this.indexController.modifyRelations(resourceDefinition, resource);
     }
     delete resource._id;
@@ -94,7 +116,7 @@ export class ResourceController {
       await this.indexController.modifyPermission(resourceDefinition, resource);
     }
     if (resource.relations !== resourceDefinition.relations) {
-      await this.validateResourceRelations(resource.relations);
+      await this.validateResourceRelations(resource.relations, resource.name);
       await this.indexController.modifyRelations(resourceDefinition, resource);
     }
     delete resource._id;

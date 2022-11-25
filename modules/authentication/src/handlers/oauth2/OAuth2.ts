@@ -223,6 +223,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           .catch(err => {
             ConduitGrpcSdk.Logger.error(err);
           });
+      } else {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
       }
     }
     return user!;

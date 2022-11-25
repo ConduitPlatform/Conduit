@@ -64,11 +64,6 @@ export default class Authorization extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('authentication', serving => {
-      this.updateHealth(
-        serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
-      );
-    });
   }
 
   protected registerSchemas() {
@@ -98,7 +93,7 @@ export default class Authorization extends ManagedModule<Config> {
     }
   }
 
-  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
+  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<null>) {
     const { name, relations, permissions } = call.request;
     const resource: {
       name: string;
@@ -116,7 +111,8 @@ export default class Authorization extends ManagedModule<Config> {
       resource.permissions![permission.name] = permission.roles;
     });
     await this.resourceController.createResource(resource);
-    callback(null, {});
+    ConduitGrpcSdk.Logger.info(`Resource ${name} created`);
+    callback(null, null);
   }
 
   async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
@@ -137,7 +133,7 @@ export default class Authorization extends ManagedModule<Config> {
       resource.permissions![permission.name] = permission.roles;
     });
     await this.resourceController.updateResourceDefinition(resource.name, resource);
-    callback(null, {});
+    callback(null, undefined);
   }
 
   async deleteResource(
