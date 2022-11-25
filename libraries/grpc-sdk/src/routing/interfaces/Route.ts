@@ -6,6 +6,9 @@ export interface ConduitRouteParameters {
   headers: { [field: string]: any };
   context?: { [field: string]: any };
   cookies?: { [field: string]: any };
+  bodyParams?: { [field: string]: any };
+  urlParams?: { [field: string]: any };
+  queryParams?: { [field: string]: any };
 }
 
 export enum RouteOptionType {
