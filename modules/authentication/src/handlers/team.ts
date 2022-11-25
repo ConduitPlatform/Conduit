@@ -34,6 +34,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return TeamsHandler._instance;
   }
 
+  public get isActive() {
+    return this.initialized;
+  }
+
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({

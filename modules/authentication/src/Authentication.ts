@@ -113,7 +113,7 @@ export default class Authentication extends ManagedModule<Config> {
     });
     this.grpcSdk.monitorModule('authorization', async () => {
       this.refreshAppRoutes();
-      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.adminRouter.registerAdminRoutes();
     });
     this.grpcSdk.monitorModule('sms', async () => {
       this.refreshAppRoutes();

@@ -20,7 +20,6 @@ export class AdminHandlers {
   private readonly serviceAdmin: ServiceAdmin;
   private readonly teamsAdmin: TeamsAdmin;
   private readonly routingManager: RoutingManager;
-  private teamsEnabled: boolean;
 
   constructor(
     private readonly server: GrpcServer,
@@ -30,15 +29,10 @@ export class AdminHandlers {
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
-    TeamsHandler.getInstance(grpcSdk)
-      .validate()
-      .then(teamsEnabled => {
-        this.teamsEnabled = teamsEnabled;
-        this.registerAdminRoutes();
-      });
+    this.registerAdminRoutes();
   }
 
-  private async registerAdminRoutes() {
+  async registerAdminRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
       {
@@ -218,7 +212,7 @@ export class AdminHandlers {
       this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
     // Team Routes
-    if (this.teamsEnabled) {
+    if (TeamsHandler.getInstance(this.grpcSdk).isActive) {
       await this.teamsAdmin.declareRoutes(this.routingManager);
     }
     this.routingManager.registerRoutes();
