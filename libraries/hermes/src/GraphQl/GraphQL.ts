@@ -349,6 +349,8 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
+          const { urlParams, queryParams, bodyParams } =
+            this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
           const params = Object.assign(args, args.params);
           delete params.params;
           if (caching) {
@@ -361,14 +363,32 @@ export class GraphQLController extends ConduitRouter {
                 if (r) {
                   return { fromCache: true, data: JSON.parse(r) };
                 } else {
-                  return route.executeRequest.bind(route)({ ...context, params });
+                  return route.executeRequest.bind(route)({
+                    ...context,
+                    params,
+                    urlParams,
+                    queryParams,
+                    bodyParams,
+                  });
                 }
               })
               .catch(() => {
-                return route.executeRequest.bind(route)({ ...context, params });
+                return route.executeRequest.bind(route)({
+                  ...context,
+                  params,
+                  urlParams,
+                  queryParams,
+                  bodyParams,
+                });
               });
           } else {
-            return route.executeRequest.bind(route)({ ...context, params });
+            return route.executeRequest.bind(route)({
+              ...context,
+              params,
+              urlParams,
+              queryParams,
+              bodyParams,
+            });
           }
         })
         .then(r => {
@@ -415,9 +435,18 @@ export class GraphQLController extends ConduitRouter {
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
           Object.assign(context.context, r);
+          const { urlParams, queryParams, bodyParams } =
+            this.splitParamsToPathAndUrlParams(args, route.input.urlParams);
           const params = Object.assign(args, args.params);
           delete params.params;
-          return route.executeRequest.bind(route)({ ...context, params: args });
+
+          return route.executeRequest.bind(route)({
+            ...context,
+            params: args,
+            urlParams,
+            queryParams,
+            bodyParams,
+          });
         })
         .then(r => {
           let result = r.result ? r.result : r;
@@ -494,5 +523,23 @@ export class GraphQLController extends ConduitRouter {
       // false on this.refreshGQLServer() -> importDbTypes() -> updateSchemaType()
       this.scheduleApolloRefresh();
     }
+  }
+
+  private splitParamsToPathAndUrlParams(params: Indexable, urlParameters?: Indexable) {
+    const queryParams: Indexable = {};
+    const urlParams: Indexable = {};
+    const bodyParams: Indexable = {};
+    Object.assign(bodyParams, params.params);
+    for (const key in params) {
+      if (key === 'params') {
+        continue;
+      }
+      if (!urlParameters?.[key]) {
+        queryParams[key] = params[key];
+      } else {
+        urlParams[key] = params[key];
+      }
+    }
+    return { urlParams, queryParams, bodyParams };
   }
 }

@@ -3,6 +3,9 @@ import { GrpcRequest } from '../../types';
 
 export type ParsedRouterRequest = GrpcRequest<{
   params: Params;
+  urlParams: Params;
+  queryParams: Params;
+  bodyParams: Params;
   path: string;
   headers: Headers;
   context: Context;

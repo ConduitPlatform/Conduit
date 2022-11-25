@@ -111,6 +111,9 @@ function createHandlerForRoute(
   const handler = (req: ConduitRouteParameters) => {
     const request = {
       params: req.params ? JSON.stringify(req.params) : null,
+      urlParams: req.urlParams ? JSON.stringify(req.urlParams) : null,
+      queryParams: req.queryParams ? JSON.stringify(req.queryParams) : null,
+      bodyParams: req.bodyParams ? JSON.stringify(req.bodyParams) : null,
       path: req.path,
       headers: JSON.stringify(req.headers),
       context: JSON.stringify(req.context),

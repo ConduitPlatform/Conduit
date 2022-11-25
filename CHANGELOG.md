@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.7](https://github.com/ConduitPlatform/Conduit/compare/v0.15.6...v0.15.7) (2022-11-25)
+
+
+### Features
+
+* **database,grpc-sdk:** raw query support ([#445](https://github.com/ConduitPlatform/Conduit/issues/445)) ([d715f47](https://github.com/ConduitPlatform/Conduit/commit/d715f471603e123768a43e454b9017cb414ce973))
+* **grpc-sdk,hermes,admin,router:** request params split ([#446](https://github.com/ConduitPlatform/Conduit/issues/446)) ([70dcc7b](https://github.com/ConduitPlatform/Conduit/commit/70dcc7b8df035590849cfb28825db846db5f2359))
+* **hermes,grpc-sdk:** route field and return descriptions support ([#439](https://github.com/ConduitPlatform/Conduit/issues/439)) ([59b745f](https://github.com/ConduitPlatform/Conduit/commit/59b745f85304526261b40f0267232ada09034253))
+* Improved redis support (auth, sentinel, cluster) ([#435](https://github.com/ConduitPlatform/Conduit/issues/435)) ([e272105](https://github.com/ConduitPlatform/Conduit/commit/e2721051bde2326af948d577855c5e170e249945))
+
+
+### Bug Fixes
+
+* **core:** missing fs-extra ([1cdac90](https://github.com/ConduitPlatform/Conduit/commit/1cdac9015ed697d63e297aff61ce9af3098cd99f))
+* **database:** no error when setting body params in GET/DELETE custom endpoints ([#442](https://github.com/ConduitPlatform/Conduit/issues/442)) ([676a4e5](https://github.com/ConduitPlatform/Conduit/commit/676a4e559444d3a76118123a20de8d451a13d565))
+* **grpc-sdk:** missing fs-extra ([#444](https://github.com/ConduitPlatform/Conduit/issues/444)) ([61b1e83](https://github.com/ConduitPlatform/Conduit/commit/61b1e83abac63e643aa5743cb194666752e466c5))
+* **router,admin,hermes:** new redis options compatibility ([#443](https://github.com/ConduitPlatform/Conduit/issues/443)) ([f0f2202](https://github.com/ConduitPlatform/Conduit/commit/f0f220286514c01fc997b133fbe7f84240054386))
+* **router:** graphql explorer not working ([7c1cec7](https://github.com/ConduitPlatform/Conduit/commit/7c1cec7298023df336be337e9ea927198f1b5264))
+
 ### [0.15.6](https://github.com/ConduitPlatform/Conduit/compare/v0.15.5...v0.15.6) (2022-11-18)
 
 
