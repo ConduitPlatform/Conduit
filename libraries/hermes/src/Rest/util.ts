@@ -7,6 +7,9 @@ type ConduitRequest = Request & { conduit?: Indexable };
 export function extractRequestData(req: ConduitRequest) {
   const context = req.conduit || {};
   const params: any = {};
+  const urlParams: any = {};
+  const queryParams: any = {};
+  const bodyParams: any = {};
   const headers = req.headers;
   const cookies = req.cookies;
   if (req.query) {
@@ -23,14 +26,17 @@ export function extractRequestData(req: ConduitRequest) {
       }
     });
     Object.assign(params, newObj);
+    Object.assign(queryParams, newObj);
   }
 
   if (req.body) {
     Object.assign(params, req.body);
+    Object.assign(bodyParams, req.body);
   }
 
   if (req.params) {
     Object.assign(params, req.params);
+    Object.assign(urlParams, req.params);
   }
 
   if (params.populate) {
@@ -41,7 +47,7 @@ export function extractRequestData(req: ConduitRequest) {
     }
   }
   const path = req.baseUrl + req.path;
-  return { context, params, headers, cookies, path };
+  return { context, params, headers, cookies, path, urlParams, queryParams, bodyParams };
 }
 
 export function validateParams(params: Params, routeDefinedParams: Params) {

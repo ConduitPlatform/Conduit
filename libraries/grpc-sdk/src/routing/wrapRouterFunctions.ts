@@ -118,6 +118,9 @@ export function wrapRouterGrpcFunction(
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);
       call.request.cookies = parseRequestData(call.request.cookies);
+      call.request.urlParams = parseRequestData(call.request.urlParams);
+      call.request.queryParams = parseRequestData(call.request.queryParams);
+      call.request.bodyParams = parseRequestData(call.request.bodyParams);
 
       routerRequest = !call.request.hasOwnProperty('event');
       if (routerRequest) {
