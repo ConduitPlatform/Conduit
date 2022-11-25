@@ -1,0 +1,68 @@
+{
+  "bumpFiles": [
+    {
+      "filename": "./package.json",
+      "type": "json"
+    },
+    {
+      "filename": "packages/admin/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "packages/commons/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "packages/core/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/authentication/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/authorization/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/chat/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/database/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/email/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/forms/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/push-notifications/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/router/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/sms/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "modules/storage/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "libraries/grpc-sdk/package.json",
+      "type": "json"
+    },
+    {
+      "filename": "libraries/hermes/package.json",
+      "type": "json"
+    }
+  ]
+}
