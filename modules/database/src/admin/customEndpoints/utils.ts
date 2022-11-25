@@ -8,6 +8,7 @@ import {
 import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
+import { LocationEnum } from '../../controllers/customEndpoints/utils';
 
 /**
  * Query schema:
@@ -155,13 +156,13 @@ function _inputValidation(
     return 'Location is not valid!';
   }
 
-  if (location === 2 && isArray) {
+  if (location === LocationEnum.URL && isArray) {
     return "Url params can't have an array input";
   }
 
   if (
     (operation === OperationsEnum.GET || operation === OperationsEnum.DELETE) &&
-    location === 0
+    location === LocationEnum.BODY
   ) {
     return 'GET or DELETE requests can not have body parameters';
   }

@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   PostgresIndexOptions,
   PostgresIndexType,
+  RawSQLQuery,
   sleep,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
@@ -364,6 +365,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
     }
     return 'Indexes deleted';
+  }
+
+  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery): Promise<any> {
+    return await this.sequelize
+      .query(rawQuery.query, rawQuery.options)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
   }
 
   private checkAndConvertIndexes(
