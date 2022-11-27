@@ -2,7 +2,7 @@
 
 # Installation: sh <(curl -s https://getconduit.dev/bootstrap)
 
-uname=`uname -a`
+uname=$(uname -a)
 website="https://getconduit.dev"
 
 # Detect Platform
@@ -28,9 +28,9 @@ else
 fi
 
 # Locate Latest CLI Release
-target_line=`curl -s 'https://api.github.com/repos/ConduitPlatform/CLI/releases/latest' | grep '"name": "conduit-v' | grep ${platform} | grep ${arch}`
-file=`echo ${target_line} | sed -e 's/.*"name": "\(.*\)",.*/\1/'`
-tag=`echo ${file} | cut -d '-' -f 2`
+target_line=$(curl -s 'https://api.github.com/repos/ConduitPlatform/CLI/releases/latest' | grep '"name": "conduit-v' | grep ${platform} | grep ${arch})
+file=$(echo ${target_line} | sed -e 's/.*"name": "\(.*\)",.*/\1/')
+tag=$(echo ${file} | cut -d '-' -f 2)
 download_url="https://github.com/ConduitPlatform/CLI/releases/download/${tag}/${file}"
 
 # Install Conduit
