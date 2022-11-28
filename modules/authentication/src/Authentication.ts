@@ -29,7 +29,6 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
-import { TeamsHandler } from './handlers/team';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
