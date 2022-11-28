@@ -91,7 +91,7 @@ export class TeamsAdmin {
           },
         },
         name: 'AddTeamMembers',
-        description: 'Add users as members to a team',
+        description: 'Add members to a team',
       },
       new ConduitRouteReturnDefinition('AddTeamMembers', 'String'),
       this.addTeamMembers.bind(this),
@@ -129,11 +129,11 @@ export class TeamsAdmin {
           },
           role: { type: TYPE.String, required: true },
         },
-        name: 'ChangeMemberRole',
-        description: 'Changes the roles of members in a team',
+        name: 'ModifyMembersRoles',
+        description: 'Modifies the roles of members in a team',
       },
-      new ConduitRouteReturnDefinition('ChangeMemberRole', 'String'),
-      this.modifyRoles.bind(this),
+      new ConduitRouteReturnDefinition('ModifyMembersRoles', 'String'),
+      this.modifyMembersRoles.bind(this),
     );
     routingManager.route(
       {
@@ -222,12 +222,26 @@ export class TeamsAdmin {
     return team;
   }
 
-  async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async modifyMembersRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { members, teamId, role } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
-
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (!members || members.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members is required and must be a non-empty array',
+      );
+    }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
     }
 
     for (const member of members) {
@@ -295,6 +309,15 @@ export class TeamsAdmin {
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
+    }
     const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
@@ -311,8 +334,20 @@ export class TeamsAdmin {
 
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { members, teamId } = call.request.params;
-    if (members.length === 0) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'No members to remove');
+    if (!members || members.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members is required and must be a non-empty array',
+      );
+    }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
     }
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {

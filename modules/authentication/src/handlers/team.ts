@@ -410,7 +410,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition(Team.name),
       this.createTeam.bind(this),
     );
-
     routingManager.route(
       {
         path: '/teams/:teamId/members',
