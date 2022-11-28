@@ -12,7 +12,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team } from '../models/Team.schema';
+import { Team } from '../models';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 import { User } from '../models';
@@ -227,7 +227,7 @@ export class TeamsAdmin {
     const team = await Team.getInstance().findOne({ _id: teamId });
 
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
 
     for (const member of members) {
@@ -248,7 +248,7 @@ export class TeamsAdmin {
         relation: role,
       });
     }
-    return 'ok';
+    return 'Ok';
   }
 
   async updateTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -265,7 +265,7 @@ export class TeamsAdmin {
       isDefault: isNil(isDefault) ? false : isDefault,
     });
     if (!updatedTeam) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
     return updatedTeam;
   }
@@ -274,7 +274,7 @@ export class TeamsAdmin {
     const { teamId } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
     if (team.isDefault) {
       throw new GrpcError(status.FAILED_PRECONDITION, 'Default team cannot be deleted');
@@ -293,11 +293,11 @@ export class TeamsAdmin {
     const { members, teamId } = call.request.params;
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
     const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'User not found');
+      throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
     for (const user of users) {
       await this.grpcSdk.authorization!.createRelation({
@@ -316,11 +316,11 @@ export class TeamsAdmin {
     }
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
     const users = await User.getInstance().findMany({ _id: { $in: members } });
     if (!users || users.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'Users not found');
+      throw new GrpcError(status.NOT_FOUND, 'Users does not exist');
     }
     for (const user of users) {
       await this.grpcSdk.authorization!.deleteAllRelations({
