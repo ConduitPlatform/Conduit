@@ -33,6 +33,7 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
   deleteRelation(data: Relation): Promise<Empty> {
     return this.client!.deleteRelation(data);
   }
+
   deleteAllRelations(data: DeleteAllRelationsRequest): Promise<Empty> {
     return this.client!.deleteAllRelations(data);
   }
@@ -48,9 +49,11 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
   can(data: PermissionCheck): Promise<Decision> {
     return this.client!.can(data);
   }
+
   grantPermission(data: PermissionRequest): Promise<Empty> {
     return this.client!.grantPermission(data);
   }
+
   removePermission(data: PermissionRequest): Promise<Empty> {
     return this.client!.removePermission(data);
   }

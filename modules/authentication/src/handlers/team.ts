@@ -57,7 +57,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!inviteToken) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not join user to team, invite token not found',
+        'Could not add user to team, invite token not found',
       );
     }
     if (
@@ -66,14 +66,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
     ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not join user to team, email does not match',
+        'Could not add user to team, email does not match',
       );
     }
     const team = await Team.getInstance().findOne({ _id: inviteToken!.data.teamId });
     if (!team) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not join user to team, team not found',
+        'Could not add user to team, team not found',
       );
     }
     await this.grpcSdk.authorization!.createRelation({
@@ -471,7 +471,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/teams/:teamId/invite',
-        description: `Creates a new invite to join a user to a team.`,
+        description: `Creates a new invite to add a user to a team.`,
         urlParams: {
           teamId: ConduitObjectId.Required,
         },
