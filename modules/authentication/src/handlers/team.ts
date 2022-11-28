@@ -57,7 +57,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!inviteToken) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not add user to team, invite token not found',
+        'Could not add user to team, invite token does not exist',
       );
     }
     if (
@@ -73,7 +73,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!team) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not add user to team, team not found',
+        'Could not add user to team, team does not exist',
       );
     }
     await this.grpcSdk.authorization!.createRelation({
@@ -207,10 +207,25 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const { teamId, members } = call.request.params;
     const targetTeam = await Team.getInstance().findOne({ _id: teamId });
     if (!targetTeam) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (!members || members.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members is required and must be a non-empty array',
+      );
     }
     if (members.indexOf(user._id) !== -1) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot remove self from team');
+    }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
     }
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
@@ -291,7 +306,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!team) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
-        'Could not create invite, team not found',
+        'Could not create invite, team does not exist',
+      );
+    }
+    const existingUser = await User.getInstance().findOne({ _id: user });
+    if (!existingUser) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not create invite, user does not exist',
       );
     }
     const can = await this.grpcSdk.authorization!.can({
@@ -331,12 +353,27 @@ export class TeamsHandler implements IAuthenticationStrategy {
     return invitation.token;
   }
 
-  async modifyRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async modifyMembersRoles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, members, role } = call.request.params;
     const targetTeam = await Team.getInstance().findOne({ _id: teamId });
     if (!targetTeam) {
-      throw new GrpcError(status.NOT_FOUND, 'Team not found');
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (!members || members.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members is required and must be a non-empty array',
+      );
+    }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
     }
     if (members.indexOf(user._id) !== -1) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot change self role');
@@ -349,7 +386,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!allowed) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
-        'User does not have permission to remove team members',
+        'User does not have permission to modify team members',
       );
     }
 
@@ -449,11 +486,11 @@ export class TeamsHandler implements IAuthenticationStrategy {
           },
           role: { type: TYPE.String, required: true },
         },
-        name: 'ChangeMemberRole',
-        description: 'Changes the roles of members in a team',
+        name: 'ModifyMembersRoles',
+        description: 'Modifies the roles of members in a team',
       },
-      new ConduitRouteReturnDefinition('ChangeMemberRole', 'String'),
-      this.modifyRoles.bind(this),
+      new ConduitRouteReturnDefinition('ModifyMembersRoles', 'String'),
+      this.modifyMembersRoles.bind(this),
     );
     routingManager.route(
       {
