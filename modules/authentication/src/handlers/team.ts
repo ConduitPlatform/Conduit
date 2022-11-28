@@ -11,13 +11,11 @@ import ConduitGrpcSdk, {
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { Team as TeamAuthz, User as UserAuthz } from '../authz';
 import { Team, Token, User } from '../models';
 import { TokenType } from '../constants/TokenType';
 import { status } from '@grpc/grpc-js';
 import { Config } from '../config';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
-import { TeamInviteTemplate } from '../templates';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 
@@ -32,20 +30,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
     TeamsHandler._instance = new TeamsHandler(grpcSdk);
     return TeamsHandler._instance;
-  }
-
-  async initialize() {
-    await this.grpcSdk.authorization!.defineResource(UserAuthz);
-    await this.grpcSdk.authorization!.defineResource(TeamAuthz);
-    const config: Config = ConfigController.getInstance().config;
-    if (!config.teams.enableDefaultTeam) return;
-    const existingTeam = await Team.getInstance().findOne({ isDefault: true });
-    if (!existingTeam) {
-      await Team.getInstance().create({
-        name: 'Default Team',
-        isDefault: true,
-      });
-    }
   }
 
   async addUserToTeam(user: User, invitationToken: string) {
@@ -524,25 +508,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
   }
 
-  async validate(): Promise<boolean> {
+  async validate() {
     const config: Config = ConfigController.getInstance().config;
-    if (!config.teams.enabled || !this.grpcSdk.isAvailable('authorization')) {
-      return (this.initialized = false);
-    }
-    await this.initialize();
-    if (config.teams.invites.enabled && !config.teams.invites.sendEmail) {
-      if (!config.teams.invites.sendEmail || !this.grpcSdk.isAvailable('email')) {
-        ConduitGrpcSdk.Logger.warn(
-          'Team invites are enabled, but email sending is disabled. No invites will be sent.',
-        );
-      }
-      if (config.teams.invites.sendEmail) {
-        this.grpcSdk.onceModuleUp('email', async () => {
-          await this.grpcSdk.emailProvider!.registerTemplate(TeamInviteTemplate);
-        });
-      }
-    }
-    ConduitGrpcSdk.Logger.log('Teams are available');
-    return (this.initialized = true);
+    return config.teams.enabled && this.grpcSdk.isAvailable('authorization');
   }
 }
