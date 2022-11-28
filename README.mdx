@@ -18,17 +18,13 @@ Conduit takes care of all the tedious tasks that come with developing a backend 
 
 We built a CLI to help you conveniently spin up local Conduit deployments among other interesting things.
 
-It's available through multiple installation options. Here's an example using `npm`:
-
 ``` bash
-# Option A: Just give me a barebones setup of the latest Conduit release
-npx @conduitplatform/cli deploy setup
-
-# Option B: I wish to bring up extra modules and perform some basic configuration
-npx @conduitplatform/cli deploy setup --config
+# Install Conduit CLI and setup a local deployment:
+sh <(curl -s https://getconduit.dev/bootstrap)
 ```
 
 <p align="center"><strong>👉 Make sure <a href="https://www.docker.com">Docker</a> and <a href="https://docs.docker.com/compose/install">Docker Compose</a> are available. 👈</p></strong>
+<p align="center"><strong>⚠️ Windows users are currently expected to use the CLI through WSL. ⚠️</strong></p>
 
 Once your deployment is ready, your web browser will automatically redirect you to your administration dashboard.<br />
 Depending on your environment, it may take a few seconds for the page to become responsive.
@@ -36,7 +32,6 @@ Depending on your environment, it may take a few seconds for the page to become 
 Default Credentials: `admin`/`admin`.<br />
 Once logged-in, you may check out your APIs' generated route documentation through the `Swagger` and `GraphQL` elements.
 
-<p align="center">⚠️ Windows users are currently expected to use the CLI through WSL. ⚠️</p>
 <p align="center"><a href="https://getconduit.dev/docs/cli">Find out more regarding Conduit's CLI</a></p>
 
 # Documentation 📖
