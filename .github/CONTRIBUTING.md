@@ -10,7 +10,7 @@ Before submitting your contribution, please make sure to take a moment and read 
 - [Development Setup](#development-setup)
 - [Project Structure](#project-structure)
 
-## Issue Reporting Guidelines
+## Issue Reporting Guidelines 🐛
 
 - When you are creating a bug report, please include as many details as possible. 
 
@@ -18,7 +18,7 @@ Before submitting your contribution, please make sure to take a moment and read 
 
 - If you find a Closed issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
-## Pull Request Guidelines
+## Pull Request Guidelines ✨
 
 - Checkout a topic branch from `main`, and merge back.
 
@@ -82,7 +82,7 @@ Find out more about [Lerna](https://lerna.js.org/).
 
 You may find additional scripts in the `scripts` section of the `package.json` file.
 
-## Project Structure
+## Project Structure 📍
 
 - **`packages`**: contains *core modules* built into the "Core" package
     - `admin`: provides administrative APIs (using `Hermes`)
@@ -113,11 +113,11 @@ You may find additional scripts in the `scripts` section of the `package.json` f
 
 - **`benchmarks`**: contains benchmarking utilities
 
-## License
+## License ✍️
 
 By contributing to Conduit & Conduit Platform repositories, you agree that your contributions will be licensed under the license specified in the repository you are contributing to.
     
-## Credits
+## Credits 🎉
 
 Thank you to all the awesome people who have already contributed to Conduit!
 
