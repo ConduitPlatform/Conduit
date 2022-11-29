@@ -3,6 +3,8 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   ModelOptionsIndexes,
+  RawMongoQuery,
+  RawSQLQuery,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -173,11 +175,17 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
+    callerModule: string,
   ): Promise<string>;
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
+
+  abstract execRawQuery(
+    schemaName: string,
+    rawQuery: RawMongoQuery | RawSQLQuery,
+  ): Promise<any>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
@@ -286,14 +294,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     validateExtensionFields(schema, extFields, extOwner);
     const extIndex = schema.extensions.findIndex(ext => ext.ownerModule === extOwner);
-    if (extIndex === -1) {
+    const extFieldsCount = Object.keys(extFields).length;
+    if (extIndex === -1 && extFieldsCount === 0) {
+      return Promise.resolve(schema as unknown as Schema); // @dirty-type-cast
+    } else if (extIndex === -1) {
       // Create Extension
-      if (Object.keys(extFields).length === 0) {
-        throw new GrpcError(
-          status.INVALID_ARGUMENT,
-          'Could not create schema extension with no custom fields',
-        );
-      }
       schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
@@ -301,7 +306,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         updatedAt: new Date(), // TODO FORMAT
       });
     } else {
-      if (Object.keys(extFields).length === 0) {
+      if (extFieldsCount === 0) {
         // Remove Extension
         schema.extensions.splice(extIndex, 1);
       } else {

@@ -91,7 +91,7 @@ services:
       LOKI_URL: 'http://conduit-loki:3100'
       GRPC_KEY: '${GRPC_KEY}'
       DB_TYPE: '${DB_TYPE:-mongodb}'
-      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017}'
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017/conduit?authSource=admin}'
     networks:
       default:
         aliases:
@@ -332,6 +332,7 @@ services:
     ports:
       - '${DB_PORT:-27017}:27017'
     environment:
+      MONGO_INITDB_DATABASE: 'conduit'
       MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
       MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
     profiles: ['mongodb']
@@ -340,7 +341,7 @@ services:
         aliases:
           - conduit-mongo
     volumes:
-      - conduit-mongodb:/data/db
+      - mongo:/data/db
 
   postgres:
     container_name: 'conduit-postgres'
@@ -358,7 +359,7 @@ services:
         aliases:
           - conduit-postgres
     volumes:
-      - conduit-postgres:/var/lib/postgresql
+      - postgres:/var/lib/postgresql
 
   # Metrics / Logs
   prometheus:
@@ -375,7 +376,7 @@ services:
           - conduit-prometheus
     volumes:
       - ./prometheus.cfg.yml:/etc/prometheus/prometheus.yml:Z
-      - conduit-prometheus:/prometheus
+      - prometheus:/prometheus
 
   loki:
     image: 'docker.io/grafana/loki:2.6.1'
@@ -389,15 +390,15 @@ services:
           - conduit-loki
     volumes:
       - ./loki.cfg.yml:/etc/loki/loki-config.yaml:Z
-      - conduit-loki:/loki
+      - loki:/loki
 
 # Persistent Volumes
 volumes:
-  conduit-mongodb:
+  mongo:
     external: false
-  conduit-postgres:
+  postgres:
     external: false
-  conduit-prometheus:
+  prometheus:
     external: false
-  conduit-loki:
+  loki:
     external: false

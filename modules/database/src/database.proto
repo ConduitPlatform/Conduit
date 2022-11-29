@@ -62,6 +62,35 @@ message QueryRequest {
     string query = 2;
 }
 
+message RawQueryRequest {
+    message RawQuery {
+        message MongoQuery {
+            oneof operation {
+                string aggregate = 1;
+                string count = 2;
+                string deleteOne = 3;
+                string deleteMany = 4;
+                string drop = 5;
+                string explain = 6;
+                string find = 7;
+                string insertOne = 8;
+                string insertMany = 9;
+                string updateOne = 10;
+                string updateMany = 11;
+            }
+            optional string options = 12;
+        }
+        message SQLQuery {
+            string query = 1;
+            optional string options = 2;
+        };
+        optional MongoQuery mongoQuery = 1;
+        optional SQLQuery sqlQuery = 2;
+    };
+    string schemaName = 1;
+    RawQuery query = 2;
+}
+
 message UpdateRequest {
     string schemaName = 1;
     string id = 2;
@@ -98,4 +127,5 @@ service DatabaseProvider {
     rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments(QueryRequest) returns (QueryResponse);
+    rpc rawQuery(RawQueryRequest) returns (QueryResponse);
 }

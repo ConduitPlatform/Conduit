@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   PostgresIndexOptions,
   PostgresIndexType,
+  RawSQLQuery,
   sleep,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
@@ -18,6 +19,7 @@ import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -205,14 +207,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
   ): Promise<SequelizeSchema> {
-    if (this.registeredSchemas.has(schema.name)) {
-      if (schema.name !== 'Config') {
-        schema = validateSchema(this.registeredSchemas.get(schema.name)!, schema);
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
       }
-      delete this.sequelize.models[schema.collectionName];
+      delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const newSchema = schemaConverter(schema);
+    const newSchema = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -295,10 +302,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   async createIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
+    callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    indexes = this.checkAndConvertIndexes(indexes);
+    indexes = this.checkAndConvertIndexes(schemaName, indexes, callerModule);
     const queryInterface = this.sequelize.getQueryInterface();
     for (const index of indexes) {
       await queryInterface
@@ -359,8 +367,21 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Indexes deleted';
   }
 
-  private checkAndConvertIndexes(indexes: ModelOptionsIndexes[]) {
+  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery): Promise<any> {
+    return await this.sequelize
+      .query(rawQuery.query, rawQuery.options)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  }
+
+  private checkAndConvertIndexes(
+    schemaName: string,
+    indexes: ModelOptionsIndexes[],
+    callerModule: string,
+  ) {
     for (const index of indexes) {
+      if (!index.types && !index.options) continue;
       if (index.types) {
         if (
           Array.isArray(index.types) ||
@@ -379,6 +400,15 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             'Invalid index options for PostgreSQL',
+          );
+        }
+        if (
+          Object.keys(index.options).includes('unique') &&
+          this.models[schemaName].originalSchema.ownerModule !== callerModule
+        ) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'Not authorized to create unique index',
           );
         }
       }

@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.7](https://github.com/ConduitPlatform/Conduit/compare/v0.15.6...v0.15.7) (2022-11-25)
+
+
+### Features
+
+* **database,grpc-sdk:** raw query support ([#445](https://github.com/ConduitPlatform/Conduit/issues/445)) ([d715f47](https://github.com/ConduitPlatform/Conduit/commit/d715f471603e123768a43e454b9017cb414ce973))
+* **grpc-sdk,hermes,admin,router:** request params split ([#446](https://github.com/ConduitPlatform/Conduit/issues/446)) ([70dcc7b](https://github.com/ConduitPlatform/Conduit/commit/70dcc7b8df035590849cfb28825db846db5f2359))
+* **hermes,grpc-sdk:** route field and return descriptions support ([#439](https://github.com/ConduitPlatform/Conduit/issues/439)) ([59b745f](https://github.com/ConduitPlatform/Conduit/commit/59b745f85304526261b40f0267232ada09034253))
+* Improved redis support (auth, sentinel, cluster) ([#435](https://github.com/ConduitPlatform/Conduit/issues/435)) ([e272105](https://github.com/ConduitPlatform/Conduit/commit/e2721051bde2326af948d577855c5e170e249945))
+
+
+### Bug Fixes
+
+* **core:** missing fs-extra ([1cdac90](https://github.com/ConduitPlatform/Conduit/commit/1cdac9015ed697d63e297aff61ce9af3098cd99f))
+* **database:** no error when setting body params in GET/DELETE custom endpoints ([#442](https://github.com/ConduitPlatform/Conduit/issues/442)) ([676a4e5](https://github.com/ConduitPlatform/Conduit/commit/676a4e559444d3a76118123a20de8d451a13d565))
+* **grpc-sdk:** missing fs-extra ([#444](https://github.com/ConduitPlatform/Conduit/issues/444)) ([61b1e83](https://github.com/ConduitPlatform/Conduit/commit/61b1e83abac63e643aa5743cb194666752e466c5))
+* **router,admin,hermes:** new redis options compatibility ([#443](https://github.com/ConduitPlatform/Conduit/issues/443)) ([f0f2202](https://github.com/ConduitPlatform/Conduit/commit/f0f220286514c01fc997b133fbe7f84240054386))
+* **router:** graphql explorer not working ([7c1cec7](https://github.com/ConduitPlatform/Conduit/commit/7c1cec7298023df336be337e9ea927198f1b5264))
+
+### [0.15.6](https://github.com/ConduitPlatform/Conduit/compare/v0.15.5...v0.15.6) (2022-11-18)
+
+
+### Bug Fixes
+
+* **database:** check for schema ownership in case of unique index creation ([#434](https://github.com/ConduitPlatform/Conduit/issues/434)) ([cf66de9](https://github.com/ConduitPlatform/Conduit/commit/cf66de92097555e3135d188e6dc8ee222e856a26))
+* **database:** custom endpoint handler createString length check ([#436](https://github.com/ConduitPlatform/Conduit/issues/436)) ([54b03cc](https://github.com/ConduitPlatform/Conduit/commit/54b03cc879868e9edd7aa4bbdf833873f9191993))
+
+### [0.15.5](https://github.com/ConduitPlatform/Conduit/compare/v0.15.4...v0.15.5) (2022-11-17)
+
+
+### Bug Fixes
+
+* **database:** fix index creation bugs ([#431](https://github.com/ConduitPlatform/Conduit/issues/431)) ([5ce7483](https://github.com/ConduitPlatform/Conduit/commit/5ce74836b043d810245166704f8ef49a483fa5b0))
+* **grpc-sdk:** router function wrappers crashes ([#433](https://github.com/ConduitPlatform/Conduit/issues/433)) ([e9e6383](https://github.com/ConduitPlatform/Conduit/commit/e9e638382b9490f48999b82ceeaeb008a83f30fd))
+
+### [0.15.4](https://github.com/ConduitPlatform/Conduit/compare/v0.15.3...v0.15.4) (2022-11-17)
+
+
+### Features
+
+* **core,email,router:** sorting option missing in some routes. ([#424](https://github.com/ConduitPlatform/Conduit/issues/424)) ([f924eb4](https://github.com/ConduitPlatform/Conduit/commit/f924eb4a25afd7c1b254cad539789c616cbb9eec))
+* **database,grpc-sdk:** index support ([#410](https://github.com/ConduitPlatform/Conduit/issues/410)) ([80f30b6](https://github.com/ConduitPlatform/Conduit/commit/80f30b6b4a5d09246200295ac829cbe783270c1d))
+* **database:** add admin index routes ([#419](https://github.com/ConduitPlatform/Conduit/issues/419)) ([4180c9f](https://github.com/ConduitPlatform/Conduit/commit/4180c9f5cf0bb937641ebe47c3c22ca855a6822b))
+* **grpc-sdk:** support for early request termination in router ([#420](https://github.com/ConduitPlatform/Conduit/issues/420)) ([9cce293](https://github.com/ConduitPlatform/Conduit/commit/9cce29366ba0bbd24ac19cedaee58a2b65b82082))
+
+
+### Bug Fixes
+
+* **database:** cms route sorting ([#425](https://github.com/ConduitPlatform/Conduit/issues/425)) ([a2f87c2](https://github.com/ConduitPlatform/Conduit/commit/a2f87c271784ea22a5ffb4d725d62c3c6e444680))
+* **database:** custom endpoints not registering without crud endpoints ([#414](https://github.com/ConduitPlatform/Conduit/issues/414)) ([7fd206c](https://github.com/ConduitPlatform/Conduit/commit/7fd206c4cd58b0496faa0a32ff99254cf9668d23))
+* **database:** custom endpoints query validation checking wrong access ([#418](https://github.com/ConduitPlatform/Conduit/issues/418)) ([f8307d6](https://github.com/ConduitPlatform/Conduit/commit/f8307d6af3d392bb6edd66402a23dd9f0c291665))
+* **database:** fix sequelize sort ([#416](https://github.com/ConduitPlatform/Conduit/issues/416)) ([f226330](https://github.com/ConduitPlatform/Conduit/commit/f226330308bf521aa9ce3d289f95f1338dc07658))
+* **database:** original schema clean ([#427](https://github.com/ConduitPlatform/Conduit/issues/427)) ([c9c6342](https://github.com/ConduitPlatform/Conduit/commit/c9c6342548c13da9dcda64a8655c2f3758083f40))
+* **database:** remove throw on repetitive extension deletions ([#428](https://github.com/ConduitPlatform/Conduit/issues/428)) ([37fd87b](https://github.com/ConduitPlatform/Conduit/commit/37fd87b8026f7b4103f030930c702a7b45e5a522))
+* **database:** schema extensions ([#423](https://github.com/ConduitPlatform/Conduit/issues/423)) ([97340a5](https://github.com/ConduitPlatform/Conduit/commit/97340a542b04911b222a525abb9f3072f0a74968))
+* **grpc-sdk:** sequelize type import ([#430](https://github.com/ConduitPlatform/Conduit/issues/430)) ([13eb8be](https://github.com/ConduitPlatform/Conduit/commit/13eb8bece0aac26cefab3116d57bb5d892e9acba))
+* **grpc-sdk:** sequelize type import ([#432](https://github.com/ConduitPlatform/Conduit/issues/432)) ([95cd423](https://github.com/ConduitPlatform/Conduit/commit/95cd4237d478a269f96adcd98588317639937831))
+* **hermes, databse:** swagger & schema cleanups ([#417](https://github.com/ConduitPlatform/Conduit/issues/417)) ([da4531d](https://github.com/ConduitPlatform/Conduit/commit/da4531de186dae76637e01b073715ff65e8db4b4))
+
 ### [0.15.3](https://github.com/ConduitPlatform/Conduit/compare/v0.15.2...v0.15.3) (2022-11-04)
 
 

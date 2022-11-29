@@ -9,7 +9,7 @@ import { populateArray, wrongFields } from '../utils/utilities';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { Doc } from '../interfaces';
+import { ConduitDatabaseSchema, Doc } from '../interfaces';
 
 export class DocumentsAdmin {
   constructor(
@@ -19,11 +19,9 @@ export class DocumentsAdmin {
 
   async getDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id, populate } = call.request.params;
-    const schema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ name: schemaName });
+    const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema)) {
-      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
+      throw new GrpcError(status.NOT_FOUND, 'Schema does not exist ');
     }
     let populates;
     if (!isNil(populate)) {
@@ -43,9 +41,7 @@ export class DocumentsAdmin {
     const { schemaName } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      name: schemaName,
-    });
+    const schema = this.database.getSchemaModel(schemaName);
     if (isNil(schema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
@@ -67,10 +63,8 @@ export class DocumentsAdmin {
 
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, inputDocument } = call.request.params;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      $and: [{ name: { $nin: this.database.systemSchemas } }, { name: schemaName }],
-    });
-    if (isNil(schema)) {
+    const schema = this.database.getSchemaModel(schemaName);
+    if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
       throw new GrpcError(
         status.NOT_FOUND,
         'Schema does not exist or disallows doc modifications',
@@ -81,10 +75,8 @@ export class DocumentsAdmin {
 
   async createDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, inputDocuments } = call.request.params;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      $and: [{ name: { $nin: this.database.systemSchemas } }, { name: schemaName }],
-    });
-    if (isNil(schema)) {
+    const schema = this.database.getSchemaModel(schemaName);
+    if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
       throw new GrpcError(
         status.NOT_FOUND,
         'Schema does not exist or disallows doc modifications',
@@ -98,16 +90,16 @@ export class DocumentsAdmin {
 
   async updateDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id, changedDocument } = call.request.params;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      $and: [{ name: { $nin: this.database.systemSchemas } }, { name: schemaName }],
-    });
-    if (isNil(schema)) {
+    const schema = this.database.getSchemaModel(schemaName);
+    if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
       throw new GrpcError(
         status.NOT_FOUND,
         'Schema does not exist or disallows doc modifications',
       );
     }
-    const currentFields = Object.keys(schema.fields);
+    const currentFields = Object.keys(
+      (schema.model.originalSchema as ConduitDatabaseSchema).compiledFields,
+    );
     const changedFields = Object.keys(changedDocument);
     if (!wrongFields(currentFields, changedFields)) {
       throw new GrpcError(status.NOT_FOUND, 'Wrong input fields!');
@@ -124,10 +116,8 @@ export class DocumentsAdmin {
 
   async updateDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, changedDocuments } = call.request.params;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      $and: [{ name: { $nin: this.database.systemSchemas } }, { name: schemaName }],
-    });
-    if (isNil(schema)) {
+    const schema = this.database.getSchemaModel(schemaName);
+    if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
       throw new GrpcError(
         status.NOT_FOUND,
         'Schema does not exist or disallows doc modifications',
@@ -149,10 +139,8 @@ export class DocumentsAdmin {
 
   async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, id } = call.request.params;
-    const schema = await this.database.getSchemaModel('_DeclaredSchema').model.findOne({
-      $and: [{ name: { $nin: this.database.systemSchemas } }, { name: schemaName }],
-    });
-    if (isNil(schema)) {
+    const schema = this.database.getSchemaModel(schemaName);
+    if (isNil(schema) || this.database.systemSchemas.includes(schemaName)) {
       throw new GrpcError(
         status.NOT_FOUND,
         'Schema does not exist or disallows doc modifications',

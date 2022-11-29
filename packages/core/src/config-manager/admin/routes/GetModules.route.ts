@@ -4,8 +4,10 @@ import {
   ConduitError,
   ConduitString,
   ConduitBoolean,
+  ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { isNil } from 'lodash';
 
 export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(
@@ -13,6 +15,9 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
       path: '/config/modules',
       action: ConduitRouteActions.GET,
       description: `Returns as array of currently available modules, providing information about their service.`,
+      queryParams: {
+        sortByName: ConduitBoolean.Optional,
+      },
     },
     new ConduitRouteReturnDefinition('GetModules', {
       modules: [
@@ -23,7 +28,8 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
         },
       ],
     }),
-    async () => {
+    async (call: ConduitRouteParameters) => {
+      const sortByName = call.params!.sortByName;
       if (registeredModules.size !== 0) {
         const modules: any[] = [];
         registeredModules.forEach((value: RegisteredModule, key: string) => {
@@ -33,6 +39,11 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
             serving: value.serving,
           });
         });
+        if (!isNil(sortByName)) {
+          if (sortByName)
+            modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+          else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
+        }
         return { modules };
       } else {
         throw new ConduitError('INTERNAL', 500, 'Modules not available yet');

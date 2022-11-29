@@ -16,8 +16,7 @@ export default class SecurityModule {
 
     this.router.registerGlobalMiddleware(
       'rateLimiter',
-      new RateLimiter(this.grpcSdk.redisDetails.host, this.grpcSdk.redisDetails.port)
-        .limiter,
+      new RateLimiter(this.grpcSdk).limiter,
       true,
     );
     this.router.registerGlobalMiddleware('helmetMiddleware', helmet());
@@ -29,6 +28,7 @@ export default class SecurityModule {
           req.method === 'GET'
         ) {
           res.removeHeader('Content-Security-Policy');
+          res.removeHeader('Cross-Origin-Embedder-Policy');
         }
         next();
       },

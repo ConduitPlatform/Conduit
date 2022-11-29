@@ -5,6 +5,7 @@ import {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
+import { constructSortObj } from '../utils';
 import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
@@ -58,7 +59,7 @@ export class CustomEndpointHandler {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          if (createString.length !== OperationsEnum.GET) createString += ',';
+          if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
               const res = endpoint.inputs.filter(input => {
@@ -111,9 +112,9 @@ export class CustomEndpointHandler {
       );
     }
 
-    let sort: string | undefined = undefined;
+    let sort: { [key: string]: number } | undefined = undefined;
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
-      sort = params.sort;
+      sort = constructSortObj(params.sort);
     }
 
     const createObj = this.parseCreateQuery(createString);

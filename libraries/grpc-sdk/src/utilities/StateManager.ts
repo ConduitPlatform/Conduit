@@ -1,8 +1,8 @@
 import { RedisManager } from './RedisManager';
-import { Redis } from 'ioredis';
+import { Cluster, Redis } from 'ioredis';
 
 export class StateManager {
-  private readonly redisClient: Redis;
+  private readonly redisClient: Redis | Cluster;
 
   constructor(redisManager: RedisManager, name: string) {
     this.redisClient = redisManager.getClient({ keyPrefix: name + '_' });

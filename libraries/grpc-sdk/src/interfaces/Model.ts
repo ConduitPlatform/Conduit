@@ -1,4 +1,4 @@
-import { WhereOptions } from 'sequelize';
+import type { WhereOptions } from 'sequelize';
 
 export enum TYPE {
   String = 'String',
@@ -39,6 +39,7 @@ export interface ConduitModelField {
   unique?: boolean;
   select?: boolean;
   required?: boolean;
+  description?: string;
   systemRequired?: boolean;
   index?: SchemaFieldIndex;
 }
@@ -118,5 +119,5 @@ export interface PostgresIndexOptions {
   prefix?: string;
   unique?: boolean;
   using?: PostgresIndexType;
-  where?: WhereOptions;
+  where?: WhereOptions<any>;
 }

@@ -37,6 +37,8 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
+import fs from 'fs-extra';
+import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -44,7 +46,10 @@ export default class ConduitGrpcSdk {
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private _redisDetails?: { host: string; port: number };
+  private _redisManager: RedisManager | null = null;
+  private _redisDetails?:
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -280,7 +285,9 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get redisDetails(): { host: string; port: number } {
+  get redisDetails():
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
     if (this._redisDetails) {
       return this._redisDetails;
     } else {
@@ -346,32 +353,77 @@ export default class ConduitGrpcSdk {
 
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
-    if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+    if (process.env.REDIS_CONFIG) {
+      const redisConfig = process.env.REDIS_CONFIG;
+      let redisJson;
+      if (redisConfig.startsWith('{')) {
+        try {
+          redisJson = JSON.parse(redisConfig);
+        } catch (e) {
+          throw new Error('Invalid JSON in REDIS_CONFIG');
+        }
+      } else {
+        try {
+          redisJson = JSON.parse(fs.readFileSync(redisConfig).toString());
+        } catch (e) {
+          throw new Error('Invalid JSON in REDIS_CONFIG');
+        }
+      }
+      this._redisDetails = redisJson;
+    } else if (
+      process.env.REDIS_HOST &&
+      process.env.REDIS_PORT &&
+      !process.env.REDIS_CONFIG
+    ) {
       this._redisDetails = {
-        host: process.env.REDIS_HOST,
-        port: parseInt(process.env.REDIS_PORT, 10),
+        host: process.env.REDIS_HOST!,
+        port: parseInt(process.env.REDIS_PORT!, 10),
+        username: process.env.REDIS_USERNAME,
+        password: process.env.REDIS_PASSWORD,
       };
     } else {
       promise = promise
         .then(() => this.config.getRedisDetails())
         .then((r: GetRedisDetailsResponse) => {
-          this._redisDetails = { host: r.redisHost, port: r.redisPort };
+          if (r.redisConfig) {
+            this._redisDetails = JSON.parse(r.redisConfig);
+          } else {
+            this._redisDetails = {
+              host: r.redisHost,
+              port: r.redisPort,
+              username: r.redisUsername,
+              password: r.redisPassword,
+            };
+          }
         });
     }
     return promise
       .then(() => {
-        const redisManager = new RedisManager(
-          this.urlRemap ?? this._redisDetails!.host,
-          this._redisDetails!.port,
-        );
-        this._eventBus = new EventBus(redisManager);
-        this._stateManager = new StateManager(redisManager, this.name);
+        if (this._redisDetails!.hasOwnProperty('nodes')) {
+          this._redisManager = new RedisManager(this._redisDetails);
+        } else {
+          const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
+          this._redisManager = new RedisManager({
+            host: redisHost,
+            ...this._redisDetails,
+          });
+        }
+        this._eventBus = new EventBus(this._redisManager);
+        this._stateManager = new StateManager(this._redisManager, this.name);
         return this._eventBus;
       })
       .catch((err: Error) => {
         ConduitGrpcSdk.Logger.error('Failed to initialize event bus');
         throw err;
       });
+  }
+
+  get redisManager(): RedisManager {
+    if (this._redisManager) {
+      return this._redisManager;
+    } else {
+      throw new Error('Redis not available');
+    }
   }
 
   /**
