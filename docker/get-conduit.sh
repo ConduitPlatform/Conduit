@@ -2,6 +2,8 @@
 
 # Installation: sh <(curl -s https://getconduit.dev/bootstrap)
 
+[[ $1 = '--no-deploy' ]] && deploy="false" || deploy="true"
+
 uname=$(uname -a)
 website="https://getconduit.dev"
 
@@ -66,5 +68,7 @@ if [[ $shell_detected == "false" ]]; then
 fi
 
 # Bootstrap Local Deployment
-printf "\n\n"
-~/.conduit/bin/conduit deploy setup --config
+if [[ $deploy == "true" ]]; then
+  printf "\n\n"
+  ~/.conduit/bin/conduit deploy setup --config
+fi
