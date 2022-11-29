@@ -21,6 +21,7 @@ export class AdminHandlers {
     this.routingManager.clear();
     this.relationHandler.registerRoutes(this.routingManager);
     this.resourceHandler.registerRoutes(this.routingManager);
+    this.routingManager.registerRoutes().then();
   }
 
   reconstructIndices() {
