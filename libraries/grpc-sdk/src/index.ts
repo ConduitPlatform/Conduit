@@ -508,6 +508,21 @@ export default class ConduitGrpcSdk {
     return true;
   }
 
+  onceModuleUp(moduleName: string, callback: () => void) {
+    if (this.isAvailable(moduleName)) callback();
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? callback() : null,
+    );
+  }
+
+  onceModuleDown(moduleName: string, callback: () => void) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? null : callback(),
+    );
+  }
+
   /**
    * Used to refresh all modules to check for new registrations
    * @param force If true will check for new modules no matter the interval

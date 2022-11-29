@@ -114,6 +114,10 @@ export class UserAdmin {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
     const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      resource: 'User:' + user._id,
+    });
+    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'User:' + user._id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'User was deleted';
   }

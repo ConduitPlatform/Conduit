@@ -111,6 +111,10 @@ export default class Authentication extends ManagedModule<Config> {
     this.grpcSdk.monitorModule('email', async () => {
       this.refreshAppRoutes();
     });
+    this.grpcSdk.monitorModule('authorization', async () => {
+      this.refreshAppRoutes();
+      this.adminRouter.registerAdminRoutes();
+    });
     this.grpcSdk.monitorModule('sms', async () => {
       this.refreshAppRoutes();
     });
@@ -276,7 +280,7 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
+    const promises: Promise<any>[] = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
       return this.database.createSchemaFromAdapter(modelInstance);
     });

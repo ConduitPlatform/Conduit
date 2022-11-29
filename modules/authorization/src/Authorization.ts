@@ -1,4 +1,4 @@
-import {
+import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   GrpcRequest,
@@ -17,6 +17,7 @@ import {
   Empty,
   FindRelationRequest,
   PermissionCheck,
+  PermissionRequest,
   Relation,
   Resource,
 } from './protoTypes/authorization';
@@ -39,7 +40,10 @@ export default class Authorization extends ManagedModule<Config> {
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
+      grantPermission: this.grantPermission.bind(this),
+      removePermission: this.removePermission.bind(this),
       deleteRelation: this.deleteRelation.bind(this),
+      deleteAllRelations: this.deleteAllRelations.bind(this),
       findRelation: this.findRelation.bind(this),
       can: this.can.bind(this),
     },
@@ -60,11 +64,6 @@ export default class Authorization extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
-    await this.grpcSdk.monitorModule('authentication', serving => {
-      this.updateHealth(
-        serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
-      );
-    });
   }
 
   protected registerSchemas() {
@@ -94,7 +93,7 @@ export default class Authorization extends ManagedModule<Config> {
     }
   }
 
-  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
+  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<null>) {
     const { name, relations, permissions } = call.request;
     const resource: {
       name: string;
@@ -112,7 +111,8 @@ export default class Authorization extends ManagedModule<Config> {
       resource.permissions![permission.name] = permission.roles;
     });
     await this.resourceController.createResource(resource);
-    callback(null, {});
+    ConduitGrpcSdk.Logger.info(`Resource ${name} created`);
+    callback(null, null);
   }
 
   async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
@@ -133,7 +133,7 @@ export default class Authorization extends ManagedModule<Config> {
       resource.permissions![permission.name] = permission.roles;
     });
     await this.resourceController.updateResourceDefinition(resource.name, resource);
-    callback(null, {});
+    callback(null, undefined);
   }
 
   async deleteResource(
@@ -157,6 +157,17 @@ export default class Authorization extends ManagedModule<Config> {
     callback(null, {});
   }
 
+  async deleteAllRelations(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
+    const { resource, subject } = call.request;
+    try {
+      await this.relationsController.deleteAllRelations({ subject, resource });
+    } catch (e) {
+      ConduitGrpcSdk.Logger.warn((e as Error).message);
+    } finally {
+      callback(null, {});
+    }
+  }
+
   async findRelation(
     call: GrpcRequest<FindRelationRequest>,
     callback: GrpcResponse<Empty>,
@@ -168,18 +179,41 @@ export default class Authorization extends ManagedModule<Config> {
         message: 'At least 2 of subject, relation, resource must be provided',
       });
     }
-    await this.relationsController.findRelations({
+    const relations = await this.relationsController.findRelations({
       relation,
       resource,
       subject,
     });
-    callback(null, {});
+    callback(null, { relations });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
-    const { subject, resource, action } = call.request;
-    const allow = await this.permissionsController.can(subject, action, resource);
+    const { subject, resource, actions } = call.request;
+    let allow = false;
+    for (const action of actions) {
+      allow = await this.permissionsController.can(subject, action, resource);
+      if (allow) break;
+    }
     callback(null, { allow });
+  }
+
+  async grantPermission(
+    call: GrpcRequest<PermissionRequest>,
+    callback: GrpcResponse<Decision>,
+  ) {
+    const { subject, resource, action } = call.request;
+    await this.permissionsController.grantPermission(subject, action, resource);
+    callback(null);
+  }
+
+  async removePermission(
+    call: GrpcRequest<PermissionRequest>,
+    callback: GrpcResponse<Decision>,
+  ) {
+    const { subject, resource, action } = call.request;
+    await this.permissionsController.removePermission(subject, action, resource);
+
+    callback(null);
   }
 
   async initializeMetrics() {
