@@ -29,7 +29,6 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
-import { initializeTeams } from './utils/authz';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -50,7 +49,6 @@ export default class Authentication extends ManagedModule<Config> {
   private database: DatabaseProvider;
   private refreshAppRoutesTimeout: NodeJS.Timeout | null = null;
   private monitorsActive = false;
-  private teamsInitialized = false;
 
   constructor() {
     super('authentication');
@@ -114,10 +112,6 @@ export default class Authentication extends ManagedModule<Config> {
       this.refreshAppRoutes();
     });
     this.grpcSdk.monitorModule('authorization', async () => {
-      if (!this.teamsInitialized) {
-        await initializeTeams(this.grpcSdk);
-        this.teamsInitialized = true;
-      }
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
       this.refreshAppRoutes();
     });

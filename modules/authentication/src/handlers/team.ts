@@ -18,6 +18,7 @@ import { Config } from '../config';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
+import { initializeTeams } from '../utils/authz';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private initialized = false;
@@ -508,7 +509,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async validate() {
-    const config: Config = ConfigController.getInstance().config;
-    return config.teams.enabled && this.grpcSdk.isAvailable('authorization');
+    return initializeTeams(this.grpcSdk);
   }
 }
