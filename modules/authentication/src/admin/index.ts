@@ -13,7 +13,7 @@ import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
 import { TeamsAdmin } from './team';
 import { Service, User } from '../models';
-import { initializeTeams } from '../utils/authz';
+import { TeamsHandler } from '../handlers/team';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
@@ -30,10 +30,12 @@ export class AdminHandlers {
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
     this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
-    initializeTeams(this.grpcSdk).then(teamsEnabled => {
-      this.teamsEnabled = teamsEnabled;
-      this.registerAdminRoutes();
-    });
+    TeamsHandler.getInstance(grpcSdk)
+      .validate()
+      .then(teamsEnabled => {
+        this.teamsEnabled = teamsEnabled;
+        this.registerAdminRoutes();
+      });
   }
 
   private async registerAdminRoutes() {

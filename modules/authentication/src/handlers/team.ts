@@ -13,12 +13,13 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { Team, Token, User } from '../models';
 import { TokenType } from '../constants/TokenType';
-import { status } from '@grpc/grpc-js';
 import { Config } from '../config';
+import { Team as TeamAuthz, User as UserAuthz } from '../authz';
+import { TeamInviteTemplate } from '../templates';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
-import { initializeTeams } from '../utils/authz';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private initialized = false;
@@ -509,6 +510,35 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async validate() {
-    return initializeTeams(this.grpcSdk);
+    const config: Config = ConfigController.getInstance().config;
+    if (config.teams.enabled && this.grpcSdk.isAvailable('authorization')) {
+      if (this.initialized) return true;
+      await this.grpcSdk.authorization!.defineResource(UserAuthz);
+      await this.grpcSdk.authorization!.defineResource(TeamAuthz);
+      if (config.teams.enableDefaultTeam) {
+        const existingTeam = await Team.getInstance().findOne({ isDefault: true });
+        if (!existingTeam) {
+          await Team.getInstance().create({
+            name: 'Default Team',
+            isDefault: true,
+          });
+        }
+      }
+      if (config.teams.invites.enabled && !config.teams.invites.sendEmail) {
+        if (!config.teams.invites.sendEmail || !this.grpcSdk.isAvailable('email')) {
+          ConduitGrpcSdk.Logger.warn(
+            'Team invites are enabled, but email sending is disabled. No invites will be sent.',
+          );
+        }
+        if (config.teams.invites.sendEmail) {
+          this.grpcSdk.onceModuleUp('email', async () => {
+            await this.grpcSdk.emailProvider!.registerTemplate(TeamInviteTemplate);
+          });
+        }
+      }
+      ConduitGrpcSdk.Logger.log('Teams are available');
+      return (this.initialized = true);
+    }
+    return (this.initialized = false);
   }
 }
