@@ -85,7 +85,10 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
-    const twoFaMethod = user.twoFaMethod ?? 'phone';
+    let twoFaMethod: string | undefined;
+    if (hasTwoFA) {
+      twoFaMethod = user.twoFaMethod ?? 'phone';
+    }
     const query = {
       email: email ?? user.email,
       isVerified: isVerified ?? user.isVerified,
