@@ -22,6 +22,7 @@ import {
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
 import { clearTimeout } from 'timers';
+import { isNil } from 'lodash';
 
 /**
  * - Multi-instance services are not handled individually (LoadBalancer)
@@ -89,7 +90,16 @@ export class ServiceDiscovery {
         if (!this.deploymentStateModified) return;
         [...this.registeredModules.values()]
           .filter(m => m.moduleName !== 'core' && m.pending)
-          .forEach(m => this.attemptModuleActivation(m));
+          .forEach(async m => {
+            const healthClient = this.grpcSdk.getHealthClient(m.moduleName)!;
+            const healthStatus = await healthClient
+              .check({})
+              .then(res => res.status as unknown as HealthCheckStatus)
+              .catch(() => {
+                return HealthCheckStatus.SERVICE_UNKNOWN;
+              });
+            await this.attemptModuleActivation(m, healthStatus);
+          });
       }, 500);
     }
   }
@@ -139,34 +149,69 @@ export class ServiceDiscovery {
 
   private async attemptModuleActivation(
     module: ModuleStateInfo,
-    healthStatus?: HealthCheckStatus,
+    healthStatus: HealthCheckStatus,
+  ) {
+    // TODO: rename registrationState and enum
+    const registrationState = await this.checkModuleDependencies(module, healthStatus);
+    if (registrationState === 1) {
+      const migrationRequirement = await this.checkModuleMigrations(module);
+      if (migrationRequirement) {
+        healthStatus = HealthCheckStatus.NOT_SERVING;
+        const config = await this.grpcSdk.state!.getKey(`moduleConfigs.core`);
+        if (JSON.parse(config!).autoMigration) {
+          await this.triggerModuleMigrations(module);
+        } else {
+          ConduitGrpcSdk.Logger.warn(
+            `Manual migration of ${module.moduleName} is required`,
+          );
+        }
+      } else {
+        await this.grpcSdk.state!.setKey(
+          `moduleVersion.${module.moduleName}`,
+          module.moduleVersion,
+        );
+      }
+      await this.enableModule(
+        module.moduleName,
+        module.moduleVersion,
+        module.moduleUrl,
+        healthStatus,
+      );
+    }
+  }
+
+  private async checkModuleDependencies(
+    module: ModuleStateInfo,
+    healthStatus: HealthCheckStatus,
   ): Promise<ModuleRegistrationState> {
     const readyCheckRes = ManifestManager.getInstance().readyCheck(
       this.registeredModules,
       this.moduleManifests.get(module.moduleName)!,
     );
-    if (readyCheckRes.issues.length > 0) {
+    if (
+      readyCheckRes.issues.length > 0 ||
+      healthStatus === HealthCheckStatus.SERVICE_UNKNOWN
+    ) {
       return Promise.resolve(ModuleRegistrationState.PENDING);
     }
-    if (!healthStatus) {
-      const healthClient = this.grpcSdk.getHealthClient(module.moduleName)!;
-      healthStatus = await healthClient
-        .check({})
-        .then(res => res.status as unknown as HealthCheckStatus)
-        .catch(() => {
-          return HealthCheckStatus.SERVICE_UNKNOWN;
-        });
-      if (healthStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
-        return Promise.resolve(ModuleRegistrationState.PENDING);
-      }
-    }
-    await this.enableModule(
-      module.moduleName,
-      module.moduleVersion,
-      module.moduleUrl,
-      healthStatus,
-    );
     return Promise.resolve(ModuleRegistrationState.AVAILABLE);
+  }
+
+  private async checkModuleMigrations(module: ModuleStateInfo) {
+    const storedModuleVersion = await this.grpcSdk.state!.getKey(
+      `moduleVersion.${module.moduleName}`,
+    );
+    // TODO: add check to see how many versions afar is the stored one with current one
+    if (isNil(storedModuleVersion)) return false;
+    if (module.moduleVersion !== storedModuleVersion) {
+      return true;
+    }
+    return false;
+  }
+
+  private async triggerModuleMigrations(module: ModuleStateInfo) {
+    // when migrations are done update new module version in redis
+    // and core should change module's healthStatus to SERVING
   }
 
   /**
@@ -316,7 +361,7 @@ export class ServiceDiscovery {
       serving: healthStatus === HealthCheckStatus.SERVING,
     };
     this.registeredModules.set(moduleName, moduleInfo);
-    this.attemptModuleActivation(moduleInfo, healthStatus).then();
+    await this.attemptModuleActivation(moduleInfo, healthStatus);
   }
 
   private async enableModule(

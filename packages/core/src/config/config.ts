@@ -4,4 +4,8 @@ export default {
     default: 'development',
     enum: ['production', 'development', 'test'],
   },
+  autoMigration: {
+    format: 'Boolean',
+    default: true,
+  },
 };
