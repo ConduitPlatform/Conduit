@@ -404,8 +404,8 @@ export default class ConduitGrpcSdk {
         } else {
           const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
-            host: redisHost,
             ...this._redisDetails,
+            host: redisHost,
           });
         }
         this._eventBus = new EventBus(this._redisManager);
