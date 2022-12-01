@@ -37,7 +37,7 @@ services:
       - prometheus
       - loki
     ports:
-#      - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
+      - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
       - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
       - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
     environment:
@@ -81,8 +81,8 @@ services:
       - ${DB_TYPE:-mongodb}
       - prometheus
       - loki
-#    ports:
-#      - '${DB_GRPC_PORT:-55160}:${DB_GRPC_PORT:-55160}'
+    ports:
+      - '${DB_GRPC_PORT:-55160}:${DB_GRPC_PORT:-55160}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-database:${DB_GRPC_PORT:-55160}'
@@ -109,7 +109,7 @@ services:
       - prometheus
       - loki
     ports:
-#      - '${ROUTER_GRPC_PORT:-55161}:${ROUTER_GRPC_PORT:-55161}'
+      - '${ROUTER_GRPC_PORT:-55161}:${ROUTER_GRPC_PORT:-55161}'
       - '${CLIENT_HTTP_PORT:-3000}:3000'
       - '${CLIENT_SOCKET_PORT:-3001}:3001'
     environment:
@@ -138,8 +138,8 @@ services:
       - database
       - prometheus
       - loki
-#    ports:
-#      - '${AUTH_GRPC_PORT:-55162}:${AUTH_GRPC_PORT:-55162}'
+    ports:
+      - '${AUTH_GRPC_PORT:-55162}:${AUTH_GRPC_PORT:-55162}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-authentication:${AUTH_GRPC_PORT:-55162}'
@@ -166,8 +166,8 @@ services:
       - router
       - prometheus
       - loki
-#    ports:
-#      - '${CHAT_GRPC_PORT:-55163}:${CHAT_GRPC_PORT:-55163}'
+    ports:
+      - '${CHAT_GRPC_PORT:-55163}:${CHAT_GRPC_PORT:-55163}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-chat:${CHAT_GRPC_PORT:-55163}'
@@ -192,8 +192,8 @@ services:
       - database
       - prometheus
       - loki
-#    ports:
-#      - '${EMAIL_GRPC_PORT:-55164}:${EMAIL_GRPC_PORT:-55164}'
+    ports:
+      - '${EMAIL_GRPC_PORT:-55164}:${EMAIL_GRPC_PORT:-55164}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-email:${EMAIL_GRPC_PORT:-55164}'
@@ -220,8 +220,8 @@ services:
       - email
       - prometheus
       - loki
-#    ports:
-#      - '${FORMS_GRPC_PORT:-55165}:${FORMS_GRPC_PORT:-55165}'
+    ports:
+      - '${FORMS_GRPC_PORT:-55165}:${FORMS_GRPC_PORT:-55165}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-forms:${FORMS_GRPC_PORT:-55165}'
@@ -247,8 +247,8 @@ services:
       - router
       - prometheus
       - loki
-#    ports:
-#      - '${PUSH_GRPC_PORT:-55166}:${PUSH_GRPC_PORT:-55166}'
+    ports:
+      - '${PUSH_GRPC_PORT:-55166}:${PUSH_GRPC_PORT:-55166}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-push-notifications:${PUSH_GRPC_PORT:-55166}'
@@ -273,8 +273,8 @@ services:
       - database
       - prometheus
       - loki
-#    ports:
-#      - '${SMS_GRPC_PORT:-55167}:${SMS_GRPC_PORT:-55167}'
+    ports:
+      - '${SMS_GRPC_PORT:-55167}:${SMS_GRPC_PORT:-55167}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-sms:${SMS_GRPC_PORT:-55167}'
@@ -300,8 +300,8 @@ services:
       - router
       - prometheus
       - loki
-#    ports:
-#      - '${STORAGE_GRPC_PORT:-55168}:${STORAGE_GRPC_PORT:-55168}'
+    ports:
+      - '${STORAGE_GRPC_PORT:-55168}:${STORAGE_GRPC_PORT:-55168}'
     environment:
       CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55152}'
       SERVICE_URL: 'conduit-storage:${STORAGE_GRPC_PORT:-55168}'
