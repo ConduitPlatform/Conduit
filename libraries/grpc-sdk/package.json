@@ -10,6 +10,7 @@
     "prepublish": "npm run build",
     "prebuild": "npm run protoc",
     "build": "rimraf dist && tsc",
+    "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/",
     "protoc": "sh build.sh"
   },
   "license": "MIT",
