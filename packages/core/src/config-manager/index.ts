@@ -201,7 +201,7 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.database!.createSchemaFromAdapter(
       models.Config.getInstance(this.grpcSdk.database!),
     );
-    await runMigrations(this.grpcSdk);
+    // await runMigrations(this.grpcSdk);
     this._configStorage.onDatabaseAvailable();
   }
 
@@ -350,5 +350,19 @@ export default class ConfigManager implements IConfigManager {
       .catch(() => {
         ConduitGrpcSdk.Logger.error('Failed to recover Redis state');
       });
+  }
+
+  async checkAndTriggerPackageMigrations() {
+    const coreModule = this.serviceDiscovery.registeredModules.get('core');
+    if (isNil(coreModule)) {
+      throw new Error('WTF?');
+    }
+    const migrationRequirement = await this.serviceDiscovery.checkModuleMigrations(
+      coreModule,
+    );
+    if (migrationRequirement) {
+      // run migrations for core and admin
+    }
+    await this.registerAppConfig();
   }
 }
