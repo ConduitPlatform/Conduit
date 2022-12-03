@@ -2,9 +2,12 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import {
   AuthorizationDefinition,
   Decision,
+  DeleteAllRelationsRequest,
   Empty,
   FindRelationRequest,
+  FindRelationResponse,
   PermissionCheck,
+  PermissionRequest,
   Relation,
   Resource,
 } from '../../protoUtils/authorization';
@@ -31,15 +34,27 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.deleteRelation(data);
   }
 
+  deleteAllRelations(data: DeleteAllRelationsRequest): Promise<Empty> {
+    return this.client!.deleteAllRelations(data);
+  }
+
   createRelation(data: Relation): Promise<Empty> {
     return this.client!.createRelation(data);
   }
 
-  findRelation(data: FindRelationRequest): Promise<Relation> {
+  findRelation(data: FindRelationRequest): Promise<FindRelationResponse> {
     return this.client!.findRelation(data);
   }
 
   can(data: PermissionCheck): Promise<Decision> {
     return this.client!.can(data);
+  }
+
+  grantPermission(data: PermissionRequest): Promise<Empty> {
+    return this.client!.grantPermission(data);
+  }
+
+  removePermission(data: PermissionRequest): Promise<Empty> {
+    return this.client!.removePermission(data);
   }
 }

@@ -74,8 +74,7 @@ export class UserAdmin {
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, email, isVerified, hasTwoFA, phoneNumber, twoFaMethod } =
-      call.request.params;
+    const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
@@ -86,19 +85,16 @@ export class UserAdmin {
         'Can not enable 2fa without a phone number',
       );
     }
-    if (twoFaMethod !== 'phone') {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Can not enable 2fa with other method than phone',
-      );
+    let twoFaMethod: string | undefined;
+    if (hasTwoFA) {
+      twoFaMethod = user.twoFaMethod ?? 'phone';
     }
-
     const query = {
       email: email ?? user.email,
       isVerified: isVerified ?? user.isVerified,
       hasTwoFA: hasTwoFA ?? user.hasTwoFA,
       phoneNumber: phoneNumber ?? user.phoneNumber,
-      twoFaMethod: twoFaMethod ?? user.twoFaMethod,
+      twoFaMethod: twoFaMethod,
     };
 
     const res: User | null = await User.getInstance().findByIdAndUpdate(user._id, query);
@@ -114,6 +110,10 @@ export class UserAdmin {
       throw new GrpcError(status.NOT_FOUND, 'User does not exist');
     }
     const res = await User.getInstance().deleteOne({ _id: call.request.params.id });
+    await this.grpcSdk.authorization!.deleteAllRelations({
+      resource: 'User:' + user._id,
+    });
+    await this.grpcSdk.authorization!.deleteAllRelations({ subject: 'User:' + user._id });
     this.grpcSdk.bus?.publish('authentication:delete:user', JSON.stringify(res));
     return 'User was deleted';
   }

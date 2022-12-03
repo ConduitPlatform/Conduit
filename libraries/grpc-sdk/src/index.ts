@@ -409,8 +409,8 @@ export default class ConduitGrpcSdk {
         } else {
           const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
-            host: redisHost,
             ...this._redisDetails,
+            host: redisHost,
           });
         }
         this._eventBus = new EventBus(this._redisManager);
@@ -512,6 +512,21 @@ export default class ConduitGrpcSdk {
       await sleep(1000);
     }
     return true;
+  }
+
+  onceModuleUp(moduleName: string, callback: () => void) {
+    if (this.isAvailable(moduleName)) callback();
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? callback() : null,
+    );
+  }
+
+  onceModuleDown(moduleName: string, callback: () => void) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? null : callback(),
+    );
   }
 
   /**

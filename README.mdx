@@ -1,126 +1,76 @@
-<div align="center">
-<br>
-<a href="https://getconduit.dev" target="_blank"><img src="https://getconduit.dev/conduitLogo.svg" height="80px" alt="logo"/></a>
-<br/>
-<h3>The only Backend you'll ever need. Written in NodeJS, works with any stack</h3>
-</div>
-
+<a href="https://getconduit.dev" target="_blank"><img src=".github/assets/conduit-ui-dashboard.png" alt="logo"/></a>
+<hr />
 <p align="center">
-<a href="https://www.codefactor.io/repository/github/conduitplatform/conduit">
-    <img src="https://www.codefactor.io/repository/github/conduitplatform/conduit/badge?style=for-the-badge" alt="CodeFactor Badge"/>
-</a>
-<img src="https://img.shields.io/github/v/release/ConduitPlatform/Conduit?color=green&sort=semver&style=for-the-badge" alt="Latest SemVer Release"/>
-<img src="https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit?style=for-the-badge" alt="Commit Activity"/>
-<img src="https://img.shields.io/discord/938737566365126707?label=discord&style=for-the-badge" alt="Discord Server"/>
+    <a href="https://www.codefactor.io/repository/github/conduitplatform/conduit">
+        <img src="https://img.shields.io/codefactor/grade/github/conduitplatform/conduit?logo=codefactor&style=for-the-badge&labelColor=000000" alt="CodeFactor Badge"/>
+    </a>
+    <a href="https://github.com/ConduitPlatform/Conduit/releases">
+        <img src="https://img.shields.io/github/v/release/ConduitPlatform/Conduit?color=green&sort=semver&style=for-the-badge&labelColor=000000" alt="Latest SemVer Release"/>
+    </a>
+    <a href="https://github.com/ConduitPlatform/Conduit/commits/main">
+        <img src="https://img.shields.io/github/commit-activity/m/ConduitPlatform/Conduit?style=for-the-badge&labelColor=000000" alt="Commit Activity"/>
+    </a>
+    <a href="https://discord.com/invite/fBqUQ23M7g">
+        <img src="https://img.shields.io/discord/938737566365126707?label=discord&style=for-the-badge&logo=discord&labelColor=000000&logoWidth=20" alt="Discord Server"/>
+    </a>
 </p>
 
-# Conduit Platform
+Conduit is a self-hosted backend aiming to cut down development times by providing common functionality through ready-made modules, while offering maximum flexibility through extensions and custom modules.
 
-Conduit is a NodeJS-based Self-Hosted backend, that aims to cut down development times
-by providing ready-made modules that offer common functionality out of the box, and allowing
-maximum flexibility to add custom functionality.
+Why write and debug the same boilerplate code for every project when you can focus on implementing the features that genuinely matter for your unique application.<br />
+Conduit takes care of all the tedious tasks that come with developing a backend from scratch, allowing you to spend your time building APIs that are going to properly support your project's needs and make it stand out.
 
-Check out our docs here: [Documentation](https://getconduit.dev/docs/overview/intro)\
-Wanna see what comes next: [Roadmap](https://sharing.clickup.com/1554325/b/h/1fdwn-7561/8b09d2e9aedec0b)\
-Help us make Conduit great: [Contribute](https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md)\
-Learn more: [Website](https://getconduit.dev)
+# Getting Started ✨
 
-# Features ✔️
+We built a CLI to help you conveniently spin up local Conduit deployments among other interesting things.
 
-- Transports: REST, GraphQL, WebSockets (via Socket.io) and gRPC
-- Database support for MongoDB and PostgreSQL
-- In-memory database through Redis
-- All functionalities and routes available both as REST and GraphQL endpoints
-- CMS module to create and edit schemas from the admin panel and also 
-  add custom logic through the "custom endpoints" functionality
-- Swagger docs and GraphQL explorer with full route documentation
-- Authentication system with JWT and 2FA, supporting ServiceAccounts/API keys as well as
-local(username/password or email/password), oAuth(Facebook, Google, Twitch)
-- Basic security built-in with Client Id/secret for all requests, rate limiting and Helmet.
-- Emails with template support
-- SMS for 2FA or plain SMS send
-- Storage using S3, GCS and  Azure Blob Storage 
-- Chat
-- Forms for basic form submission and email forwarding
-- Conduit SDK can be used to add new modules or custom services
-- so much more
-
-# Requirements ⚡
-
-- NodeJS >= 16 or Docker
-- MongoDB or PostgreSQL
-- Desire to create something awesome
-
-# Quickstart
-This script uses docker compose to spin up some basic modules for you to test.
-```sh
-source <(curl -s https://getconduit.dev/bootstrap)
-```
-Open http://localhost:8080 to check the admin panel (username: `admin`, password: `admin`)
-
-Your application API will be on http://localhost:3000<br />
-Your administration API will be on http://localhost:3030
-
-Check out Swagger on: `/swagger` and `/admin/swagger`<br/>
-Check out GraphQL on `/graphql`
-
-# Running from source 🔨
-
-```sh
-yarn
-npx lerna run build
-REDIS_HOST=localhost REDIS_PORT=6379 yarn --cwd ./packages/core start
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:55165 DB_CONN_URI=mongodb://localhost:27017 yarn --cwd ./modules/database start
+``` bash
+# Install Conduit CLI and setup a local deployment:
+sh <(curl -s https://getconduit.dev/bootstrap)
 ```
 
-Then repeat the following step for every additional module you wish to bring online, specifying any additional env vars.
+<p align="center"><strong>👉 Make sure <a href="https://www.docker.com">Docker</a> and <a href="https://docs.docker.com/compose/install">Docker Compose</a> are available. 👈</p></strong>
+<p align="center"><strong>⚠️ Windows users are currently expected to use the CLI through WSL. ⚠️</strong></p>
 
-```sh
-CONDUIT_SERVER=0.0.0.0:55152 SERVICE_URL=0.0.0.0:PORT yarn --cwd ./modules/MODULE start
-```
+Once your deployment is ready, your web browser will automatically redirect you to your administration dashboard.<br />
+Depending on your environment, it may take a few seconds for the page to become responsive.
 
-## Environment Variables 📃 <a name="env-vars"></a>
+Default Credentials: `admin`/`admin`.<br />
+Once logged-in, you may check out your APIs' generated route documentation through the `Swagger` and `GraphQL` elements.
 
-### Core:
+<p align="center"><a href="https://getconduit.dev/docs/cli">Find out more regarding Conduit's CLI</a></p>
 
-|       Variable      | Description                                                | Required |   Example   |
-|:-------------------:|:-----------------------------------------------------------|:--------:|:-----------:|
-|     `REDIS_HOST`    | Redis Address                                              |   True   | `localhost` |
-|     `REDIS_PORT`    | Redis Port                                                 |   True   |    `6379`   |
-|  `ADMIN_HTTP_PORT`  | Port to be used by admin REST and GrahpQL APIs             |  False   |    `3030`   |
-| `ADMIN_SOCKET_PORT` | Port to be used by admin WebSockets API                    |  False   |    `3030`   |
-|    `GRPC_PORT`      | Port to be used by the gRPC server                         |  False   |   `55152`   |
-|    `MASTER_KEY`     | Master Secret                                              |  False   | `M4ST3RK3Y` |
-|     `GRPC_KEY`      | Specifying a secret enables gRPC signed request protection |  False   | `someRandomSecret` |
-| `SERVICE_MONITOR_INTERVAL_MS` | Service discovery monitor interval in ms (default: 30000) |  False   | `5000` |
-| `SERVICE_RECONN_RETRIES` | Reconnection attempts before removal of offline services (default: 5) |  False   | `5` |
-| `SERVICE_RECONN_INIT_MS` | Initial delay for linear backoff reconnection to offline services in ms (default: 250) | False | `125` |
-| `DEBUG__DISABLE_SERVICE_REMOVAL` | Prevent removal of offline services           |  False   |    `true`   |
+# Documentation 📖
 
+If you're only just starting out with Conduit, make sure you familiarize yourself with the project by checking out [our docs](https://getconduit.dev/docs/overview/intro).
 
-### Database
+Can't find what you're interested in? Shoot us a message [on Discord](https://discord.com/invite/fBqUQ23M7g) and we'll help you out.
 
-|   Variable    | Description       | Required |                     Example                      |  Default                    |
-|:-------------:|:------------------| :------: |:------------------------------------------------ | :-------------------------: |
-| `DB_CONN_URI` | DB Connection URI |  False   | `postgres://conduit:pass@localhost:5432/conduit` | `mongodb://localhost:27017` |
-|   `DB_TYPE`   | DB Engine Type    |  False   |                    `postgres`                    | `mongodb`                   |
+# Modules 🧩
 
-Generic module env variables are also supported, with required ones being obligatory.
+- [Authentication](https://getconduit.dev/docs/modules/authentication) - Authenticate your users using a plethora of sign-in methods.
+- [Authorization](https://getconduit.dev/docs/modules/authorization) - Configure resource authorization rules that meet your needs.
+- [Chat](https://getconduit.dev/docs/modules/chat) - Build realtime chat applications.
+- [Database](https://getconduit.dev/docs/modules/database) - Create schemas with auto-generated CRUD and Query-based functional endpoints. Supports MongoDB and PostgreSQL.
+- [Email](https://getconduit.dev/docs/modules/email) - Send emails using multiple supported providers.
+- [Forms](https://getconduit.dev/docs/modules/forms) - Submit forms and have responses forwarded to an email address.
+- [PushNotifications](https://getconduit.dev/docs/modules/push-notifications) - Send push notifications to your users.
+- [Router](https://getconduit.dev/docs/modules/router) - Seamlessly expose REST, GraphQL and WebSockets APIs with auto-generated endpoint documentation.
+- [SMS](https://getconduit.dev/docs/modules/sms) - Send text messages and expand user authentication with 2FA.
+- [Storage](https://getconduit.dev/docs/modules/storage) - Online storage using multiple cloud providers.
 
-### Router
+# Running from Source 🔨
 
-|   Variable           | Description                                          | Required | Example |
-| :------------------: | :--------------------------------------------------- | :------: | :-----: |
-|  `CLIENT_HTTP_PORT`  | Port to be used by application REST and GrahpQL APIs |  False   |  `3000` |
-| `CLIENT_SOCKET_PORT` | DPort to be used by application WebSockets API       |  False   |  `3001` |
+Find out how to build and run Conduit from source in the [Development Setup](https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md#development-setup-) section.
 
-Generic module env variables are also supported, with required ones being obligatory.
+# Roadmap 🏁
 
-### Generic Module
+Wanna see what comes next?
+[Here](https://sharing.clickup.com/1554325/b/h/1fdwn-7561/8b09d2e9aedec0b)'s some of the stuff we're working on behind the scenes.
 
-|       Variable       | Description                                          | Required |      Example       |
-|:--------------------:|:-----------------------------------------------------| :------: |:------------------:|
-|   `CONDUIT_SERVER`   | Conduit Core's address and port                      |   True   |  `0.0.0.0:55152`   |
-|    `SERVICE_URL`     | This should be where this service listens on. If behind a LB it should point to the LB's IP/DNS  |   False   |  `0.0.0.0:55190`   |
-|    `GRPC_PORT`       | Port to be used by the gRPC server                   |  False   |  `55190`           |
-|     `GRPC_KEY`       | Specifying a secret enables gRPC signed request protection (**use across modules**) |   False  | `someRandomSecret` |
+# Contributing ❤️
+
+We built Conduit cause we felt like none of the already available options seemed right for our needs.<br />
+Then we made it open-source so that everyone can use and extend it however they see fit.
+
+If you enjoy building awesome things and want to support the project, check out our [Contributing Guide](https://github.com/ConduitPlatform/Conduit/blob/main/.github/CONTRIBUTING.md) to find out how to get started.

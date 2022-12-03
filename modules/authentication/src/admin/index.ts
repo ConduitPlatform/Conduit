@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, {
+  ConduitString,
   ConduitBoolean,
   ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcServer,
   RouteOptionType,
   RoutingManager,
@@ -11,12 +11,15 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
+import { TeamsAdmin } from './team';
 import { Service, User } from '../models';
+import { TeamsHandler } from '../handlers/team';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
   private readonly serviceAdmin: ServiceAdmin;
-  private routingManager: RoutingManager;
+  private readonly teamsAdmin: TeamsAdmin;
+  private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
@@ -24,11 +27,12 @@ export class AdminHandlers {
   ) {
     this.userAdmin = new UserAdmin(this.grpcSdk);
     this.serviceAdmin = new ServiceAdmin(this.grpcSdk);
+    this.teamsAdmin = new TeamsAdmin(this.grpcSdk);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
-  private registerAdminRoutes() {
+  async registerAdminRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
       {
@@ -207,6 +211,10 @@ export class AdminHandlers {
       }),
       this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
+    // Team Routes
+    if (TeamsHandler.getInstance(this.grpcSdk).isActive) {
+      await this.teamsAdmin.declareRoutes(this.routingManager);
+    }
     this.routingManager.registerRoutes();
   }
 }

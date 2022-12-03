@@ -38,7 +38,7 @@ export class DocumentsAdmin {
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     let { query } = call.request.params;
-    const { schemaName } = call.request.params;
+    const { schemaName, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const schema = this.database.getSchemaModel(schemaName);
@@ -51,7 +51,7 @@ export class DocumentsAdmin {
 
     const documentsPromise = this.database
       .getSchemaModel(schemaName)
-      .model.findMany(query, skip, limit);
+      .model.findMany(query, skip, limit, undefined, sort);
     const countPromise = this.database
       .getSchemaModel(schemaName)
       .model.countDocuments(query);

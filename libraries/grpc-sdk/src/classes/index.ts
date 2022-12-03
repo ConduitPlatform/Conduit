@@ -7,3 +7,4 @@ export * from './ManagedModule';
 export * from './ManifestManager';
 export * from './ModuleManager';
 export * from './ConfigController';
+export * from './ConduitAuthorizedResource';

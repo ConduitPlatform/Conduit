@@ -45,7 +45,7 @@ export abstract class ConduitServiceModule {
 
   protected async addHealthCheckService() {
     await this.grpcServer.addService(
-      path.resolve(__dirname, '../../src/grpc_health_check.proto'),
+      path.resolve(__dirname, '../grpc_health_check.proto'),
       'grpc.health.v1.Health',
       {
         Check: this.healthCheck.bind(this),
