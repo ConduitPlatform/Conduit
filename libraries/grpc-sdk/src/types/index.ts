@@ -26,9 +26,6 @@ export class GrpcError extends Error {
   }
 }
 
-export type SetConfigRequest = GrpcRequest<{ newConfig: string }>;
-export type SetConfigResponse = GrpcResponse<{ updatedConfig: string }>;
-
 export enum HealthCheckStatus {
   UNKNOWN,
   SERVING,

@@ -22,7 +22,7 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
       moduleName,
       routes: routes.map(r => JSON.stringify(r)),
     };
-    return this.client!.generateProto(request);
+    return this.serviceClient!.generateProto(request);
   }
 
   register(
@@ -35,10 +35,10 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
       protoFile: protoFile,
       routerUrl: url,
     };
-    return this.client!.registerConduitRoute(request);
+    return this.serviceClient!.registerConduitRoute(request);
   }
 
   socketPush(data: SocketData) {
-    return this.client!.socketPush(data);
+    return this.serviceClient!.socketPush(data);
   }
 }

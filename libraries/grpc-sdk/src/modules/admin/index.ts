@@ -21,7 +21,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
       moduleName,
       routes: routes.map(r => JSON.stringify(r)),
     };
-    return this.client!.generateProto(request);
+    return this.serviceClient!.generateProto(request);
   }
 
   register(
@@ -35,6 +35,6 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
       routerUrl: serverUrl,
     };
 
-    return this.client!.registerAdminRoute(request);
+    return this.serviceClient!.registerAdminRoute(request);
   }
 }

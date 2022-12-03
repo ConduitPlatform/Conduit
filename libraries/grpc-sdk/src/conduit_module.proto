@@ -1,0 +1,25 @@
+syntax = "proto3";
+package conduit.module;
+
+message ModuleActivationRequest {}
+
+message ModuleActivationResponse {
+  enum ActivationResponse {
+    ALREADY_ACTIVATED = 0;
+    ACTIVATED = 1;
+  }
+  ActivationResponse status = 1;
+}
+
+message SetConfigRequest {
+  string newConfig = 1;
+}
+
+message SetConfigResponse {
+  string updatedConfig = 1;
+}
+
+service ConduitModule {
+  rpc ActivateModule(ModuleActivationRequest) returns (ModuleActivationResponse);
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+}

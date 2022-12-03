@@ -3,12 +3,15 @@ import ConduitGrpcSdk, {
   GrpcServer,
   GrpcRequest,
   GrpcResponse,
-  SetConfigRequest,
-  SetConfigResponse,
   Indexable,
-  ModuleActivationResponse,
   ModuleActivationStatus,
 } from '..';
+import {
+  ModuleActivationRequest,
+  ModuleActivationResponse,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '../protoUtils/conduit_module';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
 import { kebabCase, merge } from 'lodash';
@@ -128,14 +131,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       this._serviceName = this.service.protoDescription.substring(
         this.service.protoDescription.indexOf('.') + 1,
       );
-      this.service.functions['ActivateModule'] = this.activateModule.bind(this);
-      if (this.config) {
-        this.service.functions['SetConfig'] = this.setConfig.bind(this);
-      }
       await this.grpcServer.addService(
         this.service.protoPath,
         this.service.protoDescription,
         this.service.functions,
+      );
+      await this.addConduitService(
+        this.activateModule.bind(this),
+        this.config ? this.setConfig.bind(this) : undefined,
       );
       await this.addHealthCheckService();
       await this.grpcServer.start();
@@ -144,7 +147,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   }
 
   async activateModule(
-    call: GrpcRequest<null>,
+    call: GrpcRequest<ModuleActivationRequest>,
     callback: GrpcResponse<ModuleActivationResponse>,
   ) {
     if (this._activated) {
@@ -175,7 +178,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     return callback(null, { status: ModuleActivationStatus.ACTIVATED });
   }
 
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
     try {
       if (!this.config) {
         return callback({

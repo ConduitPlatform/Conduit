@@ -23,6 +23,7 @@ import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
 } from './protoUtils/grpc_health_check';
+import { ConduitModuleDefinition } from './protoUtils/conduit_module';
 import {
   GetRedisDetailsResponse,
   DeploymentState,
@@ -491,16 +492,18 @@ export default class ConduitGrpcSdk {
     return this._modules[name];
   }
 
+  getHealthClient(name: string): Client<typeof HealthDefinition> | undefined {
+    return this._modules[name]?.healthClient;
+  }
+
+  getConduitClient(name: string): Client<ConduitModuleDefinition> | undefined {
+    return this._modules[name]?.conduitClient;
+  }
+
   getServiceClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<T> | undefined {
-    return this._modules[name]?.client;
-  }
-
-  getHealthClient<T extends CompatServiceDefinition>(
-    name: string,
-  ): Client<typeof HealthDefinition> | undefined {
-    return this._modules[name]?.healthClient;
+    return this._modules[name]?.serviceClient;
   }
 
   isAvailable(moduleName: string) {

@@ -13,7 +13,7 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     body: string;
     variables: string[];
   }) {
-    return this.client!.registerTemplate({
+    return this.serviceClient!.registerTemplate({
       name: template.name,
       subject: template.subject,
       body: template.body,
@@ -34,7 +34,7 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
       attachments?: string[];
     },
   ) {
-    return this.client!.sendEmail({
+    return this.serviceClient!.sendEmail({
       templateName,
       params: {
         email: params.email,

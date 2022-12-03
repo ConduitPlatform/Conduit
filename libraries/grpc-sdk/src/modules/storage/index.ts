@@ -12,11 +12,11 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
   }
 
   getFile(id: string): Promise<FileResponse> {
-    return this.client!.getFile({ id });
+    return this.serviceClient!.getFile({ id });
   }
 
   getFileData(id: string): Promise<GetFileDataResponse> {
-    return this.client!.getFileData({ id });
+    return this.serviceClient!.getFileData({ id });
   }
 
   createFile(
@@ -26,6 +26,6 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     folder: string,
     isPublic: boolean = false,
   ): Promise<FileResponse> {
-    return this.client!.createFile({ name, mimeType, data, folder, isPublic });
+    return this.serviceClient!.createFile({ name, mimeType, data, folder, isPublic });
   }
 }

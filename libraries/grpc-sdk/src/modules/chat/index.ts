@@ -8,14 +8,14 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
   }
 
   sendMessage(messageData: SendMessageRequest): Promise<any> {
-    return this.client!.sendMessage(messageData);
+    return this.serviceClient!.sendMessage(messageData);
   }
 
   createRoom(name: string, participants: string[]): Promise<Room> {
-    return this.client!.createRoom({ name, participants });
+    return this.serviceClient!.createRoom({ name, participants });
   }
 
   deleteRoom(id: string): Promise<Room> {
-    return this.client!.deleteRoom({ id });
+    return this.serviceClient!.deleteRoom({ id });
   }
 }

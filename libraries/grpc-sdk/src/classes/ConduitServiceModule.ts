@@ -2,7 +2,13 @@ import ConduitGrpcSdk, { GrpcServer, HealthCheckStatus } from '..';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
-import { GrpcRequest } from '../types';
+import { GrpcRequest, GrpcResponse } from '../types';
+import {
+  ModuleActivationRequest,
+  ModuleActivationResponse,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '../protoUtils/conduit_module';
 import {
   HealthCheckRequest,
   HealthCheckResponse,
@@ -41,6 +47,26 @@ export abstract class ConduitServiceModule {
 
   get port(): string {
     return this._port;
+  }
+
+  protected async addConduitService(
+    activateModule: (
+      call: GrpcRequest<ModuleActivationRequest>,
+      callback: GrpcResponse<ModuleActivationResponse>,
+    ) => Promise<void>,
+    setConfig?: (
+      call: GrpcRequest<SetConfigRequest>,
+      callback: GrpcResponse<SetConfigResponse>,
+    ) => Promise<void>,
+  ) {
+    await this.grpcServer.addService(
+      path.resolve(__dirname, '../conduit_module.proto'),
+      'conduit.module.ConduitModule',
+      {
+        ActivateModule: activateModule,
+        ...(setConfig && { SetConfig: setConfig }),
+      },
+    );
   }
 
   protected async addHealthCheckService() {

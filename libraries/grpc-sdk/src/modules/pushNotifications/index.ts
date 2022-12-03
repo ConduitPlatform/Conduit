@@ -8,7 +8,7 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
   }
 
   sendNotificationToken(token: string, platform: string, userId: string) {
-    return this.client!.setNotificationToken({
+    return this.serviceClient!.setNotificationToken({
       token,
       platform,
       userId,
@@ -18,7 +18,7 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
   }
 
   getNotificationTokens(userId: string) {
-    return this.client!.getNotificationTokens({
+    return this.serviceClient!.getNotificationTokens({
       userId,
     }).then(res => {
       return res.tokenDocuments;
@@ -32,7 +32,7 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     data?: string,
     platform?: string,
   ) {
-    return this.client!.sendNotification({
+    return this.serviceClient!.sendNotification({
       sendTo,
       title,
       body,
@@ -48,7 +48,7 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
       { sendTo: string; title: string; body?: string; data?: string; platform?: string },
     ],
   ) {
-    return this.client!.sendManyNotifications({
+    return this.serviceClient!.sendManyNotifications({
       notifications,
     }).then(res => {
       return JSON.parse(res.message);
@@ -62,7 +62,7 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     data?: string,
     platform?: string,
   ) {
-    return this.client!.sendNotificationToManyDevices({
+    return this.serviceClient!.sendNotificationToManyDevices({
       sendTo,
       title,
       body,
