@@ -21,6 +21,8 @@ fi
 # Detect Architecture
 if [[ $uname =~ "arm64" ]]; then
   arch="arm64"
+elif [[ $uname =~ "aarch64" ]]; then
+  arch="arm64"
 elif [[ $uname =~ "x86_64" ]]; then
   arch="x64"
 else
