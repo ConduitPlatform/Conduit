@@ -19,8 +19,8 @@ else
 fi
 
 # Detect Architecture
-if [[ $uname =~ "arm64" ]]; then
-  arch="arm64"
+if [[ $uname =~ "arm64" ]] || [[ $uname =~ "aarch64" ]]; then
+  arch="arm"
 elif [[ $uname =~ "x86_64" ]]; then
   arch="x64"
 else
@@ -48,11 +48,14 @@ chmod a+x ~/.conduit/bin/conduit
 
 # Add To Executable Path
 shell_detected='false'
+already_installed='false'
 if which zsh >> /dev/null 2>&1; then
   shell_detected='true'
   if ! grep 'export PATH=$PATH:~/.conduit/bin' ~/.zshrc >> /dev/null 2>&1; then
     echo "Adding Conduit CLI to Zsh"
     printf '\n# Add Conduit CLI to executable PATH\nexport PATH=$PATH:~/.conduit/bin\n' >> ~/.zshrc
+  else
+    already_installed='true'
   fi
 fi
 if which bash >> /dev/null 2>&1; then
@@ -60,15 +63,19 @@ if which bash >> /dev/null 2>&1; then
   if ! grep 'export PATH=$PATH:~/.conduit/bin' ~/.bashrc >> /dev/null 2>&1; then
     echo "Adding Conduit CLI to Bash"
     printf '\n# Add Conduit CLI to executable PATH\nexport PATH=$PATH:~/.conduit/bin\n' >> ~/.bashrc
+  else
+      already_installed='true'
   fi
 fi
 if [[ $shell_detected == "false" ]]; then
   printf '\nShell auto-detection failed. Could not update executable $PATH.\n';
   echo "Conduit CLI located in ~/.conduit/bin/conduit"
+elif [[ $already_installed == 'false' ]]; then
+  printf "\nTo ensure that 'conduit' is available, please open a new terminal window.\n"
 fi
 
 # Bootstrap Local Deployment
 if [[ $deploy == "true" ]]; then
-  printf "\n\n"
+  printf "\n"
   ~/.conduit/bin/conduit deploy setup --config
 fi
