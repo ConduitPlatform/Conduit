@@ -4,7 +4,7 @@ import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat'
 export class Chat extends ConduitModule<typeof ChatDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'chat', url, grpcToken);
-    this.initializeClient(ChatDefinition);
+    this.initializeClients(ChatDefinition);
   }
 
   sendMessage(messageData: SendMessageRequest): Promise<any> {

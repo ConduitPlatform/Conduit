@@ -23,11 +23,10 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     private readonly _grpcToken?: string,
   ) {}
 
-  initializeClient(type: T): Client<T> {
-    if (this._serviceClient) return this._serviceClient;
+  initializeClients(type: T) {
+    if (this._serviceClient) return;
     this.type = type;
     this.openConnection();
-    return this._serviceClient!;
   }
 
   openConnection() {
@@ -54,9 +53,11 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     this._conduitClient = clientFactory.create(ConduitModuleDefinition, this.channel, {
       '*': retryOptions,
     });
-    this._serviceClient = clientFactory.create(this.type!, this.channel, {
-      '*': retryOptions,
-    });
+    if (this.type) {
+      this._serviceClient = clientFactory.create(this.type!, this.channel, {
+        '*': retryOptions,
+      });
+    }
     this.active = true;
   }
 

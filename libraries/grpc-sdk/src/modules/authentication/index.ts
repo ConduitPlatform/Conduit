@@ -9,7 +9,7 @@ import {
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'authentication', url, grpcToken);
-    this.initializeClient(AuthenticationDefinition);
+    this.initializeClients(AuthenticationDefinition);
   }
 
   userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {

@@ -4,7 +4,7 @@ import { PushNotificationsDefinition } from '../../protoUtils/push-notifications
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'push-notifications', url, grpcToken);
-    this.initializeClient(PushNotificationsDefinition);
+    this.initializeClients(PushNotificationsDefinition);
   }
 
   sendNotificationToken(token: string, platform: string, userId: string) {
