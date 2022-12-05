@@ -5,9 +5,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-
-type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;
-type GetModuleResponse = { setConfig: SetConfig };
+import { ModuleClient } from '../../../interfaces';
 
 export default function setConfigRoute(
   moduleName: string,
@@ -50,10 +48,7 @@ export default function setConfigRoute(
             });
           break;
         default:
-          const moduleClient = grpcSdk.getServiceClient<any>(
-            moduleName,
-          ) as unknown as GetModuleResponse;
-
+          const moduleClient = grpcSdk.getConduitClient(moduleName)!;
           updatedConfig = await moduleClient
             .setConfig({
               newConfig: JSON.stringify(updatedConfig),

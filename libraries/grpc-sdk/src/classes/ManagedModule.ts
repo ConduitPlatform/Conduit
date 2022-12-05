@@ -1,9 +1,17 @@
 import ConduitGrpcSdk, {
   ConduitService,
   GrpcServer,
+  GrpcRequest,
+  GrpcResponse,
+  Indexable,
+  ModuleActivationStatus,
+} from '..';
+import {
+  ModuleActivationRequest,
+  ModuleActivationResponse,
   SetConfigRequest,
   SetConfigResponse,
-} from '..';
+} from '../protoUtils/conduit_module';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
 import { kebabCase, merge } from 'lodash';
@@ -11,6 +19,7 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
+  private _activated: boolean = false;
   protected abstract readonly configSchema?: object;
   protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
@@ -127,13 +136,52 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.protoDescription,
         this.service.functions,
       );
+      await this.addConduitService(
+        this.activateModule.bind(this),
+        this.config ? this.setConfig.bind(this) : undefined,
+      );
       await this.addHealthCheckService();
       await this.grpcServer.start();
       ConduitGrpcSdk.Logger.log('gRPC server listening on ' + this._port);
     }
   }
 
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
+  async activateModule(
+    call: GrpcRequest<ModuleActivationRequest>,
+    callback: GrpcResponse<ModuleActivationResponse>,
+  ) {
+    if (this._activated) {
+      return callback(null, { status: ModuleActivationStatus.ALREADY_ACTIVATED });
+    }
+    try {
+      await this.onRegister();
+      if (this.config) {
+        const configSchema = this.config.getSchema();
+        let config: any = this.config.getProperties();
+        config = await this.preConfig(config);
+        config = await this.grpcSdk.config.configure(
+          config,
+          convictConfigParser(configSchema),
+          this.configOverride,
+        );
+        ConfigController.getInstance();
+        if (config) ConfigController.getInstance().config = config;
+        if (!config || config.active || !config.hasOwnProperty('active'))
+          await this.onConfig();
+      }
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error('Failed to activate module');
+      ConduitGrpcSdk.Logger.error(err as Error);
+      process.exit(-1);
+    }
+    this._activated = true;
+    return callback(null, { status: ModuleActivationStatus.ACTIVATED });
+  }
+
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
     try {
       if (!this.config) {
         return callback({
@@ -179,3 +227,16 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     });
   }
 }
+
+const convictConfigParser = (config: Indexable) => {
+  if (typeof config === 'object') {
+    Object.keys(config).forEach(key => {
+      if (key === '_cvtProperties') {
+        config = convictConfigParser(config._cvtProperties);
+      } else {
+        config[key] = convictConfigParser(config[key]);
+      }
+    });
+  }
+  return config;
+};

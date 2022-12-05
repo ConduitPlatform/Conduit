@@ -152,6 +152,9 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
         path: `/init/apple`,
         description: `Begins Apple authentication.`,
         action: ConduitRouteActions.GET,
+        queryParams: {
+          invitationToken: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition(`AppleInitResponse`, 'String'),
       this.redirect.bind(this),

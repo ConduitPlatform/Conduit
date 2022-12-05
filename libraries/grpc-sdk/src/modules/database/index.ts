@@ -20,7 +20,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     modelOptions: any;
     fieldHash: string;
   }> {
-    return this.client!.getSchema({ schemaName: schemaName }).then(res => {
+    return this.serviceClient!.getSchema({ schemaName: schemaName }).then(res => {
       return {
         name: res.name,
         fields: JSON.parse(res.fields),
@@ -38,7 +38,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       fieldHash: string;
     }[]
   > {
-    return this.client!.getSchemas({}).then(res => {
+    return this.serviceClient!.getSchemas({}).then(res => {
       return res.schemas.map(
         (schema: {
           name: string;
@@ -58,11 +58,11 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   deleteSchema(schemaName: string, deleteData: boolean): Promise<DropCollectionResponse> {
-    return this.client!.deleteSchema({ schemaName, deleteData });
+    return this.serviceClient!.deleteSchema({ schemaName, deleteData });
   }
 
   createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema> {
-    return this.client!.createSchemaFromAdapter({
+    return this.serviceClient!.createSchemaFromAdapter({
       name: schema.name,
       fields: JSON.stringify(schema.fields),
       modelOptions: JSON.stringify(schema.modelOptions),
@@ -79,7 +79,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   setSchemaExtension(extension: ConduitSchemaExtension): Promise<Schema> {
-    return this.client!.setSchemaExtension({
+    return this.serviceClient!.setSchemaExtension({
       schemaName: extension.schemaName,
       fields: JSON.stringify(extension.fields),
     }).then(res => {
@@ -107,7 +107,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     if (populate && !Array.isArray(populate)) {
       populateArray = [populate];
     }
-    return this.client!.findOne({
+    return this.serviceClient!.findOne({
       schemaName,
       query: this.processQuery(query),
       select: select === null ? undefined : select,
@@ -150,7 +150,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     if (populate && !Array.isArray(populate)) {
       populateArray = [populate];
     }
-    return this.client!.findMany({
+    return this.serviceClient!.findMany({
       schemaName,
       query: this.processQuery(query),
       select: select === null ? undefined : select,
@@ -164,19 +164,21 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   create<T>(schemaName: string, query: Query<T>): Promise<T> {
-    return this.client!.create({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+    return this.serviceClient!.create({
+      schemaName,
+      query: this.processQuery(query),
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   createMany<T>(schemaName: string, query: Query<T>): Promise<T[] | any[]> {
-    return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+    return this.serviceClient!.createMany({
+      schemaName,
+      query: this.processQuery(query),
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   findByIdAndUpdate<T>(
@@ -190,7 +192,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     if (populate && !Array.isArray(populate)) {
       populateArray = [populate];
     }
-    return this.client!.findByIdAndUpdate({
+    return this.serviceClient!.findByIdAndUpdate({
       schemaName,
       id,
       query: this.processQuery(document),
@@ -207,7 +209,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     updateProvidedOnly: boolean = false,
   ) {
-    return this.client!.updateMany({
+    return this.serviceClient!.updateMany({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
@@ -218,23 +220,25 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   }
 
   deleteOne<T>(schemaName: string, query: Query<T>) {
-    return this.client!.deleteOne({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+    return this.serviceClient!.deleteOne({
+      schemaName,
+      query: this.processQuery(query),
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   deleteMany<T>(schemaName: string, query: Query<T>) {
-    return this.client!.deleteMany({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+    return this.serviceClient!.deleteMany({
+      schemaName,
+      query: this.processQuery(query),
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   countDocuments<T>(schemaName: string, query: Query<T>): Promise<number> {
-    return this.client!.countDocuments({
+    return this.serviceClient!.countDocuments({
       schemaName,
       query: this.processQuery(query),
     }).then(res => {
@@ -252,7 +256,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     if (query.sqlQuery?.options) {
       processed.sqlQuery.options = JSON.stringify(processed.sqlQuery.options);
     }
-    return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
+    return this.serviceClient!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
   }

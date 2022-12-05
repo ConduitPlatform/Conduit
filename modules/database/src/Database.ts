@@ -104,7 +104,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
-    await this.grpcSdk.core.watch('');
+    this.grpcSdk.core.watch().then();
   }
 
   private registerInstanceSyncEvents() {

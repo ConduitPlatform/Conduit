@@ -117,7 +117,7 @@ service DatabaseProvider {
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
     rpc SetSchemaExtension(SchemaExtension) returns (Schema);
-    // Database queries
+    // Database Queries
     rpc findOne(FindOneRequest) returns (QueryResponse);
     rpc findMany(FindRequest) returns (QueryResponse);
     rpc create(QueryRequest) returns (QueryResponse);

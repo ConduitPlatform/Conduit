@@ -1,14 +1,6 @@
 syntax = 'proto3';
 package pushnotifications;
 
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message SetNotificationTokenRequest {
   string token = 1;
   string platform = 2;
@@ -52,7 +44,6 @@ message SendNotificationResponse {
 }
 
 service PushNotifications {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc SetNotificationToken(SetNotificationTokenRequest) returns (SetNotificationTokenResponse);
   rpc GetNotificationTokens(GetNotificationTokensRequest) returns (GetNotificationTokensResponse);
   rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);

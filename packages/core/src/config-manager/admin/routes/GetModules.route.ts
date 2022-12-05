@@ -1,53 +1,45 @@
-import { RegisteredModule } from '@conduitplatform/commons';
+import { DeploymentState_ModuleStateInfo as ModuleStateInfo } from '@conduitplatform/commons';
 import {
   ConduitRouteActions,
-  ConduitError,
   ConduitString,
   ConduitBoolean,
   ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { isNil } from 'lodash';
 
-export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
+export function getModulesRoute(registeredModules: Map<string, ModuleStateInfo>) {
   return new ConduitRoute(
     {
       path: '/config/modules',
       action: ConduitRouteActions.GET,
-      description: `Returns as array of currently available modules, providing information about their service.`,
+      description: `Returns as array of online modules, providing information about their service.`,
       queryParams: {
         sortByName: ConduitBoolean.Optional,
+        available: ConduitBoolean.Optional,
       },
     },
     new ConduitRouteReturnDefinition('GetModules', {
       modules: [
         {
           moduleName: ConduitString.Required,
-          url: ConduitString.Required,
+          moduleVersion: ConduitString.Required,
+          moduleUrl: ConduitString.Required,
+          pending: ConduitBoolean.Required,
           serving: ConduitBoolean.Required,
         },
       ],
     }),
     async (call: ConduitRouteParameters) => {
-      const sortByName = call.params!.sortByName;
-      if (registeredModules.size !== 0) {
-        const modules: any[] = [];
-        registeredModules.forEach((value: RegisteredModule, key: string) => {
-          modules.push({
-            moduleName: key,
-            url: value.address,
-            serving: value.serving,
-          });
-        });
-        if (!isNil(sortByName)) {
-          if (sortByName)
-            modules!.sort((a, b) => a.moduleName.localeCompare(b.moduleName));
-          else modules!.sort((a, b) => b.moduleName.localeCompare(a.moduleName));
-        }
-        return { modules };
-      } else {
-        throw new ConduitError('INTERNAL', 500, 'Modules not available yet');
-      }
+      const availableFilter = call.params!.pending;
+      const sortByName = call.params!.sortByName === true;
+      const modules = [...registeredModules.values()].filter(m =>
+        availableFilter === undefined ? true : m.pending !== availableFilter,
+      );
+      return {
+        modules: sortByName
+          ? modules.sort((a, b) => a.moduleName.localeCompare(b.moduleName))
+          : modules,
+      };
     },
   );
 }

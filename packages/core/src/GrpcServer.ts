@@ -6,13 +6,13 @@ import ConduitGrpcSdk, {
   GrpcCallback,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
-import { EventEmitter } from 'events';
-import path from 'path';
 import AppConfigSchema from './config';
 import CoreConfigSchema from './config/config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
+import { EventEmitter } from 'events';
 import convict from 'convict';
+import path from 'path';
 
 const CORE_SERVICES = ['Config', 'Admin'];
 
@@ -51,10 +51,15 @@ export class GrpcServer {
           'core',
           false,
         );
-        this._grpcSdk.initialize().then(async () => {
+        const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
+        this._grpcSdk.initialize(packageJsonPath).then(async () => {
           await this._grpcSdk.initializeEventBus();
           this.commons.registerConfigManager(
-            new ConfigManager(this._grpcSdk, this.commons),
+            new ConfigManager(
+              this._grpcSdk,
+              this.commons,
+              this.getServiceHealthState.bind(this),
+            ),
           );
           await this.commons.getConfigManager().initialize(this.server);
           await this.bootstrapSdkComponents();

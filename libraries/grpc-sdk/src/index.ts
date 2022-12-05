@@ -13,30 +13,33 @@ import {
   SMS,
   Storage,
 } from './modules';
-import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
 import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
-import { Client } from 'nice-grpc';
-import { status } from '@grpc/grpc-js';
 import { sleep } from './utilities';
 import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
 } from './protoUtils/grpc_health_check';
+import { ConduitModuleDefinition } from './protoUtils/conduit_module';
 import {
   GetRedisDetailsResponse,
-  ModuleListResponse_ModuleResponse,
+  DeploymentState,
+  DeploymentState_ModuleStateInfo,
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
-import { createSigner } from 'fast-jwt';
-import { checkModuleHealth } from './classes/HealthCheck';
+import { checkServiceHealth } from './classes/HealthCheck';
 import { ConduitLogger, setupLoki } from './utilities/Logger';
+import { ConduitMetrics } from './metrics';
+import { ManifestManager } from './classes';
+import { createSigner } from 'fast-jwt';
+import { Client } from 'nice-grpc';
+import { status } from '@grpc/grpc-js';
+import Crypto from 'crypto';
 import winston from 'winston';
 import path from 'path';
-import { ConduitMetrics } from './metrics';
 import fs from 'fs-extra';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
@@ -51,7 +54,7 @@ export default class ConduitGrpcSdk {
     | RedisOptions
     | { nodes: { host: string; port: number }[]; options: ClusterOptions };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
-  private readonly _availableModules: any = {
+  private readonly _availableModules: { [key: string]: any } = {
     router: Router,
     database: DatabaseProvider,
     storage: Storage,
@@ -68,8 +71,9 @@ export default class ConduitGrpcSdk {
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly name: string;
+  readonly isModule: boolean = true;
   private readonly instance: string;
-  private readonly _serviceHealthStatusGetter: Function;
+  private readonly _serviceHealthStatusGetter: () => HealthCheckStatus;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
   static Metrics?: ConduitMetrics;
@@ -86,7 +90,7 @@ export default class ConduitGrpcSdk {
 
   constructor(
     serverUrl: string,
-    serviceHealthStatusGetter: Function,
+    serviceHealthStatusGetter: () => HealthCheckStatus,
     name?: string,
     watchModules = true,
     private readonly urlRemap?: string,
@@ -95,6 +99,7 @@ export default class ConduitGrpcSdk {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
       this.name = name;
+      this.isModule = this.name !== 'core';
     }
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
@@ -118,8 +123,9 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  async initialize() {
-    if (this.name === 'core') {
+  async initialize(packageJsonPath: string) {
+    ManifestManager.getInstance(this, this.name, packageJsonPath);
+    if (!this.isModule) {
       return this._initialize();
     }
     (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
@@ -297,27 +303,27 @@ export default class ConduitGrpcSdk {
 
   watchModules() {
     const emitter = this.config.getModuleWatcher();
-    this.config.watchModules().then();
-    emitter.on('serving-modules-update', (modules: any) => {
+    this.config.watchDeploymentState().then();
+    emitter.on('serving-modules-update', (state: DeploymentState) => {
       Object.keys(this._modules).forEach(r => {
         if (r !== this.name) {
-          const found = modules.filter(
-            (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
+          const found = state.modules.find(
+            m => m.moduleName === r && !m.pending && m.serving,
           );
-          if ((!found || found.length === 0) && this._modules[r]) {
+          if (!found && this._modules[r]) {
             this._modules[r]?.closeConnection();
             emitter.emit(`module-connection-update:${r}`, false);
           }
         }
       });
-      modules.forEach((m: ModuleListResponse_ModuleResponse) => {
-        if (m.moduleName !== this.name) {
+      state.modules.forEach((m: DeploymentState_ModuleStateInfo) => {
+        if (m.moduleName !== this.name && !m.pending) {
           const alreadyActive = this._modules[m.moduleName]?.active;
           if (!alreadyActive && m.serving) {
             if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
               this._modules[m.moduleName].openConnection();
             } else {
-              this.createModuleClient(m.moduleName, m.url);
+              this.createModuleClient(m.moduleName, m.moduleUrl);
             }
             emitter.emit(`module-connection-update:${m.moduleName}`, true);
           }
@@ -404,8 +410,8 @@ export default class ConduitGrpcSdk {
         } else {
           const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
-            host: redisHost,
             ...this._redisDetails,
+            host: redisHost,
           });
         }
         this._eventBus = new EventBus(this._redisManager);
@@ -431,11 +437,12 @@ export default class ConduitGrpcSdk {
    * This will only work on known modules, since the primary usage for the sdk is internal
    */
   initializeModules() {
-    return this._config!.moduleList()
+    return this._config!.getDeploymentState()
       .then(r => {
         this.lastSearch = Date.now();
-        r.forEach(m => {
-          this.createModuleClient(m.moduleName, m.url);
+        r.modules.forEach(m => {
+          if (m.pending) return;
+          this.createModuleClient(m.moduleName, m.moduleUrl);
         });
         return 'ok';
       })
@@ -471,8 +478,8 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  isModuleUp(moduleName: string, moduleUrl: string, service: string = '') {
-    return checkModuleHealth(moduleName, moduleUrl, service, this._grpcToken);
+  checkServiceHealth(moduleUrl: string, service: string = '') {
+    return checkServiceHealth(this.name, moduleUrl, service, this._grpcToken);
   }
 
   moduleClient(name: string, type: CompatServiceDefinition): void {
@@ -485,16 +492,18 @@ export default class ConduitGrpcSdk {
     return this._modules[name];
   }
 
+  getHealthClient(name: string): Client<typeof HealthDefinition> | undefined {
+    return this._modules[name]?.healthClient;
+  }
+
+  getConduitClient(name: string): Client<ConduitModuleDefinition> | undefined {
+    return this._modules[name]?.conduitClient;
+  }
+
   getServiceClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<T> | undefined {
-    return this._modules[name]?.client;
-  }
-
-  getHealthClient<T extends CompatServiceDefinition>(
-    name: string,
-  ): Client<typeof HealthDefinition> | undefined {
-    return this._modules[name]?.healthClient;
+    return this._modules[name]?.serviceClient;
   }
 
   isAvailable(moduleName: string) {
@@ -506,6 +515,21 @@ export default class ConduitGrpcSdk {
       await sleep(1000);
     }
     return true;
+  }
+
+  onceModuleUp(moduleName: string, callback: () => void) {
+    if (this.isAvailable(moduleName)) callback();
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? callback() : null,
+    );
+  }
+
+  onceModuleDown(moduleName: string, callback: () => void) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? null : callback(),
+    );
   }
 
   /**

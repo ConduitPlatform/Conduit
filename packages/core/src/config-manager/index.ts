@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   GrpcServer,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -16,25 +17,26 @@ import {
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
-import { registerConfigRoute } from './admin/routes';
 import * as models from './models';
-import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
 import { ConfigStorage } from './config-storage';
 import parseConfigSchema from '../utils';
-import { IModuleConfig } from '../interfaces/IModuleConfig';
+import { ServiceDiscoveryState, ServiceDiscoveryModuleEntry } from '../interfaces';
+import { isNil } from 'lodash';
 import convict from 'convict';
 import fs from 'fs-extra';
-import { isNil } from 'lodash';
+import path from 'path';
 
 export default class ConfigManager implements IConfigManager {
-  grpcSdk: ConduitGrpcSdk;
   private readonly serviceDiscovery: ServiceDiscovery;
   private _configStorage: ConfigStorage;
 
-  constructor(grpcSdk: ConduitGrpcSdk, private readonly sdk: ConduitCommons) {
-    this.grpcSdk = grpcSdk;
-    this.serviceDiscovery = new ServiceDiscovery(grpcSdk);
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly sdk: ConduitCommons,
+    readonly conduitHealthCheckGetter: (service: '') => HealthCheckStatus,
+  ) {
+    this.serviceDiscovery = new ServiceDiscovery(grpcSdk, conduitHealthCheckGetter);
     this._configStorage = new ConfigStorage(sdk, grpcSdk, this.serviceDiscovery);
   }
 
@@ -51,10 +53,15 @@ export default class ConfigManager implements IConfigManager {
         getServerConfig: this.getServerConfig.bind(this),
         getRedisDetails: this.getRedisDetails.bind(this),
         configure: this.configureModule.bind(this),
-        moduleExists: this.serviceDiscovery.moduleExists.bind(this.serviceDiscovery),
-        registerModule: this.serviceDiscovery.registerModule.bind(this.serviceDiscovery),
-        moduleList: this.serviceDiscovery.moduleList.bind(this.serviceDiscovery),
-        watchModules: this.serviceDiscovery.watchModules.bind(this.serviceDiscovery),
+        registerModule: this.serviceDiscovery.registerModuleGrpc.bind(
+          this.serviceDiscovery,
+        ),
+        getDeploymentState: this.serviceDiscovery.getDeploymentState.bind(
+          this.serviceDiscovery,
+        ),
+        watchDeploymentState: this.serviceDiscovery.watchDeploymentState.bind(
+          this.serviceDiscovery,
+        ),
         moduleHealthProbe: this.serviceDiscovery.moduleHealthProbe.bind(
           this.serviceDiscovery,
         ),
@@ -68,21 +75,16 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async highAvailability() {
-    const loadedState = await this.grpcSdk.state!.getKey('config');
+    const loadedState = await this.grpcSdk.state!.getKey('serviceDiscovery');
     try {
       if (!loadedState || loadedState.length === 0) return;
-      const state = JSON.parse(loadedState);
-      const success: IModuleConfig[] = [];
+      const state: ServiceDiscoveryState = JSON.parse(loadedState);
+      const success: ServiceDiscoveryModuleEntry[] = [];
       if (state.modules) {
         for (const module of state.modules) {
           try {
-            await this.serviceDiscovery._registerModule(module.name, module.url);
-            success.push({
-              name: module.name,
-              url: module.url,
-              instance: module.instance,
-              ...(module.configSchema && { configSchema: module.configSchema }),
-            });
+            await this.serviceDiscovery._registerModule(module.manifest, module.url);
+            success.push(module);
           } catch {}
         }
         if (state.modules.length > success.length) {
@@ -93,7 +95,7 @@ export default class ConfigManager implements IConfigManager {
         return Promise.resolve();
       }
     } catch {
-      ConduitGrpcSdk.Logger.error('Failed to recover state');
+      ConduitGrpcSdk.Logger.error('Failed to recover Redis state');
     }
   }
 
@@ -127,7 +129,10 @@ export default class ConfigManager implements IConfigManager {
       });
   }
 
-  getServerConfig(call: GrpcRequest<null>, callback: GrpcCallback<GetConfigResponse>) {
+  private getServerConfig(
+    call: GrpcRequest<null>,
+    callback: GrpcCallback<GetConfigResponse>,
+  ) {
     this._configStorage
       .getConfig('core')
       .then(config => {
@@ -146,7 +151,7 @@ export default class ConfigManager implements IConfigManager {
       });
   }
 
-  getRedisDetails(
+  private getRedisDetails(
     call: GrpcRequest<null>,
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
@@ -200,7 +205,10 @@ export default class ConfigManager implements IConfigManager {
     this._configStorage.onDatabaseAvailable();
   }
 
-  getGrpc(call: GrpcRequest<{ key: string }>, callback: GrpcResponse<{ data: string }>) {
+  private getGrpc(
+    call: GrpcRequest<{ key: string }>,
+    callback: GrpcResponse<{ data: string }>,
+  ) {
     this.get(call.request.key).then(r => {
       if (!r) {
         return callback({
@@ -232,7 +240,7 @@ export default class ConfigManager implements IConfigManager {
     }
   }
 
-  async configureModule(
+  private async configureModule(
     call: GrpcRequest<UpdateRequest>,
     callback: GrpcCallback<UpdateResponse>,
   ) {
@@ -250,7 +258,7 @@ export default class ConfigManager implements IConfigManager {
       config = await this.addFieldsToModule(moduleName, config);
     }
     this.registerConfigRoutes(moduleName, configSchema);
-    this.updateState(moduleName, configSchema);
+    this.updateRedisState(moduleName, configSchema);
     return callback(null, { result: JSON.stringify(config) });
   }
 
@@ -272,12 +280,10 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async isModuleUp(moduleName: string) {
-    if (!this.serviceDiscovery.registeredModules.has(moduleName)) return false;
+    const module = this.serviceDiscovery.registeredModules.get(moduleName);
+    if (!module || module.pending) return false;
     try {
-      await this.grpcSdk.isModuleUp(
-        moduleName,
-        this.serviceDiscovery.registeredModules.get(moduleName)!.address,
-      );
+      await this.grpcSdk.checkServiceHealth(module.moduleUrl);
     } catch (e) {
       return false;
     }
@@ -296,7 +302,7 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        adminRoutes.registerConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
@@ -307,7 +313,7 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        adminRoutes.registerConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
@@ -317,34 +323,32 @@ export default class ConfigManager implements IConfigManager {
       );
   }
 
-  private updateState(name: string, configSchema: convict.Config<any>) {
+  private updateRedisState(moduleName: string, configSchema: convict.Config<object>) {
     this.grpcSdk
-      .state!.getKey('config')
+      .state!.getKey('serviceDiscovery')
       .then(r => {
         if (!r || r.length === 0) {
           throw new Error('No config state found');
         }
-        const state = JSON.parse(r);
-        const module = state.modules.find((module: IModuleConfig) => {
-          return module.name === name;
-        });
+        const state: ServiceDiscoveryState = JSON.parse(r);
+        const module = state.modules.find(m => m.manifest.moduleName === moduleName);
         if (!module) {
           throw new Error('Cannot update module state');
         }
         state.modules = [
-          ...state.modules.filter((module: IModuleConfig) => module.name !== name),
+          ...state.modules.filter(m => m.manifest.moduleName !== moduleName),
           {
             ...module,
             configSchema,
           },
         ];
-        return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
+        return this.grpcSdk.state!.setKey('serviceDiscovery', JSON.stringify(state));
       })
       .then(() => {
-        ConduitGrpcSdk.Logger.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Updated Redis state');
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.error('Failed to recover state');
+        ConduitGrpcSdk.Logger.error('Failed to recover Redis state');
       });
   }
 }

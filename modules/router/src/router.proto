@@ -2,11 +2,12 @@ syntax = "proto3";
 package router;
 
 service Router {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
 }
+
+message Empty {}
 
 message GenerateProtoRequest {
   string moduleName = 1;
@@ -32,7 +33,6 @@ message SocketData {
   repeated string receivers = 3;
   repeated string rooms = 4;
 }
-
 
 message RegisterConduitRouteRequest {
   repeated PathDefinition routes = 1;
@@ -63,7 +63,4 @@ message RegisterConduitRouteRequest {
     string name = 1;
     string fields = 2;
   }
-}
-
-message Empty {
 }

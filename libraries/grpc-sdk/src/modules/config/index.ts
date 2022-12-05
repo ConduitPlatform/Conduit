@@ -7,17 +7,17 @@ import {
   RegisterModuleRequest,
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
-import ConduitGrpcSdk from '../../index';
+import ConduitGrpcSdk, { ManifestManager } from '../../index';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
   private coreLive = false;
-  private readonly _serviceHealthStatusGetter: Function;
+  private readonly _serviceHealthStatusGetter: (service: string) => HealthCheckStatus;
 
   constructor(
     moduleName: string,
     readonly url: string,
-    serviceHealthStatusGetter: Function,
+    serviceHealthStatusGetter: (service: string) => HealthCheckStatus,
     grpcToken?: string,
   ) {
     super(moduleName, 'config', url, grpcToken);
@@ -27,14 +27,14 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
 
   getServerConfig() {
     const request = {};
-    return this.client!.getServerConfig(request).then(res => {
+    return this.serviceClient!.getServerConfig(request).then(res => {
       return JSON.parse(res.data);
     });
   }
 
   getModuleUrlByName(name: string): Promise<{ url: string }> {
     if (name === 'core') return Promise.resolve({ url: this.url });
-    return this.client!.getModuleUrlByName({ name: name }).then(res => {
+    return this.serviceClient!.getModuleUrlByName({ name }).then(res => {
       return { url: res.moduleUrl };
     });
   }
@@ -43,7 +43,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     const request = {
       key: name,
     };
-    return this.client!.get(request).then(res => {
+    return this.serviceClient!.get(request).then(res => {
       return JSON.parse(res.data);
     });
   }
@@ -54,58 +54,44 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       schema: JSON.stringify(schema),
       override,
     };
-    return this.client!.configure(request).then(res => {
+    return this.serviceClient!.configure(request).then(res => {
       return JSON.parse(res.result);
     });
   }
 
-  moduleExists(name: string) {
-    const request = {
-      moduleName: name,
-    };
-    return this.client!.moduleExists(request);
-  }
-
-  moduleList(): Promise<any[]> {
-    const request = {};
-    return this.client!.moduleList(request)
-      .then(res => res.modules)
-      .catch(err => {
-        if (this._clientName === 'core') return [];
-        throw err;
-      });
-  }
-
   getRedisDetails() {
     const request: Indexable = {};
-    return this.client!.getRedisDetails(request);
+    return this.serviceClient!.getRedisDetails(request);
   }
 
   registerModule(
-    name: string,
     url: string,
     healthStatus: Omit<HealthCheckStatus, HealthCheckStatus.SERVICE_UNKNOWN>,
   ) {
     const request: RegisterModuleRequest = {
-      moduleName: name.toString(),
+      manifest: ManifestManager.getInstance().manifest,
       url: url.toString(),
       healthStatus: healthStatus as number,
     };
     const self = this;
-    return this.client!.registerModule(request).then(res => {
+    return this.serviceClient!.registerModule(request).then(() => {
       self.coreLive = true;
-      return res.result;
     });
+  }
+
+  getDeploymentState() {
+    return this.serviceClient!.getDeploymentState({});
   }
 
   moduleHealthProbe(name: string, url: string) {
     const request: ModuleHealthRequest = {
       moduleName: name.toString(),
-      url,
-      status: this._serviceHealthStatusGetter(),
+      moduleVersion: ManifestManager.getInstance().moduleVersion,
+      moduleUrl: url,
+      status: this._serviceHealthStatusGetter(''),
     };
     const self = this;
-    this.client!.moduleHealthProbe(request)
+    this.serviceClient!.moduleHealthProbe(request)
       .then(res => {
         if (!res && self.coreLive) {
           ConduitGrpcSdk.Logger.warn('Core unhealthy');
@@ -113,7 +99,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
         } else if (res && !self.coreLive) {
           ConduitGrpcSdk.Logger.log('Core is live');
           self.coreLive = true;
-          self.watchModules();
+          self.watchDeploymentState();
         }
       })
       .catch(e => {
@@ -128,14 +114,17 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     return this.emitter;
   }
 
-  async watchModules() {
+  async watchDeploymentState() {
     const self = this;
     this.emitter.setMaxListeners(150);
-    self.emitter.emit('serving-modules-update', await self.moduleList().catch());
+    self.emitter.emit('serving-modules-update', await self.getDeploymentState().catch());
     try {
-      const call = this.client!.watchModules({});
+      const call = this.serviceClient!.watchDeploymentState({});
       for await (const data of call) {
-        self.emitter.emit('serving-modules-update', data.modules);
+        self.emitter.emit(
+          'serving-modules-update',
+          data.modules.filter(m => !m.pending),
+        );
       }
     } catch (error) {
       self.coreLive = false;

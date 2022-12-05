@@ -13,11 +13,11 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
   }
 
   userLogin(userId: string, clientId: string): Promise<UserLoginResponse> {
-    return this.client!.userLogin({ userId, clientId });
+    return this.serviceClient!.userLogin({ userId, clientId });
   }
 
   userDelete(userId: string): Promise<UserDeleteResponse> {
-    return this.client!.userDelete({ userId });
+    return this.serviceClient!.userDelete({ userId });
   }
 
   userCreate(
@@ -25,10 +25,10 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
     verify: boolean = false,
     password?: string,
   ): Promise<UserCreateResponse> {
-    return this.client!.userCreate({ email, verify, password });
+    return this.serviceClient!.userCreate({ email, verify, password });
   }
 
   changePass(email: string, password?: string): Promise<UserCreateResponse> {
-    return this.client!.changePass({ email, password });
+    return this.serviceClient!.changePass({ email, password });
   }
 }

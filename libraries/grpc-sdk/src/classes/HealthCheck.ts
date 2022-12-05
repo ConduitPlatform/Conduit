@@ -1,9 +1,10 @@
 import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../interceptors';
 import { createChannel, createClientFactory } from 'nice-grpc';
-import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health_check';
+import { HealthDefinition } from '../protoUtils/grpc_health_check';
 import { clientMiddleware } from '../metrics/clientMiddleware';
+import { HealthCheckStatus } from '../types';
 
-export async function checkModuleHealth(
+export async function checkServiceHealth(
   clientName: string,
   serviceUrl: string,
   service: string = '',
@@ -21,17 +22,13 @@ export async function checkModuleHealth(
         : getModuleNameInterceptor(clientName),
     );
   const _healthClient = clientFactory.create(HealthDefinition, channel);
-
-  let error;
-  let status = await _healthClient
+  return _healthClient
     .check({ service })
-    .then((res: HealthCheckResponse) => {
+    .then(res => {
       return res.status;
     })
-    .catch(err => (error = err));
-  channel.close();
-  if (!error) {
-    return status;
-  }
-  throw error;
+    .catch(() => {
+      channel.close();
+      return HealthCheckStatus.SERVICE_UNKNOWN;
+    }) as Promise<HealthCheckStatus>;
 }

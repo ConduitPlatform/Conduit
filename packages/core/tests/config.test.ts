@@ -4,7 +4,9 @@ import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import { sleep } from '@conduitplatform/grpc-sdk/src/utilities';
 
-const testModuleUrl = '0.0.0.0:55184';
+const REGISTER_MODULE_SERVICE_URL = '0.0.0.0:55184';
+const WATCH_DEPLOYMENT_STATE_SERVICE_URL = '0.0.0.0:55185';
+
 let dependencies: ChildProcess[];
 const testModule = testingTools.getTestModule<ConfigDefinition>(
   'test',
@@ -32,59 +34,8 @@ beforeAll(async () => {
   ]);
 });
 
-describe('Testing Core package', () => {
-  test('Getting Redis Details', async () => {
-    const res = await testClient.getRedisDetails({});
-    expect(res).toMatchObject({
-      redisPort: expect.any(Number),
-      redisHost: expect.any(String),
-    });
-  });
-
-  test('Getting Server Config', async () => {
-    const res = await testClient.getServerConfig({});
-    expect(res).toMatchObject({
-      data: expect.any(String),
-    });
-  });
-});
-
-describe('Testing module related rpc calls', () => {
-  test('Register Module', async () => {
-    const res = await testClient.registerModule({
-      moduleName: 'test',
-      url: testModuleUrl,
-      healthStatus: 1,
-    });
-    expect(res).toMatchObject({
-      result: expect.any(Boolean),
-    });
-  });
-
-  test('Getting Module List', async () => {
-    const res = await testClient.moduleList({});
-    expect(res.modules[0]).toMatchObject({
-      moduleName: 'test',
-      url: testModuleUrl,
-      serving: expect.any(Boolean),
-    });
-  });
-
-  test('Module Exists', async () => {
-    const res = await testClient.moduleExists({ moduleName: 'test' });
-    expect(res).toMatchObject({
-      url: testModuleUrl,
-    });
-  });
-
-  test('Get Module Url By Name', async () => {
-    const res = await testClient.getModuleUrlByName({ name: 'test' });
-    expect(res).toMatchObject({
-      moduleUrl: testModuleUrl,
-    });
-  });
-
-  test('Get Config Request', async () => {
+describe('Testing Config Service', () => {
+  test('GetConfigRequest', async () => {
     await testClient.configure({
       config: JSON.stringify({ active: false }),
       schema: JSON.stringify({
@@ -110,32 +61,116 @@ describe('Testing module related rpc calls', () => {
     });
   });
 
-  test('Module Health Probe', async () => {
+  test('GetDeploymentState', async () => {
+    const res = await testClient.getDeploymentState({});
+    expect(res).toMatchObject({
+      modules: [
+        {
+          moduleName: 'core',
+          moduleVersion: expect.any(String),
+          moduleUrl: expect.any(String),
+          pending: false,
+          serving: expect.any(Boolean),
+        },
+      ],
+    });
+  });
+
+  test('RegisterModule', async () => {
+    const res = await testClient.registerModule({
+      manifest: {
+        moduleName: 'test-register-module',
+        moduleVersion: '0.16.0',
+        dependencies: [
+          {
+            name: 'some-unavailable-module',
+            version: '^0.16',
+          },
+        ],
+      },
+      url: REGISTER_MODULE_SERVICE_URL,
+      healthStatus: 1,
+    });
+    expect(res).toMatchObject({});
+  });
+
+  test('WatchDeploymentState', async () => {
+    const watchDeploymentState = testClient.watchDeploymentState({});
+    await sleep(6000).then(async () => {
+      await testClient.registerModule({
+        manifest: {
+          moduleName: 'test-watch-deployment-state',
+          moduleVersion: '0.16.0',
+          dependencies: [
+            {
+              name: 'test',
+              version: '0.16.0',
+            },
+          ],
+        },
+        url: WATCH_DEPLOYMENT_STATE_SERVICE_URL,
+        healthStatus: 1,
+      });
+      for await (const modules of watchDeploymentState) {
+        expect(modules).toMatchObject({
+          modules: [
+            {
+              moduleName: 'core',
+              moduleVersion: expect.any(String),
+              moduleUrl: expect.any(String),
+              pending: false,
+              serving: true,
+            },
+            {
+              moduleName: 'test-register-module',
+              moduleVersion: '0.16.0',
+              moduleUrl: REGISTER_MODULE_SERVICE_URL,
+              pending: expect.any(Boolean),
+              serving: true,
+            },
+            {
+              moduleName: 'test-watch-deployment-state',
+              moduleVersion: '0.16.0',
+              moduleUrl: WATCH_DEPLOYMENT_STATE_SERVICE_URL,
+              pending: expect.any(Boolean),
+              serving: true,
+            },
+          ],
+        });
+        break;
+      }
+    });
+  });
+
+  test('ModuleHealthProbe', async () => {
     const res = await testClient.moduleHealthProbe({
-      moduleName: 'test',
-      url: testModuleUrl,
+      moduleName: 'test-register-module',
+      moduleVersion: 'v0.16.0',
+      moduleUrl: REGISTER_MODULE_SERVICE_URL,
       status: 1,
     });
     expect(res).toMatchObject({});
   });
 
-  test('Watch Modules', async () => {
-    const watchModules = testClient.watchModules({});
-    sleep(6000).then(async () => {
-      await testClient.registerModule({
-        moduleName: 'watch-modules',
-        url: '0.0.0.0:55152',
-        healthStatus: 1,
-      });
-      for await (const modules of watchModules) {
-        expect(modules).toMatchObject({
-          modules: [
-            { moduleName: 'test', url: '0.0.0.0:55184', serving: true },
-            { moduleName: 'watch-modules', url: '0.0.0.0:55152', serving: true },
-          ],
-        });
-        break;
-      }
+  test('GetRedisDetails', async () => {
+    const res = await testClient.getRedisDetails({});
+    expect(res).toMatchObject({
+      redisPort: expect.any(Number),
+      redisHost: expect.any(String),
+    });
+  });
+
+  test('GetServerConfig', async () => {
+    const res = await testClient.getServerConfig({});
+    expect(res).toMatchObject({
+      data: expect.any(String),
+    });
+  });
+
+  test('GetModuleUrlByName', async () => {
+    const res = await testClient.getModuleUrlByName({ name: 'test-register-module' });
+    expect(res).toMatchObject({
+      moduleUrl: REGISTER_MODULE_SERVICE_URL,
     });
   });
 });

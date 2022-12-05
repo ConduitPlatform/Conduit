@@ -117,7 +117,7 @@ export class ResourceHandler {
       permissions,
     });
     this.grpcSdk.bus?.publish('authentication:create:resource', JSON.stringify(resource));
-    return resource;
+    return resource!;
   }
 
   async getResources(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
