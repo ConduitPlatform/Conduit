@@ -384,10 +384,8 @@ export class ServiceDiscovery {
     if (module?.pending) {
       module.pending = false;
     }
-    const moduleClient = this.grpcSdk.getServiceClient<any>(
-      name,
-    )! as unknown as ModuleClient;
-    const activationStatus = await moduleClient
+    const conduitClient = this.grpcSdk.getConduitClient(name)! as unknown as ModuleClient;
+    const activationStatus = await conduitClient
       .activateModule()
       .then(res => Promise.resolve(res.status))
       .catch(() => {

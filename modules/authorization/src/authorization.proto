@@ -3,21 +3,6 @@ package authorization;
 
 message Empty {}
 
-message ModuleActivationResponse {
-  enum ActivationResponse {
-    ALREADY_ACTIVATED = 0;
-    ACTIVATED = 1;
-  }
-  ActivationResponse status = 1;
-}
-
-message SetConfigRequest {
-  string newConfig = 1;
-}
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message Resource {
   string name = 1;
   repeated _Relation relations = 2;
@@ -32,7 +17,6 @@ message Resource {
     string name = 1;
     repeated string roles = 2;
   }
-
 }
 
 message Relation {
@@ -40,6 +24,12 @@ message Relation {
   string relation = 2;
   string resource = 3;
 }
+
+message DeleteAllRelationsRequest {
+  optional string subject = 1;
+  optional string resource = 2;
+}
+
 message DeleteResourceRequest {
   string name = 1;
 }
@@ -49,8 +39,16 @@ message FindRelationRequest {
   optional string relation = 2;
   optional string resource = 3;
 }
+message FindRelationResponse {
+  repeated Relation relations = 1;
+}
 
 message PermissionCheck {
+  string subject = 1;
+  repeated string actions = 2;
+  string resource = 3;
+}
+message PermissionRequest {
   string subject = 1;
   string action = 2;
   string resource = 3;
@@ -61,15 +59,14 @@ message Decision {
 }
 
 service Authorization {
-  // Conduit
-  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-  // Service
   rpc DefineResource(Resource) returns (Empty);
   rpc DeleteResource(DeleteResourceRequest) returns (Empty);
   rpc UpdateResource(Resource) returns (Empty);
   rpc CreateRelation(Relation) returns (Empty);
   rpc DeleteRelation(Relation) returns (Empty);
-  rpc FindRelation(FindRelationRequest) returns (Relation);
+  rpc GrantPermission(PermissionRequest) returns (Empty);
+  rpc RemovePermission(PermissionRequest) returns (Empty);
+  rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (Empty);
+  rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
 }

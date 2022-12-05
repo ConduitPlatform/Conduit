@@ -3,22 +3,6 @@ package chat;
 
 message Empty {}
 
-message ModuleActivationResponse {
-  enum ActivationResponse {
-    ALREADY_ACTIVATED = 0;
-    ACTIVATED = 1;
-  }
-  ActivationResponse status = 1;
-}
-
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message CreateRoomRequest {
   string name = 1;
   repeated string participants = 2;
@@ -45,10 +29,6 @@ message GetRoomResponse {
 }
 
 service Chat {
-  // Conduit
-  rpc ActivateModule(Empty) returns (ModuleActivationResponse);
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-  // Service
   rpc CreateRoom(CreateRoomRequest) returns (Room);
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
   rpc SendMessage(SendMessageRequest) returns (Empty);

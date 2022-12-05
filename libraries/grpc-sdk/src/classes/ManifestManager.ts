@@ -1,5 +1,4 @@
 import { Schema, Validator, ValidationError } from 'jsonschema';
-import fs from 'fs-extra';
 import ConduitGrpcSdk from '../index';
 import {
   DeploymentState_ModuleStateInfo as ModuleStateInfo,
@@ -106,7 +105,7 @@ export class ManifestManager {
   }
 
   private parsePackageJson(jsonPath: string, validationSchema: Schema): ConduitManifest {
-    const packageJson = fs.readJsonSync(jsonPath);
+    const packageJson = require(jsonPath);
     if (!packageJson.conduit) {
       throw new Error("Missing 'conduit' section in package.json");
     }

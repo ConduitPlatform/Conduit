@@ -1,4 +1,4 @@
 export {
   ModuleActivationResponse,
   ModuleActivationResponse_ActivationResponse as ModuleActivationStatus,
-} from '../protoUtils/database';
+} from '../protoUtils/conduit_module';

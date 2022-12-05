@@ -1,16 +1,6 @@
 syntax = 'proto3';
 package database;
 
-message Empty {}
-
-message ModuleActivationResponse {
-    enum ActivationResponse {
-        ALREADY_ACTIVATED = 0;
-        ACTIVATED = 1;
-    }
-    ActivationResponse status = 1;
-}
-
 message CreateSchemaRequest {
     string name = 1;
     string fields = 2;
@@ -122,9 +112,6 @@ message DropCollectionRequest {
 }
 
 service DatabaseProvider {
-    // Conduit
-    rpc ActivateModule(Empty) returns (ModuleActivationResponse);
-    // Service
     rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
     rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);

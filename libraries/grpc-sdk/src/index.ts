@@ -23,6 +23,7 @@ import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
 } from './protoUtils/grpc_health_check';
+import { ConduitModuleDefinition } from './protoUtils/conduit_module';
 import {
   GetRedisDetailsResponse,
   DeploymentState,
@@ -409,8 +410,8 @@ export default class ConduitGrpcSdk {
         } else {
           const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
-            host: redisHost,
             ...this._redisDetails,
+            host: redisHost,
           });
         }
         this._eventBus = new EventBus(this._redisManager);
@@ -491,16 +492,18 @@ export default class ConduitGrpcSdk {
     return this._modules[name];
   }
 
+  getHealthClient(name: string): Client<typeof HealthDefinition> | undefined {
+    return this._modules[name]?.healthClient;
+  }
+
+  getConduitClient(name: string): Client<ConduitModuleDefinition> | undefined {
+    return this._modules[name]?.conduitClient;
+  }
+
   getServiceClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<T> | undefined {
-    return this._modules[name]?.client;
-  }
-
-  getHealthClient<T extends CompatServiceDefinition>(
-    name: string,
-  ): Client<typeof HealthDefinition> | undefined {
-    return this._modules[name]?.healthClient;
+    return this._modules[name]?.serviceClient;
   }
 
   isAvailable(moduleName: string) {
@@ -512,6 +515,21 @@ export default class ConduitGrpcSdk {
       await sleep(1000);
     }
     return true;
+  }
+
+  onceModuleUp(moduleName: string, callback: () => void) {
+    if (this.isAvailable(moduleName)) callback();
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? callback() : null,
+    );
+  }
+
+  onceModuleDown(moduleName: string, callback: () => void) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.once(`module-connection-update:${moduleName}`, (serving: boolean) =>
+      serving ? null : callback(),
+    );
   }
 
   /**

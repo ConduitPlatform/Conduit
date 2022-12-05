@@ -395,6 +395,7 @@ export class AdminHandlers {
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
         },
         bodyParams: {
           query: ConduitJson.Required,

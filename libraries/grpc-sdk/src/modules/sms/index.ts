@@ -13,14 +13,14 @@ export class SMS extends ConduitModule<typeof SmsDefinition> {
   }
 
   sendSms(to: string, message: string): Promise<SendSmsResponse> {
-    return this.client!.sendSms({ to, message });
+    return this.serviceClient!.sendSms({ to, message });
   }
 
   sendVerificationCode(to: string): Promise<SendVerificationCodeResponse> {
-    return this.client!.sendVerificationCode({ to });
+    return this.serviceClient!.sendVerificationCode({ to });
   }
 
   verify(verificationSid: string, code: string): Promise<VerifyResponse> {
-    return this.client!.verify({ verificationSid, code });
+    return this.serviceClient!.verify({ verificationSid, code });
   }
 }
