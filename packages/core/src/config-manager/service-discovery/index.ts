@@ -362,7 +362,12 @@ export class ServiceDiscovery {
       moduleManifest,
       call.request.url,
       call.request.healthStatus as HealthCheckStatus,
-    );
+    ).catch(err => {
+      return callback({
+        code: status.INTERNAL,
+        message: err.message,
+      });
+    });
     this.updateRedisState(moduleManifest, call.request.url, instance);
     this.publishModuleData(
       'serving-modules-update',
