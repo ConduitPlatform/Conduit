@@ -300,7 +300,7 @@ export class ServiceDiscovery {
   ) {
     const { moduleName, moduleVersion } = moduleManifest;
     this.grpcSdk.createModuleClient(moduleName, moduleUrl);
-    if (!healthStatus) {
+    if (healthStatus === undefined) {
       const healthResponse = await this.grpcSdk.checkServiceHealth(moduleUrl);
       if (healthResponse === HealthCheckStatus.SERVICE_UNKNOWN) {
         throw new Error('Failed to register unresponsive module');
