@@ -117,7 +117,12 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   async watchDeploymentState() {
     const self = this;
     this.emitter.setMaxListeners(150);
-    self.emitter.emit('serving-modules-update', await self.getDeploymentState().catch());
+    const readyModules =
+      (await self
+        .getDeploymentState()
+        .then(data => data.modules.filter(m => !m.pending))
+        .catch()) ?? [];
+    self.emitter.emit('serving-modules-update', readyModules);
     try {
       const call = this.serviceClient!.watchDeploymentState({});
       for await (const data of call) {
