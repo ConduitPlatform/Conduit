@@ -119,7 +119,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           // if it has "type" as a property we assume that the value is a string
           if ((fields[field] as any).type) {
             // if type is simply a type
-            if ((fields[field] as ConduitModelField).type === 'String') {
+            if (typeof (fields[field] as ConduitModelField).type === 'string') {
               if ((fields[field] as ConduitModelField).type === 'Relation') {
                 this.getResultFromRelation(
                   processingObject,
