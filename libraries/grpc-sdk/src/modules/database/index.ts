@@ -11,7 +11,7 @@ import { Query } from '../../types/db';
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'database', url, grpcToken);
-    this.initializeClient(DatabaseProviderDefinition);
+    this.initializeClients(DatabaseProviderDefinition);
   }
 
   getSchema(schemaName: string): Promise<{

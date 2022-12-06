@@ -11,7 +11,7 @@ import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'router', url, grpcToken);
-    this.initializeClient(RouterDefinition);
+    this.initializeClients(RouterDefinition);
   }
 
   generateProtoFile(

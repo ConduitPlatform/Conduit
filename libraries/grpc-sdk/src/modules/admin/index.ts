@@ -10,7 +10,7 @@ import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'admin', url, grpcToken);
-    this.initializeClient(AdminDefinition);
+    this.initializeClients(AdminDefinition);
   }
 
   generateProtoFile(

@@ -21,7 +21,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     grpcToken?: string,
   ) {
     super(moduleName, 'config', url, grpcToken);
-    this.initializeClient(ConfigDefinition);
+    this.initializeClients(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }
 
