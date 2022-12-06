@@ -122,7 +122,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         processingObject.properties = {};
       }
       // @ts-ignore
-      processingObject.properties[name] = this.getType(value);
+      processingObject.type = this.getType(value).type;
       if (description)
         // @ts-ignore
         processingObject.properties[name].description = description;
