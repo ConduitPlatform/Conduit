@@ -148,7 +148,7 @@ export class ServiceDiscovery {
     if (readyCheckRes.issues.length > 0) {
       return Promise.resolve(ModuleRegistrationState.PENDING);
     }
-    if (!healthStatus) {
+    if (healthStatus === undefined) {
       const healthClient = this.grpcSdk.getHealthClient(module.moduleName)!;
       healthStatus = await healthClient
         .check({})
