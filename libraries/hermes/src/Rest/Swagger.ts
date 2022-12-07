@@ -1,9 +1,10 @@
 import { SwaggerParser } from './SwaggerParser';
-import { isNil, cloneDeep } from 'lodash';
-import { ConduitRouteActions, Indexable, ConduitModel } from '@conduitplatform/grpc-sdk';
+import { cloneDeep, isNil } from 'lodash';
+import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute } from '../classes';
 import { importDbTypes } from '../utils/types';
+import { processSwaggerParams } from './SimpleTypeParamUtils';
 
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;
@@ -84,7 +85,7 @@ export class SwaggerGenerator {
           name,
           in: 'path',
           required: true,
-          schema: this._parser.extractTypes('url', route.input.urlParams, true),
+          schema: processSwaggerParams(route.input.urlParams[name]),
           //@ts-ignore
           description: route.input.urlParams[name].description,
         });
@@ -96,10 +97,13 @@ export class SwaggerGenerator {
       (route.input.queryParams as unknown as string) !== ''
     ) {
       for (const name in route.input.queryParams) {
+        const tmpSchema = processSwaggerParams(route.input.queryParams[name]);
         routeDoc.parameters.push({
           name,
           in: 'query',
-          schema: this._parser.extractTypes('query', route.input.queryParams, true),
+          required:
+            (route.input.queryParams[name] as { required: boolean }).required ?? false,
+          schema: tmpSchema,
           //@ts-ignore
           description: route.input.queryParams[name].description,
         });
