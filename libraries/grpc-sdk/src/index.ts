@@ -26,6 +26,7 @@ import {
 import { ConduitModuleDefinition } from './protoUtils/conduit_module';
 import {
   GetRedisDetailsResponse,
+  DeploymentState,
   DeploymentState_ModuleStateInfo as ModuleStateInfo,
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
@@ -303,17 +304,19 @@ export default class ConduitGrpcSdk {
   watchModules() {
     const emitter = this.config.getModuleWatcher();
     this.config.watchDeploymentState().then();
-    emitter.on('serving-modules-update', (modules: ModuleStateInfo[]) => {
+    emitter.on('serving-modules-update', (state: DeploymentState) => {
       Object.keys(this._modules).forEach(r => {
         if (r !== this.name) {
-          const found = modules.find(m => m.moduleName === r && !m.pending && m.serving);
+          const found = state.modules.find(
+            m => m.moduleName === r && !m.pending && m.serving,
+          );
           if (!found && this._modules[r]) {
             this._modules[r]?.closeConnection();
             emitter.emit(`module-connection-update:${r}`, false);
           }
         }
       });
-      modules.forEach((m: ModuleStateInfo) => {
+      state.modules.forEach((m: ModuleStateInfo) => {
         if (m.moduleName !== this.name && !m.pending) {
           const alreadyActive = this._modules[m.moduleName]?.connectionsActive;
           if (!alreadyActive && m.serving) {
