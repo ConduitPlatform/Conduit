@@ -11,7 +11,7 @@ const migrateV11_V15_Database = async () => {
     } catch {
       newModelOptions = { ...newModelOptions, ...schema.modelOptions };
     }
-    await documents.updateMany(schema._id, { $set: { modelOptions: newModelOptions } }).catch((err) => {
+    await documents.updateMany({ _id: schema._id }, { $set: { modelOptions: newModelOptions } }).catch((err) => {
       console.log(err);
     });
   }
@@ -28,7 +28,7 @@ const migrateV11_V15_Storage = async () => {
     if (!exists) {
       await db.collection('storagecontainers').insertOne({ name: file.container });
     }
-    await documents.findOneAndUpdate(file.id, file);
+    await documents.findOneAndUpdate({ _id: file.id }, file);
   }
 }
 

@@ -133,19 +133,31 @@ const migrateV12_V15_schemaDefinitions = async () => {
   }
 };
 
-const migrateV12_V15 = async () => {
+const migrateV12_V15_Authentication = async () => {
+  const legacyKeys = [
+    'sendVerificationEmail',
+    'verificationRequired',
+    'verification_redirect_uri',
+    'identifier',
+  ];
+
+  function configIsOutdated(authConfig) {
+    return Object.keys(authConfig.local).some(key => legacyKeys.includes(key));
+  }
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({"moduleConfigs.authentication": {$exists: true}});
-  if (authConfig.local['verificationRequired']) {
-    authConfig.local.verification = {
-      required: authConfig.local['verificationRequired'],
-      send_email: authConfig.local['sendVerificationEmail'],
-      redirect_uri: authConfig.local['verification_redirect_uri'],
-    };
-    delete authConfig.local['verificationRequired'];
-    delete authConfig.local['sendVerificationEmail'];
-    delete authConfig.local['verification_redirect_uri'];
-    await documents.findOneAndUpdate(authConfig._id, authConfig);
+  if(!isNil(authConfig)) {
+    if (authConfig.local['verificationRequired']) {
+      authConfig.local.verification = {
+        required: authConfig.local['verificationRequired'],
+        send_email: authConfig.local['sendVerificationEmail'],
+        redirect_uri: authConfig.local['verification_redirect_uri'],
+      };
+      delete authConfig.local['verificationRequired'];
+      delete authConfig.local['sendVerificationEmail'];
+      delete authConfig.local['verification_redirect_uri'];
+      await documents.findOneAndUpdate(authConfig._id, authConfig);
+    }
   }
 };
 
@@ -154,7 +166,7 @@ const migrateV11_V12 = async () => {
   await migrateV12_V15_modelOptions();
   await migrateV12_V15_customEndpoints();
   await migrateV12_V15_cmsOwners();
-  await migrateV12_V15();
+  // await migrateV12_V15_Authentication();
 }
 
 module.exports = migrateV11_V12;

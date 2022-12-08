@@ -91,35 +91,26 @@ const migrateV15_config = async () => {
 }
 
 const migrateV14_V15_Database = async () => {
-  const conduitSystemSchemas = ['']
-  const collection = db.collection('_declaredschemas');
-  const declaredSchemas = await collection.find({ $and: [
+  const conduitSystemSchemas = ['AccessToken', 'RefreshToken', 'Token', 'TwoFactorSecret', 'Config', 'CustomEndpoints'];
+  const declaredSchemas = db.collection('_declaredschemas');
+  const affectedSchemas = await declaredSchemas.find({ $and: [
       { name: { $in: conduitSystemSchemas} },
       { 'modelOptions.conduit.cms': { $exists: true } },
     ]}).toArray();
-  /*
-  *   const declaredSchemas = adapter.getSchemaModel('_DeclaredSchema').model;
-  const affectedSchemas: IDeclaredSchema[] = await declaredSchemas.findMany({
-    $and: [
-      { name: { $in: adapter.systemSchemas } },
-      { 'modelOptions.conduit.cms': { $exists: true } },
-    ],
-  });
-
   if (affectedSchemas.length > 0) {
     for (const schema of affectedSchemas) {
       const conduit = schema.modelOptions.conduit;
-      delete conduit!.cms;
-      await declaredSchemas.findByIdAndUpdate(schema._id, {
+      delete conduit.cms;
+      await declaredSchemas.findOneAndUpdate({ _id: schema._id }, {
         modelOptions: {
           conduit,
         },
       });
     }
-    const customEndpoints = adapter.getSchemaModel('CustomEndpoints').model;
+    const customEndpoints = db.collection('customendpoints')
     const affectedSchemaNames = affectedSchemas.map(s => s.name);
     await customEndpoints.deleteMany({ selectedSchema: { $in: affectedSchemaNames } });
-  }*/
+  }
 };
 
  const migrateV14_V15= async () => {
