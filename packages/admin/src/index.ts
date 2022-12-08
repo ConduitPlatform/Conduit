@@ -1,4 +1,4 @@
-import { isNaN, isNil, merge } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
@@ -10,6 +10,7 @@ import ConduitGrpcSdk, {
   Indexable,
   ConduitRouteObject,
   SocketProtoDescription,
+  merge,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
