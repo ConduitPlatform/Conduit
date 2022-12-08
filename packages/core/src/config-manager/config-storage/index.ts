@@ -8,7 +8,6 @@ import { merge } from 'lodash';
 export class ConfigStorage {
   toBeReconciled: string[] = [];
   reconciling: boolean = false;
-  private configDocId: string | null = null;
 
   constructor(
     private readonly commons: ConduitCommons,
