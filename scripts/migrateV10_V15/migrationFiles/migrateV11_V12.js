@@ -1,5 +1,5 @@
 const db = require('../mongoConnection');
-const { isNil, merge } = require('lodash');
+const { isNil, merge, isEmpty } = require('lodash');
 
 
 
@@ -79,11 +79,11 @@ const migrateV11_V12_schemaDefinitions = async () => {
   if (schemas.filter((schema) => schema.name === 'SchemaDefinitions').length === 0)
     return;
 
-  const SchemaDefinitions = db.collection('SchemaDefinitions');
+  const SchemaDefinitions = db.collection('schemadefinitions');
   const schemaDefinitions = await SchemaDefinitions.find().toArray();
 
   // Migrate SchemaDefinitions to DeclaredSchemas
-  if (!isNil(schemaDefinitions)) {
+  if (!isNil(schemaDefinitions) && schemaDefinitions.length !== 0) {
     for (const schema of schemaDefinitions) {
       const declaredSchema = await db.collection('_declaredschemas')
         .findOne({ name: schema.name });
@@ -119,8 +119,8 @@ const migrateV11_V12_schemaDefinitions = async () => {
       await documents.insertOne({name: schema.name, fields: schema.fields, modelOptions: modelOptions});
     }
 
-    // Delete SchemaDefinitions
-    await SchemaDefinitions.drop();
+    // delete schemaDefinitions collection and documents
+    // await SchemaDefinitions.drop();
   }
 };
 
