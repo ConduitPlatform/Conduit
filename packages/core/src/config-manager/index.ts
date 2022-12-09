@@ -360,9 +360,9 @@ export default class ConfigManager implements IConfigManager {
     const migrationRequirement = await this.serviceDiscovery.checkModuleMigrations(
       coreModule,
     );
-    if (migrationRequirement) {
-      // run migrations for core and admin
-    }
+    // if (migrationRequirement) {
+    //   // run migrations for core and admin
+    // }
     await this.registerAppConfig();
   }
 }

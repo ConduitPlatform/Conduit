@@ -5,27 +5,31 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   Indexable,
   ModuleActivationStatus,
+  MigrationStatus,
 } from '..';
 import {
   ModuleActivationRequest,
   ModuleActivationResponse,
+  RunMigrationsRequest,
+  RunMigrationsResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '../protoUtils/conduit_module';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
-import { kebabCase, merge } from 'lodash';
+import { isNil, kebabCase, merge } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
+import { Migration } from '../interfaces/Migration';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   private _activated: boolean = false;
+  private _migrationFilesPath: string | undefined;
   protected abstract readonly configSchema?: object;
   protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
   configOverride: boolean = false;
   service?: ConduitService;
-
   protected constructor(moduleName: string) {
     super(moduleName);
   }
@@ -44,10 +48,16 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * @param address {string} external address:port of service (LoadBalancer)
    * @param port {string} port to bring up gRPC service
    */
-  initialize(grpcSdk: ConduitGrpcSdk, address: string, port: string) {
+  initialize(
+    grpcSdk: ConduitGrpcSdk,
+    address: string,
+    port: string,
+    migrationFilesPath: string,
+  ) {
     this.grpcSdk = grpcSdk;
     this._address = address;
     this._port = port;
+    this._migrationFilesPath = migrationFilesPath;
     if (this.configSchema) {
       (this.config as unknown) = convict(this.configSchema);
     }
@@ -132,6 +142,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.protoDescription.indexOf('.') + 1,
       );
       this.service.functions['ActivateModule'] = this.activateModule.bind(this);
+      this.service.functions['RunMigrations'] = this.runMigrations.bind(this);
       if (this.config) {
         this.service.functions['SetConfig'] = this.setConfig.bind(this);
       }
@@ -142,6 +153,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
       await this.addConduitService(
         this.activateModule.bind(this),
+        this.runMigrations.bind(this),
         this.config ? this.setConfig.bind(this) : undefined,
       );
       await this.addHealthCheckService();
@@ -219,6 +231,42 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async runMigrations(
+    call: GrpcRequest<RunMigrationsRequest>,
+    callback: GrpcResponse<RunMigrationsResponse>,
+  ) {
+    const { v1, v2, upgrade } = call.request;
+    if (this._migrationFilesPath === undefined)
+      return callback({
+        code: status.INTERNAL,
+        message: 'Migrations files path not specified',
+      });
+    // import the migrations files
+    const imported = await require(this._migrationFilesPath);
+    let migrations = imported.migrationFilesArray as Array<Migration>;
+    if (isNil(migrations) || migrations.length === 0) {
+      return callback({ code: status.INTERNAL, message: 'Migrations not found' });
+    }
+    // TODO: the below check for equality is wrong
+    // filter the array to find the appropriate version migration files
+    migrations = migrations.filter(m => {
+      if (m.v1 === v1 && m.v2 === v2) return m;
+    });
+    try {
+      for (const m of migrations) {
+        if (upgrade) {
+          await m.up(this.grpcSdk);
+        } else {
+          await m.down(this.grpcSdk);
+        }
+      }
+      return callback(null, { migrationStatus: MigrationStatus.READY });
+    } catch (e) {
+      //throw new Error((e as Error).message);
+      return callback(null, { migrationStatus: MigrationStatus.FAILED });
     }
   }
 

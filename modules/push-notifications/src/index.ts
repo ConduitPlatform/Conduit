@@ -5,5 +5,10 @@ import path from 'path';
 
 const pushNotifications = new PushNotificationsModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(pushNotifications, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(
+  pushNotifications,
+  packageJsonPath,
+  migrationFilesPath,
+);
 moduleManager.start();

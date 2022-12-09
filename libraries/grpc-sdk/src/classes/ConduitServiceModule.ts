@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { GrpcServer, HealthCheckStatus } from '..';
+import ConduitGrpcSdk, { GrpcServer, HealthCheckStatus, RunMigrationsResponse } from '..';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
@@ -6,6 +6,7 @@ import { GrpcRequest, GrpcResponse } from '../types';
 import {
   ModuleActivationRequest,
   ModuleActivationResponse,
+  RunMigrationsRequest,
   SetConfigRequest,
   SetConfigResponse,
 } from '../protoUtils/conduit_module';
@@ -54,6 +55,10 @@ export abstract class ConduitServiceModule {
       call: GrpcRequest<ModuleActivationRequest>,
       callback: GrpcResponse<ModuleActivationResponse>,
     ) => Promise<void>,
+    runMigrations: (
+      call: GrpcRequest<RunMigrationsRequest>,
+      callback: GrpcResponse<RunMigrationsResponse>,
+    ) => Promise<void>,
     setConfig?: (
       call: GrpcRequest<SetConfigRequest>,
       callback: GrpcResponse<SetConfigResponse>,
@@ -64,6 +69,7 @@ export abstract class ConduitServiceModule {
       'conduit.module.ConduitModule',
       {
         ActivateModule: activateModule,
+        RunMigrations: runMigrations,
         ...(setConfig && { SetConfig: setConfig }),
       },
     );
