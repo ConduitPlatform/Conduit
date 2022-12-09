@@ -7,20 +7,12 @@ const { isNil, merge } = require('lodash');
 const migrateV11_V12_cmsOwners = async () => {
   const documents = db.collection('_declaredschemas');
   const schemas = await documents.find({ ownerModule: 'cms' }).toArray();
-  if (schemas.filter((schema) => schema.name !== 'schemadefinitions').length === 0)
+  if (schemas.filter((schema) => schema.name !== 'SchemaDefinitions').length === 0)
     return;
   if (schemas.length > 0) {
     await documents.updateMany({ ownerModule: 'cms' }, { $set: { ownerModule: 'database' } });
   }
 
-  const CustomEndpointSchema = db.collection('customendpoints');
-  const customEndpoints = await CustomEndpointSchema.find().toArray();
-  for (const customEndpoint of customEndpoints) {
-    if (!isNil(customEndpoint.queries) && isNil(customEndpoint.query)) {
-      customEndpoint.query = { AND: customEndpoint.queries };
-      await CustomEndpointSchema.findOneAndUpdate(customEndpoint._id, customEndpoint);
-    }
-  }
 };
 
 const migrateV11_V12_customEndpoints = async () => {
@@ -83,11 +75,11 @@ const migrateV11_V12_modelOptions = async () => {
 
 const migrateV11_V12_schemaDefinitions = async () => {
   const documents = db.collection('_declaredschemas');
-  const schemas = await documents.find().toArray();
-  if (schemas.filter((schema) => schema.name === 'schemadefinitions').length === 0)
+  const schemas = await documents.find({name: 'SchemaDefinitions'}).toArray();
+  if (schemas.filter((schema) => schema.name === 'SchemaDefinitions').length === 0)
     return;
 
-  const SchemaDefinitions = db.collection('schemadefinitions');
+  const SchemaDefinitions = db.collection('SchemaDefinitions');
   const schemaDefinitions = await SchemaDefinitions.find().toArray();
 
   // Migrate SchemaDefinitions to DeclaredSchemas
@@ -122,12 +114,12 @@ const migrateV11_V12_schemaDefinitions = async () => {
             ? merge(declaredSchema.modelOptions, modelOptions)
             : modelOptions;
       }
-      const newSchema = (schema.name, schema.fields, modelOptions);
+
       // create new schema
-      await documents.insertOne(newSchema);
+      await documents.insertOne({name: schema.name, fields: schema.fields, modelOptions: modelOptions});
     }
 
-    // Delete SchemaDefinitionsx
+    // Delete SchemaDefinitions
     await SchemaDefinitions.drop();
   }
 };
