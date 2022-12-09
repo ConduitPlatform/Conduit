@@ -43,9 +43,9 @@ const migrateV11_V15_CustomEndpoints = async () => {
   }
 }
 const migrateV10_V11 = async () => {
+  await migrateV11_V15_CustomEndpoints();
   await migrateV11_V15_Database();
   await migrateV11_V15_Storage();
-  await migrateV11_V15_CustomEndpoints();
 }
 
 module.exports = migrateV10_V11;

@@ -7,6 +7,7 @@ const { MongoConnection } = require('./mongoConnection');
 const migrate = async () => {
   await MongoConnection;
   await migrateV10_V15();
+
 };
 const migrateV10_V15 = async () => {
   await migrateV10_V11();
@@ -16,3 +17,4 @@ const migrateV10_V15 = async () => {
 };
 
 migrate().catch(e => console.log(e));
+

@@ -4,7 +4,7 @@ const { isNil, merge } = require('lodash');
 
 
 
-const migrateV12_V15_cmsOwners = async () => {
+const migrateV11_V12_cmsOwners = async () => {
   const documents = db.collection('_declaredschemas');
   const schemas = await documents.find({ ownerModule: 'cms' }).toArray();
   if (schemas.filter((schema) => schema.name !== 'schemadefinitions').length === 0)
@@ -23,7 +23,7 @@ const migrateV12_V15_cmsOwners = async () => {
   }
 };
 
-const migrateV12_V15_customEndpoints = async () => {
+const migrateV11_V12_customEndpoints = async () => {
   const documents = db.collection('_declaredschemas');
   const declaredSchemas = await documents.find({ 'modelOptions.conduit': { $exists: false } }).toArray();
   for (const declaredSchema of declaredSchemas) {
@@ -39,7 +39,7 @@ const migrateV12_V15_customEndpoints = async () => {
   }
 };
 
-const migrateV12_V15_modelOptions = async () => {
+const migrateV11_V12_modelOptions = async () => {
   const documents = db.collection('_declaredschemas');
   const cmsSchemas = await documents.find({
     $or: [
@@ -81,7 +81,7 @@ const migrateV12_V15_modelOptions = async () => {
   }
 };
 
-const migrateV12_V15_schemaDefinitions = async () => {
+const migrateV11_V12_schemaDefinitions = async () => {
   const documents = db.collection('_declaredschemas');
   const schemas = await documents.find().toArray();
   if (schemas.filter((schema) => schema.name === 'schemadefinitions').length === 0)
@@ -127,46 +127,36 @@ const migrateV12_V15_schemaDefinitions = async () => {
       await documents.insertOne(newSchema);
     }
 
-    // Delete SchemaDefinitions
-    // await adapter.deleteSchema('SchemaDefinitions', true, 'database');
+    // Delete SchemaDefinitionsx
     await SchemaDefinitions.drop();
   }
 };
 
-const migrateV12_V15_Authentication = async () => {
-  const legacyKeys = [
-    'sendVerificationEmail',
-    'verificationRequired',
-    'verification_redirect_uri',
-    'identifier',
-  ];
+const migrateV11_V12_Authentication = async () => {
 
-  function configIsOutdated(authConfig) {
-    return Object.keys(authConfig.local).some(key => legacyKeys.includes(key));
-  }
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({"moduleConfigs.authentication": {$exists: true}});
   if(!isNil(authConfig)) {
-    if (authConfig.local['verificationRequired']) {
-      authConfig.local.verification = {
-        required: authConfig.local['verificationRequired'],
-        send_email: authConfig.local['sendVerificationEmail'],
-        redirect_uri: authConfig.local['verification_redirect_uri'],
+    if (authConfig.moduleConfigs.authentication.local['verificationRequired']) {
+      authConfig.moduleConfigs.authentication.local.verification = {
+        required: authConfig.moduleConfigs.authentication.local['verificationRequired'],
+        send_email: authConfig.moduleConfigs.authentication.local['sendVerificationEmail'],
+        redirect_uri: authConfig.moduleConfigs.authentication.local['verification_redirect_uri'],
       };
-      delete authConfig.local['verificationRequired'];
-      delete authConfig.local['sendVerificationEmail'];
-      delete authConfig.local['verification_redirect_uri'];
-      await documents.findOneAndUpdate(authConfig._id, authConfig);
+      delete authConfig.moduleConfigs.authentication.local['verificationRequired'];
+      delete authConfig.moduleConfigs.authentication.local['sendVerificationEmail'];
+      delete authConfig.moduleConfigs.authentication.local['verification_redirect_uri'];
+      await documents.replaceOne({ _id:  authConfig._id }, authConfig);
     }
   }
 };
 
 const migrateV11_V12 = async () => {
-  await migrateV12_V15_schemaDefinitions();
-  await migrateV12_V15_modelOptions();
-  await migrateV12_V15_customEndpoints();
-  await migrateV12_V15_cmsOwners();
-  // await migrateV12_V15_Authentication();
+  await migrateV11_V12_Authentication();
+  await migrateV11_V12_cmsOwners();
+  await migrateV11_V12_customEndpoints();
+  await migrateV11_V12_modelOptions();
+  await migrateV11_V12_schemaDefinitions();
 }
 
 module.exports = migrateV11_V12;
