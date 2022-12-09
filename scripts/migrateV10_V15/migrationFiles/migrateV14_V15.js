@@ -8,8 +8,8 @@ const migrateV15_userIdToAccessTokenSchemas = async () => {
   const collection = db.collection('_declaredschemas');
   const accessTokenSchemas = await collection.find({ name: 'AccessToken' , "fields.userId" : { $exists: true }}).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
-    accessTokenSchema.fields.user = accessTokenSchema.fields.userId;
-    await collection.updateOne({ _id : accessTokenSchema._id }, accessTokenSchema);
+    const userId = accessTokenSchema.fields.userId;
+    await collection.updateOne({ _id : accessTokenSchema._id }, { $set: {"fields.user" : userId }} );
   }
 };
 
@@ -18,8 +18,8 @@ const migrateV15_userIdToRefreshTokenSchemas = async () => {
   const collection = db.collection('_declaredschemas');
   const refreshTokenSchemas = await collection.find({ name: 'RefreshToken', "fields.userId" : { $exists: true } }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
-    refreshTokenSchema.fields.user = refreshTokenSchema.fields.userId;
-    await collection.updateOne({ _id: refreshTokenSchema._id }, refreshTokenSchema);
+    const userId = refreshTokenSchema.fields.userId;
+    await collection.updateOne({ _id: refreshTokenSchema._id }, { $set: {"fields.user" : userId }});
   }
 };
 
@@ -27,8 +27,8 @@ const migrateV15_userIdToTokenSchemas = async () => {
   const collection = db.collection('_declaredschemas');
   const tokenSchemas = await collection.find({ name: 'Token' , "fields.userId" : { $exists: true }}).toArray();
   for (const tokenSchema of tokenSchemas) {
-    tokenSchema.fields.user = tokenSchema.fields.userId;
-    await collection.updateOne({ _id: tokenSchema._id }, tokenSchema);
+    const userId = tokenSchema.fields.userId;
+    await collection.updateOne({ _id: tokenSchema._id }, { $set: {"fields.user" : userId }});
   }
 };
 
@@ -36,8 +36,8 @@ const migrateV15_userIdToTwoFactorSchemas = async () => {
   const collection = db.collection('_declaredschemas');
   const twoFactorSecretSchemas = await collection.find({ name: 'TwoFactorSecret' , "fields.userId" : { $exists: true }}).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
-    twoFactorSecretSchema.fields.user = twoFactorSecretSchema.fields.userId;
-    await collection.updateOne({ _id: twoFactorSecretSchema._id }, twoFactorSecretSchema);
+    const userId = twoFactorSecretSchema.fields.userId;
+    await collection.updateOne({ _id: twoFactorSecretSchema._id }, { $set: {"fields.user" : userId }});
   }
 };
 
