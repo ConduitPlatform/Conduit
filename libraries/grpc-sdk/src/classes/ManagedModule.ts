@@ -3,10 +3,11 @@ import ConduitGrpcSdk, {
   GrpcServer,
   SetConfigRequest,
   SetConfigResponse,
+  merge,
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
-import { kebabCase, merge } from 'lodash';
+import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 
