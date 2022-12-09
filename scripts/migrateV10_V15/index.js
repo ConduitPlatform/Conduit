@@ -5,9 +5,15 @@ const  migrateV14_V15  = require('../migrateV10_V15/migrationFiles/migrateV14_V1
 const { MongoConnection } = require('./mongoConnection');
 
 const migrate = async () => {
-  await MongoConnection;
-  await migrateV10_V15();
-
+  try {
+    await MongoConnection;
+    await migrateV10_V15();
+    console.log('Migration completed successfully');
+    process.exit(0);
+  }
+  catch (e) {
+    console.log(e);
+  }
 };
 const migrateV10_V15 = async () => {
   await migrateV10_V11();
@@ -16,5 +22,4 @@ const migrateV10_V15 = async () => {
   await migrateV14_V15();
 };
 
-migrate().catch(e => console.log(e));
-
+migrate().then(r => console.log(r)).catch(e => console.log(e));

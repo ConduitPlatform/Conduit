@@ -87,7 +87,7 @@ const migrateV15_config = async () => {
   await documents.findOneAndUpdate({ _id: authConfig._id }, { $set: { "moduleConfigs.authentication": authConfigData } });
 };
 
-const migrateV14_V15_Database = async () => {
+const migrateV14_V15_System_Schemas = async () => {
   const conduitSystemSchemas = [
     'AccessToken',
     'RefreshToken',
@@ -129,13 +129,25 @@ const migrateV14_V15_Database = async () => {
   }
 };
 
+const migrateV14_V15_CustomEndpoints = async () => {
+  const customEndpoints = db.collection('customendpoints');
+  const endpoints = await customEndpoints.find({$or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }],}).toArray();
+  for (const endpoint of endpoints) {
+    const schemaModel = await db.collection('_declaredschemas').findOne({ name: endpoint.schema });
+    if (schemaModel) {
+      await customEndpoints.findOneAndUpdate({ _id: endpoint._id }, { $set: { selectedSchema: schemaModel._id.toString() } });
+    }
+  }
+}
+
 const migrateV14_V15 = async () => {
   await migrateV15_userIdToAccessTokenSchemas();
   await migrateV15_userIdToRefreshTokenSchemas();
   await migrateV15_userIdToTokenSchemas();
   await migrateV15_userIdToTwoFactorSchemas();
   await migrateV15_config();
-  await migrateV14_V15_Database();
+  await migrateV14_V15_System_Schemas();
+  await migrateV14_V15_CustomEndpoints();
 };
 
 module.exports = migrateV14_V15;
