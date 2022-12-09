@@ -1,5 +1,5 @@
 const db = require('../mongoConnection');
-const { isNil, merge, isEmpty } = require('lodash');
+const { isNil, merge } = require('lodash');
 
 
 
@@ -120,7 +120,7 @@ const migrateV11_V12_schemaDefinitions = async () => {
     }
 
     // delete schemaDefinitions collection and documents
-    // await SchemaDefinitions.drop();
+    await SchemaDefinitions.drop();
   }
 };
 

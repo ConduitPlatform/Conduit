@@ -9,7 +9,7 @@ const migrateV15_userIdToAccessTokenSchemas = async () => {
   const accessTokenSchemas = await collection.find({ name: 'AccessToken' , "fields.userId" : { $exists: true }}).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
     accessTokenSchema.fields.user = accessTokenSchema.fields.userId;
-    await collection.replaceOne({ _id : accessTokenSchema._id }, accessTokenSchema);
+    await collection.updateOne({ _id : accessTokenSchema._id }, accessTokenSchema);
   }
 };
 
@@ -19,7 +19,7 @@ const migrateV15_userIdToRefreshTokenSchemas = async () => {
   const refreshTokenSchemas = await collection.find({ name: 'RefreshToken', "fields.userId" : { $exists: true } }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
     refreshTokenSchema.fields.user = refreshTokenSchema.fields.userId;
-    await collection.replaceOne({ _id: refreshTokenSchema._id }, refreshTokenSchema);
+    await collection.updateOne({ _id: refreshTokenSchema._id }, refreshTokenSchema);
   }
 };
 
@@ -28,7 +28,7 @@ const migrateV15_userIdToTokenSchemas = async () => {
   const tokenSchemas = await collection.find({ name: 'Token' , "fields.userId" : { $exists: true }}).toArray();
   for (const tokenSchema of tokenSchemas) {
     tokenSchema.fields.user = tokenSchema.fields.userId;
-    await collection.replaceOne({ _id: tokenSchema._id }, tokenSchema);
+    await collection.updateOne({ _id: tokenSchema._id }, tokenSchema);
   }
 };
 
@@ -37,7 +37,7 @@ const migrateV15_userIdToTwoFactorSchemas = async () => {
   const twoFactorSecretSchemas = await collection.find({ name: 'TwoFactorSecret' , "fields.userId" : { $exists: true }}).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     twoFactorSecretSchema.fields.user = twoFactorSecretSchema.fields.userId;
-    await collection.replaceOne({ _id: twoFactorSecretSchema._id }, twoFactorSecretSchema);
+    await collection.updateOne({ _id: twoFactorSecretSchema._id }, twoFactorSecretSchema);
   }
 };
 
