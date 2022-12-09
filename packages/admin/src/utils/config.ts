@@ -12,4 +12,5 @@ export async function generateConfigDefaults(config: ConfigSchema) {
       process.env.__DEFAULT_HOST_URL ??
       `http://localhost:${process.env['ADMIN_HTTP_PORT'] ?? '3030'}`;
   }
+  // TODO: if prod automigrations false
 }

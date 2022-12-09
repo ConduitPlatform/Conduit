@@ -25,7 +25,7 @@ import {
   UserLoginRequest,
   UserLoginResponse,
 } from './protoTypes/authentication';
-import { runMigrations } from './migrations';
+//import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
@@ -59,7 +59,7 @@ export default class Authentication extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
+    //await runMigrations(this.grpcSdk);
   }
 
   async preConfig(config: Config) {

@@ -1,10 +1,12 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { Migration } from '@conduitplatform/grpc-sdk/dist/interfaces/Migration';
 
-export const testMigration1 = {
+const testMigration1 = {
   schemaName: 'TwoFactorSecret',
-  from: 14,
-  to: 15,
+  from: '14',
+  to: '15',
   up: async (grpcSdk: ConduitGrpcSdk) => {
+    console.log('Running up function in migration testMigration1!!');
     const twoFactorSecretSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
       'TwoFactorSecret',
       { userId: { $exists: true } },
@@ -19,14 +21,15 @@ export const testMigration1 = {
       );
     }
   },
-  down: (grpcSdk: ConduitGrpcSdk) => {},
+  down: async (grpcSdk: ConduitGrpcSdk) => {},
 };
 
-export const testMigration2 = {
+const testMigration2 = {
   schemaName: 'TwoFactorSecret',
-  from: 14,
-  to: 15,
+  from: '14',
+  to: '15',
   up: async (grpcSdk: ConduitGrpcSdk) => {
+    console.log('Running up function in migration testMigration1!!');
     const twoFactorSecretSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
       'TwoFactorSecret',
       { userId: { $exists: true } },
@@ -41,5 +44,7 @@ export const testMigration2 = {
       );
     }
   },
-  down: (grpcSdk: ConduitGrpcSdk) => {},
+  down: async (grpcSdk: ConduitGrpcSdk) => {},
 };
+
+export const migrationFilesArray: Array<Migration> = [testMigration1, testMigration2];

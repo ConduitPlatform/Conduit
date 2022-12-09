@@ -5,5 +5,10 @@ import path from 'path';
 
 const email = new EmailModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(email, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(
+  email,
+  packageJsonPath,
+  migrationFilesPath,
+);
 moduleManager.start();

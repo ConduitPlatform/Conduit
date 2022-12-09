@@ -5,5 +5,10 @@ import path from 'path';
 
 const authorization = new AuthorizationModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(authorization, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(
+  authorization,
+  packageJsonPath,
+  migrationFilesPath,
+);
 moduleManager.start();

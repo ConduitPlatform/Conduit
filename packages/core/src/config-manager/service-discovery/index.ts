@@ -7,11 +7,13 @@ import {
   RegisterModuleRequest_ConduitManifest as ConduitManifest,
 } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
+  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
   linearBackoffTimeout,
   ManifestManager,
+  MigrationStatus,
   ModuleActivationStatus,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -91,8 +93,8 @@ export class ServiceDiscovery {
         [...this.registeredModules.values()]
           .filter(m => m.moduleName !== 'core' && m.pending)
           .forEach(async m => {
-            const healthClient = this.grpcSdk.getHealthClient(m.moduleName)!;
-            const healthStatus = await healthClient
+            const healthStatus = await this.grpcSdk
+              .getHealthClient(m.moduleName)!
               .check({})
               .then(res => res.status as unknown as HealthCheckStatus)
               .catch(() => {
@@ -151,25 +153,38 @@ export class ServiceDiscovery {
     module: ModuleStateInfo,
     healthStatus: HealthCheckStatus,
   ) {
-    // TODO: rename registrationState and enum
-    const registrationState = await this.checkModuleDependencies(module, healthStatus);
-    if (registrationState === 0) return;
+    const state = await this.checkModuleDependencies(module, healthStatus);
+    if (state === ModuleRegistrationState.PENDING) return;
+
     const migrationRequirement = await this.checkModuleMigrations(module);
-    if (migrationRequirement) {
-      healthStatus = HealthCheckStatus.NOT_SERVING;
-      const config = await this.grpcSdk.state!.getKey(`moduleConfigs.core`);
-      if (JSON.parse(config!).autoMigration) {
-        await this.triggerModuleMigrations(module);
-      } else {
-        ConduitGrpcSdk.Logger.warn(
-          `Manual migration of ${module.moduleName} is required`,
-        );
-      }
-    } else {
+    if (!migrationRequirement) {
+      // if migrations are not required store current module version in redis
       await this.grpcSdk.state!.setKey(
         `moduleVersion.${module.moduleName}`,
         module.moduleVersion,
       );
+    } else {
+      healthStatus = HealthCheckStatus.NOT_SERVING;
+      const config = await this.grpcSdk.state!.getKey(`moduleConfigs.core`);
+      if (!JSON.parse(config!).autoMigration) {
+        ConduitGrpcSdk.Logger.info(
+          `Manual migration of ${module.moduleName} is required`,
+        );
+        return Promise.resolve(ModuleRegistrationState.PENDING); // ??
+      } else {
+        // trigger automatic migrations and update module version in redis after that
+        const migrationStatus = await this.triggerModuleMigrations(module);
+        if (migrationStatus === MigrationStatus.READY) {
+          healthStatus = HealthCheckStatus.SERVING;
+          await this.grpcSdk.state!.setKey(
+            `moduleVersion.${module.moduleName}`,
+            module.moduleVersion,
+          );
+        } else {
+          ConduitGrpcSdk.Logger.error(`Migration failed for ${module.moduleName}`);
+          return Promise.resolve(ModuleRegistrationState.PENDING);
+        }
+      }
     }
     await this.enableModule(
       module.moduleName,
@@ -177,6 +192,7 @@ export class ServiceDiscovery {
       module.moduleUrl,
       healthStatus,
     );
+    return Promise.resolve(ModuleRegistrationState.AVAILABLE);
   }
 
   private async checkModuleDependencies(
@@ -196,32 +212,42 @@ export class ServiceDiscovery {
     return Promise.resolve(ModuleRegistrationState.AVAILABLE);
   }
 
-  async checkModuleMigrations(module: ModuleStateInfo) {
+  async checkModuleMigrations(module: ModuleStateInfo): Promise<boolean> {
     const storedModuleVersion = await this.grpcSdk.state!.getKey(
       `moduleVersion.${module.moduleName}`,
     );
-    // TODO: add check to see how many versions afar is the stored one with current one
-    // TODO: maybe make an enum for the return type
     if (isNil(storedModuleVersion)) return false;
-    if (module.moduleVersion !== storedModuleVersion) {
+    try {
+      ManifestManager.getInstance().validateTag(
+        '',
+        storedModuleVersion,
+        module.moduleVersion,
+      );
+    } catch {
       return true;
     }
     return false;
   }
 
   private async triggerModuleMigrations(module: ModuleStateInfo) {
-    // TODO: when migrations are done update new module version in redis
-    // TODO: and core should change module's healthStatus to SERVING
     if (!this.registeredModules.get('database')) {
       ConduitGrpcSdk.Logger.warn(
         'Database module is required to run migrations. Waiting for database...',
       );
       await this.grpcSdk.waitForExistence('database');
     }
-    // const moduleClient = this.grpcSdk.getServiceClient<any>(module.moduleName)! as unknown as ModuleClient;
-    // console.log(moduleClient);
-    // const migrationStatus = await moduleClient.runMigrations().then(res => Promise.resolve(res)).catch((e) => {throw new Error(e.message)});
-    // console.log(migrationStatus);
+    const storedModuleVersion = await this.grpcSdk.state!.getKey(
+      `moduleVersion.${module.moduleName}`,
+    );
+    const conduitClient = this.grpcSdk.getConduitClient(
+      module.moduleName,
+    )! as unknown as ModuleClient;
+    return await conduitClient
+      .runMigrations({ from: storedModuleVersion!, to: module.moduleVersion })
+      .then(res => Promise.resolve(res.migrationStatus))
+      .catch(e => {
+        throw new Error(e.message);
+      });
   }
 
   /**

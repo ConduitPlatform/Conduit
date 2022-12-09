@@ -8,6 +8,7 @@ export class ModuleManager<T> {
   constructor(
     private readonly module: ManagedModule<T>,
     private readonly packageJsonPath: string,
+    private readonly migrationFilesPath: string,
   ) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
@@ -34,7 +35,12 @@ export class ModuleManager<T> {
 
   async start() {
     await this.grpcSdk.initialize(this.packageJsonPath);
-    this.module.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
+    this.module.initialize(
+      this.grpcSdk,
+      this.serviceAddress,
+      this.servicePort,
+      this.migrationFilesPath,
+    );
     try {
       await this.preRegisterLifecycle();
       await this.grpcSdk.config.registerModule(

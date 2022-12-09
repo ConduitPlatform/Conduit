@@ -5,5 +5,10 @@ import path from 'path';
 
 const storage = new StorageModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(storage, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(
+  storage,
+  packageJsonPath,
+  migrationFilesPath,
+);
 moduleManager.start();

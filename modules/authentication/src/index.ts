@@ -5,5 +5,10 @@ import path from 'path';
 
 const authentication = new AuthenticationModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(authentication, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations', 'test.migration');
+const moduleManager = new ModuleManager<Config>(
+  authentication,
+  packageJsonPath,
+  migrationFilesPath,
+); // TODO: make the last 2 an object
 moduleManager.start();

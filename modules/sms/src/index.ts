@@ -5,5 +5,6 @@ import path from 'path';
 
 const sms = new SmsModule();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(sms, packageJsonPath);
+const migrationFilesPath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(sms, packageJsonPath, migrationFilesPath);
 moduleManager.start();

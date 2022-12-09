@@ -83,7 +83,7 @@ export class GrpcServer {
     this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
-      .then(() => this.commons.getConfigManager().checkAndTriggerPackageMigrations())
+      .then(() => this.commons.getConfigManager().registerAppConfig())
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
