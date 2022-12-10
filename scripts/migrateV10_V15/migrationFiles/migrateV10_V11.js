@@ -77,8 +77,7 @@ const migrateV11_V15_FoldersToContainers = async () => {
   for (const schema of schemas) {
     schema.container = schema.folder;
     schema.folder = null;
-    const storage = await documents.findOne({ name: '_StorageContainer' });
-    let exists = storage.fields.find((field) => field.name === schema.container);
+    const exists = await documents.findOne({ name: '_StorageContainer' , 'fields.name': schema.container });
     if (!exists) {
       await db.collection('_StorageContainer').insertOne({ name: schema.container });
     }
