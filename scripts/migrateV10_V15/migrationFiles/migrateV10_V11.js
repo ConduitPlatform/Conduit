@@ -13,7 +13,8 @@ const migrateV11_V15_CustomEndpoints = async () => {
 const migrateV10_V11_SchemaDefinitions = async () => {
 
   const documents = db.collection('_declaredschemas');
-  const schemaDefinitions = await documents.find({ name: 'SchemaDefinitions' }).toArray();
+
+  const schemaDefinitions = await db.collection('schemadefinitions').find().toArray();
   if(schemaDefinitions.length === 0){
     return;
   }
