@@ -2,49 +2,57 @@ const db = require('../mongoConnection');
 const { isNil } = require('lodash');
 
 
-
 const migrateV15_userIdToAccessTokenSchemas = async () => {
 
   const collection = db.collection('_declaredschemas');
-  const accessTokenSchemas = await collection.find({ name: 'AccessToken' , "fields.userId" : { $exists: true }}).toArray();
+  const accessTokenSchemas = await collection.find({
+    name: 'AccessToken',
+    'fields.userId': { $exists: true },
+  }).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
     const userId = accessTokenSchema.fields.userId;
-    await collection.updateOne({ _id : accessTokenSchema._id }, { $set: {"fields.user" : userId }} );
+    await collection.updateOne({ _id: accessTokenSchema._id }, { $set: { 'fields.user': userId } });
   }
 };
 
 const migrateV15_userIdToRefreshTokenSchemas = async () => {
 
   const collection = db.collection('_declaredschemas');
-  const refreshTokenSchemas = await collection.find({ name: 'RefreshToken', "fields.userId" : { $exists: true } }).toArray();
+  const refreshTokenSchemas = await collection.find({
+    name: 'RefreshToken',
+    'fields.userId': { $exists: true },
+  }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
     const userId = refreshTokenSchema.fields.userId;
-    await collection.updateOne({ _id: refreshTokenSchema._id }, { $set: {"fields.user" : userId }});
+    await collection.updateOne({ _id: refreshTokenSchema._id }, { $set: { 'fields.user': userId } });
   }
 };
 
 const migrateV15_userIdToTokenSchemas = async () => {
   const collection = db.collection('_declaredschemas');
-  const tokenSchemas = await collection.find({ name: 'Token' , "fields.userId" : { $exists: true }}).toArray();
+  const tokenSchemas = await collection.find({ name: 'Token', 'fields.userId': { $exists: true } }).toArray();
   for (const tokenSchema of tokenSchemas) {
     const userId = tokenSchema.fields.userId;
-    await collection.updateOne({ _id: tokenSchema._id }, { $set: {"fields.user" : userId }});
+    await collection.updateOne({ _id: tokenSchema._id }, { $set: { 'fields.user': userId } });
   }
 };
 
 const migrateV15_userIdToTwoFactorSchemas = async () => {
   const collection = db.collection('_declaredschemas');
-  const twoFactorSecretSchemas = await collection.find({ name: 'TwoFactorSecret' , "fields.userId" : { $exists: true }}).toArray();
+  const twoFactorSecretSchemas = await collection.find({
+    name: 'TwoFactorSecret',
+    'fields.userId': { $exists: true },
+  }).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     const userId = twoFactorSecretSchema.fields.userId;
-    await collection.updateOne({ _id: twoFactorSecretSchema._id }, { $set: {"fields.user" : userId }});
+    await collection.updateOne({ _id: twoFactorSecretSchema._id }, { $set: { 'fields.user': userId } });
   }
 };
 
 const migrateV15_config = async () => {
 
   const documents = db.collection('configs');
-  const authConfig = await documents.findOne({"moduleConfigs.authentication": {$exists: true}});
+  const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
   const authConfigData = authConfig.moduleConfigs.authentication;
   if (isNil(authConfigData) || isNil(authConfigData.generateRefreshToken)) {
     return;
@@ -84,7 +92,20 @@ const migrateV15_config = async () => {
   delete authConfigData.setCookies;
   delete authConfigData.rateLimit;
 
-  await documents.findOneAndUpdate({ _id: authConfig._id }, { $set: { "moduleConfigs.authentication": authConfigData } });
+  await documents.findOneAndUpdate({ _id: authConfig._id }, { $set: { 'moduleConfigs.authentication': authConfigData } });
+};
+
+const migrateV14_V15_CustomEndpoints = async () => {
+  const customEndpoints = db.collection('customendpoints');
+  const customEndpointsData = await customEndpoints.find({ $or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }] }).toArray();
+  for (const customEndpoint of customEndpointsData) {
+    const schemaModel = await db.collection('_declaredschemas');
+    const selectedSchema = await schemaModel.findOne({ name: customEndpoint.schemaName });
+    if(!selectedSchema) {
+      continue;
+    }
+    await customEndpoints.updateOne({ _id: customEndpoint._id }, { $set: { selectedSchema: selectedSchema._id.toString() } });
+  }
 };
 
 const migrateV14_V15_System_Schemas = async () => {
@@ -92,19 +113,24 @@ const migrateV14_V15_System_Schemas = async () => {
     'AccessToken',
     'RefreshToken',
     'Token',
-    'TwoFactorSecret',
-    'Config',
-    'CustomEndpoints',
-    'DeclaredSchemas',
-    'PendingSchemas',
-    'ServiceSchema',
     'User',
-    'TwoFactorBackUpCodes',
-    'EmailTemplate',
+    'Service',
+    'SchemaDefinitions',
+    'CustomEndpoints',
+    'ChatMessage',
     'ChatRoom',
-    'FormReplies',
     'Forms',
-    'ChatMessage'
+    'FormReplies',
+    'EmailTemplate',
+    'NotificationToken',
+    'File',
+    '_StorageContainer',
+    '_StorageFolder',
+    'Config',
+    'Admin',
+    'Client',
+    'TwoFactorBackUpCodes',
+    'Team',
   ];
   const declaredSchemas = db.collection('_declaredschemas');
   const affectedSchemas = await declaredSchemas.find({
@@ -129,16 +155,6 @@ const migrateV14_V15_System_Schemas = async () => {
   }
 };
 
-const migrateV14_V15_CustomEndpoints = async () => {
-  const customEndpoints = db.collection('customendpoints');
-  const endpoints = await customEndpoints.find({$or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }],}).toArray();
-  for (const endpoint of endpoints) {
-    const schemaModel = await db.collection('_declaredschemas').findOne({ name: endpoint.schema });
-    if (schemaModel) {
-      await customEndpoints.findOneAndUpdate({ _id: endpoint._id }, { $set: { selectedSchema: schemaModel._id.toString() } });
-    }
-  }
-}
 
 const migrateV14_V15 = async () => {
   await migrateV15_userIdToAccessTokenSchemas();
@@ -146,8 +162,8 @@ const migrateV14_V15 = async () => {
   await migrateV15_userIdToTokenSchemas();
   await migrateV15_userIdToTwoFactorSchemas();
   await migrateV15_config();
-  await migrateV14_V15_System_Schemas();
   await migrateV14_V15_CustomEndpoints();
+  await migrateV14_V15_System_Schemas();
 };
 
 module.exports = migrateV14_V15;
