@@ -120,6 +120,8 @@ const migrateV14_V15_System_Schemas = async () => {
     'Admin',
     'Client',
     'TwoFactorBackUpCodes',
+    'TwoFactorSecret',
+     'AdminTwoFactorSecret',
     'Team',
   ];
   const declaredSchemas = db.collection('_declaredschemas');

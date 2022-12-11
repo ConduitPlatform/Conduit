@@ -22,7 +22,10 @@ const migrateSchemaOwnerModule = async () => {
       Admin: 'core',
       Client: 'router',
       TwoFactorBackUpCodes: 'authentication',
+      TwoFactorSecret: 'authentication',
       Team: 'authentication',
+      AdminTwoFactorSecret: 'core',
+      _PendingSchemas: 'database',
     };
    const noOwnerSchemas = [];
 
