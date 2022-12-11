@@ -42,7 +42,7 @@ const migrateV15_config = async () => {
 
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
-  const authConfigData = authConfig.moduleConfigs.authentication;
+  const authConfigData = authConfig?.moduleConfigs?.authentication;
   if (isNil(authConfigData) || isNil(authConfigData.generateRefreshToken)) {
     return;
   }
