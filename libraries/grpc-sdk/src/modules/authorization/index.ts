@@ -15,7 +15,7 @@ import {
 export class Authorization extends ConduitModule<typeof AuthorizationDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'authorization', url, grpcToken);
-    this.initializeClient(AuthorizationDefinition);
+    this.initializeClients(AuthorizationDefinition);
   }
 
   defineResource(data: Resource): Promise<Empty> {

@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { ConduitModule } from '../../classes/ConduitModule';
 import { HealthCheckStatus } from '../../types';
 import {
+  DeploymentState,
   ConfigDefinition,
   ModuleHealthRequest,
   RegisterModuleRequest,
@@ -21,7 +22,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     grpcToken?: string,
   ) {
     super(moduleName, 'config', url, grpcToken);
-    this.initializeClient(ConfigDefinition);
+    this.initializeClients(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
   }
 
@@ -102,7 +103,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
           self.watchDeploymentState();
         }
       })
-      .catch(e => {
+      .catch(() => {
         if (self.coreLive) {
           ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;
@@ -117,14 +118,14 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   async watchDeploymentState() {
     const self = this;
     this.emitter.setMaxListeners(150);
-    self.emitter.emit('serving-modules-update', await self.getDeploymentState().catch());
+    const state: DeploymentState = await self.getDeploymentState().catch(() => {
+      return { modules: [] };
+    });
+    self.emitter.emit('serving-modules-update', state);
     try {
       const call = this.serviceClient!.watchDeploymentState({});
-      for await (const data of call) {
-        self.emitter.emit(
-          'serving-modules-update',
-          data.modules.filter(m => !m.pending),
-        );
+      for await (const state of call) {
+        self.emitter.emit('serving-modules-update', state);
       }
     } catch (error) {
       self.coreLive = false;

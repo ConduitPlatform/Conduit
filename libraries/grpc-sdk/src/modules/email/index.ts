@@ -4,7 +4,7 @@ import { EmailDefinition } from '../../protoUtils/email';
 export class Email extends ConduitModule<typeof EmailDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
     super(moduleName, 'email', url, grpcToken);
-    this.initializeClient(EmailDefinition);
+    this.initializeClients(EmailDefinition);
   }
 
   registerTemplate(template: {

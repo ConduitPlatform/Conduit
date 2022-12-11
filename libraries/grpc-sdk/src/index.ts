@@ -27,7 +27,7 @@ import { ConduitModuleDefinition } from './protoUtils/conduit_module';
 import {
   GetRedisDetailsResponse,
   DeploymentState,
-  DeploymentState_ModuleStateInfo,
+  DeploymentState_ModuleStateInfo as ModuleStateInfo,
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
 import { checkServiceHealth } from './classes/HealthCheck';
@@ -316,12 +316,12 @@ export default class ConduitGrpcSdk {
           }
         }
       });
-      state.modules.forEach((m: DeploymentState_ModuleStateInfo) => {
+      state.modules.forEach((m: ModuleStateInfo) => {
         if (m.moduleName !== this.name && !m.pending) {
-          const alreadyActive = this._modules[m.moduleName]?.active;
+          const alreadyActive = this._modules[m.moduleName]?.connectionsActive;
           if (!alreadyActive && m.serving) {
             if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
-              this._modules[m.moduleName].openConnection();
+              this._modules[m.moduleName].openConnections();
             } else {
               this.createModuleClient(m.moduleName, m.moduleUrl);
             }
@@ -454,36 +454,20 @@ export default class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (
-      this._modules[moduleName] ||
-      (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
-    )
-      return;
-    if (this._availableModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
-      this._modules[moduleName] = new this._availableModules[moduleName](
-        this.name,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
-        this._grpcToken,
-      );
-    } else if (this._dynamicModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
-      this._modules[moduleName] = new ConduitModule(
-        this.name,
-        moduleName,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
-        this._grpcToken,
-      );
-      this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
-    }
+    if (this._modules[moduleName] || moduleName === 'core') return;
+    moduleUrl = this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl;
+    this._modules[moduleName] = this._availableModules[moduleName]
+      ? new this._availableModules[moduleName](this.name, moduleUrl, this._grpcToken)
+      : new ConduitModule(this.name, moduleName, moduleUrl, this._grpcToken);
+    this._modules[moduleName].initializeClients(this._dynamicModules[moduleName]);
   }
 
   checkServiceHealth(moduleUrl: string, service: string = '') {
     return checkServiceHealth(this.name, moduleUrl, service, this._grpcToken);
   }
 
-  moduleClient(name: string, type: CompatServiceDefinition): void {
-    this._dynamicModules[name] = type;
+  importDynamicModuleDefinition(name: string, definition: CompatServiceDefinition): void {
+    this._dynamicModules[name] = definition;
   }
 
   getModule<T extends CompatServiceDefinition>(
@@ -507,7 +491,7 @@ export default class ConduitGrpcSdk {
   }
 
   isAvailable(moduleName: string) {
-    return !!this._modules[moduleName]?.active;
+    return !!this._modules[moduleName]?.connectionsActive;
   }
 
   async waitForExistence(moduleName: string) {
