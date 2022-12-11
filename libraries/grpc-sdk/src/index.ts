@@ -102,9 +102,6 @@ export default class ConduitGrpcSdk {
 
     if (process.env.METRICS_PORT) {
       ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
-      ConduitGrpcSdk.Metrics.setDefaultLabels({
-        module_instance: this.instance,
-      });
     }
     setupLoki(this.name, this.instance).then();
     this.serverUrl = serverUrl;

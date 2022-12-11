@@ -1,14 +1,14 @@
 import ConduitGrpcSdk from '../index';
 import express from 'express';
-import * as client from 'prom-client';
+import { Registry } from 'prom-client';
 import { isNaN } from 'lodash';
 
 export class MetricsServer {
   private readonly moduleName: string;
   private readonly instance: string;
-  private readonly Registry: client.Registry;
+  private readonly Registry: Registry;
 
-  constructor(moduleName: string, instance: string, registry: client.Registry) {
+  constructor(moduleName: string, instance: string, registry: Registry) {
     this.moduleName = moduleName;
     this.instance = instance;
     this.Registry = registry;
