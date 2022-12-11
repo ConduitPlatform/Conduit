@@ -165,8 +165,8 @@ export class ServiceDiscovery {
       );
     } else {
       healthStatus = HealthCheckStatus.NOT_SERVING;
-      const config = await this.grpcSdk.state!.getKey(`moduleConfigs.core`);
-      if (!JSON.parse(config!).autoMigration) {
+      const config = await this.grpcSdk.config.get('core');
+      if (!config.autoMigration) {
         ConduitGrpcSdk.Logger.info(
           `Manual migration of ${module.moduleName} is required`,
         );
@@ -213,19 +213,18 @@ export class ServiceDiscovery {
   }
 
   async checkModuleMigrations(module: ModuleStateInfo): Promise<boolean> {
-    const storedModuleVersion = await this.grpcSdk.state!.getKey(
-      `moduleVersion.${module.moduleName}`,
-    );
-    if (isNil(storedModuleVersion)) return false;
-    try {
-      ManifestManager.getInstance().validateTag(
-        '',
-        storedModuleVersion,
-        module.moduleVersion,
-      );
-    } catch {
-      return true;
-    }
+    // const moduleConfig = await this.grpcSdk.config.get(module.moduleName);
+    // const storedModuleVersion = moduleConfig.version;
+    // if (isNil(storedModuleVersion) || storedModuleVersion === 'unknown') return false;
+    // try {
+    //   ManifestManager.getInstance().validateTag(
+    //     '',
+    //     storedModuleVersion,
+    //     module.moduleVersion,
+    //   );
+    // } catch {
+    //   return true;
+    // }
     return false;
   }
 
@@ -236,9 +235,9 @@ export class ServiceDiscovery {
       );
       await this.grpcSdk.waitForExistence('database');
     }
-    const storedModuleVersion = await this.grpcSdk.state!.getKey(
-      `moduleVersion.${module.moduleName}`,
-    );
+    const moduleConfig = await this.grpcSdk.config.get(module.moduleName);
+    const storedModuleVersion = moduleConfig.version;
+
     const conduitClient = this.grpcSdk.getConduitClient(
       module.moduleName,
     )! as unknown as ModuleClient;

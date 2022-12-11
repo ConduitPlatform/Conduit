@@ -262,12 +262,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     // filter the array to find migration files that match the targeted versions
     migrations = migrations.filter(m => {
       if (
-        m.from === from.tag ||
-        (m.from === to.tag && m.to === from.tag) ||
-        m.to === to.tag
+        (m.from === from.tag || m.from === to.tag) &&
+        (m.to === from.tag || m.to === to.tag)
       )
         return m;
     });
+    if (migrations.length === 0) {
+      return callback(null, { migrationStatus: MigrationStatus.UNSUPPORTED });
+    }
     try {
       for (const m of migrations) {
         if (upgrade) {
