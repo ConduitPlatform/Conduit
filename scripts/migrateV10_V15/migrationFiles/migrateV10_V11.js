@@ -72,16 +72,17 @@ const migrateV11_V15_ModelOptions = async () => {
 };
 
 const migrateV11_V15_FoldersToContainers = async () => {
-  const documents = db.collection('_declaredschemas');
-  const schemas = await documents.find({ name: 'File', container: { $exists: false } }).toArray();
-  for (const schema of schemas) {
-    schema.container = schema.folder;
-    schema.folder = null;
-    const exists = await documents.findOne({ name: '_StorageContainer' , 'fields.name': schema.container });
+  const documents = db.collection('files');
+  const files = await documents.find({ container: { $exists: false } }).toArray();
+  for (const file of files) {
+    file.container = file.folder;
+    file.folder = null;
+    const storageCollection = db.collection('_storagecontainers');
+    let exists = await storageCollection.findOne({ name: file.container });
     if (!exists) {
-      await db.collection('_StorageContainer').insertOne({ name: schema.container });
+      await storageCollection.insertOne({ name: file.container });
     }
-    await documents.findOneAndUpdate({ _id: schema.id }, { $set: { container: schema.container, folder: null } });
+    await documents.updateMany({ _id: file._id }, { $set: { container: file.container, folder: file.folder } });
   }
 }
 

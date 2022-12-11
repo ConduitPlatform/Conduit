@@ -32,11 +32,11 @@ const migrateV11_V12_cmsOwners = async () => {
 };
 
 const migrateV11_V12_customEndpoints = async () => {
-  const documents = db.collection('_declaredschemas');
-  const customEndpointsSchemas = await documents.find({ name: 'CustomEndpoints' }).toArray();
-  for (const schema of customEndpointsSchemas) {
-    if (!isNil(schema.queries) && isNil(schema.query)) {
-      await documents.updateOne({ _id: schema._id }, { $set: { query: schema.queries } });
+  const documents = db.collection('customendpoints');
+  const customEndpoints = await documents.find().toArray();
+  for (const customEndpoint of customEndpoints) {
+    if (!isNil(customEndpoint.queries) && isNil(customEndpoint.query)) {
+      await documents.updateOne({ _id: customEndpoint._id }, { $set: { query: customEndpoint.queries } });
     }
   }
 };

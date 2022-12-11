@@ -3,49 +3,38 @@ const { isNil } = require('lodash');
 
 
 const migrateV15_userIdToAccessTokenSchemas = async () => {
-
-  const collection = db.collection('_declaredschemas');
-  const accessTokenSchemas = await collection.find({
-    name: 'AccessToken',
-    'fields.userId': { $exists: true },
-  }).toArray();
+  const collection = db.collection('accesstokens');
+  const accessTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
-    const userId = accessTokenSchema.fields.userId;
-    await collection.updateOne({ _id: accessTokenSchema._id }, { $set: { 'fields.user': userId } });
+    const userId = accessTokenSchema.userId;
+    await collection.updateOne({ _id: accessTokenSchema._id }, { $set: { 'user': userId } });
   }
 };
 
 const migrateV15_userIdToRefreshTokenSchemas = async () => {
-
-  const collection = db.collection('_declaredschemas');
-  const refreshTokenSchemas = await collection.find({
-    name: 'RefreshToken',
-    'fields.userId': { $exists: true },
-  }).toArray();
+  const collection = db.collection('refreshtokens');
+  const refreshTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
-    const userId = refreshTokenSchema.fields.userId;
-    await collection.updateOne({ _id: refreshTokenSchema._id }, { $set: { 'fields.user': userId } });
+    const userId = refreshTokenSchema.userId;
+    await collection.updateOne({ _id: refreshTokenSchema._id }, { $set: { 'user': userId } });
   }
 };
 
 const migrateV15_userIdToTokenSchemas = async () => {
-  const collection = db.collection('_declaredschemas');
-  const tokenSchemas = await collection.find({ name: 'Token', 'fields.userId': { $exists: true } }).toArray();
+  const collection = db.collection('tokens');
+  const tokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const tokenSchema of tokenSchemas) {
-    const userId = tokenSchema.fields.userId;
-    await collection.updateOne({ _id: tokenSchema._id }, { $set: { 'fields.user': userId } });
+    const userId = tokenSchema.userId;
+    await collection.updateOne({ _id: tokenSchema._id }, { $set: { 'user': userId } });
   }
 };
 
 const migrateV15_userIdToTwoFactorSchemas = async () => {
-  const collection = db.collection('_declaredschemas');
-  const twoFactorSecretSchemas = await collection.find({
-    name: 'TwoFactorSecret',
-    'fields.userId': { $exists: true },
-  }).toArray();
+  const collection = db.collection('twofactorsecrets');
+  const twoFactorSecretSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
-    const userId = twoFactorSecretSchema.fields.userId;
-    await collection.updateOne({ _id: twoFactorSecretSchema._id }, { $set: { 'fields.user': userId } });
+    const userId = twoFactorSecretSchema.userId;
+    await collection.updateOne({ _id: twoFactorSecretSchema._id }, { $set: { 'user': userId } });
   }
 };
 
@@ -96,9 +85,10 @@ const migrateV15_config = async () => {
 };
 
 const migrateV14_V15_CustomEndpoints = async () => {
-  const customEndpoints = db.collection('customendpoints');
+  const  customEndpoints = db.collection('customendpoints');
   const customEndpointsData = await customEndpoints.find({ $or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }] }).toArray();
-  for (const customEndpoint of customEndpointsData) {
+
+  for(const customEndpoint of customEndpointsData) {
     const schemaModel = await db.collection('_declaredschemas');
     const selectedSchema = await schemaModel.findOne({ name: customEndpoint.schemaName });
     if(!selectedSchema) {
