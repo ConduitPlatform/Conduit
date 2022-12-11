@@ -3,7 +3,7 @@ const { isNil } = require('lodash');
 
 
 const migrateV15_userIdToAccessTokenSchemas = async () => {
-  const collection = db.collection('accesstokens');
+  const collection = db.collection('cnd_accesstokens');
   const accessTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
     const userId = accessTokenSchema.userId;
@@ -12,7 +12,7 @@ const migrateV15_userIdToAccessTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToRefreshTokenSchemas = async () => {
-  const collection = db.collection('refreshtokens');
+  const collection = db.collection('cnd_refreshtokens');
   const refreshTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
     const userId = refreshTokenSchema.userId;
@@ -21,7 +21,7 @@ const migrateV15_userIdToRefreshTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToTokenSchemas = async () => {
-  const collection = db.collection('tokens');
+  const collection = db.collection('cnd_tokens');
   const tokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const tokenSchema of tokenSchemas) {
     const userId = tokenSchema.userId;
@@ -30,7 +30,7 @@ const migrateV15_userIdToTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToTwoFactorSchemas = async () => {
-  const collection = db.collection('twofactorsecrets');
+  const collection = db.collection('cnd_twofactorsecrets');
   const twoFactorSecretSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     const userId = twoFactorSecretSchema.userId;
@@ -50,28 +50,25 @@ const migrateV15_config = async () => {
   Object.assign(authConfigData, { twoFa: { methods: { sms: false, authenticator: true } } });
 
   Object.assign(authConfigData, {
-    refreshTokens: { enabled: authConfigData.generateRefreshToken },
-  });
-  Object.assign(authConfigData, {
-    refreshTokens: { expiryPeriod: authConfigData.refreshTokenInvalidationPeriod },
-  });
-  Object.assign(authConfigData, {
-    accessTokens: { expiryPeriod: authConfigData.tokenInvalidationPeriod },
-  });
-  Object.assign(authConfigData, { accessTokens: { jwtSecret: authConfigData.jwtSecret } });
+    refreshTokens: {
+      enabled: authConfigData.generateRefreshToken,
+      expiryPeriod: authConfigData.refreshTokenInvalidationPeriod,
+      setCookie: authConfigData.setCookies?.enabled,
+      cookieOptions: authConfigData.setCookies?.options,
+    },
+    }
+  );
 
   Object.assign(authConfigData, {
-    accessTokens: { setCookie: authConfigData.setCookies?.enabled },
-  });
-  Object.assign(authConfigData, {
-    accessTokens: { cookieOptions: authConfigData.setCookies?.options },
-  });
-  Object.assign(authConfigData, {
-    refreshTokens: { setCookie: authConfigData.setCookies?.enabled },
-  });
-  Object.assign(authConfigData, {
-    refreshTokens: { cookieOptions: authConfigData.setCookies?.options },
-  });
+    accessTokens: {
+      expiryPeriod: authConfigData.tokenInvalidationPeriod,
+      jwtSecret: authConfigData.jwtSecret,
+      setCookie: authConfigData.setCookies?.enabled,
+      cookieOptions: authConfigData.setCookies?.options,
+    }
+  }
+  );
+
 
   delete authConfigData.twofa;
   delete authConfigData.refreshTokenInvalidationPeriod;
@@ -82,16 +79,17 @@ const migrateV15_config = async () => {
   delete authConfigData.rateLimit;
 
   await documents.findOneAndUpdate({ _id: authConfig._id }, { $set: { 'moduleConfigs.authentication': authConfigData } });
+
 };
 
 const migrateV14_V15_CustomEndpoints = async () => {
-  const  customEndpoints = db.collection('customendpoints');
+  const customEndpoints = db.collection('cnd_customendpoints');
   const customEndpointsData = await customEndpoints.find({ $or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }] }).toArray();
 
-  for(const customEndpoint of customEndpointsData) {
-    const schemaModel = await db.collection('_declaredschemas');
+  for (const customEndpoint of customEndpointsData) {
+    const schemaModel = await db.collection('cnd_declaredschemas');
     const selectedSchema = await schemaModel.findOne({ name: customEndpoint.schemaName });
-    if(!selectedSchema) {
+    if (!selectedSchema) {
       continue;
     }
     await customEndpoints.updateOne({ _id: customEndpoint._id }, { $set: { selectedSchema: selectedSchema._id.toString() } });
@@ -121,10 +119,10 @@ const migrateV14_V15_System_Schemas = async () => {
     'Client',
     'TwoFactorBackUpCodes',
     'TwoFactorSecret',
-     'AdminTwoFactorSecret',
+    'AdminTwoFactorSecret',
     'Team',
   ];
-  const declaredSchemas = db.collection('_declaredschemas');
+  const declaredSchemas = db.collection('cnd_declaredschemas');
   const affectedSchemas = await declaredSchemas.find({
     $and: [
       { name: { $in: conduitSystemSchemas } },
@@ -141,7 +139,7 @@ const migrateV14_V15_System_Schemas = async () => {
         },
       });
     }
-    const customEndpoints = db.collection('customendpoints');
+    const customEndpoints = db.collection('cnd_customendpoints');
     const affectedSchemaNames = affectedSchemas.map(s => s.name);
     await customEndpoints.deleteMany({ selectedSchema: { $in: affectedSchemaNames } });
   }
