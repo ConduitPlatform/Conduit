@@ -140,5 +140,5 @@ export async function captchaV2Middleware(call: ParsedRouterRequest) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
     }
   }
-  return { message: 'Captcha Verified' };
+  return {};
 }
