@@ -1,4 +1,5 @@
 const migrateOwnerModule = require('../migrateV10_V15/migrationFiles/schemaOwnerModule');
+const migrateSchemaCollectionName = require('../migrateV10_V15/migrationFiles/schemaCollectionName');
 const migrateV10_V11 = require('../migrateV10_V15/migrationFiles/migrateV10_V11');
 const migrateV11_V12 = require('../migrateV10_V15/migrationFiles/migrateV11_V12');
 const migrateV12_V13 = require('../migrateV10_V15/migrationFiles/migrateV12_V13');
@@ -18,6 +19,7 @@ const migrate = async () => {
 };
 const migrateV10_V15 = async () => {
   await migrateOwnerModule();
+  await migrateSchemaCollectionName();
   await migrateV10_V11();
   await migrateV11_V12();
   await migrateV12_V13();

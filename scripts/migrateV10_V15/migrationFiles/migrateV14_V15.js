@@ -3,7 +3,7 @@ const { isNil } = require('lodash');
 
 
 const migrateV15_userIdToAccessTokenSchemas = async () => {
-  const collection = db.collection('cnd_accesstokens');
+  const collection = db.collection('accesstokens');
   const accessTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const accessTokenSchema of accessTokenSchemas) {
     const userId = accessTokenSchema.userId;
@@ -12,7 +12,7 @@ const migrateV15_userIdToAccessTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToRefreshTokenSchemas = async () => {
-  const collection = db.collection('cnd_refreshtokens');
+  const collection = db.collection('refreshtokens');
   const refreshTokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const refreshTokenSchema of refreshTokenSchemas) {
     const userId = refreshTokenSchema.userId;
@@ -21,7 +21,7 @@ const migrateV15_userIdToRefreshTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToTokenSchemas = async () => {
-  const collection = db.collection('cnd_tokens');
+  const collection = db.collection('tokens');
   const tokenSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const tokenSchema of tokenSchemas) {
     const userId = tokenSchema.userId;
@@ -30,7 +30,7 @@ const migrateV15_userIdToTokenSchemas = async () => {
 };
 
 const migrateV15_userIdToTwoFactorSchemas = async () => {
-  const collection = db.collection('cnd_twofactorsecrets');
+  const collection = db.collection('twofactorsecrets');
   const twoFactorSecretSchemas = await collection.find({ 'userId': { $exists: true } }).toArray();
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     const userId = twoFactorSecretSchema.userId;
@@ -83,11 +83,11 @@ const migrateV15_config = async () => {
 };
 
 const migrateV14_V15_CustomEndpoints = async () => {
-  const customEndpoints = db.collection('cnd_customendpoints');
+  const customEndpoints = db.collection('customendpoints');
   const customEndpointsData = await customEndpoints.find({ $or: [{ selectedSchema: { $exists: false } }, { selectedSchema: null }] }).toArray();
 
   for (const customEndpoint of customEndpointsData) {
-    const schemaModel = await db.collection('cnd_declaredschemas');
+    const schemaModel = await db.collection('declaredschemas');
     const selectedSchema = await schemaModel.findOne({ name: customEndpoint.schemaName });
     if (!selectedSchema) {
       continue;
@@ -122,7 +122,7 @@ const migrateV14_V15_System_Schemas = async () => {
     'AdminTwoFactorSecret',
     'Team',
   ];
-  const declaredSchemas = db.collection('cnd_declaredschemas');
+  const declaredSchemas = db.collection('declaredschemas');
   const affectedSchemas = await declaredSchemas.find({
     $and: [
       { name: { $in: conduitSystemSchemas } },
@@ -139,7 +139,7 @@ const migrateV14_V15_System_Schemas = async () => {
         },
       });
     }
-    const customEndpoints = db.collection('cnd_customendpoints');
+    const customEndpoints = db.collection('customendpoints');
     const affectedSchemaNames = affectedSchemas.map(s => s.name);
     await customEndpoints.deleteMany({ selectedSchema: { $in: affectedSchemaNames } });
   }
