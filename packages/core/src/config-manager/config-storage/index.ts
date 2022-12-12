@@ -3,7 +3,7 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import * as models from '../models';
 import { ServiceDiscovery } from '../service-discovery';
 import { clearInterval } from 'timers';
-import { merge } from 'lodash';
+import { isNil, merge } from 'lodash';
 
 export class ConfigStorage {
   toBeReconciled: string[] = [];
@@ -47,6 +47,11 @@ export class ConfigStorage {
 
   async firstSync() {
     this.changeState(true);
+    try {
+      await this.syncModuleVersions();
+    } catch (e: any) {
+      throw new Error(e.message);
+    }
     const configDocs = await models.Config.getInstance().findMany({});
     const registeredModules = [...this.serviceDiscovery.registeredModules.keys()].filter(
       m => m !== 'core',
@@ -102,6 +107,38 @@ export class ConfigStorage {
     }
   }
 
+  async syncModuleVersions() {
+    const versions = await models.Version.getInstance().findMany({});
+    const registeredModules = [...this.serviceDiscovery.registeredModules.keys()];
+    if (versions.length === 0) {
+      for (const module of registeredModules) {
+        if (module === 'core') continue; //TODO: remove this after core & admin migrations
+        const version = await this.grpcSdk.state!.getKey(`moduleVersion.${module}`);
+        await models.Version.getInstance().create({ name: module, version: version! });
+      }
+    } else {
+      versions.forEach(v => {
+        if (!registeredModules.includes(v.name))
+          this.grpcSdk.state!.setKey(`moduleVersion.${v.name}`, v.version);
+      });
+      for (const module of registeredModules) {
+        if (module === 'core') continue; //TODO: remove this after core & admin migrations
+        const redisVersion = await this.grpcSdk.state!.getKey(`moduleVersion.${module}`);
+        const dbVersion = await models.Version.getInstance().findOne({ name: module });
+        if (isNil(dbVersion)) {
+          await models.Version.getInstance().create({
+            name: module,
+            version: redisVersion!,
+          });
+        } else {
+          await models.Version.getInstance().findByIdAndUpdate(dbVersion._id, {
+            version: redisVersion!,
+          });
+        }
+      }
+    }
+  }
+
   reconcileMonitor() {
     const reconciliationInterval = setInterval(() => {
       if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
@@ -118,6 +155,7 @@ export class ConfigStorage {
 
   reconcile() {
     this.changeState(true);
+    this.syncModuleVersions().then();
     const promises = this.toBeReconciled.map(moduleName => {
       return this.getConfig(moduleName, false).then(async config => {
         const moduleConfig = await models.Config.getInstance().findOne({

@@ -7,7 +7,6 @@ import {
   RegisterModuleRequest_ConduitManifest as ConduitManifest,
 } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
-  GrpcError,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
@@ -213,18 +212,19 @@ export class ServiceDiscovery {
   }
 
   async checkModuleMigrations(module: ModuleStateInfo): Promise<boolean> {
-    // const moduleConfig = await this.grpcSdk.config.get(module.moduleName);
-    // const storedModuleVersion = moduleConfig.version;
-    // if (isNil(storedModuleVersion) || storedModuleVersion === 'unknown') return false;
-    // try {
-    //   ManifestManager.getInstance().validateTag(
-    //     '',
-    //     storedModuleVersion,
-    //     module.moduleVersion,
-    //   );
-    // } catch {
-    //   return true;
-    // }
+    const storedModuleVersion = await this.grpcSdk.state!.getKey(
+      `moduleVersion.${module.moduleName}`,
+    );
+    if (isNil(storedModuleVersion)) return false;
+    try {
+      ManifestManager.getInstance().validateTag(
+        '',
+        storedModuleVersion,
+        module.moduleVersion,
+      );
+    } catch {
+      return true;
+    }
     return false;
   }
 
@@ -235,9 +235,9 @@ export class ServiceDiscovery {
       );
       await this.grpcSdk.waitForExistence('database');
     }
-    const moduleConfig = await this.grpcSdk.config.get(module.moduleName);
-    const storedModuleVersion = moduleConfig.version;
-
+    const storedModuleVersion = await this.grpcSdk.state!.getKey(
+      `moduleVersion.${module.moduleName}`,
+    );
     const conduitClient = this.grpcSdk.getConduitClient(
       module.moduleName,
     )! as unknown as ModuleClient;

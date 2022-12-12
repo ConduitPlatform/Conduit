@@ -201,6 +201,9 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.database!.createSchemaFromAdapter(
       models.Config.getInstance(this.grpcSdk.database!),
     );
+    await this.grpcSdk.database!.createSchemaFromAdapter(
+      models.Version.getInstance(this.grpcSdk.database!),
+    );
     await runMigrations(this.grpcSdk);
     this._configStorage.onDatabaseAvailable();
   }
@@ -354,15 +357,11 @@ export default class ConfigManager implements IConfigManager {
 
   async checkAndTriggerPackageMigrations() {
     const coreModule = this.serviceDiscovery.registeredModules.get('core');
-    // TODO: error?
-    if (isNil(coreModule)) {
-      throw new Error('WTF?');
-    }
     const migrationRequirement = await this.serviceDiscovery.checkModuleMigrations(
-      coreModule,
+      coreModule!,
     );
     if (migrationRequirement) {
-      // run migrations for core and admin
+      // TODO: run migrations for core and admin
       await runMigrations(this.grpcSdk);
     }
     await this.registerAppConfig();

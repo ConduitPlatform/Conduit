@@ -48,6 +48,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * @param grpcSdk {ConduitGrpcSdk}
    * @param address {string} external address:port of service (LoadBalancer)
    * @param port {string} port to bring up gRPC service
+   * @param migrationFilesPath path to import module migration files from
    */
   initialize(
     grpcSdk: ConduitGrpcSdk,
