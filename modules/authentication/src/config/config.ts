@@ -37,4 +37,24 @@ export default {
       default: false,
     },
   },
+  captcha: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    google: {
+      active: {
+        format: 'Boolean',
+        default: false,
+      },
+      version: {
+        format: 'String',
+        default: 'v2',
+      },
+      secretKey: {
+        format: 'String',
+        default: '',
+      },
+    },
+  },
 };

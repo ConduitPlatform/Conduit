@@ -58,6 +58,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
         },
+        middlewares: ['captchaV2Middleware'],
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,

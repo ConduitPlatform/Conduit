@@ -14,7 +14,7 @@ import { PhoneHandlers } from '../handlers/phone';
 import { OAuth2 } from '../handlers/oauth2/OAuth2';
 import { OAuth2Settings } from '../handlers/oauth2/interfaces/OAuth2Settings';
 import { TwoFa } from '../handlers/twoFa';
-import authMiddleware from './middleware';
+import { authMiddleware, captchaV2Middleware } from './middleware';
 import { MagicLinkHandlers } from '../handlers/magicLink';
 import { Config } from '../config';
 import { TeamsHandler } from '../handlers/team';
@@ -134,6 +134,10 @@ export class AuthenticationRoutes {
       this._routingManager.middleware(
         { path: '/', name: 'authMiddleware' },
         authMiddleware,
+      );
+      this._routingManager.middleware(
+        { path: '/', name: 'captchaV2Middleware' },
+        captchaV2Middleware,
       );
     }
     return this._routingManager.registerRoutes().catch((err: Error) => {
