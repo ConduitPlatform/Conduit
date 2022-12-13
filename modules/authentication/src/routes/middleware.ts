@@ -6,14 +6,16 @@ import {
   Indexable,
   Headers,
   Cookies,
+  PlatformTypesEnum,
 } from '@conduitplatform/grpc-sdk';
 import { AuthUtils } from '../utils';
-import { AccessToken } from '../models';
+import { AccessToken, Client } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
 import axios from 'axios';
+
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
  *
@@ -112,21 +114,43 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
   return headerArgs[1] || tokenCookie;
 }
 
-export async function captchaV2Middleware(call: ParsedRouterRequest) {
+export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
   if (!config.captcha.enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
-
+  const { clientId } = call.request.context;
   const { captcha } = call.request.params;
   const secret = config.captcha.google.secretKey;
-  if (config.captcha.google.active) {
+  const version = config.captcha.google.version;
+  const captchaActive = config.captcha.google.active;
+  const client = await Client.getInstance().findOne({ clientId: clientId });
+  const platform = client!.platform;
+
+  if (captchaActive) {
     if (!secret) {
       throw new GrpcError(
         status.UNAUTHENTICATED,
         'Secret key for recaptcha is required.',
       );
     }
+    if (version != 'v2' && version != 'v3') {
+      throw new GrpcError(
+        status.INTERNAL,
+        'Google recaptcha only supports v2 and v3 versions',
+      );
+    }
+    if (
+      version === 'v2' &&
+      platform != PlatformTypesEnum.WEB &&
+      platform != PlatformTypesEnum.ANDROID
+    ) {
+      throw new GrpcError(
+        status.INTERNAL,
+        'Google recaptcha v2 supports only WEB and ANDROID clients.',
+      );
+    }
+
     const response = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
       {},
