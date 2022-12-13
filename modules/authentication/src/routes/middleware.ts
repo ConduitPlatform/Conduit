@@ -119,9 +119,16 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (!config.captcha.enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
-  const { clientId } = call.request.context;
   const { captcha } = call.request.params;
   const secret = config.captcha.google.secretKey;
+  const { clientId } = call.request.context;
+  if (clientId === 'anonymous-client') {
+    throw new GrpcError(
+      status.INTERNAL,
+      'Can not apply captcha middleware on anonymous clients. Client validation should be enabled.',
+    );
+  }
+
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const platform = client!.platform;
 
