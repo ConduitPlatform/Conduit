@@ -1,16 +1,15 @@
-const migrateOwnerModule = require('../migrateV10_V15/migrationFiles/schemaOwnerModule');
-const migrateSchemaCollectionName = require('../migrateV10_V15/migrationFiles/schemaCollectionName');
-const migrateV10_V11 = require('../migrateV10_V15/migrationFiles/migrateV10_V11');
-const migrateV11_V12 = require('../migrateV10_V15/migrationFiles/migrateV11_V12');
-const migrateV12_V13 = require('../migrateV10_V15/migrationFiles/migrateV12_V13');
-const migrateV13_V14 = require('../migrateV10_V15/migrationFiles/migrateV13_V14');
-const migrateV14_V15 = require('../migrateV10_V15/migrationFiles/migrateV14_V15');
-const migrateRemoveKakaoFromUser = require('../migrateV10_V15/migrationFiles/removeKakaoFromUser');
-const { MongoConnection } = require('./mongoConnection');
-
+import { migrateOwnerModule } from './migrationFiles/schemaOwnerModule.js';
+import { migrateSchemaCollectionName } from './migrationFiles/schemaCollectionName.js';
+import { migrateV10_V11 } from './migrationFiles/migrateV10_V11.js';
+import { migrateV11_V12 } from './migrationFiles/migrateV11_V12.js';
+import { migrateV12_V13 } from './migrationFiles/migrateV12_V13.js';
+import { migrateV13_V14 } from './migrationFiles/migrateV13_V14.js';
+import { migrateV14_V15 } from './migrationFiles/migrateV14_V15.js';
+import { migrateRemoveKakaoFromUser } from './migrationFiles/removeKakaoFromUser.js';
+import * as MongoClient from './mongoConnection.js';
 const migrate = async () => {
   try {
-    await MongoConnection;
+    await MongoClient;
     await migrateV10_V15();
     console.log('Migration completed successfully');
     process.exit(0);

@@ -1,5 +1,5 @@
-const db = require('../mongoConnection');
-const migrateSchemaOwnerModule = async () => {
+import db from '../mongoConnection.js';
+export async function migrateOwnerModule() {
 
     const dictionary = {
       AccessToken: 'authentication',
@@ -50,9 +50,3 @@ const migrateSchemaOwnerModule = async () => {
     }
   }
 ;
-
-const migrateOwnerModule = async () => {
-  await migrateSchemaOwnerModule();
-};
-
-module.exports = migrateOwnerModule;

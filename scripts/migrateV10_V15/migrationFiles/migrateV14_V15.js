@@ -1,5 +1,8 @@
-const db = require('../mongoConnection');
-const { isNil } = require('lodash');
+import db from '../mongoConnection.js';
+import pkg from 'lodash';
+const {  isNil } = pkg;
+
+
 
 
 const migrateV15_userIdToAccessTokenSchemas = async () => {
@@ -50,23 +53,23 @@ const migrateV15_config = async () => {
   Object.assign(authConfigData, { twoFa: { methods: { sms: false, authenticator: true } } });
 
   Object.assign(authConfigData, {
-    refreshTokens: {
-      enabled: authConfigData.generateRefreshToken,
-      expiryPeriod: authConfigData.refreshTokenInvalidationPeriod,
-      setCookie: authConfigData.setCookies?.enabled,
-      cookieOptions: authConfigData.setCookies?.options,
+      refreshTokens: {
+        enabled: authConfigData.generateRefreshToken,
+        expiryPeriod: authConfigData.refreshTokenInvalidationPeriod,
+        setCookie: authConfigData.setCookies?.enabled,
+        cookieOptions: authConfigData.setCookies?.options,
+      },
     },
-    }
   );
 
   Object.assign(authConfigData, {
-    accessTokens: {
-      expiryPeriod: authConfigData.tokenInvalidationPeriod,
-      jwtSecret: authConfigData.jwtSecret,
-      setCookie: authConfigData.setCookies?.enabled,
-      cookieOptions: authConfigData.setCookies?.options,
-    }
-  }
+      accessTokens: {
+        expiryPeriod: authConfigData.tokenInvalidationPeriod,
+        jwtSecret: authConfigData.jwtSecret,
+        setCookie: authConfigData.setCookies?.enabled,
+        cookieOptions: authConfigData.setCookies?.options,
+      },
+    },
   );
 
 
@@ -146,7 +149,7 @@ const migrateV14_V15_System_Schemas = async () => {
 };
 
 
-const migrateV14_V15 = async () => {
+export async function migrateV14_V15() {
   await migrateV15_userIdToAccessTokenSchemas();
   await migrateV15_userIdToRefreshTokenSchemas();
   await migrateV15_userIdToTokenSchemas();
@@ -156,5 +159,5 @@ const migrateV14_V15 = async () => {
   await migrateV14_V15_System_Schemas();
 };
 
-module.exports = migrateV14_V15;
+
 

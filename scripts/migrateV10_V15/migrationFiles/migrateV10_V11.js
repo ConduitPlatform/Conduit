@@ -1,11 +1,13 @@
-const db = require('../mongoConnection');
-const { isNil, merge } = require('lodash');
+import db from '../mongoConnection.js';
+import pkg from 'lodash';
+const { merge, isNil } = pkg;
+
 
 const migrateV11_V15_CustomEndpoints = async () => {
   const documents = db.collection('customendpoints');
   const customEndpoints = await documents.find().toArray();
   for (const customEndpoint of customEndpoints) {
-    if (!isNil(customEndpoint.queries) && isNil(customEndpoint.query)) {
+    if (!isNil(customEndpoint.queries) &&  isNil(customEndpoint.query)) {
       await documents.updateMany({_id: customEndpoint._id}, {$set: customEndpoint.query = customEndpoint.queries});
     }
   }
@@ -86,11 +88,10 @@ const migrateV11_V15_FoldersToContainers = async () => {
   }
 }
 
-const migrateV10_V11 = async () => {
+export async function migrateV10_V11() {
   await migrateV11_V15_CustomEndpoints();
   await migrateV10_V11_SchemaDefinitions();
   await migrateV11_V15_ModelOptions();
   await migrateV11_V15_FoldersToContainers();
 }
 
-module.exports = migrateV10_V11;

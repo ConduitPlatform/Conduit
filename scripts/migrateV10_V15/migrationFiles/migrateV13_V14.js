@@ -1,9 +1,8 @@
-const db = require('../mongoConnection');
+import db from '../mongoConnection.js';
 
-const migrateV13_V14 = async () => {
+export async function migrateV13_V14() {
   const documents = db.collection('_declaredschemas');
   await documents.updateMany({ name: 'Client' }, { $set: { ownerModule: 'router' } });
 };
 
 
-module.exports = migrateV13_V14;

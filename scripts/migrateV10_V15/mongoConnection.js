@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
 
 const client = new MongoClient(process.env.DB_CONN_URI);
 async function connect() {
@@ -14,8 +14,8 @@ async function connect() {
 
 connect().then(r => console.log(r)).catch(e => console.log(e))
 
-
-module.exports = client.db(process.env.DB_NAME);
+const db = client.db(process.env.DB_NAME);
+export default db;
 
 
 

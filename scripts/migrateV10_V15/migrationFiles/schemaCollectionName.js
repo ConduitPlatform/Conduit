@@ -1,4 +1,4 @@
-const db = require('../mongoConnection');
+import db from '../mongoConnection.js';
 
 const pluralization = [
   [/(m)an$/gi, '$1en'],
@@ -77,7 +77,7 @@ function pluralize(str) {
   return str;
 }
 
-const migrateSchemaCollectionName = async () => {
+export async function migrateSchemaCollectionName() {
   const documents = db.collection('_declaredschemas');
   const schemas = await documents.find({}).toArray();
   for (const schema of schemas) {
@@ -88,4 +88,4 @@ const migrateSchemaCollectionName = async () => {
   }
 };
 
-module.exports = migrateSchemaCollectionName;
+// module.exports = migrateSchemaCollectionName;

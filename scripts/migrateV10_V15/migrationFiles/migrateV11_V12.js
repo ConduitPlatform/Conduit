@@ -1,5 +1,7 @@
-const db = require('../mongoConnection');
-const { isNil } = require('lodash');
+import db from '../mongoConnection.js';
+import pkg from 'lodash';
+const {  isNil } = pkg;
+
 
 const migrateV11_V12_migrateLocalAuthConfig = async () => {
 
@@ -42,11 +44,9 @@ const migrateV11_V12_customEndpoints = async () => {
 };
 
 
-const migrateV11_V12 = async () => {
+export async function migrateV11_V12() {
   await migrateV11_V12_migrateLocalAuthConfig();
   await migrateV11_V12_cmsOwners();
   await migrateV11_V12_customEndpoints();
 
 };
-
-module.exports = migrateV11_V12;

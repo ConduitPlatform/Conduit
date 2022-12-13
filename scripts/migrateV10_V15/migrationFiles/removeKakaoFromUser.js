@@ -1,6 +1,6 @@
-const db = require('../mongoConnection');
+import db from '../mongoConnection.js';
 
-const migrateRemoveKakaoFromUser = async () => {
+export async function migrateRemoveKakaoFromUser() {
   const documents = db.collection('_declaredschemas');
   const schema = await documents.findOne({ name: 'User' });
 
@@ -11,5 +11,3 @@ const migrateRemoveKakaoFromUser = async () => {
   await db.collection('users').updateMany({'fields.kakao': { $exists: true }}, { $unset: { 'fields.kakao': '' ,'compiledFields.kakao': ''} });
 
 };
-
-module.exports = migrateRemoveKakaoFromUser;

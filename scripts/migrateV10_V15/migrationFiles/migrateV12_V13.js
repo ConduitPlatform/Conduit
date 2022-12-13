@@ -1,6 +1,6 @@
-const db = require('../mongoConnection');
+import db from '../mongoConnection.js';
 
-const migateV12_V13 = async () => {
+export async function migrateV12_V13() {
   const documents = db.collection('_declaredschemas');
   const cmsSchemas = await documents.find({ $or: [
       { 'modelOptions.conduit.cms.crudOperations': true },
@@ -37,5 +37,3 @@ const migateV12_V13 = async () => {
     });
   }
 }
-
-module.exports = migateV12_V13;
