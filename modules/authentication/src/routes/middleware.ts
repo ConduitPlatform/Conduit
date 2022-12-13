@@ -8,13 +8,12 @@ import {
   Cookies,
   PlatformTypesEnum,
 } from '@conduitplatform/grpc-sdk';
-import { AuthUtils } from '../utils';
+import { AuthUtils, validateCaptcha } from '../utils';
 import { AccessToken, Client } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
-import axios from 'axios';
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -120,7 +119,13 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
   const { captcha } = call.request.params;
-  const secret = config.captcha.google.secretKey;
+  const { recaptcha, hcaptcha } = config.captcha;
+  if (recaptcha.active && hcaptcha.active) {
+    throw new GrpcError(
+      status.INTERNAL,
+      'Recaptcha and hcaptcha can not be active simultaneously.',
+    );
+  }
   const { clientId } = call.request.context;
   if (clientId === 'anonymous-client') {
     throw new GrpcError(
@@ -128,31 +133,22 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
       'Can not apply captcha middleware on anonymous clients. Client validation should be enabled.',
     );
   }
+  const secret = config.captcha[config.captcha.provider].secretKey;
+  if (secret === '') {
+    throw new GrpcError(
+      status.INTERNAL,
+      `Secret key for ${config.captcha.provider} is required.`,
+    );
+  }
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const platform = client!.platform;
-
-  if (!secret) {
-    throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-  }
   if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
     throw new GrpcError(
       status.INTERNAL,
       'Google recaptcha v2 supports only WEB and ANDROID clients.',
     );
   }
-  const response = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
-    {},
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-      },
-    },
-  );
-  if (!response.data.success) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
-  }
 
-  return {};
+  return validateCaptcha(config.captcha.provider, secret, captcha);
 }

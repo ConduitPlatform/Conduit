@@ -1,11 +1,19 @@
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk, { GrpcError, Indexable, SMS } from '@conduitplatform/grpc-sdk';
-import { Token, User } from '../models';
+import ConduitGrpcSdk, {
+  GrpcError,
+  Indexable,
+  ParsedRouterRequest,
+  PlatformTypesEnum,
+  SMS,
+} from '@conduitplatform/grpc-sdk';
+import { Client, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
+import { Config } from '../config';
+import axios from 'axios';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -125,4 +133,26 @@ export namespace AuthUtils {
       return true;
     }
   }
+}
+
+export async function validateCaptcha(provider: string, secret: string, captcha: string) {
+  let verifyCaptchaUrl = '';
+  if (provider === 'recaptcha') {
+    verifyCaptchaUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`;
+  } else if (provider === 'hcaptcha') {
+    verifyCaptchaUrl = `https://hcaptcha.com/siteverify?secret=${secret}&response=${captcha}`;
+  }
+  const response = await axios.post(
+    verifyCaptchaUrl,
+    {},
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+      },
+    },
+  );
+  if (!response.data.success) {
+    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
+  }
+  return {};
 }

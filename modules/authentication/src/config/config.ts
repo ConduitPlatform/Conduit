@@ -42,9 +42,29 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    secretKey: {
+    provider: {
       format: 'String',
-      default: '',
+      default: 'recaptcha',
+    },
+    recaptcha: {
+      active: {
+        format: 'Boolean',
+        default: false,
+      },
+      secretKey: {
+        format: 'String',
+        default: '',
+      },
+    },
+    hcaptcha: {
+      active: {
+        format: 'Boolean',
+        default: false,
+      },
+      secretKey: {
+        format: 'String',
+        default: '',
+      },
     },
   },
 };
