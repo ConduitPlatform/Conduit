@@ -1,6 +1,5 @@
 import db from '../mongoConnection.js';
-import pkg from 'lodash';
-const {  isNil } = pkg;
+import _ from 'lodash';
 
 
 
@@ -46,7 +45,7 @@ const migrateV15_config = async () => {
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
   const authConfigData = authConfig?.moduleConfigs?.authentication;
-  if (isNil(authConfigData) || isNil(authConfigData.generateRefreshToken)) {
+  if (_.isNil(authConfigData) || _.isNil(authConfigData.generateRefreshToken)) {
     return;
   }
 

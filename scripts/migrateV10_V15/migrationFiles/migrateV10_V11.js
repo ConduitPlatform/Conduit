@@ -1,13 +1,12 @@
 import db from '../mongoConnection.js';
-import pkg from 'lodash';
-const { merge, isNil } = pkg;
+import _ from 'lodash';
 
 
 const migrateV11_V15_CustomEndpoints = async () => {
   const documents = db.collection('customendpoints');
   const customEndpoints = await documents.find().toArray();
   for (const customEndpoint of customEndpoints) {
-    if (!isNil(customEndpoint.queries) &&  isNil(customEndpoint.query)) {
+    if (!_.isNil(customEndpoint.queries) &&  _.isNil(customEndpoint.query)) {
       await documents.updateMany({_id: customEndpoint._id}, {$set: customEndpoint.query = customEndpoint.queries});
     }
   }
@@ -20,7 +19,7 @@ const migrateV10_V11_SchemaDefinitions = async () => {
   if(schemaDefinitions.length === 0){
     return;
   }
-  if(!isNil(schemaDefinitions)){
+  if(!_.isNil(schemaDefinitions)){
     for(const schema of schemaDefinitions) {
       const declaredSchema = await documents.findOne({ name: schema.name});
       let modelOptions = {
@@ -33,7 +32,7 @@ const migrateV10_V11_SchemaDefinitions = async () => {
         }
       };
         try {
-          modelOptions = merge(
+          modelOptions = _.merge(
             JSON.parse(schema.modelOptions),
             modelOptions,
           );
@@ -46,7 +45,7 @@ const migrateV10_V11_SchemaDefinitions = async () => {
         // DeclaredSchema exists, missing metadata
         modelOptions =
           declaredSchema.modelOptions // possibly undefined
-            ? merge(declaredSchema.modelOptions, modelOptions)
+            ? _.merge(declaredSchema.modelOptions, modelOptions)
             : modelOptions;
       }
        const newSchema = { name: schema.name, fields: schema.fields, modelOptions: modelOptions };

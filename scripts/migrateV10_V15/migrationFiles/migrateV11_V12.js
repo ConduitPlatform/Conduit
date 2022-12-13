@@ -1,13 +1,13 @@
 import db from '../mongoConnection.js';
-import pkg from 'lodash';
-const {  isNil } = pkg;
+import _ from 'lodash';
+
 
 
 const migrateV11_V12_migrateLocalAuthConfig = async () => {
 
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
-  if (!isNil(authConfig)) {
+  if (!_.isNil(authConfig)) {
     if (authConfig.moduleConfigs.authentication.local['verificationRequired']) {
       authConfig.moduleConfigs.authentication.local.verification = {
         required: authConfig.moduleConfigs.authentication.local['verificationRequired'],
@@ -37,7 +37,7 @@ const migrateV11_V12_customEndpoints = async () => {
   const documents = db.collection('customendpoints');
   const customEndpoints = await documents.find().toArray();
   for (const customEndpoint of customEndpoints) {
-    if (!isNil(customEndpoint.queries) && isNil(customEndpoint.query)) {
+    if (!_.isNil(customEndpoint.queries) && _.isNil(customEndpoint.query)) {
       await documents.updateOne({ _id: customEndpoint._id }, { $set: { query: customEndpoint.queries } });
     }
   }
