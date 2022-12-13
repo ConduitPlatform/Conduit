@@ -133,7 +133,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const platform = client!.platform;
 
   if (!secret) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Secret key for recaptcha is required.');
+    throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
   if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
     throw new GrpcError(
