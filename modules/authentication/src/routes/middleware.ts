@@ -122,7 +122,6 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const { clientId } = call.request.context;
   const { captcha } = call.request.params;
   const secret = config.captcha.google.secretKey;
-  const version = config.captcha.google.version;
   const captchaActive = config.captcha.google.active;
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const platform = client!.platform;
@@ -134,23 +133,12 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
         'Secret key for recaptcha is required.',
       );
     }
-    if (version != 'v2' && version != 'v3') {
-      throw new GrpcError(
-        status.INTERNAL,
-        'Google recaptcha only supports v2 and v3 versions',
-      );
-    }
-    if (
-      version === 'v2' &&
-      platform != PlatformTypesEnum.WEB &&
-      platform != PlatformTypesEnum.ANDROID
-    ) {
+    if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
       throw new GrpcError(
         status.INTERNAL,
         'Google recaptcha v2 supports only WEB and ANDROID clients.',
       );
     }
-
     const response = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
       {},

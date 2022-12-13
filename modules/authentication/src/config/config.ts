@@ -47,10 +47,6 @@ export default {
         format: 'Boolean',
         default: false,
       },
-      version: {
-        format: 'String',
-        default: 'v2',
-      },
       secretKey: {
         format: 'String',
         default: '',
