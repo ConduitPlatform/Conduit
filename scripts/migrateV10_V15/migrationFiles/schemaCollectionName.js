@@ -87,5 +87,3 @@ export async function migrateSchemaCollectionName() {
     }
   }
 };
-
-// module.exports = migrateSchemaCollectionName;
