@@ -122,35 +122,30 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const { clientId } = call.request.context;
   const { captcha } = call.request.params;
   const secret = config.captcha.google.secretKey;
-  const captchaActive = config.captcha.google.active;
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const platform = client!.platform;
 
-  if (captchaActive) {
-    if (!secret) {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        'Secret key for recaptcha is required.',
-      );
-    }
-    if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
-      throw new GrpcError(
-        status.INTERNAL,
-        'Google recaptcha v2 supports only WEB and ANDROID clients.',
-      );
-    }
-    const response = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        },
-      },
-    );
-    if (!response.data.success) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
-    }
+  if (!secret) {
+    throw new GrpcError(status.UNAUTHENTICATED, 'Secret key for recaptcha is required.');
   }
+  if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
+    throw new GrpcError(
+      status.INTERNAL,
+      'Google recaptcha v2 supports only WEB and ANDROID clients.',
+    );
+  }
+  const response = await axios.post(
+    `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
+    {},
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+      },
+    },
+  );
+  if (!response.data.success) {
+    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
+  }
+
   return {};
 }

@@ -42,15 +42,9 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    google: {
-      active: {
-        format: 'Boolean',
-        default: false,
-      },
-      secretKey: {
-        format: 'String',
-        default: '',
-      },
+    secretKey: {
+      format: 'String',
+      default: '',
     },
   },
 };
