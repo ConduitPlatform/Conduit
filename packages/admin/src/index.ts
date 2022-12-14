@@ -379,7 +379,6 @@ export default class AdminModule extends IConduitAdmin {
 
   private async handleDatabase() {
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async existing => {

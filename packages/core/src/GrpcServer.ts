@@ -88,12 +88,12 @@ export class GrpcServer {
         const coreMigrationsFilePath = path.resolve(
           __dirname,
           'config-manager/migrations',
-          'migrations',
+          'index',
         );
         const adminMigrationsFilePath = path.resolve(
           __dirname,
           '../../admin/dist/migrations',
-          'migrations',
+          'index',
         );
         await this.commons
           .getConfigManager()
