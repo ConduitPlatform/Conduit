@@ -251,7 +251,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     // import the migrations files
     const imported = await require(this._migrationFilesPath);
     let migrations = imported.migrationFilesArray as Array<Migration>;
-    if (isNil(migrations) || migrations.length === 0) {
+    if (isNil(migrations)) {
       return callback({ code: status.INTERNAL, message: 'Migrations not found' });
     }
     let upgrade = true;

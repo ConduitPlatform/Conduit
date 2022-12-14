@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   TYPE,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  MigrationStatus,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil, merge, isEmpty } from 'lodash';
@@ -24,6 +25,33 @@ export class SchemaAdmin {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController,
   ) {}
+
+  async migrateModule(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const moduleName = call.request.params.moduleName;
+    const moduleVersion = await this.grpcSdk.state!.getKey(`moduleVersion.${moduleName}`);
+    if (isNil(moduleVersion)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        `No previous version of ${moduleName} stored`,
+      );
+    }
+    const deploymentState = await this.grpcSdk.config.getDeploymentState();
+    const moduleState = deploymentState.modules.filter(
+      v => v.moduleName === moduleName,
+    )[0];
+    // module should be available and non_serving
+    const conduitClient = this.grpcSdk.getConduitClient(moduleName)!;
+    const migrationStatus = await conduitClient
+      .runMigrations({ from: moduleVersion, to: moduleState.moduleVersion })
+      .then(res => Promise.resolve(res.migrationStatus))
+      .catch(e => {
+        throw new Error(e.message); // TODO: remove after debugging
+      });
+    if (migrationStatus !== MigrationStatus.READY) {
+      throw new GrpcError(status.INTERNAL, 'Migrations failed');
+    }
+    return 'Migrations completed';
+  }
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {

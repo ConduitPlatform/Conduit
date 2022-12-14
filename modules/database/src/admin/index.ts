@@ -51,6 +51,19 @@ export class AdminHandlers {
 
   private registerAdminRoutes() {
     this.routingManager.clear();
+    // Migrations
+    this.routingManager.route(
+      {
+        path: '/migrations/:moduleName',
+        action: ConduitRouteActions.POST,
+        description: `Triggers manual migrations for a module.`,
+        urlParams: {
+          moduleName: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('TriggerModuleMigrations', 'String'),
+      this.schemaAdmin.migrateModule.bind(this.schemaAdmin),
+    );
     // Schemas
     this.routingManager.route(
       {

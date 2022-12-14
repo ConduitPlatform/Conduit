@@ -83,7 +83,25 @@ export class GrpcServer {
     this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
-      .then(() => this.commons.getConfigManager().registerAppConfig())
+      .then(async () => {
+        await this.commons.getConfigManager().registerAppConfig();
+        const coreMigrationsFilePath = path.resolve(
+          __dirname,
+          'config-manager/migrations',
+          'migrations',
+        );
+        const adminMigrationsFilePath = path.resolve(
+          __dirname,
+          '../../admin/dist/migrations',
+          'migrations',
+        );
+        await this.commons
+          .getConfigManager()
+          .checkAndTriggerPackageMigrations(
+            coreMigrationsFilePath,
+            adminMigrationsFilePath,
+          );
+      })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });

@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   GrpcServer,
   HealthCheckStatus,
+  ManifestManager,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -26,6 +27,7 @@ import { isNil } from 'lodash';
 import convict from 'convict';
 import fs from 'fs-extra';
 import path from 'path';
+import { Migration } from '@conduitplatform/grpc-sdk/dist/interfaces/Migration';
 
 export default class ConfigManager implements IConfigManager {
   private readonly serviceDiscovery: ServiceDiscovery;
@@ -204,7 +206,6 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.database!.createSchemaFromAdapter(
       models.Version.getInstance(this.grpcSdk.database!),
     );
-    await runMigrations(this.grpcSdk);
     this._configStorage.onDatabaseAvailable();
   }
 
@@ -355,15 +356,56 @@ export default class ConfigManager implements IConfigManager {
       });
   }
 
-  async checkAndTriggerPackageMigrations() {
-    const coreModule = this.serviceDiscovery.registeredModules.get('core');
-    const migrationRequirement = await this.serviceDiscovery.checkModuleMigrations(
-      coreModule!,
-    );
-    if (migrationRequirement) {
-      // TODO: run migrations for core and admin
-      await runMigrations(this.grpcSdk);
+  async checkAndTriggerPackageMigrations(
+    coreMigrationsFilePath: string,
+    adminMigrationsFilePath: string,
+  ) {
+    const core = this.serviceDiscovery.registeredModules.get('core');
+    const migrationRequirement = await this.serviceDiscovery.checkModuleMigrations(core!);
+    if (!migrationRequirement) {
+      await this.grpcSdk.state!.setKey(`moduleVersion.core`, core!.moduleVersion);
+      return;
     }
-    await this.registerAppConfig();
+    const storedVersion = await this.grpcSdk.state!.getKey(`moduleVersion.core`);
+    const from = ManifestManager.getInstance().parseTag(storedVersion!);
+    const deployedVersion = core!.moduleVersion;
+    const to = ManifestManager.getInstance().parseTag(deployedVersion);
+
+    const coreImport = await require(coreMigrationsFilePath);
+    const adminImport = await require(adminMigrationsFilePath);
+    const coreMigrations = coreImport.migrationFilesArray as Array<Migration>;
+    const adminMigrations = adminImport.migrationFilesArray as Array<Migration>;
+
+    if (isNil(coreMigrations) || isNil(adminMigrations)) {
+      ConduitGrpcSdk.Logger.error(`Migration files not found for core and admin`);
+    }
+    // check if upgrade or downgrade and execute migration functions
+    let upgrade = true;
+    if (
+      from.preVersionOne > to.preVersionOne ||
+      (from.majorVersion > to.majorVersion && from.preVersionOne >= to.preVersionOne)
+    )
+      upgrade = false;
+
+    // filter to find migration files that match the targeted versions
+    const migrations = coreMigrations.concat(adminMigrations).filter(m => {
+      if (
+        (m.from === from.tag || m.from === to.tag) &&
+        (m.to === from.tag || m.to === to.tag)
+      )
+        return m;
+    });
+    if (migrations.length === 0) {
+      ConduitGrpcSdk.Logger.error(`Migration files not found for core and admin`);
+    }
+    try {
+      for (const m of migrations) {
+        if (upgrade) await m.up(this.grpcSdk);
+        else await m.down(this.grpcSdk);
+      }
+      await this.grpcSdk.state!.setKey(`moduleVersion.core`, core!.moduleVersion);
+    } catch {
+      ConduitGrpcSdk.Logger.error(`Migrations failed for core and admin`);
+    }
   }
 }

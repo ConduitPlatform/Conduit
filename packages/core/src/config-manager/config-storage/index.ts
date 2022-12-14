@@ -112,7 +112,6 @@ export class ConfigStorage {
     const registeredModules = [...this.serviceDiscovery.registeredModules.keys()];
     if (versions.length === 0) {
       for (const module of registeredModules) {
-        if (module === 'core') continue; //TODO: remove this after core & admin migrations
         const version = await this.grpcSdk.state!.getKey(`moduleVersion.${module}`);
         await models.Version.getInstance().create({ name: module, version: version! });
       }
@@ -122,7 +121,6 @@ export class ConfigStorage {
           this.grpcSdk.state!.setKey(`moduleVersion.${v.name}`, v.version);
       });
       for (const module of registeredModules) {
-        if (module === 'core') continue; //TODO: remove this after core & admin migrations
         const redisVersion = await this.grpcSdk.state!.getKey(`moduleVersion.${module}`);
         const dbVersion = await models.Version.getInstance().findOne({ name: module });
         if (isNil(dbVersion)) {

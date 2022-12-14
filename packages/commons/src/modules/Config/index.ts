@@ -10,5 +10,8 @@ export abstract class IConfigManager {
   abstract getModuleUrlByName(moduleName: string): string | undefined;
   abstract isModuleUp(moduleName: string): Promise<boolean>;
   abstract configurePackage(moduleName: string, config: any, schema: any): Promise<any>;
-  abstract checkAndTriggerPackageMigrations(): Promise<any>;
+  abstract checkAndTriggerPackageMigrations(
+    coreMigrationsFilePath: string,
+    adminMigrationsFilePath: string,
+  ): Promise<any>;
 }

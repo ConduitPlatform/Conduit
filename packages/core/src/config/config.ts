@@ -6,6 +6,6 @@ export default {
   },
   autoMigration: {
     format: 'Boolean',
-    default: true,
+    default: false,
   },
 };

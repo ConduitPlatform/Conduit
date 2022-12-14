@@ -169,7 +169,6 @@ export class ServiceDiscovery {
         ConduitGrpcSdk.Logger.info(
           `Manual migration of ${module.moduleName} is required`,
         );
-        return Promise.resolve(ModuleRegistrationState.PENDING); // ??
       } else {
         // trigger automatic migrations and update module version in redis after that
         const migrationStatus = await this.triggerModuleMigrations(module);
