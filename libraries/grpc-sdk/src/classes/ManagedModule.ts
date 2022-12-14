@@ -21,7 +21,7 @@ import { ConfigController } from './ConfigController';
 import { isNil, kebabCase, merge } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { Migration } from '../interfaces/Migration';
+import { Migration } from '../interfaces';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   private _activated: boolean = false;

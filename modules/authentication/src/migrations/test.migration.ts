@@ -1,5 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { Migration } from '@conduitplatform/grpc-sdk/dist/interfaces/Migration';
+import ConduitGrpcSdk, { Migration } from '@conduitplatform/grpc-sdk';
 
 const testMigration1 = {
   schemaName: 'TwoFactorSecret',

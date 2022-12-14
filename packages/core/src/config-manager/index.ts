@@ -27,7 +27,7 @@ import { isNil } from 'lodash';
 import convict from 'convict';
 import fs from 'fs-extra';
 import path from 'path';
-import { Migration } from '@conduitplatform/grpc-sdk/dist/interfaces/Migration';
+import { Migration } from '@conduitplatform/grpc-sdk';
 
 export default class ConfigManager implements IConfigManager {
   private readonly serviceDiscovery: ServiceDiscovery;

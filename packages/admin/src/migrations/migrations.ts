@@ -1,5 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { Migration } from '@conduitplatform/grpc-sdk/dist/interfaces/Migration';
+import ConduitGrpcSdk, { Migration } from '@conduitplatform/grpc-sdk';
 
 const isSuperAdminToAdmin = {
   schemaName: 'Admin',
@@ -16,7 +15,7 @@ const isSuperAdminToAdmin = {
       sqlQuery: {
         query:
           'ALTER TABLE IF EXISTS "cnd_Admin" ADD COLUMN "isSuperAdmin";' +
-          'UPDATE TABLE IF EXISTS "cnd_Admin" SET "isSuperAdmin"=true;',
+          'UPDATE TABLE IF EXISTS "cnd_Admin" SET isSuperAdmin=true;',
       },
     };
     await grpcSdk.database!.rawQuery('Admin', query);

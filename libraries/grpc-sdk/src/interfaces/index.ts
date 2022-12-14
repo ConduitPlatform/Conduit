@@ -5,3 +5,4 @@ export * from './GrpcCallback';
 export * from './Indexable';
 export * from './ModuleActivation';
 export * from './RawQuery';
+export * from './Migration';
