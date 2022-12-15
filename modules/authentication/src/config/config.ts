@@ -42,6 +42,24 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    routes: {
+      login: {
+        format: 'Boolean',
+        default: false,
+      },
+      register: {
+        format: 'Boolean',
+        default: false,
+      },
+      oAuth2: {
+        format: 'Boolean',
+        default: false,
+      },
+    },
+    platform: {
+      format: 'String',
+      default: 'anonymous-client',
+    },
     secretKey: {
       format: 'String',
       default: '',

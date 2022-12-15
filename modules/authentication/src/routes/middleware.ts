@@ -6,7 +6,6 @@ import {
   Indexable,
   Headers,
   Cookies,
-  PlatformTypesEnum,
 } from '@conduitplatform/grpc-sdk';
 import { AuthUtils } from '../utils';
 import { AccessToken, Client } from '../models';
@@ -122,25 +121,20 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const { captcha } = call.request.params;
   const secret = config.captcha.google.secretKey;
   const { clientId } = call.request.context;
-  if (clientId === 'anonymous-client') {
-    throw new GrpcError(
-      status.INTERNAL,
-      'Can not apply captcha middleware on anonymous clients. Client validation should be enabled.',
-    );
-  }
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const platform = client!.platform;
-
+  const acceptablePlatform = config.captcha.platform;
   if (!secret) {
     throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
-  if (platform != PlatformTypesEnum.WEB && platform != PlatformTypesEnum.ANDROID) {
+  if (platform != acceptablePlatform) {
     throw new GrpcError(
       status.INTERNAL,
-      'Google recaptcha v2 supports only WEB and ANDROID clients.',
+      `Captcha is enabled only for ${acceptablePlatform} clients`,
     );
   }
+
   const response = await axios.post(
     `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
     {},
