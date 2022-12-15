@@ -248,7 +248,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.oAuth2
             ? ['captchaMiddleware']
-            : [],
+            : undefined,
       },
       new ConduitRouteReturnDefinition(
         `${this.capitalizeProvider()}InitResponse`,

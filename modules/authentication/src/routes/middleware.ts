@@ -119,24 +119,27 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
   const { captcha } = call.request.params;
-  const secret = config.captcha.google.secretKey;
+  const { acceptablePlatform, secretKey } = config.captcha;
   const { clientId } = call.request.context;
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
-  const platform = client!.platform;
-  const acceptablePlatform = config.captcha.platform;
-  if (!secret) {
-    throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-  }
-  if (platform != acceptablePlatform) {
-    throw new GrpcError(
-      status.INTERNAL,
-      `Captcha is enabled only for ${acceptablePlatform} clients`,
-    );
+  if (client && clientId !== 'anonymous-client') {
+    const clientPlatform = client!.platform;
+    Object.keys(acceptablePlatform).forEach(platform => {
+      if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
+        throw new GrpcError(
+          status.INTERNAL,
+          `${clientPlatform} clients can not use captcha.`,
+        );
+      }
+    });
   }
 
+  if (!secretKey) {
+    throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+  }
   const response = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${captcha}`,
+    `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captcha}`,
     {},
     {
       headers: {

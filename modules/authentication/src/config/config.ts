@@ -56,9 +56,15 @@ export default {
         default: false,
       },
     },
-    platform: {
-      format: 'String',
-      default: 'anonymous-client',
+    acceptablePlatform: {
+      android: {
+        format: 'Boolean',
+        default: false,
+      },
+      web: {
+        format: 'Boolean',
+        default: true,
+      },
     },
     secretKey: {
       format: 'String',

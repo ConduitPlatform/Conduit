@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
+  ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   ConduitString,
   ConfigController,
@@ -47,7 +48,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.register
             ? ['captchaMiddleware']
-            : [],
+            : undefined,
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -62,11 +63,11 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
-          middlewares:
-            captchaConfig.enabled && captchaConfig.routes.login
-              ? ['captchaMiddleware']
-              : [],
         },
+        middlewares:
+          captchaConfig.enabled && captchaConfig.routes.login
+            ? ['captchaMiddleware']
+            : undefined,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
