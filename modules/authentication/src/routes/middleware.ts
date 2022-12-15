@@ -151,7 +151,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     },
   );
   if (!response.data.success) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token');
+    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
   }
 
   return {};
