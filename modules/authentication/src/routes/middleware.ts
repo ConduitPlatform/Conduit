@@ -119,6 +119,9 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
   const { captcha } = call.request.params;
+  if (isNil(captcha)) {
+    throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+  }
   const { acceptablePlatform, secretKey } = config.captcha;
   const { clientId } = call.request.context;
 
