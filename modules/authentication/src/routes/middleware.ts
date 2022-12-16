@@ -126,7 +126,8 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
   if (clientId !== 'anonymous-client') {
-    // if is anonymous client then do the proper checks for platform validation
+    // if is not an anonymous client then do the proper checks for platform validation
+    // only web and android clients are allowed to use captcha
     if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
       throw new GrpcError(
         status.INTERNAL,
@@ -135,7 +136,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     }
 
     Object.keys(acceptablePlatform).forEach(platform => {
-      // do the proper checks based on configuration
+      // do the proper validation based on configuration
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
         throw new GrpcError(
           status.INTERNAL,
