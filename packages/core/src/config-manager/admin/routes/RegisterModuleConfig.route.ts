@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
-import getConfigRoute from './GetConfigRoute';
-import setConfigRoute from './SetConfigRoute';
+import getModuleConfigRoute from './GetModuleConfig.route';
+import setModuleConfigRoute from './SetModuleConfig.route';
 
-export function registerConfigRoute(
+export function registerModuleConfigRoute(
   grpcSdk: ConduitGrpcSdk,
   conduit: ConduitCommons,
   moduleName: string,
@@ -12,7 +12,7 @@ export function registerConfigRoute(
 ) {
   let response;
   routeAction === ConduitRouteActions.GET
-    ? (response = getConfigRoute(grpcSdk, moduleName, configSchema))
-    : (response = setConfigRoute(moduleName, grpcSdk, conduit, configSchema));
+    ? (response = getModuleConfigRoute(grpcSdk, moduleName, configSchema))
+    : (response = setModuleConfigRoute(moduleName, grpcSdk, conduit, configSchema));
   return response;
 }

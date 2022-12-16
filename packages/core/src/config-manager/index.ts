@@ -16,7 +16,7 @@ import {
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
-import { registerConfigRoute } from './admin/routes';
+import { getModulesRoute, registerModuleConfigRoute } from './admin/routes';
 import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
@@ -296,7 +296,15 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        adminRoutes.getMonoConfigRoute(
+          this.grpcSdk,
+          this.serviceDiscovery.registeredModules,
+        ),
+      );
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        registerModuleConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
@@ -307,7 +315,7 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        registerModuleConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
