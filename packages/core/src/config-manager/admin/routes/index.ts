@@ -1,3 +1,4 @@
+export * from './GetModuleConfig.route';
 export * from './GetModules.route';
 export * from './GetMonoConfig.route';
-export * from './RegisterModuleConfig.route';
+export * from './SetModuleConfig.route';

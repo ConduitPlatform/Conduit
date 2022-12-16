@@ -16,7 +16,6 @@ import {
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
-import { getModulesRoute, registerModuleConfigRoute } from './admin/routes';
 import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
@@ -292,7 +291,10 @@ export default class ConfigManager implements IConfigManager {
       );
   }
 
-  private registerConfigRoutes(moduleName: string, configSchema: convict.Config<any>) {
+  private registerConfigRoutes(
+    moduleName: string,
+    configSchema: convict.Config<unknown>,
+  ) {
     this.sdk
       .getAdmin()
       .registerRoute(
@@ -304,23 +306,16 @@ export default class ConfigManager implements IConfigManager {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerModuleConfigRoute(
-          this.grpcSdk,
-          this.sdk,
-          moduleName,
-          configSchema,
-          ConduitRouteActions.GET,
-        ),
+        adminRoutes.getModuleConfigRoute(this.grpcSdk, moduleName, configSchema),
       );
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerModuleConfigRoute(
+        adminRoutes.setModuleConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
           configSchema,
-          ConduitRouteActions.PATCH,
         ),
       );
   }
