@@ -1,13 +1,11 @@
-import ConduitGrpcSdk, {
-  ConduitRouteActions,
-  ConduitRouteParameters,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import convict from 'convict';
 
-export default function getConfigRoute(
+export function getModuleConfigRoute(
   grpcSdk: ConduitGrpcSdk,
   moduleName: string,
-  configSchema: any,
+  configSchema: convict.Config<unknown>,
 ) {
   return new ConduitRoute(
     {
@@ -21,7 +19,7 @@ export default function getConfigRoute(
         config: configSchema,
       },
     ),
-    async (params: ConduitRouteParameters) => {
+    async () => {
       let finalConfig;
       finalConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);
       if (!finalConfig) {
