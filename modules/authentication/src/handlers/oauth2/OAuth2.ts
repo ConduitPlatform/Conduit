@@ -244,6 +244,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         queryParams: {
           scopes: [ConduitString.Optional],
           invitationToken: ConduitString.Optional,
+          captchaToken: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.oAuth2

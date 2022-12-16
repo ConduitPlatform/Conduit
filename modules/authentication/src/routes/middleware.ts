@@ -115,6 +115,8 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
+  const { acceptablePlatform, secretKey } = config.captcha;
+  const { clientId } = call.request.context;
   if (!config.captcha.enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
@@ -122,12 +124,16 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (isNil(captcha)) {
     throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
-  const { acceptablePlatform, secretKey } = config.captcha;
-  const { clientId } = call.request.context;
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
+  const clientPlatform = client!.platform;
+  if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
+    throw new GrpcError(
+      status.INTERNAL,
+      `Captcha is not supported for ${clientPlatform} clients.`,
+    );
+  }
   if (client && clientId !== 'anonymous-client') {
-    const clientPlatform = client!.platform;
     Object.keys(acceptablePlatform).forEach(platform => {
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
         throw new GrpcError(
