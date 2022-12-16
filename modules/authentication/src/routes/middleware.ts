@@ -125,6 +125,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
   if (clientId !== 'anonymous-client') {
+    // if is anonymous client then do the proper checks for platform validation
     if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
       throw new GrpcError(
         status.INTERNAL,
@@ -133,6 +134,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     }
 
     Object.keys(acceptablePlatform).forEach(platform => {
+      // do the proper checks based on configuration
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
         throw new GrpcError(
           status.INTERNAL,
@@ -146,9 +148,11 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (isNil(captchaToken)) {
     throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
+
   if (!secretKey) {
     throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
+
   const response = await axios.post(
     `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
     {},
@@ -158,6 +162,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
       },
     },
   );
+
   if (!response.data.success) {
     throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
   }
