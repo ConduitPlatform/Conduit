@@ -20,13 +20,13 @@ export function getMonoConfigRoute(
       config: ConduitJson.Required,
     }),
     async () => {
-      const monoConfig: { modules: { [module: string]: object } } = {
-        modules: {
-          core: JSON.parse((await grpcSdk.state!.getKey('moduleConfigs.core'))!),
-          admin: JSON.parse((await grpcSdk.state!.getKey('moduleConfigs.admin'))!),
-        },
-      };
-      for (const moduleName of Array.from(registeredModules.keys())) {
+      const monoConfig: { modules: { [moduleName: string]: object } } = { modules: {} };
+      const sortedModules = [
+        'core',
+        'admin',
+        ...Array.from(registeredModules.keys()),
+      ].sort();
+      for (const moduleName of sortedModules) {
         const moduleConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);
         if (moduleConfig) monoConfig.modules[moduleName] = JSON.parse(moduleConfig);
       }
