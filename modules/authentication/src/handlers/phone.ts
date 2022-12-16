@@ -47,8 +47,6 @@ export class PhoneHandlers implements IAuthenticationStrategy {
               A message will be returned which indicates that a verification code has been sent.`,
         bodyParams: {
           phone: ConduitString.Required,
-        },
-        queryParams: {
           captchaToken: ConduitString.Optional,
         },
         middlewares:

@@ -44,8 +44,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
           invitationToken: ConduitString.Optional,
-        },
-        queryParams: {
           captchaToken: ConduitString.Required,
         },
         middlewares:
