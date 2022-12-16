@@ -51,7 +51,8 @@ export interface ConduitModel {
     | ConduitModel
     | TYPE
     | TYPE[]
-    | any[]; // removing this caused multiple issues
+    | any[] // removing this caused multiple issues
+    | undefined;
 }
 
 export const ConduitModelOptionsPermModifyType = [

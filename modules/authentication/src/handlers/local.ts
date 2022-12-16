@@ -45,6 +45,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
           password: ConduitString.Required,
           invitationToken: ConduitString.Optional,
         },
+        queryParams: {
+          captchaToken: ConduitString.Required,
+        },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.register
             ? ['captchaMiddleware']
@@ -63,6 +66,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
+        },
+        queryParams: {
+          captchaToken: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login

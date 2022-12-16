@@ -48,6 +48,9 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         bodyParams: {
           phone: ConduitString.Required,
         },
+        queryParams: {
+          captchaToken: ConduitString.Optional,
+        },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
             ? ['captchaMiddleware']

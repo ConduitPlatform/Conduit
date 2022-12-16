@@ -81,6 +81,9 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           access_token: ConduitString.Required,
           invitationToken: ConduitString.Optional,
         },
+        queryParams: {
+          captchaToken: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {
         userId: ConduitString.Required,
