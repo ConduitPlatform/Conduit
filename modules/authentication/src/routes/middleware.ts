@@ -115,8 +115,9 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
-  const { acceptablePlatform, secretKey, enabled } = config.captcha;
+  const { acceptablePlatform, secretKey, enabled, provider } = config.captcha;
   const { clientId } = call.request.context;
+  const { captchaToken } = call.request.params;
 
   if (!enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
@@ -144,7 +145,6 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     });
   }
 
-  const { captchaToken } = call.request.params;
   if (isNil(captchaToken)) {
     throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
@@ -152,12 +152,12 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (!secretKey) {
     throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
-  const configuredProvider = config.captcha.provider;
-  let url = `https://www.${configuredProvider}.com/`;
+
+  let url = `https://www.${provider}.com/`;
   const suffix = `siteverify?secret=${secretKey}&response=${captchaToken}`;
-  if (configuredProvider === 'recaptcha') {
+  if (provider === 'recaptcha') {
     url += 'api/' + suffix;
-  } else if (configuredProvider === 'hcaptcha') {
+  } else if (provider === 'hcaptcha') {
     url += suffix;
   }
 
