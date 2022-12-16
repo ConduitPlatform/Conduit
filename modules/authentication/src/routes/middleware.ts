@@ -115,26 +115,26 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
-  const { acceptablePlatform, secretKey } = config.captcha;
+  const { acceptablePlatform, secretKey, enabled } = config.captcha;
   const { clientId } = call.request.context;
-  if (!config.captcha.enabled) {
+
+  if (!enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
-  }
-  const { captchaToken } = call.request.params;
-  if (isNil(captchaToken)) {
-    throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
-  if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
-    throw new GrpcError(
-      status.INTERNAL,
-      `Captcha is not supported for ${clientPlatform} clients.`,
-    );
-  }
-  if (client && clientId !== 'anonymous-client') {
+  if (clientId !== 'anonymous-client') {
+    // if is anonymous client then do the proper checks for platform validation
+    if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
+      throw new GrpcError(
+        status.INTERNAL,
+        `Captcha is not supported for ${clientPlatform} clients.`,
+      );
+    }
+
     Object.keys(acceptablePlatform).forEach(platform => {
+      // do the proper checks based on configuration
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
         throw new GrpcError(
           status.INTERNAL,
@@ -142,6 +142,11 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
         );
       }
     });
+  }
+
+  const { captchaToken } = call.request.params;
+  if (isNil(captchaToken)) {
+    throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
 
   if (!secretKey) {
@@ -164,6 +169,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
       },
     },
   );
+
   if (!response.data.success) {
     throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
   }
