@@ -1,6 +1,5 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
-  ConduitRouteActions,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
