@@ -66,8 +66,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           access_token: ConduitString.Required,
           expires_in: ConduitString.Optional,
           invitationToken: ConduitString.Optional,
-        },
-        queryParams: {
           captchaToken: ConduitString.Optional,
         },
       },
