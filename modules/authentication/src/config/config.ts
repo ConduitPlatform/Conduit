@@ -42,6 +42,11 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    provider: {
+      format: 'String',
+      default: 'recaptcha',
+      enum: ['recaptcha', 'hcaptcha'],
+    },
     routes: {
       login: {
         format: 'Boolean',
