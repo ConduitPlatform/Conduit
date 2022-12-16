@@ -153,11 +153,12 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
   const configuredProvider = config.captcha.provider;
-  let url = 'https://';
+  let url = `https://www.${configuredProvider}.com/`;
+  const suffix = `siteverify?secret=${secretKey}&response=${captchaToken}`;
   if (configuredProvider === 'recaptcha') {
-    url += `www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
+    url += 'api/' + suffix;
   } else if (configuredProvider === 'hcaptcha') {
-    url += `api.hcaptcha.com/siteverify?secret=${secretKey}&response=${captchaToken}`;
+    url += suffix;
   }
 
   const response = await axios.post(
