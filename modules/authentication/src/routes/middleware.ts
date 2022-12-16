@@ -144,7 +144,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const configuredProvider = config.captcha.provider;
   let url = 'https://';
   if (configuredProvider === 'recaptcha') {
-    url += `www.google.com/api/siteverify?secret=${secretKey}&response=${captcha}`;
+    url += `www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captcha}`;
   } else if (configuredProvider === 'hcaptcha') {
     url += `api.hcaptcha.com/siteverify?secret=${secretKey}&response=${captcha}`;
   }
