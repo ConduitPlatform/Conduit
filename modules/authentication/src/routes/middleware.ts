@@ -131,9 +131,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
         `Captcha is not supported for ${clientPlatform} clients.`,
       );
     }
-  }
 
-  if (clientId !== 'anonymous-client') {
     Object.keys(acceptablePlatform).forEach(platform => {
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
         throw new GrpcError(
