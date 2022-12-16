@@ -120,8 +120,8 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (!config.captcha.enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
-  const { captcha } = call.request.params;
-  if (isNil(captcha)) {
+  const { captchaToken } = call.request.params;
+  if (isNil(captchaToken)) {
     throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
   }
 
@@ -148,7 +148,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
   }
   const response = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captcha}`,
+    `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
     {},
     {
       headers: {
