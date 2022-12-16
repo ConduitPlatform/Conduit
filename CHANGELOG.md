@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.8](https://github.com/ConduitPlatform/Conduit/compare/v0.15.7...v0.15.8) (2022-12-16)
+
+
+### Features
+
+* **authentication:** teams & roles ([#411](https://github.com/ConduitPlatform/Conduit/issues/411)) ([921d68d](https://github.com/ConduitPlatform/Conduit/commit/921d68d251c84dcac54501401b771cfefbdea1b0))
+* **database:** sort option in admin doc query ([741c128](https://github.com/ConduitPlatform/Conduit/commit/741c128d84d5780ad18cdee9c677ff6d7dad6ea8))
+* expose compose container grpc ports ([#456](https://github.com/ConduitPlatform/Conduit/issues/456)) ([f9a6e3a](https://github.com/ConduitPlatform/Conduit/commit/f9a6e3aa6d1ad9ad2ca9f93a9b00d8acf0960709))
+* get-conduit.sh --no-deploy flag ([#452](https://github.com/ConduitPlatform/Conduit/issues/452)) ([74d3833](https://github.com/ConduitPlatform/Conduit/commit/74d3833b100a7c613fb5bdf8cba2dc36d8f105d0))
+* oneliner deployment setup for Linux and Mac ([#451](https://github.com/ConduitPlatform/Conduit/issues/451)) ([9838056](https://github.com/ConduitPlatform/Conduit/commit/9838056950fa560f0b22f3fda6cf9b589b2ea317))
+
+
+### Bug Fixes
+
+* **authentication:** admin patch user twoFaMethod ([#454](https://github.com/ConduitPlatform/Conduit/issues/454)) ([556c402](https://github.com/ConduitPlatform/Conduit/commit/556c402f6ccad3d2d580ceeda3f077b437d44cf2))
+* get-conduit.sh linux arm64 detection ([#459](https://github.com/ConduitPlatform/Conduit/issues/459)) ([44635af](https://github.com/ConduitPlatform/Conduit/commit/44635af3e801cd74c7ee39e0f358ed0c8794e2b1))
+* **grpc-sdk,admin:** config object patch array field merging ([#464](https://github.com/ConduitPlatform/Conduit/issues/464)) ([ef1e4fe](https://github.com/ConduitPlatform/Conduit/commit/ef1e4fe1553c2317038799baf85a3b514110a0e4))
+* **grpc-sdk:** Metrics labeling ([#466](https://github.com/ConduitPlatform/Conduit/issues/466)) ([5843a2d](https://github.com/ConduitPlatform/Conduit/commit/5843a2dfd7abd62cc7b45948146c48bbaf60fafd))
+* **grpc-sdk:** redis url remap ([#457](https://github.com/ConduitPlatform/Conduit/issues/457)) ([5fd0dad](https://github.com/ConduitPlatform/Conduit/commit/5fd0dade6d11c44ee6a40d7dbb1b77959cd79f41))
+* **hermes:** swagger path/query params being shown as objects ([b285db2](https://github.com/ConduitPlatform/Conduit/commit/b285db26f90d13321a4a308d61f870b9c42c876b))
+
 ### [0.15.7](https://github.com/ConduitPlatform/Conduit/compare/v0.15.6...v0.15.7) (2022-11-25)
 
 
