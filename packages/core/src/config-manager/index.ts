@@ -1,6 +1,5 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
-  ConduitRouteActions,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
@@ -16,7 +15,6 @@ import {
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
-import { registerConfigRoute } from './admin/routes';
 import * as models from './models';
 import path from 'path';
 import { ServiceDiscovery } from './service-discovery';
@@ -292,27 +290,31 @@ export default class ConfigManager implements IConfigManager {
       );
   }
 
-  private registerConfigRoutes(moduleName: string, configSchema: convict.Config<any>) {
+  private registerConfigRoutes(
+    moduleName: string,
+    configSchema: convict.Config<unknown>,
+  ) {
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        adminRoutes.getMonoConfigRoute(
           this.grpcSdk,
-          this.sdk,
-          moduleName,
-          configSchema,
-          ConduitRouteActions.GET,
+          this.serviceDiscovery.registeredModules,
         ),
       );
     this.sdk
       .getAdmin()
       .registerRoute(
-        registerConfigRoute(
+        adminRoutes.getModuleConfigRoute(this.grpcSdk, moduleName, configSchema),
+      );
+    this.sdk
+      .getAdmin()
+      .registerRoute(
+        adminRoutes.setModuleConfigRoute(
           this.grpcSdk,
           this.sdk,
           moduleName,
           configSchema,
-          ConduitRouteActions.PATCH,
         ),
       );
   }
