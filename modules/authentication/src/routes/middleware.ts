@@ -125,18 +125,21 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
   if (
-    clientId !== 'anonymous-client' &&
-    (clientPlatform == 'WEB ' || clientPlatform == 'ANDROID')
+    clientId === 'anonymous-client' ||
+    clientPlatform === 'WEB ' ||
+    clientPlatform === 'ANDROID'
   ) {
-    Object.keys(acceptablePlatform).forEach(platform => {
-      // do the proper checks based on configuration
-      if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
-        throw new GrpcError(
-          status.INTERNAL,
-          `${clientPlatform} clients can not use captcha.`,
-        );
-      }
-    });
+    if (clientId !== 'anonymous-client') {
+      Object.keys(acceptablePlatform).forEach(platform => {
+        // do the proper checks based on configuration
+        if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
+          throw new GrpcError(
+            status.INTERNAL,
+            `${clientPlatform} clients can not use captcha.`,
+          );
+        }
+      });
+    }
     const { captchaToken } = call.request.params;
     if (isNil(captchaToken)) {
       throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
