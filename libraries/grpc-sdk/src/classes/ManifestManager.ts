@@ -202,7 +202,7 @@ export class ManifestManager {
     };
   }
 
-  private validateTag(depName: string, requestedTag: string, availableTag: string) {
+  validateTag(depName: string, requestedTag: string, availableTag: string) {
     // Minor versions don't break compatibility (v0.16.1 is a valid target for ^v0.16)
     // RC information is stripped (v0.16.0-rc1 is a valid target for v0.16)
     const requested = this.parseTag(requestedTag);

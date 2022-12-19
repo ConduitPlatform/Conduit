@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   ConduitModel,
   registerMigrations,
+  ManifestManager,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -241,11 +242,17 @@ export default class DatabaseModule extends ManagedModule<void> {
         .getSchemaModel('_DeclaredSchema')
         .model.findMany({ ownerModule: moduleName })),
     ];
-    if (
-      isNil(storedVersion) ||
-      storedSchemas.length === 0 ||
-      version.moduleVersion === storedVersion.moduleVersion
-    ) {
+    let tagCompatibility = true;
+    try {
+      ManifestManager.getInstance().validateTag(
+        '',
+        storedVersion.version,
+        version.moduleVersion,
+      );
+    } catch {
+      tagCompatibility = false;
+    }
+    if (isNil(storedVersion) || storedSchemas.length === 0 || tagCompatibility) {
       await this._activeAdapter.getSchemaModel('Migrations').model.create({
         name: migrationName,
         moduleName: moduleName,

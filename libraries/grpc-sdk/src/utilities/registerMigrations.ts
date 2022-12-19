@@ -1,6 +1,5 @@
 import { readFileSync, readdirSync } from 'fs';
 import { DatabaseProvider } from '../modules';
-import { EventEmitter } from 'events';
 
 /**
  * Returns a map that holds pairs of (module migration name)-(contents of migration file in string format)
