@@ -124,15 +124,10 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
-  if (clientId !== 'anonymous-client') {
-    // if is anonymous client then do the proper checks for platform validation
-    if (clientPlatform !== 'WEB' && clientPlatform !== 'ANDROID') {
-      throw new GrpcError(
-        status.INTERNAL,
-        `Captcha is not supported for ${clientPlatform} clients.`,
-      );
-    }
-
+  if (
+    clientId !== 'anonymous-client' &&
+    (clientPlatform == 'WEB ' || clientPlatform == 'ANDROID')
+  ) {
     Object.keys(acceptablePlatform).forEach(platform => {
       // do the proper checks based on configuration
       if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
@@ -142,29 +137,25 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
         );
       }
     });
-  }
-
-  const { captchaToken } = call.request.params;
-  if (isNil(captchaToken)) {
-    throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
-  }
-
-  if (!secretKey) {
-    throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-  }
-
-  const response = await axios.post(
-    `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
-    {},
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+    const { captchaToken } = call.request.params;
+    if (isNil(captchaToken)) {
+      throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+    }
+    if (!secretKey) {
+      throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+    }
+    const response = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+        },
       },
-    },
-  );
-
-  if (!response.data.success) {
-    throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+    );
+    if (!response.data.success) {
+      throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+    }
   }
 
   return {};
