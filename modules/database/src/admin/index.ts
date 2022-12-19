@@ -19,11 +19,13 @@ import { SchemaAdmin } from './schema.admin';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models';
+import { MigrationsAdmin } from './migrations.admin';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
   private readonly documentsAdmin: DocumentsAdmin;
   private readonly customEndpointsAdmin: CustomEndpointsAdmin;
+  private readonly migrationsAdmin: MigrationsAdmin;
   private readonly routingManager: RoutingManager;
 
   constructor(
@@ -45,6 +47,7 @@ export class AdminHandlers {
       this._activeAdapter,
       this.customEndpointController,
     );
+    this.migrationsAdmin = new MigrationsAdmin(this.grpcSdk, _activeAdapter);
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
@@ -650,6 +653,45 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('getDatabaseType', 'String'),
       this.schemaAdmin.getDatabaseType.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/trigger-migrations/:moduleName',
+        action: ConduitRouteActions.POST,
+        description: `Triggers pending migrations.`,
+        urlParams: {
+          moduleName: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('triggerMigrations', 'String'),
+      this.migrationsAdmin.triggerMigrations.bind(this.migrationsAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/migrations/:moduleName',
+        action: ConduitRouteActions.GET,
+        description: `Returns all the migrations a module has completed.`,
+        urlParams: {
+          moduleName: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('getCompletedMigrations', {
+        migrations: [ConduitJson.Required],
+      }),
+      this.migrationsAdmin.getCompletedMigrations.bind(this.migrationsAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/migrations/:moduleName/:migrationId',
+        action: ConduitRouteActions.POST,
+        description: `Triggers the downgrade function of a module's migration.`,
+        urlParams: {
+          moduleName: { type: RouteOptionType.String, required: true },
+          migrationId: { type: RouteOptionType.String, required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('downgrade', 'String'),
+      this.migrationsAdmin.downgrade.bind(this.schemaAdmin),
     );
     this.routingManager.registerRoutes();
   }

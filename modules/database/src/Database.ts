@@ -268,19 +268,19 @@ export default class DatabaseModule extends ManagedModule<void> {
     callback: GrpcResponse<TriggerMigrationsResponse>,
   ) {
     const moduleName = call.request.moduleName;
-    const migrationsModel = await this._activeAdapter.getSchemaModel('Migrations').model;
+    const model = await this._activeAdapter.getSchemaModel('Migrations').model;
     const config = await this.grpcSdk.config.get('core');
     const emitter = new EventEmitter();
     emitter.setMaxListeners(150);
-    const migrations = [...(await migrationsModel.findMany({}))];
+    const migrations = [...(await model.findMany({}))];
     if (!migrations.some(m => m.status !== MigrationStatus.SKIPPED)) {
       emitter.emit(`${moduleName}-initialize`);
       callback(null, {});
     }
     if (config.env === 'production') {
       // manual migrations
-      await migrationsModel.updateMany(
-        { ownerModule: moduleName, status: MigrationStatus.REQUIRED },
+      await model.updateMany(
+        { moduleName: moduleName, status: MigrationStatus.REQUIRED },
         { status: MigrationStatus.PENDING },
       );
       ConduitGrpcSdk.Logger.info(`Manual migrations for ${moduleName} pending`);
@@ -289,15 +289,17 @@ export default class DatabaseModule extends ManagedModule<void> {
       const auto = migrations.filter(m => m.status === MigrationStatus.REQUIRED);
       const vm = new NodeVM({ console: 'inherit', sandbox: {} });
       for (const a of auto) {
-        const migrationInSandbox = vm.run(a.data);
         try {
+          const migrationInSandbox = vm.run(a.data);
           await migrationInSandbox.up(this.grpcSdk);
-          await migrationsModel.findByIdAndUpdate(a.id, {
-            status: MigrationStatus.SUCCESSFUL,
+          await model.findByIdAndUpdate(a._id, {
+            moduleName: moduleName,
+            status: MigrationStatus.SUCCESSFUL_UP,
           });
         } catch (e) {
           console.log((e as Error).message);
-          await migrationsModel.findByIdAndUpdate(a.id, {
+          await model.findByIdAndUpdate(a._id, {
+            moduleName: moduleName,
             status: MigrationStatus.FAILED,
           });
           callback(null, {

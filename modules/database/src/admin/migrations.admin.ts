@@ -1,0 +1,93 @@
+import ConduitGrpcSdk, {
+  GrpcError,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
+} from '@conduitplatform/grpc-sdk';
+import { status } from '@grpc/grpc-js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { MigrationStatus } from '../interfaces/MigrationStatus';
+import { NodeVM } from 'vm2';
+import { isNil } from 'lodash';
+import { EventEmitter } from 'events';
+
+export class MigrationsAdmin {
+  constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
+  ) {}
+
+  async triggerMigrations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { moduleName } = call.request.params;
+    const model = this.database.getSchemaModel('Migrations').model;
+    const migrations = [
+      ...(await model.findMany({
+        moduleName: moduleName,
+        status: MigrationStatus.PENDING,
+      })),
+    ];
+    if (migrations.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, `No pending migrations for ${moduleName}`);
+    }
+    const vm = new NodeVM({ console: 'inherit', sandbox: {} });
+    for (const m of migrations) {
+      try {
+        const migrationInSandbox = vm.run(m.data);
+        await migrationInSandbox.up(this.grpcSdk);
+        await model.findByIdAndUpdate(m._id, {
+          moduleName: moduleName,
+          status: MigrationStatus.SUCCESSFUL_UP,
+        });
+      } catch {
+        await model.findByIdAndUpdate(m._id, {
+          moduleName: moduleName,
+          status: MigrationStatus.FAILED,
+        });
+        throw new GrpcError(status.INTERNAL, 'Migration failed');
+      }
+    }
+    const emitter = new EventEmitter();
+    emitter.emit(`${moduleName}-initialize`);
+    return 'Migrations successfully executed';
+  }
+
+  async getCompletedMigrations(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { moduleName } = call.request.params;
+    const model = this.database.getSchemaModel('Migrations').model;
+    const migrations = [
+      ...(await model.findMany({
+        moduleName: moduleName,
+        status: MigrationStatus.SUCCESSFUL_UP,
+      })),
+    ];
+    return { migrations: migrations };
+  }
+
+  async downgrade(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { moduleName, migrationId } = call.request.params;
+    const model = this.database.getSchemaModel('Migrations').model;
+    const migration = await model.findOne({ _id: migrationId, moduleName: moduleName });
+    if (isNil(migration)) {
+      throw new GrpcError(status.NOT_FOUND, 'Migration not found');
+    }
+    const vm = new NodeVM({ console: 'inherit', sandbox: {} });
+    try {
+      const migrationInSandbox = vm.run(migration.data);
+      await migrationInSandbox.down(this.grpcSdk);
+      await model.findByIdAndUpdate(migration._id, {
+        moduleName: moduleName,
+        status: MigrationStatus.SUCCESSFUL_DOWN,
+      });
+    } catch {
+      await model.findByIdAndUpdate(migration._id, {
+        moduleName: moduleName,
+        status: MigrationStatus.FAILED,
+      });
+      throw new GrpcError(status.INTERNAL, 'Migration failed');
+    }
+    return 'Migration successfully executed';
+  }
+}
