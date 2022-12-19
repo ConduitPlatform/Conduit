@@ -111,8 +111,28 @@ message DropCollectionRequest {
     bool deleteData = 2;
 }
 
+message RegisterMigrationRequest {
+    string moduleName = 1;
+    string migrationName = 2;
+    string data = 3;
+}
+
+message RegisterMigrationResponse {
+
+}
+
+message TriggerMigrationsRequest {
+    string moduleName = 1;
+}
+
+message TriggerMigrationsResponse {
+
+}
+
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
+    rpc RegisterMigration(RegisterMigrationRequest) returns (RegisterMigrationResponse);
+    rpc TriggerMigrations(TriggerMigrationsRequest) returns (TriggerMigrationsResponse);
     rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);

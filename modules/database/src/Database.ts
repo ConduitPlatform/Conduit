@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   ConduitModel,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -23,6 +24,10 @@ import {
   UpdateManyRequest,
   UpdateRequest,
   RawQueryRequest,
+  RegisterMigrationRequest,
+  RegisterMigrationResponse,
+  TriggerMigrationsResponse,
+  TriggerMigrationsRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -32,7 +37,6 @@ import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { Schema, ConduitDatabaseSchema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
-import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
 import { SchemaConverter } from './utils/SchemaConverter';
@@ -40,6 +44,9 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
 import { isNil } from 'lodash';
+import { MigrationStatus } from './interfaces/MigrationStatus';
+import { NodeVM } from 'vm2';
+import { EventEmitter } from 'events';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -49,6 +56,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     protoDescription: 'database.DatabaseProvider',
     functions: {
       createSchemaFromAdapter: this.createSchemaFromAdapter.bind(this),
+      registerMigration: this.registerMigration.bind(this),
+      triggerMigrations: this.triggerMigrations.bind(this),
       getSchema: this.getSchema.bind(this),
       getSchemas: this.getSchemas.bind(this),
       deleteSchema: this.deleteSchema.bind(this),
@@ -96,7 +105,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
-    await runMigrations(this._activeAdapter);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'database', migrationFilePath);
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -208,6 +218,97 @@ export default class DatabaseModule extends ManagedModule<void> {
           message: err.message,
         });
       });
+  }
+  /**
+   * Stores module migration files in database
+   * @param call
+   * @param callback
+   */
+  async registerMigration(
+    call: GrpcRequest<RegisterMigrationRequest>,
+    callback: GrpcResponse<RegisterMigrationResponse>,
+  ) {
+    const { moduleName, migrationName, data } = call.request;
+    // get current and last stored version of caller module
+    const state = await this.grpcSdk.config.getDeploymentState();
+    const version = state.modules.filter(v => v.moduleName === moduleName)[0];
+    const storedVersion = await this._activeAdapter
+      .getSchemaModel('Versions')
+      .model.findOne({ moduleName });
+    // check if module has any stored schemas
+    const storedSchemas = [
+      ...(await this._activeAdapter
+        .getSchemaModel('_DeclaredSchema')
+        .model.findMany({ ownerModule: moduleName })),
+    ];
+    if (
+      isNil(storedVersion) ||
+      storedSchemas.length === 0 ||
+      version.moduleVersion === storedVersion.moduleVersion
+    ) {
+      await this._activeAdapter.getSchemaModel('Migrations').model.create({
+        name: migrationName,
+        moduleName: moduleName,
+        status: MigrationStatus.SKIPPED,
+        data: data,
+      });
+    } else {
+      await this._activeAdapter.getSchemaModel('Migrations').model.create({
+        name: migrationName,
+        moduleName: moduleName,
+        status: MigrationStatus.REQUIRED,
+        data: data,
+      });
+    }
+    callback(null, {});
+  }
+
+  async triggerMigrations(
+    call: GrpcRequest<TriggerMigrationsRequest>,
+    callback: GrpcResponse<TriggerMigrationsResponse>,
+  ) {
+    const moduleName = call.request.moduleName;
+    const migrationsModel = await this._activeAdapter.getSchemaModel('Migrations').model;
+    const config = await this.grpcSdk.config.get('core');
+    const emitter = new EventEmitter();
+    emitter.setMaxListeners(150);
+    const migrations = [...(await migrationsModel.findMany({}))];
+    if (!migrations.some(m => m.status !== MigrationStatus.SKIPPED)) {
+      emitter.emit(`${moduleName}-initialize`);
+      callback(null, {});
+    }
+    if (config.env === 'production') {
+      // manual migrations
+      await migrationsModel.updateMany(
+        { ownerModule: moduleName, status: MigrationStatus.REQUIRED },
+        { status: MigrationStatus.PENDING },
+      );
+      ConduitGrpcSdk.Logger.info(`Manual migrations for ${moduleName} pending`);
+    } else {
+      // automatic migrations
+      const auto = migrations.filter(m => m.status === MigrationStatus.REQUIRED);
+      const vm = new NodeVM({ console: 'inherit', sandbox: {} });
+      for (const a of auto) {
+        const migrationInSandbox = vm.run(a.data);
+        try {
+          await migrationInSandbox.up(this.grpcSdk);
+          await migrationsModel.findByIdAndUpdate(a.id, {
+            status: MigrationStatus.SUCCESSFUL,
+          });
+        } catch (e) {
+          console.log((e as Error).message);
+          await migrationsModel.findByIdAndUpdate(a.id, {
+            status: MigrationStatus.FAILED,
+          });
+          callback(null, {
+            code: status.INTERNAL,
+            message: `Migration failed for ${moduleName}`,
+          });
+        }
+      }
+      emitter.emit(`${moduleName}-initialize`);
+      callback(null, {});
+    }
   }
 
   /**

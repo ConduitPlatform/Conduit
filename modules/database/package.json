@@ -33,7 +33,8 @@
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.21.2",
-    "sequelize-auto": "^0.8.8"
+    "sequelize-auto": "^0.8.8",
+    "vm2": "^3.9.13"
   },
   "directories": {
     "lib": "src"

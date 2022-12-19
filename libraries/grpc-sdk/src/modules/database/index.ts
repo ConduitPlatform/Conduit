@@ -3,6 +3,8 @@ import { ConduitSchema } from '../../classes';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
+  RegisterMigrationResponse,
+  TriggerMigrationsResponse,
   Schema,
 } from '../../protoUtils/database';
 import { ConduitSchemaExtension, RawQuery } from '../../interfaces';
@@ -76,6 +78,22 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         fieldHash: res.fieldHash,
       };
     });
+  }
+
+  registerMigration(
+    moduleName: string,
+    migrationName: string,
+    data: string,
+  ): Promise<RegisterMigrationResponse> {
+    return this.serviceClient!.registerMigration({
+      moduleName: moduleName,
+      migrationName: migrationName,
+      data: data,
+    });
+  }
+
+  triggerMigrations(moduleName: string): Promise<TriggerMigrationsResponse> {
+    return this.serviceClient!.triggerMigrations({ moduleName });
   }
 
   setSchemaExtension(extension: ConduitSchemaExtension): Promise<Schema> {

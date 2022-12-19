@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   GrpcRequest,
   GrpcCallback,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema from './config';
@@ -15,7 +16,6 @@ import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { Config } from './config';
-import { runMigrations } from './migrations';
 import {
   RegisterTemplateRequest,
   RegisterTemplateResponse,
@@ -50,7 +50,8 @@ export default class Email extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'email', migrationFilePath);
   }
 
   protected registerSchemas() {

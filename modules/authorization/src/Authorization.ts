@@ -5,11 +5,11 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
-import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import {
   Decision,
@@ -62,7 +62,8 @@ export default class Authorization extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    await runMigrations(this.grpcSdk);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'authorization', migrationFilePath);
   }
 
   protected registerSchemas() {

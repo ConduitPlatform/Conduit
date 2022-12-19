@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   GrpcServer,
   HealthCheckStatus,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -15,7 +16,6 @@ import {
   UpdateRequest,
   UpdateResponse,
 } from '@conduitplatform/commons';
-import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
 import * as models from './models';
 import { ServiceDiscovery } from './service-discovery';
@@ -201,7 +201,8 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.database!.createSchemaFromAdapter(
       models.Config.getInstance(this.grpcSdk.database!),
     );
-    await runMigrations(this.grpcSdk);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'core', migrationFilePath);
     this._configStorage.onDatabaseAvailable();
   }
 

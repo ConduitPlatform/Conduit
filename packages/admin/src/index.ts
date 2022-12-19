@@ -10,6 +10,7 @@ import ConduitGrpcSdk, {
   Indexable,
   ConduitRouteObject,
   SocketProtoDescription,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -20,7 +21,6 @@ import {
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
-import { runMigrations } from './migrations';
 import AdminConfigRawSchema from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
@@ -379,7 +379,8 @@ export default class AdminModule extends IConduitAdmin {
 
   private async handleDatabase() {
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'admin', migrationFilePath);
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async existing => {

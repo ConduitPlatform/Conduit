@@ -3,6 +3,7 @@ import {
   DatabaseProvider,
   HealthCheckStatus,
   ManagedModule,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -28,7 +29,6 @@ import {
   ISendNotification,
   ISendNotificationToManyDevices,
 } from './interfaces/ISendNotification';
-import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { OneSignalProvider } from './providers/OneSignal.provider';
 import { IOneSignalSettings } from './interfaces/IOneSignalSettings';
@@ -63,7 +63,12 @@ export default class PushNotifications extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
+    const migrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(
+      this.grpcSdk.database!,
+      'push-notifications',
+      migrationFilePath,
+    );
     await this.grpcSdk.monitorModule('authentication', serving => {
       this.updateHealthState(undefined, serving);
     });
