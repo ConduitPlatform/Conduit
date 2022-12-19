@@ -129,35 +129,35 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
     clientPlatform === 'WEB ' ||
     clientPlatform === 'ANDROID'
   ) {
-    if (clientId !== 'anonymous-client') {
-      Object.keys(acceptablePlatform).forEach(platform => {
-        // do the proper checks based on configuration
-        if (!acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform) {
-          throw new GrpcError(
-            status.INTERNAL,
-            `${clientPlatform} clients can not use captcha.`,
+    for (const platform of Object.keys(acceptablePlatform)) {
+      // do the proper checks based on configuration
+      if (
+        clientId == 'anonymous-client' ||
+        (acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform)
+      ) {
+        const { captchaToken } = call.request.params;
+        if (clientId === 'anonymous-client' && isNil(captchaToken)) break;
+        else {
+          if (isNil(captchaToken)) {
+            throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+          }
+          if (!secretKey) {
+            throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+          }
+          const response = await axios.post(
+            `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
+            {},
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+              },
+            },
           );
+          if (!response.data.success) {
+            throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+          }
         }
-      });
-    }
-    const { captchaToken } = call.request.params;
-    if (isNil(captchaToken)) {
-      throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
-    }
-    if (!secretKey) {
-      throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-    }
-    const response = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        },
-      },
-    );
-    if (!response.data.success) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+      }
     }
   }
 
