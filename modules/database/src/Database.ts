@@ -230,29 +230,16 @@ export default class DatabaseModule extends ManagedModule<void> {
     callback: GrpcResponse<RegisterMigrationResponse>,
   ) {
     const { moduleName, migrationName, data } = call.request;
-    // get current and last stored version of caller module
-    const state = await this.grpcSdk.config.getDeploymentState();
-    const version = state.modules.filter(v => v.moduleName === moduleName)[0];
-    const storedVersion = await this._activeAdapter
-      .getSchemaModel('Versions')
-      .model.findOne({ moduleName });
     // check if module has any stored schemas
     const storedSchemas = [
       ...(await this._activeAdapter
         .getSchemaModel('_DeclaredSchema')
         .model.findMany({ ownerModule: moduleName })),
     ];
-    let tagCompatibility = true;
-    try {
-      ManifestManager.getInstance().validateTag(
-        '',
-        storedVersion.version,
-        version.moduleVersion,
-      );
-    } catch {
-      tagCompatibility = false;
-    }
-    if (isNil(storedVersion) || storedSchemas.length === 0 || tagCompatibility) {
+    if (
+      storedSchemas.length === 0 ||
+      (await this.moduleVersionCompatibility(moduleName))
+    ) {
       await this._activeAdapter.getSchemaModel('Migrations').model.create({
         name: migrationName,
         moduleName: moduleName,
@@ -302,6 +289,13 @@ export default class DatabaseModule extends ManagedModule<void> {
           await model.findByIdAndUpdate(a._id, {
             moduleName: moduleName,
             status: MigrationStatus.SUCCESSFUL_UP,
+          });
+          // store new version of module in db
+          const state = await this.grpcSdk.config.getDeploymentState();
+          const version = state.modules.filter(v => v.moduleName === moduleName)[0];
+          await this._activeAdapter.getSchemaModel('Versions').model.create({
+            moduleName: moduleName,
+            version: version,
           });
         } catch (e) {
           console.log((e as Error).message);
@@ -706,5 +700,28 @@ export default class DatabaseModule extends ManagedModule<void> {
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  private async moduleVersionCompatibility(moduleName: string) {
+    // returns true if migrations aren't needed (based on module version)
+    const state = await this.grpcSdk.config.getDeploymentState();
+    const version = state.modules.filter(v => v.moduleName === moduleName)[0];
+    const storedVersion = await this._activeAdapter
+      .getSchemaModel('Versions')
+      .model.findOne({ moduleName });
+    if (isNil(storedVersion)) {
+      return true;
+    }
+    let tagCompatibility = true;
+    try {
+      ManifestManager.getInstance().validateTag(
+        '',
+        storedVersion.version,
+        version.moduleVersion,
+      );
+    } catch {
+      tagCompatibility = false;
+    }
+    return tagCompatibility;
   }
 }

@@ -39,6 +39,13 @@ export class MigrationsAdmin {
           moduleName: moduleName,
           status: MigrationStatus.SUCCESSFUL_UP,
         });
+        // store new module version in db
+        const state = await this.grpcSdk.config.getDeploymentState();
+        const version = state.modules.filter(v => v.moduleName === moduleName)[0];
+        await this.database.getSchemaModel('Versions').model.create({
+          moduleName: moduleName,
+          version: version,
+        });
       } catch {
         await model.findByIdAndUpdate(m._id, {
           moduleName: moduleName,
