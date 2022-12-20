@@ -708,8 +708,11 @@ export default class DatabaseModule extends ManagedModule<void> {
     const storedVersion = await this._activeAdapter
       .getSchemaModel('Versions')
       .model.findOne({ moduleName });
-    if (isNil(storedVersion) || storedVersion.version === 'unknown') {
+    if (isNil(storedVersion)) {
       return true;
+    }
+    if (storedVersion.version === 'unknown') {
+      return false;
     }
     let tagCompatibility = true;
     try {
