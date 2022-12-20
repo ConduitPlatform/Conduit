@@ -106,8 +106,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'database', migrationFilePath);
+    //const migrationFilePath = path.resolve(__dirname, 'migrations');
+    //await registerMigrations(this.grpcSdk.database!, 'database', migrationFilePath);
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -262,14 +262,20 @@ export default class DatabaseModule extends ManagedModule<void> {
     callback: GrpcResponse<TriggerMigrationsResponse>,
   ) {
     const moduleName = call.request.moduleName;
-    const model = await this._activeAdapter.getSchemaModel('Migrations').model;
+    const model = this._activeAdapter.getSchemaModel('Migrations').model;
     const config = await this.grpcSdk.config.get('core');
+    const state = await this.grpcSdk.config.getDeploymentState();
+    const version = state.modules.filter(v => v.moduleName === moduleName)[0];
     const emitter = new EventEmitter();
     emitter.setMaxListeners(150);
     const migrations = [...(await model.findMany({}))];
     if (!migrations.some(m => m.status !== MigrationStatus.SKIPPED)) {
+      await this._activeAdapter.getSchemaModel('Versions').model.create({
+        moduleName: moduleName,
+        version: version.moduleVersion,
+      });
       emitter.emit(`${moduleName}-initialize`);
-      callback(null, {});
+      return callback(null, {});
     }
     if (config.env === 'production') {
       // manual migrations
@@ -288,15 +294,13 @@ export default class DatabaseModule extends ManagedModule<void> {
           await migrationInSandbox.up(this.grpcSdk);
           await model.findByIdAndUpdate(a._id, { status: MigrationStatus.SUCCESSFUL_UP });
           // update or store new version of module in db
-          const state = await this.grpcSdk.config.getDeploymentState();
-          const version = state.modules.filter(v => v.moduleName === moduleName)[0];
           const updated = await this._activeAdapter
             .getSchemaModel('Versions')
-            .model.findByIdAndUpdate(a._id, { version: version });
+            .model.findByIdAndUpdate(a._id, { version: version.moduleVersion });
           if (isNil(updated)) {
             await this._activeAdapter.getSchemaModel('Versions').model.create({
               moduleName: moduleName,
-              version: version,
+              version: version.moduleVersion,
             });
           }
         } catch (e) {

@@ -14,7 +14,6 @@ export async function registerMigrations(
   path: string,
 ) {
   const files = readdirSync(path).filter(f => f.endsWith('.js'));
-  //const files = readdirSync(path).filter(f => f === 'test.migration.js');
   if (files.length === 0) {
     throw new Error('Migration files not found');
   }
