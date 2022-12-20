@@ -70,7 +70,11 @@ export class MigrationsAdmin {
   async downgrade(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { moduleName, migrationId } = call.request.params;
     const model = this.database.getSchemaModel('Migrations').model;
-    const migration = await model.findOne({ _id: migrationId, moduleName: moduleName });
+    const migration = await model.findOne({
+      _id: migrationId,
+      moduleName: moduleName,
+      status: MigrationStatus.SUCCESSFUL_UP,
+    });
     if (isNil(migration)) {
       throw new GrpcError(status.NOT_FOUND, 'Migration not found');
     }
@@ -81,6 +85,13 @@ export class MigrationsAdmin {
       await model.findByIdAndUpdate(migration._id, {
         status: MigrationStatus.SUCCESSFUL_DOWN,
       });
+      // update module version to unknown
+      const version = await this.database
+        .getSchemaModel('Versions')
+        .model.findOne({ moduleName: moduleName });
+      await this.database
+        .getSchemaModel('Versions')
+        .model.findByIdAndUpdate(version._id, { version: 'unknown' });
     } catch {
       await model.findByIdAndUpdate(migration._id, { status: MigrationStatus.FAILED });
       throw new GrpcError(status.INTERNAL, 'Migration failed');

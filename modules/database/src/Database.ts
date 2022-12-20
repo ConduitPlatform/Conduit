@@ -708,7 +708,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     const storedVersion = await this._activeAdapter
       .getSchemaModel('Versions')
       .model.findOne({ moduleName });
-    if (isNil(storedVersion)) {
+    if (isNil(storedVersion) || storedVersion.version === 'unknown') {
       return true;
     }
     let tagCompatibility = true;
