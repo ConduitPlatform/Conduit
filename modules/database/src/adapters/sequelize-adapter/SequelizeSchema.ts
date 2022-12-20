@@ -103,7 +103,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
   sync() {
     incrementDbQueries();
-    return this.model.sync({ alter: true });
+    return this.model.sync({ alter: { drop: false } });
   }
 
   async create(query: SingleDocQuery) {
