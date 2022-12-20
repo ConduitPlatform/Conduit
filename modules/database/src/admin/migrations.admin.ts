@@ -35,10 +35,7 @@ export class MigrationsAdmin {
       try {
         const migrationInSandbox = vm.run(m.data);
         await migrationInSandbox.up(this.grpcSdk);
-        await model.findByIdAndUpdate(m._id, {
-          moduleName: moduleName,
-          status: MigrationStatus.SUCCESSFUL_UP,
-        });
+        await model.findByIdAndUpdate(m._id, { status: MigrationStatus.SUCCESSFUL_UP });
         // store new module version in db
         const state = await this.grpcSdk.config.getDeploymentState();
         const version = state.modules.filter(v => v.moduleName === moduleName)[0];
@@ -47,10 +44,7 @@ export class MigrationsAdmin {
           version: version,
         });
       } catch {
-        await model.findByIdAndUpdate(m._id, {
-          moduleName: moduleName,
-          status: MigrationStatus.FAILED,
-        });
+        await model.findByIdAndUpdate(m._id, { status: MigrationStatus.FAILED });
         throw new GrpcError(status.INTERNAL, 'Migration failed');
       }
     }
@@ -85,14 +79,10 @@ export class MigrationsAdmin {
       const migrationInSandbox = vm.run(migration.data);
       await migrationInSandbox.down(this.grpcSdk);
       await model.findByIdAndUpdate(migration._id, {
-        moduleName: moduleName,
         status: MigrationStatus.SUCCESSFUL_DOWN,
       });
     } catch {
-      await model.findByIdAndUpdate(migration._id, {
-        moduleName: moduleName,
-        status: MigrationStatus.FAILED,
-      });
+      await model.findByIdAndUpdate(migration._id, { status: MigrationStatus.FAILED });
       throw new GrpcError(status.INTERNAL, 'Migration failed');
     }
     return 'Migration successfully executed';

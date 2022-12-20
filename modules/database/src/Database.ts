@@ -286,23 +286,22 @@ export default class DatabaseModule extends ManagedModule<void> {
         try {
           const migrationInSandbox = vm.run(a.data);
           await migrationInSandbox.up(this.grpcSdk);
-          await model.findByIdAndUpdate(a._id, {
-            moduleName: moduleName,
-            status: MigrationStatus.SUCCESSFUL_UP,
-          });
-          // store new version of module in db
+          await model.findByIdAndUpdate(a._id, { status: MigrationStatus.SUCCESSFUL_UP });
+          // update or store new version of module in db
           const state = await this.grpcSdk.config.getDeploymentState();
           const version = state.modules.filter(v => v.moduleName === moduleName)[0];
-          await this._activeAdapter.getSchemaModel('Versions').model.create({
-            moduleName: moduleName,
-            version: version,
-          });
+          const updated = await this._activeAdapter
+            .getSchemaModel('Versions')
+            .model.findByIdAndUpdate(a._id, { version: version });
+          if (isNil(updated)) {
+            await this._activeAdapter.getSchemaModel('Versions').model.create({
+              moduleName: moduleName,
+              version: version,
+            });
+          }
         } catch (e) {
           console.log((e as Error).message);
-          await model.findByIdAndUpdate(a._id, {
-            moduleName: moduleName,
-            status: MigrationStatus.FAILED,
-          });
+          await model.findByIdAndUpdate(a._id, { status: MigrationStatus.FAILED });
           callback(null, {
             code: status.INTERNAL,
             message: `Migration failed for ${moduleName}`,
