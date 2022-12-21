@@ -6,6 +6,7 @@ import { Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
+import axios from 'axios';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -124,5 +125,19 @@ export namespace AuthUtils {
     } else {
       return true;
     }
+  }
+
+  export async function recaptchaVerify(secret: string, token: string) {
+    const googleUrl = `https://www.google.com/siteverify?secret=${secret}&response=${token}`;
+    const response = await axios.post(
+      googleUrl,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+        },
+      },
+    );
+    return response.data.success;
   }
 }

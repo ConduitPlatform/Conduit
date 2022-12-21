@@ -7583,6 +7583,11 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
+hcaptcha@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/hcaptcha/-/hcaptcha-0.1.1.tgz#0a5c3469ac55e3f3827f2fd07c2bf27859067d12"
+  integrity sha512-iMrDmH2VpIEKOrcKWidVjI89FdDKTEdZ7PfPWkP27sTazIIkob8YfdY2ezaufAnWBiUUcvzsn0qF+dyXtBH2Vw==
+
 helmet@^5.1.0:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/helmet/-/helmet-5.1.0.tgz#e98a5d4bf89ab8119c856018a3bcc82addadcd47"
