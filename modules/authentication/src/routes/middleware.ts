@@ -14,6 +14,7 @@ import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
 import axios from 'axios';
+import { verify } from 'hcaptcha';
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -144,26 +145,26 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
           if (!secretKey) {
             throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
           }
-
-          let url = `https://www.${provider}.com/`;
-          const suffix = `siteverify?secret=${secretKey}&response=${captchaToken}`;
+          let success = false;
           if (provider === 'recaptcha') {
-            url += 'api/' + suffix;
-          } else if (provider === 'hcaptcha') {
-            url += suffix;
+            const googleUrl = `https://www.google.com/siteverify?secret=${secretKey}&response=${captchaToken}`;
+            const response = await axios.post(
+              googleUrl,
+              {},
+              {
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+                },
+              },
+            );
+            success = response.data.success;
+          } else {
+            const response = await verify(secretKey, captchaToken);
+            success = response.success;
           }
 
-          const response = await axios.post(
-            url,
-            {},
-            {
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-              },
-            },
-          );
-          if (!response.data.success) {
-            throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+          if (!success) {
+            throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
           }
         }
       }
