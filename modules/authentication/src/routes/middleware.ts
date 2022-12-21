@@ -147,17 +147,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
           }
           let success = false;
           if (provider === 'recaptcha') {
-            const googleUrl = `https://www.google.com/siteverify?secret=${secretKey}&response=${captchaToken}`;
-            const response = await axios.post(
-              googleUrl,
-              {},
-              {
-                headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-                },
-              },
-            );
-            success = response.data.success;
+            success = await AuthUtils.recaptchaVerify(secretKey, captchaToken);
           } else {
             const response = await verify(secretKey, captchaToken);
             success = response.success;
