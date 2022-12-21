@@ -43,7 +43,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
           invitationToken: ConduitString.Optional,
-          captchaToken: ConduitString.Required,
+          captchaToken: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.register
