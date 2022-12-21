@@ -38,6 +38,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager) {
+    const captchaConfig = ConfigController.getInstance().config.captcha;
     routingManager.route(
       {
         path: '/phone',
@@ -46,7 +47,12 @@ export class PhoneHandlers implements IAuthenticationStrategy {
               A message will be returned which indicates that a verification code has been sent.`,
         bodyParams: {
           phone: ConduitString.Required,
+          captchaToken: ConduitString.Optional,
         },
+        middlewares:
+          captchaConfig.enabled && captchaConfig.routes.login
+            ? ['captchaMiddleware']
+            : undefined,
       },
       new ConduitRouteReturnDefinition('PhoneAuthenticateResponse', {
         token: ConduitString.Required,

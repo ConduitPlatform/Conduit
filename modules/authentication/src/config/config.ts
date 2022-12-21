@@ -37,4 +37,38 @@ export default {
       default: false,
     },
   },
+  captcha: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    routes: {
+      login: {
+        format: 'Boolean',
+        default: false,
+      },
+      register: {
+        format: 'Boolean',
+        default: false,
+      },
+      oAuth2: {
+        format: 'Boolean',
+        default: false,
+      },
+    },
+    acceptablePlatform: {
+      android: {
+        format: 'Boolean',
+        default: false,
+      },
+      web: {
+        format: 'Boolean',
+        default: true,
+      },
+    },
+    secretKey: {
+      format: 'String',
+      default: '',
+    },
+  },
 };

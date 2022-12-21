@@ -33,6 +33,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
+    const captchaConfig = ConfigController.getInstance().config.captcha;
     routingManager.route(
       {
         path: '/local/new',
@@ -42,7 +43,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
           email: ConduitString.Required,
           password: ConduitString.Required,
           invitationToken: ConduitString.Optional,
+          captchaToken: ConduitString.Optional,
         },
+        middlewares:
+          captchaConfig.enabled && captchaConfig.routes.register
+            ? ['captchaMiddleware']
+            : undefined,
       },
       new ConduitRouteReturnDefinition('RegisterResponse', User.name),
       this.register.bind(this),
@@ -57,7 +63,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
         bodyParams: {
           email: ConduitString.Required,
           password: ConduitString.Required,
+          captchaToken: ConduitString.Optional,
         },
+        middlewares:
+          captchaConfig.enabled && captchaConfig.routes.login
+            ? ['captchaMiddleware']
+            : undefined,
       },
       new ConduitRouteReturnDefinition('LoginResponse', {
         accessToken: ConduitString.Optional,
