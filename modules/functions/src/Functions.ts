@@ -6,8 +6,6 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
-import { Config } from './config';
-import AppConfigSchema from '@conduitplatform/email/dist/config';
 import metricsSchema from './metrics';
 import path from 'path';
 import { AdminHandlers } from './admin';
@@ -17,6 +15,7 @@ import * as models from './models';
 import { ExecuteFunctionRequest, ExecuteFunctionResponse } from './protoTypes/functions';
 import { status } from '@grpc/grpc-js';
 import { NodeVM } from 'vm2';
+import AppConfigSchema, { Config } from './config';
 
 export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
