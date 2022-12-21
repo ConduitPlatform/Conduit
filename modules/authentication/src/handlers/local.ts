@@ -5,7 +5,6 @@ import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
-  ConduitRouteOptions,
   ConduitRouteReturnDefinition,
   ConduitString,
   ConfigController,
