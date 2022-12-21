@@ -6,6 +6,14 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
+  code: {
+    type: TYPE.String,
+    required: true,
+  },
+  operation: {
+    type: TYPE.String,
+    required: true,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -23,23 +31,25 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class Function extends ConduitActiveSchema<Function> {
-  private static _instance: Function;
+export class Functions extends ConduitActiveSchema<Functions> {
+  private static _instance: Functions;
   _id!: string;
   name!: string;
+  code!: string;
+  operation!: string;
   createdAt: Date;
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, Function.name, schema, modelOptions, collectionName);
+    super(database, Functions.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (Function._instance) return Function._instance;
+    if (Functions._instance) return Functions._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    Function._instance = new Function(database);
-    return Function._instance;
+    Functions._instance = new Functions(database);
+    return Functions._instance;
   }
 }
