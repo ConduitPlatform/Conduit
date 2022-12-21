@@ -235,6 +235,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   }
 
   declareRoutes(routingManager: RoutingManager) {
+    const captchaConfig = ConfigController.getInstance().config.captcha;
     routingManager.route(
       {
         path: `/init/${this.providerName}`,
@@ -243,7 +244,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         queryParams: {
           scopes: [ConduitString.Optional],
           invitationToken: ConduitString.Optional,
+          captchaToken: ConduitString.Optional,
         },
+        middlewares:
+          captchaConfig.enabled && captchaConfig.routes.oAuth2
+            ? ['captchaMiddleware']
+            : undefined,
       },
       new ConduitRouteReturnDefinition(
         `${this.capitalizeProvider()}InitResponse`,

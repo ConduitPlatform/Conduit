@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitActiveSchema,
   ConfigController,
   DatabaseProvider,
   GrpcCallback,
@@ -280,9 +281,16 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   protected registerSchemas() {
-    const promises: Promise<any>[] = Object.values(models).map(model => {
+    const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
-      return this.database.createSchemaFromAdapter(modelInstance);
+      //TODO: add support for multiple schemas types
+      if (
+        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
+          .length !== 0
+      ) {
+        // borrowed foreign model
+        return this.database.createSchemaFromAdapter(modelInstance);
+      }
     });
     return Promise.all(promises);
   }
