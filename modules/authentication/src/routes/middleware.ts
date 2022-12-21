@@ -121,6 +121,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   if (!enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
+
   const client = await Client.getInstance().findOne({ clientId: clientId });
   const clientPlatform = client!.platform;
   if (
