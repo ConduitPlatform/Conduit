@@ -115,7 +115,7 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
-  const { acceptablePlatform, secretKey, enabled } = config.captcha;
+  const { acceptablePlatform, secretKey, enabled, provider } = config.captcha;
   const { clientId } = call.request.context;
 
   if (!enabled) {
@@ -143,8 +143,17 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
           if (!secretKey) {
             throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
           }
+
+          let url = `https://www.${provider}.com/`;
+          const suffix = `siteverify?secret=${secretKey}&response=${captchaToken}`;
+          if (provider === 'recaptcha') {
+            url += 'api/' + suffix;
+          } else if (provider === 'hcaptcha') {
+            url += suffix;
+          }
+
           const response = await axios.post(
-            `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
+            url,
             {},
             {
               headers: {
