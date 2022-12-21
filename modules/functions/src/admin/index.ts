@@ -44,14 +44,14 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/execute/:id',
+        path: '/execute',
         action: ConduitRouteActions.POST,
         description: 'Execute a function',
-        urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+        bodyParams: {
+          name: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition(Functions.name),
+      new ConduitRouteReturnDefinition('ExecuteFunction', 'String'),
       this.executeFunction.bind(this),
     );
     this.routingManager.route(
@@ -116,7 +116,7 @@ export class AdminHandlers {
     const { name, code, operation } = call.request.params;
     const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'function already exists');
+      throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
     const newFunction = await Functions.getInstance().create({
       name: name,
@@ -127,8 +127,8 @@ export class AdminHandlers {
   }
 
   async executeFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const id = call.request.params._id;
-    const func = await Functions.getInstance().findOne({ _id: id });
+    const functionName = call.request.params.name;
+    const func = await Functions.getInstance().findOne({ name: functionName });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
@@ -136,8 +136,8 @@ export class AdminHandlers {
       console: 'inherit',
       sandbox: {},
     });
-    const result = vm.run(func.code);
-    return result;
+    vm.run(func.code);
+    return 'success';
   }
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

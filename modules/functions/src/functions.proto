@@ -16,7 +16,7 @@ message UploadFunctionRequest {
 }
 
 message ExecuteFunctionRequest {
-  string id = 1;
+  string name = 1;
 }
 
 message DeleteFunctionRequest {
@@ -66,7 +66,7 @@ message SuccessResponse {
 service Functions {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc UploadFunction(UploadFunctionRequest) returns (FunctionResponse);
-  rpc ExecuteFunction(ExecuteFunctionRequest) returns (FunctionResponse);
+  rpc ExecuteFunction(ExecuteFunctionRequest) returns (SuccessResponse);
   rpc DeleteFunction(DeleteFunctionRequest) returns (SuccessResponse);
   rpc UpdateFunction(UpdateFunctionRequest) returns (FunctionResponse);
   rpc GetFunction(GetFunctionRequest) returns (FunctionResponse);

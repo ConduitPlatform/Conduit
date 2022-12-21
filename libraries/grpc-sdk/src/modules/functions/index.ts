@@ -13,9 +13,9 @@ export class Functions extends ConduitModule<typeof FunctionsDefinition> {
     });
   }
 
-  executeFunction(id: string) {
-    return this.client!.executeFunction({ id }).then(res => {
-      return { name: res.name, code: res.code, operation: res.operation };
+  executeFunction(name: string) {
+    return this.client!.executeFunction({ name }).then(res => {
+      return JSON.parse(res.message);
     });
   }
 
