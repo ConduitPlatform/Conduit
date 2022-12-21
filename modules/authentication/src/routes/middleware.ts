@@ -126,7 +126,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const clientPlatform = client!.platform;
   if (
     clientId === 'anonymous-client' ||
-    clientPlatform === 'WEB ' ||
+    clientPlatform === 'WEB' ||
     clientPlatform === 'ANDROID'
   ) {
     for (const platform of Object.keys(acceptablePlatform)) {
