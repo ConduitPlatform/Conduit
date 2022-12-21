@@ -134,7 +134,6 @@ export class AdminHandlers {
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
-
     const vm = new NodeVM({
       console: 'inherit',
       sandbox: {},
