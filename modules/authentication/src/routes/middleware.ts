@@ -13,8 +13,7 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
-import axios from 'axios';
-import { verify } from 'hcaptcha';
+import { verify as hcaptchaVerify } from 'hcaptcha';
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -149,7 +148,7 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
           if (provider === 'recaptcha') {
             success = await AuthUtils.recaptchaVerify(secretKey, captchaToken);
           } else {
-            const response = await verify(secretKey, captchaToken);
+            const response = await hcaptchaVerify(secretKey, captchaToken);
             success = response.success;
           }
 
