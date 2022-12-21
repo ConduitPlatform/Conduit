@@ -17,6 +17,7 @@ message UploadFunctionRequest {
 
 message ExecuteFunctionRequest {
   string name = 1;
+  optional int32 timeout = 2;
 }
 
 message DeleteFunctionRequest {
@@ -57,7 +58,9 @@ message FunctionResponse {
   string code = 3;
   string operation = 4;
 }
-
+message ExecuteFunctionResponse {
+  string result = 1;
+}
 message SuccessResponse {
   string message = 1;
 }
@@ -66,7 +69,7 @@ message SuccessResponse {
 service Functions {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc UploadFunction(UploadFunctionRequest) returns (FunctionResponse);
-  rpc ExecuteFunction(ExecuteFunctionRequest) returns (SuccessResponse);
+  rpc ExecuteFunction(ExecuteFunctionRequest) returns (ExecuteFunctionResponse);
   rpc DeleteFunction(DeleteFunctionRequest) returns (SuccessResponse);
   rpc UpdateFunction(UpdateFunctionRequest) returns (FunctionResponse);
   rpc GetFunction(GetFunctionRequest) returns (FunctionResponse);

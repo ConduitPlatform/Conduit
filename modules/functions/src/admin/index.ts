@@ -49,6 +49,7 @@ export class AdminHandlers {
         description: 'Execute a function',
         bodyParams: {
           name: ConduitString.Required,
+          timeout: ConduitNumber.Optional,
         },
       },
       new ConduitRouteReturnDefinition('ExecuteFunction', 'String'),
@@ -128,16 +129,23 @@ export class AdminHandlers {
 
   async executeFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const functionName = call.request.params.name;
+    const terminationTime = call.request.params.timeout ?? 180000;
     const func = await Functions.getInstance().findOne({ name: functionName });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
+
     const vm = new NodeVM({
       console: 'inherit',
       sandbox: {},
+      timeout: terminationTime,
     });
-    vm.run(func.code);
-    return 'success';
+    try {
+      const result = await vm.run(func.code);
+      return { result };
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, 'Execution failed');
+    }
   }
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

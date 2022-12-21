@@ -14,7 +14,7 @@ import { AdminHandlers } from './admin';
 import { runMigrations } from './migrations';
 import { isNil } from 'lodash';
 import * as models from './models';
-import { ExecuteFunctionRequest } from './protoTypes/functions';
+import { ExecuteFunctionRequest, ExecuteFunctionResponse } from './protoTypes/functions';
 import { status } from '@grpc/grpc-js';
 import { NodeVM } from 'vm2';
 
@@ -64,7 +64,7 @@ export default class Functions extends ManagedModule<Config> {
 
   async executeFunction(
     call: GrpcRequest<ExecuteFunctionRequest>,
-    callback: GrpcCallback<null>,
+    callback: GrpcCallback<ExecuteFunctionResponse>,
   ) {
     const { name } = call.request;
     let errorMessage: string | null = null;
@@ -89,12 +89,25 @@ export default class Functions extends ManagedModule<Config> {
 
     // @ts-ignore
     const { code } = functionModel;
+    const terminationTime = call.request.timeout ?? 180000;
 
     const vm = new NodeVM({
       console: 'inherit',
       sandbox: {},
+      timeout: terminationTime,
     });
-    const result = vm.run(code);
+    let result: any;
+    try {
+      result = vm.run(code);
+    } catch (err: any) {
+      errorMessage = err.message;
+      ConduitGrpcSdk.Metrics?.increment('failed_functions_total', 1);
+      return callback({
+        code: status.INTERNAL,
+        message: `Execution terminated: ${errorMessage}`,
+      });
+    }
+
     ConduitGrpcSdk.Metrics?.increment('executed_functions_total', 1);
     return callback(null, result);
   }
