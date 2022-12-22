@@ -31,12 +31,7 @@ export interface SchemaAdapter<T> {
    * @param populate
    * @param relations
    */
-  findOne(
-    query: Query,
-    select?: string,
-    populate?: string[],
-    relations?: Indexable,
-  ): Promise<any>;
+  findOne(query: Query, select?: string, populate?: string[]): Promise<any>;
 
   /**
    * Should find Many
@@ -55,7 +50,6 @@ export interface SchemaAdapter<T> {
     select?: string,
     sort?: any,
     populate?: string[],
-    relations?: Indexable,
   ): Promise<any>;
 
   /**
@@ -75,7 +69,6 @@ export interface SchemaAdapter<T> {
     document: SingleDocQuery,
     updateProvidedOnly?: boolean,
     populate?: string[],
-    relations?: Indexable,
   ): Promise<any>;
 
   updateMany(
