@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -168,7 +169,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync?: boolean,
   ): Promise<string>;
 
-  abstract getSchemaModel(schemaName: string): { model: Schema; relations: any };
+  abstract getSchemaModel(schemaName: string): {
+    model: Schema;
+    relations: null | Indexable;
+  };
 
   abstract getDatabaseType(): string;
 

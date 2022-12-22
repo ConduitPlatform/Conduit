@@ -5,8 +5,13 @@ import { UserIdToUserRefreshTokenSchemaMigration } from './UserIdToUserRefreshTo
 import { UserIdToUserTwoFactorSchemaMigration } from './UserIdToUserTwoFactorSchemaMigration';
 
 export async function runMigrations(grpcSdk: ConduitGrpcSdk) {
-  await UserIdToUserTokenSchemaMigration(grpcSdk);
-  await UserIdToUserAccessTokenSchemaMigration(grpcSdk);
-  await UserIdToUserRefreshTokenSchemaMigration(grpcSdk);
-  await UserIdToUserTwoFactorSchemaMigration(grpcSdk);
+  await UserIdToUserTokenSchemaMigration(grpcSdk).catch(ignorePostgres);
+  await UserIdToUserAccessTokenSchemaMigration(grpcSdk).catch(ignorePostgres);
+  await UserIdToUserRefreshTokenSchemaMigration(grpcSdk).catch(ignorePostgres);
+  await UserIdToUserTwoFactorSchemaMigration(grpcSdk).catch(ignorePostgres);
+}
+
+function ignorePostgres(error: { details: string }) {
+  if (error.details.endsWith('.userId does not exist')) return;
+  throw error;
 }

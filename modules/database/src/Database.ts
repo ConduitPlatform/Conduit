@@ -317,7 +317,6 @@ export default class DatabaseModule extends ManagedModule<void> {
         call.request.query,
         call.request.select,
         call.request.populate,
-        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -347,7 +346,6 @@ export default class DatabaseModule extends ManagedModule<void> {
         select,
         sort,
         populate,
-        schemaAdapter.relations,
       );
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -433,7 +431,6 @@ export default class DatabaseModule extends ManagedModule<void> {
         call.request.query,
         call.request.updateProvidedOnly,
         call.request.populate,
-        schemaAdapter.relations,
       );
       const resultString = JSON.stringify(result);
 

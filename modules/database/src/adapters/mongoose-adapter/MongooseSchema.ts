@@ -137,7 +137,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.deleteMany(this.parseQuery(parsedQuery)).exec();
   }
 
-  calculatePopulates(queryObj: any, population: string[]) {
+  private calculatePopulates(queryObj: any, population: string[]) {
     population.forEach((r: string | string[], index: number) => {
       const final = r.toString().trim();
       if (r.indexOf('.') !== -1) {

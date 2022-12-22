@@ -13,7 +13,7 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
-import axios from 'axios';
+import { verify as hcaptchaVerify } from 'hcaptcha';
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -115,7 +115,7 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
-  const { acceptablePlatform, secretKey, enabled } = config.captcha;
+  const { acceptablePlatform, secretKey, enabled, provider } = config.captcha;
   const { clientId } = call.request.context;
 
   if (!enabled) {
@@ -144,17 +144,16 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
           if (!secretKey) {
             throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
           }
-          const response = await axios.post(
-            `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`,
-            {},
-            {
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-              },
-            },
-          );
-          if (!response.data.success) {
-            throw new GrpcError(status.UNAUTHENTICATED, 'Can not verify captcha token.');
+          let success = false;
+          if (provider === 'recaptcha') {
+            success = await AuthUtils.recaptchaVerify(secretKey, captchaToken);
+          } else {
+            const response = await hcaptchaVerify(secretKey, captchaToken);
+            success = response.success;
+          }
+
+          if (!success) {
+            throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
           }
         }
       }
