@@ -17,7 +17,11 @@ import {
 } from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitModelField,
+  ConduitSchema,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 
@@ -137,12 +141,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return this.model.bulkCreate(parsedQuery);
   }
 
-  async findOne(
-    query: Query,
-    select?: string,
-    populate?: string[],
-    relations?: Indexable,
-  ) {
+  async findOne(query: Query, select?: string, populate?: string[]) {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -159,15 +158,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     incrementDbQueries();
     const document = await this.model.findOne(options);
 
-    if (!isNil(populate) && !isNil(relations)) {
-      for (const relation of populate) {
-        if (this.relations.hasOwnProperty(relation)) {
-          if (relations.hasOwnProperty(this.relations[relation])) {
-            incrementDbQueries();
-            document[relation] = await relations[this.relations[relation]].findOne({
-              _id: document[relation],
-            });
-          }
+    if (!isNil(populate) && !isNil(this.relations)) {
+      for (const relationField of populate) {
+        const relationSchema = (
+          this.originalSchema.fields[relationField] as ConduitModelField
+        )?.model;
+        if (!relationSchema) continue;
+        if (this.relations.hasOwnProperty(relationField)) {
+          incrementDbQueries();
+          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
+          document[relationField] = await schemaModel.findOne({
+            _id: document[relationField],
+          });
         }
       }
     }
@@ -182,7 +184,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     select?: string,
     sort?: { [key: string]: number },
     populate?: string[],
-    relations?: Indexable,
   ): Promise<any> {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
@@ -209,20 +210,24 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     const documents = await this.model.findAll(options);
 
-    if (!isNil(populate) && !isNil(relations)) {
+    if (!isNil(populate) && !isNil(this.relations)) {
       for (const relation of populate) {
+        const relationField = relation.split('.')[1];
+        const relationSchema = (
+          this.originalSchema.fields[relationField] as ConduitModelField
+        )?.model;
+        if (!relationSchema) continue;
         const cache: Indexable = {};
         for (const document of documents) {
-          if (this.relations.hasOwnProperty(relation)) {
-            if (relations.hasOwnProperty(this.relations[relation])) {
-              if (!cache.hasOwnProperty(document[relation])) {
-                incrementDbQueries();
-                cache[document[relation]] = await relations[
-                  this.relations[relation]
-                ].findOne({ _id: document[relation] });
-              }
-              document[relation] = cache[document[relation]];
+          if (this.relations.hasOwnProperty(relationField)) {
+            if (!cache.hasOwnProperty(document[relation])) {
+              incrementDbQueries();
+              const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
+              cache[document[relation]] = await schemaModel.findOne({
+                _id: document[relation],
+              });
             }
+            document[relationField] = cache[document[relation]];
           }
         }
       }
@@ -258,7 +263,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     query: SingleDocQuery,
     updateProvidedOnly: boolean = false,
     populate?: string[],
-    relations?: Indexable,
   ) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -334,19 +338,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     incrementDbQueries();
     await this.createWithPopulations(parsedQuery);
     const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
-    if (!isNil(populate) && !isNil(relations)) {
-      for (const relation of populate) {
-        const cache: Indexable = {};
-        if (this.relations.hasOwnProperty(relation)) {
-          if (relations.hasOwnProperty(this.relations[relation])) {
-            if (!cache.hasOwnProperty(document[relation])) {
-              incrementDbQueries();
-              cache[document[relation]] = await relations[
-                this.relations[relation]
-              ].findOne({ _id: document[relation] });
-            }
-            document[relation] = cache[document[relation]];
-          }
+    if (!isNil(populate) && !isNil(this.relations)) {
+      for (const relationField of populate) {
+        const relationSchema = (
+          this.originalSchema.fields[relationField] as ConduitModelField
+        )?.model;
+        if (!relationSchema) continue;
+        if (this.relations.hasOwnProperty(relationField)) {
+          incrementDbQueries();
+          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
+          document[relationField] = await schemaModel.findOne({
+            _id: document[relationField],
+          });
         }
       }
     }

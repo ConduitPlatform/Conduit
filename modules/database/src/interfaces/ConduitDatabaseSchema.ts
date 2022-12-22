@@ -54,15 +54,8 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     document: ParsedQuery,
     updateProvidedOnly?: boolean,
     populate?: string[] | undefined,
-    relations?: any,
   ) {
-    return this.model.findByIdAndUpdate(
-      id,
-      document,
-      updateProvidedOnly,
-      populate,
-      relations,
-    );
+    return this.model.findByIdAndUpdate(id, document, updateProvidedOnly, populate);
   }
 
   updateMany(filterQuery: ParsedQuery, query: ParsedQuery, updateProvidedOnly?: boolean) {
