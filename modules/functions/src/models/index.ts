@@ -1,1 +1,1 @@
-export * from './Functions.shema';
+export * from './Function.endpoints.shema';

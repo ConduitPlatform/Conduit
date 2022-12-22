@@ -1,8 +1,6 @@
 import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
-  GrpcRequest,
-  GrpcCallback,
   HealthCheckStatus,
   ManagedModule,
 } from '@conduitplatform/grpc-sdk';
@@ -10,12 +8,9 @@ import metricsSchema from './metrics';
 import path from 'path';
 import { AdminHandlers } from './admin';
 import { runMigrations } from './migrations';
-import { isNil } from 'lodash';
 import * as models from './models';
-import { ExecuteFunctionRequest, ExecuteFunctionResponse } from './protoTypes/functions';
-import { status } from '@grpc/grpc-js';
-import { NodeVM } from 'vm2';
 import AppConfigSchema, { Config } from './config';
+import { FunctionController } from './controllers/function.controller';
 
 export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -26,10 +21,9 @@ export default class Functions extends ManagedModule<Config> {
     protoDescription: 'functions.Functions',
     functions: {
       setConfig: this.setConfig.bind(this),
-      executeFunction: this.executeFunction.bind(this),
     },
   };
-
+  private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private database: DatabaseProvider;
 
@@ -58,56 +52,16 @@ export default class Functions extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     }
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+    this.isRunning = true;
     this.updateHealth(HealthCheckStatus.SERVING);
-  }
-
-  async executeFunction(
-    call: GrpcRequest<ExecuteFunctionRequest>,
-    callback: GrpcCallback<ExecuteFunctionResponse>,
-  ) {
-    const { name } = call.request;
-    let errorMessage: string | null = null;
-    if (isNil(name)) {
-      return callback({
-        code: status.INVALID_ARGUMENT,
-        message: 'Invalid request',
+    const functionController = new FunctionController(this.grpcServer, this.grpcSdk);
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        functionController.refreshRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
       });
-    }
-    const functionModel = await models.Functions.getInstance()
-      .findOne({ name })
-      .catch((e: Error) => {
-        errorMessage = e.message;
-      });
-    if (!isNil(errorMessage)) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
-
-    if (isNil(functionModel)) {
-      return callback({ code: status.NOT_FOUND, message: 'Function not found' });
-    }
-
-    // @ts-ignore
-    const { code } = functionModel;
-    const terminationTime = call.request.timeout ?? 180000;
-
-    const vm = new NodeVM({
-      console: 'inherit',
-      sandbox: {},
-      timeout: terminationTime,
-    });
-    let result: any;
-    try {
-      result = vm.run(code);
-    } catch (err: any) {
-      errorMessage = err.message;
-      ConduitGrpcSdk.Metrics?.increment('failed_functions_total', 1);
-      return callback({
-        code: status.INTERNAL,
-        message: `Execution terminated: ${errorMessage}`,
-      });
-    }
-
-    ConduitGrpcSdk.Metrics?.increment('executed_functions_total', 1);
-    return callback(null, result);
   }
 }

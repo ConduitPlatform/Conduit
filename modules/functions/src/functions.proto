@@ -1,6 +1,7 @@
 syntax = 'proto3';
 package functions;
 
+
 message SetConfigRequest {
   string newConfig = 1;
 }
@@ -9,71 +10,6 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
-message UploadFunctionRequest {
-  string name = 1;
-  string code = 2;
-  string operation = 3;
-}
-
-message ExecuteFunctionRequest {
-  string name = 1;
-  optional int32 timeout = 2;
-}
-
-message DeleteFunctionRequest {
- string id = 1;
-}
-
-message UpdateFunctionRequest {
- string id = 1;
- optional string name = 2;
- optional string code = 3;
- optional string operation = 4;
-}
-
-message GetFunctionRequest {
- string id = 1;
-}
-
-message GetFunctionsRequest {
-  optional int32 skip = 1;
-  optional int32 limit = 2;
-  optional string sort = 3;
-}
-
-message GetFunctionsResponse {
-  repeated Function functions = 1;
-}
-
-message Function {
-  string id = 1;
-  string name = 2;
-  string code = 3;
-  string operation = 4;
-}
-
-message FunctionResponse {
-  string id = 1;
-  string name = 2;
-  string code = 3;
-  string operation = 4;
-}
-message ExecuteFunctionResponse {
-  string result = 1;
-}
-message SuccessResponse {
-  string message = 1;
-}
-
-
 service Functions {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
-  rpc UploadFunction(UploadFunctionRequest) returns (FunctionResponse);
-  rpc ExecuteFunction(ExecuteFunctionRequest) returns (ExecuteFunctionResponse);
-  rpc DeleteFunction(DeleteFunctionRequest) returns (SuccessResponse);
-  rpc UpdateFunction(UpdateFunctionRequest) returns (FunctionResponse);
-  rpc GetFunction(GetFunctionRequest) returns (FunctionResponse);
-  rpc GetFunctions(GetFunctionsRequest) returns (GetFunctionsResponse);
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse) {}
 }
-
-
