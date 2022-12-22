@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   DatabaseProvider,
   HealthCheckStatus,
   ManagedModule,
-  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
@@ -36,8 +35,6 @@ export default class Forms extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'forms', migrationFilePath);
     await this.registerSchemas();
     await this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {

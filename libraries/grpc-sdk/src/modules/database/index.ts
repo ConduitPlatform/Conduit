@@ -278,4 +278,12 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       return JSON.parse(res.result);
     });
   }
+
+  getDatabaseType() {
+    return this.serviceClient!.getDatabaseType({});
+  }
+
+  getSystemSchemas() {
+    return this.serviceClient!.getSystemSchemas({});
+  }
 }

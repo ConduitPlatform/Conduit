@@ -6,7 +6,6 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   ManagedModule,
   registerMigrations,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -27,11 +26,9 @@ import {
   UserLoginRequest,
   UserLoginResponse,
 } from './protoTypes/authentication';
-import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
-import EventEmitter from 'events';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;

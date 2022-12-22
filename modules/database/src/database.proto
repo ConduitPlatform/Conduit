@@ -117,16 +117,24 @@ message RegisterMigrationRequest {
     string data = 3;
 }
 
-message RegisterMigrationResponse {
-
-}
+message RegisterMigrationResponse {}
 
 message TriggerMigrationsRequest {
     string moduleName = 1;
 }
 
-message TriggerMigrationsResponse {
+message TriggerMigrationsResponse {}
 
+message GetDatabaseTypeRequest {}
+
+message GetDatabaseTypeResponse {
+    string type = 1;
+}
+
+message GetSystemSchemasRequest {}
+
+message GetSystemSchemasResponse {
+    string schemas = 1;
 }
 
 service DatabaseProvider {
@@ -137,6 +145,8 @@ service DatabaseProvider {
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
     rpc SetSchemaExtension(SchemaExtension) returns (Schema);
+    rpc GetDatabaseType(GetDatabaseTypeRequest) returns (GetDatabaseTypeResponse);
+    rpc GetSystemSchemas(GetSystemSchemasRequest) returns (GetSystemSchemasResponse);
     // Database Queries
     rpc findOne(FindOneRequest) returns (QueryResponse);
     rpc findMany(FindRequest) returns (QueryResponse);

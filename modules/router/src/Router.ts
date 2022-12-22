@@ -1,4 +1,4 @@
-import { Router, NextFunction } from 'express';
+import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConfigController,
@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   ManagedModule,
   ConduitRouteObject,
   SocketProtoDescription,
-  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -73,8 +72,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'router', migrationFilePath);
     ProtoGenerator.getInstance(protoTemplate);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,

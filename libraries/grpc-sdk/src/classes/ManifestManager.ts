@@ -210,7 +210,7 @@ export class ManifestManager {
     if (
       requested.preVersionOne === available.preVersionOne &&
       requested.operator === TagComparisonOperator.Equal &&
-      requested.tag === availableTag
+      requested.tag === available.tag
     )
       return;
     else if (

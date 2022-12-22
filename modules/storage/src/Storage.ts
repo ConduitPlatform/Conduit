@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   ManagedModule,
   ParsedRouterRequest,
-  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
@@ -50,8 +49,6 @@ export default class Storage extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'storage', migrationFilePath);
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
   }

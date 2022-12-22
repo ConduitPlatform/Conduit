@@ -201,10 +201,18 @@ export default class ConfigManager implements IConfigManager {
     await this.grpcSdk.database!.createSchemaFromAdapter(
       models.Config.getInstance(this.grpcSdk.database!),
     );
-    // TODO: core should run admin's migrations too in order to store a correct module version
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'core', migrationFilePath);
+    await this.registerPackageMigrations();
     this._configStorage.onDatabaseAvailable();
+  }
+
+  private async registerPackageMigrations() {
+    const coreMigrationFilePath = path.resolve(__dirname, 'migrations');
+    await registerMigrations(this.grpcSdk.database!, 'core', coreMigrationFilePath);
+    const adminMigrationFilePath = path.resolve(
+      __dirname,
+      '../../../admin/dist/migrations',
+    );
+    await registerMigrations(this.grpcSdk.database!, 'core', adminMigrationFilePath);
   }
 
   private getGrpc(

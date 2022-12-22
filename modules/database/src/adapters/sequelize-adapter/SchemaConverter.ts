@@ -76,7 +76,7 @@ function extractObjectType(objectField: any) {
 function extractType(type: string) {
   switch (type) {
     case 'String':
-      return DataTypes.STRING;
+      return DataTypes.TEXT;
     case 'Number':
       return DataTypes.FLOAT;
     case 'Boolean':
