@@ -160,11 +160,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relationField of populate) {
-        const relationSchema = (
-          this.originalSchema.fields[relationField] as ConduitModelField
-        )?.model;
-        if (!relationSchema) continue;
         if (this.relations.hasOwnProperty(relationField)) {
+          const relationSchema = this.relations[relationField];
           incrementDbQueries();
           const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
           document[relationField] = await schemaModel.findOne({
@@ -213,13 +210,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relation of populate) {
         const relationField = relation.split('.')[1];
-        const relationSchema = (
-          this.originalSchema.fields[relationField] as ConduitModelField
-        )?.model;
-        if (!relationSchema) continue;
         const cache: Indexable = {};
         for (const document of documents) {
           if (this.relations.hasOwnProperty(relationField)) {
+            const relationSchema = this.relations[relationField];
             if (!cache.hasOwnProperty(document[relation])) {
               incrementDbQueries();
               const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
@@ -340,11 +334,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relationField of populate) {
-        const relationSchema = (
-          this.originalSchema.fields[relationField] as ConduitModelField
-        )?.model;
-        if (!relationSchema) continue;
         if (this.relations.hasOwnProperty(relationField)) {
+          const relationSchema = this.relations[relationField];
           incrementDbQueries();
           const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
           document[relationField] = await schemaModel.findOne({
