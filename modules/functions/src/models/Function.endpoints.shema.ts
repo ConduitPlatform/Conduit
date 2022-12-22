@@ -16,21 +16,13 @@ const schema = {
   },
   inputs: {
     type: TYPE.JSON,
-    required: true,
+    required: false,
   },
   returns: {
     type: TYPE.JSON,
     required: false,
   },
   authentication: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  paginated: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  sorted: {
     type: TYPE.Boolean,
     required: false,
   },
@@ -72,7 +64,7 @@ export class FunctionEndpoints extends ConduitActiveSchema<FunctionEndpoints> {
 
   sorted?: boolean;
 
-  timeout?: number;
+  timeout!: number;
 
   createdAt: Date;
   updatedAt: Date;

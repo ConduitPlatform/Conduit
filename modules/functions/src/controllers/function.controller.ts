@@ -1,16 +1,10 @@
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  GrpcError,
   GrpcServer,
-  ParsedRouterRequest,
   RequestHandlers,
   RoutingManager,
-  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { NodeVM } from 'vm2';
 import { FunctionEndpoints } from '../models';
 import { createFunctionRoute } from './utils';
 
@@ -43,7 +37,7 @@ export class FunctionController {
         const routes: any[] = [];
 
         r.forEach(func => {
-          routes.push(createFunctionRoute(func, this.executeFunction.bind(this)));
+          routes.push(createFunctionRoute(func));
         });
 
         this.addRoutes(routes, false);
@@ -81,27 +75,6 @@ export class FunctionController {
       this.crudRoutes = routes;
     } else {
       this.customRoutes = routes;
-    }
-  }
-
-  async executeFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const functionName = call.request.params.name;
-    const terminationTime = call.request.params.timeout ?? 180000;
-
-    const func = await FunctionEndpoints.getInstance().findOne({ name: functionName });
-    if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
-    }
-
-    const vm = new NodeVM({
-      console: 'inherit',
-      timeout: terminationTime,
-    });
-    try {
-      const result = await vm.run(func.code);
-      return { result };
-    } catch (e) {
-      throw new GrpcError(status.INTERNAL, 'Execution failed');
     }
   }
 }

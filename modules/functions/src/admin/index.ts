@@ -36,12 +36,10 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           code: ConduitString.Required,
-          method: ConduitNumber.Required,
-          inputs: { type: [TYPE.JSON], required: true },
+          method: ConduitString.Required,
+          inputs: { type: [TYPE.JSON], required: false },
           returns: { type: [TYPE.JSON], required: false },
           authentication: { type: TYPE.Boolean, required: false },
-          paginated: { type: TYPE.Boolean, required: false },
-          sorted: { type: TYPE.Boolean, required: false },
           timeout: ConduitNumber.Optional,
         },
       },
@@ -95,14 +93,12 @@ export class AdminHandlers {
           id: { type: RouteOptionType.String, required: true },
         },
         bodyParams: {
-          name: ConduitString.Required,
-          code: ConduitString.Required,
-          method: ConduitNumber.Required,
-          inputs: { type: [TYPE.JSON], required: true },
+          name: ConduitString.Optional,
+          code: ConduitString.Optional,
+          method: ConduitString.Optional,
+          inputs: { type: [TYPE.JSON], required: false },
           returns: { type: [TYPE.JSON], required: false },
           authentication: { type: TYPE.Boolean, required: false },
-          paginated: { type: TYPE.Boolean, required: false },
-          sorted: { type: TYPE.Boolean, required: false },
           timeout: ConduitNumber.Optional,
         },
       },
@@ -113,17 +109,8 @@ export class AdminHandlers {
   }
 
   async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
-      name,
-      code,
-      method,
-      inputs,
-      returns,
-      authentication,
-      paginated,
-      sorted,
-      timeout,
-    } = call.request.params;
+    const { name, code, method, inputs, returns, authentication, timeout } =
+      call.request.params;
     const func = await FunctionEndpoints.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
@@ -136,12 +123,9 @@ export class AdminHandlers {
       inputs,
       returns: functionReturns,
       authentication,
-      paginated,
-      sorted,
       timeout,
     };
-    const newFunction = await FunctionEndpoints.getInstance().create(query);
-    return { newFunction };
+    return FunctionEndpoints.getInstance().create(query);
   }
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -177,17 +161,8 @@ export class AdminHandlers {
   }
 
   async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const {
-      name,
-      code,
-      method,
-      inputs,
-      returns,
-      authentication,
-      paginated,
-      sorted,
-      timeout,
-    } = call.request.params;
+    const { name, code, method, inputs, returns, authentication, timeout } =
+      call.request.params;
     const func = await FunctionEndpoints.getInstance().findOne({ name: name });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
@@ -199,8 +174,6 @@ export class AdminHandlers {
       inputs: inputs ?? func.inputs,
       returns: returns ?? func.returns,
       authentication: authentication ?? func.authentication,
-      paginated: paginated ?? func.paginated,
-      sorted: sorted ?? func.sorted,
       timeout: timeout ?? func.timeout,
     };
     const updated = FunctionEndpoints.getInstance().findByIdAndUpdate(func._id, query);

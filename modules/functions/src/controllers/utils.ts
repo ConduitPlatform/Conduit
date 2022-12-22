@@ -1,6 +1,8 @@
-import { ConduitRouteActions, RouteBuilder, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, GrpcError, RouteBuilder } from '@conduitplatform/grpc-sdk';
 import { FunctionEndpoints } from '../models';
 import { isNil } from 'lodash';
+import { NodeVM } from 'vm2';
+import { status } from '@grpc/grpc-js';
 
 export const LocationEnum = {
   BODY: 0,
@@ -63,48 +65,30 @@ function extractParams(
   return resultingObject;
 }
 
-export function createFunctionRoute(func: FunctionEndpoints, handler: any) {
+async function executeFunction(code: string, terminationTime: number) {
+  const vm = new NodeVM({
+    console: 'inherit',
+    timeout: terminationTime,
+  });
+  try {
+    const result = await vm.run(code);
+    return { result };
+  } catch (e) {
+    throw new GrpcError(status.INTERNAL, 'Execution failed');
+  }
+}
+
+export function createFunctionRoute(func: FunctionEndpoints) {
   const route = new RouteBuilder()
-    .path(`/function/${func.name}`)
+    .path(`/${func.name}`)
     .method(getOperation(func.method))
-    .handler(handler);
+    .handler(() => executeFunction(func.code, func.timeout));
   if (func.authentication) {
     route.middleware('authMiddleware');
   }
-  const inputs = func.inputs;
   let returns: any = { result: [func.returns] };
-  if (getOperation(func.method) === ConduitRouteActions.GET) {
-    route.cacheControl(
-      func.authentication ? 'private, max-age=10' : 'public, max-age=10',
-    );
-  }
 
-  if (func.paginated) {
-    inputs.push({
-      name: 'skip',
-      type: TYPE.Number,
-      location: LocationEnum.QUERY,
-    });
-    inputs.push({
-      name: 'limit',
-      type: TYPE.Number,
-      location: LocationEnum.QUERY,
-    });
-    returns = {
-      documents: [func.returns],
-      count: TYPE.Number,
-    };
-  }
-  if (func.sorted) {
-    inputs.push({
-      name: 'sort',
-      type: TYPE.String,
-      location: LocationEnum.QUERY,
-      optional: true,
-      array: true,
-    });
-  }
-  if (!isNil(func.inputs) && func.inputs.length > 0) {
+  if (!isNil(func?.inputs) && func?.inputs.length > 0) {
     const params = extractParams(func.inputs);
     if (params['bodyParams']) {
       route.bodyParams(params['bodyParams']);
@@ -115,7 +99,7 @@ export function createFunctionRoute(func: FunctionEndpoints, handler: any) {
       Object.keys(params.urlParams).forEach(key => {
         pathPostFix += `/:${key}`;
       });
-      route.path(`/function/${func.name}` + pathPostFix);
+      route.path(`/${func.name}` + pathPostFix);
     }
     if (params['queryParams']) {
       route.queryParams(params['queryParams']);
