@@ -65,14 +65,15 @@ function extractParams(
   return resultingObject;
 }
 
-async function executeFunction(code: string, terminationTime: number) {
+async function executeFunction(code: string, terminationTime: number, inputs: any) {
   const vm = new NodeVM({
-    console: 'inherit',
     timeout: terminationTime,
   });
   try {
-    const result = vm.run(code);
-    const res = !isNil(result) ? result : 'Execution Succeed';
+    const script = `module.exports = function(inputs) { ${code} }`;
+    let functionInSandbox = vm.run(script);
+    let functionData = functionInSandbox(inputs);
+    const res = !isNil(functionData) ? functionData : 'Execution Succeed';
     return res;
   } catch (e) {
     throw new GrpcError(status.INTERNAL, 'Execution failed');
@@ -83,7 +84,7 @@ export function createFunctionRoute(func: FunctionEndpoints) {
   const route = new RouteBuilder()
     .path(`/${func.name}`)
     .method(getOperation(func.method))
-    .handler(() => executeFunction(func.code, func.timeout));
+    .handler(() => executeFunction(func.code, func.timeout, func.inputs));
   if (func.authentication) {
     route.middleware('authMiddleware');
   }
