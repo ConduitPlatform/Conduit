@@ -1,4 +1,4 @@
-syntax = 'proto3';
+syntax = "proto3";
 package functions;
 
 
@@ -11,5 +11,5 @@ message SetConfigResponse {
 }
 
 service Functions {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse) {}
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
 }

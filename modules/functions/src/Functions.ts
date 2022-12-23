@@ -25,6 +25,8 @@ export default class Functions extends ManagedModule<Config> {
   };
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
+
+  private functionsController: FunctionController;
   private database: DatabaseProvider;
 
   constructor() {
@@ -37,6 +39,24 @@ export default class Functions extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.isRunning = true;
+        this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
+        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        return this.functionsController.refreshRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
+  }
+
+  async onConfig() {
+    if (!ConfigController.getInstance().config.active) {
+      this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    }
+    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   protected registerSchemas() {
@@ -45,23 +65,5 @@ export default class Functions extends ManagedModule<Config> {
       return this.database.createSchemaFromAdapter(modelInstance);
     });
     return Promise.all(promises);
-  }
-
-  async onConfig() {
-    if (!ConfigController.getInstance().config.active) {
-      this.updateHealth(HealthCheckStatus.NOT_SERVING);
-    }
-    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
-    this.isRunning = true;
-    this.updateHealth(HealthCheckStatus.SERVING);
-    const functionController = new FunctionController(this.grpcServer, this.grpcSdk);
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        functionController.refreshRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
   }
 }

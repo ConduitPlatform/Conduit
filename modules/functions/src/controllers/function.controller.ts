@@ -25,8 +25,13 @@ export class FunctionController {
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this.refreshRoutes();
+    this.initializeState();
   }
-
+  initializeState() {
+    this.grpcSdk.bus?.subscribe('functions', (message: string) => {
+      this.refreshRoutes();
+    });
+  }
   refreshRoutes() {
     return FunctionEndpoints.getInstance()
       .findMany({})
@@ -76,5 +81,10 @@ export class FunctionController {
     } else {
       this.customRoutes = routes;
     }
+  }
+
+  refreshEndpoints(): void {
+    this.grpcSdk.bus?.publish('functions', '');
+    this.refreshRoutes();
   }
 }

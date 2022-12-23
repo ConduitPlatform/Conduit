@@ -12,7 +12,7 @@ const schema = {
   },
   method: {
     type: TYPE.String,
-    required: false,
+    required: true,
   },
   inputs: {
     type: TYPE.JSON,
@@ -54,15 +54,11 @@ export class FunctionEndpoints extends ConduitActiveSchema<FunctionEndpoints> {
   code!: string;
   method!: string;
 
-  inputs!: any;
+  inputs?: any;
 
   returns?: any;
 
   authentication?: boolean;
-
-  paginated?: boolean;
-
-  sorted?: boolean;
 
   timeout!: number;
 

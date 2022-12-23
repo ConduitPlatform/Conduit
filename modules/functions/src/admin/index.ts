@@ -115,13 +115,12 @@ export class AdminHandlers {
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
-    const functionReturns = returns ?? {};
     const query = {
       name,
       code,
       method,
       inputs,
-      returns: functionReturns,
+      returns,
       authentication,
       timeout,
     };

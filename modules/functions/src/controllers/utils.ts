@@ -72,7 +72,8 @@ async function executeFunction(code: string, terminationTime: number) {
   });
   try {
     const result = await vm.run(code);
-    return { result };
+    const res = !isNil(result) ? result : 'Execution Succeed';
+    return res;
   } catch (e) {
     throw new GrpcError(status.INTERNAL, 'Execution failed');
   }
@@ -86,8 +87,7 @@ export function createFunctionRoute(func: FunctionEndpoints) {
   if (func.authentication) {
     route.middleware('authMiddleware');
   }
-  let returns: any = { result: [func.returns] };
-
+  const returns = !isNil(func.returns) ? func.returns : 'String';
   if (!isNil(func?.inputs) && func?.inputs.length > 0) {
     const params = extractParams(func.inputs);
     if (params['bodyParams']) {
