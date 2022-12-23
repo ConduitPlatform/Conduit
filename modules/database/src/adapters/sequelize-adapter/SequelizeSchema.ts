@@ -485,11 +485,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   private parseSort(sort: { [field: string]: -1 | 1 }) {
     const order: Order = [];
     Object.keys(sort).forEach(field => {
-      if (sort[field] === 1) {
-        order.push([field, 'ASC'] as OrderItem);
-      } else {
-        order.push([field, 'DESC'] as OrderItem);
-      }
+      order.push([field, sort[field] === 1 ? 'ASC' : 'DESC'] as OrderItem);
     });
     return order;
   }
