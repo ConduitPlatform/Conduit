@@ -36,7 +36,7 @@
     "convict": "^6.2.3",
     "crypto": "^1.0.1",
     "helmet": "^5.1.0",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
