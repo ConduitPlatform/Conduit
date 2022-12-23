@@ -1,5 +1,5 @@
 export function constructSortObj(sort: string[]) {
-  const sortObj: { [key: string]: number } = {};
+  const sortObj: { [field: string]: -1 | 1 } = {};
   sort.forEach((sortVal: string) => {
     sortVal = sortVal.trim();
     if (sortVal.indexOf('-') !== -1) {

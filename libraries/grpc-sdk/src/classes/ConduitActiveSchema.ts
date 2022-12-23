@@ -28,9 +28,9 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   findMany(
     query: Query<T>,
     select?: string,
-    skip?: number,
+    skip?: -1 | 1,
     limit?: number,
-    sort?: { [key: string]: number } | string[],
+    sort?: { [field: string]: -1 | 1 } | string[] | string,
     populate?: string | string[],
   ): Promise<T[]> {
     return this.dbInstance.findMany<T>(

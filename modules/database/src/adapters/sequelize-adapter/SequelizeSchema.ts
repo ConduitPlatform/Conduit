@@ -17,11 +17,7 @@ import {
 } from '../../interfaces';
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
-import ConduitGrpcSdk, {
-  ConduitModelField,
-  ConduitSchema,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
 
@@ -179,7 +175,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     skip?: number,
     limit?: number,
     select?: string,
-    sort?: { [key: string]: number },
+    sort?: { [field: string]: -1 | 1 },
     populate?: string[],
   ): Promise<any> {
     let parsedQuery: ParsedQuery | ParsedQuery[];
@@ -486,13 +482,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     return { exclude };
   }
 
-  private parseSort(sort: { [key: string]: number }): Order {
+  private parseSort(sort: { [field: string]: -1 | 1 }) {
     const order: Order = [];
     Object.keys(sort).forEach(field => {
-      if (field[0] === '-') {
-        order.push([field.slice(1), 'DESC'] as OrderItem);
-      } else {
+      if (sort[field] === 1) {
         order.push([field, 'ASC'] as OrderItem);
+      } else {
+        order.push([field, 'DESC'] as OrderItem);
       }
     });
     return order;
