@@ -71,7 +71,7 @@ async function executeFunction(code: string, terminationTime: number) {
     timeout: terminationTime,
   });
   try {
-    const result = await vm.run(code);
+    const result = vm.run(code);
     const res = !isNil(result) ? result : 'Execution Succeed';
     return res;
   } catch (e) {

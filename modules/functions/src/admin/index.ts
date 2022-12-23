@@ -115,6 +115,7 @@ export class AdminHandlers {
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
+    const timeoutValue = timeout ?? 180000;
     const query = {
       name,
       code,
@@ -122,7 +123,7 @@ export class AdminHandlers {
       inputs,
       returns,
       authentication,
-      timeout,
+      timeout: timeoutValue,
     };
     return FunctionEndpoints.getInstance().create(query);
   }
