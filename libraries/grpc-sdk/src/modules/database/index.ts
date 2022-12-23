@@ -117,8 +117,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  constructSortObj(sort: string[]) {
-    const sortObj: { [key: string]: number } = {};
+  private constructSortObj(sort: string[]) {
+    const sortObj: { [field: string]: -1 | 1 } = {};
     sort.forEach((sortVal: string) => {
       sortVal = sortVal.trim();
       if (sortVal.indexOf('-') !== -1) {
@@ -136,16 +136,11 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     select?: string,
     skip?: number,
     limit?: number,
-    sort?: { [key: string]: number } | string[],
+    sort?: { [field: string]: -1 | 1 } | string[] | string,
     populate?: string | string[],
   ): Promise<T[]> {
-    let sortStr;
-    if (Array.isArray(sort)) {
-      sortStr = JSON.stringify(this.constructSortObj(sort));
-    } else {
-      sortStr = sort ? JSON.stringify(sort) : undefined;
-    }
-
+    if (typeof sort === 'string') sort = [sort];
+    const sortObj = Array.isArray(sort) ? this.constructSortObj(sort) : sort;
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
       populateArray = [populate];
@@ -156,7 +151,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       select: select === null ? undefined : select,
       skip,
       limit,
-      sort: sortStr,
+      sort: sortObj,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);

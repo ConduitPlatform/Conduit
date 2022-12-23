@@ -32,7 +32,7 @@ export class CmsHandlers {
       limitNumber = Number.parseInt(limit as string);
     }
 
-    let parsedSort: { [key: string]: number } | undefined = undefined;
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
     if (sort && sort.length > 0) {
       parsedSort = constructSortObj(sort);
     }

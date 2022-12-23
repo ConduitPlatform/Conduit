@@ -329,22 +329,25 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async findMany(call: GrpcRequest<FindRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
-      const skip = call.request.skip;
-      const limit = call.request.limit;
-      const select = call.request.select;
-      const sort: { [key: string]: number } = call.request.sort
-        ? JSON.parse(call.request.sort)
-        : null;
-      const populate = call.request.populate;
-
+      const { skip, limit, select, populate } = call.request;
+      const sort = call.request.sort as { [key: string]: -1 | 1 | number } | undefined;
+      if (sort) {
+        Object.keys(sort).forEach(field => {
+          if (sort[field] !== 1 && sort[field] !== -1) {
+            return callback({
+              code: status.INVALID_ARGUMENT,
+              message: `Invalid sort field value "${sort[field]}" in field "${field}", should be -1 or 1.`,
+            });
+          }
+        });
+      }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-
       const docs = await schemaAdapter.model.findMany(
         call.request.query,
         skip,
         limit,
         select,
-        sort,
+        sort as { [key: string]: -1 | 1 } | undefined,
         populate,
       );
       callback(null, { result: JSON.stringify(docs) });
