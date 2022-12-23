@@ -33,7 +33,7 @@
     "bcrypt": "^5.0.1",
     "convict": "^6.2.3",
     "escape-string-regexp": "^4.0.0",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "uuid": "^8.3.2"
