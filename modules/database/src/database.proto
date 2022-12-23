@@ -49,7 +49,7 @@ message FindRequest {
     optional string select = 3;
     optional int32 skip = 4;
     optional int32 limit = 5;
-    optional string sort = 6;
+    map<string, int32> sort = 6; // -1 | 1
     repeated string populate = 7;
 }
 

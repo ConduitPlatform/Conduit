@@ -112,7 +112,7 @@ export class CustomEndpointHandler {
       );
     }
 
-    let sort: { [key: string]: number } | undefined = undefined;
+    let sort: { [field: string]: -1 | 1 } | undefined = undefined;
     if (endpoint.sorted && params.sort && params.sort.length > 0) {
       sort = constructSortObj(params.sort);
     }
