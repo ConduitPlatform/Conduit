@@ -7,7 +7,7 @@ import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { MigrationStatus } from '../interfaces/MigrationStatus';
+import { MigrationStatus } from '../interfaces/MigrationTypes';
 import { NodeVM } from 'vm2';
 import { isNil } from 'lodash';
 import { EventEmitter } from 'events';
@@ -35,7 +35,9 @@ export class MigrationsAdmin {
       try {
         const migrationInSandbox = vm.run(m.data);
         await migrationInSandbox.up(this.grpcSdk);
-        await model.findByIdAndUpdate(m._id, { status: MigrationStatus.SUCCESSFUL_UP });
+        await model.findByIdAndUpdate(m._id, {
+          status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
+        });
         // store new module version in db
         const state = await this.grpcSdk.config.getDeploymentState();
         const version = state.modules.filter(v => v.moduleName === moduleName)[0];
@@ -61,7 +63,7 @@ export class MigrationsAdmin {
     const migrations = [
       ...(await model.findMany({
         moduleName: moduleName,
-        status: MigrationStatus.SUCCESSFUL_UP,
+        status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
       })),
     ];
     return { migrations: migrations };
@@ -73,7 +75,7 @@ export class MigrationsAdmin {
     const migration = await model.findOne({
       _id: migrationId,
       moduleName: moduleName,
-      status: MigrationStatus.SUCCESSFUL_UP,
+      status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
     });
     if (isNil(migration)) {
       throw new GrpcError(status.NOT_FOUND, 'Migration not found');
@@ -83,7 +85,7 @@ export class MigrationsAdmin {
       const migrationInSandbox = vm.run(migration.data);
       await migrationInSandbox.down(this.grpcSdk);
       await model.findByIdAndUpdate(migration._id, {
-        status: MigrationStatus.SUCCESSFUL_DOWN,
+        status: MigrationStatus.SUCCESSFUL_MANUAL_DOWN,
       });
       // update module version to unknown
       const version = await this.database
