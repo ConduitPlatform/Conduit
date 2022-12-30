@@ -1,11 +1,9 @@
 import ConduitGrpcSdk, { ManagedModule } from '..';
-import { EventEmitter } from 'events';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
   private readonly servicePort: string;
   private readonly grpcSdk: ConduitGrpcSdk;
-  private readonly emitter = new EventEmitter();
 
   constructor(
     private readonly module: ManagedModule<T>,
@@ -59,7 +57,7 @@ export class ModuleManager<T> {
     await this.module.startGrpcServer();
     await this.module.onServerStart();
     // resume module initialization after migrations
-    this.emitter.on(`${this.module.name}-initialize`, async () => {
+    this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
       await this.module.initializeMetrics();
       await this.module.preRegister();
     });

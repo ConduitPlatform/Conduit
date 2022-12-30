@@ -357,7 +357,7 @@ export default class DatabaseModule extends ManagedModule<void> {
           });
         }
       }
-      emitter.emit(`${moduleName}-initialize`);
+      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
       callback(null, {});
     }
   }
