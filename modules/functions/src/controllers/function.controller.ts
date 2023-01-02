@@ -42,7 +42,7 @@ export class FunctionController {
         const routes: any[] = [];
 
         r.forEach(func => {
-          routes.push(createFunctionRoute(func));
+          routes.push(createFunctionRoute(func, this.grpcSdk));
         });
 
         this.addRoutes(routes, false);

@@ -36,10 +36,8 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           code: ConduitString.Required,
-          method: ConduitString.Required,
-          inputs: { type: [TYPE.JSON], required: false },
-          returns: { type: [TYPE.JSON], required: false },
-          authentication: { type: TYPE.Boolean, required: false },
+          inputs: { type: TYPE.JSON, required: false },
+          returns: { type: TYPE.JSON, required: false },
           timeout: ConduitNumber.Optional,
         },
       },
@@ -95,10 +93,8 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Optional,
           code: ConduitString.Optional,
-          method: ConduitString.Optional,
-          inputs: { type: [TYPE.JSON], required: false },
-          returns: { type: [TYPE.JSON], required: false },
-          authentication: { type: TYPE.Boolean, required: false },
+          inputs: { type: TYPE.JSON, required: false },
+          returns: { type: TYPE.JSON, required: false },
           timeout: ConduitNumber.Optional,
         },
       },
@@ -109,20 +105,17 @@ export class AdminHandlers {
   }
 
   async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, code, method, inputs, returns, authentication, timeout } =
-      call.request.params;
+    const { name, code, inputs, returns } = call.request.params;
     const func = await FunctionEndpoints.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
-    const timeoutValue = timeout ?? 180000;
+    const timeoutValue = inputs.timeout ?? 180000;
     const query = {
       name,
       code,
-      method,
       inputs,
       returns,
-      authentication,
       timeout: timeoutValue,
     };
     return FunctionEndpoints.getInstance().create(query);
@@ -161,8 +154,7 @@ export class AdminHandlers {
   }
 
   async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, code, method, inputs, returns, authentication, timeout } =
-      call.request.params;
+    const { name, code, inputs, returns, timeout } = call.request.params;
     const func = await FunctionEndpoints.getInstance().findOne({ name: name });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
@@ -170,10 +162,8 @@ export class AdminHandlers {
     const query = {
       name: name ?? func.name,
       code: code ?? func.code,
-      method: method ?? func.method,
       inputs: inputs ?? func.inputs,
       returns: returns ?? func.returns,
-      authentication: authentication ?? func.authentication,
       timeout: timeout ?? func.timeout,
     };
     const updated = FunctionEndpoints.getInstance().findByIdAndUpdate(func._id, query);

@@ -1,4 +1,10 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitActiveSchema,
+  DatabaseProvider,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import { IInputsInterface } from '../interfaces/IInputs.interface';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -10,20 +16,12 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  method: {
-    type: TYPE.String,
-    required: true,
-  },
   inputs: {
     type: TYPE.JSON,
     required: false,
   },
   returns: {
     type: TYPE.JSON,
-    required: false,
-  },
-  authentication: {
-    type: TYPE.Boolean,
     required: false,
   },
   timeout: {
@@ -52,13 +50,10 @@ export class FunctionEndpoints extends ConduitActiveSchema<FunctionEndpoints> {
   _id!: string;
   name!: string;
   code!: string;
-  method!: string;
 
-  inputs?: any;
+  inputs!: IInputsInterface;
 
-  returns?: any;
-
-  authentication?: boolean;
+  returns?: Indexable;
 
   timeout!: number;
 
