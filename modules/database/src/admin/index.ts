@@ -658,7 +658,7 @@ export class AdminHandlers {
       {
         path: '/trigger-migrations/:moduleName',
         action: ConduitRouteActions.POST,
-        description: `Triggers pending migrations.`,
+        description: `Triggers pending migrations of a module.`,
         urlParams: {
           moduleName: { type: RouteOptionType.String, required: true },
         },
@@ -670,15 +670,15 @@ export class AdminHandlers {
       {
         path: '/migrations/:moduleName',
         action: ConduitRouteActions.GET,
-        description: `Returns all the migrations a module has completed.`,
+        description: `Returns all successfully executed manual migrations of module.`,
         urlParams: {
           moduleName: { type: RouteOptionType.String, required: true },
         },
       },
-      new ConduitRouteReturnDefinition('getCompletedMigrations', {
+      new ConduitRouteReturnDefinition('getSuccessfulMigrations', {
         migrations: [ConduitJson.Required],
       }),
-      this.migrationsAdmin.getCompletedMigrations.bind(this.migrationsAdmin),
+      this.migrationsAdmin.getSuccessfulMigrations.bind(this.migrationsAdmin),
     );
     this.routingManager.route(
       {

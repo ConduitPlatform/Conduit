@@ -188,7 +188,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
   ): Promise<any>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'Migrations'];
+    const dbSchemas = [
+      'CustomEndpoints',
+      '_PendingSchemas',
+      'Migrations',
+      'MigrationLogs',
+    ];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }

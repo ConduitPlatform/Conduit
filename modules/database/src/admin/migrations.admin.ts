@@ -10,7 +10,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MigrationStatus } from '../interfaces/MigrationTypes';
 import { NodeVM } from 'vm2';
 import { isNil } from 'lodash';
-import { EventEmitter } from 'events';
+import { updateMigrationLogs, updateMigrationState } from '../utils/migrationUtils';
 
 export class MigrationsAdmin {
   constructor(
@@ -38,24 +38,19 @@ export class MigrationsAdmin {
         await model.findByIdAndUpdate(m._id, {
           status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
         });
-        // store new module version in db
-        const state = await this.grpcSdk.config.getDeploymentState();
-        const version = state.modules.filter(v => v.moduleName === moduleName)[0];
-        await this.database.getSchemaModel('Versions').model.create({
-          moduleName: moduleName,
-          version: version,
-        });
-      } catch {
+        await updateMigrationLogs(this.database, m._id, m.status);
+        await updateMigrationState(this.grpcSdk, moduleName, m.name);
+      } catch (e) {
         await model.findByIdAndUpdate(m._id, { status: MigrationStatus.FAILED });
+        await updateMigrationLogs(this.database, m._id, e as string);
         throw new GrpcError(status.INTERNAL, 'Migration failed');
       }
     }
-    const emitter = new EventEmitter();
-    emitter.emit(`${moduleName}-initialize`);
+    this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
     return 'Migrations successfully executed';
   }
 
-  async getCompletedMigrations(
+  async getSuccessfulMigrations(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { moduleName } = call.request.params;
@@ -87,15 +82,11 @@ export class MigrationsAdmin {
       await model.findByIdAndUpdate(migration._id, {
         status: MigrationStatus.SUCCESSFUL_MANUAL_DOWN,
       });
-      // update module version to unknown
-      const version = await this.database
-        .getSchemaModel('Versions')
-        .model.findOne({ moduleName: moduleName });
-      await this.database
-        .getSchemaModel('Versions')
-        .model.findByIdAndUpdate(version._id, { version: 'unknown' });
-    } catch {
+      await updateMigrationLogs(this.database, migration._id, migration.status);
+      await updateMigrationState(this.grpcSdk, moduleName, migration.name);
+    } catch (e) {
       await model.findByIdAndUpdate(migration._id, { status: MigrationStatus.FAILED });
+      await updateMigrationLogs(this.database, migration._id, e as string);
       throw new GrpcError(status.INTERNAL, 'Migration failed');
     }
     return 'Migration successfully executed';

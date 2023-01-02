@@ -48,13 +48,9 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
 import { isNil } from 'lodash';
-import {
-  MigrationName,
-  MigrationsState,
-  MigrationStatus,
-} from './interfaces/MigrationTypes';
+import { MigrationsState, MigrationStatus } from './interfaces/MigrationTypes';
 import { NodeVM } from 'vm2';
-import { EventEmitter } from 'events';
+import { updateMigrationState, updateMigrationLogs } from './utils/migrationUtils';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -117,7 +113,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter.recoverSchemasFromDatabase();
     await this.setMigrationsState();
     const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'database', migrationFilePath);
+    //await registerMigrations(this.grpcSdk.database!, 'database', migrationFilePath);
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -134,27 +130,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       const emptyState: MigrationsState = { state: {} };
       await this.grpcSdk.state!.setKey('migrationsState', JSON.stringify(emptyState));
     }
-  }
-
-  private async updateMigrationState(
-    moduleName: string,
-    migrationName: string,
-    remove: boolean = false,
-  ) {
-    const state = await this.grpcSdk.state!.getKey('migrationState');
-    const json = JSON.parse(state!);
-    if (remove) {
-      json.state[moduleName] = json.state[moduleName].filter(
-        (m: MigrationName) => m !== migrationName,
-      );
-    } else {
-      if (json.state.hasOwnProperty(moduleName)) {
-        json[moduleName].append(migrationName);
-      } else {
-        json[moduleName] = [migrationName];
-      }
-    }
-    await this.grpcSdk.state!.setKey('migrationState', JSON.stringify(json));
   }
 
   private registerInstanceSyncEvents() {
@@ -307,7 +282,6 @@ export default class DatabaseModule extends ManagedModule<void> {
           data: data,
         });
     }
-    //TODO: add log in migration
     return callback(null, {});
   }
 
@@ -317,40 +291,47 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     const moduleName = call.request.moduleName;
     const model = this._activeAdapter.getSchemaModel('Migrations').model;
-    const emitter = new EventEmitter();
-    emitter.setMaxListeners(150);
-
     const migrations = [...(await model.findMany({}))];
-    if (!migrations.some(m => m.status !== MigrationStatus.SKIPPED)) {
-      emitter.emit(`${moduleName}-initialize`);
+
+    // Skipped migrations
+    if (migrations.every(m => m.status === MigrationStatus.SKIPPED)) {
+      for (const m of migrations) {
+        await updateMigrationLogs(this._activeAdapter, m._id, m.status);
+        await updateMigrationState(this.grpcSdk, m, m.name);
+      }
+      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
       return callback(null, {});
     }
 
     const config = await this.grpcSdk.config.get('core');
     if (config.env === 'production') {
-      // manual migrations
+      // Manual migrations
       await model.updateMany(
         { moduleName: moduleName, status: MigrationStatus.REQUIRED },
         { status: MigrationStatus.PENDING },
       );
+      for (const m of migrations) {
+        await updateMigrationLogs(this._activeAdapter, m._id, m.status);
+      }
       ConduitGrpcSdk.Logger.info(`Manual migrations for ${moduleName} pending`);
     } else {
-      // automatic migrations
+      // Automatic migrations
       const auto = migrations.filter(m => m.status === MigrationStatus.REQUIRED);
       const vm = new NodeVM({ console: 'inherit', sandbox: {} });
       for (const a of auto) {
         try {
-          const migrationInSandbox = vm.run(a.data);
           this.grpcSdk.createModuleClient('database', process.env.SERVICE_IP!);
+          const migrationInSandbox = vm.run(a.data);
           await migrationInSandbox.up(this.grpcSdk);
           await model.findByIdAndUpdate(a._id, {
             status: MigrationStatus.SUCCESSFUL_AUTO_UP,
           });
-          await this.updateMigrationState(moduleName, a.name);
+          await updateMigrationLogs(this._activeAdapter, a._id, a.status);
+          await updateMigrationState(this.grpcSdk, moduleName, a.name);
         } catch (e) {
           console.log((e as Error).message);
           await model.findByIdAndUpdate(a._id, { status: MigrationStatus.FAILED });
-          await this.updateMigrationState(moduleName, a.name, true);
+          await updateMigrationLogs(this._activeAdapter, a._id, e as string);
           callback(null, {
             code: status.INTERNAL,
             message: `Migration failed for ${moduleName}`,
@@ -358,8 +339,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         }
       }
       this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
-      callback(null, {});
     }
+    callback(null, {});
   }
 
   /**

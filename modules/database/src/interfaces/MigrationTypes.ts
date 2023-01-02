@@ -10,6 +10,7 @@ export enum MigrationStatus {
 
 export type MigrationName = string;
 
+// Migration state includes all module migrations that are currently applied
 export type MigrationsState = {
   state: {
     [moduleName: string]: MigrationName[];
