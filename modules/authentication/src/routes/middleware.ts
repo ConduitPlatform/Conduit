@@ -113,51 +113,59 @@ function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refre
   return headerArgs[1] || tokenCookie;
 }
 
+async function verifyCaptcha(secretKey: string, provider: string, token: string) {
+  let success = false;
+  if (provider === 'recaptcha') {
+    success = await AuthUtils.recaptchaVerify(secretKey, token);
+  } else {
+    const response = await hcaptchaVerify(secretKey, token);
+    success = response.success;
+  }
+  return success;
+}
+
 export async function captchaMiddleware(call: ParsedRouterRequest) {
-  const config = ConfigController.getInstance().config;
-  const { acceptablePlatform, secretKey, enabled, provider } = config.captcha;
+  const { acceptablePlatform, secretKey, enabled, provider } =
+    ConfigController.getInstance().config.captcha;
   const { clientId } = call.request.context;
+
+  let clientPlatform;
+  const { captchaToken } = call.request.params;
 
   if (!enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
 
+  if (clientId === 'anonymous-client') clientPlatform = 'anonymous-client';
   const client = await Client.getInstance().findOne({ clientId: clientId });
-  const clientPlatform = client!.platform;
-  if (
-    clientId === 'anonymous-client' ||
-    clientPlatform === 'WEB' ||
-    clientPlatform === 'ANDROID'
-  ) {
-    for (const platform of Object.keys(acceptablePlatform)) {
-      // do the proper checks based on configuration
-      if (
-        clientId == 'anonymous-client' ||
-        (acceptablePlatform[platform] && platform.toUpperCase() == clientPlatform)
-      ) {
-        const { captchaToken } = call.request.params;
-        if (clientId === 'anonymous-client' && isNil(captchaToken)) break;
-        else {
-          if (isNil(captchaToken)) {
-            throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
-          }
-          if (!secretKey) {
-            throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-          }
-          let success = false;
-          if (provider === 'recaptcha') {
-            success = await AuthUtils.recaptchaVerify(secretKey, captchaToken);
-          } else {
-            const response = await hcaptchaVerify(secretKey, captchaToken);
-            success = response.success;
-          }
+  if (!isNil(client)) clientPlatform = client!.platform;
 
-          if (!success) {
-            throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
-          }
+  switch (clientPlatform) {
+    case 'WEB':
+    case 'ANDROID':
+      if (!acceptablePlatform[clientPlatform.toLowerCase()]) {
+        break;
+      }
+      if (captchaToken == null) {
+        throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+      }
+      if (!secretKey) {
+        throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+      }
+      if (!(await verifyCaptcha(secretKey, provider, captchaToken))) {
+        throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
+      }
+      break;
+    case 'anonymous-client':
+      if (captchaToken != null) {
+        if (!secretKey) {
+          throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+        }
+        if (!(await verifyCaptcha(secretKey, provider, captchaToken))) {
+          throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
         }
       }
-    }
+      break;
   }
 
   return {};
