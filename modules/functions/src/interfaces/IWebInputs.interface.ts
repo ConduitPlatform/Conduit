@@ -1,9 +1,7 @@
 import { ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
 
-export interface IInputsInterface {
-  url: string;
+export interface IWebInputsInterface {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  headers?: { [field: string]: any };
 
   bodyParams?: ConduitRouteOption | ConduitModel;
 

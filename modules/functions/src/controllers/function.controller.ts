@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   RequestHandlers,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
-import { FunctionEndpoints } from '../models';
+import { Functions } from '../models';
 import { createFunctionRoute } from './utils';
 
 export class FunctionController {
@@ -33,7 +33,7 @@ export class FunctionController {
     });
   }
   refreshRoutes() {
-    return FunctionEndpoints.getInstance()
+    return Functions.getInstance()
       .findMany({})
       .then(r => {
         if (!r || r.length == 0) {

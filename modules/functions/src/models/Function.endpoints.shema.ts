@@ -4,7 +4,7 @@ import {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { IInputsInterface } from '../interfaces/IInputs.interface';
+import { IWebInputsInterface } from '../interfaces/IWebInputs.interface';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -12,7 +12,7 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  code: {
+  functionCode: {
     type: TYPE.String,
     required: true,
   },
@@ -45,13 +45,13 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class FunctionEndpoints extends ConduitActiveSchema<FunctionEndpoints> {
-  private static _instance: FunctionEndpoints;
+export class Functions extends ConduitActiveSchema<Functions> {
+  private static _instance: Functions;
   _id!: string;
   name!: string;
-  code!: string;
+  functionCode!: string;
 
-  inputs!: IInputsInterface;
+  inputs!: IWebInputsInterface;
 
   returns?: Indexable;
 
@@ -61,15 +61,15 @@ export class FunctionEndpoints extends ConduitActiveSchema<FunctionEndpoints> {
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, FunctionEndpoints.name, schema, modelOptions, collectionName);
+    super(database, Functions.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (FunctionEndpoints._instance) return FunctionEndpoints._instance;
+    if (Functions._instance) return Functions._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    FunctionEndpoints._instance = new FunctionEndpoints(database);
-    return FunctionEndpoints._instance;
+    Functions._instance = new Functions(database);
+    return Functions._instance;
   }
 }

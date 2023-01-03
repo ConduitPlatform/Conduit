@@ -13,7 +13,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { FunctionEndpoints } from '../models';
+import { Functions } from '../models';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -35,13 +35,13 @@ export class AdminHandlers {
         description: 'Upload a function',
         bodyParams: {
           name: ConduitString.Required,
-          code: ConduitString.Required,
+          functionCode: ConduitString.Required,
           inputs: { type: TYPE.JSON, required: false },
           returns: { type: TYPE.JSON, required: false },
           timeout: ConduitNumber.Optional,
         },
       },
-      new ConduitRouteReturnDefinition(FunctionEndpoints.name),
+      new ConduitRouteReturnDefinition(Functions.name),
       this.uploadFunction.bind(this),
     );
     this.routingManager.route(
@@ -92,7 +92,7 @@ export class AdminHandlers {
         },
         bodyParams: {
           name: ConduitString.Optional,
-          code: ConduitString.Optional,
+          functionCode: ConduitString.Optional,
           inputs: { type: TYPE.JSON, required: false },
           returns: { type: TYPE.JSON, required: false },
           timeout: ConduitNumber.Optional,
@@ -105,29 +105,29 @@ export class AdminHandlers {
   }
 
   async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, code, inputs, returns } = call.request.params;
-    const func = await FunctionEndpoints.getInstance().findOne({ name: name });
+    const { name, functionCode, inputs, returns } = call.request.params;
+    const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
     }
     const timeoutValue = inputs.timeout ?? 180000;
     const query = {
       name,
-      code,
+      functionCode,
       inputs,
       returns,
       timeout: timeoutValue,
     };
-    return FunctionEndpoints.getInstance().create(query);
+    return Functions.getInstance().create(query);
   }
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const func = await FunctionEndpoints.getInstance().findOne({ _id: id });
+    const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
-    await FunctionEndpoints.getInstance().deleteOne({ _id: id });
+    await Functions.getInstance().deleteOne({ _id: id });
     return { deleted: true };
   }
 
@@ -135,18 +135,13 @@ export class AdminHandlers {
     const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const functions = await FunctionEndpoints.getInstance().findMany(
-      {},
-      skip,
-      limit,
-      sort,
-    );
+    const functions = await Functions.getInstance().findMany({}, skip, limit, sort);
     return { functions };
   }
 
   async getFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { functionName } = call.request.params;
-    const func = await FunctionEndpoints.getInstance().findOne({ name: functionName });
+    const func = await Functions.getInstance().findOne({ name: functionName });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
@@ -154,19 +149,19 @@ export class AdminHandlers {
   }
 
   async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, code, inputs, returns, timeout } = call.request.params;
-    const func = await FunctionEndpoints.getInstance().findOne({ name: name });
+    const { name, functionCode, inputs, returns, timeout } = call.request.params;
+    const func = await Functions.getInstance().findOne({ name: name });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
     const query = {
       name: name ?? func.name,
-      code: code ?? func.code,
+      functionCode: functionCode ?? func.functionCode,
       inputs: inputs ?? func.inputs,
       returns: returns ?? func.returns,
       timeout: timeout ?? func.timeout,
     };
-    const updated = FunctionEndpoints.getInstance().findByIdAndUpdate(func._id, query);
+    const updated = Functions.getInstance().findByIdAndUpdate(func._id, query);
     return { updated };
   }
 }

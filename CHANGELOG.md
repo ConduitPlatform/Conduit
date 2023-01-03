@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.9](https://github.com/ConduitPlatform/Conduit/compare/v0.15.8...v0.15.9) (2023-01-02)
+
+
+### Features
+
+* **authentication:** Captcha middleware with recaptcha v2 ([#467](https://github.com/ConduitPlatform/Conduit/issues/467)) ([e0286fb](https://github.com/ConduitPlatform/Conduit/commit/e0286fbd78b3e9c4eaaeb5ff049fedec317ecd49))
+* **authentication:** Hcaptcha ([#470](https://github.com/ConduitPlatform/Conduit/issues/470)) ([efff1d0](https://github.com/ConduitPlatform/Conduit/commit/efff1d087dda8375a111c05419ab24f374c4fbfe))
+* **core:** monolithic get config route ([#469](https://github.com/ConduitPlatform/Conduit/issues/469)) ([603690f](https://github.com/ConduitPlatform/Conduit/commit/603690fc3774264938f58410225908581c210018))
+
+
+### Bug Fixes
+
+* **authentication:** crash on postgres migrations ([#472](https://github.com/ConduitPlatform/Conduit/issues/472)) ([ea04506](https://github.com/ConduitPlatform/Conduit/commit/ea04506aed3ca109e28aa8c6e72ee21389cd20f1))
+* **database:** sequelize populations ([#473](https://github.com/ConduitPlatform/Conduit/issues/473)) ([9a6ab79](https://github.com/ConduitPlatform/Conduit/commit/9a6ab791fef6ac66793de83d50fbb491ec50bc14))
+* **database:** sequelize query sorting ([#480](https://github.com/ConduitPlatform/Conduit/issues/480)) ([a076852](https://github.com/ConduitPlatform/Conduit/commit/a0768526bd91024a1b698bb42d6c7d2eb78c1109))
+* modules/push-notifications/package.json to reduce vulnerabilities ([#478](https://github.com/ConduitPlatform/Conduit/issues/478)) ([78d36ee](https://github.com/ConduitPlatform/Conduit/commit/78d36ee1322f67dec51249f34c1839fe18dcb5cb))
+
 ### [0.15.8](https://github.com/ConduitPlatform/Conduit/compare/v0.15.7...v0.15.8) (2022-12-16)
 
 

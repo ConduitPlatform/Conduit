@@ -1,9 +1,10 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
+  ParsedRouterRequest,
   RouteBuilder,
 } from '@conduitplatform/grpc-sdk';
-import { FunctionEndpoints } from '../models';
+import { Functions } from '../models';
 import { isNil } from 'lodash';
 import { NodeVM } from 'vm2';
 import { status } from '@grpc/grpc-js';
@@ -25,27 +26,43 @@ function getOperation(op: string) {
   }
 }
 
-async function executeFunction(func: FunctionEndpoints, grpcSdk: ConduitGrpcSdk) {
+async function executeFunction(
+  call: ParsedRouterRequest,
+  callback: any,
+  functionCode: string,
+  timeout: number,
+  grpcSdk: ConduitGrpcSdk,
+) {
   const vm = new NodeVM({
     console: 'inherit',
     sandbox: {},
-    timeout: func.timeout,
+    timeout: timeout,
   });
   try {
-    const script = `module.exports = function(grpcSdk,req,res) { ${func.code} }`;
+    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
     const functionInSandbox = vm.run(script);
-    const functionData = functionInSandbox(grpcSdk, func.inputs, func.returns);
+    const functionData = functionInSandbox(grpcSdk, call.request, callback);
     return { data: functionData };
   } catch (e) {
     throw new GrpcError(status.INTERNAL, 'Execution failed');
   }
 }
 
-export function createFunctionRoute(func: FunctionEndpoints, grpcSdk: ConduitGrpcSdk) {
+export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   const route = new RouteBuilder()
     .path(`/${func.name}`)
     .method(getOperation(func.inputs?.method))
-    .handler(() => executeFunction(func, grpcSdk));
+    .handler((call: ParsedRouterRequest, callback: any) =>
+      executeFunction(
+        call,
+        (returns: any) => {
+          callback(null, JSON.parse(returns));
+        },
+        func.functionCode,
+        func.timeout,
+        grpcSdk,
+      ),
+    );
   if (func.inputs?.auth) {
     route.middleware('authMiddleware');
   }
