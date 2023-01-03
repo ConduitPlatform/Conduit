@@ -137,42 +137,35 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   }
 
   if (clientId === 'anonymous-client') clientPlatform = 'anonymous-client';
-
   const client = await Client.getInstance().findOne({ clientId: clientId });
   if (!isNil(client)) clientPlatform = client!.platform;
 
-  if (
-    clientId === 'anonymous-client' ||
-    clientPlatform === 'WEB' ||
-    clientPlatform === 'ANDROID'
-  ) {
-    switch (clientPlatform) {
-      case 'WEB':
-      case 'ANDROID':
-        if (!acceptablePlatform[clientPlatform.toLowerCase()]) {
-          break;
-        }
-        if (captchaToken == null) {
-          throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
-        }
+  switch (clientPlatform) {
+    case 'WEB':
+    case 'ANDROID':
+      if (!acceptablePlatform[clientPlatform.toLowerCase()]) {
+        break;
+      }
+      if (captchaToken == null) {
+        throw new GrpcError(status.INTERNAL, `Captcha token is missing.`);
+      }
+      if (!secretKey) {
+        throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
+      }
+      if (!(await verifyCaptcha(secretKey, provider, captchaToken))) {
+        throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
+      }
+      break;
+    case 'anonymous-client':
+      if (captchaToken != null) {
         if (!secretKey) {
           throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
         }
         if (!(await verifyCaptcha(secretKey, provider, captchaToken))) {
           throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
         }
-        break;
-      case 'anonymous-client':
-        if (captchaToken != null) {
-          if (!secretKey) {
-            throw new GrpcError(status.INTERNAL, 'Secret key for recaptcha is required.');
-          }
-          if (!(await verifyCaptcha(secretKey, provider, captchaToken))) {
-            throw new GrpcError(status.INTERNAL, 'Can not verify captcha.');
-          }
-        }
-        break;
-    }
+      }
+      break;
   }
 
   return {};
