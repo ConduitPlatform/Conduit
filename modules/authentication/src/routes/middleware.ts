@@ -117,13 +117,13 @@ export async function captchaMiddleware(call: ParsedRouterRequest) {
   const config = ConfigController.getInstance().config;
   const { acceptablePlatform, secretKey, enabled, provider } = config.captcha;
   const { clientId } = call.request.context;
-
+  let clientPlatform;
   if (!enabled) {
     throw new GrpcError(status.INTERNAL, 'Captcha is disabled.');
   }
 
   const client = await Client.getInstance().findOne({ clientId: clientId });
-  const clientPlatform = client!.platform;
+  if (!isNil(client)) clientPlatform = client!.platform;
   if (
     clientId === 'anonymous-client' ||
     clientPlatform === 'WEB' ||
