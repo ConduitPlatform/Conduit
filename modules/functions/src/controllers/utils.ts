@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RouteBuilder,
 } from '@conduitplatform/grpc-sdk';
-import { Functions } from '../models';
+import { FunctionDefinitions, Functions } from '../models';
 import { isNil } from 'lodash';
 import { NodeVM } from 'vm2';
 import { status } from '@grpc/grpc-js';
@@ -31,19 +31,37 @@ async function executeFunction(
   callback: any,
   functionCode: string,
   timeout: number,
+  name: string,
   grpcSdk: ConduitGrpcSdk,
 ) {
+  let logs: string[] | undefined = [];
   const vm = new NodeVM({
-    console: 'inherit',
+    console: 'redirect',
     sandbox: {},
     timeout: timeout,
+    require: {
+      external: true,
+      import: ['lodash'],
+    },
   });
+  vm.on('console.log', data => {
+    logs?.push(data);
+  });
+
+  let duration;
+  const start = process.hrtime();
   try {
     const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
     const functionInSandbox = vm.run(script);
+    const end = process.hrtime(start);
+    duration = end[0] * 1e3 + end[1] / 1e6;
     const functionData = functionInSandbox(grpcSdk, call.request, callback);
+    await addSchemaDefinitions(name, duration, true, undefined, logs);
     return { data: functionData };
   } catch (e) {
+    const end = process.hrtime(start);
+    duration = end[0] * 1e3 + end[1] / 1e6;
+    await addSchemaDefinitions(name, duration, false, e, logs);
     throw new GrpcError(status.INTERNAL, 'Execution failed');
   }
 }
@@ -60,6 +78,7 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
         },
         func.functionCode,
         func.timeout,
+        func.name,
         grpcSdk,
       ),
     );
@@ -87,4 +106,21 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   }
   route.return(getOperation(func.inputs?.method) + func.name, returns);
   return route.build();
+}
+
+async function addSchemaDefinitions(
+  functionName: string,
+  duration: number,
+  success: boolean,
+  error?: any,
+  logs?: string[],
+) {
+  const query = {
+    functionName,
+    duration,
+    success,
+    error,
+    logs,
+  };
+  await FunctionDefinitions.getInstance().create(query);
 }

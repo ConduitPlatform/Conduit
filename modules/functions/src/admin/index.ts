@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitBoolean,
   ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -11,9 +12,9 @@ import ConduitGrpcSdk, {
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { Functions } from '../models';
+import { FunctionDefinitions, Functions } from '../models';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -84,6 +85,35 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/definitions',
+        action: ConduitRouteActions.GET,
+        description: 'List all functions definitions',
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('ListFunctionsDefinitions', 'String'),
+      this.getFunctionsDefinitions.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/definitions/:functionName',
+        action: ConduitRouteActions.GET,
+        description: 'Get function Definitions for specific function',
+        urlParams: {
+          functionName: { type: RouteOptionType.String, required: true },
+        },
+        queryParams: {
+          success: ConduitBoolean.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetFunctionDefinitions', 'String'),
+      this.getFunctionDefinitions.bind(this),
+    );
+    this.routingManager.route(
+      {
         path: '/function/:id',
         action: ConduitRouteActions.PATCH,
         description: 'Update a function',
@@ -140,8 +170,8 @@ export class AdminHandlers {
   }
 
   async getFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { functionName } = call.request.params;
-    const func = await Functions.getInstance().findOne({ name: functionName });
+    const { id } = call.request.params;
+    const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
@@ -163,5 +193,35 @@ export class AdminHandlers {
     };
     const updated = Functions.getInstance().findByIdAndUpdate(func._id, query);
     return { updated };
+  }
+
+  async getFunctionsDefinitions(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+
+    const functionDefinitions = await FunctionDefinitions.getInstance().findMany(
+      {},
+      skip,
+      limit,
+      sort,
+    );
+    return { functionDefinitions };
+  }
+
+  async getFunctionDefinitions(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { functionName, success } = call.request.params;
+    const functionDefinitions = await FunctionDefinitions.getInstance().findMany({
+      functionName: functionName,
+      success: success,
+    });
+    if (isNil(functionDefinitions) || isEmpty(functionDefinitions)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function Definition does not exist');
+    }
+    return { functionDefinitions };
   }
 }
