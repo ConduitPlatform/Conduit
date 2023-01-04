@@ -279,7 +279,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     const moduleName = call.request.moduleName;
     const model = this._activeAdapter.getSchemaModel('Migrations').model;
-    const migrations = [...(await model.findMany({}))];
+    const migrations = [...(await model.findMany({ module: moduleName }))];
 
     // Skipped migrations
     if (migrations.every(m => m.status === MigrationStatus.SKIPPED)) {

@@ -375,7 +375,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       result = await collection[queryOperation](
         rawQuery[queryOperation as keyof RawMongoQuery],
         rawQuery.options,
-      ).toArray();
+      );
+      if (queryOperation === 'find') {
+        result = result.toArray();
+      }
     } catch (e: any) {
       throw new GrpcError(status.INTERNAL, e.message);
     }

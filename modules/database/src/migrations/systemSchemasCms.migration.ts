@@ -65,10 +65,7 @@ module.exports = {
       await database.rawQuery('_DeclaredSchemas', query);
       const affectedSchemaNames = affectedSchemas.map((s: any) => s.name);
       // SQL requires List instead of Array
-      const schemaList = affectedSchemaNames
-        .toString()
-        .replace('[', '(')
-        .replace(']', ')');
+      const schemaList = '(' + affectedSchemaNames.join(',') + ')';
       query = {
         mongoQuery: {
           deleteMany: { selectedSchema: { $in: affectedSchemaNames } },
