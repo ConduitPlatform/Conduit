@@ -1,25 +1,10 @@
 import { MigrationStatus } from '../interfaces/MigrationTypes';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError, ManifestManager } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-
-export async function updateMigrationState(
-  grpcSdk: ConduitGrpcSdk,
-  moduleName: string,
-  migrationName: string,
-) {
-  const state = await grpcSdk.state!.getKey('migrationState');
-  const json = JSON.parse(state!);
-  if (json.state.hasOwnProperty(moduleName)) {
-    json[moduleName].append(migrationName);
-  } else {
-    json[moduleName] = [migrationName];
-  }
-  await grpcSdk.state!.setKey('migrationState', JSON.stringify(json));
-}
 
 export async function updateMigrationLogs(
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
@@ -34,25 +19,24 @@ export async function updateMigrationLogs(
   }
   let success = false;
   if (
-    migration.status ===
-    (MigrationStatus.SUCCESSFUL_MANUAL_UP ||
-      MigrationStatus.SUCCESSFUL_AUTO_UP ||
-      MigrationStatus.SKIPPED)
+    [
+      MigrationStatus.SUCCESSFUL_MANUAL_UP,
+      MigrationStatus.SUCCESSFUL_AUTO_UP,
+      MigrationStatus.SKIPPED,
+    ].includes(migration.status)
   ) {
     success = true;
   }
   const log = await database
     .getSchemaModel('MigrationLogs')
-    .model.findOne({ migration: migrationId });
+    .model.findOne({ migration: migration });
   const date = new Date().toJSON();
   if (isNil(log)) {
-    await database
-      .getSchemaModel('MigrationLogs')
-      .model.create({
-        migration: migrationId,
-        success: success,
-        logs: { date: message },
-      });
+    await database.getSchemaModel('MigrationLogs').model.create({
+      migration: migration,
+      success: success,
+      logs: { [date]: message },
+    });
   } else {
     const jsonLogs = log.logs;
     jsonLogs[date] = message;
@@ -60,4 +44,18 @@ export async function updateMigrationLogs(
       .getSchemaModel('MigrationLogs')
       .model.findByIdAndUpdate(log._id, { success: success, logs: jsonLogs });
   }
+}
+
+export async function moduleVersionCompatibility(
+  currentVersion: string,
+  storedVersion: string,
+) {
+  // Returns true if migrations aren't needed
+  let tagCompatibility = true;
+  try {
+    ManifestManager.getInstance().validateTag('', storedVersion, currentVersion);
+  } catch {
+    tagCompatibility = false;
+  }
+  return tagCompatibility;
 }

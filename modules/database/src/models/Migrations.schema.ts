@@ -8,7 +8,11 @@ export const Migrations = new ConduitSchema(
       type: TYPE.String,
       required: true,
     },
-    moduleName: {
+    module: {
+      type: TYPE.String,
+      required: true,
+    },
+    version: {
       type: TYPE.String,
       required: true,
     },

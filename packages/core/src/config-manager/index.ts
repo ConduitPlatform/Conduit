@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   GrpcServer,
   HealthCheckStatus,
+  ManifestManager,
   registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -207,12 +208,23 @@ export default class ConfigManager implements IConfigManager {
 
   private async registerPackageMigrations() {
     const coreMigrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.grpcSdk.database!, 'core', coreMigrationFilePath);
+    const version = ManifestManager.getInstance().moduleVersion;
+    await registerMigrations(
+      this.grpcSdk.database!,
+      'core',
+      version,
+      coreMigrationFilePath,
+    );
     const adminMigrationFilePath = path.resolve(
       __dirname,
       '../../../admin/dist/migrations',
     );
-    await registerMigrations(this.grpcSdk.database!, 'core', adminMigrationFilePath);
+    await registerMigrations(
+      this.grpcSdk.database!,
+      'admin',
+      version,
+      adminMigrationFilePath,
+    );
   }
 
   private getGrpc(

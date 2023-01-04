@@ -10,7 +10,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MigrationStatus } from '../interfaces/MigrationTypes';
 import { NodeVM } from 'vm2';
 import { isNil } from 'lodash';
-import { updateMigrationLogs, updateMigrationState } from '../utils/migrationUtils';
+import { updateMigrationLogs } from '../utils/migrationUtils';
 
 export class MigrationsAdmin {
   constructor(
@@ -23,12 +23,17 @@ export class MigrationsAdmin {
     const model = this.database.getSchemaModel('Migrations').model;
     const migrations = [
       ...(await model.findMany({
-        moduleName: moduleName,
-        status: MigrationStatus.PENDING,
+        module: moduleName,
+        status: {
+          $in: [MigrationStatus.PENDING, MigrationStatus.SUCCESSFUL_MANUAL_DOWN],
+        },
       })),
     ];
     if (migrations.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, `No pending migrations for ${moduleName}`);
+      throw new GrpcError(
+        status.NOT_FOUND,
+        `No pending or manually downgraded migrations for ${moduleName}`,
+      );
     }
     const vm = new NodeVM({ console: 'inherit', sandbox: {} });
     for (const m of migrations) {
@@ -38,8 +43,11 @@ export class MigrationsAdmin {
         await model.findByIdAndUpdate(m._id, {
           status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
         });
-        await updateMigrationLogs(this.database, m._id, m.status);
-        await updateMigrationState(this.grpcSdk, moduleName, m.name);
+        await updateMigrationLogs(
+          this.database,
+          m._id,
+          MigrationStatus.SUCCESSFUL_MANUAL_UP,
+        );
       } catch (e) {
         await model.findByIdAndUpdate(m._id, { status: MigrationStatus.FAILED });
         await updateMigrationLogs(this.database, m._id, e as string);
@@ -57,7 +65,7 @@ export class MigrationsAdmin {
     const model = this.database.getSchemaModel('Migrations').model;
     const migrations = [
       ...(await model.findMany({
-        moduleName: moduleName,
+        module: moduleName,
         status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
       })),
     ];
@@ -69,7 +77,7 @@ export class MigrationsAdmin {
     const model = this.database.getSchemaModel('Migrations').model;
     const migration = await model.findOne({
       _id: migrationId,
-      moduleName: moduleName,
+      module: moduleName,
       status: MigrationStatus.SUCCESSFUL_MANUAL_UP,
     });
     if (isNil(migration)) {
@@ -82,8 +90,11 @@ export class MigrationsAdmin {
       await model.findByIdAndUpdate(migration._id, {
         status: MigrationStatus.SUCCESSFUL_MANUAL_DOWN,
       });
-      await updateMigrationLogs(this.database, migration._id, migration.status);
-      await updateMigrationState(this.grpcSdk, moduleName, migration.name);
+      await updateMigrationLogs(
+        this.database,
+        migration._id,
+        MigrationStatus.SUCCESSFUL_MANUAL_DOWN,
+      );
     } catch (e) {
       await model.findByIdAndUpdate(migration._id, { status: MigrationStatus.FAILED });
       await updateMigrationLogs(this.database, migration._id, e as string);

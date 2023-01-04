@@ -82,11 +82,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   registerMigration(
     moduleName: string,
+    moduleVersion: string,
     migrationName: string,
     data: string,
   ): Promise<RegisterMigrationResponse> {
     return this.serviceClient!.registerMigration({
       moduleName: moduleName,
+      moduleVersion: moduleVersion,
       migrationName: migrationName,
       data: data,
     });

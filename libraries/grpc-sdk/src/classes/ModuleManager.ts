@@ -56,10 +56,7 @@ export class ModuleManager<T> {
     await this.module.registerMetrics();
     await this.module.startGrpcServer();
     await this.module.onServerStart();
-    // resume module initialization after migrations
-    this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
-      await this.module.initializeMetrics();
-      await this.module.preRegister();
-    });
+    await this.module.initializeMetrics();
+    await this.module.preRegister();
   }
 }

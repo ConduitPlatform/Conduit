@@ -113,8 +113,9 @@ message DropCollectionRequest {
 
 message RegisterMigrationRequest {
     string moduleName = 1;
-    string migrationName = 2;
-    string data = 3;
+    string moduleVersion = 2;
+    string migrationName = 3;
+    string data = 4;
 }
 
 message RegisterMigrationResponse {}
