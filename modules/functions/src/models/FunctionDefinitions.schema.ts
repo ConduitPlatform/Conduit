@@ -1,4 +1,9 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitActiveSchema,
+  DatabaseProvider,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -50,7 +55,7 @@ export class FunctionDefinitions extends ConduitActiveSchema<FunctionDefinitions
 
   success!: boolean;
 
-  error?: any;
+  error?: Indexable;
 
   logs?: string[];
 

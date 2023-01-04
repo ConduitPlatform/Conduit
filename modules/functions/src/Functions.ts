@@ -7,7 +7,6 @@ import ConduitGrpcSdk, {
 import metricsSchema from './metrics';
 import path from 'path';
 import { AdminHandlers } from './admin';
-import { runMigrations } from './migrations';
 import * as models from './models';
 import AppConfigSchema, { Config } from './config';
 import { FunctionController } from './controllers/function.controller';
@@ -38,7 +37,6 @@ export default class Functions extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    await runMigrations(this.grpcSdk);
     this.grpcSdk
       .waitForExistence('router')
       .then(() => {
