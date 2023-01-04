@@ -27,11 +27,13 @@ export class FunctionController {
     this.refreshRoutes();
     this.initializeState();
   }
+
   initializeState() {
-    this.grpcSdk.bus?.subscribe('functions', (message: string) => {
+    this.grpcSdk.bus?.subscribe('functions', () => {
       this.refreshRoutes();
     });
   }
+
   refreshRoutes() {
     return Functions.getInstance()
       .findMany({})

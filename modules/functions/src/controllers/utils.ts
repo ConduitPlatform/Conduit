@@ -34,7 +34,7 @@ async function executeFunction(
   name: string,
   grpcSdk: ConduitGrpcSdk,
 ) {
-  let logs: string[] | undefined = [];
+  const logs: string[] | undefined = [];
   const vm = new NodeVM({
     console: 'redirect',
     sandbox: {},
