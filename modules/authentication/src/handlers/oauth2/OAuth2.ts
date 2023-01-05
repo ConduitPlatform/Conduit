@@ -74,7 +74,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         .replace(/\//g, '_');
     }
 
-    const options: RedirectOptions = {
+    const queryOptions: RedirectOptions = {
       client_id: this.settings.clientId,
       redirect_uri: conduitUrl + this.settings.callbackUrl,
       response_type: this.settings.responseType,
@@ -94,7 +94,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         data: {
           invitationToken: call.request.params?.invitationToken,
           clientId: call.request.context.clientId,
-          scope: options.scope,
+          scope: queryOptions.scope,
           codeChallenge: codeChallenge,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         },
@@ -102,15 +102,15 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       .catch(err => {
         throw new GrpcError(status.INTERNAL, err);
       });
-    options['state'] = stateToken.token;
+    queryOptions['state'] = stateToken.token;
 
-    const keys = Object.keys(options) as [keyof RedirectOptions];
-    const url = keys
+    const keys = Object.keys(queryOptions) as [keyof RedirectOptions];
+    const queryString = keys
       .map(k => {
-        return k + '=' + options[k];
+        return k + '=' + queryOptions[k];
       })
       .join('&');
-    return baseUrl + '?' + url;
+    return baseUrl + '?' + queryString;
   }
 
   async authorize(call: ParsedRouterRequest) {
