@@ -1,6 +1,4 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
-import { isBoolean } from 'lodash';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/grpc-sdk';
 
 // export async function migrateCrudOperations(
 //   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
@@ -54,8 +52,8 @@ module.exports = {
       },
     };
     const declaredSchemas = await database.rawQuery('_DeclaredSchema', query);
-    const cmsSchemas = declaredSchemas.filter((schema: ConduitSchema) =>
-      isBoolean(schema.modelOptions.conduit?.cms),
+    const cmsSchemas = declaredSchemas.filter(
+      (schema: ConduitSchema) => typeof schema.modelOptions.conduit?.cms === 'boolean',
     );
     for (const schema of cmsSchemas) {
       const { crudOperations, authentication, enabled } = schema.modelOptions.conduit.cms;

@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   ManagedModule,
   ManifestManager,
+  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -39,7 +40,7 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { Schema, ConduitDatabaseSchema } from './interfaces';
+import { ConduitDatabaseSchema, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { SchemaController } from './controllers/cms/schema.controller';
 import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
@@ -111,9 +112,16 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
+
+    this.grpcSdk.createModuleClient('database', process.env.SERVICE_IP!);
     const version = ManifestManager.getInstance().moduleVersion;
     const migrationFilePath = path.resolve(__dirname, 'migrations');
-    //await registerMigrations(this.grpcSdk.database!, 'database',version, migrationFilePath);
+    await registerMigrations(
+      this.grpcSdk.database!,
+      'database',
+      version,
+      migrationFilePath,
+    );
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -181,6 +189,15 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
+  private publishInitializationEvent(moduleName: string) {
+    if (moduleName === 'database') {
+      const emitter = this.grpcSdk.config.getModuleWatcher();
+      emitter.emit('database:initialize');
+    } else {
+      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
+    }
+  }
+
   async initializeMetrics() {
     const customEndpointsTotal = await this._activeAdapter
       .getSchemaModel('CustomEndpoints')
@@ -227,7 +244,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       });
   }
   /**
-   * Stores module migration files in database
+   * Stores module migration files in database and determines if migration is required
    * @param call
    * @param callback
    */
@@ -253,14 +270,16 @@ export default class DatabaseModule extends ManagedModule<void> {
         moduleVersion,
         migration.version,
       );
-      if (compatible) {
-        status = MigrationStatus.SKIPPED;
-      }
       if (
-        migration.status === MigrationStatus.FAILED ||
-        migration.status === MigrationStatus.SUCCESSFUL_MANUAL_DOWN
+        compatible &&
+        ![
+          MigrationStatus.FAILED,
+          MigrationStatus.SUCCESSFUL_MANUAL_DOWN,
+          MigrationStatus.REQUIRED,
+          MigrationStatus.PENDING,
+        ].includes(migration.status)
       ) {
-        status = MigrationStatus.REQUIRED;
+        status = MigrationStatus.SKIPPED;
       }
       await this._activeAdapter
         .getSchemaModel('Migrations')
@@ -272,7 +291,11 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
     return callback(null, {});
   }
-
+  /**
+   * Triggers any required module migration
+   * @param call
+   * @param callback
+   */
   async triggerMigrations(
     call: GrpcRequest<TriggerMigrationsRequest>,
     callback: GrpcResponse<TriggerMigrationsResponse>,
@@ -286,7 +309,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       for (const m of migrations) {
         await updateMigrationLogs(this._activeAdapter, m._id, m.status);
       }
-      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
+      this.publishInitializationEvent(moduleName);
       return callback(null, {});
     }
 
@@ -307,7 +330,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       const vm = new NodeVM({ console: 'inherit', sandbox: {} });
       for (const m of required) {
         try {
-          this.grpcSdk.createModuleClient('database', process.env.SERVICE_IP!);
           const migrationInSandbox = vm.run(m.data);
           await migrationInSandbox.up(this.grpcSdk);
           await model.findByIdAndUpdate(m._id, {
@@ -319,16 +341,15 @@ export default class DatabaseModule extends ManagedModule<void> {
             MigrationStatus.SUCCESSFUL_AUTO_UP,
           );
         } catch (e) {
-          console.log((e as Error).message);
           await model.findByIdAndUpdate(m._id, { status: MigrationStatus.FAILED });
-          await updateMigrationLogs(this._activeAdapter, m._id, e as string);
+          await updateMigrationLogs(this._activeAdapter, m._id, (e as Error).message);
           return callback(null, {
             code: status.INTERNAL,
             message: `Migration failed for ${moduleName}`,
           });
         }
       }
-      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
+      this.publishInitializationEvent(moduleName);
     }
     callback(null, {});
   }

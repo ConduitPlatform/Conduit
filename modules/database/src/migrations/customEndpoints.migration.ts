@@ -43,7 +43,7 @@ module.exports = {
         query: 'SELECT * FROM "cnd_CustomEndpoints" WHERE "selectedSchema" IS NULL',
       },
     };
-    const customEndpoints = await database.rawQuery('_CustomEndpoints', query);
+    const customEndpoints = await database.rawQuery('CustomEndpoints', query);
     for (const endpoint of customEndpoints) {
       let query: RawQuery = {
         mongoQuery: {
@@ -55,10 +55,10 @@ module.exports = {
       };
       const selectedSchema = await database.rawQuery('_DeclaredSchema', query);
       if (selectedSchema.length === 0) {
-        ConduitGrpcSdk.Logger.warn(
-          `Failed to fix incomplete CustomEndpoint '${endpoint.name}` +
-            ` missing selectedSchema field, with unknown schema name '${endpoint.selectedSchemaName}'`,
-        );
+        // ConduitGrpcSdk.Logger.warn(
+        //   `Failed to fix incomplete CustomEndpoint '${endpoint.name}` +
+        //     ` missing selectedSchema field, with unknown schema name '${endpoint.selectedSchemaName}'`,
+        // );
         continue;
       }
       query = {

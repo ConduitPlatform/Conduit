@@ -37,10 +37,6 @@ export class ModuleManager<T> {
     this.module.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
-      await this.grpcSdk.config.registerModule(
-        this.module.address,
-        this.module.healthState,
-      );
     } catch (err) {
       ConduitGrpcSdk.Logger.error('Failed to initialize server');
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -52,11 +48,32 @@ export class ModuleManager<T> {
     await this.module.createGrpcServer();
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
+    this.subToInitializationEvent();
     await this.module.handleConfigSyncUpdate();
     await this.module.registerMetrics();
     await this.module.startGrpcServer();
     await this.module.onServerStart();
+  }
+
+  private subToInitializationEvent() {
+    if (this.module.name === 'database') {
+      const emitter = this.grpcSdk.config.getModuleWatcher();
+      emitter.on('database:initialize', async () => {
+        await this.resumeInitialization();
+      });
+    } else {
+      this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
+        await this.resumeInitialization();
+      });
+    }
+  }
+
+  private async resumeInitialization() {
     await this.module.initializeMetrics();
     await this.module.preRegister();
+    await this.grpcSdk.config.registerModule(
+      this.module.address,
+      this.module.healthState,
+    );
   }
 }

@@ -36,20 +36,23 @@ module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
     const schemas = await database.getSystemSchemas();
-    const systemSchemas = JSON.parse(schemas.schemas);
+    const systemSchemasArray = schemas.schemas.split(',');
+    // SQL requires List instead of Array
+    const systemSchemasList = '(' + schemas.schemas + ')';
     const query = {
       mongoQuery: {
-        find: { 'modelOptions.conduit.cms': { $exists: true } },
+        find: {
+          $and: [
+            { name: { $in: systemSchemasArray } },
+            { 'modelOptions.conduit.cms': { $exists: true } },
+          ],
+        },
       },
       sqlQuery: {
-        query:
-          'SELECT * FROM "cnd_DeclaredSchema" WHERE "modelOptions.conduit.cms" IS NOT NULL',
+        query: `SELECT * FROM "cnd_DeclaredSchema" WHERE "modelOptions.conduit.cms" IS NOT NULL AND "name" IN ${systemSchemasList}`,
       },
     };
-    let affectedSchemas = await database.rawQuery('_DeclaredSchemas', query);
-    affectedSchemas = affectedSchemas.filter((schema: any) =>
-      systemSchemas.includes(schema.name),
-    );
+    const affectedSchemas = await database.rawQuery('_DeclaredSchema', query);
     for (const schema of affectedSchemas) {
       const conduit = schema.modelOptions.conduit;
       delete conduit!.cms;
@@ -62,7 +65,7 @@ module.exports = {
           query: `UPDATE "cnd_DeclaredSchema" SET "modelOptions.conduit" = ${conduit} WHERE _id = ${schema._id}`,
         },
       };
-      await database.rawQuery('_DeclaredSchemas', query);
+      await database.rawQuery('_DeclaredSchema', query);
       const affectedSchemaNames = affectedSchemas.map((s: any) => s.name);
       // SQL requires List instead of Array
       const schemaList = '(' + affectedSchemaNames.join(',') + ')';
@@ -74,7 +77,7 @@ module.exports = {
           query: `DROP FROM "cnd_CustomEndpoints" WHERE "selectedSchema" IN ${schemaList}`,
         },
       };
-      await database.rawQuery('_CustomEndpoints', query);
+      await database.rawQuery('CustomEndpoints', query);
     }
   },
   down: async function (grpcSdk: ConduitGrpcSdk) {

@@ -21,6 +21,8 @@ export async function registerMigrations(
   }
   const migrations = new Map<string, string>();
   for (const name of files) {
+    // Ignore authentication's config migration for convict
+    if (name === 'configMigration.js' && moduleName === 'authentication') continue;
     const migrationPath = path + `/${name}`;
     const data = readFileSync(migrationPath, 'utf-8');
     migrations.set(name.split('.js')[0], data);

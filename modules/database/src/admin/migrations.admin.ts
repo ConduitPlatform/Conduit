@@ -50,7 +50,7 @@ export class MigrationsAdmin {
         );
       } catch (e) {
         await model.findByIdAndUpdate(m._id, { status: MigrationStatus.FAILED });
-        await updateMigrationLogs(this.database, m._id, e as string);
+        await updateMigrationLogs(this.database, m._id, (e as Error).message);
         throw new GrpcError(status.INTERNAL, 'Migration failed');
       }
     }
@@ -97,7 +97,7 @@ export class MigrationsAdmin {
       );
     } catch (e) {
       await model.findByIdAndUpdate(migration._id, { status: MigrationStatus.FAILED });
-      await updateMigrationLogs(this.database, migration._id, e as string);
+      await updateMigrationLogs(this.database, migration._id, (e as Error).message);
       throw new GrpcError(status.INTERNAL, 'Migration failed');
     }
     return 'Migration successfully executed';
