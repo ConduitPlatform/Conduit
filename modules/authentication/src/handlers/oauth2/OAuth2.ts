@@ -80,8 +80,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
-      code_challenge: codeChallenge,
-      code_challenge_method: this.settings.codeChallengeMethod,
+      ...(codeChallenge !== undefined && { code_challenge: codeChallenge }),
+      ...(this.settings.codeChallengeMethod !== undefined && {
+        code_challenge_method: this.settings.codeChallengeMethod,
+      }),
     };
     const baseUrl = this.settings.authorizeUrl;
 
