@@ -108,7 +108,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         return k + '=' + options[k];
       })
       .join('&');
-    return baseUrl + url;
+    return baseUrl + '?' + url;
   }
 
   async authorize(call: ParsedRouterRequest) {
