@@ -47,7 +47,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/function/:id',
+        path: '/:id',
         action: ConduitRouteActions.DELETE,
         description: 'Delete a function',
         urlParams: {
@@ -59,7 +59,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/list',
+        path: '/',
         action: ConduitRouteActions.GET,
         description: 'List all functions',
         queryParams: {
@@ -73,7 +73,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/function/:id',
+        path: '/:id',
         action: ConduitRouteActions.GET,
         description: 'Get a function',
         urlParams: {
@@ -114,7 +114,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/function/:id',
+        path: '/:id',
         action: ConduitRouteActions.PATCH,
         description: 'Update a function',
         urlParams: {

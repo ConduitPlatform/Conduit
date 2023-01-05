@@ -49,9 +49,10 @@ async function executeFunction(
   });
 
   let duration;
-  const start = process.hrtime();
+  let start;
   try {
     const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
+    start = process.hrtime();
     const functionInSandbox = vm.run(script);
     const end = process.hrtime(start);
     duration = end[0] * 1e3 + end[1] / 1e6;
