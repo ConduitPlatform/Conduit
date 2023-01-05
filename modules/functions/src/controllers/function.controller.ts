@@ -9,12 +9,7 @@ import { Functions } from '../models';
 import { createFunctionRoute } from './utils';
 
 export class FunctionController {
-  private crudRoutes: {
-    input: ConduitRouteOptions;
-    returnType: ConduitRouteReturnDefinition;
-    handler: RequestHandlers;
-  }[] = [];
-  private customRoutes: {
+  private functionRoutes: {
     input: ConduitRouteOptions;
     returnType: ConduitRouteReturnDefinition;
     handler: RequestHandlers;
@@ -46,10 +41,9 @@ export class FunctionController {
         r.forEach(func => {
           routes.push(createFunctionRoute(func, this.grpcSdk));
         });
-
-        this.addRoutes(routes, false);
+        this.functionRoutes = routes;
         this._routingManager.clear();
-        this.crudRoutes.concat(this.customRoutes).forEach(route => {
+        this.functionRoutes.forEach(route => {
           this._routingManager.route(route.input, route.returnType, route.handler);
         });
         this._routingManager
@@ -68,21 +62,6 @@ export class FunctionController {
         );
         ConduitGrpcSdk.Logger.error(err);
       });
-  }
-
-  addRoutes(
-    routes: {
-      input: ConduitRouteOptions;
-      returnType: ConduitRouteReturnDefinition;
-      handler: RequestHandlers;
-    }[],
-    crud: boolean = true,
-  ) {
-    if (crud) {
-      this.crudRoutes = routes;
-    } else {
-      this.customRoutes = routes;
-    }
   }
 
   refreshEndpoints(): void {

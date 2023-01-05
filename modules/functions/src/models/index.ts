@@ -1,2 +1,2 @@
-export * from './Function.endpoints.shema';
-export * from './FunctionDefinitions.schema';
+export * from './Function.shema';
+export * from './FunctionExecutions.schema';

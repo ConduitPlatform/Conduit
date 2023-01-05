@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RouteBuilder,
 } from '@conduitplatform/grpc-sdk';
-import { FunctionDefinitions, Functions } from '../models';
+import { FunctionExecutions, Functions } from '../models';
 import { isNil } from 'lodash';
 import { NodeVM } from 'vm2';
 import { status } from '@grpc/grpc-js';
@@ -41,7 +41,7 @@ async function executeFunction(
     timeout: timeout,
     require: {
       external: true,
-      import: ['lodash'],
+      import: ['lodash', 'axios'],
     },
   });
   vm.on('console.log', data => {
@@ -55,14 +55,22 @@ async function executeFunction(
     start = process.hrtime();
     const functionInSandbox = vm.run(script);
     const end = process.hrtime(start);
-    duration = end[0] * 1e3 + end[1] / 1e6;
     const functionData = functionInSandbox(grpcSdk, call.request, callback);
-    await addSchemaDefinitions(name, duration, true, undefined, logs);
+    duration = end[0] * 1e3 + end[1] / 1e6;
+    await addFunctionExecutions(name, duration, true, undefined, logs);
+    ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
+    ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
+      function_name: name,
+    });
     return { data: functionData };
   } catch (e) {
     const end = process.hrtime(start);
     duration = end[0] * 1e3 + end[1] / 1e6;
-    await addSchemaDefinitions(name, duration, false, e, logs);
+    await addFunctionExecutions(name, duration, false, e, logs);
+    ConduitGrpcSdk.Metrics?.increment('failed_functions_total');
+    ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
+      function_name: name,
+    });
     throw new GrpcError(status.INTERNAL, 'Execution failed');
   }
 }
@@ -109,7 +117,7 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   return route.build();
 }
 
-async function addSchemaDefinitions(
+async function addFunctionExecutions(
   functionName: string,
   duration: number,
   success: boolean,
@@ -123,5 +131,5 @@ async function addSchemaDefinitions(
     error,
     logs,
   };
-  await FunctionDefinitions.getInstance().create(query);
+  await FunctionExecutions.getInstance().create(query);
 }

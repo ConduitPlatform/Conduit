@@ -45,8 +45,8 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class FunctionDefinitions extends ConduitActiveSchema<FunctionDefinitions> {
-  private static _instance: FunctionDefinitions;
+export class FunctionExecutions extends ConduitActiveSchema<FunctionExecutions> {
+  private static _instance: FunctionExecutions;
   _id!: string;
 
   functionName!: string;
@@ -63,15 +63,15 @@ export class FunctionDefinitions extends ConduitActiveSchema<FunctionDefinitions
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, FunctionDefinitions.name, schema, modelOptions, collectionName);
+    super(database, FunctionExecutions.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (FunctionDefinitions._instance) return FunctionDefinitions._instance;
+    if (FunctionExecutions._instance) return FunctionExecutions._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    FunctionDefinitions._instance = new FunctionDefinitions(database);
-    return FunctionDefinitions._instance;
+    FunctionExecutions._instance = new FunctionExecutions(database);
+    return FunctionExecutions._instance;
   }
 }

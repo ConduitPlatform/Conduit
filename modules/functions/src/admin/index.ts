@@ -14,7 +14,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { FunctionDefinitions, Functions } from '../models';
+import { FunctionExecutions, Functions } from '../models';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -85,23 +85,23 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/definitions',
+        path: '/executions',
         action: ConduitRouteActions.GET,
-        description: 'List all functions definitions',
+        description: 'List all functions executions',
         queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
         },
       },
-      new ConduitRouteReturnDefinition('ListFunctionsDefinitions', 'String'),
-      this.getFunctionsDefinitions.bind(this),
+      new ConduitRouteReturnDefinition('ListFunctionsExecutions', 'String'),
+      this.getFunctionsExecutions.bind(this),
     );
     this.routingManager.route(
       {
-        path: '/definitions/:functionName',
+        path: '/executions/:functionName',
         action: ConduitRouteActions.GET,
-        description: 'Get function Definitions for specific function',
+        description: 'Get function executions for specific function',
         urlParams: {
           functionName: { type: RouteOptionType.String, required: true },
         },
@@ -109,8 +109,8 @@ export class AdminHandlers {
           success: ConduitBoolean.Optional,
         },
       },
-      new ConduitRouteReturnDefinition('GetFunctionDefinitions', 'String'),
-      this.getFunctionDefinitions.bind(this),
+      new ConduitRouteReturnDefinition('GetFunctionExecutions', 'String'),
+      this.getFunctionExecutions.bind(this),
     );
     this.routingManager.route(
       {
@@ -195,33 +195,33 @@ export class AdminHandlers {
     return { updated };
   }
 
-  async getFunctionsDefinitions(
+  async getFunctionsExecutions(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    const functionDefinitions = await FunctionDefinitions.getInstance().findMany(
+    const functionExecutions = await FunctionExecutions.getInstance().findMany(
       {},
       skip,
       limit,
       sort,
     );
-    return { functionDefinitions };
+    return { functionExecutions };
   }
 
-  async getFunctionDefinitions(
+  async getFunctionExecutions(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
     const { functionName, success } = call.request.params;
-    const functionDefinitions = await FunctionDefinitions.getInstance().findMany({
+    const functionExecutions = await FunctionExecutions.getInstance().findMany({
       functionName: functionName,
       success: success,
     });
-    if (isNil(functionDefinitions) || isEmpty(functionDefinitions)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function Definition does not exist');
+    if (isNil(functionExecutions) || isEmpty(functionExecutions)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function Executions not exist');
     }
-    return { functionDefinitions };
+    return { functionExecutions };
   }
 }
