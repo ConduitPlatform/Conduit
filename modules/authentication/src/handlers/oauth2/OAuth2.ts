@@ -34,9 +34,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   mapScopes: { [key: string]: string };
   defaultScopes: string[];
   protected settings: S;
-  private providerName: string;
+  private readonly providerName: string;
 
-  constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
+  protected constructor(grpcSdk: ConduitGrpcSdk, providerName: string, settings: S) {
     this.providerName = providerName;
     this.grpcSdk = grpcSdk;
     this.settings = settings;
