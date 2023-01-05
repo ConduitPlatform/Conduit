@@ -67,6 +67,8 @@ export default class Chat extends ManagedModule<Config> {
         serving ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
       );
     });
+    const emitter = this.grpcSdk.config.getModuleWatcher();
+    emitter.emit('chat:initialize');
   }
 
   async onConfig() {

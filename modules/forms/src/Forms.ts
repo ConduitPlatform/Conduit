@@ -47,6 +47,8 @@ export default class Forms extends ManagedModule<Config> {
         this.updateHealth(HealthCheckStatus.NOT_SERVING);
       }
     });
+    const emitter = this.grpcSdk.config.getModuleWatcher();
+    emitter.emit('forms:initialize');
   }
 
   async onConfig() {

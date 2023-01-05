@@ -306,9 +306,6 @@ export default class DatabaseModule extends ManagedModule<void> {
 
     // Skipped migrations
     if (migrations.every(m => m.status === MigrationStatus.SKIPPED)) {
-      for (const m of migrations) {
-        await updateMigrationLogs(this._activeAdapter, m._id, m.status);
-      }
       this.publishInitializationEvent(moduleName);
       return callback(null, {});
     }

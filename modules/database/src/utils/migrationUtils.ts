@@ -19,11 +19,9 @@ export async function updateMigrationLogs(
   }
   let success = false;
   if (
-    [
-      MigrationStatus.SUCCESSFUL_MANUAL_UP,
-      MigrationStatus.SUCCESSFUL_AUTO_UP,
-      MigrationStatus.SKIPPED,
-    ].includes(migration.status)
+    [MigrationStatus.SUCCESSFUL_MANUAL_UP, MigrationStatus.SUCCESSFUL_AUTO_UP].includes(
+      migration.status,
+    )
   ) {
     success = true;
   }

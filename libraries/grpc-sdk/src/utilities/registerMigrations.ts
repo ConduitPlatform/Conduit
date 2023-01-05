@@ -6,7 +6,7 @@ import { DatabaseProvider } from '../modules';
  * There could be many migration files or one that contains all migrations
  * @param database
  * @param moduleName
- * @param moduleVersion => version of the module that registers this migration
+ * @param moduleVersion => version of the module that registers migrations
  * @param path => absolute path to module's migration folder
  **/
 export async function registerMigrations(
@@ -16,9 +16,6 @@ export async function registerMigrations(
   path: string,
 ) {
   const files = readdirSync(path).filter(f => f.endsWith('.js'));
-  if (files.length === 0) {
-    throw new Error('Migration files not found');
-  }
   const migrations = new Map<string, string>();
   for (const name of files) {
     // Ignore authentication's config migration for convict

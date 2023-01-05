@@ -49,6 +49,8 @@ export default class Email extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
+    const emitter = this.grpcSdk.config.getModuleWatcher();
+    emitter.emit('email:initialize');
   }
 
   protected registerSchemas() {

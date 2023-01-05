@@ -90,6 +90,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       },
       true,
     );
+    const emitter = this.grpcSdk.config.getModuleWatcher();
+    emitter.emit('router:initialize');
   }
 
   async onRegister() {

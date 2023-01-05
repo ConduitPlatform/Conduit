@@ -56,16 +56,15 @@ export class ModuleManager<T> {
   }
 
   private subToInitializationEvent() {
-    if (this.module.name === 'database') {
-      const emitter = this.grpcSdk.config.getModuleWatcher();
-      emitter.on('database:initialize', async () => {
-        await this.resumeInitialization();
-      });
-    } else {
-      this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
-        await this.resumeInitialization();
-      });
-    }
+    // This triggers only when a module doesn't have any migrations or when database completes its migrations
+    const emitter = this.grpcSdk.config.getModuleWatcher();
+    emitter.on(`${this.module.name}:initialize`, async () => {
+      await this.resumeInitialization();
+    });
+    // This triggers only when a module has migrations and database has completed them
+    this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
+      await this.resumeInitialization();
+    });
   }
 
   private async resumeInitialization() {
