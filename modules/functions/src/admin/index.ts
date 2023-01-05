@@ -15,6 +15,7 @@ import ConduitGrpcSdk, {
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models';
+import { FunctionController } from '../controllers/function.controller';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -22,6 +23,7 @@ export class AdminHandlers {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly functionsController: FunctionController,
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
@@ -148,7 +150,9 @@ export class AdminHandlers {
       returns,
       timeout: timeoutValue,
     };
-    return Functions.getInstance().create(query);
+    const functionEndpoint = await Functions.getInstance().create(query);
+    this.functionsController.refreshEndpoints();
+    return functionEndpoint;
   }
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -158,6 +162,7 @@ export class AdminHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
     await Functions.getInstance().deleteOne({ _id: id });
+    this.functionsController.refreshEndpoints();
     return { deleted: true };
   }
 
@@ -192,6 +197,7 @@ export class AdminHandlers {
       timeout: timeout ?? func.timeout,
     };
     const updated = Functions.getInstance().findByIdAndUpdate(func._id, query);
+    this.functionsController.refreshEndpoints();
     return { updated };
   }
 

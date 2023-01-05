@@ -42,7 +42,11 @@ export default class Functions extends ManagedModule<Config> {
       .then(() => {
         this.isRunning = true;
         this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
-        this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+        this.adminRouter = new AdminHandlers(
+          this.grpcServer,
+          this.grpcSdk,
+          this.functionsController,
+        );
         return this.functionsController.refreshRoutes();
       })
       .catch(e => {
