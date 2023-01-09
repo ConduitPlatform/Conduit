@@ -184,8 +184,8 @@ export class AdminHandlers {
   }
 
   async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, functionCode, inputs, returns, timeout } = call.request.params;
-    const func = await Functions.getInstance().findOne({ name: name });
+    const { id, name, functionCode, inputs, returns, timeout } = call.request.params;
+    const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }

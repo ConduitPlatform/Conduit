@@ -1,2 +1,2 @@
-export * from './Function.shema';
+export * from './Function.schema';
 export * from './FunctionExecutions.schema';
