@@ -180,7 +180,7 @@ export class AdminHandlers {
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
-    return { func };
+    return func;
   }
 
   async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -196,9 +196,9 @@ export class AdminHandlers {
       returns: returns ?? func.returns,
       timeout: timeout ?? func.timeout,
     };
-    const updated = Functions.getInstance().findByIdAndUpdate(func._id, query);
+    await Functions.getInstance().findByIdAndUpdate(func._id, query);
     this.functionsController.refreshEndpoints();
-    return { updated };
+    return { updated: 'true' };
   }
 
   async getFunctionsExecutions(
@@ -214,7 +214,7 @@ export class AdminHandlers {
       limit,
       sort,
     );
-    return { functionExecutions };
+    return functionExecutions;
   }
 
   async getFunctionExecutions(
@@ -228,6 +228,6 @@ export class AdminHandlers {
     if (isNil(functionExecutions) || isEmpty(functionExecutions)) {
       throw new GrpcError(status.NOT_FOUND, 'Function Executions not exist');
     }
-    return { functionExecutions };
+    return functionExecutions;
   }
 }
