@@ -87,7 +87,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/executions',
+        path: '/list/executions',
         action: ConduitRouteActions.GET,
         description: 'List all functions executions',
         queryParams: {
@@ -198,7 +198,7 @@ export class AdminHandlers {
     };
     await Functions.getInstance().findByIdAndUpdate(func._id, query);
     this.functionsController.refreshEndpoints();
-    return { updated: 'true' };
+    return { updated: true };
   }
 
   async getFunctionsExecutions(
@@ -208,13 +208,13 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    const functionExecutions = await FunctionExecutions.getInstance().findMany(
+    const functionsExecutions = await FunctionExecutions.getInstance().findMany(
       {},
       skip,
       limit,
       sort,
     );
-    return functionExecutions;
+    return functionsExecutions;
   }
 
   async getFunctionExecutions(
