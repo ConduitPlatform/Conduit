@@ -20,6 +20,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     name: string;
     fields: any;
     modelOptions: any;
+    collectionName: any;
     fieldHash: string;
   }> {
     return this.serviceClient!.getSchema({ schemaName: schemaName }).then(res => {
@@ -27,6 +28,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         name: res.name,
         fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.modelOptions),
+        collectionName: res.collectionName,
         fieldHash: res.fieldHash,
       };
     });
@@ -37,6 +39,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       name: string;
       fields: any;
       modelOptions: any;
+      collectionName: any;
       fieldHash: string;
     }[]
   > {
@@ -46,12 +49,14 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
           name: string;
           fields: string;
           modelOptions: string;
+          collectionName: string;
           fieldHash: string;
         }) => {
           return {
             name: schema.name,
             fields: JSON.parse(schema.fields),
             modelOptions: JSON.parse(schema.modelOptions),
+            collectionName: schema.collectionName,
             fieldHash: schema.fieldHash,
           };
         },
