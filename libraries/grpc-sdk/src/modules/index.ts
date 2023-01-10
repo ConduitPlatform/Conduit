@@ -11,3 +11,4 @@ export * from './chat';
 export * from './forms';
 export * from './authorization';
 export * from './authentication';
+export * from './functions';

@@ -12,6 +12,7 @@ import {
   Router,
   SMS,
   Storage,
+  Functions,
 } from './modules';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
@@ -62,6 +63,7 @@ export default class ConduitGrpcSdk {
     sms: SMS,
     chat: Chat,
     forms: Forms,
+    functions: Functions,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
@@ -278,6 +280,15 @@ export default class ConduitGrpcSdk {
       return this._modules['chat'] as Chat;
     } else {
       ConduitGrpcSdk.Logger.warn('Chat module not up yet!');
+      return null;
+    }
+  }
+
+  get functions(): Functions | null {
+    if (this._modules['functions']) {
+      return this._modules['functions'] as Functions;
+    } else {
+      ConduitGrpcSdk.Logger.warn('Functions module not up yet!');
       return null;
     }
   }
