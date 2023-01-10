@@ -8,6 +8,10 @@ import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const customEndpointsSchema = await database.getSchema('CustomEndpoints');
+    const declaredSchema = await database.getSchema('_DeclaredSchema');
+    const customEndpointsName = customEndpointsSchema.collectionName;
+    const declaredSchemaName = declaredSchema.collectionName;
     const query = {
       mongoQuery: {
         find: {
@@ -15,7 +19,7 @@ module.exports = {
         },
       },
       sqlQuery: {
-        query: 'SELECT * FROM "cnd_CustomEndpoints" WHERE "selectedSchema" IS NULL',
+        query: `SELECT * FROM ${customEndpointsName} WHERE "selectedSchema" IS NULL`,
       },
     };
     const customEndpoints = await database.rawQuery('CustomEndpoints', query);
@@ -25,7 +29,7 @@ module.exports = {
           find: { name: endpoint.selectedSchemaName },
         },
         sqlQuery: {
-          query: `SELECT * FROM "cnd_DeclaredSchema" WHERE name = '${endpoint.selectedSchemaName}'`,
+          query: `SELECT * FROM ${declaredSchemaName} WHERE name = '${endpoint.selectedSchemaName}'`,
         },
       };
       const selectedSchema = await database.rawQuery('_DeclaredSchema', query);
@@ -42,13 +46,11 @@ module.exports = {
           options: { $set: { selectedSchema: selectedSchema._id.toString() } },
         },
         sqlQuery: {
-          query: `UPDATE "cnd_DeclaredSchema" SET "selectedSchema" = '${selectedSchema._id}' WHERE _id = ${endpoint._id}`,
+          query: `UPDATE ${declaredSchemaName} SET "selectedSchema" = '${selectedSchema._id}' WHERE _id = ${endpoint._id}`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

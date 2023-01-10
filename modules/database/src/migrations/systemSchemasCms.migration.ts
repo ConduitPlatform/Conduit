@@ -8,6 +8,10 @@ import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const customEndpointsSchema = await database.getSchema('CustomEndpoints');
+    const declaredSchema = await database.getSchema('_DeclaredSchema');
+    const customEndpointsName = customEndpointsSchema.collectionName;
+    const declaredSchemaName = declaredSchema.collectionName;
     const schemas = await database.getSystemSchemas();
     const systemSchemasArray = schemas.schemas.split(',');
     // SQL requires List instead of Array
@@ -22,7 +26,7 @@ module.exports = {
         },
       },
       sqlQuery: {
-        query: `SELECT * FROM "cnd_DeclaredSchema" WHERE "modelOptions.conduit.cms" IS NOT NULL AND "name" IN ${systemSchemasList}`,
+        query: `SELECT * FROM ${declaredSchemaName} WHERE "modelOptions.conduit.cms" IS NOT NULL AND "name" IN ${systemSchemasList}`,
       },
     };
     const affectedSchemas = await database.rawQuery('_DeclaredSchema', query);
@@ -35,7 +39,7 @@ module.exports = {
           options: { modelOptions: { conduit } },
         },
         sqlQuery: {
-          query: `UPDATE "cnd_DeclaredSchema" SET "modelOptions.conduit" = ${conduit} WHERE _id = ${schema._id}`,
+          query: `UPDATE ${declaredSchemaName} SET "modelOptions.conduit" = ${conduit} WHERE _id = ${schema._id}`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);
@@ -47,13 +51,11 @@ module.exports = {
           deleteMany: { selectedSchema: { $in: affectedSchemaNames } },
         },
         sqlQuery: {
-          query: `DROP FROM "cnd_CustomEndpoints" WHERE "selectedSchema" IN ${schemaList}`,
+          query: `DROP FROM ${customEndpointsName} WHERE "selectedSchema" IN ${schemaList}`,
         },
       };
       await database.rawQuery('CustomEndpoints', query);
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

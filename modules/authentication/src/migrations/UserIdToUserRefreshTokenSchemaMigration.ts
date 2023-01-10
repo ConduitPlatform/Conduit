@@ -3,6 +3,8 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const schema = await database.getSchema('RefreshToken');
+    const sqlTableName = schema.collectionName;
     const dbType = await database.getDatabaseType();
     if (dbType.type === 'MongoDB') {
       const query = {
@@ -15,7 +17,7 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: 'SELECT * FROM "cnd_RefreshToken" WHERE "userId" IS NOT NULL',
+          query: `SELECT * FROM ${sqlTableName} WHERE "userId" IS NOT NULL`,
         },
       };
       const refreshTokens = await database.rawQuery('RefreshToken', query);
@@ -23,22 +25,20 @@ module.exports = {
       query = {
         sqlQuery: {
           query:
-            'ALTER TABLE "cnd_RefreshToken" DROP COLUMN "userId";' +
-            'ALTER TABLE "cnd_RefreshToken" ADD COLUMN "user" ;',
+            `ALTER TABLE ${sqlTableName} DROP COLUMN "userId";` +
+            `ALTER TABLE ${sqlTableName} ADD COLUMN "user";`,
         },
       };
       await database.rawQuery('RefreshToken', query);
       for (const token of refreshTokens) {
         query = {
           sqlQuery: {
-            query: `UPDATE "cnd_RefreshToken" SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
+            query: `UPDATE ${sqlTableName} SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
           },
         };
         await database.rawQuery('RefreshToken', query);
       }
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

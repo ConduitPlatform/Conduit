@@ -3,12 +3,14 @@ import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const schema = await database.getSchema('Config');
+    const sqlTableName = schema.collectionName;
     let query: RawQuery = {
       mongoQuery: {
         find: {},
       },
       sqlQuery: {
-        query: 'SELECT * FROM "cnd_Config"',
+        query: `SELECT * FROM ${sqlTableName}`,
       },
     };
     const configs = await database!.rawQuery('Config', query);
@@ -21,8 +23,8 @@ module.exports = {
       },
       sqlQuery: {
         query:
-          'DROP TABLE "cnd_Config";' +
-          'CREATE TABLE IF NOT EXISTS public."cnd_Config" (' +
+          `DROP TABLE ${sqlTableName};` +
+          `CREATE TABLE IF NOT EXISTS public.${sqlTableName} (` +
           'name character varying(255) COLLATE pg_catalog."default", ' +
           "config json DEFAULT '{}'::json, " +
           '_id uuid NOT NULL, ' +
@@ -38,13 +40,11 @@ module.exports = {
           insertOne: { name: moduleName, config: newConfig },
         },
         sqlQuery: {
-          query: `INSERT INTO "cnd_Config" (name, config) VALUES ('${moduleName}', ${newConfig});`,
+          query: `INSERT INTO ${sqlTableName} (name, config) VALUES ('${moduleName}', ${newConfig});`,
         },
       };
       await database.rawQuery('Config', query);
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

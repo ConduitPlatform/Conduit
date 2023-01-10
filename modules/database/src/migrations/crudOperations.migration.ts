@@ -3,12 +3,14 @@ import ConduitGrpcSdk, { ConduitSchema } from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const schema = await database.getSchema('_DeclaredSchema');
+    const sqlTableName = schema.collectionName;
     const query = {
       mongoQuery: {
         find: {},
       },
       sqlQuery: {
-        query: 'SELECT * FROM "cnd_DeclaredSchema"',
+        query: `SELECT * FROM ${sqlTableName}`,
       },
     };
     const declaredSchemas = await database.rawQuery('_DeclaredSchema', query);
@@ -47,13 +49,11 @@ module.exports = {
           },
         },
         sqlQuery: {
-          query: `UPDATE "cnd_DeclaredSchema" SET "modelOptions" = ${modelOptions} WHERE _id = '${schema._id}'`,
+          query: `UPDATE ${sqlTableName} SET "modelOptions" = ${modelOptions} WHERE _id = '${schema._id}'`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

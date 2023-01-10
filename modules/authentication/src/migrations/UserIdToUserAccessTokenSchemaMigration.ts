@@ -3,6 +3,8 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const schema = await database.getSchema('AccessToken');
+    const sqlTableName = schema.collectionName;
     const dbType = await database.getDatabaseType();
     if (dbType.type === 'MongoDB') {
       const query = {
@@ -15,7 +17,7 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: 'SELECT * FROM "cnd_AccessToken" WHERE "userId" IS NOT NULL',
+          query: `SELECT * FROM "cnd_AccessToken" WHERE ${sqlTableName} IS NOT NULL`,
         },
       };
       const accessTokens = await database.rawQuery('AccessToken', query);
@@ -23,22 +25,20 @@ module.exports = {
       query = {
         sqlQuery: {
           query:
-            'ALTER TABLE "cnd_AccessToken" DROP COLUMN "userId";' +
-            'ALTER TABLE "cnd_AccessToken" ADD COLUMN "user" ;',
+            `ALTER TABLE ${sqlTableName} DROP COLUMN "userId";` +
+            `ALTER TABLE ${sqlTableName} ADD COLUMN "user";`,
         },
       };
       await database.rawQuery('AccessToken', query);
       for (const token of accessTokens) {
         query = {
           sqlQuery: {
-            query: `UPDATE "cnd_AccessToken" SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
+            query: `UPDATE ${sqlTableName} SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
           },
         };
         await database.rawQuery('AccessToken', query);
       }
     }
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };

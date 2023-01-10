@@ -3,12 +3,14 @@ import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
     const database = grpcSdk.database!;
+    const schema = await database.getSchema('Admin');
+    const sqlTableName = schema.collectionName;
     let query: RawQuery = {
       mongoQuery: {
         find: {},
       },
       sqlQuery: {
-        query: 'SELECT * FROM "cnd_Admin"',
+        query: `SELECT * FROM ${sqlTableName}`,
       },
     };
     const originalAdmin = await database.rawQuery('Admin', query);
@@ -20,13 +22,11 @@ module.exports = {
       },
       sqlQuery: {
         query:
-          'ALTER TABLE "cnd_Admin" ADD COLUMN "isSuperAdmin" BOOLEAN NOT NULL DEFAULT FALSE;' +
-          `UPDATE "cnd_Admin" SET "isSuperAdmin" = TRUE WHERE _id = '${originalAdmin[0]._id}'`,
+          `ALTER TABLE ${sqlTableName} ADD COLUMN "isSuperAdmin" BOOLEAN NOT NULL DEFAULT FALSE;` +
+          `UPDATE ${sqlTableName} SET "isSuperAdmin" = TRUE WHERE _id = '${originalAdmin[0]._id}'`,
       },
     };
     await database.rawQuery('Admin', query);
   },
-  down: async function (grpcSdk: ConduitGrpcSdk) {
-    console.log('Executed down function!');
-  },
+  down: async function (grpcSdk: ConduitGrpcSdk) {},
 };
