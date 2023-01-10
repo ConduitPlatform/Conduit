@@ -1,6 +1,7 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   RouteBuilder,
 } from '@conduitplatform/grpc-sdk';
@@ -29,7 +30,7 @@ function getOperation(op: string) {
 async function executeFunction(
   call: ParsedRouterRequest,
   callback: any,
-  functionCodeCompiled: any,
+  functionCodeCompiled: VMScript,
   timeout: number,
   name: string,
   grpcSdk: ConduitGrpcSdk,
