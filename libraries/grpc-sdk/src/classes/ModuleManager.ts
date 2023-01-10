@@ -52,7 +52,9 @@ export class ModuleManager<T> {
     await this.module.createGrpcServer();
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
-    this.subToInitializationEvent();
+    if (this.module.migrations) {
+      this.subToInitializationEvent();
+    }
     await this.module.handleConfigSyncUpdate();
     await this.module.registerMetrics();
     await this.module.startGrpcServer();
@@ -62,7 +64,7 @@ export class ModuleManager<T> {
   }
 
   private subToInitializationEvent() {
-    // This triggers only when a module doesn't have any migrations or when database completes its migrations
+    // This triggers only when database completes its migrations
     const emitter = this.grpcSdk.config.getModuleWatcher();
     emitter.on(`${this.module.name}:initialize`, async () => {
       this.module.updateHealth(HealthCheckStatus.SERVING);

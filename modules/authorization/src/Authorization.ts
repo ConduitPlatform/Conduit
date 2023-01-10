@@ -63,8 +63,6 @@ export default class Authorization extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    const emitter = this.grpcSdk.config.getModuleWatcher();
-    emitter.emit('authorization:initialize');
   }
 
   protected registerSchemas() {

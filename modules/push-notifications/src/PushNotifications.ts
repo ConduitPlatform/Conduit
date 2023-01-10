@@ -65,8 +65,6 @@ export default class PushNotifications extends ManagedModule<Config> {
     await this.grpcSdk.monitorModule('authentication', serving => {
       this.updateHealthState(undefined, serving);
     });
-    const emitter = this.grpcSdk.config.getModuleWatcher();
-    emitter.emit('pushNotifications:initialize');
   }
 
   async onConfig() {

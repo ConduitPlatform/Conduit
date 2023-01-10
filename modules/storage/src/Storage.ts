@@ -51,8 +51,6 @@ export default class Storage extends ManagedModule<Config> {
     await this.registerSchemas();
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
-    const emitter = this.grpcSdk.config.getModuleWatcher();
-    emitter.emit('storage:initialize');
   }
 
   async preConfig(config: Config) {

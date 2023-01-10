@@ -20,6 +20,7 @@ import convict from 'convict';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   private _activated: boolean = false;
+  private _migrations: boolean = false;
   protected abstract readonly configSchema?: object;
   protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
@@ -36,6 +37,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   get address() {
     return this._address;
+  }
+
+  get migrations() {
+    return this._migrations;
+  }
+
+  activateMigrations() {
+    this._migrations = true;
   }
 
   /**

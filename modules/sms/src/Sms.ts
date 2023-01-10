@@ -43,10 +43,7 @@ export default class Sms extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
-  async onServerStart() {
-    const emitter = this.grpcSdk.config.getModuleWatcher();
-    emitter.emit('sms:initialize');
-  }
+  async onServerStart() {}
 
   async onRegister() {
     this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
