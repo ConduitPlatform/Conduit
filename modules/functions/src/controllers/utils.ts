@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { FunctionExecutions, Functions } from '../models';
 import { isNil } from 'lodash';
-import { NodeVM } from 'vm2';
+import { NodeVM, VMScript } from 'vm2';
 import { status } from '@grpc/grpc-js';
 
 function getOperation(op: string) {
@@ -29,7 +29,7 @@ function getOperation(op: string) {
 async function executeFunction(
   call: ParsedRouterRequest,
   callback: any,
-  functionCode: string,
+  functionCodeCompiled: any,
   timeout: number,
   name: string,
   grpcSdk: ConduitGrpcSdk,
@@ -51,9 +51,8 @@ async function executeFunction(
   let duration;
   let start;
   try {
-    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
     start = process.hrtime();
-    const functionInSandbox = vm.run(script);
+    const functionInSandbox = vm.run(functionCodeCompiled);
     const end = process.hrtime(start);
     const functionData = functionInSandbox(grpcSdk, call.request, callback);
     duration = end[0] * 1e3 + end[1] / 1e6;
@@ -76,6 +75,7 @@ async function executeFunction(
 }
 
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
   const route = new RouteBuilder()
     .path(`/${func.name}`)
     .method(getOperation(func.inputs?.method))
@@ -85,7 +85,7 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
         (returns: any) => {
           callback(null, JSON.parse(returns));
         },
-        func.functionCode,
+        compiledFunctionCode,
         func.timeout,
         func.name,
         grpcSdk,
@@ -132,4 +132,15 @@ async function addFunctionExecutions(
     logs,
   };
   await FunctionExecutions.getInstance().create(query);
+}
+
+export function compileFunctionCode(functionCode: string) {
+  const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
+  let functionScriptCompiled;
+  try {
+    functionScriptCompiled = new VMScript(script).compile();
+  } catch (e) {
+    throw new GrpcError(status.INTERNAL, 'Compilation failed');
+  }
+  return functionScriptCompiled;
 }

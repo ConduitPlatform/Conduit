@@ -16,6 +16,7 @@ import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models';
 import { FunctionController } from '../controllers/function.controller';
+import { VMScript } from 'vm2';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -141,6 +142,12 @@ export class AdminHandlers {
     const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
+    }
+    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
+    try {
+      new VMScript(script).compile();
+    } catch (e) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
     }
     const timeoutValue = inputs.timeout ?? 180000;
     const query = {
