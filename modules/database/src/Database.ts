@@ -122,7 +122,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       version,
       migrationFilePath,
     );
-    this.updateHealth(HealthCheckStatus.SERVING);
   }
 
   async onRegister() {

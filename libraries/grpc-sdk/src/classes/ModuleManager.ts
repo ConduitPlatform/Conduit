@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ManagedModule } from '..';
+import ConduitGrpcSdk, { HealthCheckStatus, ManagedModule } from '..';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
@@ -37,6 +37,10 @@ export class ModuleManager<T> {
     this.module.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
+      await this.grpcSdk.config.registerModule(
+        this.module.address,
+        this.module.healthState,
+      );
     } catch (err) {
       ConduitGrpcSdk.Logger.error('Failed to initialize server');
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -53,26 +57,19 @@ export class ModuleManager<T> {
     await this.module.registerMetrics();
     await this.module.startGrpcServer();
     await this.module.onServerStart();
+    await this.module.initializeMetrics();
+    await this.module.preRegister();
   }
 
   private subToInitializationEvent() {
     // This triggers only when a module doesn't have any migrations or when database completes its migrations
     const emitter = this.grpcSdk.config.getModuleWatcher();
     emitter.on(`${this.module.name}:initialize`, async () => {
-      await this.resumeInitialization();
+      this.module.updateHealth(HealthCheckStatus.SERVING);
     });
     // This triggers only when a module has migrations and database has completed them
     this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
-      await this.resumeInitialization();
+      this.module.updateHealth(HealthCheckStatus.SERVING);
     });
-  }
-
-  private async resumeInitialization() {
-    await this.module.initializeMetrics();
-    await this.module.preRegister();
-    await this.grpcSdk.config.registerModule(
-      this.module.address,
-      this.module.healthState,
-    );
   }
 }

@@ -54,7 +54,12 @@ export class MigrationsAdmin {
         throw new GrpcError(status.INTERNAL, 'Migration failed');
       }
     }
-    this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
+    if (moduleName === 'database') {
+      const emitter = this.grpcSdk.config.getModuleWatcher();
+      emitter.emit(`${moduleName}:initialize`);
+    } else {
+      this.grpcSdk.bus?.publish(`${moduleName}:initialize`, '');
+    }
     return 'Migrations successfully executed';
   }
 

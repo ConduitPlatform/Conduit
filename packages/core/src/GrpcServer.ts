@@ -1,9 +1,10 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
-  HealthCheckStatus,
-  GrpcServer as ConduitGrpcServer,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
+  GrpcServer as ConduitGrpcServer,
+  HealthCheckStatus,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
 import AppConfigSchema from './config';
@@ -83,7 +84,15 @@ export class GrpcServer {
     this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
-      .then(() => this.commons.getConfigManager().registerAppConfig())
+      .then(async () => {
+        while (
+          ((await this.grpcSdk.database!.check()) as unknown as HealthCheckStatus) !==
+          HealthCheckStatus.SERVING
+        ) {
+          await sleep(500);
+        }
+        await this.commons.getConfigManager().registerAppConfig();
+      })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e.message);
       });
