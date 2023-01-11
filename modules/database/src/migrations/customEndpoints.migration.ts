@@ -19,7 +19,7 @@ module.exports = {
         },
       },
       sqlQuery: {
-        query: `SELECT * FROM ${customEndpointsName} WHERE "selectedSchema" IS NULL`,
+        query: `SELECT * FROM "${customEndpointsName}" WHERE "selectedSchema" IS NULL`,
       },
     };
     const customEndpoints = await database.rawQuery('CustomEndpoints', query);
@@ -29,7 +29,7 @@ module.exports = {
           find: { name: endpoint.selectedSchemaName },
         },
         sqlQuery: {
-          query: `SELECT * FROM ${declaredSchemaName} WHERE name = '${endpoint.selectedSchemaName}'`,
+          query: `SELECT * FROM "${declaredSchemaName}" WHERE name = '${endpoint.selectedSchemaName}'`,
         },
       };
       const selectedSchema = await database.rawQuery('_DeclaredSchema', query);
@@ -46,7 +46,7 @@ module.exports = {
           options: { $set: { selectedSchema: selectedSchema._id.toString() } },
         },
         sqlQuery: {
-          query: `UPDATE ${declaredSchemaName} SET "selectedSchema" = '${selectedSchema._id}' WHERE _id = ${endpoint._id}`,
+          query: `UPDATE "${declaredSchemaName}" SET "selectedSchema" = '${selectedSchema._id}' WHERE _id = '${endpoint._id}'`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);

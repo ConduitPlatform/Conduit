@@ -10,7 +10,7 @@ module.exports = {
         find: {},
       },
       sqlQuery: {
-        query: `SELECT * FROM ${sqlTableName}`,
+        query: `SELECT * FROM "${sqlTableName}"`,
       },
     };
     const declaredSchemas = await database.rawQuery('_DeclaredSchema', query);
@@ -49,7 +49,7 @@ module.exports = {
           },
         },
         sqlQuery: {
-          query: `UPDATE ${sqlTableName} SET "modelOptions" = ${modelOptions} WHERE _id = '${schema._id}'`,
+          query: `UPDATE "${sqlTableName}" SET "modelOptions" = ${modelOptions} WHERE _id = '${schema._id}'`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);

@@ -15,7 +15,7 @@ module.exports = {
         },
       },
       sqlQuery: {
-        query: `UPDATE ${sqlTableName} SET "ownerModule" = 'router' WHERE name = 'Client'`,
+        query: `UPDATE "${sqlTableName}" SET "ownerModule" = 'router' WHERE name = 'Client'`,
       },
     };
     await database.rawQuery('_DeclaredSchema', query);

@@ -15,7 +15,7 @@ module.exports = {
     const schemas = await database.getSystemSchemas();
     const systemSchemasArray = schemas.schemas.split(',');
     // SQL requires List instead of Array
-    const systemSchemasList = '(' + schemas.schemas + ')';
+    const systemSchemasList = "('" + schemas.schemas.replace(',', "','") + "')";
     const query = {
       mongoQuery: {
         find: {
@@ -26,7 +26,7 @@ module.exports = {
         },
       },
       sqlQuery: {
-        query: `SELECT * FROM ${declaredSchemaName} WHERE "modelOptions.conduit.cms" IS NOT NULL AND "name" IN ${systemSchemasList}`,
+        query: `SELECT * FROM "${declaredSchemaName}" WHERE "modelOptions"->'conduit.cms' IS NOT NULL AND "name" IN ${systemSchemasList}`,
       },
     };
     const affectedSchemas = await database.rawQuery('_DeclaredSchema', query);
@@ -39,19 +39,19 @@ module.exports = {
           options: { modelOptions: { conduit } },
         },
         sqlQuery: {
-          query: `UPDATE ${declaredSchemaName} SET "modelOptions.conduit" = ${conduit} WHERE _id = ${schema._id}`,
+          query: `UPDATE "${declaredSchemaName}" SET "modelOptions.conduit" = ${conduit} WHERE _id = '${schema._id}'`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);
       const affectedSchemaNames = affectedSchemas.map((s: any) => s.name);
       // SQL requires List instead of Array
-      const schemaList = '(' + affectedSchemaNames.join(',') + ')';
+      const schemaList = "('" + affectedSchemaNames.toString().replace(',', "','") + "')";
       query = {
         mongoQuery: {
           deleteMany: { selectedSchema: { $in: affectedSchemaNames } },
         },
         sqlQuery: {
-          query: `DROP FROM ${customEndpointsName} WHERE "selectedSchema" IN ${schemaList}`,
+          query: `DROP FROM "${customEndpointsName}" WHERE "selectedSchema" IN ${schemaList}`,
         },
       };
       await database.rawQuery('CustomEndpoints', query);
