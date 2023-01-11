@@ -31,7 +31,7 @@ export async function updateMigrationLogs(
   const date = new Date().toJSON();
   if (isNil(log)) {
     await database.getSchemaModel('MigrationLogs').model.create({
-      migration: migration._id,
+      migration: migration,
       success: success,
       logs: { [date]: message },
     });
