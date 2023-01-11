@@ -23,7 +23,7 @@ module.exports = {
       sqlQuery: {
         query:
           `ALTER TABLE ${sqlTableName} ADD COLUMN "isSuperAdmin" BOOLEAN NOT NULL DEFAULT FALSE;` +
-          `UPDATE ${sqlTableName} SET "isSuperAdmin" = TRUE WHERE _id = '${originalAdmin[0]._id}'`,
+          `UPDATE "${sqlTableName}" SET "isSuperAdmin" = TRUE WHERE _id = '${originalAdmin[0]._id}'`,
       },
     };
     await database.rawQuery('Admin', query);

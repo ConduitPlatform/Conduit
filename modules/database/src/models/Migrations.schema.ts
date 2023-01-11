@@ -36,5 +36,4 @@ export const Migrations = new ConduitSchema(
       },
     },
   },
-  'migrations',
 );
