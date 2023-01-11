@@ -27,11 +27,11 @@ export async function updateMigrationLogs(
   }
   const log = await database
     .getSchemaModel('MigrationLogs')
-    .model.findOne({ migration: migration });
+    .model.findOne({ migration: migration._id });
   const date = new Date().toJSON();
   if (isNil(log)) {
     await database.getSchemaModel('MigrationLogs').model.create({
-      migration: migration,
+      migration: migration._id,
       success: success,
       logs: { [date]: message },
     });

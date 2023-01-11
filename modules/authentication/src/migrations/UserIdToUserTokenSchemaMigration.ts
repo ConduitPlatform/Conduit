@@ -17,7 +17,7 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: `SELECT * FROM ${sqlTableName} WHERE "userId" IS NOT NULL`,
+          query: `SELECT * FROM "${sqlTableName}" WHERE "userId" IS NOT NULL;`,
         },
       };
       const tokens = await database.rawQuery('Token', query);
@@ -25,15 +25,15 @@ module.exports = {
       query = {
         sqlQuery: {
           query:
-            `ALTER TABLE ${sqlTableName} DROP COLUMN "userId";` +
-            `ALTER TABLE ${sqlTableName} ADD COLUMN "user";`,
+            `ALTER TABLE "${sqlTableName}" DROP COLUMN "userId";` +
+            `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
         },
       };
       await database.rawQuery('Token', query);
       for (const token of tokens) {
         query = {
           sqlQuery: {
-            query: `UPDATE ${sqlTableName} SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
+            query: `UPDATE "${sqlTableName}" SET "user" = '${token.userId}' WHERE _id = '${token._id}';`,
           },
         };
         await database.rawQuery('Token', query);

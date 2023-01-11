@@ -17,7 +17,7 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: `SELECT * FROM ${sqlTableName} WHERE "userId" IS NOT NULL`,
+          query: `SELECT * FROM "${sqlTableName}" WHERE "userId" IS NOT NULL;`,
         },
       };
       const result = await database.rawQuery('TwoFactorSecret', query);
@@ -25,15 +25,15 @@ module.exports = {
       query = {
         sqlQuery: {
           query:
-            `ALTER TABLE ${sqlTableName} DROP COLUMN "userId";` +
-            `ALTER TABLE ${sqlTableName} ADD COLUMN "user";`,
+            `ALTER TABLE "${sqlTableName}" DROP COLUMN "userId";` +
+            `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
         },
       };
       await database.rawQuery('TwoFactorSecret', query);
       for (const r of result) {
         query = {
           sqlQuery: {
-            query: `UPDATE ${sqlTableName} SET "user" = '${r.userId}' WHERE _id = ${r._id};`,
+            query: `UPDATE "${sqlTableName}" SET "user" = '${r.userId}' WHERE _id = '${r._id}';`,
           },
         };
         await database.rawQuery('TwoFactorSecret', query);

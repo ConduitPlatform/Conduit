@@ -10,7 +10,7 @@ module.exports = {
         find: {},
       },
       sqlQuery: {
-        query: `SELECT * FROM ${sqlTableName}`,
+        query: `SELECT * FROM "${sqlTableName}"`,
       },
     };
     const originalAdmin = await database.rawQuery('Admin', query);
@@ -22,7 +22,7 @@ module.exports = {
       },
       sqlQuery: {
         query:
-          `ALTER TABLE ${sqlTableName} ADD COLUMN "isSuperAdmin" BOOLEAN NOT NULL DEFAULT FALSE;` +
+          `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "isSuperAdmin" BOOLEAN NOT NULL DEFAULT FALSE;` +
           `UPDATE "${sqlTableName}" SET "isSuperAdmin" = TRUE WHERE _id = '${originalAdmin[0]._id}'`,
       },
     };

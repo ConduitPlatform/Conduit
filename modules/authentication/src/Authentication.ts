@@ -58,11 +58,11 @@ export default class Authentication extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    TokenProvider.getInstance(this.grpcSdk);
-    await this.registerSchemas();
     const version = ManifestManager.getInstance().moduleVersion;
     const migrationFilePath = path.resolve(__dirname, 'migrations');
     await registerMigrations(this.database, 'authentication', version, migrationFilePath);
+    TokenProvider.getInstance(this.grpcSdk);
+    await this.registerSchemas();
   }
 
   async preConfig(config: Config) {

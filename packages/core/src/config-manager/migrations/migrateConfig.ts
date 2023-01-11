@@ -13,7 +13,7 @@ module.exports = {
         query: `SELECT * FROM "${sqlTableName}"`,
       },
     };
-    const configs = await database!.rawQuery('Config', query);
+    const configs = await database.rawQuery('Config', query);
     if (configs.length === 0 || configs.length > 1) return;
     query = {
       mongoQuery: {

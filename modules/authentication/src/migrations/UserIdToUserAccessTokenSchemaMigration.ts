@@ -17,7 +17,7 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: `SELECT * FROM "cnd_AccessToken" WHERE ${sqlTableName} IS NOT NULL`,
+          query: `SELECT * FROM "${sqlTableName}" WHERE "userId" IS NOT NULL;`,
         },
       };
       const accessTokens = await database.rawQuery('AccessToken', query);
@@ -25,15 +25,15 @@ module.exports = {
       query = {
         sqlQuery: {
           query:
-            `ALTER TABLE ${sqlTableName} DROP COLUMN "userId";` +
-            `ALTER TABLE ${sqlTableName} ADD COLUMN "user";`,
+            `ALTER TABLE "${sqlTableName}" DROP COLUMN "userId";` +
+            `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
         },
       };
       await database.rawQuery('AccessToken', query);
       for (const token of accessTokens) {
         query = {
           sqlQuery: {
-            query: `UPDATE ${sqlTableName} SET "user" = '${token.userId}' WHERE _id = ${token._id};`,
+            query: `UPDATE "${sqlTableName}" SET "user" = '${token.userId}' WHERE _id = '${token._id}';`,
           },
         };
         await database.rawQuery('AccessToken', query);
