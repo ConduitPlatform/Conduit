@@ -16,11 +16,14 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute } from './classes';
 import { createRouteMiddleware } from './utils/logger';
+import { ProxyRouteController } from './Proxy';
 
 export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
+
+  private _proxyRouter?: ProxyRouteController;
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
@@ -39,6 +42,7 @@ export class ConduitRoutingController {
         name: string;
       };
     },
+    private readonly proxyBaseUrl?: string,
   ) {
     this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
     this.start();
@@ -76,6 +80,10 @@ export class ConduitRoutingController {
       }
     });
     this.registerGlobalMiddleware();
+
+    if (proxyBaseUrl) {
+      this.initProxy(proxyBaseUrl);
+    }
   }
 
   start() {
@@ -109,6 +117,15 @@ export class ConduitRoutingController {
     );
   }
 
+  initProxy(proxyBaseUrl: string) {
+    if (this._proxyRouter) return;
+    this._proxyRouter = new ProxyRouteController(
+      this.grpcSdk,
+      proxyBaseUrl,
+      this.metrics,
+    );
+  }
+
   stopRest() {
     if (!this._restRouter) return;
     this._restRouter.shutDown();
@@ -127,6 +144,11 @@ export class ConduitRoutingController {
     delete this._socketRouter;
   }
 
+  stopProxy() {
+    if (!this._proxyRouter) return;
+    this._proxyRouter.shutDown();
+    delete this._proxyRouter;
+  }
   registerMiddleware(
     middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
@@ -141,6 +163,7 @@ export class ConduitRoutingController {
     this._restRouter?.registerMiddleware(middleware);
     this._graphQLRouter?.registerMiddleware(middleware);
     this._socketRouter?.registerMiddleware(middleware);
+    this._proxyRouter?.registerMiddleware(middleware);
   }
 
   registerRoute(
@@ -156,6 +179,10 @@ export class ConduitRoutingController {
   registerConduitRoute(route: ConduitRoute) {
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
+  }
+
+  registerProxyRoute(path: string, proxyUrl: string) {
+    this._proxyRouter?.registerProxyRoute(path, proxyUrl);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -219,6 +246,7 @@ export class ConduitRoutingController {
     });
     this._restRouter?.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
+    this._proxyRouter?.scheduleRouterRefresh();
   }
 
   onError(error: any) {

@@ -80,9 +80,11 @@ export class RoutingManager {
     input: ConduitRouteOptions,
     type: ConduitRouteReturnDefinition,
     handler: RequestHandlers,
+    target?: string,
   ) {
     const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
+      target: target,
       returns: {
         name: type.name,
         fields: JSON.stringify(type.fields),
@@ -143,6 +145,12 @@ export class RoutingManager {
       protoDescriptions.protoFile,
     );
   }
+  proxy(path: string, target: string): RouteBuilder {
+    return new RouteBuilder(this)
+      .method(ConduitRouteActions.PROXY)
+      .path(path)
+      .target(target);
+  }
 
   private generateGrpcName(options: ConduitRouteOptions) {
     if (options.name) {
@@ -169,6 +177,12 @@ export class RoutingManager {
   ): ConduitRouteObject | SocketProtoDescription {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
+    }
+    // Check if the route is a proxy route
+    if (routeObject.options.action === ConduitRouteActions.PROXY) {
+      // Do not stringify the target,
+      //as it should be a string and the GRPC request takes care of the redirect.
+      delete routeObject.options.target;
     }
     for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;

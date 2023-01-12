@@ -27,6 +27,8 @@
     "graphql-parse-resolve-info": "^4.5.0",
     "graphql-type-json": "^0.3.1",
     "helmet": "^5.1.0",
+    "http-proxy": "^1.18.1",
+    "http-proxy-middleware": "^2.0.6",
     "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",

@@ -57,6 +57,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
+  private readonly proxyUrl: string;
   private _grpcRoutes: {
     [field: string]: RouteT[];
   } = {};
@@ -132,6 +133,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     } else {
       this._internalRouter.stopRest();
     }
+    if (config.transports.proxy) {
+      this._internalRouter.initProxy(this.getProxyUrl());
+      atLeastOne = true;
+    } else {
+      this._internalRouter.stopProxy();
+    }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
       atLeastOne = true;
@@ -159,6 +166,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     if (port >= 0) {
       return port;
     }
+  }
+
+  // TODO: This is a temporary solution to get the proxy url
+  private getProxyUrl() {
+    const value = process.env['PROXY_URL'] ?? '';
+    return value;
   }
 
   private getSocketPort() {

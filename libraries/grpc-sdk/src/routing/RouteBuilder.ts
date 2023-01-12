@@ -90,6 +90,11 @@ export class RouteBuilder {
     return this;
   }
 
+  target(target: string): RouteBuilder {
+    this._options.target = target;
+    return this;
+  }
+
   add() {
     if (!this.manager) throw new Error('Builder not setup with manager');
     if (!this._options) throw new Error('Cannot build route without options');
@@ -97,7 +102,7 @@ export class RouteBuilder {
     if (!this._options.path) throw new Error('Cannot build route without action');
     if (!this._returns) throw new Error('Cannot build route without return');
     if (!this._handler) throw new Error('Cannot build route without handler');
-    this.manager.route(this._options, this._returns, this._handler);
+    this.manager.route(this._options, this._returns, this._handler, this._options.target);
   }
 
   build(): ConduitRoute {

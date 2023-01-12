@@ -40,6 +40,7 @@ export enum ConduitRouteActions {
   UPDATE = 'PUT',
   PATCH = 'PATCH',
   DELETE = 'DELETE',
+  PROXY = 'PROXY',
 }
 
 export interface ConduitRouteOptions {
@@ -52,6 +53,7 @@ export interface ConduitRouteOptions {
   description?: string;
   middlewares?: string[];
   cacheControl?: string;
+  target?: string;
 }
 
 export interface ConduitRouteObject {
