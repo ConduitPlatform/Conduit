@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
+import * as uuid from 'uuid';
 
 module.exports = {
   up: async function (grpcSdk: ConduitGrpcSdk) {
@@ -22,8 +23,8 @@ module.exports = {
       sqlQuery: {
         query:
           `DROP TABLE "${sqlTableName}";` +
-          `CREATE TABLE IF NOT EXISTS public."${sqlTableName}" (` +
-          'name character varying(255)' +
+          `CREATE TABLE IF NOT EXISTS "${sqlTableName}" (` +
+          'name character varying(255),' +
           "config json DEFAULT '{}'::json, " +
           '_id uuid NOT NULL, ' +
           '"createdAt" timestamp with time zone NOT NULL, ' +
@@ -34,6 +35,7 @@ module.exports = {
     await database.rawQuery('Config', query);
     for (const [moduleName, newConfig] of Object.entries(configs[0].moduleConfigs)) {
       const date = new Date();
+      const id = uuid.v4();
       query = {
         mongoQuery: {
           insertOne: {
@@ -44,7 +46,9 @@ module.exports = {
           },
         },
         sqlQuery: {
-          query: `INSERT INTO ${sqlTableName} (name, config, createdAt, updatedAt) VALUES ('${moduleName}', ${newConfig}, DEFAULT, DEFAULT);`,
+          query: `INSERT INTO "${sqlTableName}" (name, config, _id, "createdAt", "updatedAt") VALUES ('${moduleName}', '${JSON.stringify(
+            newConfig,
+          )}'::json, '${id}', NOW(), NOW());`,
         },
       };
       await database.rawQuery('Config', query);

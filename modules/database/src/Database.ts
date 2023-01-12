@@ -50,7 +50,7 @@ import path from 'path';
 import metricsSchema from './metrics';
 import { isNil } from 'lodash';
 import { MigrationStatus } from './interfaces/MigrationTypes';
-import { NodeVM } from 'vm2';
+import { NodeVM, VMScript } from 'vm2';
 import { moduleVersionCompatibility, updateMigrationLogs } from './utils/migrationUtils';
 
 export default class DatabaseModule extends ManagedModule<void> {
@@ -323,10 +323,15 @@ export default class DatabaseModule extends ManagedModule<void> {
       ConduitGrpcSdk.Logger.info(`Manual migrations for ${moduleName} pending`);
     } else {
       // Automatic migrations
-      const vm = new NodeVM({ console: 'inherit', sandbox: {} });
+      const vm = new NodeVM({
+        console: 'inherit',
+        sandbox: {},
+        require: { external: true, import: ['uuid'] },
+      });
       for (const m of required) {
         try {
-          const migrationInSandbox = vm.run(m.data);
+          const script = new VMScript(m.data).compile();
+          const migrationInSandbox = vm.run(script);
           await migrationInSandbox.up(this.grpcSdk);
           await model.findByIdAndUpdate(m._id, {
             status: MigrationStatus.SUCCESSFUL_AUTO_UP,

@@ -26,7 +26,8 @@
     "@grpc/proto-loader": "^0.6.13",
     "convict": "^6.2.3",
     "fs-extra": "^10.1.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@conduitplatform/testing-tools": "^1.0.0",
