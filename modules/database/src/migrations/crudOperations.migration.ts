@@ -43,7 +43,7 @@ module.exports = {
       const modelOptions = { conduit: { cms } };
       const query = {
         mongoQuery: {
-          updateOne: { _id: schema._id.toString() },
+          updateOne: { _id: schema._id },
           options: {
             $set: { modelOptions: modelOptions },
           },

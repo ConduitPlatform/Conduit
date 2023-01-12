@@ -42,11 +42,11 @@ module.exports = {
       }
       query = {
         mongoQuery: {
-          updateOne: { _id: endpoint._id },
-          options: { $set: { selectedSchema: selectedSchema._id.toString() } },
+          updateOne: { _id: endpoint },
+          options: { $set: { selectedSchema: selectedSchema[0] } },
         },
         sqlQuery: {
-          query: `UPDATE "${declaredSchemaName}" SET "selectedSchema" = '${selectedSchema._id}' WHERE _id = '${endpoint._id}'`,
+          query: `UPDATE "${customEndpointsName}" SET "selectedSchema" = '${selectedSchema[0]._id}' WHERE _id = '${endpoint._id}'`,
         },
       };
       await database.rawQuery('_DeclaredSchema', query);
