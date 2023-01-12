@@ -17,7 +17,15 @@ module.exports = {
     } else {
       let query = {
         sqlQuery: {
-          query: `SELECT * FROM "${sqlTableName}" WHERE "userId" IS NOT NULL;`,
+          query: `SELECT * FROM information_schema.columns WHERE table_name = '${sqlTableName}' AND column_name = 'userId';`,
+        },
+      };
+      const userIdExists = await database.rawQuery('RefreshToken', query);
+      if (userIdExists.length === 0) return;
+
+      query = {
+        sqlQuery: {
+          query: `SELECT * FROM "${sqlTableName}";`,
         },
       };
       const refreshTokens = await database.rawQuery('RefreshToken', query);
