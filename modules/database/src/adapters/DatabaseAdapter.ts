@@ -187,6 +187,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
 
+  abstract syncModuleSchemas(moduleName: string): Promise<void>;
+
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = [
       'CustomEndpoints',

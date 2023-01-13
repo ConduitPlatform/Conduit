@@ -375,6 +375,18 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
+  async syncModuleSchemas(moduleName: string) {
+    const moduleSchemaName: string[] = [];
+    for (const [name, schema] of this.registeredSchemas) {
+      if (schema.ownerModule === moduleName) {
+        moduleSchemaName.push(name);
+      }
+    }
+    for (const name of moduleSchemaName) {
+      await this.models[name].model.sync({ alter: true });
+    }
+  }
+
   private checkAndConvertIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],

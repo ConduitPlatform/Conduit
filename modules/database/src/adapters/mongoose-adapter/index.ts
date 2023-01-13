@@ -385,6 +385,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return result;
   }
 
+  async syncModuleSchemas(moduleName: string) {
+    throw new GrpcError(status.UNIMPLEMENTED, 'Cannot sync module schemas in Mongoose');
+  }
+
   private checkIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],

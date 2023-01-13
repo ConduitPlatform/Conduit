@@ -42,14 +42,14 @@ module.exports = {
       }
       query = {
         mongoQuery: {
-          updateOne: { _id: endpoint },
+          updateOne: { _id: endpoint._id },
           options: { $set: { selectedSchema: selectedSchema[0] } },
         },
         sqlQuery: {
           query: `UPDATE "${customEndpointsName}" SET "selectedSchema" = '${selectedSchema[0]._id}' WHERE _id = '${endpoint._id}'`,
         },
       };
-      await database.rawQuery('_DeclaredSchema', query);
+      await database.rawQuery('CustomEndpoints', query);
     }
   },
   down: async function (grpcSdk: ConduitGrpcSdk) {},

@@ -32,9 +32,7 @@ module.exports = {
       if (tokens.length === 0) return;
       query = {
         sqlQuery: {
-          query:
-            `ALTER TABLE "${sqlTableName}" DROP COLUMN "userId";` +
-            `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
+          query: `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
         },
       };
       await database.rawQuery('Token', query);

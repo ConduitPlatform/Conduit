@@ -350,6 +350,10 @@ export default class DatabaseModule extends ManagedModule<void> {
           });
         }
       }
+      // Sync models in SQL to drop old columns with { alter: true }
+      if (this._activeAdapter.getDatabaseType() === 'PostgreSQL') {
+        await this._activeAdapter.syncModuleSchemas(moduleName);
+      }
       this.publishInitializationEvent(moduleName);
     }
     callback(null, {});

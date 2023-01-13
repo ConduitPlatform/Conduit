@@ -89,6 +89,10 @@ export class SchemaController {
       createdSchema.originalSchema.name,
     );
     this.refreshRoutes();
+    // Sync models in SQL to drop old columns with { alter: true }
+    if (this.database.getDatabaseType() === 'PostgreSQL') {
+      await this.database.syncModuleSchemas(schema.ownerModule);
+    }
     return createdSchema.originalSchema;
   }
 
