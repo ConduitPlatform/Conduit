@@ -4,11 +4,10 @@ import _ from 'lodash';
 
 
 const migrateV11_V12_migrateLocalAuthConfig = async () => {
-// does not work
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
   if (!_.isNil(authConfig)) {
-    if (authConfig.moduleConfigs.authentication.local['verificationRequired']) {
+    if (!_.isNil(authConfig.moduleConfigs.authentication.local['verificationRequired'])) {
       authConfig.moduleConfigs.authentication.local.verification = {
         required: authConfig.moduleConfigs.authentication.local['verificationRequired'],
         send_email: authConfig.moduleConfigs.authentication.local['sendVerificationEmail'],
