@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.10](https://github.com/ConduitPlatform/Conduit/compare/v0.15.9...v0.15.10) (2023-01-13)
+
+
+### Features
+
+* **grpc-sdk:** add namespace label to loki for k8s ([#486](https://github.com/ConduitPlatform/Conduit/issues/486)) ([11c6e9b](https://github.com/ConduitPlatform/Conduit/commit/11c6e9b51a41b900244079502fe015ca7e8050d0))
+* new Functions module ([#474](https://github.com/ConduitPlatform/Conduit/issues/474)) ([f7c874b](https://github.com/ConduitPlatform/Conduit/commit/f7c874b4348f370548ec5593a39b68d2908c2b5c))
+
+
+### Bug Fixes
+
+* **authentication:** OAuth2 authentication url construction ([#482](https://github.com/ConduitPlatform/Conduit/issues/482)) ([eae1e82](https://github.com/ConduitPlatform/Conduit/commit/eae1e8272817276da5b04622965bc2b41bdd9fed))
+* **authentication:** undefined checks ([#481](https://github.com/ConduitPlatform/Conduit/issues/481)) ([3cfdf55](https://github.com/ConduitPlatform/Conduit/commit/3cfdf55c997607bb2a087c6c4973eeeb8d3e9101))
+* get-conduit.sh not being posix compatible ([#485](https://github.com/ConduitPlatform/Conduit/issues/485)) ([d3f638e](https://github.com/ConduitPlatform/Conduit/commit/d3f638e71910ed03d5d88d959ef7620be424dd29))
+* v10_15 migrations ([#487](https://github.com/ConduitPlatform/Conduit/issues/487)) ([cd37341](https://github.com/ConduitPlatform/Conduit/commit/cd373417f2f39bb877de8718a6670f1ba9e65a88))
+
 ### [0.15.9](https://github.com/ConduitPlatform/Conduit/compare/v0.15.8...v0.15.9) (2023-01-02)
 
 
