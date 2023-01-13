@@ -2,10 +2,12 @@ import db from '../mongoConnection.js';
 
 export async function migrateV12_V13() {
   const documents = db.collection('_declaredschemas');
-  const cmsSchemas = await documents.find({ $or: [
+  const cmsSchemas = await documents.find({
+    $or: [
       { 'modelOptions.conduit.cms.crudOperations': true },
       { 'modelOptions.conduit.cms.crudOperations': false },
-    ]}).toArray();
+    ],
+  }).toArray();
   for (const schema of cmsSchemas) {
     const { crudOperations, authentication, enabled } = schema.modelOptions.conduit.cms;
     const cms = {
@@ -31,8 +33,10 @@ export async function migrateV12_V13() {
     };
     const id = schema._id.toString();
     await documents.findOneAndUpdate({ _id: id }, {
-      modelOptions: {
-        conduit: { cms },
+      $set: {
+        modelOptions: {
+          conduit: { cms },
+        },
       },
     });
   }

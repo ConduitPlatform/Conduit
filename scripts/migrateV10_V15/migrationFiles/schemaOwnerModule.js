@@ -37,6 +37,7 @@ export async function migrateOwnerModule() {
       } else if (schema.modelOptions && schema.modelOptions.conduit && schema.modelOptions.conduit.cms) {
         await documents.updateOne({ _id: schema._id }, { $set: { ownerModule: 'database' } });
       } else {
+        await documents.updateOne({ _id: schema._id }, { $set: { ownerModule: 'database' } });
         noOwnerSchemas.push(schema.name);
       }
     }

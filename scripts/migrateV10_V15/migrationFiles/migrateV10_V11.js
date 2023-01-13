@@ -49,7 +49,7 @@ const migrateV10_V11_SchemaDefinitions = async () => {
             : modelOptions;
       }
        const newSchema = { name: schema.name, fields: schema.fields, modelOptions: modelOptions };
-       await documents.insertOne(newSchema);
+       await documents.updateOne({name:schema.name}, {$set: {...newSchema}}, {upsert: true});
     }
     // Delete SchemaDefinitions
     await documents.deleteMany({ name: 'SchemaDefinitions' });

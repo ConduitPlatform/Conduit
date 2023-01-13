@@ -4,7 +4,7 @@ import _ from 'lodash';
 
 
 const migrateV11_V12_migrateLocalAuthConfig = async () => {
-
+// does not work
   const documents = db.collection('configs');
   const authConfig = await documents.findOne({ 'moduleConfigs.authentication': { $exists: true } });
   if (!_.isNil(authConfig)) {
