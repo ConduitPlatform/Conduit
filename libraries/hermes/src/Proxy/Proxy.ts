@@ -27,7 +27,6 @@ export class ProxyRouteController extends ConduitRouter {
       next();
     });
   }
-
   registerProxyRoute(path: string, proxyUrl: string) {
     const key = `*-${path}`;
     const registered = this._proxyRoutes.has(key);
@@ -51,7 +50,7 @@ export class ProxyRouteController extends ConduitRouter {
   protected _refreshRouter() {
     this._expressRouter = Router();
     this._proxyRoutes.forEach((proxyUrl, path) => {
-      this.addProxyRoute(path.substring(2), proxyUrl);
+      this.addProxyRoute(path, proxyUrl);
     });
   }
 

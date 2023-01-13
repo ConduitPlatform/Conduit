@@ -57,7 +57,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private adminRouter: AdminHandlers;
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
-  private readonly proxyUrl: string;
   private _grpcRoutes: {
     [field: string]: RouteT[];
   } = {};
