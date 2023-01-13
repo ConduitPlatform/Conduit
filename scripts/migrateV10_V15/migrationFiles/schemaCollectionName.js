@@ -82,7 +82,7 @@ export async function migrateSchemaCollectionName() {
   const schemas = await documents.find({}).toArray();
   for (const schema of schemas) {
     const collectionName = pluralize(schema.name);
-    if (collectionName) {
+    if (collectionName != schema.collectionName) {
       await documents.updateOne({ _id: schema._id }, { $set: { collectionName: collectionName } });
     }
   }
