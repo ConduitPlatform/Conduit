@@ -145,6 +145,9 @@ export async function setupLoki(module: string, instance: string) {
               labels: {
                 module,
                 instance,
+                ...(process.env.CONDUIT_NAMESPACE && {
+                  namespace: process.env.CONDUIT_NAMESPACE,
+                }),
               },
             }),
           );
