@@ -44,7 +44,10 @@ export class ProxyRouteController extends ConduitRouter {
   }
 
   private addProxyRoute(path: string, proxyUrl: string) {
-    this._expressRouter!.use(path, createProxyMiddleware({ target: proxyUrl }));
+    this._expressRouter!.use(
+      path,
+      createProxyMiddleware({ target: proxyUrl, changeOrigin: true }),
+    );
   }
 
   protected _refreshRouter() {

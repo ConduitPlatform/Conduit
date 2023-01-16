@@ -232,19 +232,17 @@ export class ConduitRoutingController {
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
-      }
-      // else if (r instanceof ConduitRoute && r.input.path.startsWith('/proxy')) {
-      //   ConduitGrpcSdk.Logger.log(
-      //     'New proxy route registered: ' +
-      //     r.input.action +
-      //     ' ' +
-      //     r.input.path +
-      //     ' handler url: ' +
-      //     url,
-      //   );
-      //   this._proxyRouter?.registerProxyRoute(r.input.path,<string>this!.proxyBaseUrl);
-      // }
-      else {
+      } else if (r instanceof ConduitRoute && r.input.path.includes('/proxy')) {
+        ConduitGrpcSdk.Logger.log(
+          'New proxy route registered: ' +
+            r.input.action +
+            ' ' +
+            r.input.path +
+            ' handler url: ' +
+            url,
+        );
+        this._proxyRouter?.registerProxyRoute(r.input.path, <string>this!.proxyBaseUrl);
+      } else {
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
             r.input.action +

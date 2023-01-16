@@ -34,6 +34,7 @@ import {
   GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
+  RegisterProxyRouteRequest,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
@@ -169,8 +170,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   // TODO: This is a temporary solution to get the proxy url
   private getProxyUrl() {
-    const value = process.env['PROXY_URL'] ?? '';
-    return value;
+    return process.env['PROXY_URL'] ?? '';
   }
 
   private getSocketPort() {
@@ -413,6 +413,20 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   getGrpcRoutes() {
     return this._grpcRoutes;
+  }
+
+  registerProxyRoute(
+    call: GrpcRequest<RegisterProxyRouteRequest>,
+    callback: GrpcCallback<null>,
+  ) {
+    try {
+      this._internalRouter.registerProxyRoute(call.request.path, call.request.target);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error(err as Error);
+      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
+    }
+
+    callback(null, undefined);
   }
 
   registerRoute(route: ConduitRoute): void {

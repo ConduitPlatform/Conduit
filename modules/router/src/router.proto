@@ -33,6 +33,10 @@ message SocketData {
   repeated string rooms = 4;
 }
 
+message RegisterProxyRouteRequest {
+  string path = 1;
+  string target = 2;
+}
 
 message RegisterConduitRouteRequest {
   repeated PathDefinition routes = 1;
