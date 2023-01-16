@@ -178,12 +178,6 @@ export class RoutingManager {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
-    // Check if the route is a proxy route
-    if (routeObject.options.action === ConduitRouteActions.PROXY) {
-      // Do not stringify the target,
-      //as it should be a string and the GRPC request takes care of the redirect.
-      delete routeObject.options.target;
-    }
     for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
       if (option === 'middlewares') continue;

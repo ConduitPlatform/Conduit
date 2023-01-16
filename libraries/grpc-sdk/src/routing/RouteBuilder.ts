@@ -102,7 +102,7 @@ export class RouteBuilder {
     if (!this._options.path) throw new Error('Cannot build route without action');
     if (!this._returns) throw new Error('Cannot build route without return');
     if (!this._handler) throw new Error('Cannot build route without handler');
-    this.manager.route(this._options, this._returns, this._handler, this._options.target);
+    this.manager.route(this._options, this._returns, this._handler);
   }
 
   build(): ConduitRoute {
