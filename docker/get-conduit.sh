@@ -2,15 +2,19 @@
 
 # Installation: sh <(curl -s https://getconduit.dev/bootstrap)
 
-[[ $1 = '--no-deploy' ]] && deploy="false" || deploy="true"
+if [ "$1" = "--no-deploy" ]; then
+  deploy="false"
+else
+  deploy="true"
+fi
 
 uname=$(uname -a)
 website="https://getconduit.dev"
 
 # Detect Platform
-if [[ $uname =~ "Linux" ]]; then
+if echo "$uname" | grep -q "Linux"; then
   platform="linux"
-elif [[ $uname =~ "Darwin" ]]; then
+elif echo "$uname" | grep -q "Darwin"; then
   platform="darwin"
 else
   echo "Could not automatically detect your platform."
@@ -19,9 +23,9 @@ else
 fi
 
 # Detect Architecture
-if [[ $uname =~ "arm64" ]] || [[ $uname =~ "aarch64" ]]; then
+if echo "$uname" | grep -q "arm64" || echo "$uname" | grep -q "aarch64"; then
   arch="arm"
-elif [[ $uname =~ "x86_64" ]]; then
+elif echo "$uname" | grep -q "x86_64"; then
   arch="x64"
 else
   echo "Could not automatically detect your system's architecture."
@@ -49,7 +53,7 @@ chmod a+x ~/.conduit/bin/conduit
 # Add To Executable Path
 shell_detected='false'
 already_installed='false'
-if which zsh >> /dev/null 2>&1; then
+if command -v zsh >/dev/null 2>&1; then
   shell_detected='true'
   if ! grep 'export PATH=$PATH:~/.conduit/bin' ~/.zshrc >> /dev/null 2>&1; then
     echo "Adding Conduit CLI to Zsh"
@@ -58,7 +62,7 @@ if which zsh >> /dev/null 2>&1; then
     already_installed='true'
   fi
 fi
-if which bash >> /dev/null 2>&1; then
+if command -v bash >/dev/null 2>&1; then
   shell_detected='true'
   if ! grep 'export PATH=$PATH:~/.conduit/bin' ~/.bashrc >> /dev/null 2>&1; then
     echo "Adding Conduit CLI to Bash"
@@ -67,15 +71,15 @@ if which bash >> /dev/null 2>&1; then
       already_installed='true'
   fi
 fi
-if [[ $shell_detected == "false" ]]; then
+if [ "$shell_detected" = "false" ]; then
   printf '\nShell auto-detection failed. Could not update executable $PATH.\n';
   echo "Conduit CLI located in ~/.conduit/bin/conduit"
-elif [[ $already_installed == 'false' ]]; then
+elif [ "$already_installed" = "false" ]; then
   printf "\nTo ensure that 'conduit' is available, please open a new terminal window.\n"
 fi
 
 # Bootstrap Local Deployment
-if [[ $deploy == "true" ]]; then
+if [ "$deploy" = "true" ]; then
   printf "\n"
   ~/.conduit/bin/conduit deploy setup --config
 fi
