@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { DatabaseProvider } from '../modules';
 
 /**
- * Returns a map that holds pairs of (module migration name)-(contents of migration file in string format)
+ * Registers all the migrations of a module and then triggers them
  * There could be many migration files or one that contains all migrations
  * @param database
  * @param moduleName
