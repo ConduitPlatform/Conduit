@@ -35,7 +35,9 @@ message SocketData {
 
 message RegisterProxyRouteRequest {
   string path = 1;
-  string target = 2;
+  string targetUrl = 2;
+  optional string description = 3;
+  repeated string middlewares = 4;
 }
 
 message RegisterConduitRouteRequest {

@@ -134,7 +134,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this._internalRouter.stopRest();
     }
     if (config.transports.proxy) {
-      this._internalRouter.initProxy(this.getProxyUrl());
+      this._internalRouter.initProxy('');
       atLeastOne = true;
     } else {
       this._internalRouter.stopProxy();
@@ -166,11 +166,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     if (port >= 0) {
       return port;
     }
-  }
-
-  // TODO: This is a temporary solution to get the proxy url
-  private getProxyUrl() {
-    return process.env['PROXY_URL'] ?? '';
   }
 
   private getSocketPort() {
@@ -414,13 +409,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   getGrpcRoutes() {
     return this._grpcRoutes;
   }
-
   registerProxyRoute(
     call: GrpcRequest<RegisterProxyRouteRequest>,
     callback: GrpcCallback<null>,
   ) {
     try {
-      this._internalRouter.registerProxyRoute(call.request.path, call.request.target);
+      this._internalRouter.registerProxyRoute(call.request.path, call.request.targetUrl);
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
