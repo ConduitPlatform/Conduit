@@ -409,18 +409,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   getGrpcRoutes() {
     return this._grpcRoutes;
   }
-  registerProxyRoute(
-    call: GrpcRequest<RegisterProxyRouteRequest>,
-    callback: GrpcCallback<null>,
-  ) {
+  registerProxyRoute(path: string, targetUrl: string) {
     try {
-      this._internalRouter.registerProxyRoute(call.request.path, call.request.targetUrl);
+      this._internalRouter.registerProxyRoute(path, targetUrl);
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
     }
-
-    callback(null, undefined);
   }
 
   registerRoute(route: ConduitRoute): void {
