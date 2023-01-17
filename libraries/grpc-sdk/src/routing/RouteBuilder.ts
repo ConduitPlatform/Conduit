@@ -90,8 +90,8 @@ export class RouteBuilder {
     return this;
   }
 
-  target(target: string): RouteBuilder {
-    this._options.target = target;
+  targetUrl(targetUrl: string): RouteBuilder {
+    this._options.targetUrl = targetUrl;
     return this;
   }
 

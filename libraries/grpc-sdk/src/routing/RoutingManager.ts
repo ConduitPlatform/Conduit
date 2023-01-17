@@ -145,13 +145,6 @@ export class RoutingManager {
       protoDescriptions.protoFile,
     );
   }
-  proxy(path: string, target: string): RouteBuilder {
-    return new RouteBuilder(this)
-      .method(ConduitRouteActions.PROXY)
-      .path(path)
-      .target(target);
-  }
-
   private generateGrpcName(options: ConduitRouteOptions) {
     if (options.name) {
       return options.name.charAt(0).toUpperCase() + options.name.slice(1);
