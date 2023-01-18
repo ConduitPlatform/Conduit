@@ -80,11 +80,9 @@ export class RoutingManager {
     input: ConduitRouteOptions,
     type: ConduitRouteReturnDefinition,
     handler: RequestHandlers,
-    target?: string,
   ) {
     const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
-      target: target,
       returns: {
         name: type.name,
         fields: JSON.stringify(type.fields),

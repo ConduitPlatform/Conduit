@@ -90,11 +90,6 @@ export class RouteBuilder {
     return this;
   }
 
-  targetUrl(targetUrl: string): RouteBuilder {
-    this._options.targetUrl = targetUrl;
-    return this;
-  }
-
   add() {
     if (!this.manager) throw new Error('Builder not setup with manager');
     if (!this._options) throw new Error('Cannot build route without options');
