@@ -1,4 +1,4 @@
-import { GrpcServer } from '../index';
+import { ConduitProxyOptions, GrpcServer, ProxyRouteBuilder } from '../index';
 import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
@@ -25,6 +25,8 @@ export class RoutingManager {
   private _moduleRoutes: {
     [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
+  private _moduleProxyroutes: { [path: string]: ConduitProxyOptions } = {};
+
   private _routeHandlers: {
     [key: string]: RequestHandlers;
   } = {};
@@ -59,9 +61,14 @@ export class RoutingManager {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
+  proxy(path: string, target: string): ProxyRouteBuilder {
+    return new ProxyRouteBuilder(this).path(path).target(target);
+  }
+
   clear() {
     this._moduleRoutes = {};
     this._routeHandlers = {};
+    this._moduleProxyroutes = {};
   }
 
   middleware(
