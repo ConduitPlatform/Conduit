@@ -62,21 +62,6 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/routes/proxy',
-        action: ConduitRouteActions.POST,
-        description: `Proxy request to another server.`,
-        bodyParams: {
-          path: ConduitString.Required,
-          target: ConduitString.Required,
-        },
-      },
-      new ConduitRouteReturnDefinition('ProxyRoute', {
-        response: TYPE.JSON,
-      }),
-      this.routerAdmin.registerProxyRoute.bind(this.routerAdmin),
-    );
-    this.routingManager.route(
-      {
         path: '/security/client',
         action: ConduitRouteActions.POST,
         description: `Creates a security client.`,

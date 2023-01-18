@@ -54,10 +54,4 @@ export class RouterAdmin {
     }
     return response;
   }
-
-  async registerProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target } = call.request.params;
-    this.router.registerProxyRoute(path, target);
-    return { message: `proxy route for ${path} to ${target} registered successfully` };
-  }
 }

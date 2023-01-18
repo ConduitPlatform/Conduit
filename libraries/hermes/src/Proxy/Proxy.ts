@@ -2,14 +2,13 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { ConduitRouter } from '../Router';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { TypeRegistry } from '../classes';
+import { ProxyRoute, TypeRegistry } from '../classes';
 
 export class ProxyRouteController extends ConduitRouter {
-  private _proxyRoutes: Map<string, string>;
+  private _proxyRoutes: Map<string, ProxyRoute>;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    proxyBaseUrl: string,
     private readonly metrics?: {
       registeredRoutes?: {
         name: string;
@@ -27,14 +26,15 @@ export class ProxyRouteController extends ConduitRouter {
       next();
     });
   }
-  registerProxyRoute(path: string, proxyUrl: string) {
-    const key = `${path}`;
+
+  registerProxyRoute(route: ProxyRoute) {
+    const key = `${route.input.path}`;
     const registered = this._proxyRoutes.has(key);
-    this._proxyRoutes.set(key, proxyUrl);
+    this._proxyRoutes.set(key, route);
     if (registered) {
       this.refreshRouter();
     } else {
-      this.addProxyRoute(path, proxyUrl);
+      this.addProxyRoute(route);
       if (this.metrics?.registeredRoutes) {
         ConduitGrpcSdk.Metrics?.increment(this.metrics.registeredRoutes.name, 1, {
           transport: 'proxy',
@@ -43,17 +43,17 @@ export class ProxyRouteController extends ConduitRouter {
     }
   }
 
-  private addProxyRoute(path: string, proxyUrl: string) {
+  private addProxyRoute(route: ProxyRoute) {
     this._expressRouter!.use(
-      path,
-      createProxyMiddleware({ target: proxyUrl, changeOrigin: true }),
+      route.input.path,
+      createProxyMiddleware({ target: route.input.target, changeOrigin: true }),
     );
   }
 
   protected _refreshRouter() {
     this._expressRouter = Router();
-    this._proxyRoutes.forEach((proxyUrl, path) => {
-      this.addProxyRoute(path, proxyUrl);
+    this._proxyRoutes.forEach(r => {
+      this.addProxyRoute(r);
     });
   }
 

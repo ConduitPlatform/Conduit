@@ -21,6 +21,7 @@ import {
   ProtoGenerator,
   RouteT,
   SocketPush,
+  ProxyRoute,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
@@ -34,7 +35,6 @@ import {
   GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
-  RegisterProxyRouteRequest,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
@@ -134,7 +134,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this._internalRouter.stopRest();
     }
     if (config.transports.proxy) {
-      this._internalRouter.initProxy('');
+      this._internalRouter.initProxy();
       atLeastOne = true;
     } else {
       this._internalRouter.stopProxy();
@@ -343,17 +343,21 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
-      grpcToConduitRoute(
-        'Router',
-        {
-          protoFile: protofile,
-          routes: routes,
-          routerUrl: url,
-        },
-        moduleName === 'core' ? undefined : moduleName,
-        this.grpcSdk.grpcToken,
-      );
+    const processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+      | ProxyRoute
+    )[] = grpcToConduitRoute(
+      'Router',
+      {
+        protoFile: protofile,
+        routes: routes,
+        routerUrl: url,
+      },
+      moduleName === 'core' ? undefined : moduleName,
+      this.grpcSdk.grpcToken,
+    );
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
@@ -408,13 +412,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   getGrpcRoutes() {
     return this._grpcRoutes;
-  }
-  registerProxyRoute(path: string, targetUrl: string) {
-    try {
-      this._internalRouter.registerProxyRoute(path, targetUrl);
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-    }
   }
 
   registerRoute(route: ConduitRoute): void {

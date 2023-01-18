@@ -14,9 +14,10 @@ import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { ConduitRoute } from './classes';
+import { ConduitRoute, ProxyRoute } from './classes';
 import { createRouteMiddleware } from './utils/logger';
 import { ProxyRouteController } from './Proxy';
+import { isInstanceOfProxyRoute } from './Proxy/utils';
 
 export class ConduitRoutingController {
   private _restRouter?: RestController;
@@ -80,10 +81,6 @@ export class ConduitRoutingController {
       }
     });
     this.registerGlobalMiddleware();
-
-    if (proxyBaseUrl) {
-      this.initProxy(proxyBaseUrl);
-    }
   }
 
   start() {
@@ -117,13 +114,9 @@ export class ConduitRoutingController {
     );
   }
 
-  initProxy(proxyBaseUrl: string) {
+  initProxy() {
     if (this._proxyRouter) return;
-    this._proxyRouter = new ProxyRouteController(
-      this.grpcSdk,
-      proxyBaseUrl,
-      this.metrics,
-    );
+    this._proxyRouter = new ProxyRouteController(this.grpcSdk, this.metrics);
   }
 
   stopRest() {
@@ -149,6 +142,7 @@ export class ConduitRoutingController {
     this._proxyRouter.shutDown();
     delete this._proxyRouter;
   }
+
   registerMiddleware(
     middleware: (req: ConduitRequest, res: Response, next: NextFunction) => void,
     socketMiddleware: boolean,
@@ -181,8 +175,8 @@ export class ConduitRoutingController {
     this._restRouter?.registerConduitRoute(route);
   }
 
-  registerProxyRoute(path: string, proxyUrl: string) {
-    this._proxyRouter?.registerProxyRoute(path, proxyUrl);
+  registerProxyRoute(route: ProxyRoute) {
+    this._proxyRouter?.registerProxyRoute(route);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -218,7 +212,7 @@ export class ConduitRoutingController {
   }
 
   registerRoutes(
-    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
+    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[],
     url: string,
   ) {
     processedRoutes.forEach(r => {
@@ -232,16 +226,17 @@ export class ConduitRoutingController {
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
-      } else if (r instanceof ConduitRoute && r.input.path.includes('/proxy')) {
+      } else if (isInstanceOfProxyRoute(r)) {
+        r.input.target = url;
         ConduitGrpcSdk.Logger.log(
           'New proxy route registered: ' +
             r.input.action +
             ' ' +
             r.input.path +
-            ' handler url: ' +
-            url,
+            ' target url: ' +
+            r.input.target,
         );
-        this._proxyRouter?.registerProxyRoute(r.input.path, <string>this!.proxyBaseUrl);
+        this._proxyRouter?.registerProxyRoute(r);
       } else {
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
