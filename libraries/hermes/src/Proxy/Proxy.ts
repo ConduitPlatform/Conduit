@@ -58,7 +58,7 @@ export class ProxyRouteController extends ConduitRouter {
   private addProxyRoute(route: ProxyRoute) {
     this._expressRouter!.use(route.input.path, (req, res, next) => {
       this.checkMiddlewares(req, route.input.middlewares)
-        .then(r => {
+        .then(() => {
           this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
           createProxyMiddleware({ target: route.input.target, changeOrigin: true })(
             req,
