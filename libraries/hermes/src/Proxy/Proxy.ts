@@ -6,6 +6,11 @@ import { ProxyRoute, TypeRegistry } from '../classes';
 
 export class ProxyRouteController extends ConduitRouter {
   private _proxyRoutes: Map<string, ProxyRoute>;
+  private globalMiddlewares: ((
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => void)[];
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
@@ -17,14 +22,21 @@ export class ProxyRouteController extends ConduitRouter {
   ) {
     super(grpcSdk);
     this._proxyRoutes = new Map();
+    this.globalMiddlewares = [];
     this.initializeRouter();
   }
 
   private initializeRouter() {
     this.createRouter();
     this._expressRouter!.use((req: Request, res: Response, next: NextFunction) => {
-      next();
+      this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
     });
+  }
+
+  registerGlobalMiddleware(
+    middleware: (req: Request, res: Response, next: NextFunction) => void,
+  ) {
+    this.globalMiddlewares.push(middleware);
   }
 
   registerProxyRoute(route: ProxyRoute) {
@@ -44,10 +56,20 @@ export class ProxyRouteController extends ConduitRouter {
   }
 
   private addProxyRoute(route: ProxyRoute) {
-    this._expressRouter!.use(
-      route.input.path,
-      createProxyMiddleware({ target: route.input.target, changeOrigin: true }),
-    );
+    this._expressRouter!.use(route.input.path, (req, res, next) => {
+      this.checkMiddlewares(req, route.input.middlewares)
+        .then(r => {
+          this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
+          createProxyMiddleware({ target: route.input.target, changeOrigin: true })(
+            req,
+            res,
+            next,
+          );
+        })
+        .catch(err => {
+          next(err);
+        });
+    });
   }
 
   protected _refreshRouter() {
