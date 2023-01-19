@@ -210,14 +210,15 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
         for (const document of documents) {
           if (this.relations.hasOwnProperty(relationField)) {
             const relationSchema = this.relations[relationField];
-            if (!cache.hasOwnProperty(document[relation])) {
+            const cacheIdentifier = `${relation}:${document[relationField]}`;
+            if (!cache.hasOwnProperty(cacheIdentifier)) {
               incrementDbQueries();
               const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-              cache[document[relation]] = await schemaModel.findOne({
-                _id: document[relation],
+              cache[cacheIdentifier] = await schemaModel.findOne({
+                _id: document[relationField],
               });
             }
-            document[relationField] = cache[document[relation]];
+            document[relationField] = cache[cacheIdentifier];
           }
         }
       }
