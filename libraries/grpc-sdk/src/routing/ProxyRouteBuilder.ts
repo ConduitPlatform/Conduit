@@ -5,7 +5,7 @@ export class ProxyRouteBuilder {
   private readonly _options!: ConduitProxyOptions;
 
   constructor(private readonly manager?: RoutingManager) {
-    this._options = {} as any;
+    this._options = {} as ConduitProxyOptions;
   }
 
   path(path: string): ProxyRouteBuilder {
