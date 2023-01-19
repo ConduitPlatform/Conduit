@@ -37,6 +37,7 @@ import {
   grpcToConduitRoute,
   RouteT,
   ProtoGenerator,
+  MiddlewareOrder,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -44,6 +45,7 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
+import { InjectMiddlewareRequest } from '@conduitplatform/router/dist/protoTypes/router';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -120,6 +122,7 @@ export default class AdminModule extends IConduitAdmin {
       {
         generateProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
+        injectMiddleware: this.injectMiddleware.bind(this),
       },
     );
     this.grpcSdk
@@ -265,6 +268,42 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Error when registering routes',
       });
     }
+    callback(null, null);
+  }
+
+  injectMiddleware(
+    call: GrpcRequest<InjectMiddlewareRequest>,
+    callback: GrpcCallback<null>,
+  ) {
+    const { path, action, name, position } = call.request;
+    const middleware = new ConduitMiddleware({}, name, async () => {});
+    outer: for (const key of Object.keys(this._grpcRoutes)) {
+      const routesArray = this._grpcRoutes[key];
+      for (const r of routesArray) {
+        if (r.options?.path !== path || r.options?.action !== action) {
+          continue;
+        }
+        if (r.options?.middlewares.includes(name)) {
+          return callback({
+            code: status.ALREADY_EXISTS,
+            message: `Middleware ${name} already assigned to ${action} ${path}`,
+          });
+        }
+        if (position === MiddlewareOrder.FIRST) {
+          r.options?.middlewares.unshift(name);
+        } else {
+          r.options?.middlewares.push(name);
+        }
+        break outer;
+      }
+    }
+    this._router.registerRouteMiddleware(middleware);
+    this._router.patchRouteMiddleware(
+      path,
+      action as ConduitRouteActions,
+      name,
+      position as MiddlewareOrder,
+    );
     callback(null, null);
   }
 

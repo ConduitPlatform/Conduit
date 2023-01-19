@@ -5,6 +5,7 @@ service Router {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+  rpc InjectMiddleware(InjectMiddlewareRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
 }
 
@@ -66,4 +67,11 @@ message RegisterConduitRouteRequest {
 }
 
 message Empty {
+}
+
+message InjectMiddlewareRequest {
+  string path = 1;
+  string action = 2;
+  string name = 3;
+  string position = 4; // 0 = first, 1 = last
 }
