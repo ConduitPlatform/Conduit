@@ -1,4 +1,4 @@
-import { Router, NextFunction } from 'express';
+import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConfigController,
@@ -9,6 +9,8 @@ import ConduitGrpcSdk, {
   ManagedModule,
   ConduitRouteObject,
   SocketProtoDescription,
+  ConduitRouteActions,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -18,11 +20,12 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
+  MiddlewareOrder,
   ProtoGenerator,
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { protoTemplate, swaggerMetadata } from './hermes';
@@ -32,6 +35,7 @@ import { AdminHandlers } from './admin';
 import {
   GenerateProtoRequest,
   GenerateProtoResponse,
+  InjectMiddlewareRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
@@ -49,6 +53,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
       generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
+      injectMiddleware: this.injectMiddleware.bind(this),
       socketPush: this.socketPush.bind(this),
     },
   };
@@ -241,6 +246,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       });
   }
 
+  private async updateStateForMiddlewarePatch(
+    middleware: string[],
+    path: string,
+    action: string,
+  ) {
+    await this.grpcSdk.state!.getKey('router').then(result => {
+      if (isNil(result)) {
+        throw new GrpcError(status.INTERNAL, 'State not found');
+      }
+      const routes = JSON.parse(result).routes as any[];
+      const foundRoute = routes.find(value => {
+        // TODO: Find a better way to update this
+      });
+      const index = routes.indexOf(foundRoute);
+    });
+  }
+
   publishAdminRouteData(
     protofile: string,
     routes: RegisterConduitRouteRequest_PathDefinition[],
@@ -350,6 +372,42 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
+  }
+
+  async injectMiddleware(
+    call: GrpcRequest<InjectMiddlewareRequest>,
+    callback: GrpcCallback<null>,
+  ) {
+    const { path, action, name, position } = call.request;
+    const middleware = new ConduitMiddleware({}, name, async () => {});
+    outer: for (const key of Object.keys(this._grpcRoutes)) {
+      const routesArray = this._grpcRoutes[key];
+      for (const r of routesArray) {
+        if (r.options.path !== path || r.options.action !== action) {
+          continue;
+        }
+        if (r.options.middlewares.includes(name)) {
+          return callback({
+            code: status.ALREADY_EXISTS,
+            message: `Middleware ${name} already assigned to ${action} ${path}`,
+          });
+        }
+        if (position === MiddlewareOrder.FIRST) {
+          r.options.middlewares.unshift(name);
+        } else {
+          r.options.middlewares.push(name);
+        }
+        break outer;
+      }
+    }
+    this._internalRouter.registerRouteMiddleware(middleware);
+    this._internalRouter.patchRouteMiddleware(
+      path,
+      action as ConduitRouteActions,
+      name,
+      position as MiddlewareOrder,
+    );
+    callback(null, null);
   }
 
   async socketPush(call: GrpcRequest<SocketData>, callback: GrpcCallback<null>) {

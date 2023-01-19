@@ -2,7 +2,10 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  ConduitRouteActions,
+} from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
   ConduitRequest,
@@ -10,7 +13,7 @@ import {
   ConduitSocket,
   SocketPush,
 } from './interfaces';
-import { SwaggerRouterMetadata } from './types';
+import { MiddlewareOrder, SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -160,6 +163,16 @@ export class ConduitRoutingController {
 
   registerConduitSocket(socket: ConduitSocket) {
     this._socketRouter?.registerConduitSocket(socket);
+  }
+
+  patchRouteMiddleware(
+    path: string,
+    action: ConduitRouteActions,
+    middleware: string,
+    order: MiddlewareOrder,
+  ) {
+    this._restRouter?.patchRouteMiddleware(path, action, middleware, order);
+    this._graphQLRouter?.patchRouteMiddleware(path, action, middleware, order);
   }
 
   cleanupRoutes(routes: any[]) {
