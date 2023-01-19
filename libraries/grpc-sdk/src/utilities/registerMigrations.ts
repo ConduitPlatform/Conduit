@@ -18,10 +18,11 @@ export async function registerMigrations(
   const files = readdirSync(path).filter(f => f.endsWith('.js'));
   const migrations = new Map<string, string>();
   for (const name of files) {
-    // Ignore authentication's config migration for convict
-    if (name === 'configMigration.js' && moduleName === 'authentication') continue;
     const migrationPath = path + `/${name}`;
     const data = readFileSync(migrationPath, 'utf-8');
+    if (!isMigrationFile(data)) {
+      continue;
+    }
     migrations.set(name.split('.js')[0], data);
   }
   for (const [migrationName, data] of migrations) {
@@ -29,4 +30,10 @@ export async function registerMigrations(
   }
   await database.triggerMigrations(moduleName);
   return;
+}
+
+function isMigrationFile(file: string) {
+  const upRegex = /up: function/;
+  const downRegex = /down: function/;
+  return upRegex.test(file) && downRegex.test(file);
 }
