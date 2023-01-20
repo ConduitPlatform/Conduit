@@ -563,7 +563,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     const dbType = this._activeAdapter.getDatabaseType();
     if (
       (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
-      (dbType === 'PostgreSQL' && isNil(query?.sqlQuery))
+      (dbType !== 'MongoDB' && isNil(query?.sqlQuery))
     ) {
       callback({
         code: status.INVALID_ARGUMENT,
