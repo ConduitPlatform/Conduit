@@ -8,3 +8,4 @@ export * from './ManifestManager';
 export * from './ModuleManager';
 export * from './ConfigController';
 export * from './ConduitAuthorizedResource';
+export * from './ManifestManager';

@@ -5,8 +5,6 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   HealthCheckStatus,
   ManagedModule,
-  ManifestManager,
-  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -59,9 +57,6 @@ export default class Authentication extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    const version = ManifestManager.getInstance().moduleVersion;
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(this.database, 'authentication', version, migrationFilePath);
     TokenProvider.getInstance(this.grpcSdk);
   }
 

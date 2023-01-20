@@ -30,12 +30,6 @@ module.exports = {
       };
       const accessTokens = await database.rawQuery('AccessToken', query);
       if (accessTokens.length === 0) return;
-      query = {
-        sqlQuery: {
-          query: `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
-        },
-      };
-      await database.rawQuery('AccessToken', query);
       for (const token of accessTokens) {
         query = {
           sqlQuery: {

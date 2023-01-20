@@ -30,12 +30,6 @@ module.exports = {
       };
       const result = await database.rawQuery('TwoFactorSecret', query);
       if (result.length === 0) return;
-      query = {
-        sqlQuery: {
-          query: `ALTER TABLE "${sqlTableName}" ADD COLUMN IF NOT EXISTS "user" uuid;`,
-        },
-      };
-      await database.rawQuery('TwoFactorSecret', query);
       for (const r of result) {
         query = {
           sqlQuery: {

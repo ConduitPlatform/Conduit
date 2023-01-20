@@ -4,7 +4,11 @@ import { Config } from './config';
 import path from 'path';
 
 const authentication = new AuthenticationModule();
-authentication.activateMigrations();
 const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
-const moduleManager = new ModuleManager<Config>(authentication, packageJsonPath);
+const migrationFilePath = path.resolve(__dirname, 'migrations');
+const moduleManager = new ModuleManager<Config>(
+  authentication,
+  packageJsonPath,
+  migrationFilePath,
+);
 moduleManager.start();

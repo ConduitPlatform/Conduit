@@ -6,8 +6,6 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
-  ManifestManager,
-  registerMigrations,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -112,16 +110,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
-
     this.grpcSdk.createModuleClient('database', process.env.SERVICE_IP!);
-    const version = ManifestManager.getInstance().moduleVersion;
-    const migrationFilePath = path.resolve(__dirname, 'migrations');
-    await registerMigrations(
-      this.grpcSdk.database!,
-      'database',
-      version,
-      migrationFilePath,
-    );
   }
 
   async onRegister() {

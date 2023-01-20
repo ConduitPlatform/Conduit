@@ -1,4 +1,9 @@
-import ConduitGrpcSdk, { HealthCheckStatus, ManagedModule } from '..';
+import ConduitGrpcSdk, {
+  HealthCheckStatus,
+  ManagedModule,
+  ManifestManager,
+  registerMigrations,
+} from '..';
 
 export class ModuleManager<T> {
   private readonly serviceAddress: string;
@@ -8,6 +13,7 @@ export class ModuleManager<T> {
   constructor(
     private readonly module: ManagedModule<T>,
     private readonly packageJsonPath: string,
+    private readonly migrationsFilePath?: string,
   ) {
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
@@ -52,13 +58,16 @@ export class ModuleManager<T> {
     await this.module.createGrpcServer();
     await this.module.preServerStart();
     await this.grpcSdk.initializeEventBus();
-    if (this.module.migrations) {
+    if (this.migrationsFilePath) {
       this.subToInitializationEvent();
     }
     await this.module.handleConfigSyncUpdate();
     await this.module.registerMetrics();
     await this.module.startGrpcServer();
     await this.module.onServerStart();
+    if (this.migrationsFilePath) {
+      await this.startMigrations();
+    }
     await this.module.initializeMetrics();
     await this.module.preRegister();
   }
@@ -73,5 +82,15 @@ export class ModuleManager<T> {
     this.grpcSdk.bus?.subscribe(`${this.module.name}:initialize`, async () => {
       this.module.updateHealth(HealthCheckStatus.SERVING);
     });
+  }
+
+  private async startMigrations() {
+    const version = ManifestManager.getInstance().moduleVersion;
+    await registerMigrations(
+      this.grpcSdk.database!,
+      this.module.name,
+      version,
+      this.migrationsFilePath!,
+    );
   }
 }
