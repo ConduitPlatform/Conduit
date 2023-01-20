@@ -21,11 +21,17 @@ import {
   EventResponse,
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
+  ProxyRouteOptions,
   RouterDescriptor,
   RouteT,
   SocketProtoDescription,
 } from '../interfaces';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '../classes';
+import {
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  instanceOfConduitProxy,
+  ProxyRoute,
+} from '../classes';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -52,7 +58,7 @@ export function grpcToConduitRoute(
   },
   moduleName?: string,
   grpcToken?: string,
-): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
+): (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] {
   const routes = request.routes;
 
   let routerDescriptor: RouterDescriptor = getDescriptor(request.protoFile);
@@ -80,7 +86,8 @@ function createHandlers(
   moduleName?: string,
   grpcToken?: string,
 ) {
-  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
+  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] =
+    [];
 
   routes.forEach(r => {
     let route;
@@ -90,6 +97,8 @@ function createHandlers(
     }
     if (instanceOfSocketProtoDescription(r)) {
       route = createHandlerForSocket(r, client, metadata, moduleName);
+    } else if (instanceOfConduitProxy(r)) {
+      route = createHandlerForProxy(r.options, moduleName);
     } else {
       route = createHandlerForRoute(r, client, metadata, moduleName);
     }
@@ -235,4 +244,19 @@ function createHandlerForSocket(
   }
 
   return new ConduitSocket(socket.options, eventHandlers);
+}
+
+export function createHandlerForProxy(options: ProxyRouteOptions, moduleName?: string) {
+  if (moduleName) {
+    if (!options.path.startsWith('/')) {
+      options.path = `/${options.path}`;
+    }
+    if (!options.path.startsWith(`/${moduleName}/`)) {
+      options.path = `/${moduleName}${options.path}`;
+    }
+    if (!options.path.startsWith(`/proxy/${moduleName}/`)) {
+      options.path = `/proxy/${moduleName}${options.path}`;
+    }
+  }
+  return new ProxyRoute(options);
 }

@@ -1,4 +1,8 @@
-import { ConduitRouteObject, SocketProtoDescription } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitProxy,
+  ConduitRouteObject,
+  SocketProtoDescription,
+} from '@conduitplatform/grpc-sdk';
 
 type ProtoTemplate = {
   request: string;
@@ -35,13 +39,20 @@ export class ProtoGenerator {
     return moduleName.replace('-', '_');
   }
 
-  private createProtoFunctions(paths: (ConduitRouteObject | SocketProtoDescription)[]) {
+  private createProtoFunctions(
+    paths: (ConduitRouteObject | SocketProtoDescription | ConduitProxy)[],
+  ) {
     let protoFunctions = '';
 
     paths.forEach(r => {
       if (r.hasOwnProperty('events')) {
         protoFunctions += this.createProtoFunctionsForSocket(
           r as SocketProtoDescription,
+          protoFunctions,
+        );
+      } else if (r.options.hasOwnProperty('target')) {
+        protoFunctions += this.createProtoFunctionForProxy(
+          r as ConduitProxy,
           protoFunctions,
         );
       } else {
@@ -81,6 +92,17 @@ export class ProtoGenerator {
       return '';
     }
     return `rpc ${newFunction}(${this.protoTemplate.request}) returns (${this.protoTemplate.response});\n`;
+  }
+
+  private createProtoFunctionForProxy(path: ConduitProxy, protoFunctions: string) {
+    const newFunction = this.createGrpcFunctionName(
+      path.options.name || path.options.path,
+    );
+
+    if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
+      return '';
+    }
+    return `rpc ${newFunction}(ProxyRequest) returns (ProxyResponse);\n`;
   }
 
   private createGrpcFunctionName(grpcFunction: string) {
