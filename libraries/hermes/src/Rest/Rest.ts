@@ -150,22 +150,18 @@ export class RestController extends ConduitRouter {
         route,
         req.headers['cache-control'],
       );
+      if (route.input.bodyParams)
+        validateParams(context.bodyParams, route.input.bodyParams);
+      if (route.input.queryParams)
+        validateParams(context.queryParams, route.input.queryParams);
+      if (route.input.urlParams) validateParams(context.urlParams, route.input.urlParams);
+      context.params = {
+        ...context.bodyParams,
+        ...context.queryParams,
+        ...context.urlParams,
+      };
       self
         .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          if (route.input.bodyParams)
-            validateParams(context.bodyParams, route.input.bodyParams);
-          if (route.input.queryParams)
-            validateParams(context.queryParams, route.input.queryParams);
-          if (route.input.urlParams)
-            validateParams(context.urlParams, route.input.urlParams);
-          context.params = {
-            ...context.bodyParams,
-            ...context.queryParams,
-            ...context.urlParams,
-          };
-          return r;
-        })
         .then(r => {
           Object.assign(context.context, r);
           if (route.input.action !== ConduitRouteActions.GET) {
