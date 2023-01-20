@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   ConduitRouteObject,
   SocketProtoDescription,
   merge,
+  GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -271,12 +272,14 @@ export default class AdminModule extends IConduitAdmin {
     callback(null, null);
   }
 
-  injectMiddleware(
+  async injectMiddleware(
     call: GrpcRequest<InjectMiddlewareRequest>,
     callback: GrpcCallback<null>,
   ) {
     const { path, action, name, position } = call.request;
-    const middleware = new ConduitMiddleware({}, name, async () => {});
+    const middleware = new ConduitMiddleware({}, name, async () => {}); // TODO: remove this
+    let middlewareArray: string[] | undefined;
+
     outer: for (const key of Object.keys(this._grpcRoutes)) {
       const routesArray = this._grpcRoutes[key];
       for (const r of routesArray) {
@@ -294,8 +297,15 @@ export default class AdminModule extends IConduitAdmin {
         } else {
           r.options?.middlewares.push(name);
         }
+        middlewareArray = r.options.middlewares;
         break outer;
       }
+    }
+    if (!middlewareArray) {
+      return callback({
+        code: status.NOT_FOUND,
+        message: `Route ${action} ${path} not found`,
+      });
     }
     this._router.registerRouteMiddleware(middleware);
     this._router.patchRouteMiddleware(
@@ -304,6 +314,7 @@ export default class AdminModule extends IConduitAdmin {
       name,
       position as MiddlewareOrder,
     );
+    await this.updateStateForMiddlewarePatch(middlewareArray, path, action);
     callback(null, null);
   }
 
@@ -397,6 +408,34 @@ export default class AdminModule extends IConduitAdmin {
       })
       .catch(() => {
         ConduitGrpcSdk.Logger.error('Failed to update state');
+      });
+  }
+
+  private async updateStateForMiddlewarePatch(
+    middleware: string[],
+    path: string,
+    action: string,
+  ) {
+    await this.grpcSdk
+      .state!.getKey('admin')
+      .then(result => {
+        const routes = JSON.parse(result!).routes as any[];
+        outer: for (const v of routes) {
+          for (const r of v.routes) {
+            if (r.options?.path !== path && r.options.action !== action) {
+              continue;
+            }
+            r.options.middlewares = middleware;
+            break outer;
+          }
+        }
+        return this.grpcSdk.state!.setKey('admin', JSON.stringify({ routes: routes }));
+      })
+      .catch(() => {
+        throw new GrpcError(
+          status.INTERNAL,
+          'Failed to update state for patched middleware',
+        );
       });
   }
 
