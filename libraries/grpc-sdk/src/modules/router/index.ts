@@ -6,7 +6,12 @@ import {
   RouterDefinition,
   SocketData,
 } from '../../protoUtils/router';
-import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
+import {
+  ConduitRouteActions,
+  ConduitRouteObject,
+  SocketProtoDescription,
+  MiddlewareOrder,
+} from '../../routing';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
@@ -36,6 +41,15 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
       routerUrl: url,
     };
     return this.client!.registerConduitRoute(request);
+  }
+
+  injectMiddleware(
+    path: string,
+    action: ConduitRouteActions,
+    name: string,
+    position: MiddlewareOrder,
+  ) {
+    return this.client!.injectMiddleware({ path, action, name, position });
   }
 
   socketPush(data: SocketData) {
