@@ -288,8 +288,8 @@ export class GraphQLController extends ConduitRouter {
         },
         parseLiteral(ast) {
           if (ast.kind === Kind.INT || ast.kind === Kind.FLOAT) {
-            return ast.value;
-          } else if (ast.kind == Kind.STRING) {
+            return Number(ast.value);
+          } else if (ast.kind === Kind.STRING) {
             if (Number.isInteger(ast.value)) {
               return Number.parseInt(ast.value);
             } else if (!Number.isNaN(ast.value)) {
