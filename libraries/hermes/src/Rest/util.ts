@@ -6,7 +6,6 @@ type ConduitRequest = Request & { conduit?: Indexable };
 
 export function extractRequestData(req: ConduitRequest) {
   const context = req.conduit || {};
-  const params: any = {};
   const urlParams: any = {};
   const queryParams: any = {};
   const bodyParams: any = {};
@@ -25,29 +24,26 @@ export function extractRequestData(req: ConduitRequest) {
         newObj[k] = req.query[k];
       }
     });
-    Object.assign(params, newObj);
     Object.assign(queryParams, newObj);
   }
 
   if (req.body) {
-    Object.assign(params, req.body);
     Object.assign(bodyParams, req.body);
   }
 
   if (req.params) {
-    Object.assign(params, req.params);
     Object.assign(urlParams, req.params);
   }
 
-  if (params.populate) {
-    if (params.populate.includes(',')) {
-      params.populate = params.populate.split(',');
-    } else if (!Array.isArray(params.populate)) {
-      params.populate = [params.populate];
+  if (queryParams.populate) {
+    if (queryParams.populate.includes(',')) {
+      queryParams.populate = queryParams.populate.split(',');
+    } else if (!Array.isArray(queryParams.populate)) {
+      queryParams.populate = [queryParams.populate];
     }
   }
   const path = req.baseUrl + req.path;
-  return { context, params, headers, cookies, path, urlParams, queryParams, bodyParams };
+  return { context, headers, cookies, path, urlParams, queryParams, bodyParams };
 }
 
 export function validateParams(params: Params, routeDefinedParams: Params) {
