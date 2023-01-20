@@ -12,6 +12,7 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   merge,
   GrpcError,
+  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -20,6 +21,7 @@ import {
   GenerateProtoResponse,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
+  InjectMiddlewareRequest,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -38,7 +40,6 @@ import {
   grpcToConduitRoute,
   RouteT,
   ProtoGenerator,
-  MiddlewareOrder,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -46,24 +47,11 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-import { InjectMiddlewareRequest } from '@conduitplatform/router/dist/protoTypes/router';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _router: ConduitRoutingController;
-  private _sdkRoutes: ConduitRoute[] = [
-    adminRoutes.getLoginRoute(),
-    adminRoutes.getCreateAdminRoute(),
-    adminRoutes.getAdminRoute(),
-    adminRoutes.getAdminsRoute(),
-    adminRoutes.deleteAdminUserRoute(),
-    adminRoutes.changePasswordRoute(),
-    adminRoutes.getReadyRoute(),
-    adminRoutes.toggleTwoFaRoute(),
-    adminRoutes.verifyQrCodeRoute(),
-    adminRoutes.verifyTwoFaRoute(),
-    adminRoutes.changeUsersPasswordRoute(),
-  ];
+  private _sdkRoutes: ConduitRoute[];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -83,6 +71,20 @@ export default class AdminModule extends IConduitAdmin {
       { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
+    this._sdkRoutes = [
+      adminRoutes.getLoginRoute(),
+      adminRoutes.getCreateAdminRoute(),
+      adminRoutes.getAdminRoute(),
+      adminRoutes.getAdminsRoute(),
+      adminRoutes.deleteAdminUserRoute(),
+      adminRoutes.changePasswordRoute(),
+      adminRoutes.getReadyRoute(),
+      adminRoutes.toggleTwoFaRoute(),
+      adminRoutes.verifyQrCodeRoute(),
+      adminRoutes.verifyTwoFaRoute(),
+      adminRoutes.changeUsersPasswordRoute(),
+      adminRoutes.injectMiddleware(this.grpcSdk),
+    ];
     this.registerMetrics();
   }
 

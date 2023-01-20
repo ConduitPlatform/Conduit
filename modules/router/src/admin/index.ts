@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitBoolean,
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -45,6 +46,21 @@ export class AdminHandlers {
         response: TYPE.JSON,
       }),
       this.routerAdmin.getMiddlewares.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/router/inject-middleware',
+        action: ConduitRouteActions.PATCH,
+        description: `Injects a middleware into an app route with a specific order (1 = first, -1 = last).`,
+        bodyParams: {
+          path: ConduitString.Required,
+          action: ConduitString.Required,
+          middlewareName: ConduitString.Required,
+          order: ConduitNumber.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('InjectAppMiddleware', 'String'),
+      this.routerAdmin.injectMiddleware.bind(this.routerAdmin),
     );
     this.routingManager.route(
       {

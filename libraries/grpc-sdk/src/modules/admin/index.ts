@@ -5,7 +5,12 @@ import {
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '../../protoUtils/core';
-import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
+import {
+  ConduitRouteActions,
+  ConduitRouteObject,
+  SocketProtoDescription,
+  MiddlewareOrder,
+} from '../../routing';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
@@ -36,5 +41,14 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     };
 
     return this.client!.registerAdminRoute(request);
+  }
+
+  injectMiddleware(
+    path: string,
+    action: ConduitRouteActions,
+    name: string,
+    position: MiddlewareOrder,
+  ) {
+    return this.client!.injectMiddleware({ path, action, name, position });
   }
 }

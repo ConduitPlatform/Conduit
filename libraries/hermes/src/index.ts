@@ -5,6 +5,7 @@ import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
+  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
@@ -13,7 +14,7 @@ import {
   ConduitSocket,
   SocketPush,
 } from './interfaces';
-import { MiddlewareOrder, SwaggerRouterMetadata } from './types';
+import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';

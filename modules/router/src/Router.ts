@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   ConduitRouteActions,
   GrpcError,
+  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -20,12 +21,11 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  MiddlewareOrder,
   ProtoGenerator,
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN, isNil } from 'lodash';
+import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { protoTemplate, swaggerMetadata } from './hermes';

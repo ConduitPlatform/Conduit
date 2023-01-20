@@ -4,12 +4,12 @@ import ConduitGrpcSdk, {
   ConduitRouteParameters,
   GrpcError,
   Indexable,
+  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitMiddleware } from './interfaces';
 import { ConduitRoute } from './classes';
 import ObjectHash from 'object-hash';
 import { status } from '@grpc/grpc-js';
-import { MiddlewareOrder } from './types';
 
 export abstract class ConduitRouter {
   protected _expressRouter?: Router;
@@ -52,19 +52,22 @@ export abstract class ConduitRouter {
   ) {
     const [key, route] = this.findRoute(path, action);
     const middlewareArray = route.input.middlewares;
-    if (order === MiddlewareOrder.FIRST) {
-      route.input.middlewares = middlewareArray
-        ? [middleware, ...middlewareArray]
-        : [middleware];
-    } else {
-      route.input.middlewares = middlewareArray
-        ? [...middlewareArray, middleware]
-        : [middleware];
+    if (!route.input.middlewares!.includes(middleware)) {
+      if (order === MiddlewareOrder.FIRST) {
+        route.input.middlewares = middlewareArray
+          ? [middleware, ...middlewareArray]
+          : [middleware];
+      } else {
+        route.input.middlewares = middlewareArray
+          ? [...middlewareArray, middleware]
+          : [middleware];
+      }
+      this._registeredRoutes.set(key, route);
     }
-    this._registeredRoutes.set(key, route);
-    const routes = Object.values(this._registeredRoutes).filter((route: ConduitRoute) => {
-      return { action: route.input.action, path: route.input.path };
-    });
+    const routes: { action: string; path: string }[] = [];
+    for (const conduitRoute of this._registeredRoutes.values()) {
+      routes.push({ action: conduitRoute.input.action, path: conduitRoute.input.path });
+    }
     this.cleanupRoutes(routes);
   }
 
@@ -96,13 +99,12 @@ export abstract class ConduitRouter {
   }
 
   protected findRoute(path: string, action: ConduitRouteActions): [string, ConduitRoute] {
-    const routeEntry = Object.entries(this._registeredRoutes).find(
-      ([, route]) => route.input.path === path && route.input.action === action,
-    );
-    if (!routeEntry) {
+    const key = `${action}-${path}`;
+    const exists = this._registeredRoutes.has(key);
+    if (!exists) {
       throw new GrpcError(status.NOT_FOUND, 'Route not found');
     }
-    return routeEntry;
+    return [key, this._registeredRoutes.get(key)!];
   }
 
   registerMiddleware(middleware: ConduitMiddleware) {
