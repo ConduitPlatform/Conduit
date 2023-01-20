@@ -1,9 +1,13 @@
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  GrpcError,
+  MiddlewareOrder,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
+import { status } from '@grpc/grpc-js';
 
 export class RouterAdmin {
   constructor(
@@ -31,6 +35,29 @@ export class RouterAdmin {
       else response = response.sort((a, b) => b.localeCompare(a));
     }
     return Array.from(new Set(response));
+  }
+
+  async injectMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, action, middlewareName, order } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    if (Math.abs(order) !== 1) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Order should be 1 or -1');
+    }
+    const routeOrder = order === 1 ? MiddlewareOrder.FIRST : MiddlewareOrder.LAST;
+    try {
+      this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
+      await this.grpcSdk.router!.injectMiddleware(
+        path,
+        action,
+        middlewareName,
+        routeOrder,
+      );
+    } catch (e) {
+      throw new GrpcError(status.INTERNAL, (e as Error).message);
+    }
+    return 'Middleware injected successfully';
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
