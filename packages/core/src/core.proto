@@ -67,7 +67,7 @@ message InjectMiddlewareRequest {
   string path = 1;
   string action = 2;
   string name = 3;
-  string position = 4; // 0 = first, 1 = last
+  string position = 4;
 }
 
 message Empty {
