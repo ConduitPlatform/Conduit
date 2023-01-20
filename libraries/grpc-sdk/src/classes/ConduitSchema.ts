@@ -6,7 +6,7 @@ export class ConduitSchema {
   readonly collectionName: string | ''; // '' on implicit name, updated in createSchemaFromAdapter()
   readonly modelOptions: ConduitSchemaOptions;
   ownerModule: string = 'unknown';
-
+  parentSchema?: string;
   constructor(
     name: string,
     fields: ConduitModel,

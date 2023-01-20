@@ -4,9 +4,9 @@ import {
   FindAttributeOptions,
   FindOptions,
   ModelCtor,
-  Sequelize,
   Order,
   OrderItem,
+  Sequelize,
 } from 'sequelize';
 import {
   MultiDocQuery,
@@ -30,16 +30,19 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   fieldHash: string;
   excludedFields: string[];
   relations: Indexable;
+  _associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
 
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
     originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
+    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     this.originalSchema = originalSchema;
     this.excludedFields = [];
     this.relations = {};
+    this._associations = associations;
     const self = this;
     let primaryKeyExists = false;
     let idField: string = '';
@@ -99,11 +102,47 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       ...schema.modelOptions,
       freezeTableName: true,
     });
+    for (const association in associations) {
+      if (associations.hasOwnProperty(association)) {
+        const value = associations[association];
+        if (Array.isArray(value)) {
+          const item = value[0];
+          if (item instanceof SequelizeSchema) {
+            this.model.hasMany(item.model, {
+              foreignKey: association,
+              as: association,
+            });
+            item.model.belongsTo(this.model);
+          }
+        } else {
+          if (value instanceof SequelizeSchema) {
+            this.model.hasOne(value.model, {
+              foreignKey: association,
+              as: association,
+            });
+            value.model.belongsTo(this.model);
+          }
+        }
+      }
+    }
   }
 
   sync() {
+    const syncOptions = { alter: true };
+    let promiseArray: Promise<any>[] = [];
     incrementDbQueries();
-    return this.model.sync({ alter: true });
+    for (const association in this._associations) {
+      if (this._associations.hasOwnProperty(association)) {
+        const value = this._associations[association];
+        if (Array.isArray(value)) {
+          promiseArray.push(value[0].sync());
+        } else {
+          promiseArray.push(value.sync());
+        }
+      }
+    }
+    promiseArray.push(this.model.sync(syncOptions));
+    return Promise.all(promiseArray);
   }
 
   async create(query: SingleDocQuery) {
@@ -117,7 +156,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     await this.createWithPopulations(parsedQuery);
-    return this.model.create(parsedQuery, { raw: true });
+    return this.model.create(parsedQuery, {
+      raw: true,
+      include: { all: true, nested: true },
+    });
   }
 
   async createMany(query: MultiDocQuery) {
@@ -134,7 +176,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       await this.createWithPopulations(doc);
     }
     incrementDbQueries();
-    return this.model.bulkCreate(parsedQuery);
+    return this.model.bulkCreate(parsedQuery, { include: { all: true, nested: true } });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -144,7 +186,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
+    const options: FindOptions = {
+      where: parseQuery(parsedQuery),
+      raw: true,
+      include: { all: true, nested: true },
+    };
     options.attributes = {
       exclude: [...this.excludedFields],
     } as unknown as FindAttributeOptions;
@@ -184,7 +230,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     } else {
       parsedQuery = query;
     }
-    const options: FindOptions = { where: parseQuery(parsedQuery), raw: true };
+    const options: FindOptions = {
+      where: parseQuery(parsedQuery),
+      raw: true,
+      include: { all: true, nested: true },
+    };
     options.attributes = {
       exclude: [...this.excludedFields],
     } as unknown as FindAttributeOptions;
@@ -270,18 +320,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     }
 
     if (updateProvidedOnly) {
-      const record = await this.model.findByPk(id, { raw: true }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      const record = await this.model
+        .findByPk(id, { raw: true, include: { all: true, nested: true } })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       if (!isNil(record)) {
         parsedQuery = { ...record, ...parsedQuery };
       }
     } else if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
       incrementDbQueries();
-      const record = await this.model.findByPk(id, { raw: true }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      const record = await this.model
+        .findByPk(id, { raw: true, include: { all: true, nested: true } })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       if (!isNil(record)) {
         parsedQuery = { ...record, ...parsedQuery };
       }
