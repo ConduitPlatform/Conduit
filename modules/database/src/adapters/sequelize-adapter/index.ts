@@ -206,9 +206,12 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
+    options?: { parentSchema: string },
   ): Promise<SequelizeSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
-    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    (compiledSchema as any).fields = JSON.parse(
+      JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
+    );
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
         compiledSchema = validateSchema(
@@ -219,16 +222,58 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const newSchema = schemaConverter(compiledSchema);
+    const [newSchema, extractedSchemas] = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
+    let associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+    for (const extractedSchema in extractedSchemas) {
+      let modelOptions = {
+        ...schema.modelOptions,
+        permissions: {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing',
+          canDelete: false,
+        },
+      };
+      let modeledSchema;
+      let isArray = false;
+      if (Array.isArray(extractedSchemas[extractedSchema])) {
+        isArray = true;
+        modeledSchema = new ConduitSchema(
+          `${schema.name}_${extractedSchema}`,
+          extractedSchemas[extractedSchema][0],
+          modelOptions,
+          `${schema.collectionName}_${extractedSchema}`,
+        );
+      } else {
+        modeledSchema = new ConduitSchema(
+          `${schema.name}_${extractedSchema}`,
+          extractedSchemas[extractedSchema],
+          modelOptions,
+          `${schema.collectionName}_${extractedSchema}`,
+        );
+      }
+
+      modeledSchema.ownerModule = schema.ownerModule;
+      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
+      // check index compatibility
+      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, {
+        parentSchema: schema.name,
+      });
+      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
+    }
+    if (options?.parentSchema) {
+      schema.parentSchema = options.parentSchema;
+    }
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
       schema,
       this,
+      associatedSchemas,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
@@ -236,7 +281,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       await this.models[schema.name].sync();
     }
     await this.saveSchemaToDatabase(schema);
-
     return this.models[schema.name];
   }
 
