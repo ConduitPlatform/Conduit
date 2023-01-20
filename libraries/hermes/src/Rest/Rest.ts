@@ -144,7 +144,7 @@ export class RestController extends ConduitRouter {
   constructHandler(route: ConduitRoute): (req: Request, res: Response) => void {
     const self = this;
     return (req, res) => {
-      const context = extractRequestData(req);
+      const context = { ...extractRequestData(req), params: {} };
       let hashKey: string;
       const { caching, cacheAge, scope } = extractCaching(
         route,
@@ -153,11 +153,17 @@ export class RestController extends ConduitRouter {
       self
         .checkMiddlewares(context, route.input.middlewares)
         .then(r => {
-          validateParams(context.params, {
-            ...route.input.bodyParams,
-            ...route.input.queryParams,
-            ...route.input.urlParams,
-          });
+          if (route.input.bodyParams)
+            validateParams(context.bodyParams, route.input.bodyParams);
+          if (route.input.queryParams)
+            validateParams(context.queryParams, route.input.queryParams);
+          if (route.input.urlParams)
+            validateParams(context.urlParams, route.input.urlParams);
+          context.params = {
+            ...context.bodyParams,
+            ...context.queryParams,
+            ...context.urlParams,
+          };
           return r;
         })
         .then(r => {
