@@ -505,9 +505,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
     // @ts-ignore
-    return this.model
-      .update(parsedQuery, { where: parsedFilter })
-      .then(doc => doc.toJSON());
+    return this.model.update(parsedQuery, { where: parsedFilter });
   }
 
   countDocuments(query: Query): Promise<number> {
