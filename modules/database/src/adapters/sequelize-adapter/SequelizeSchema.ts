@@ -3,7 +3,7 @@ import {
   DataTypes,
   FindAttributeOptions,
   FindOptions,
-  ModelCtor,
+  ModelStatic,
   Order,
   OrderItem,
   Sequelize,
@@ -24,9 +24,8 @@ const deepdash = require('deepdash/standalone');
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
-export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
-  model: ModelCtor<any>;
-  originalSchema: ConduitSchema;
+export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
+  model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
   relations: Indexable;
@@ -35,11 +34,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
-    originalSchema: ConduitSchema,
+    readonly originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
     associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
-    this.originalSchema = originalSchema;
     this.excludedFields = [];
     this.relations = {};
     this._associations = associations;
@@ -48,7 +46,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     let idField: string = '';
 
     deepdash.eachDeep(
-      this.originalSchema.fields,
+      schema.fields,
       (value: Indexable, key: string, parentValue: Indexable) => {
         if (!parentValue?.hasOwnProperty(key!)) {
           return true;
@@ -112,7 +110,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               foreignKey: association,
               as: association,
             });
-            item.model.belongsTo(this.model);
+            // item.model.belongsTo(this.model);
           }
         } else {
           if (value instanceof SequelizeSchema) {
@@ -120,7 +118,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
               foreignKey: association,
               as: association,
             });
-            value.model.belongsTo(this.model);
+            // value.model.belongsTo(this.model);
           }
         }
       }
@@ -129,20 +127,19 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
   sync() {
     const syncOptions = { alter: true };
-    let promiseArray: Promise<any>[] = [];
+    let promiseChain: Promise<any> = this.model.sync(syncOptions);
     incrementDbQueries();
     for (const association in this._associations) {
       if (this._associations.hasOwnProperty(association)) {
         const value = this._associations[association];
         if (Array.isArray(value)) {
-          promiseArray.push(value[0].sync());
+          promiseChain = promiseChain.then(() => value[0].sync());
         } else {
-          promiseArray.push(value.sync());
+          promiseChain = promiseChain.then(() => value.sync());
         }
       }
     }
-    promiseArray.push(this.model.sync(syncOptions));
-    return Promise.all(promiseArray);
+    return promiseChain;
   }
 
   async create(query: SingleDocQuery) {
@@ -189,6 +186,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     const options: FindOptions = {
       where: parseQuery(parsedQuery),
       raw: true,
+      nest: true,
       include: { all: true, nested: true },
     };
     options.attributes = {
@@ -233,6 +231,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
     const options: FindOptions = {
       where: parseQuery(parsedQuery),
       raw: true,
+      nest: true,
       include: { all: true, nested: true },
     };
     options.attributes = {
@@ -321,7 +320,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
 
     if (updateProvidedOnly) {
       const record = await this.model
-        .findByPk(id, { raw: true, include: { all: true, nested: true } })
+        .findByPk(id, { raw: true, nest: true, include: { all: true, nested: true } })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -332,7 +331,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelCtor<any>> {
       parsedQuery = parsedQuery['$set'];
       incrementDbQueries();
       const record = await this.model
-        .findByPk(id, { raw: true, include: { all: true, nested: true } })
+        .findByPk(id, { raw: true, nest: true, include: { all: true, nested: true } })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
