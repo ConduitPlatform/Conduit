@@ -5,8 +5,9 @@ import {
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
-import { isBoolean, isNumber, isString, isArray, isObject, cloneDeep } from 'lodash';
+import { cloneDeep, isArray, isBoolean, isNumber, isObject, isString } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
+
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
@@ -26,20 +27,24 @@ export function schemaConverter(
   iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extracted];
 }
+
 function extractEmbedded(ogSchema: any, schema: any) {
   let extracted: { [key: string]: any } = {};
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
       let arrayField = schema[key];
       if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (!arrayField[0].hasOwnProperty('type')) {
+        if (
+          !arrayField[0].hasOwnProperty('type') ||
+          typeof arrayField[0].type !== 'string'
+        ) {
           extracted[key] = [arrayField[0]];
           delete schema[key];
           delete ogSchema[key];
         }
       }
     } else if (isObject(schema[key])) {
-      if (!schema[key].hasOwnProperty('type')) {
+      if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
         extracted[key] = schema[key];
         delete schema[key];
         delete ogSchema[key];
