@@ -280,7 +280,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if ((isNil(noSync) || !noSync) && !options) {
       await this.models[schema.name].sync();
     }
-    await this.saveSchemaToDatabase(schema);
+    // do not store extracted schemas to db
+    if (!options) {
+      await this.saveSchemaToDatabase(schema);
+    }
+
     return this.models[schema.name];
   }
 

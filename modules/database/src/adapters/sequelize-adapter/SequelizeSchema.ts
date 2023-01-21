@@ -153,10 +153,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     await this.createWithPopulations(parsedQuery);
-    return this.model.create(parsedQuery, {
-      raw: true,
-      include: { all: true, nested: true },
-    });
+    return await this.model
+      .create(parsedQuery, {
+        include: { all: true, nested: true },
+      })
+      .then(doc => doc.toJSON());
   }
 
   async createMany(query: MultiDocQuery) {
@@ -173,7 +174,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       await this.createWithPopulations(doc);
     }
     incrementDbQueries();
-    return this.model.bulkCreate(parsedQuery, { include: { all: true, nested: true } });
+    return this.model
+      .bulkCreate(parsedQuery, {
+        include: {
+          all: true,
+          nested: true,
+        },
+      })
+      .then(docs => docs.map(doc => doc.toJSON()));
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -185,7 +193,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     const options: FindOptions = {
       where: parseQuery(parsedQuery),
-      raw: true,
       nest: true,
       include: { all: true, nested: true },
     };
@@ -196,7 +203,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       options.attributes = this.parseSelect(select);
     }
     incrementDbQueries();
-    const document = await this.model.findOne(options);
+    const document = await this.model.findOne(options).then(doc => doc.toJSON());
 
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relationField of populate) {
@@ -230,9 +237,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     const options: FindOptions = {
       where: parseQuery(parsedQuery),
-      raw: true,
       nest: true,
-      include: { all: true, nested: true },
+      include: { all: true, nested: true, required: false },
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -250,7 +256,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       options.order = this.parseSort(sort);
     }
 
-    const documents = await this.model.findAll(options);
+    const documents = await this.model
+      .findAll(options)
+      .then(docs => docs.map(doc => doc.toJSON()));
 
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relation of populate) {
@@ -320,7 +328,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     if (updateProvidedOnly) {
       const record = await this.model
-        .findByPk(id, { raw: true, nest: true, include: { all: true, nested: true } })
+        .findByPk(id, { nest: true, include: { all: true, nested: true } })
+        .then(doc => doc.toJSON())
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -331,7 +340,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = parsedQuery['$set'];
       incrementDbQueries();
       const record = await this.model
-        .findByPk(id, { raw: true, nest: true, include: { all: true, nested: true } })
+        .findByPk(id, { nest: true, include: { all: true, nested: true } })
+        .then(doc => doc.toJSON())
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -362,9 +372,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
 
     if (parsedQuery.hasOwnProperty('$pull')) {
-      const dbDocument = await this.model.findByPk(id).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      const dbDocument = await this.model
+        .findByPk(id)
+        .then(doc => doc.toJSON())
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e);
+        });
       for (const key in parsedQuery['$push']) {
         const ind = dbDocument[key].indexOf(parsedQuery['$push'][key]);
         if (ind > -1) {
@@ -381,7 +394,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     await this.createWithPopulations(parsedQuery);
-    const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0];
+    const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0].toJSON();
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relationField of populate) {
         if (this.relations.hasOwnProperty(relationField)) {
@@ -432,7 +445,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       incrementDbQueries();
       const record = await this.model
         // @ts-ignore
-        .findOne({ where: parsedFilter, raw: true })
+        .findOne({
+          where: parsedFilter,
+          nest: true,
+          include: { all: true, nested: true },
+        })
+        .then(doc => doc.toJSON())
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -487,7 +505,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.updatedAt = new Date();
     await this.createWithPopulations(parsedQuery);
     // @ts-ignore
-    return this.model.update(parsedQuery, { where: parsedFilter });
+    return this.model
+      .update(parsedQuery, { where: parsedFilter })
+      .then(doc => doc.toJSON());
   }
 
   countDocuments(query: Query): Promise<number> {
