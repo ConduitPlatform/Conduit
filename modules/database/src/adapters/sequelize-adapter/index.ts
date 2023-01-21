@@ -277,7 +277,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
-    if (isNil(noSync) || !noSync) {
+    if ((isNil(noSync) || !noSync) && !options) {
       await this.models[schema.name].sync();
     }
     await this.saveSchemaToDatabase(schema);
