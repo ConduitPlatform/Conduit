@@ -16,18 +16,15 @@ const EJSON = require('mongodb-extended-json');
 
 export class MongooseSchema implements SchemaAdapter<Model<any>> {
   model: Model<any>;
-  originalSchema: ConduitSchema;
   fieldHash: string;
 
   constructor(
     mongoose: Mongoose,
     schema: ConduitSchema,
-    originalSchema: any,
+    readonly originalSchema: any,
     deepPopulate: any,
     private readonly adapter: MongooseAdapter,
   ) {
-    this.originalSchema = originalSchema;
-
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
