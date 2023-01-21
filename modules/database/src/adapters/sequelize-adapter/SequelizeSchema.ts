@@ -1,6 +1,5 @@
 import _, { isNil } from 'lodash';
 import {
-  DataTypes,
   FindAttributeOptions,
   FindOptions,
   ModelStatic,
@@ -18,8 +17,7 @@ import {
 import { createWithPopulations, parseQuery } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-
-const deepdash = require('deepdash/standalone');
+import { extractAssociations, sqlTypesProcess } from './utils/schema';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -29,109 +27,34 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   fieldHash: string;
   excludedFields: string[];
   relations: Indexable;
-  _associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
 
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
     readonly originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
-    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+    private readonly associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     this.excludedFields = [];
     this.relations = {};
-    this._associations = associations;
-    const self = this;
-    let primaryKeyExists = false;
-    let idField: string = '';
 
-    deepdash.eachDeep(
-      schema.fields,
-      (value: Indexable, key: string, parentValue: Indexable) => {
-        if (!parentValue?.hasOwnProperty(key!)) {
-          return true;
-        }
+    sqlTypesProcess(sequelize, schema, this.excludedFields, this.relations);
 
-        if (parentValue[key].hasOwnProperty('select')) {
-          if (!parentValue[key].select) {
-            self.excludedFields.push(key);
-          }
-        }
-
-        if (
-          parentValue[key].hasOwnProperty('type') &&
-          parentValue[key].type === 'Relation'
-        ) {
-          this.relations[key] = parentValue[key].model;
-        }
-
-        if (parentValue[key].hasOwnProperty('type') && parentValue[key].type === 'JSON') {
-          const dialect = sequelize.getDialect();
-          if (dialect === 'postgres') {
-            parentValue[key].type = DataTypes.JSONB;
-          }
-        }
-
-        if (
-          parentValue[key].hasOwnProperty('primaryKey') &&
-          parentValue[key].primaryKey
-        ) {
-          primaryKeyExists = true;
-          idField = key;
-        }
-      },
-    );
-    if (!primaryKeyExists) {
-      schema.fields._id = {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-      };
-    } else {
-      schema.fields._id = {
-        type: DataTypes.VIRTUAL,
-        get() {
-          return `${this[idField]}`;
-        },
-      };
-    }
     incrementDbQueries();
     this.model = sequelize.define(schema.collectionName, schema.fields, {
       ...schema.modelOptions,
       freezeTableName: true,
     });
-    for (const association in associations) {
-      if (associations.hasOwnProperty(association)) {
-        const value = associations[association];
-        if (Array.isArray(value)) {
-          const item = value[0];
-          if (item instanceof SequelizeSchema) {
-            this.model.hasMany(item.model, {
-              foreignKey: association,
-              as: association,
-            });
-            // item.model.belongsTo(this.model);
-          }
-        } else {
-          if (value instanceof SequelizeSchema) {
-            this.model.hasOne(value.model, {
-              foreignKey: association,
-              as: association,
-            });
-            // value.model.belongsTo(this.model);
-          }
-        }
-      }
-    }
+    extractAssociations(this.model, associations);
   }
 
   sync() {
     const syncOptions = { alter: true };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
     incrementDbQueries();
-    for (const association in this._associations) {
-      if (this._associations.hasOwnProperty(association)) {
-        const value = this._associations[association];
+    for (const association in this.associations) {
+      if (this.associations.hasOwnProperty(association)) {
+        const value = this.associations[association];
         if (Array.isArray(value)) {
           promiseChain = promiseChain.then(() => value[0].sync());
         } else {
