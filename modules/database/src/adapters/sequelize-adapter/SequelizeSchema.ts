@@ -38,7 +38,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     this.excludedFields = [];
     this.relations = {};
 
-    sqlTypesProcess(sequelize, schema, this.excludedFields, this.relations);
+    sqlTypesProcess(
+      sequelize,
+      originalSchema,
+      schema,
+      this.excludedFields,
+      this.relations,
+    );
 
     incrementDbQueries();
     this.model = sequelize.define(schema.collectionName, schema.fields, {
@@ -65,6 +71,49 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return promiseChain;
   }
 
+  constructAssociationInclusion(requiredAssociations: { [key: string]: string[] }) {
+    const inclusionArray = [];
+    for (const association in this.associations) {
+      if (!this.associations.hasOwnProperty(association)) continue;
+      const associationTarget = this.associations[association];
+      const associationSchema = Array.isArray(associationTarget)
+        ? (associationTarget as SequelizeSchema[])[0]
+        : (associationTarget as SequelizeSchema);
+      const associationObject: {
+        model: ModelStatic<any>;
+        as: string;
+        required: boolean;
+        include?: any;
+      } = {
+        model: associationSchema.model,
+        as: association,
+        required: requiredAssociations.hasOwnProperty(association),
+      };
+      if (requiredAssociations.hasOwnProperty(association)) {
+        let newAssociations: { [key: string]: string[] } = {};
+        requiredAssociations[association].forEach(v => {
+          // if v contains ".", which may be contained multiple times, remove the first occurrence of "." and everything before it
+          if (v.indexOf('.') > -1) {
+            let path = v.substring(v.indexOf('.') + 1);
+            if (v.indexOf('.') > -1) {
+              let associationName = v.substring(0, v.indexOf('.'));
+              if (!newAssociations.hasOwnProperty(associationName)) {
+                newAssociations[associationName] = [];
+              }
+              newAssociations[associationName].push(path);
+            }
+          }
+        });
+        if (Object.keys(associationSchema.associations).length > 0) {
+          associationObject.include =
+            associationSchema.constructAssociationInclusion(newAssociations);
+        }
+      }
+      inclusionArray.push(associationObject);
+    }
+    return inclusionArray;
+  }
+
   async create(query: SingleDocQuery) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -78,9 +127,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     await this.createWithPopulations(parsedQuery);
     return await this.model
       .create(parsedQuery, {
-        include: { all: true, nested: true },
+        include: this.constructAssociationInclusion({}),
       })
-      .then(doc => doc.toJSON());
+      .then(doc => (doc ? doc.toJSON() : doc));
   }
 
   async createMany(query: MultiDocQuery) {
@@ -99,12 +148,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     return this.model
       .bulkCreate(parsedQuery, {
-        include: {
-          all: true,
-          nested: true,
-        },
+        include: this.constructAssociationInclusion({}),
       })
-      .then(docs => docs.map(doc => doc.toJSON()));
+      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
   }
 
   private async findPopulations(document: Indexable, populate?: string[]) {
@@ -148,10 +194,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
+    const [filter, requiredAssociations] = parseQuery(parsedQuery);
     const options: FindOptions = {
-      where: parseQuery(parsedQuery),
+      where: filter,
       nest: true,
-      include: { all: true, nested: true },
+      include: this.constructAssociationInclusion(requiredAssociations ?? {}),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -160,7 +207,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       options.attributes = this.parseSelect(select);
     }
     incrementDbQueries();
-    const document = await this.model.findOne(options).then(doc => doc.toJSON());
+    const document = await this.model
+      .findOne(options)
+      .then(doc => (doc ? doc.toJSON() : doc));
     await this.findPopulations(document, populate);
 
     return document;
@@ -180,10 +229,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
+    const [filter, requiredAssociations] = parseQuery(parsedQuery);
     const options: FindOptions = {
-      where: parseQuery(parsedQuery),
+      where: filter,
       nest: true,
-      include: { all: true, nested: true, required: false },
+      include: this.constructAssociationInclusion(requiredAssociations ?? {}),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -203,7 +253,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     const documents = await this.model
       .findAll(options)
-      .then(docs => docs.map(doc => doc.toJSON()));
+      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
 
     await this.findManyPopulations(documents, populate);
 
@@ -218,7 +268,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    return this.model.destroy({ where: parseQuery(parsedQuery), limit: 1 });
+    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    return this.model.destroy({ where: filter, limit: 1 });
   }
 
   deleteMany(query: Query) {
@@ -229,7 +280,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    return this.model.destroy({ where: parseQuery(parsedQuery) });
+    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    return this.model.destroy({ where: filter });
   }
 
   async findByIdAndUpdate(
@@ -255,7 +307,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     if (updateProvidedOnly) {
       const record = await this.model
         .findByPk(id, { nest: true, include: { all: true, nested: true } })
-        .then(doc => doc.toJSON())
+        .then(doc => (doc ? doc.toJSON() : doc))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -267,7 +319,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       incrementDbQueries();
       const record = await this.model
         .findByPk(id, { nest: true, include: { all: true, nested: true } })
-        .then(doc => doc.toJSON())
+        .then(doc => (doc ? doc.toJSON() : doc))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -300,7 +352,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     if (parsedQuery.hasOwnProperty('$pull')) {
       const dbDocument = await this.model
         .findByPk(id)
-        .then(doc => doc.toJSON())
+        .then(doc => (doc ? doc.toJSON() : doc))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -355,7 +407,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedFilter = filterQuery;
     }
 
-    parsedFilter = parseQuery(parsedFilter as ParsedQuery | ParsedQuery[]);
+    parsedFilter = parseQuery(parsedFilter as ParsedQuery | ParsedQuery[])[0];
     incrementDbQueries();
     if (query.hasOwnProperty('$inc')) {
       await this.model
@@ -376,7 +428,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           nest: true,
           include: { all: true, nested: true },
         })
-        .then(doc => doc.toJSON())
+        .then(doc => (doc ? doc.toJSON() : doc))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
@@ -442,7 +494,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    return this.model.count({ where: parseQuery(parsedQuery) });
+    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    return this.model.count({ where: filter });
   }
 
   private async createWithPopulations(document: ParsedQuery) {
