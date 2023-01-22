@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { isArray, isBoolean, isString } from 'lodash';
+import { isArray, isBoolean, isString, merge } from 'lodash';
 import {
   Indexable,
   MongoIndexOptions,
@@ -10,7 +10,7 @@ import { ParsedQuery } from '../../../interfaces';
 function arrayHandler(value: any) {
   const newArray = [];
   for (const val of value) {
-    newArray.push(parseQuery(val));
+    newArray.push(parseQuery(val)[0]);
   }
   return newArray;
 }
@@ -59,20 +59,25 @@ function matchOperation(operator: string, value: any) {
   }
 }
 
-export function parseQuery(query: ParsedQuery) {
+export function parseQuery(query: ParsedQuery, associations?: Indexable) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query)) return query;
+  let requiredAssociations: { [key: string]: string[] } = {};
+  if (isString(query) || isBoolean(query)) return [query, requiredAssociations];
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
         [Op.or]: query[key].map((operation: ParsedQuery) => {
-          return parseQuery(operation);
+          let [result, assoc] = parseQuery(operation, associations);
+          requiredAssociations = merge(requiredAssociations, assoc);
+          return result;
         }),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
         [Op.and]: query[key].map((operation: ParsedQuery) => {
-          return parseQuery(operation);
+          let [result, assoc] = parseQuery(operation, associations);
+          requiredAssociations = merge(requiredAssociations, assoc);
+          return result;
         }),
       });
     } else if (key === '$regex') {
@@ -80,22 +85,37 @@ export function parseQuery(query: ParsedQuery) {
     } else if (key === '$options') {
       continue;
     } else {
-      const subQuery = parseQuery(query[key]);
+      const [subQuery, assoc] = parseQuery(query[key], associations);
+      requiredAssociations = merge(requiredAssociations, assoc);
       if (subQuery === undefined) continue;
       const matched = matchOperation(key, subQuery);
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
-      } else {
-        parsed[key] = matched;
+        continue;
       }
+      // Check if key contains an association
+      let assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
+      if (associations && associations[assocKey]) {
+        // if it is not already in the requiredAssociations array
+        if (!requiredAssociations[assocKey]) {
+          requiredAssociations[assocKey] = [key];
+        }
+        if (key.indexOf('.') !== -1) {
+          parsed[`$${key}$`] = matched;
+        } else {
+          parsed[`$${key}._id$`] = matched;
+        }
+        continue;
+      }
+      parsed[key] = matched;
     }
   }
   if (
     Object.keys(parsed).length === 0 &&
     Object.getOwnPropertySymbols(parsed).length === 0
   )
-    return undefined;
-  return parsed;
+    return [undefined, requiredAssociations];
+  return [parsed, requiredAssociations];
 }
 
 export function checkIfPostgresOptions(
