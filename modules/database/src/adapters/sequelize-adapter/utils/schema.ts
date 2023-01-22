@@ -15,11 +15,15 @@ export const extractAssociations = (
         model.hasMany(item.model, {
           foreignKey: association,
           as: association,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
         });
       } else {
         model.hasOne(value.model, {
           foreignKey: association,
           as: association,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
         });
       }
     }

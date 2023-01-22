@@ -204,30 +204,11 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       : schema.name;
   }
 
-  protected async _createSchemaFromAdapter(
+  private async processExtractedSchemas(
     schema: ConduitSchema,
-    options?: { parentSchema: string },
-  ): Promise<SequelizeSchema> {
-    let compiledSchema = JSON.parse(JSON.stringify(schema));
-    (compiledSchema as any).fields = JSON.parse(
-      JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
-    );
-    if (this.registeredSchemas.has(compiledSchema.name)) {
-      if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
-          this.registeredSchemas.get(compiledSchema.name)!,
-          compiledSchema,
-        );
-      }
-      delete this.sequelize.models[compiledSchema.collectionName];
-    }
-
-    const [newSchema, extractedSchemas] = schemaConverter(compiledSchema);
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
-    let associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+    extractedSchemas: { [key: string]: any },
+    associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  ) {
     for (const extractedSchema in extractedSchemas) {
       let modelOptions = {
         ...schema.modelOptions,
@@ -265,6 +246,33 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
       associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
     }
+  }
+
+  protected async _createSchemaFromAdapter(
+    schema: ConduitSchema,
+    options?: { parentSchema: string },
+  ): Promise<SequelizeSchema> {
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    (compiledSchema as any).fields = JSON.parse(
+      JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
+    );
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateSchema(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
+      }
+      delete this.sequelize.models[compiledSchema.collectionName];
+    }
+
+    const [newSchema, extractedSchemas] = schemaConverter(compiledSchema);
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
+    let associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+    await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
     if (options?.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
@@ -277,6 +285,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
+    // do not sync extracted schemas
     if ((isNil(noSync) || !noSync) && !options) {
       await this.models[schema.name].sync();
     }

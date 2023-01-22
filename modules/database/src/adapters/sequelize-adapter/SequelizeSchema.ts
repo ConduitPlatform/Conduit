@@ -107,6 +107,40 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       .then(docs => docs.map(doc => doc.toJSON()));
   }
 
+  private async findPopulations(document: Indexable, populate?: string[]) {
+    if (isNil(populate) || isNil(this.relations)) return;
+    for (const relationField of populate) {
+      if (!this.relations.hasOwnProperty(relationField)) continue;
+      const relationSchema = this.relations[relationField];
+      incrementDbQueries();
+      const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
+      document[relationField] = await schemaModel.findOne({
+        _id: document[relationField],
+      });
+    }
+  }
+
+  private async findManyPopulations(documents: Indexable[], populate?: string[]) {
+    if (isNil(populate) || isNil(this.relations)) return;
+    for (const relation of populate) {
+      const relationField = relation.split('.')[1];
+      const cache: Indexable = {};
+      for (const document of documents) {
+        if (!this.relations.hasOwnProperty(relationField)) continue;
+        const relationSchema = this.relations[relationField];
+        const cacheIdentifier = `${relation}:${document[relationField]}`;
+        if (!cache.hasOwnProperty(cacheIdentifier)) {
+          incrementDbQueries();
+          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
+          cache[cacheIdentifier] = await schemaModel.findOne({
+            _id: document[relationField],
+          });
+        }
+        document[relationField] = cache[cacheIdentifier];
+      }
+    }
+  }
+
   async findOne(query: Query, select?: string, populate?: string[]) {
     let parsedQuery: ParsedQuery | ParsedQuery[];
     if (typeof query === 'string') {
@@ -127,19 +161,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     incrementDbQueries();
     const document = await this.model.findOne(options).then(doc => doc.toJSON());
-
-    if (!isNil(populate) && !isNil(this.relations)) {
-      for (const relationField of populate) {
-        if (this.relations.hasOwnProperty(relationField)) {
-          const relationSchema = this.relations[relationField];
-          incrementDbQueries();
-          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-          document[relationField] = await schemaModel.findOne({
-            _id: document[relationField],
-          });
-        }
-      }
-    }
+    await this.findPopulations(document, populate);
 
     return document;
   }
@@ -183,26 +205,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       .findAll(options)
       .then(docs => docs.map(doc => doc.toJSON()));
 
-    if (!isNil(populate) && !isNil(this.relations)) {
-      for (const relation of populate) {
-        const relationField = relation.split('.')[1];
-        const cache: Indexable = {};
-        for (const document of documents) {
-          if (this.relations.hasOwnProperty(relationField)) {
-            const relationSchema = this.relations[relationField];
-            const cacheIdentifier = `${relation}:${document[relationField]}`;
-            if (!cache.hasOwnProperty(cacheIdentifier)) {
-              incrementDbQueries();
-              const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-              cache[cacheIdentifier] = await schemaModel.findOne({
-                _id: document[relationField],
-              });
-            }
-            document[relationField] = cache[cacheIdentifier];
-          }
-        }
-      }
-    }
+    await this.findManyPopulations(documents, populate);
 
     return documents;
   }
