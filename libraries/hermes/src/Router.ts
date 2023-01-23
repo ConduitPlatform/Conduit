@@ -52,6 +52,9 @@ export abstract class ConduitRouter {
   ) {
     const [key, route] = this.findRoute(path, action);
     const middlewareArray = route.input.middlewares;
+    if (!this._middlewares || !this._middlewares[middleware]) {
+      throw new Error('Middleware not registered');
+    }
     if (!route.input.middlewares!.includes(middleware)) {
       if (order === MiddlewareOrder.FIRST) {
         route.input.middlewares = middlewareArray
