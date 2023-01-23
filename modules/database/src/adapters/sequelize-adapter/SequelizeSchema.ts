@@ -124,7 +124,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    await this.createWithPopulations(parsedQuery);
     return await this.model
       .create(parsedQuery, {
         include: this.constructAssociationInclusion({}),
@@ -138,12 +137,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = JSON.parse(query);
     } else {
       parsedQuery = query;
-    }
-    const date = new Date();
-    for (const doc of parsedQuery) {
-      doc.createdAt = date;
-      doc.updatedAt = date;
-      await this.createWithPopulations(doc);
     }
     incrementDbQueries();
     return this.model
@@ -371,7 +364,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    await this.createWithPopulations(parsedQuery);
     const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0].toJSON();
     if (!isNil(populate) && !isNil(this.relations)) {
       for (const relationField of populate) {
@@ -484,7 +476,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     incrementDbQueries();
     parsedQuery.updatedAt = new Date();
-    await this.createWithPopulations(parsedQuery);
     // @ts-ignore
     return this.model.update(parsedQuery, { where: parsedFilter });
   }
@@ -499,11 +490,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     return this.model.count({ where: filter });
-  }
-
-  private async createWithPopulations(document: ParsedQuery) {
-    incrementDbQueries();
-    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
   private parseSelect(select: string): string[] | { exclude: string[] } {
