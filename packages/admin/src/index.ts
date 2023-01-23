@@ -419,17 +419,28 @@ export default class AdminModule extends IConduitAdmin {
     await this.grpcSdk
       .state!.getKey('admin')
       .then(result => {
-        const routes = JSON.parse(result!).routes as any[];
-        outer: for (const v of routes) {
-          for (const r of v.routes) {
-            if (r.options?.path !== path && r.options.action !== action) {
+        const stateRoutes = JSON.parse(result!).routes as {
+          protofile: string;
+          routes: RegisterAdminRouteRequest_PathDefinition[];
+          url: string;
+          moduleName: string;
+        }[];
+        let index = 0;
+        outer: for (const obj of stateRoutes) {
+          for (const r of obj.routes) {
+            if (r.options?.path !== path || r.options.action !== action) {
               continue;
             }
             r.options.middlewares = middleware;
+            stateRoutes[index] = obj;
             break outer;
           }
+          index++;
         }
-        return this.grpcSdk.state!.setKey('admin', JSON.stringify({ routes: routes }));
+        return this.grpcSdk.state!.setKey(
+          'admin',
+          JSON.stringify({ routes: stateRoutes }),
+        );
       })
       .catch(() => {
         throw new GrpcError(
