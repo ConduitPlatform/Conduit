@@ -9,7 +9,6 @@ import {
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { _ConduitSchema, _ConduitSchemaOptions } from '../../interfaces';
-import { createWithPopulations } from './utils';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -41,7 +40,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await this.createWithPopulations(parsedQuery);
     return this.model.create(parsedQuery).then(r => r.toObject());
   }
 
@@ -52,13 +50,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       docs = query;
     }
-    const date = new Date();
-    for (const doc of docs) {
-      doc.createdAt = date;
-      doc.updatedAt = date;
-      await this.createWithPopulations(doc);
-    }
-
     return this.model.insertMany(docs).then(r => r);
   }
 
@@ -75,7 +66,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       parsedQuery = query;
     }
     parsedQuery['updatedAt'] = new Date();
-    await this.createWithPopulations(parsedQuery);
     if (updateProvidedOnly) {
       parsedQuery = {
         $set: parsedQuery,
@@ -105,7 +95,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    await this.createWithPopulations(parsedQuery);
     if (updateProvidedOnly) {
       parsedQuery = {
         $set: parsedQuery,
@@ -185,9 +174,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     if (!isNil(sort)) {
       finalQuery = finalQuery.sort(this.parseSort(sort));
     }
-    // } else {
-    //   finalQuery = finalQuery.sort({ createdAt: -1 });
-    // }
     return finalQuery.lean().exec();
   }
 
@@ -213,10 +199,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       parsedQuery = query;
     }
     return this.model.find(this.parseQuery(parsedQuery)).countDocuments().exec();
-  }
-
-  private async createWithPopulations(document: ParsedQuery) {
-    return createWithPopulations(this.originalSchema.fields, document, this.adapter);
   }
 
   private parseQuery(query: ParsedQuery) {
