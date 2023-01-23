@@ -12,7 +12,6 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
   MiddlewareOrder,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
