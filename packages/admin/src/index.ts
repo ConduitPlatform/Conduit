@@ -37,6 +37,7 @@ import {
   grpcToConduitRoute,
   RouteT,
   ProtoGenerator,
+  ProxyRoute,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -412,17 +413,21 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
-      grpcToConduitRoute(
-        'Admin',
-        {
-          protoFile: protofile,
-          routes: routes as RouteT[],
-          routerUrl: url,
-        },
-        moduleName,
-        this.grpcSdk.grpcToken,
-      );
+    const processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+      | ProxyRoute
+    )[] = grpcToConduitRoute(
+      'Admin',
+      {
+        protoFile: protofile,
+        routes: routes as RouteT[],
+        routerUrl: url,
+      },
+      moduleName,
+      this.grpcSdk.grpcToken,
+    );
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {

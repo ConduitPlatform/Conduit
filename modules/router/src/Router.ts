@@ -35,6 +35,7 @@ import {
   GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
+  RegisterProxyRouteRequest,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
@@ -417,5 +418,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._internalRouter.registerConduitRoute(route);
+  }
+
+  registerProxyRoute(path: string, target: string): void {
+    const route = new ProxyRoute({ path, target });
+    this._internalRouter.registerProxyRoute(route);
   }
 }

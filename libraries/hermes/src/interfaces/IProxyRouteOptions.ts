@@ -5,7 +5,7 @@ export interface ProxyRouteOptions {
   path: string;
   target: string;
 
-  action: ConduitRouteActions;
+  action?: ConduitRouteActions;
 
   middlewares?: string[];
   changeOrigin?: boolean;

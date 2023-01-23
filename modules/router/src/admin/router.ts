@@ -1,9 +1,11 @@
 import ConduitGrpcSdk, {
+  ConduitError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
+import { ProxyRoute } from '../models';
 
 export class RouterAdmin {
   constructor(
@@ -53,5 +55,74 @@ export class RouterAdmin {
       else response = response.sort((a, b) => b.localeCompare(a));
     }
     return response;
+  }
+
+  async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, target } = call.request.params;
+    if (!this.isValidUrl(target)) {
+      throw new ConduitError(
+        'INVALID_ARGUMENT',
+        400,
+        `Target '${target}' is not a valid URL`,
+      );
+    }
+    const existingProxy = await ProxyRoute.getInstance().findOne({
+      path,
+      target,
+    });
+    if (existingProxy) {
+      throw new ConduitError(
+        'ALREADY_EXISTS',
+        401,
+        `A proxy route with a path of '${path}' for target '${target}' already exists`,
+      );
+    }
+    const newProxy = await ProxyRoute.getInstance().create({
+      path,
+      target,
+    });
+
+    this.router.registerProxyRoute(newProxy.path, newProxy.target);
+    return `Proxy route created for path '${path}' and target '${target}'`;
+  }
+
+  async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, target } = call.request.params;
+    if (!this.isValidUrl(target)) {
+      throw new ConduitError(
+        'INVALID_ARGUMENT',
+        400,
+        `Target '${target}' is not a valid URL`,
+      );
+    }
+    const existingProxy = await ProxyRoute.getInstance().findOne({
+      path,
+      target,
+    });
+    if (!existingProxy) {
+      throw new ConduitError(
+        'NOT_FOUND',
+        404,
+        `A proxy route with a path of '${path}' for target '${target}' does not exist`,
+      );
+    }
+    const updatedProxy = await ProxyRoute.getInstance().findByIdAndUpdate(
+      existingProxy._id,
+      {
+        path,
+        target,
+      },
+    );
+
+    return { ...updatedProxy };
+  }
+
+  isValidUrl(url: string) {
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
