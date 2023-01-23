@@ -194,7 +194,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -229,7 +229,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -268,7 +268,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     return this.model.destroy({ where: filter, limit: 1 });
   }
 
@@ -280,7 +280,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     return this.model.destroy({ where: filter });
   }
 
@@ -407,7 +407,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedFilter = filterQuery;
     }
 
-    parsedFilter = parseQuery(parsedFilter as ParsedQuery | ParsedQuery[])[0];
+    parsedFilter = parseQuery(
+      parsedFilter as ParsedQuery | ParsedQuery[],
+      this.associations,
+    )[0];
     incrementDbQueries();
     if (query.hasOwnProperty('$inc')) {
       await this.model
@@ -494,7 +497,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery);
+    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
     return this.model.count({ where: filter });
   }
 
