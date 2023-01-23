@@ -13,6 +13,7 @@ import ConduitGrpcSdk, {
   merge,
   GrpcError,
   MiddlewareOrder,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -279,7 +280,6 @@ export default class AdminModule extends IConduitAdmin {
     callback: GrpcCallback<null>,
   ) {
     const { path, action, name, position } = call.request;
-    const middleware = new ConduitMiddleware({}, name, async () => {}); // TODO: remove this
     let middlewareArray: string[] | undefined;
 
     outer: for (const key of Object.keys(this._grpcRoutes)) {
@@ -309,7 +309,6 @@ export default class AdminModule extends IConduitAdmin {
         message: `Route ${action} ${path} not found`,
       });
     }
-    this._router.registerRouteMiddleware(middleware);
     this._router.patchRouteMiddleware(
       path,
       action as ConduitRouteActions,
