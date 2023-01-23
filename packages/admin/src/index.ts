@@ -13,7 +13,6 @@ import ConduitGrpcSdk, {
   merge,
   GrpcError,
   MiddlewareOrder,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
