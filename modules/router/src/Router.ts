@@ -254,17 +254,27 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.grpcSdk
       .state!.getKey('router')
       .then(result => {
-        const routes = JSON.parse(result!).routes as any[];
-        outer: for (const v of routes) {
-          for (const r of v.routes) {
-            if (r.options?.path !== path && r.options.action !== action) {
+        const stateRoutes = JSON.parse(result!).routes as {
+          protofile: string;
+          routes: RegisterConduitRouteRequest_PathDefinition[];
+          url: string;
+        }[];
+        let index = 0;
+        outer: for (const obj of stateRoutes) {
+          for (const r of obj.routes) {
+            if (r.options?.path !== path || r.options.action !== action) {
               continue;
             }
             r.options.middlewares = middleware;
+            stateRoutes[index] = obj;
             break outer;
           }
+          index++;
         }
-        return this.grpcSdk.state!.setKey('router', JSON.stringify({ routes: routes }));
+        return this.grpcSdk.state!.setKey(
+          'router',
+          JSON.stringify({ routes: stateRoutes }),
+        );
       })
       .catch(() => {
         throw new GrpcError(
