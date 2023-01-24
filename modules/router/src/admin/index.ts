@@ -148,6 +148,20 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('UpdateProxyRoute', ProxyRoute.name),
       this.routerAdmin.updateProxyRoute.bind(this.routerAdmin),
     );
+    this.routingManager.route(
+      {
+        path: '/proxy/:id',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a proxy route.`,
+      },
+      new ConduitRouteReturnDefinition('DeleteProxyRoute', {
+        message: ConduitString.Required,
+      }),
+      this.routerAdmin.deleteProxyRoute.bind(this.routerAdmin),
+    );
     this.routingManager.registerRoutes();
   }
 }

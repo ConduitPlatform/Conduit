@@ -87,7 +87,7 @@ export class RouterAdmin {
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target } = call.request.params;
+    const { path, target, id } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -96,8 +96,7 @@ export class RouterAdmin {
       );
     }
     const existingProxy = await ProxyRoute.getInstance().findOne({
-      path,
-      target,
+      _id: id,
     });
     if (!existingProxy) {
       throw new ConduitError(
@@ -115,6 +114,20 @@ export class RouterAdmin {
     );
 
     return { ...updatedProxy };
+  }
+
+  async deleteProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const existingProxy = await ProxyRoute.getInstance().findOne({ _id: id });
+    if (!existingProxy) {
+      throw new ConduitError(
+        'NOT_FOUND',
+        404,
+        `A proxy route with an id of '${id}' does not exist`,
+      );
+    }
+    await ProxyRoute.getInstance().deleteOne({ _id: id });
+    return 'Proxy route deleted';
   }
 
   isValidUrl(url: string) {

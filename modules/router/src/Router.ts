@@ -35,7 +35,6 @@ import {
   GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
-  RegisterProxyRouteRequest,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
@@ -183,7 +182,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   private async recoverFromState() {
     const r = await this.grpcSdk.state!.getKey('router');
-    if (!r || r.length === 0) return;
+    const proxyRoutes = await models.ProxyRoute.getInstance().findMany({});
+    if (!r || r.length === 0 || !proxyRoutes || proxyRoutes.length === 0) return;
     const state = JSON.parse(r);
     if (state.routes) {
       state.routes.forEach((r: any) => {
@@ -192,6 +192,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         } catch (err) {
           ConduitGrpcSdk.Logger.error(err as Error);
         }
+      });
+      proxyRoutes.forEach(route => {
+        const proxyRoute = new ProxyRoute({ path: route.path, target: route.target });
+        this._internalRouter.registerProxyRoute(proxyRoute);
       });
       ConduitGrpcSdk.Logger.log('Recovered routes');
     }

@@ -43,7 +43,6 @@ export class ConduitRoutingController {
         name: string;
       };
     },
-    private readonly proxyBaseUrl?: string,
   ) {
     this._cleanupTimeoutMs = cleanupTimeoutMs < 0 ? 0 : Math.round(cleanupTimeoutMs);
     this.start();
