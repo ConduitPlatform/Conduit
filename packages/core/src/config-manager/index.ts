@@ -203,6 +203,9 @@ export default class ConfigManager implements IConfigManager {
       models.Config.getInstance(this.grpcSdk.database!),
     );
     await this.registerPackageMigrations();
+    await this.grpcSdk.database!.migrate(
+      models.Config.getInstance(this.grpcSdk.database!),
+    );
     this._configStorage.onDatabaseAvailable();
   }
 

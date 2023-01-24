@@ -21,6 +21,8 @@ import {
   GetSchemasRequest,
   GetSystemSchemasRequest,
   GetSystemSchemasResponse,
+  MigrateRequest,
+  MigrateResponse,
   QueryRequest,
   QueryResponse,
   RawQueryRequest,
@@ -77,6 +79,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       rawQuery: this.rawQuery.bind(this),
       getDatabaseType: this.getDatabaseType.bind(this),
       getSystemSchemas: this.getSystemSchemas.bind(this),
+      migrate: this.migrate.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -338,10 +341,6 @@ export default class DatabaseModule extends ManagedModule<void> {
             message: `Migration failed for ${moduleName}`,
           });
         }
-      }
-      // Sync models in SQL to drop old columns with { alter: true }
-      if (this._activeAdapter.getDatabaseType() === 'PostgreSQL') {
-        await this._activeAdapter.syncModuleSchemas(moduleName);
       }
       this.publishInitializationEvent(moduleName);
     }
@@ -749,5 +748,44 @@ export default class DatabaseModule extends ManagedModule<void> {
     callback: GrpcResponse<GetSystemSchemasResponse>,
   ) {
     callback(null, { schemas: this._activeAdapter.systemSchemas.toString() });
+  }
+
+  async migrate(
+    call: GrpcRequest<MigrateRequest>,
+    callback: GrpcResponse<MigrateResponse>,
+  ) {
+    const { name, fields, modelOptions, collectionName } = call.request;
+    const schema = await this._activeAdapter
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ name });
+    const droppedFields = schema.droppedFields;
+    const compiledFields = schema.compiledFields;
+    for (const key of Object.keys(droppedFields)) {
+      delete compiledFields[key];
+    }
+    await this._activeAdapter
+      .getSchemaModel('_DeclaredSchema')
+      .model.findByIdAndUpdate(schema._id, {
+        compiledFields: compiledFields,
+        droppedFields: {},
+      });
+    const conduitSchema = new ConduitSchema(
+      name,
+      JSON.parse(fields),
+      JSON.parse(modelOptions),
+      collectionName,
+    );
+    conduitSchema.ownerModule = call.metadata!.get('module-name')![0] as string;
+    await this._activeAdapter
+      .createSchemaFromAdapter(conduitSchema, false, true)
+      .catch(err => {
+        callback({
+          code: status.INTERNAL,
+          message: err.message,
+        });
+      });
+    if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      await this._activeAdapter.syncSchema(conduitSchema.name);
+    }
   }
 }

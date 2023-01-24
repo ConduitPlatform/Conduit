@@ -93,6 +93,10 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preRegister(): Promise<void> {
+    Object.values(models).map(async model => {
+      const modelInstance = model.getInstance(this.database);
+      await this.database.migrate(modelInstance);
+    });
     const config = await configMigration(this.grpcSdk);
     if (config) {
       this.config!.load(config);

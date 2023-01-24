@@ -293,4 +293,13 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   getSystemSchemas() {
     return this.serviceClient!.getSystemSchemas({});
   }
+
+  migrate(schema: ConduitSchema) {
+    return this.serviceClient!.migrate({
+      name: schema.name,
+      fields: JSON.stringify(schema.fields),
+      modelOptions: JSON.stringify(schema.modelOptions),
+      collectionName: schema.collectionName,
+    });
+  }
 }
