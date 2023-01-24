@@ -171,7 +171,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getSchemaModel(schemaName: string): {
     model: Schema;
-    relations: null | Indexable;
   };
 
   abstract getDatabaseType(): string;
