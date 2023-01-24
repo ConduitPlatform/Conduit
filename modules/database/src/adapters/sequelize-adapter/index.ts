@@ -20,12 +20,16 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
 import { checkIfPostgresOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
+import { EventEmitter } from 'events';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
 export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connectionUri: string;
   sequelize!: Sequelize;
+  syncedSchemas: string[] = [];
+  scheduledSync: NodeJS.Timeout;
+  syncEmitter: NodeJS.EventEmitter = new EventEmitter();
 
   constructor(connectionUri: string) {
     super();
@@ -266,11 +270,31 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const [newSchema, extractedSchemas] = schemaConverter(compiledSchema);
+    const [newSchema, extractedSchemas, extractedRelations] =
+      schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
+    if (Object.keys(extractedRelations).length > 0) {
+      let pendingModels: string[] = [];
+      for (const relation in extractedRelations) {
+        let rel = Array.isArray(extractedRelations[relation])
+          ? (extractedRelations[relation] as any[])[0]
+          : extractedRelations[relation];
+        if (!this.syncedSchemas.includes(rel.model)) {
+          if (!pendingModels.includes(rel.model)) {
+            pendingModels.push(rel.model);
+          }
+        }
+      }
+      while (pendingModels.length > 0) {
+        await sleep(500);
+        pendingModels = pendingModels.filter(model => {
+          return !this.syncedSchemas.includes(model);
+        });
+      }
+    }
     let associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
     await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
     if (options?.parentSchema) {
@@ -282,19 +306,49 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       schema,
       this,
       associatedSchemas,
+      extractedRelations,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
     // do not sync extracted schemas
     if ((isNil(noSync) || !noSync) && !options) {
-      await this.models[schema.name].sync();
+      // await this.models[schema.name].sync();
+      if (!this.syncedSchemas.includes(schema.name)) {
+        this.syncedSchemas.push(schema.name);
+      }
+      this.scheduleSync();
+      // await this.sequelize.sync({ alter: true });
     }
     // do not store extracted schemas to db
     if (!options) {
       await this.saveSchemaToDatabase(schema);
     }
+    if ((isNil(noSync) || !noSync) && !options) {
+      await this.waitForSync();
+    }
 
     return this.models[schema.name];
+  }
+
+  scheduleSync() {
+    if (this.scheduledSync) {
+      clearInterval(this.scheduledSync);
+    }
+    const self = this;
+    this.scheduledSync = setTimeout(async () => {
+      await self.sequelize.sync({ alter: { drop: false } });
+      self.syncEmitter.emit('sync');
+    }, 1000);
+  }
+
+  waitForSync() {
+    const self = this;
+    //return promise that resolves once syncEmitter emits sync
+    return new Promise<void>((resolve, reject) => {
+      self.syncEmitter.once('sync', () => {
+        resolve();
+      });
+    });
   }
 
   async deleteSchema(
@@ -339,15 +393,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Schema deleted!';
   }
 
-  getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: Indexable } {
+  getSchemaModel(schemaName: string): { model: SequelizeSchema } {
     if (this.models && this.models[schemaName]) {
       const self = this;
-      const relations: Indexable = {};
-      for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] =
-          self.models[this.models[schemaName].relations[key]];
-      }
-      return { model: this.models[schemaName], relations };
+      return { model: this.models[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }

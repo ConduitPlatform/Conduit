@@ -5,7 +5,8 @@ import {
   MongoIndexOptions,
   PostgresIndexOptions,
 } from '@conduitplatform/grpc-sdk';
-import { ParsedQuery } from '../../../interfaces';
+import { MultiDocQuery, ParsedQuery, SingleDocQuery } from '../../../interfaces';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(value: any) {
   const newArray = [];
@@ -116,6 +117,38 @@ export function parseQuery(query: ParsedQuery, associations?: Indexable) {
   )
     return [undefined, requiredAssociations];
   return [parsed, requiredAssociations];
+}
+
+export function extractAssociationsFromObject(
+  query: ParsedQuery | ParsedQuery[],
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+): { [key: string]: string[] } {
+  const requiredAssociations: { [key: string]: string[] } = {};
+  if (!associations) return {};
+  if (Array.isArray(query)) {
+    query
+      .map(q => extractAssociationsFromObject(q, associations))
+      .forEach(assoc => merge(requiredAssociations, assoc));
+    return requiredAssociations;
+  }
+  for (const assoc in associations) {
+    if (query[assoc]) {
+      if (!requiredAssociations[assoc]) {
+        requiredAssociations[assoc] = [assoc];
+      }
+      let newAssoc = Array.isArray(associations[assoc])
+        ? (associations[assoc] as any[])[0]
+        : associations[assoc];
+      let embeddedAssociations = extractAssociationsFromObject(
+        query[assoc],
+        newAssoc.associations,
+      );
+      for (const embeddedAssoc in embeddedAssociations) {
+        requiredAssociations[assoc].push(`${assoc}.${embeddedAssoc}`);
+      }
+    }
+  }
+  return requiredAssociations;
 }
 
 export function checkIfPostgresOptions(

@@ -1,6 +1,8 @@
 import { SequelizeSchema } from '../SequelizeSchema';
 import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { SequelizeAdapter } from '../index';
+
 const deepdash = require('deepdash/standalone');
 
 export const extractAssociations = (
@@ -30,12 +32,47 @@ export const extractAssociations = (
   }
 };
 
+export const extractRelations = (
+  model: ModelStatic<any>,
+  relations: {
+    [key: string]:
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+  },
+  adapter: SequelizeAdapter,
+) => {
+  for (const relation in relations) {
+    if (relations.hasOwnProperty(relation)) {
+      const value = relations[relation];
+      if (Array.isArray(value)) {
+        const item = value[0];
+        model.belongsToMany(adapter.models[item.model].model, {
+          foreignKey: relation + 'Id',
+          as: relation,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+          through: model.name + '_' + item.model,
+        });
+        adapter.models[item.model].model.belongsToMany(model, {
+          through: model.name + '_' + item.model,
+        });
+      } else {
+        model.belongsTo(adapter.models[value.model].model, {
+          foreignKey: relation,
+          // as: relation,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        });
+      }
+    }
+  }
+};
+
 export const sqlTypesProcess = (
   sequelize: Sequelize,
   originalSchema: Indexable,
   schema: Indexable,
   excludedFields: string[],
-  relations: Indexable,
 ) => {
   let primaryKeyExists = false;
   let idField: string | null = null;
@@ -53,14 +90,6 @@ export const sqlTypesProcess = (
           excludedFields.push(key);
         }
       }
-
-      if (
-        parentValue[key].hasOwnProperty('type') &&
-        parentValue[key].type === 'Relation'
-      ) {
-        relations[key] = parentValue[key].model;
-      }
-
       // needs to move to a dialect specific file
       // if (parentValue[key].hasOwnProperty('type') && parentValue[key].type === 'JSON') {
       //   const dialect = sequelize.getDialect();

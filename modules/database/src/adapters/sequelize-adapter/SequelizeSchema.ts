@@ -14,10 +14,15 @@ import {
   SchemaAdapter,
   SingleDocQuery,
 } from '../../interfaces';
-import { createWithPopulations, parseQuery } from './utils';
+import {
+  extractAssociations,
+  extractAssociationsFromObject,
+  extractRelations,
+  parseQuery,
+  sqlTypesProcess,
+} from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-import { extractAssociations, sqlTypesProcess } from './utils/schema';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -26,25 +31,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
-  relations: Indexable;
 
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
     readonly originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
-    private readonly associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+    readonly associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+    private readonly extractedRelations: {
+      [key: string]:
+        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
+        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+    },
   ) {
     this.excludedFields = [];
-    this.relations = {};
 
-    sqlTypesProcess(
-      sequelize,
-      originalSchema,
-      schema,
-      this.excludedFields,
-      this.relations,
-    );
+    sqlTypesProcess(sequelize, originalSchema, schema, this.excludedFields);
 
     incrementDbQueries();
     this.model = sequelize.define(schema.collectionName, schema.fields, {
@@ -52,6 +54,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       freezeTableName: true,
     });
     extractAssociations(this.model, associations);
+    extractRelations(this.model, extractedRelations, adapter);
   }
 
   sync() {
@@ -124,9 +127,28 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
+    let assocs = extractAssociationsFromObject(parsedQuery);
+
     return await this.model
-      .create(parsedQuery, {
-        include: this.constructAssociationInclusion({}),
+      .create(parsedQuery, { include: this.constructAssociationInclusion(assocs) })
+      .then(doc => {
+        let hasOne = false;
+        for (const relation in this.extractedRelations) {
+          if (!this.extractedRelations.hasOwnProperty(relation)) continue;
+          if (!parsedQuery.hasOwnProperty(relation)) continue;
+          const relationTarget = this.extractedRelations[relation];
+          if (Array.isArray(relationTarget)) {
+            hasOne = true;
+            let modelName =
+              this.adapter.models[relationTarget[0].model].originalSchema.collectionName;
+            modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
+            if (modelName.endsWith('s')) {
+              modelName = modelName.substring(0, modelName.length - 1);
+            }
+            doc[`add${modelName}`](parsedQuery[relation], doc._id);
+          }
+        }
+        return hasOne ? doc.save() : doc;
       })
       .then(doc => (doc ? doc.toJSON() : doc));
   }
@@ -139,45 +161,35 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
+    let assocs = extractAssociationsFromObject(parsedQuery);
+
     return this.model
       .bulkCreate(parsedQuery, {
-        include: this.constructAssociationInclusion({}),
+        include: this.constructAssociationInclusion(assocs),
+      })
+      .then(docs => {
+        return docs.map((doc, index) => {
+          let hasOne = false;
+          for (const relation in this.extractedRelations) {
+            if (!this.extractedRelations.hasOwnProperty(relation)) continue;
+            if (!parsedQuery.hasOwnProperty(relation)) continue;
+            const relationTarget = this.extractedRelations[relation];
+            if (Array.isArray(relationTarget)) {
+              hasOne = true;
+              let modelName =
+                this.adapter.models[relationTarget[0].model].originalSchema
+                  .collectionName;
+              modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
+              if (modelName.endsWith('s')) {
+                modelName = modelName.substring(0, modelName.length - 1);
+              }
+              doc[`add${modelName}`](parsedQuery[index][relation], doc._id);
+            }
+          }
+          return hasOne ? doc.save() : doc;
+        });
       })
       .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
-  }
-
-  private async findPopulations(document: Indexable, populate?: string[]) {
-    if (isNil(populate) || isNil(this.relations)) return;
-    for (const relationField of populate) {
-      if (!this.relations.hasOwnProperty(relationField)) continue;
-      const relationSchema = this.relations[relationField];
-      incrementDbQueries();
-      const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-      document[relationField] = await schemaModel.findOne({
-        _id: document[relationField],
-      });
-    }
-  }
-
-  private async findManyPopulations(documents: Indexable[], populate?: string[]) {
-    if (isNil(populate) || isNil(this.relations)) return;
-    for (const relation of populate) {
-      const relationField = relation.split('.')[1];
-      const cache: Indexable = {};
-      for (const document of documents) {
-        if (!this.relations.hasOwnProperty(relationField)) continue;
-        const relationSchema = this.relations[relationField];
-        const cacheIdentifier = `${relation}:${document[relationField]}`;
-        if (!cache.hasOwnProperty(cacheIdentifier)) {
-          incrementDbQueries();
-          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-          cache[cacheIdentifier] = await schemaModel.findOne({
-            _id: document[relationField],
-          });
-        }
-        document[relationField] = cache[cacheIdentifier];
-      }
-    }
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -191,7 +203,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructAssociationInclusion(requiredAssociations ?? {}),
+      include: { all: true, nested: true },
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -203,7 +215,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     const document = await this.model
       .findOne(options)
       .then(doc => (doc ? doc.toJSON() : doc));
-    await this.findPopulations(document, populate);
 
     return document;
   }
@@ -226,7 +237,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructAssociationInclusion(requiredAssociations ?? {}),
+      include: { all: true, nested: true },
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -247,8 +258,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     const documents = await this.model
       .findAll(options)
       .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
-
-    await this.findManyPopulations(documents, populate);
 
     return documents;
   }
@@ -344,7 +353,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     if (parsedQuery.hasOwnProperty('$pull')) {
       const dbDocument = await this.model
-        .findByPk(id)
+        .findByPk(id, { nest: true, include: { all: true, nested: true } })
         .then(doc => (doc ? doc.toJSON() : doc))
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
@@ -364,21 +373,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    const document = (await this.model.upsert({ _id: id, ...parsedQuery }))[0].toJSON();
-    if (!isNil(populate) && !isNil(this.relations)) {
-      for (const relationField of populate) {
-        if (this.relations.hasOwnProperty(relationField)) {
-          const relationSchema = this.relations[relationField];
-          incrementDbQueries();
-          const schemaModel = this.adapter.getSchemaModel(relationSchema).model;
-          document[relationField] = await schemaModel.findOne({
-            _id: document[relationField],
-          });
-        }
-      }
-    }
+    await this.model.upsert({ _id: id, ...parsedQuery });
 
-    return document;
+    return await this.model
+      .findByPk(id, {
+        nest: true,
+        include: { all: true, nested: true },
+      })
+      .then(doc => (doc ? doc.toJSON() : doc));
   }
 
   async updateMany(
