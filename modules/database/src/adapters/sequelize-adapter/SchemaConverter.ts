@@ -14,7 +14,15 @@ import { checkIfPostgresOptions } from './utils';
  */
 export function schemaConverter(
   jsonSchema: ConduitSchema,
-): [ConduitSchema, { [key: string]: any }] {
+): [
+  ConduitSchema,
+  { [key: string]: any },
+  {
+    [key: string]:
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+  },
+] {
   let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
@@ -22,10 +30,11 @@ export function schemaConverter(
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  let extracted = extractEmbedded(jsonSchema.fields, copy.fields);
+  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
+  const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extracted];
+  return [copy, extractedEmbedded, extractedRelations];
 }
 
 function extractEmbedded(ogSchema: any, schema: any) {
@@ -46,6 +55,33 @@ function extractEmbedded(ogSchema: any, schema: any) {
     } else if (isObject(schema[key])) {
       if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
         extracted[key] = schema[key];
+        delete schema[key];
+        delete ogSchema[key];
+      }
+    }
+  }
+  return extracted;
+}
+
+function extractRelations(ogSchema: any, schema: any) {
+  let extracted: {
+    [key: string]:
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
+      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+  } = {};
+  for (const key of Object.keys(schema)) {
+    if (isArray(schema[key])) {
+      let arrayField = schema[key];
+      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
+        if (arrayField[0].hasOwnProperty('type') && arrayField[0].type === 'Relation') {
+          extracted[key] = [{ ...arrayField[0] }];
+          delete schema[key];
+          delete ogSchema[key];
+        }
+      }
+    } else if (isObject(schema[key])) {
+      if (schema[key].hasOwnProperty('type') && schema[key].type === 'Relation') {
+        extracted[key] = { ...schema[key] };
         delete schema[key];
         delete ogSchema[key];
       }
@@ -75,7 +111,7 @@ function extractArrayType(arrayField: any[]) {
     if (arrayField[0].hasOwnProperty('type')) {
       arrayElementType = extractType(arrayField[0].type);
     } else {
-      arrayElementType = DataTypes.JSON;
+      throw new Error('Failed to extract embedded object type');
     }
   } else {
     arrayElementType = extractType(arrayField[0]);
@@ -92,7 +128,7 @@ function extractObjectType(objectField: any) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    res.type = DataTypes.JSON;
+    throw new Error('Failed to extract embedded object type');
   }
 
   if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
@@ -119,7 +155,7 @@ function extractType(type: string) {
       return DataTypes.UUID;
   }
 
-  return DataTypes.JSON;
+  throw new Error('Failed to extract embedded object type');
 }
 
 function checkDefaultValue(type: string, value: string) {
