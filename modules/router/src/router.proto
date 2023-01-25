@@ -5,6 +5,7 @@ service Router {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
+  rpc RegisterProxyRoute (RegisterProxyRouteRequest) returns (Empty);
   rpc SocketPush (SocketData) returns (Empty);
 }
 
@@ -33,12 +34,31 @@ message SocketData {
   repeated string rooms = 4;
 }
 
-message RegisterProxyRouteRequest {
+message ProxyRouteOptions {
   string path = 1;
   string target = 2;
   optional string description = 3;
   repeated string middlewares = 4;
 }
+
+message RegisterProxyRouteRequest {
+ repeated ProxyRouteDefinition proxyRoutes = 1;
+ string protoFile = 2;
+ optional string routerUrl = 3;
+
+message ProxyRouteDefinition {
+   ProxyRouteOptions options = 1;
+ }
+ message ProxyRouteOptions {
+   string path = 1;
+   string target = 2;
+   optional string description = 3;
+   repeated string middlewares = 4;
+   repeated string rooms = 5;
+ }
+}
+
+
 
 message RegisterConduitRouteRequest {
   repeated PathDefinition routes = 1;

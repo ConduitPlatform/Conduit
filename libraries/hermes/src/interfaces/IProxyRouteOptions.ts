@@ -7,6 +7,8 @@ export interface ProxyRouteOptions {
 
   action?: ConduitRouteActions;
 
+  description?: string;
+
   middlewares?: string[];
   changeOrigin?: boolean;
   secure?: boolean;

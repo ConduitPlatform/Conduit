@@ -22,6 +22,7 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   ProxyRouteOptions,
+  ProxyRouteT,
   RouterDescriptor,
   RouteT,
   SocketProtoDescription,
@@ -53,7 +54,7 @@ export function grpcToConduitRoute(
   routerName: string,
   request: {
     protoFile: string;
-    routes: RouteT[];
+    routes: RouteT[] | ProxyRouteT[];
     routerUrl: string;
   },
   moduleName?: string,
@@ -81,7 +82,7 @@ export function grpcToConduitRoute(
 }
 
 function createHandlers(
-  routes: RouteT[],
+  routes: RouteT[] | ProxyRouteT[],
   client: Client,
   moduleName?: string,
   grpcToken?: string,
@@ -100,7 +101,7 @@ function createHandlers(
     } else if (instanceOfConduitProxy(r)) {
       route = createHandlerForProxy(r.options, moduleName);
     } else {
-      route = createHandlerForRoute(r, client, metadata, moduleName);
+      route = createHandlerForRoute(r as RouteT, client, metadata, moduleName);
     }
 
     if (route != undefined) {

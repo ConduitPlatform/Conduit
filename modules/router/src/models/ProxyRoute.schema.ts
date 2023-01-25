@@ -10,6 +10,14 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
+  description: {
+    type: TYPE.String,
+    required: false,
+  },
+  middlewares: {
+    type: [TYPE.String],
+    required: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -32,6 +40,10 @@ export class ProxyRoute extends ConduitActiveSchema<ProxyRoute> {
   _id!: string;
   path!: string;
   target!: string;
+
+  description?: string;
+
+  middlewares?: string[];
   createdAt!: Date;
   updatedAt!: Date;
   private constructor(database: DatabaseProvider) {
