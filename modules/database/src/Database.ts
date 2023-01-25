@@ -1,17 +1,16 @@
 import ConduitGrpcSdk, {
+  ConduitModel,
   ConduitSchema,
   GrpcError,
-  HealthCheckStatus,
-  ManagedModule,
   GrpcRequest,
   GrpcResponse,
-  ConduitModel,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
-  Schema as SchemaDto,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -20,9 +19,10 @@ import {
   GetSchemasRequest,
   QueryRequest,
   QueryResponse,
+  RawQueryRequest,
+  Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
-  RawQueryRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
@@ -30,7 +30,7 @@ import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { Schema, ConduitDatabaseSchema } from './interfaces';
+import { ConduitDatabaseSchema, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -74,8 +74,9 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
-    } else if (dbType === 'postgres' || dbType === 'sql') {
-      // Compat (<=0.12.2): sql
+    } else if (
+      ['postgres', 'sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)
+    ) {
       this._activeAdapter = new SequelizeAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
