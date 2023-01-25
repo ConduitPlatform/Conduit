@@ -1,7 +1,8 @@
-import _, { isNil } from 'lodash';
+import { isNil } from 'lodash';
 import {
   FindAttributeOptions,
   FindOptions,
+  Model,
   ModelStatic,
   Order,
   OrderItem,
@@ -183,6 +184,55 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return inclusionArray;
   }
 
+  createWithPopulation(doc: Model<any>, relationObjects: any) {
+    let hasOne = false;
+    for (const relation in this.extractedRelations) {
+      if (!this.extractedRelations.hasOwnProperty(relation)) continue;
+      if (!relationObjects.hasOwnProperty(relation)) continue;
+      const relationTarget = this.extractedRelations[relation];
+      hasOne = true;
+      if (Array.isArray(relationTarget)) {
+        let modelName =
+          this.adapter.models[relationTarget[0].model].originalSchema.collectionName;
+        modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
+        // if (modelName.endsWith('s')) {
+        //   modelName = modelName.substring(0, modelName.length - 1);
+        // }
+        if (!modelName.endsWith('s')) {
+          modelName = modelName + 's';
+        }
+        // @ts-ignore
+        doc[`set${modelName}`](relationObjects[relation], doc._id);
+      } else {
+        let actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
+        // @ts-ignore
+        doc[`set${actualRel}Id`](relationObjects[relation], doc._id);
+      }
+    }
+    return hasOne ? doc.save() : doc;
+  }
+
+  extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
+    let relationObjects = [{}];
+    for (const queries of parsedQuery) {
+      relationObjects.push(this.extractRelationsModification(queries));
+    }
+    return relationObjects;
+  }
+
+  extractRelationsModification(parsedQuery: ParsedQuery) {
+    let relationObjects = {};
+    for (const target in parsedQuery) {
+      if (!parsedQuery.hasOwnProperty(target)) continue;
+      if (this.extractedRelations.hasOwnProperty(target)) {
+        // @ts-ignore
+        relationObjects[target] = parsedQuery[target];
+        delete parsedQuery[target];
+      }
+    }
+    return relationObjects;
+  }
+
   async create(query: SingleDocQuery) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -194,45 +244,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     let assocs = extractAssociationsFromObject(parsedQuery);
-    let relationObjects = {};
-    for (const target in parsedQuery) {
-      if (!parsedQuery.hasOwnProperty(target)) continue;
-      if (this.extractedRelations.hasOwnProperty(target)) {
-        // @ts-ignore
-        relationObjects[target] = parsedQuery[target];
-        delete parsedQuery[target];
-      }
-    }
+    let relationObjects = this.extractRelationsModification(parsedQuery);
 
     return await this.model
       .create(parsedQuery, { include: this.constructAssociationInclusion(assocs) })
-      .then(doc => {
-        let hasOne = false;
-        for (const relation in this.extractedRelations) {
-          if (!this.extractedRelations.hasOwnProperty(relation)) continue;
-          if (!relationObjects.hasOwnProperty(relation)) continue;
-          const relationTarget = this.extractedRelations[relation];
-          hasOne = true;
-          if (Array.isArray(relationTarget)) {
-            let modelName =
-              this.adapter.models[relationTarget[0].model].originalSchema.collectionName;
-            modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
-            // if (modelName.endsWith('s')) {
-            //   modelName = modelName.substring(0, modelName.length - 1);
-            // }
-            if (!modelName.endsWith('s')) {
-              modelName = modelName + 's';
-            }
-            // @ts-ignore
-            doc[`set${modelName}`](relationObjects[relation], doc._id);
-          } else {
-            let actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
-            // @ts-ignore
-            doc[`set${actualRel}Id`](relationObjects[relation], doc._id);
-          }
-        }
-        return hasOne ? doc.save() : doc;
-      })
+      .then(doc => this.createWithPopulation(doc, relationObjects))
       .then(doc => (doc ? doc.toJSON() : doc));
   }
 
@@ -245,45 +261,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     incrementDbQueries();
     let assocs = extractAssociationsFromObject(parsedQuery);
-    let relationObjects = [{}];
-    for (const queries of parsedQuery) {
-      let relationObject = {};
-      for (const target in parsedQuery) {
-        if (!parsedQuery.hasOwnProperty(target)) continue;
-        if (this.extractedRelations.hasOwnProperty(target)) {
-          // @ts-ignore
-          relationObject[target] = parsedQuery[target];
-          delete parsedQuery[target];
-        }
-      }
-      relationObjects.push(relationObject);
-    }
+    let relationObjects = this.extractManyRelationsModification(parsedQuery);
+
     return this.model
       .bulkCreate(parsedQuery, {
         include: this.constructAssociationInclusion(assocs),
       })
       .then(docs => {
-        return docs.map((doc, index) => {
-          let hasOne = false;
-          for (const relation in this.extractedRelations) {
-            if (!this.extractedRelations.hasOwnProperty(relation)) continue;
-            if (!relationObjects[index].hasOwnProperty(relation)) continue;
-            const relationTarget = this.extractedRelations[relation];
-            if (Array.isArray(relationTarget)) {
-              hasOne = true;
-              let modelName =
-                this.adapter.models[relationTarget[0].model].originalSchema
-                  .collectionName;
-              modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
-              if (modelName.endsWith('s')) {
-                modelName = modelName.substring(0, modelName.length - 1);
-              }
-              // @ts-ignore
-              doc[`add${modelName}`](relationObjects[index][relation], doc._id);
-            }
-          }
-          return hasOne ? doc.save() : doc;
-        });
+        return Promise.all(
+          docs.map((doc, index) =>
+            this.createWithPopulation(doc, relationObjects[index]),
+          ),
+        );
       })
       .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
   }
@@ -386,12 +375,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return this.model.destroy({ where: filter });
   }
 
-  async findByIdAndUpdate(
-    id: string,
-    query: SingleDocQuery,
-    updateProvidedOnly: boolean = false,
-    populate?: string[],
-  ) {
+  async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -399,81 +383,38 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     if (parsedQuery.hasOwnProperty('$inc')) {
-      incrementDbQueries();
-      await this.model.increment(parsedQuery['$inc'], { where: { _id: id } }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
+      let inc = parsedQuery['$inc'];
+      for (const key in inc) {
+        if (!inc.hasOwnProperty(key)) continue;
+        if (inc[key] > 0) {
+          parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
+        } else {
+          parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
+        }
+      }
       delete parsedQuery['$inc'];
     }
 
-    if (updateProvidedOnly) {
-      const record = await this.model
-        .findByPk(id, { nest: true, include: { all: true, nested: true } })
-        .then(doc => (doc ? doc.toJSON() : doc))
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      if (!isNil(record)) {
-        parsedQuery = { ...record, ...parsedQuery };
-      }
-    } else if (parsedQuery.hasOwnProperty('$set')) {
+    if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
-      incrementDbQueries();
-      const record = await this.model
-        .findByPk(id, { nest: true, include: { all: true, nested: true } })
-        .then(doc => (doc ? doc.toJSON() : doc))
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      if (!isNil(record)) {
-        parsedQuery = { ...record, ...parsedQuery };
-      }
     }
 
     if (parsedQuery.hasOwnProperty('$push')) {
       for (const key in parsedQuery['$push']) {
-        incrementDbQueries();
-        await this.model
-          .update(
-            {
-              [key]: Sequelize.fn(
-                'array_append',
-                Sequelize.col(key),
-                parsedQuery['$push'][key],
-              ),
-            },
-            { where: { _id: id } },
-          )
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-          });
+        parsedQuery[key] = Sequelize.fn(
+          'array_append',
+          Sequelize.col(key),
+          parsedQuery['$push'][key],
+        );
       }
       delete parsedQuery['$push'];
     }
 
-    if (parsedQuery.hasOwnProperty('$pull')) {
-      const dbDocument = await this.model
-        .findByPk(id, { nest: true, include: { all: true, nested: true } })
-        .then(doc => (doc ? doc.toJSON() : doc))
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      for (const key in parsedQuery['$push']) {
-        const ind = dbDocument[key].indexOf(parsedQuery['$push'][key]);
-        if (ind > -1) {
-          dbDocument[key].splice(ind, 1);
-        }
-      }
-      incrementDbQueries();
-      await this.model.update(parsedQuery, { where: { _id: id } }).catch(e => {
-        ConduitGrpcSdk.Logger.error(e);
-      });
-      delete parsedQuery['$pull'];
-    }
-
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    await this.model.upsert({ _id: id, ...parsedQuery });
+    let relationObjects = this.extractRelationsModification(parsedQuery);
+    await this.model.update({ ...parsedQuery }, { where: { _id: id } });
+    incrementDbQueries();
 
     return await this.model
       .findByPk(id, {
@@ -482,14 +423,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           this.constructRelationInclusion(populate),
         ),
       })
+      .then(doc => this.createWithPopulation(doc, relationObjects))
       .then(doc => (doc ? doc.toJSON() : doc));
   }
 
-  async updateMany(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    updateProvidedOnly: boolean = false,
-  ) {
+  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -508,80 +446,59 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.associations,
     )[0];
     incrementDbQueries();
-    if (query.hasOwnProperty('$inc')) {
-      await this.model
-        // @ts-ignore
-        .increment(parsedQuery['$inc'] as any, { where: parsedFilter })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
+    if (parsedQuery.hasOwnProperty('$inc')) {
+      let inc = parsedQuery['$inc'];
+      for (const key in inc) {
+        if (!inc.hasOwnProperty(key)) continue;
+        if (inc[key] > 0) {
+          parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
+        } else {
+          parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
+        }
+      }
       delete parsedQuery['$inc'];
     }
 
-    if (updateProvidedOnly) {
-      incrementDbQueries();
-      const record = await this.model
-        // @ts-ignore
-        .findOne({
-          where: parsedFilter,
-          nest: true,
-          include: { all: true, nested: true },
-        })
-        .then(doc => (doc ? doc.toJSON() : doc))
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      if (!isNil(record)) {
-        parsedQuery = _.mergeWith(record, parsedQuery);
-      }
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
     }
 
     if (parsedQuery.hasOwnProperty('$push')) {
       for (const key in parsedQuery['$push']) {
-        incrementDbQueries();
-        await this.model
-          .update(
-            {
-              [key]: Sequelize.fn(
-                'array_append',
-                Sequelize.col(key),
-                parsedQuery['$push'][key],
-              ),
-            },
-            // @ts-ignore
-            { where: parsedFilter },
-          )
-          .catch(e => {
-            ConduitGrpcSdk.Logger.error(e);
-          });
+        parsedQuery[key] = Sequelize.fn(
+          'array_append',
+          Sequelize.col(key),
+          parsedQuery['$push'][key],
+        );
       }
       delete parsedQuery['$push'];
     }
 
-    if (parsedQuery.hasOwnProperty('$pull')) {
-      const documents = await this.findMany(filterQuery).catch(
-        ConduitGrpcSdk.Logger.error,
-      );
-      for (const document of documents) {
-        for (const key in parsedQuery['$push']) {
-          const ind = document[key].indexOf(parsedQuery['$push'][key]);
-          if (ind > -1) {
-            document[key].splice(ind, 1);
-          }
-        }
-        incrementDbQueries();
-        // @ts-ignore
-        await this.model.update(document, { where: parsedFilter }).catch(e => {
-          ConduitGrpcSdk.Logger.error(e);
-        });
-      }
-      delete parsedQuery['$pull'];
-    }
-
     incrementDbQueries();
+    let modifiedDocuments = await this.model
+      .findAll({
+        where: parsedFilter,
+        attributes: ['_id'],
+      })
+      .then(docs => docs.map(doc => doc._id));
+
     parsedQuery.updatedAt = new Date();
+    let relationObjects = this.extractRelationsModification(parsedQuery);
+    await this.model.update({ ...parsedQuery }, { where: parsedFilter! });
+    incrementDbQueries();
     // @ts-ignore
-    return this.model.update(parsedQuery, { where: parsedFilter });
+    return this.model
+      .findAll({
+        where: { _id: modifiedDocuments },
+        nest: true,
+        include: this.constructAssociationInclusion({}).concat(
+          this.constructRelationInclusion(populate),
+        ),
+      })
+      .then(docs =>
+        Promise.all(docs.map(doc => this.createWithPopulation(doc, relationObjects))),
+      )
+      .then(docs => docs.map(doc => doc.toJSON()));
   }
 
   countDocuments(query: Query): Promise<number> {

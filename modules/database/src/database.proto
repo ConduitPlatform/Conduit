@@ -95,15 +95,14 @@ message UpdateRequest {
     string schemaName = 1;
     string id = 2;
     string query = 3;
-    optional bool updateProvidedOnly = 4;
-    repeated string populate = 5;
+    repeated string populate = 4;
 }
 
 message UpdateManyRequest {
     string schemaName = 1;
     string filterQuery = 2;
     string query = 3;
-    optional bool updateProvidedOnly = 4;
+    repeated string populate = 4;
 }
 
 message DropCollectionRequest {

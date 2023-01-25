@@ -64,17 +64,12 @@ export interface SchemaAdapter<T> {
 
   deleteMany(query: Query): Promise<any>;
 
-  findByIdAndUpdate(
-    id: any,
-    document: SingleDocQuery,
-    updateProvidedOnly?: boolean,
-    populate?: string[],
-  ): Promise<any>;
+  findByIdAndUpdate(id: any, document: SingleDocQuery, populate?: string[]): Promise<any>;
 
   updateMany(
     filterQuery: Query,
     query: SingleDocQuery,
-    updateProvidedOnly?: boolean,
+    populate?: string[],
   ): Promise<any>;
 
   countDocuments(query: Query): Promise<number>;

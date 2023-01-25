@@ -26,12 +26,11 @@ export async function getUpdatedDocument(
   schemaName: string,
   params: Indexable,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-  updateProvidedOnly: boolean,
 ) {
   const id = params.id;
   let updatedDocument: Doc = await database
     .getSchemaModel(schemaName)
-    .model?.findByIdAndUpdate(id, params, updateProvidedOnly)
+    .model?.findByIdAndUpdate(id, params)
     .catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
@@ -49,13 +48,12 @@ export async function getUpdatedDocuments(
   schemaName: string,
   params: Indexable,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-  updateProvidedOnly: boolean,
 ) {
   const updatedDocuments: Doc[] = [];
   for (const doc of params.docs) {
     const updatedDocument = await database
       .getSchemaModel(schemaName)
-      .model?.findByIdAndUpdate(doc._id, doc, updateProvidedOnly)
+      .model?.findByIdAndUpdate(doc._id, doc)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });

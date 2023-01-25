@@ -6,5 +6,5 @@ export async function migrateSecurityClients(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
   const model = adapter.getSchemaModel('_DeclaredSchema').model;
-  await model.updateMany({ name: 'Client' }, { ownerModule: 'router' }, true);
+  await model.updateMany({ name: 'Client' }, { ownerModule: 'router' });
 }

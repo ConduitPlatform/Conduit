@@ -162,7 +162,7 @@ export class CustomEndpointHandler {
     } else if (endpoint.operation === OperationsEnum.PATCH) {
       promise = this.database
         .getSchemaModel(endpoint.selectedSchemaName)
-        .model.updateMany(searchQuery, createObj, true);
+        .model.updateMany(searchQuery, createObj);
     } else {
       process.exit(-1);
     }
