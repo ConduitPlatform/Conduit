@@ -266,13 +266,9 @@ export default class Authentication extends ManagedModule<Config> {
       }
 
       const hashedPassword = await AuthUtils.hashPassword(password);
-      await models.User.getInstance().findByIdAndUpdate(
-        user._id,
-        {
-          hashedPassword,
-        },
-        true,
-      );
+      await models.User.getInstance().findByIdAndUpdate(user._id, {
+        hashedPassword,
+      });
 
       return callback(null, { password });
     } catch (e) {

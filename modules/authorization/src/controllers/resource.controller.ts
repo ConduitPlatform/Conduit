@@ -99,7 +99,6 @@ export class ResourceController {
     return await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
-      true,
     );
   }
 
@@ -124,7 +123,6 @@ export class ResourceController {
     return (await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
-      true,
     ))!;
   }
 

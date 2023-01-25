@@ -432,7 +432,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.updateProvidedOnly,
         call.request.populate,
       );
       const resultString = JSON.stringify(result);
@@ -466,7 +465,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.populate,
       );
       const resultString = JSON.stringify(result);
 

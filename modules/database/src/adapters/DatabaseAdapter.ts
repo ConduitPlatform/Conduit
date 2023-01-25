@@ -215,20 +215,16 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (schema.name === '_DeclaredSchema') return;
     const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
     if (model) {
-      await this.models['_DeclaredSchema'].findByIdAndUpdate(
-        model._id,
-        {
-          name: schema.name,
-          fields: schema.fields,
-          parentSchema: schema.parentSchema,
-          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-          modelOptions: schema.modelOptions,
-          ownerModule: schema.ownerModule,
-          collectionName: schema.collectionName,
-        },
-        true,
-      );
+      await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
+        name: schema.name,
+        fields: schema.fields,
+        parentSchema: schema.parentSchema,
+        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        modelOptions: schema.modelOptions,
+        ownerModule: schema.ownerModule,
+        collectionName: schema.collectionName,
+      });
     } else {
       await this.models['_DeclaredSchema'].create({
         name: schema.name,
