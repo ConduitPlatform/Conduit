@@ -33,6 +33,7 @@ export const extractAssociations = (
 };
 
 export const extractRelations = (
+  name: string,
   model: ModelStatic<any>,
   relations: {
     [key: string]:
@@ -47,19 +48,21 @@ export const extractRelations = (
       if (Array.isArray(value)) {
         const item = value[0];
         model.belongsToMany(adapter.models[item.model].model, {
-          foreignKey: relation + 'Id',
+          foreignKey: adapter.models[item.model].originalSchema.name,
           as: relation,
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
           through: model.name + '_' + item.model,
         });
         adapter.models[item.model].model.belongsToMany(model, {
+          foreignKey: name,
+          as: relation,
           through: model.name + '_' + item.model,
         });
       } else {
         model.belongsTo(adapter.models[value.model].model, {
           foreignKey: relation,
-          // as: relation,
+          as: relation + 'Id',
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         });

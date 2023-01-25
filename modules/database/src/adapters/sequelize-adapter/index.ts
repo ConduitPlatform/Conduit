@@ -336,7 +336,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
     const self = this;
     this.scheduledSync = setTimeout(async () => {
-      await self.sequelize.sync({ alter: { drop: false } });
+      await self.sequelize.sync({ alter: true });
       self.syncEmitter.emit('sync');
     }, 1000);
   }
