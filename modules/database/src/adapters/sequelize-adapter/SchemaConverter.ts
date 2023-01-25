@@ -14,6 +14,7 @@ import { checkIfPostgresOptions } from './utils';
  */
 export function schemaConverter(
   jsonSchema: ConduitSchema,
+  dialect: string,
 ): [
   ConduitSchema,
   { [key: string]: any },
@@ -33,7 +34,7 @@ export function schemaConverter(
   const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
-  iterDeep(jsonSchema.fields, copy.fields);
+  iterDeep(jsonSchema.fields, copy.fields, dialect);
   return [copy, extractedEmbedded, extractedRelations];
 }
 
@@ -90,40 +91,40 @@ function extractRelations(ogSchema: any, schema: any) {
   return extracted;
 }
 
-function iterDeep(schema: any, resSchema: any) {
+function iterDeep(schema: any, resSchema: any, dialect: string) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      resSchema[key] = extractArrayType(schema[key]);
+      resSchema[key] = extractArrayType(schema[key], dialect);
     } else if (isObject(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key]);
+      resSchema[key] = extractObjectType(schema[key], dialect);
       if (!schema[key].hasOwnProperty('type')) {
-        iterDeep(schema[key], resSchema[key]);
+        iterDeep(schema[key], resSchema[key], dialect);
       }
     } else {
-      resSchema[key] = extractType(schema[key]);
+      resSchema[key] = extractType(schema[key], dialect);
     }
   }
 }
 
-function extractArrayType(arrayField: any[]) {
+function extractArrayType(arrayField: any[], dialect: string) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
     if (arrayField[0].hasOwnProperty('type')) {
-      arrayElementType = extractType(arrayField[0].type);
+      arrayElementType = extractType(arrayField[0].type, dialect);
     } else {
       throw new Error('Failed to extract embedded object type');
     }
   } else {
-    arrayElementType = extractType(arrayField[0]);
+    arrayElementType = extractType(arrayField[0], dialect);
   }
   return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: any) {
+function extractObjectType(objectField: any, dialect: string) {
   const res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
-    res.type = extractType(objectField.type);
+    res.type = extractType(objectField.type, dialect);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
@@ -138,7 +139,7 @@ function extractObjectType(objectField: any) {
   return res;
 }
 
-function extractType(type: string) {
+function extractType(type: string, dialect: string) {
   switch (type) {
     case 'String':
       return DataTypes.STRING;
@@ -149,7 +150,7 @@ function extractType(type: string) {
     case 'Date':
       return DataTypes.DATE;
     case 'JSON':
-      return DataTypes.JSON;
+      return dialect === 'postgres' ? DataTypes.JSONB : DataTypes.JSON;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;
