@@ -1,5 +1,7 @@
 import { Model, Mongoose, Schema, SortOrder } from 'mongoose';
 import {
+  _ConduitSchema,
+  _ConduitSchemaOptions,
   MultiDocQuery,
   ParsedQuery,
   Query,
@@ -8,7 +10,6 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
-import { _ConduitSchema, _ConduitSchemaOptions } from '../../interfaces';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -53,12 +54,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.insertMany(docs).then(r => r);
   }
 
-  async findByIdAndUpdate(
-    id: string,
-    query: SingleDocQuery,
-    updateProvidedOnly: boolean = false,
-    populate?: string[],
-  ) {
+  async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = EJSON.parse(query);
@@ -66,7 +62,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       parsedQuery = query;
     }
     parsedQuery['updatedAt'] = new Date();
-    if (updateProvidedOnly) {
+    if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
         $set: parsedQuery,
       };
@@ -78,11 +74,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return finalQuery.lean().exec();
   }
 
-  async updateMany(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    updateProvidedOnly: boolean = false,
-  ) {
+  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
     let parsedFilter: ParsedQuery | ParsedQuery[];
     if (typeof filterQuery === 'string') {
       parsedFilter = EJSON.parse(filterQuery);
@@ -95,12 +87,28 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    if (updateProvidedOnly) {
+    if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
         $set: parsedQuery,
       };
     }
-    return this.model.updateMany(this.parseQuery(parsedFilter), parsedQuery).exec();
+    let affectedIds = this.model
+      .find(parsedFilter, '_id')
+      .lean()
+      .exec()
+      .then(r => {
+        r.map((r: any) => r._id);
+      });
+    return this.model
+      .updateMany(this.parseQuery(parsedFilter), parsedQuery)
+      .exec()
+      .then(r => {
+        let finalQuery = this.model.find({ _id: { $in: affectedIds } });
+        if (populate !== undefined && populate !== null) {
+          finalQuery = this.calculatePopulates(finalQuery, populate);
+        }
+        return finalQuery.lean().exec();
+      });
   }
 
   deleteOne(query: Query) {

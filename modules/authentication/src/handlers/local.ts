@@ -364,7 +364,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     user.hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    await User.getInstance().findByIdAndUpdate(user._id, user, true);
+    await User.getInstance().findByIdAndUpdate(user._id, user);
     await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
     await TokenProvider.getInstance().deleteUserTokens({
@@ -459,7 +459,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       }
       return 'Verification required';
     }
-    await User.getInstance().findByIdAndUpdate(user._id, { email: newEmail }, true);
+    await User.getInstance().findByIdAndUpdate(user._id, { email: newEmail });
     return 'Email changed successfully';
   }
 

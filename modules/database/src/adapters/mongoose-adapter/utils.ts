@@ -15,7 +15,7 @@ async function _createOrUpdate(obj: any, model: MongooseSchema) {
   if (obj.hasOwnProperty('_id')) {
     const _id = obj._id;
     delete obj._id;
-    await model.findByIdAndUpdate(_id, JSON.stringify(obj), true);
+    await model.findByIdAndUpdate(_id, JSON.stringify(obj));
     return _id;
   } else {
     const doc = await model.create(JSON.stringify(obj));
