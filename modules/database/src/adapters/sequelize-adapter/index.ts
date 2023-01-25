@@ -18,7 +18,7 @@ import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
 import { isNil } from 'lodash';
-import { checkIfPostgresOptions } from './utils';
+import { checkIfPostgresOptions, legacyCollections, tableFetch } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
 import { EventEmitter } from 'events';
 
@@ -30,6 +30,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   syncedSchemas: string[] = [];
   scheduledSync: NodeJS.Timeout;
   syncEmitter: NodeJS.EventEmitter = new EventEmitter();
+  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb', 'mssql'];
 
   constructor(connectionUri: string) {
     super();
@@ -46,6 +47,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
       try {
         await this.sequelize.authenticate();
+        if (!this.SUPPORTED_DIALECTS.includes(this.sequelize.getDialect())) {
+          console.error(`Unsupported dialect: ${this.sequelize.getDialect()}`);
+          process.exit(1);
+        }
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
       } catch (err: any) {
@@ -61,31 +66,15 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   }
 
   protected async hasLegacyCollections() {
-    return (
-      (
-        await this.sequelize.query(
-          `SELECT EXISTS (
-    SELECT FROM 
-        information_schema.tables 
-    WHERE 
-        table_schema LIKE '${sqlSchemaName}' AND 
-        table_type LIKE 'BASE TABLE' AND
-        table_name = '_DeclaredSchema'
-    );`,
-        )
-      )[0][0] as { exists: boolean }
-    ).exists;
+    let res = await legacyCollections(this.sequelize, sqlSchemaName);
+    return res;
   }
 
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
     );
-    const tableNames: string[] = (
-      await this.sequelize.query(
-        `select * from pg_tables where schemaname='${sqlSchemaName}';`,
-      )
-    )[0].map((t: any) => t.tablename);
+    const tableNames: string[] = await tableFetch(this.sequelize, sqlSchemaName);
     const declaredSchemaTableName =
       this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const table of tableNames) {
