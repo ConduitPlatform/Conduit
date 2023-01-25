@@ -31,12 +31,11 @@ export async function migrateV12_V13() {
         },
       },
     };
-    const id = schema._id.toString();
+    schema.modelOptions.conduit.cms = cms;
+    const id = schema._id;
     await documents.findOneAndUpdate({ _id: id }, {
       $set: {
-        modelOptions: {
-          conduit: { cms },
-        },
+        modelOptions: schema.modelOptions
       },
     });
   }
