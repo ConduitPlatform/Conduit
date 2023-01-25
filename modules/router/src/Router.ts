@@ -193,12 +193,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           ConduitGrpcSdk.Logger.error(err as Error);
         }
       });
+    }
+    if (proxyRoutes) {
       proxyRoutes.forEach(route => {
         const proxyRoute = new ProxyRoute({ path: route.path, target: route.target });
         this._internalRouter.registerProxyRoute(proxyRoute);
       });
-      ConduitGrpcSdk.Logger.log('Recovered routes');
     }
+    ConduitGrpcSdk.Logger.log('Recovered routes');
   }
 
   async highAvailability() {
