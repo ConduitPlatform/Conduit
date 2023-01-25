@@ -124,6 +124,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
+    await this.storeDroppedFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = await this._createSchemaFromAdapter(schema);
@@ -190,6 +191,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
 
+  abstract syncSchema(name: string): Promise<void>;
+
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
     const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
     if (dbSchemas.includes(schema.name)) {
@@ -211,6 +214,27 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return true;
   }
 
+  protected async storeDroppedFields(schema: ConduitDatabaseSchema) {
+    if (schema.name === '_DeclaredSchema') {
+      schema.droppedFields = {};
+      return;
+    }
+    const storedSchema = await this.models['_DeclaredSchema'].findOne({
+      name: schema.name,
+    });
+    if (isNil(storedSchema)) {
+      schema.droppedFields = {};
+      return;
+    }
+    const droppedFields: ConduitModel = {};
+    for (const [fieldName, fieldValue] of Object.entries(storedSchema.fields)) {
+      if (!Object.keys(schema.fields).includes(fieldName)) {
+        droppedFields[fieldName] = fieldValue as any;
+      }
+    }
+    schema.droppedFields = droppedFields;
+  }
+
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
     const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
@@ -221,6 +245,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         parentSchema: schema.parentSchema,
         extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
         compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        droppedFields: (schema as ConduitDatabaseSchema).droppedFields, //@dirty-type-cast
         modelOptions: schema.modelOptions,
         ownerModule: schema.ownerModule,
         collectionName: schema.collectionName,
@@ -232,6 +257,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         parentSchema: schema.parentSchema,
         extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
         compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        droppedFields: (schema as ConduitDatabaseSchema).droppedFields, //@dirty-type-cast
         modelOptions: schema.modelOptions,
         ownerModule: schema.ownerModule,
         collectionName: schema.collectionName,

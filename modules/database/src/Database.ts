@@ -17,6 +17,8 @@ import {
   FindRequest,
   GetSchemaRequest,
   GetSchemasRequest,
+  MigrateRequest,
+  MigrateResponse,
   QueryRequest,
   QueryResponse,
   RawQueryRequest,
@@ -64,6 +66,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
+      migrate: this.migrate.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -596,6 +599,45 @@ export default class DatabaseModule extends ManagedModule<void> {
       callback(null, { result: JSON.stringify(result) });
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async migrate(
+    call: GrpcRequest<MigrateRequest>,
+    callback: GrpcResponse<MigrateResponse>,
+  ) {
+    const { name, fields, modelOptions, collectionName } = call.request;
+    const schema = await this._activeAdapter
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({ name });
+    const droppedFields = schema.droppedFields;
+    const compiledFields = schema.compiledFields;
+    for (const key of Object.keys(droppedFields)) {
+      delete compiledFields[key];
+    }
+    await this._activeAdapter
+      .getSchemaModel('_DeclaredSchema')
+      .model.findByIdAndUpdate(schema._id, {
+        compiledFields: compiledFields,
+        droppedFields: {},
+      });
+    const conduitSchema = new ConduitSchema(
+      name,
+      JSON.parse(fields),
+      JSON.parse(modelOptions),
+      collectionName,
+    );
+    conduitSchema.ownerModule = call.metadata!.get('module-name')![0] as string;
+    await this._activeAdapter
+      .createSchemaFromAdapter(conduitSchema, false, true)
+      .catch(err => {
+        callback({
+          code: status.INTERNAL,
+          message: err.message,
+        });
+      });
+    if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      await this._activeAdapter.syncSchema(conduitSchema.name);
     }
   }
 }

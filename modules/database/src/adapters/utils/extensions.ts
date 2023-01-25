@@ -46,7 +46,10 @@ export function stitchSchema(schema: ConduitDatabaseSchema) {
   // ConduitSchema -> ConduitDatabaseSchema transformations
   if (!schema.extensions) schema.extensions = [];
 
-  schema.compiledFields = JSON.parse(JSON.stringify(schema.fields));
+  schema.compiledFields = {
+    ...JSON.parse(JSON.stringify(schema.fields)),
+    ...JSON.parse(JSON.stringify(schema.droppedFields)),
+  };
   schema.extensions.forEach((ext: DeclaredSchemaExtension) => {
     Object.keys(ext.fields).forEach(field => {
       schema.compiledFields[field] = ext.fields[field];

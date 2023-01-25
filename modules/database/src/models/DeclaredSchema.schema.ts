@@ -32,6 +32,10 @@ export const DeclaredSchema = new ConduitSchema(
       type: TYPE.JSON,
       required: true,
     },
+    droppedFields: {
+      type: TYPE.JSON,
+      required: false,
+    },
     modelOptions: {
       type: TYPE.JSON,
       required: true,

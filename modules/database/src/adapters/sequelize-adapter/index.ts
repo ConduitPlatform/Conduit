@@ -275,7 +275,11 @@ export abstract class SequelizeAdapter<
       });
   }
 
-  protected checkAndConvertIndexes(
+  async syncSchema(name: string) {
+    await this.models[name].model.sync({ alter: true });
+  }
+
+  private checkAndConvertIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
     callerModule: string,

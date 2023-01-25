@@ -110,12 +110,22 @@ message DropCollectionRequest {
     bool deleteData = 2;
 }
 
+message MigrateRequest {
+    string name = 1;
+    string fields = 2;
+    string modelOptions = 3;
+    string collectionName = 4;
+}
+
+message MigrateResponse {}
+
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
     rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
     rpc SetSchemaExtension(SchemaExtension) returns (Schema);
+    rpc Migrate(MigrateRequest) returns (MigrateResponse);
     // Database queries
     rpc findOne(FindOneRequest) returns (QueryResponse);
     rpc findMany(FindRequest) returns (QueryResponse);
