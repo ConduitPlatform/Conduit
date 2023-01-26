@@ -5,7 +5,7 @@ import {
   MongoIndexOptions,
   PostgresIndexOptions,
 } from '@conduitplatform/grpc-sdk';
-import { MultiDocQuery, ParsedQuery, SingleDocQuery } from '../../../interfaces';
+import { ParsedQuery } from '../../../interfaces';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(value: any) {
@@ -112,6 +112,75 @@ export function parseQuery(query: ParsedQuery, associations?: Indexable) {
   )
     return [undefined, requiredAssociations];
   return [parsed, requiredAssociations];
+}
+
+function patch(query: Indexable, key: string) {
+  if (query[key][Op.in]) {
+    delete query[key];
+    // @ts-ignore
+    query[Op.or] = query[key][Op.in].map((value: any) => {
+      return { [Op.like]: `%;${value};%` };
+    });
+  } else if (query[key][Op.notIn]) {
+    delete query[key];
+    // @ts-ignore
+    query[Op.and] = query[key][Op.notIn].map((value: any) => {
+      return { [Op.notLike]: `%;${value};%` };
+    });
+  }
+}
+
+export function arrayFind(
+  key: string,
+  fields: Indexable,
+  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+): boolean {
+  if (fields[key]) {
+    if (Array.isArray(fields[key])) {
+      return true;
+    } else if (Array.isArray(fields[key].type)) {
+      return true;
+    }
+  } else if (key.indexOf('.') !== -1) {
+    let assocKey = key.split('.')[0];
+    let remain = key.split('.').slice(1).join('.');
+    if (associations[assocKey]) {
+      let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+        ? (associations[assocKey] as SequelizeSchema[])[0]
+        : (associations[assocKey] as SequelizeSchema);
+      return arrayFind(remain, assoc.originalSchema.fields, assoc.associations);
+    }
+  }
+  return false;
+}
+
+export function arrayPatch(
+  dialect: string,
+  query: Indexable,
+  fields: Indexable,
+  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+) {
+  if (dialect === 'postgres') return query;
+  let newQuery = JSON.parse(JSON.stringify(query));
+  for (const key in query) {
+    if (fields[key]) {
+      if (Array.isArray(fields[key])) {
+        patch(newQuery, key);
+      } else if (Array.isArray(fields[key].type)) {
+        patch(newQuery, key);
+      }
+    } else if (key.indexOf('.') !== -1) {
+      let assocKey = key.split('.')[0];
+      if (associations[assocKey]) {
+        let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+          ? (associations[assocKey] as SequelizeSchema[])[0]
+          : (associations[assocKey] as SequelizeSchema);
+        let found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
+        if (found) patch(newQuery, key);
+      }
+    }
+  }
+  return newQuery;
 }
 
 export function extractAssociationsFromObject(
