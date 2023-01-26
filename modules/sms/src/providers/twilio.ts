@@ -1,13 +1,14 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
-import twilio from 'twilio';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import twilio from 'twilio';
+import Twilio from 'twilio/dist/lib/rest/Twilio';
 
 export class TwilioProvider implements ISmsProvider {
   private readonly phoneNumber: string;
   private readonly accountSID: string;
   private readonly authToken: string;
   private readonly serviceSid: string | undefined;
-  private client: twilio.Twilio;
+  private client: Twilio;
 
   constructor(settings: {
     phoneNumber: string;
@@ -38,7 +39,7 @@ export class TwilioProvider implements ISmsProvider {
       return Promise.reject(Error('no service sid specified'));
     }
 
-    const verification = await this.client.verify
+    const verification = await this.client.verify.v2
       .services(this.serviceSid)
       .verifications.create({ to, channel: 'sms' })
       .catch(e => {
@@ -56,7 +57,7 @@ export class TwilioProvider implements ISmsProvider {
     if (this.serviceSid === undefined) {
       return Promise.reject(Error('no service sid specified'));
     }
-    const verificationCheck = await this.client.verify
+    const verificationCheck = await this.client.verify.v2
       .services(this.serviceSid)
       .verificationChecks.create({ verificationSid, code })
       .catch(e => {
