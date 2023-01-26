@@ -35,7 +35,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
   constructor(
     sequelize: Sequelize,
-    schema: Indexable,
+    readonly schema: Indexable,
     readonly originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
     readonly associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },

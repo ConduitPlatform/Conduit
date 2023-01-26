@@ -351,6 +351,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (instanceSync) {
+      for (const association in this.models[schemaName].associations) {
+        const associationSchema = this.models[schemaName].associations[association];
+        if (Array.isArray(associationSchema)) {
+          delete this.models[associationSchema[0].schema.name];
+        } else {
+          delete this.models[associationSchema.schema.name];
+        }
+      }
       delete this.models[schemaName];
       delete this.sequelize.models[schemaName];
       return 'Instance synchronized!';
@@ -359,6 +367,16 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
+      for (const association in this.models[schemaName].associations) {
+        const associationSchema = this.models[schemaName].associations[association];
+        if (Array.isArray(associationSchema)) {
+          delete this.models[associationSchema[0].schema.name];
+          await associationSchema[0].model.drop();
+        } else {
+          delete this.models[associationSchema.schema.name];
+          await associationSchema.model.drop();
+        }
+      }
       await this.models[schemaName].model.drop();
     }
     this.models['_DeclaredSchema']
