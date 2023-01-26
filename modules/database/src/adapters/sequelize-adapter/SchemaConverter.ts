@@ -94,7 +94,7 @@ function extractRelations(ogSchema: any, schema: any) {
 function iterDeep(schema: any, resSchema: any, dialect: string) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      resSchema[key] = extractArrayType(schema[key], dialect);
+      resSchema[key] = extractArrayType(schema[key], dialect, key);
     } else if (isObject(schema[key])) {
       resSchema[key] = extractObjectType(schema[key], dialect);
       if (!schema[key].hasOwnProperty('type')) {
@@ -106,7 +106,7 @@ function iterDeep(schema: any, resSchema: any, dialect: string) {
   }
 }
 
-function extractArrayType(arrayField: any[], dialect: string) {
+function extractArrayType(arrayField: any[], dialect: string, field: string) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
     if (arrayField[0].hasOwnProperty('type')) {
@@ -116,6 +116,23 @@ function extractArrayType(arrayField: any[], dialect: string) {
     }
   } else {
     arrayElementType = extractType(arrayField[0], dialect);
+  }
+  if (dialect !== 'postgres') {
+    if (arrayElementType === DataTypes.JSON) {
+      return { type: DataTypes.JSON };
+    } else {
+      return {
+        type: DataTypes.STRING,
+        get(): any {
+          // @ts-ignore
+          return this.getDataValue(field).split(';');
+        },
+        set(val: any): any {
+          // @ts-ignore
+          this.setDataValue(field, val.join(';'));
+        },
+      };
+    }
   }
   return { type: DataTypes.ARRAY(arrayElementType) };
 }
@@ -164,7 +181,7 @@ function extractType(type: string, dialect: string) {
    *             var currentValue = this.getDataValue(fieldName);
    *             console.log(fieldName, currentValue);
    *             if (typeof currentValue == 'string') {
-   *               console.log("parsing");
+   *               console.log('parsing');
    *               // @ts-ignore
    *               this.dataValues[fieldName] = JSON.parse(currentValue);
    *             }

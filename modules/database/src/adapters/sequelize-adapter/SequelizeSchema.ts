@@ -17,6 +17,7 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import {
+  arrayPatch,
   extractAssociations,
   extractAssociationsFromObject,
   extractRelations,
@@ -314,7 +315,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    filter = arrayPatch(
+      this.sequelize.getDialect(),
+      filter!,
+      this.originalSchema.fields,
+      this.associations,
+    );
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -350,7 +357,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    filter = arrayPatch(
+      this.sequelize.getDialect(),
+      filter!,
+      this.originalSchema.fields,
+      this.associations,
+    );
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -389,7 +402,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    filter = arrayPatch(
+      this.sequelize.getDialect(),
+      filter!,
+      this.originalSchema.fields,
+      this.associations,
+    );
     return this.model.destroy({ where: filter, limit: 1 });
   }
 
@@ -401,7 +420,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    filter = arrayPatch(
+      this.sequelize.getDialect(),
+      filter!,
+      this.originalSchema.fields,
+      this.associations,
+    );
     return this.model.destroy({ where: filter });
   }
 
@@ -655,6 +680,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedFilter as ParsedQuery | ParsedQuery[],
       this.associations,
     )[0];
+    parsedFilter = arrayPatch(
+      this.sequelize.getDialect(),
+      parsedFilter!,
+      this.originalSchema.fields,
+      this.associations,
+    );
 
     incrementDbQueries();
     let docs = await this.model.findAll({
