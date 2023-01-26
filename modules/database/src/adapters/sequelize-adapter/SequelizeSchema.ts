@@ -75,7 +75,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return promiseChain;
   }
 
-  constructAssociationInclusion(requiredAssociations?: { [key: string]: string[] }) {
+  constructAssociationInclusion(
+    requiredAssociations?: { [key: string]: string[] },
+    requiredOnly = false,
+  ) {
     if (isNil(requiredAssociations)) return [];
     const inclusionArray = [];
     for (const association in this.associations) {
@@ -84,6 +87,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       const associationSchema = Array.isArray(associationTarget)
         ? (associationTarget as SequelizeSchema[])[0]
         : (associationTarget as SequelizeSchema);
+      if (requiredOnly && !requiredAssociations.hasOwnProperty(association)) continue;
       const associationObject: {
         model: ModelStatic<any>;
         as: string;
@@ -112,8 +116,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           }
         });
         if (Object.keys(associationSchema.associations).length > 0) {
-          associationObject.include =
-            associationSchema.constructAssociationInclusion(newAssociations);
+          associationObject.include = associationSchema.constructAssociationInclusion(
+            newAssociations,
+            requiredOnly,
+          );
         }
       }
       inclusionArray.push(associationObject);
@@ -243,11 +249,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    let assocs = extractAssociationsFromObject(parsedQuery);
+    let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     let relationObjects = this.extractRelationsModification(parsedQuery);
 
     return await this.model
-      .create(parsedQuery, { include: this.constructAssociationInclusion(assocs) })
+      .create(parsedQuery, { include: this.constructAssociationInclusion(assocs, true) })
       .then(doc => this.createWithPopulation(doc, relationObjects))
       .then(doc => (doc ? doc.toJSON() : doc));
   }
@@ -260,12 +266,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     incrementDbQueries();
-    let assocs = extractAssociationsFromObject(parsedQuery);
+    let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     let relationObjects = this.extractManyRelationsModification(parsedQuery);
 
     return this.model
       .bulkCreate(parsedQuery, {
-        include: this.constructAssociationInclusion(assocs),
+        include: this.constructAssociationInclusion(assocs, true),
       })
       .then(docs => {
         return Promise.all(

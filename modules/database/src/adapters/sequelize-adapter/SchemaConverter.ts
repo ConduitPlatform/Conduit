@@ -156,6 +156,29 @@ function extractType(type: string, dialect: string) {
       return DataTypes.UUID;
   }
 
+  /**
+   *  return {
+   *           type: DataTypes.JSON,
+   *           get(): any {
+   *             // @ts-ignore
+   *             var currentValue = this.getDataValue(fieldName);
+   *             console.log(fieldName, currentValue);
+   *             if (typeof currentValue == 'string') {
+   *               console.log("parsing");
+   *               // @ts-ignore
+   *               this.dataValues[fieldName] = JSON.parse(currentValue);
+   *             }
+   *             // @ts-ignore
+   *             return this.dataValues[fieldName];
+   *           },
+   *           set(value: any) {
+   *             console.log(fieldName, value);
+   *             // @ts-ignore
+   *             this.setDataValue(fieldName, JSON.stringify(value));
+   *           },
+   *         };
+   */
+
   throw new Error('Failed to extract embedded object type');
 }
 
