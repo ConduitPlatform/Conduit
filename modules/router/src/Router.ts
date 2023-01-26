@@ -325,11 +325,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         }
         call.request.routerUrl = result.url;
       }
-      //@ts-ignore
-      // I will fix this later
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.proxyRoutes,
+        call.request.proxyRoutes as ProxyRouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
