@@ -250,7 +250,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     let t: Transaction | undefined = transaction;
     let transactionProvided = transaction !== undefined;
     if (!transactionProvided) {
-      t = await this.sequelize.transaction();
+      t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     return await this.model
       .create(parsedQuery, {
@@ -283,7 +283,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     let relationObjects = this.extractManyRelationsModification(parsedQuery);
-    let t = await this.sequelize.transaction();
+    let t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
         include: this.constructAssociationInclusion(assocs, true),
@@ -423,7 +423,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = parsedQuery['$set'];
     }
     if (isNil(t)) {
-      t = await this.sequelize.transaction();
+      t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     try {
       let parentDoc = await this.model.findByPk(id, {
@@ -625,7 +625,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
             include: this.constructAssociationInclusion(assocs).concat(
               this.constructRelationInclusion(populate),
             ),
-            transaction: t,
           });
         })
         .then(doc => (doc ? doc.toJSON() : doc));
@@ -662,7 +661,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       where: parsedFilter,
       attributes: ['_id'],
     });
-    const t = await this.sequelize.transaction();
+    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
       let data = await Promise.all(
         docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),

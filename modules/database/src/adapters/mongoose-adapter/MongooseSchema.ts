@@ -100,7 +100,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         r.map((r: any) => r._id);
       });
     return this.model
-      .updateMany(this.parseQuery(parsedFilter), parsedQuery)
+      .updateMany(parsedFilter, parsedQuery)
       .exec()
       .then(r => {
         let finalQuery = this.model.find({ _id: { $in: affectedIds } });
@@ -118,7 +118,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    return this.model.deleteOne(this.parseQuery(parsedQuery)).exec();
+    return this.model.deleteOne(parsedQuery).exec();
   }
 
   deleteMany(query: Query) {
@@ -128,7 +128,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    return this.model.deleteMany(this.parseQuery(parsedQuery)).exec();
+    return this.model.deleteMany(parsedQuery).exec();
   }
 
   private calculatePopulates(queryObj: any, population: string[]) {
@@ -169,7 +169,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    let finalQuery = this.model.find(this.parseQuery(parsedQuery), select);
+    let finalQuery = this.model.find(parsedQuery, select);
     if (!isNil(skip)) {
       finalQuery = finalQuery.skip(skip!);
     }
@@ -192,7 +192,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    let finalQuery = this.model.findOne(this.parseQuery(parsedQuery), select);
+    let finalQuery = this.model.findOne(parsedQuery, select);
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
     }
@@ -206,21 +206,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       parsedQuery = query;
     }
-    return this.model.find(this.parseQuery(parsedQuery)).countDocuments().exec();
-  }
-
-  private parseQuery(query: ParsedQuery) {
-    const parsed = {} as ParsedQuery;
-
-    Object.keys(query).forEach(key => {
-      if (query[key]?.hasOwnProperty('$contains')) {
-        parsed[key] = { $in: query[key]['$contains'] };
-      } else {
-        parsed[key] = query[key];
-      }
-    });
-
-    return parsed;
+    return this.model.find(parsedQuery).countDocuments().exec();
   }
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {

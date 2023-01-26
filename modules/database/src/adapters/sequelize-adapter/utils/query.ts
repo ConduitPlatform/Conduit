@@ -50,11 +50,6 @@ function matchOperation(operator: string, value: any) {
       return arrayHandler(value);
     case '$nin':
       return { [Op.notIn]: arrayHandler(value) };
-    case '$contains':
-      if (Array.isArray(value)) {
-        return { [Op.contains]: arrayHandler(value) };
-      }
-      return { [Op.contains]: value };
     default:
       return value;
   }
