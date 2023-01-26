@@ -2,10 +2,10 @@ import { RoutingManager } from './RoutingManager';
 import { ConduitProxyOptions } from './interfaces';
 
 export class ProxyRouteBuilder {
-  private readonly _options!: ConduitProxyOptions;
+  private _options: ConduitProxyOptions;
 
-  constructor(private readonly manager?: RoutingManager) {
-    this._options = {} as ConduitProxyOptions;
+  constructor(private readonly manager?: RoutingManager, options?: ConduitProxyOptions) {
+    this._options = options || { path: '', target: '' };
   }
 
   path(path: string): ProxyRouteBuilder {
@@ -18,6 +18,11 @@ export class ProxyRouteBuilder {
     return this;
   }
 
+  options(options: ConduitProxyOptions): ProxyRouteBuilder {
+    this._options = options;
+    return this;
+  }
+
   middleware(middleware: string | string[], allowDuplicates = false): ProxyRouteBuilder {
     if (!Array.isArray(middleware)) {
       middleware = [middleware];
@@ -27,10 +32,9 @@ export class ProxyRouteBuilder {
       this._options.middlewares?.length !== 0
     ) {
       if (allowDuplicates) {
-        this._options.middlewares?.concat(middleware);
+        this._options.middlewares = this._options.middlewares?.concat(middleware);
       } else {
-        // add to existing middlewares and filter out potential duplicates
-        this._options.middlewares?.concat(
+        this._options.middlewares = this._options.middlewares?.concat(
           middleware.filter(mid => this._options.middlewares?.indexOf(mid) === -1),
         );
       }
@@ -45,7 +49,7 @@ export class ProxyRouteBuilder {
     if (!this._options) throw new Error('Cannot build route without options');
     if (!this._options.path) throw new Error('Cannot build route without path');
     if (!this._options.target) throw new Error('Cannot build route without target');
-    this.manager.proxy(this._options.path, this._options.target);
+    this.manager.proxyRoute(this._options);
   }
 
   build() {
@@ -55,8 +59,7 @@ export class ProxyRouteBuilder {
     if (!this._options.path) throw new Error('Cannot build route without path');
     if (!this._options.target) throw new Error('Cannot build route without target');
     return {
-      path: this._options.path,
-      target: this._options.target,
+      input: this._options,
     };
   }
 }

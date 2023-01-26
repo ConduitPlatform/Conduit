@@ -3,6 +3,8 @@ import {
   GenerateProtoRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
+  RegisterProxyRouteRequest,
+  RegisterProxyRouteRequest_ProxyRouteDefinition,
   RouterDefinition,
   SocketData,
 } from '../../protoUtils/router';
@@ -36,6 +38,19 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
       routerUrl: url,
     };
     return this.client!.registerConduitRoute(request);
+  }
+
+  registerGrpcProxyRoute(
+    paths: RegisterProxyRouteRequest_ProxyRouteDefinition[],
+    protoFile: string,
+    url?: string,
+  ): Promise<any> {
+    const request: RegisterProxyRouteRequest = {
+      proxyRoutes: paths,
+      protoFile: protoFile,
+      routerUrl: url,
+    };
+    return this.client!.registerProxyRoute(request);
   }
 
   socketPush(data: SocketData) {

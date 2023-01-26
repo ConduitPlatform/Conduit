@@ -1,10 +1,18 @@
-import { ConduitProxyOptions, GrpcServer, ProxyRouteBuilder } from '../index';
+import {
+  ConduitProxy,
+  ConduitProxyOptions,
+  GrpcServer,
+  ProxyRouteBuilder,
+} from '../index';
 import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { wrapFunctionsAsync } from './RoutingUtilities';
-import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
+import {
+  RegisterConduitRouteRequest_PathDefinition,
+  RegisterProxyRouteRequest_ProxyRouteDefinition,
+} from '../protoUtils/router';
 import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -25,7 +33,7 @@ export class RoutingManager {
   private _moduleRoutes: {
     [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
-  private _moduleProxyroutes: { [path: string]: ConduitProxyOptions } = {};
+  private _moduleProxyRoutes: { [key: string]: ConduitProxy } = {};
 
   private _routeHandlers: {
     [key: string]: RequestHandlers;
@@ -61,14 +69,14 @@ export class RoutingManager {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
-  proxy(path: string, target: string): ProxyRouteBuilder {
-    return new ProxyRouteBuilder(this).path(path).target(target);
+  options(input: ConduitProxyOptions): ProxyRouteBuilder {
+    return new ProxyRouteBuilder(this).options(input);
   }
 
   clear() {
     this._moduleRoutes = {};
     this._routeHandlers = {};
-    this._moduleProxyroutes = {};
+    this._moduleProxyRoutes = {};
   }
 
   middleware(
@@ -98,6 +106,14 @@ export class RoutingManager {
     }) as ConduitRouteObject;
     this._moduleRoutes[routeObject.grpcFunction] = routeObject;
     this._routeHandlers[routeObject.grpcFunction] = handler;
+  }
+
+  proxyRoute(input: ConduitProxyOptions) {
+    const routeObject: ConduitProxy = this.parseRouteObject({
+      options: input,
+    }) as ConduitProxy;
+    this._moduleProxyRoutes[routeObject.options.path + routeObject.options.target] =
+      routeObject;
   }
 
   socket(input: ConduitSocketOptions, events: Record<string, ConduitSocketEventHandler>) {
@@ -143,13 +159,24 @@ export class RoutingManager {
       modifiedFunctions,
     );
     const paths = Object.values(this._moduleRoutes);
-    return this._router.register(
-      this.isAdmin
-        ? (paths as RegisterAdminRouteRequest_PathDefinition[])
-        : (paths as RegisterConduitRouteRequest_PathDefinition[]),
-      protoDescriptions.protoFile,
-    );
+    const proxyRoutes = Object.values(this._moduleProxyRoutes);
+    return this._router
+      .register(
+        this.isAdmin
+          ? (paths as RegisterAdminRouteRequest_PathDefinition[])
+          : (paths as RegisterConduitRouteRequest_PathDefinition[]),
+        protoDescriptions.protoFile,
+      )
+      .then(() => {
+        if (proxyRoutes && proxyRoutes.length > 0) {
+          return (this._router as Router).registerGrpcProxyRoute(
+            proxyRoutes as RegisterProxyRouteRequest_ProxyRouteDefinition[],
+            protoDescriptions.protoFile,
+          );
+        }
+      });
   }
+
   private generateGrpcName(options: ConduitRouteOptions) {
     if (options.name) {
       return options.name.charAt(0).toUpperCase() + options.name.slice(1);
@@ -172,7 +199,7 @@ export class RoutingManager {
 
   private parseRouteObject(
     routeObject: any,
-  ): ConduitRouteObject | SocketProtoDescription {
+  ): ConduitRouteObject | SocketProtoDescription | ConduitProxy {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
