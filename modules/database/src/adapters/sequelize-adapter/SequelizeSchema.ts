@@ -7,6 +7,7 @@ import {
   Order,
   OrderItem,
   Sequelize,
+  Transaction,
 } from 'sequelize';
 import {
   MultiDocQuery,
@@ -34,7 +35,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   excludedFields: string[];
 
   constructor(
-    sequelize: Sequelize,
+    readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitSchema,
     private readonly adapter: SequelizeAdapter,
@@ -190,7 +191,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return inclusionArray;
   }
 
-  createWithPopulation(doc: Model<any>, relationObjects: any) {
+  createWithPopulation(doc: Model<any>, relationObjects: any, transaction?: Transaction) {
     let hasOne = false;
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;
@@ -199,9 +200,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       hasOne = true;
       if (Array.isArray(relationTarget)) {
         let modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
-        // if (modelName.endsWith('s')) {
-        //   modelName = modelName.substring(0, modelName.length - 1);
-        // }
         if (!modelName.endsWith('s')) {
           modelName = modelName + 's';
         }
@@ -213,7 +211,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         doc[`set${actualRel}Id`](relationObjects[relation], doc._id);
       }
     }
-    return hasOne ? doc.save() : doc;
+    return hasOne ? doc.save({ transaction }) : doc;
   }
 
   extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
@@ -237,7 +235,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return relationObjects;
   }
 
-  async create(query: SingleDocQuery) {
+  async create(query: SingleDocQuery, transaction?: Transaction) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -249,11 +247,30 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     let relationObjects = this.extractRelationsModification(parsedQuery);
-
+    let t: Transaction | undefined = transaction;
+    let transactionProvided = transaction !== undefined;
+    if (!transactionProvided) {
+      t = await this.sequelize.transaction();
+    }
     return await this.model
-      .create(parsedQuery, { include: this.constructAssociationInclusion(assocs, true) })
-      .then(doc => this.createWithPopulation(doc, relationObjects))
-      .then(doc => (doc ? doc.toJSON() : doc));
+      .create(parsedQuery, {
+        include: this.constructAssociationInclusion(assocs, true),
+        transaction: t,
+      })
+      .then(doc => this.createWithPopulation(doc, relationObjects, t))
+      .then(doc => {
+        if (!transactionProvided) {
+          t!.commit();
+        }
+        return doc;
+      })
+      .then(doc => (doc ? doc.toJSON() : doc))
+      .catch(err => {
+        if (!transactionProvided) {
+          t!.rollback();
+        }
+        throw err;
+      });
   }
 
   async createMany(query: MultiDocQuery) {
@@ -266,19 +283,28 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     let relationObjects = this.extractManyRelationsModification(parsedQuery);
-
+    let t = await this.sequelize.transaction();
     return this.model
       .bulkCreate(parsedQuery, {
         include: this.constructAssociationInclusion(assocs, true),
+        transaction: t,
       })
       .then(docs => {
         return Promise.all(
           docs.map((doc, index) =>
-            this.createWithPopulation(doc, relationObjects[index]),
+            this.createWithPopulation(doc, relationObjects[index], t),
           ),
         );
       })
-      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
+      .then(docs => {
+        t.commit();
+        return docs;
+      })
+      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs))
+      .catch(err => {
+        t.rollback();
+        throw err;
+      });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -383,7 +409,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     id: string,
     query: SingleDocQuery,
     populate?: string[],
+    transaction?: Transaction,
   ): Promise<{ [key: string]: any }> {
+    let t: Transaction | undefined = transaction;
+    let transactionProvided = transaction !== undefined;
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -393,192 +422,220 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-
-    let parentDoc = await this.model.findByPk(id, {
-      nest: true,
-      include: this.constructAssociationInclusion({}).concat(
-        this.constructRelationInclusion(populate),
-      ),
-    });
-    if (parsedQuery.hasOwnProperty('$inc')) {
-      let inc = parsedQuery['$inc'];
-      for (const key in inc) {
-        if (!inc.hasOwnProperty(key)) continue;
-        if (key.indexOf('.') > -1) {
-          let [assoc, field] = [
-            key.substring(0, key.indexOf('.')),
-            key.substring(key.indexOf('.') + 1),
-          ];
-          if (!this.associations[assoc]) {
-            throw new Error(`Cannot increment field ${key}`);
-          }
-          if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
-            throw new Error(`Cannot increment array field: ${key}`);
-          }
-          await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-            parentDoc[assoc]._id,
-            {
-              $inc: { [field]: inc[key] },
-            },
-          );
-          continue;
-        }
-        if (this.extractedRelations[key]) {
-          throw new Error(`Cannot increment relation: ${key}`);
-        }
-        if (inc[key] > 0) {
-          parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
-        } else {
-          parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
-        }
-      }
-      delete parsedQuery['$inc'];
+    if (isNil(t)) {
+      t = await this.sequelize.transaction();
     }
-
-    if (parsedQuery.hasOwnProperty('$push')) {
-      let push = parsedQuery['$push'];
-      for (const key in push) {
-        if (key.indexOf('.') > -1) {
-          let [assoc, field] = [
-            key.substring(0, key.indexOf('.') - 1),
-            key.substring(key.indexOf('.') + 1),
-          ];
-          if (!this.associations[assoc]) {
-            throw new Error(`Cannot push field ${key}`);
-          }
-          if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
-            throw new Error(`Cannot push array field: ${key}`);
-          }
-          await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-            parentDoc[assoc]._id,
-            {
-              $push: { [field]: push[key] },
-            },
-          );
-          continue;
-        }
-        if (this.extractedRelations[key]) {
-          throw new Error(`Cannot increment relation: ${key}`);
-        }
-        if (this.associations[key]) {
-          if (!Array.isArray(this.associations[key])) {
-            throw new Error(`Cannot push in non-array field: ${key}`);
-          }
-          if (push[key]['$each']) {
-            let actualKey = key;
-            if (key.charAt(key.length - 1) !== 's') {
-              actualKey = key + 's';
-            }
-            parentDoc[`add${actualKey}`](push[key]['$each'], parentDoc._id);
-          } else {
-            parentDoc[`add${key}`](push[key], parentDoc._id);
-          }
-          continue;
-        }
-        if (this.extractedRelations[key]) {
-          if (!Array.isArray(this.extractedRelations[key])) {
-            throw new Error(`Cannot push in non-array field: ${key}`);
-          }
-          let modelName = key.charAt(0).toUpperCase() + key.slice(1);
-          if (push[key]['$each']) {
-            if (!modelName.endsWith('s')) {
-              modelName = modelName + 's';
-            }
-            parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
-          } else {
-            let actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-            parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
-          }
-          continue;
-        }
-        if (push[key]['$each']) {
-          parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
-        } else {
-          parentDoc[key] = [...parentDoc[key], push[key]];
-        }
-      }
-      await parentDoc.save();
-      delete parsedQuery['$push'];
-    }
-
-    parsedQuery.updatedAt = new Date();
-    incrementDbQueries();
-    let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-    let associationObjects: { [key: string]: any } = {};
-    for (const assoc in assocs) {
-      if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
-        throw new Error(`Cannot update association ${assoc} with non-array value`);
-      }
-      if (!Array.isArray(assocs[assoc]) && Array.isArray(parsedQuery[assoc])) {
-        throw new Error(`Cannot update association ${assoc} with array value`);
-      }
-      associationObjects[assoc] = parsedQuery[assoc];
-      delete parsedQuery[assoc];
-    }
-    let relationObjects = this.extractRelationsModification(parsedQuery);
-    await this.model.update({ ...parsedQuery }, { where: { _id: id } });
-    incrementDbQueries();
-
-    return await this.model
-      .findByPk(id, {
+    try {
+      let parentDoc = await this.model.findByPk(id, {
         nest: true,
-        include: this.constructAssociationInclusion(assocs).concat(
+        include: this.constructAssociationInclusion({}).concat(
           this.constructRelationInclusion(populate),
         ),
-      })
-      .then(doc => {
-        if (!doc) return doc;
-        const promises = [];
-        for (const assoc in associationObjects) {
-          if (!associationObjects.hasOwnProperty(assoc)) continue;
-          if (Array.isArray(associationObjects[assoc])) {
-            associationObjects[assoc].forEach((obj: any) => {
-              if (obj.hasOwnProperty('_id')) {
-                promises.push(
-                  (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-                    obj._id,
-                    obj,
-                  ),
-                );
-              } else {
-                promises.push(async () => {
-                  let returned = await (
-                    this.associations[assoc] as SequelizeSchema
-                  ).create(obj);
-                  doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
-                });
-              }
-            });
-          } else {
-            if (assoc.hasOwnProperty('_id')) {
-              promises.push(
-                (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-                  associationObjects[assoc]._id,
-                  associationObjects[assoc],
-                ),
-              );
-            } else {
-              promises.push(async () => {
-                let returned = (this.associations[assoc] as SequelizeSchema).create(
-                  associationObjects[assoc],
-                );
-                doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
-              });
+        transaction: t,
+      });
+      if (parsedQuery.hasOwnProperty('$inc')) {
+        let inc = parsedQuery['$inc'];
+        for (const key in inc) {
+          if (!inc.hasOwnProperty(key)) continue;
+          if (key.indexOf('.') > -1) {
+            let [assoc, field] = [
+              key.substring(0, key.indexOf('.')),
+              key.substring(key.indexOf('.') + 1),
+            ];
+            if (!this.associations[assoc]) {
+              throw new Error(`Cannot increment field ${key}`);
             }
+            if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
+              throw new Error(`Cannot increment array field: ${key}`);
+            }
+            await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
+              parentDoc[assoc]._id,
+              {
+                $inc: { [field]: inc[key] },
+              },
+              undefined,
+              t,
+            );
+            continue;
+          }
+          if (this.extractedRelations[key]) {
+            throw new Error(`Cannot increment relation: ${key}`);
+          }
+          if (inc[key] > 0) {
+            parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
+          } else {
+            parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
           }
         }
-        return Promise.all(promises).then(() => doc);
-      })
-      .then(doc => this.createWithPopulation(doc, relationObjects))
-      .then(() => {
-        return this.model.findByPk(id, {
+        delete parsedQuery['$inc'];
+      }
+
+      if (parsedQuery.hasOwnProperty('$push')) {
+        let push = parsedQuery['$push'];
+        for (const key in push) {
+          if (key.indexOf('.') > -1) {
+            let [assoc, field] = [
+              key.substring(0, key.indexOf('.') - 1),
+              key.substring(key.indexOf('.') + 1),
+            ];
+            if (!this.associations[assoc]) {
+              throw new Error(`Cannot push field ${key}`);
+            }
+            if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
+              throw new Error(`Cannot push array field: ${key}`);
+            }
+            await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
+              parentDoc[assoc]._id,
+              {
+                $push: { [field]: push[key] },
+              },
+              undefined,
+              t,
+            );
+            continue;
+          }
+          if (this.extractedRelations[key]) {
+            throw new Error(`Cannot increment relation: ${key}`);
+          }
+          if (this.associations[key]) {
+            if (!Array.isArray(this.associations[key])) {
+              throw new Error(`Cannot push in non-array field: ${key}`);
+            }
+            if (push[key]['$each']) {
+              let actualKey = key;
+              if (key.charAt(key.length - 1) !== 's') {
+                actualKey = key + 's';
+              }
+              parentDoc[`add${actualKey}`](push[key]['$each'], parentDoc._id);
+            } else {
+              parentDoc[`add${key}`](push[key], parentDoc._id);
+            }
+            continue;
+          }
+          if (this.extractedRelations[key]) {
+            if (!Array.isArray(this.extractedRelations[key])) {
+              throw new Error(`Cannot push in non-array field: ${key}`);
+            }
+            let modelName = key.charAt(0).toUpperCase() + key.slice(1);
+            if (push[key]['$each']) {
+              if (!modelName.endsWith('s')) {
+                modelName = modelName + 's';
+              }
+              parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
+            } else {
+              let actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+              parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
+            }
+            continue;
+          }
+          if (push[key]['$each']) {
+            parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
+          } else {
+            parentDoc[key] = [...parentDoc[key], push[key]];
+          }
+        }
+        await parentDoc.save();
+        delete parsedQuery['$push'];
+      }
+
+      parsedQuery.updatedAt = new Date();
+      incrementDbQueries();
+      let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+      let associationObjects: { [key: string]: any } = {};
+      for (const assoc in assocs) {
+        if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
+          throw new Error(`Cannot update association ${assoc} with non-array value`);
+        }
+        if (!Array.isArray(assocs[assoc]) && Array.isArray(parsedQuery[assoc])) {
+          throw new Error(`Cannot update association ${assoc} with array value`);
+        }
+        associationObjects[assoc] = parsedQuery[assoc];
+        delete parsedQuery[assoc];
+      }
+      let relationObjects = this.extractRelationsModification(parsedQuery);
+      await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
+      incrementDbQueries();
+
+      let data = await this.model
+        .findByPk(id, {
           nest: true,
           include: this.constructAssociationInclusion(assocs).concat(
             this.constructRelationInclusion(populate),
           ),
-        });
-      })
-      .then(doc => (doc ? doc.toJSON() : doc));
+          transaction: t,
+        })
+        .then(doc => {
+          if (!doc) return doc;
+          const promises = [];
+          for (const assoc in associationObjects) {
+            if (!associationObjects.hasOwnProperty(assoc)) continue;
+            if (Array.isArray(associationObjects[assoc])) {
+              associationObjects[assoc].forEach((obj: any) => {
+                if (obj.hasOwnProperty('_id')) {
+                  promises.push(
+                    (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
+                      obj._id,
+                      obj,
+                      undefined,
+                      t,
+                    ),
+                  );
+                } else {
+                  promises.push(async () => {
+                    let returned = await (
+                      this.associations[assoc] as SequelizeSchema
+                    ).create(obj, t);
+                    doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
+                  });
+                }
+              });
+            } else {
+              if (assoc.hasOwnProperty('_id')) {
+                promises.push(
+                  (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
+                    associationObjects[assoc]._id,
+                    associationObjects[assoc],
+                    undefined,
+                    t,
+                  ),
+                );
+              } else {
+                promises.push(async () => {
+                  let returned = (this.associations[assoc] as SequelizeSchema).create(
+                    associationObjects[assoc],
+                    t,
+                  );
+                  doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
+                });
+              }
+            }
+          }
+          return Promise.all(promises).then(() => doc);
+        })
+        .then(doc => this.createWithPopulation(doc, relationObjects, t!))
+        .then(() => {
+          if (!transactionProvided) {
+            return t!.commit();
+          }
+          return;
+        })
+        .then(() => {
+          return this.model.findByPk(id, {
+            nest: true,
+            include: this.constructAssociationInclusion(assocs).concat(
+              this.constructRelationInclusion(populate),
+            ),
+            transaction: t,
+          });
+        })
+        .then(doc => (doc ? doc.toJSON() : doc));
+      return data;
+    } catch (e) {
+      if (!transactionProvided) {
+        await t!.rollback();
+      }
+      throw e;
+    }
   }
 
   async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
@@ -601,16 +658,21 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     )[0];
 
     incrementDbQueries();
-    await this.model
-      .findAll({
-        where: parsedFilter,
-        attributes: ['_id'],
-      })
-      .then(docs =>
-        Promise.all(
-          docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate)),
-        ),
+    let docs = await this.model.findAll({
+      where: parsedFilter,
+      attributes: ['_id'],
+    });
+    const t = await this.sequelize.transaction();
+    try {
+      let data = await Promise.all(
+        docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),
       );
+      await t.commit();
+      return data;
+    } catch (e) {
+      await t.rollback();
+      throw e;
+    }
   }
 
   countDocuments(query: Query): Promise<number> {
