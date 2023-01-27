@@ -73,7 +73,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
           attributes?: { exclude: string[] };
         } = {
           model: associationSchema.model,
-          as: Array.isArray(associationTarget) ? associationName : associationName + 'Id',
+          as: associationName,
           required: false,
           attributes: { exclude: associationSchema.excludedFields },
         };
@@ -97,7 +97,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
           attributes?: { exclude: string[] };
         } = {
           model: associationSchema.model,
-          as: Array.isArray(associationTarget) ? population : population + 'Id',
+          as: population,
           required: false,
           attributes: { exclude: associationSchema.excludedFields },
         };
@@ -124,7 +124,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       } else {
         let actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
         // @ts-ignore
-        doc[`set${actualRel}Id`](relationObjects[relation], doc._id);
+        doc[`set${actualRel}`](relationObjects[relation], doc._id);
       }
     }
     return hasOne ? doc.save({ transaction }) : doc;
