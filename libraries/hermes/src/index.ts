@@ -204,6 +204,7 @@ export class ConduitRoutingController {
   private _cleanupRoutes(routes: any[]) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
+    this._proxyRouter?.cleanupRoutes(routes);
   }
 
   async socketPush(data: SocketPush) {

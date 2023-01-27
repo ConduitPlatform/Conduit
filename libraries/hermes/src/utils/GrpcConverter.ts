@@ -248,16 +248,5 @@ function createHandlerForSocket(
 }
 
 export function createHandlerForProxy(options: ProxyRouteOptions, moduleName?: string) {
-  if (moduleName) {
-    if (!options.path.startsWith('/')) {
-      options.path = `/${options.path}`;
-    }
-    if (!options.path.startsWith(`/${moduleName}/`)) {
-      options.path = `/${moduleName}${options.path}`;
-    }
-    if (!options.path.startsWith(`/proxy/${moduleName}/`)) {
-      options.path = `/proxy/${moduleName}${options.path}`;
-    }
-  }
   return new ProxyRoute(options);
 }
