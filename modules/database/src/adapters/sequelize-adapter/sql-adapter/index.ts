@@ -130,10 +130,8 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const [newSchema, extractedSchemas, extractedRelations] = schemaConverter(
-      compiledSchema,
-      this.sequelize.getDialect(),
-    );
+    const [newSchema, extractedSchemas, extractedRelations] =
+      schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
