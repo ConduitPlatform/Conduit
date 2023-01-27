@@ -25,9 +25,20 @@ export function findPopulation(
         if (
           keys.length > 0 &&
           relations.indexOf(keys[0]) !== -1 &&
-          result.indexOf(key) === -1
+          result.indexOf(key) === -1 &&
+          !context.obj[key]
         ) {
-          result.push(_extractNestedPopulation(context._item.strPath));
+          let path = context._item.strPath;
+          path = path.split('.')[0];
+          if (context.obj[path]) {
+            result.push(
+              _extractNestedPopulation(
+                context._item.strPath.substring(context._item.strPath.indexOf('.') + 1),
+              ),
+            );
+          } else {
+            result.push(_extractNestedPopulation(context._item.strPath));
+          }
         }
       }
     },

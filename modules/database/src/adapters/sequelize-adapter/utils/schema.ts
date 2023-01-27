@@ -33,8 +33,8 @@ export const extractRelations = (
         });
       } else {
         model.belongsTo(adapter.models[value.model].model, {
-          foreignKey: relation,
-          as: relation + 'Id',
+          foreignKey: relation + 'Id',
+          as: relation,
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         });

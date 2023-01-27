@@ -35,7 +35,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.grpcSdk = grpcSdk;
     this.connect();
     await this.ensureConnected();
-    this.legacyDeployment = await this.hasLegacyCollections();
+    // this.legacyDeployment = await this.hasLegacyCollections();
   }
 
   async registerSystemSchema(schema: ConduitSchema) {
