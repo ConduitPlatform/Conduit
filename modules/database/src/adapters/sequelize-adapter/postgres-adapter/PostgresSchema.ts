@@ -57,6 +57,7 @@ export class PostgresSchema extends SequelizeSchema {
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
+
     return await this.model
       .create(parsedQuery, {
         transaction: t,
@@ -116,7 +117,7 @@ export class PostgresSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let filter = parseQuery(parsedQuery);
+    let filter = parseQuery(parsedQuery, this.extractedRelations);
 
     const options: FindOptions = {
       where: filter,
@@ -151,7 +152,7 @@ export class PostgresSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let filter = parseQuery(parsedQuery);
+    let filter = parseQuery(parsedQuery, this.extractedRelations);
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -188,7 +189,7 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    let filter = parseQuery(parsedQuery);
+    let filter = parseQuery(parsedQuery, this.extractedRelations);
     return this.model.destroy({ where: filter, limit: 1 });
   }
 
@@ -200,7 +201,7 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    let filter = parseQuery(parsedQuery);
+    let filter = parseQuery(parsedQuery, this.extractedRelations);
     return this.model.destroy({ where: filter });
   }
 
@@ -324,7 +325,10 @@ export class PostgresSchema extends SequelizeSchema {
       parsedFilter = filterQuery;
     }
 
-    parsedFilter = parseQuery(parsedFilter as ParsedQuery | ParsedQuery[]);
+    parsedFilter = parseQuery(
+      parsedFilter as ParsedQuery | ParsedQuery[],
+      this.extractedRelations,
+    );
     incrementDbQueries();
     let docs = await this.model.findAll({
       where: parsedFilter,
@@ -351,7 +355,7 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const filter = parseQuery(parsedQuery);
+    const filter = parseQuery(parsedQuery, this.extractedRelations);
     return this.model.count({ where: filter });
   }
 }
