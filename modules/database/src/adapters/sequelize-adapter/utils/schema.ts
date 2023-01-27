@@ -1,36 +1,8 @@
-import { SequelizeSchema } from '../SequelizeSchema';
 import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeAdapter } from '../index';
 
 const deepdash = require('deepdash/standalone');
-
-export const extractAssociations = (
-  model: ModelStatic<any>,
-  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-) => {
-  for (const association in associations) {
-    if (associations.hasOwnProperty(association)) {
-      const value = associations[association];
-      if (Array.isArray(value)) {
-        const item = value[0];
-        model.hasMany(item.model, {
-          foreignKey: association,
-          as: association,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-        });
-      } else {
-        model.hasOne(value.model, {
-          foreignKey: association,
-          as: association,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-        });
-      }
-    }
-  }
-};
 
 export const extractRelations = (
   name: string,
@@ -40,7 +12,7 @@ export const extractRelations = (
       | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
       | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
   },
-  adapter: SequelizeAdapter,
+  adapter: SequelizeAdapter<any>,
 ) => {
   for (const relation in relations) {
     if (relations.hasOwnProperty(relation)) {
@@ -93,13 +65,6 @@ export const sqlTypesProcess = (
           excludedFields.push(key);
         }
       }
-      // needs to move to a dialect specific file
-      // if (parentValue[key].hasOwnProperty('type') && parentValue[key].type === 'JSON') {
-      //   const dialect = sequelize.getDialect();
-      //   if (dialect === 'postgres') {
-      //     parentValue[key].type = DataTypes.JSONB;
-      //   }
-      // }
 
       if (parentValue[key].hasOwnProperty('primaryKey') && parentValue[key].primaryKey) {
         primaryKeyExists = true;

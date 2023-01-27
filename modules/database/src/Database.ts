@@ -27,7 +27,6 @@ import {
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
 import { ConduitDatabaseSchema, Schema } from './interfaces';
@@ -40,6 +39,8 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
 import { isNil } from 'lodash';
+import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
+import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -74,10 +75,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
-    } else if (
-      ['postgres', 'sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)
-    ) {
-      this._activeAdapter = new SequelizeAdapter(dbUri);
+    } else if (dbType === 'postgres') {
+      this._activeAdapter = new PostgresAdapter(dbUri);
+    } else if (['sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)) {
+      this._activeAdapter = new SQLAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
     }
