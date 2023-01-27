@@ -1,12 +1,8 @@
-import { Op } from 'sequelize';
+import { ModelStatic, Op } from 'sequelize';
+import { SQLSchema } from './SQLSchema';
 import { isArray, isBoolean, isString, merge } from 'lodash';
-import {
-  Indexable,
-  MongoIndexOptions,
-  PostgresIndexOptions,
-} from '@conduitplatform/grpc-sdk';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ParsedQuery } from '../../../interfaces';
-import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(value: any) {
   const newArray = [];
@@ -133,7 +129,7 @@ function patch(query: Indexable, key: string) {
 export function arrayFind(
   key: string,
   fields: Indexable,
-  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  associations: { [key: string]: SQLSchema | SQLSchema[] },
 ): boolean {
   if (fields[key]) {
     if (Array.isArray(fields[key])) {
@@ -145,9 +141,9 @@ export function arrayFind(
     let assocKey = key.split('.')[0];
     let remain = key.split('.').slice(1).join('.');
     if (associations[assocKey]) {
-      let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
-        ? (associations[assocKey] as SequelizeSchema[])[0]
-        : (associations[assocKey] as SequelizeSchema);
+      let assoc: SQLSchema = Array.isArray(associations[assocKey])
+        ? (associations[assocKey] as SQLSchema[])[0]
+        : (associations[assocKey] as SQLSchema);
       return arrayFind(remain, assoc.originalSchema.fields, assoc.associations);
     }
   }
@@ -158,7 +154,7 @@ export function arrayPatch(
   dialect: string,
   query: Indexable,
   fields: Indexable,
-  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  associations: { [key: string]: SQLSchema | SQLSchema[] },
 ) {
   if (dialect === 'postgres') return query;
   let newQuery = JSON.parse(JSON.stringify(query));
@@ -172,9 +168,9 @@ export function arrayPatch(
     } else if (key.indexOf('.') !== -1) {
       let assocKey = key.split('.')[0];
       if (associations[assocKey]) {
-        let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
-          ? (associations[assocKey] as SequelizeSchema[])[0]
-          : (associations[assocKey] as SequelizeSchema);
+        let assoc: SQLSchema = Array.isArray(associations[assocKey])
+          ? (associations[assocKey] as SQLSchema[])[0]
+          : (associations[assocKey] as SQLSchema);
         let found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
         if (found) patch(newQuery, key);
       }
@@ -185,7 +181,7 @@ export function arrayPatch(
 
 export function extractAssociationsFromObject(
   query: ParsedQuery | ParsedQuery[],
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  associations?: { [key: string]: SQLSchema | SQLSchema[] },
 ): { [key: string]: string[] } {
   const requiredAssociations: { [key: string]: string[] } = {};
   if (!associations) return {};
@@ -215,19 +211,29 @@ export function extractAssociationsFromObject(
   return requiredAssociations;
 }
 
-export function checkIfPostgresOptions(
-  options: MongoIndexOptions | PostgresIndexOptions,
-) {
-  const postgresOptions = [
-    'concurrently',
-    'name',
-    'operator',
-    'parser',
-    'prefix',
-    'unique',
-    'using',
-    'where',
-  ];
-  const result = Object.keys(options).some(option => !postgresOptions.includes(option));
-  return !result;
-}
+export const extractAssociations = (
+  model: ModelStatic<any>,
+  associations: { [key: string]: SQLSchema | SQLSchema[] },
+) => {
+  for (const association in associations) {
+    if (associations.hasOwnProperty(association)) {
+      const value = associations[association];
+      if (Array.isArray(value)) {
+        const item = value[0];
+        model.hasMany(item.model, {
+          foreignKey: association,
+          as: association,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        });
+      } else {
+        model.hasOne(value.model, {
+          foreignKey: association,
+          as: association,
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        });
+      }
+    }
+  }
+};

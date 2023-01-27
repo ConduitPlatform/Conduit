@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isBoolean, isNumber, isObject, isString } from 'lodash';
-import { checkIfPostgresOptions } from './utils';
+import { checkIfPostgresOptions } from '../utils';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
