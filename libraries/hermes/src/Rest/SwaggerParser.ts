@@ -1,4 +1,4 @@
-import { TYPE, ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitRouteOption, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitParser } from '../classes';
 
 export interface ParseResult {
@@ -182,17 +182,26 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isRequired: boolean = false,
     isArray: boolean,
   ): void {
-    // @ts-ignore
-    processingObject.properties[name] = {
-      oneOf: [
-        {
-          $ref: `#/components/schemas/${value}`,
-        },
-        {
-          $ref: `#/components/schemas/ModelId`,
-        },
-      ],
-    };
+    if (this.isInput) {
+      // @ts-ignore
+      processingObject.properties[name] = {
+        type: 'string',
+        format: 'uuid',
+      };
+    } else {
+      // @ts-ignore
+      processingObject.properties[name] = {
+        oneOf: [
+          {
+            $ref: `#/components/schemas/${value}`,
+          },
+          {
+            type: 'string',
+            format: 'uuid',
+          },
+        ],
+      };
+    }
     this.addFieldToRequired(processingObject, name, isRequired);
   }
 
