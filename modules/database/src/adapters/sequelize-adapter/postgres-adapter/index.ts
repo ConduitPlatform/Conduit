@@ -17,7 +17,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
   protected async hasLegacyCollections() {
     let res = await this.sequelize
       .query(
-        `EXISTS (
+        `SELECT EXISTS (
     SELECT FROM 
         information_schema.tables 
     WHERE 
@@ -102,10 +102,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       delete this.sequelize.models[compiledSchema.collectionName];
     }
 
-    const [newSchema, extractedRelations] = schemaConverter(
-      compiledSchema,
-      this.sequelize.getDialect(),
-    );
+    const [newSchema, extractedRelations] = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
