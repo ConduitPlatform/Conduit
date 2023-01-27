@@ -1,35 +1,5 @@
 import { Sequelize } from 'sequelize';
 
-async function postgresLegacy(
-  sequelize: Sequelize,
-  sqlSchemaName: string,
-): Promise<boolean> {
-  return sequelize
-    .query(
-      `EXISTS (
-    SELECT FROM 
-        information_schema.tables 
-    WHERE 
-        table_schema LIKE '${sqlSchemaName}' AND 
-        table_type LIKE 'BASE TABLE' AND
-        table_name = '_DeclaredSchema'
-    );`,
-    )
-    .then(r => (r[0][0] as { exists: boolean }).exists);
-}
-
-export function legacyCollections(
-  sequelize: Sequelize,
-  sqlSchemaName: string,
-): Promise<boolean> {
-  switch (sequelize.getDialect()) {
-    case 'postgres':
-      return postgresLegacy(sequelize, sqlSchemaName);
-    default:
-      return Promise.resolve(false);
-  }
-}
-
 async function postgresTableFetch(sequelize: Sequelize, sqlSchemaName: string) {
   return sequelize
     .query(`select * from pg_tables where schemaname='${sqlSchemaName}';`)

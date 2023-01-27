@@ -1,8 +1,5 @@
 import { Sequelize } from 'sequelize';
-import { SequelizeSchema } from './SequelizeSchema';
-import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
-  ConduitModel,
   ConduitSchema,
   GrpcError,
   Indexable,
@@ -12,19 +9,18 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   sleep,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseAdapter } from '../DatabaseAdapter';
-import { validateSchema } from '../utils/validateSchema';
-import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { isNil } from 'lodash';
-import { checkIfPostgresOptions, legacyCollections, tableFetch } from './utils';
-import { ConduitDatabaseSchema } from '../../interfaces';
 import { EventEmitter } from 'events';
+import { DatabaseAdapter } from '../DatabaseAdapter';
+import { SequelizeSchema } from './SequelizeSchema';
+import { checkIfPostgresOptions, tableFetch } from './utils';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
-export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
+export abstract class SequelizeAdapter<
+  T extends SequelizeSchema,
+> extends DatabaseAdapter<T> {
   connectionUri: string;
   sequelize!: Sequelize;
   syncedSchemas: string[] = [];
@@ -65,10 +61,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
   }
 
-  protected async hasLegacyCollections() {
-    let res = await legacyCollections(this.sequelize, sqlSchemaName);
-    return res;
-  }
+  protected abstract hasLegacyCollections(): Promise<boolean>;
 
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
@@ -142,54 +135,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return introspectedSchemas;
   }
 
-  async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
-    sqlSchemaConverter(table);
-
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`,
-    );
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`,
-    );
-
-    const schema = new ConduitSchema(originalName, table as ConduitModel, {
-      timestamps: true,
-      conduit: {
-        noSync: true,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-        cms: {
-          authentication: false,
-          crudOperations: {
-            create: {
-              enabled: false,
-              authenticated: false,
-            },
-            read: {
-              enabled: false,
-              authenticated: false,
-            },
-            update: {
-              enabled: false,
-              authenticated: false,
-            },
-            delete: {
-              enabled: false,
-              authenticated: false,
-            },
-          },
-          enabled: true,
-        },
-      },
-    });
-    schema.ownerModule = 'database';
-
-    return schema;
-  }
+  abstract introspectSchema(
+    table: Indexable,
+    originalName: string,
+  ): Promise<ConduitSchema>;
 
   getCollectionName(schema: ConduitSchema) {
     return schema.collectionName && schema.collectionName !== ''
@@ -197,129 +146,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       : schema.name;
   }
 
-  private async processExtractedSchemas(
-    schema: ConduitSchema,
-    extractedSchemas: { [key: string]: any },
-    associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  ) {
-    for (const extractedSchema in extractedSchemas) {
-      let modelOptions = {
-        ...schema.modelOptions,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-      };
-      let modeledSchema;
-      let isArray = false;
-      if (Array.isArray(extractedSchemas[extractedSchema])) {
-        isArray = true;
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema][0],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      } else {
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      }
-
-      modeledSchema.ownerModule = schema.ownerModule;
-      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
-      // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, {
-        parentSchema: schema.name,
-      });
-      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
-    }
-  }
-
-  protected async _createSchemaFromAdapter(
+  protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
     options?: { parentSchema: string },
-  ): Promise<SequelizeSchema> {
-    let compiledSchema = JSON.parse(JSON.stringify(schema));
-    (compiledSchema as any).fields = JSON.parse(
-      JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
-    );
-    if (this.registeredSchemas.has(compiledSchema.name)) {
-      if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
-          this.registeredSchemas.get(compiledSchema.name)!,
-          compiledSchema,
-        );
-      }
-      delete this.sequelize.models[compiledSchema.collectionName];
-    }
-
-    const [newSchema, extractedSchemas, extractedRelations] = schemaConverter(
-      compiledSchema,
-      this.sequelize.getDialect(),
-    );
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
-    if (Object.keys(extractedRelations).length > 0) {
-      let pendingModels: string[] = [];
-      for (const relation in extractedRelations) {
-        let rel = Array.isArray(extractedRelations[relation])
-          ? (extractedRelations[relation] as any[])[0]
-          : extractedRelations[relation];
-        if (!this.syncedSchemas.includes(rel.model)) {
-          if (!pendingModels.includes(rel.model)) {
-            pendingModels.push(rel.model);
-          }
-        }
-      }
-      while (pendingModels.length > 0) {
-        await sleep(500);
-        pendingModels = pendingModels.filter(model => {
-          return !this.syncedSchemas.includes(model);
-        });
-      }
-    }
-    let associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
-    await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
-    if (options?.parentSchema) {
-      schema.parentSchema = options.parentSchema;
-    }
-    this.models[schema.name] = new SequelizeSchema(
-      this.sequelize,
-      newSchema,
-      schema,
-      this,
-      associatedSchemas,
-      extractedRelations,
-    );
-
-    const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
-    // do not sync extracted schemas
-    if ((isNil(noSync) || !noSync) && !options) {
-      // await this.models[schema.name].sync();
-      if (!this.syncedSchemas.includes(schema.name)) {
-        this.syncedSchemas.push(schema.name);
-      }
-      this.scheduleSync();
-      // await this.sequelize.sync({ alter: true });
-    }
-    // do not store extracted schemas to db
-    if (!options) {
-      await this.saveSchemaToDatabase(schema);
-    }
-    if ((isNil(noSync) || !noSync) && !options) {
-      await this.waitForSync();
-    }
-
-    return this.models[schema.name];
-  }
+  ): Promise<T>;
 
   scheduleSync() {
     if (this.scheduledSync) {
@@ -351,14 +181,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (!this.models?.[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     if (instanceSync) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-        } else {
-          delete this.models[associationSchema.schema.name];
-        }
-      }
       delete this.models[schemaName];
       delete this.sequelize.models[schemaName];
       return 'Instance synchronized!';
@@ -367,34 +189,21 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to delete schema');
     }
     if (deleteData) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-          await associationSchema[0].model.drop();
-        } else {
-          delete this.models[associationSchema.schema.name];
-          await associationSchema.model.drop();
-        }
-      }
       await this.models[schemaName].model.drop();
     }
-    this.models['_DeclaredSchema']
-      .findOne(JSON.stringify({ name: schemaName }))
-      .then(model => {
-        if (model) {
-          this.models['_DeclaredSchema']
-            .deleteOne(JSON.stringify({ name: schemaName }))
-            .catch((e: Error) => {
-              throw new GrpcError(status.INTERNAL, e.message);
-            });
-          if (!instanceSync) {
-            ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
-              imported: String(!!model.modelOptions.conduit?.imported),
-            });
-          }
-        }
+    const model = await this.models['_DeclaredSchema'].findOne(
+      JSON.stringify({ name: schemaName }),
+    );
+    if (model) {
+      await this.models['_DeclaredSchema']
+        .deleteOne(JSON.stringify({ name: schemaName }))
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+        imported: String(!!model.modelOptions.conduit?.imported),
       });
+    }
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
     this.registeredSchemas.delete(schemaName);
@@ -402,14 +211,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Schema deleted!';
   }
 
-  getSchemaModel(schemaName: string): { model: SequelizeSchema } {
+  getSchemaModel(schemaName: string): { model: T } {
     if (this.models && this.models[schemaName]) {
-      const self = this;
       return { model: this.models[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
+  // change to dialect
   getDatabaseType(): string {
     return 'PostgreSQL';
   }
@@ -490,7 +299,7 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       });
   }
 
-  private checkAndConvertIndexes(
+  protected checkAndConvertIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
     callerModule: string,
