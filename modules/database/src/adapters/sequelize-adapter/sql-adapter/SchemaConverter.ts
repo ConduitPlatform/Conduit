@@ -12,10 +12,7 @@ import { checkIfPostgresOptions } from '../utils';
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function schemaConverter(
-  jsonSchema: ConduitSchema,
-  dialect: string,
-): [
+export function schemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
   { [key: string]: any },
   {
@@ -34,7 +31,7 @@ export function schemaConverter(
   const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
-  iterDeep(jsonSchema.fields, copy.fields, dialect);
+  iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extractedEmbedded, extractedRelations];
 }
 
@@ -91,57 +88,54 @@ function extractRelations(ogSchema: any, schema: any) {
   return extracted;
 }
 
-function iterDeep(schema: any, resSchema: any, dialect: string) {
+function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      resSchema[key] = extractArrayType(schema[key], dialect, key);
+      resSchema[key] = extractArrayType(schema[key], key);
     } else if (isObject(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key], dialect);
+      resSchema[key] = extractObjectType(schema[key]);
       if (!schema[key].hasOwnProperty('type')) {
-        iterDeep(schema[key], resSchema[key], dialect);
+        iterDeep(schema[key], resSchema[key]);
       }
     } else {
-      resSchema[key] = extractType(schema[key], dialect);
+      resSchema[key] = extractType(schema[key]);
     }
   }
 }
 
-function extractArrayType(arrayField: any[], dialect: string, field: string) {
+function extractArrayType(arrayField: any[], field: string) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
     if (arrayField[0].hasOwnProperty('type')) {
-      arrayElementType = extractType(arrayField[0].type, dialect);
+      arrayElementType = extractType(arrayField[0].type);
     } else {
       throw new Error('Failed to extract embedded object type');
     }
   } else {
-    arrayElementType = extractType(arrayField[0], dialect);
+    arrayElementType = extractType(arrayField[0]);
   }
-  if (dialect !== 'postgres') {
-    if (arrayElementType === DataTypes.JSON) {
-      return { type: DataTypes.JSON };
-    } else {
-      return {
-        type: DataTypes.STRING,
-        get(): any {
-          // @ts-ignore
-          return this.getDataValue(field).split(';');
-        },
-        set(val: any): any {
-          // @ts-ignore
-          this.setDataValue(field, val.join(';'));
-        },
-      };
-    }
+  if (arrayElementType === DataTypes.JSON) {
+    return { type: DataTypes.JSON };
+  } else {
+    return {
+      type: DataTypes.STRING,
+      get(): any {
+        // @ts-ignore
+        return this.getDataValue(field).split(';');
+      },
+      set(val: any): any {
+        // @ts-ignore
+        this.setDataValue(field, val.join(';'));
+      },
+    };
   }
-  return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: any, dialect: string) {
+function extractObjectType(objectField: any) {
   const res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
-    res.type = extractType(objectField.type, dialect);
+    res.type = extractType(objectField.type);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
@@ -156,7 +150,7 @@ function extractObjectType(objectField: any, dialect: string) {
   return res;
 }
 
-function extractType(type: string, dialect: string) {
+function extractType(type: string) {
   switch (type) {
     case 'String':
       return DataTypes.STRING;
@@ -167,34 +161,11 @@ function extractType(type: string, dialect: string) {
     case 'Date':
       return DataTypes.DATE;
     case 'JSON':
-      return dialect === 'postgres' ? DataTypes.JSONB : DataTypes.JSON;
+      return DataTypes.JSON;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;
   }
-
-  /**
-   *  return {
-   *           type: DataTypes.JSON,
-   *           get(): any {
-   *             // @ts-ignore
-   *             var currentValue = this.getDataValue(fieldName);
-   *             console.log(fieldName, currentValue);
-   *             if (typeof currentValue == 'string') {
-   *               console.log('parsing');
-   *               // @ts-ignore
-   *               this.dataValues[fieldName] = JSON.parse(currentValue);
-   *             }
-   *             // @ts-ignore
-   *             return this.dataValues[fieldName];
-   *           },
-   *           set(value: any) {
-   *             console.log(fieldName, value);
-   *             // @ts-ignore
-   *             this.setDataValue(fieldName, JSON.stringify(value));
-   *           },
-   *         };
-   */
 
   throw new Error('Failed to extract embedded object type');
 }
