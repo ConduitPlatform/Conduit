@@ -41,6 +41,10 @@ export default {
       format: 'String',
       default: '',
     },
+    endpoint: {
+      format: 'String',
+      default: '',
+    },
   },
   aliyun: {
     region: {
