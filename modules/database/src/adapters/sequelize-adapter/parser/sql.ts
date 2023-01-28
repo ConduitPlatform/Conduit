@@ -3,6 +3,7 @@ import { ModelStatic, Op } from 'sequelize';
 import { SQLSchema } from '../sql-adapter/SQLSchema';
 import { ParsedQuery } from '../../../interfaces';
 import { merge } from 'lodash';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 function patch(query: Indexable, key: string) {
   if (query[key][Op.in]) {
@@ -23,7 +24,7 @@ function patch(query: Indexable, key: string) {
 export function arrayFind(
   key: string,
   fields: Indexable,
-  associations: { [key: string]: SQLSchema | SQLSchema[] },
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ): boolean {
   if (fields[key]) {
     if (Array.isArray(fields[key])) {
@@ -34,10 +35,10 @@ export function arrayFind(
   } else if (key.indexOf('.') !== -1) {
     let assocKey = key.split('.')[0];
     let remain = key.split('.').slice(1).join('.');
-    if (associations[assocKey]) {
-      let assoc: SQLSchema = Array.isArray(associations[assocKey])
-        ? (associations[assocKey] as SQLSchema[])[0]
-        : (associations[assocKey] as SQLSchema);
+    if (associations && associations[assocKey]) {
+      let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+        ? (associations[assocKey] as SequelizeSchema[])[0]
+        : (associations[assocKey] as SequelizeSchema);
       return arrayFind(remain, assoc.originalSchema.fields, assoc.associations);
     }
   }
@@ -47,7 +48,7 @@ export function arrayFind(
 export function arrayPatch(
   query: Indexable | undefined,
   fields: Indexable,
-  associations: { [key: string]: SQLSchema | SQLSchema[] },
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   if (!query) return query;
   let newQuery = JSON.parse(JSON.stringify(query));
@@ -60,7 +61,7 @@ export function arrayPatch(
       }
     } else if (key.indexOf('.') !== -1) {
       let assocKey = key.split('.')[0];
-      if (associations[assocKey]) {
+      if (associations && associations[assocKey]) {
         let assoc: SQLSchema = Array.isArray(associations[assocKey])
           ? (associations[assocKey] as SQLSchema[])[0]
           : (associations[assocKey] as SQLSchema);
@@ -74,7 +75,7 @@ export function arrayPatch(
 
 export function extractAssociationsFromObject(
   query: ParsedQuery | ParsedQuery[],
-  associations?: { [key: string]: SQLSchema | SQLSchema[] },
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ): { [key: string]: string[] } {
   const requiredAssociations: { [key: string]: string[] } = {};
   if (!associations) return {};
@@ -106,7 +107,7 @@ export function extractAssociationsFromObject(
 
 export const extractAssociations = (
   model: ModelStatic<any>,
-  associations: { [key: string]: SQLSchema | SQLSchema[] },
+  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) => {
   for (const association in associations) {
     if (associations.hasOwnProperty(association)) {
