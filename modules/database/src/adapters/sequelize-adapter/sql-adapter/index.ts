@@ -74,7 +74,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {
-      let modelOptions = {
+      const modelOptions = {
         ...schema.modelOptions,
         permissions: {
           extendable: false,
@@ -139,7 +139,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     if (Object.keys(extractedRelations).length > 0) {
       let pendingModels: string[] = [];
       for (const relation in extractedRelations) {
-        let rel = Array.isArray(extractedRelations[relation])
+        const rel = Array.isArray(extractedRelations[relation])
           ? (extractedRelations[relation] as any[])[0]
           : extractedRelations[relation];
         if (!this.syncedSchemas.includes(rel.model)) {
@@ -155,7 +155,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
         });
       }
     }
-    let associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
+    const associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
     await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
     if (options?.parentSchema) {
       schema.parentSchema = options.parentSchema;

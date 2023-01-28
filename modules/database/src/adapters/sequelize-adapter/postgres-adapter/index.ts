@@ -15,7 +15,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
   }
 
   protected async hasLegacyCollections() {
-    let res = await this.sequelize
+    const res = await this.sequelize
       .query(
         `SELECT EXISTS (
     SELECT FROM 
@@ -110,7 +110,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     if (Object.keys(extractedRelations).length > 0) {
       let pendingModels: string[] = [];
       for (const relation in extractedRelations) {
-        let rel = Array.isArray(extractedRelations[relation])
+        const rel = Array.isArray(extractedRelations[relation])
           ? (extractedRelations[relation] as any[])[0]
           : extractedRelations[relation];
         if (!this.syncedSchemas.includes(rel.model)) {

@@ -36,10 +36,10 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
 }
 
 function extractEmbedded(ogSchema: any, schema: any) {
-  let extracted: { [key: string]: any } = {};
+  const extracted: { [key: string]: any } = {};
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      let arrayField = schema[key];
+      const arrayField = schema[key];
       if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
         if (
           !arrayField[0].hasOwnProperty('type') ||
@@ -62,14 +62,14 @@ function extractEmbedded(ogSchema: any, schema: any) {
 }
 
 function extractRelations(ogSchema: any, schema: any) {
-  let extracted: {
+  const extracted: {
     [key: string]:
       | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
       | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
   } = {};
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      let arrayField = schema[key];
+      const arrayField = schema[key];
       if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
         if (arrayField[0].hasOwnProperty('type') && arrayField[0].type === 'Relation') {
           extracted[key] = [{ ...arrayField[0] }];
