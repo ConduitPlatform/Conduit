@@ -1,4 +1,13 @@
-import { Model, ModelStatic, Order, OrderItem, Sequelize, Transaction } from 'sequelize';
+import {
+  FindAttributeOptions,
+  FindOptions,
+  Model,
+  ModelStatic,
+  Order,
+  OrderItem,
+  Sequelize,
+  Transaction,
+} from 'sequelize';
 import {
   MultiDocQuery,
   ParsedQuery,
@@ -9,6 +18,13 @@ import {
 import { extractRelations, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  arrayPatch,
+  extractAssociations,
+  extractAssociationsFromObject,
+  parseQuery,
+} from './parser';
+import { isNil } from 'lodash';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -18,7 +34,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   fieldHash: string;
   excludedFields: string[];
 
-  constructor(
+  protected constructor(
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitSchema,
@@ -28,6 +44,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
         | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
     },
+    readonly associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     this.excludedFields = [];
     sqlTypesProcess(sequelize, originalSchema, schema, this.excludedFields);
@@ -37,11 +54,195 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       freezeTableName: true,
     });
     extractRelations(this.originalSchema.name, this.model, extractedRelations, adapter);
+    if (associations) {
+      extractAssociations(this.model, associations);
+    }
+  }
+
+  constructAssociationInclusion(
+    requiredAssociations?: { [key: string]: string[] },
+    requiredOnly = false,
+  ) {
+    if (isNil(requiredAssociations)) return [];
+    const inclusionArray = [];
+    for (const association in this.associations) {
+      if (!this.associations.hasOwnProperty(association)) continue;
+      const associationTarget = this.associations[association];
+      const associationSchema = Array.isArray(associationTarget)
+        ? (associationTarget as SequelizeSchema[])[0]
+        : (associationTarget as SequelizeSchema);
+      if (requiredOnly && !requiredAssociations.hasOwnProperty(association)) continue;
+      const associationObject: {
+        model: ModelStatic<any>;
+        as: string;
+        required: boolean;
+        include?: any;
+        attributes?: { exclude: string[] };
+      } = {
+        model: associationSchema.model,
+        as: association,
+        required: requiredAssociations.hasOwnProperty(association),
+        attributes: { exclude: associationSchema.excludedFields },
+      };
+      if (requiredAssociations.hasOwnProperty(association)) {
+        let newAssociations: { [key: string]: string[] } = {};
+        requiredAssociations[association].forEach(v => {
+          // if v contains ".", which may be contained multiple times, remove the first occurrence of "." and everything before it
+          if (v.indexOf('.') > -1) {
+            let path = v.substring(v.indexOf('.') + 1);
+            if (v.indexOf('.') > -1) {
+              let associationName = v.substring(0, v.indexOf('.'));
+              if (!newAssociations.hasOwnProperty(associationName)) {
+                newAssociations[associationName] = [];
+              }
+              newAssociations[associationName].push(path);
+            }
+          }
+        });
+        if (
+          associationSchema.associations &&
+          Object.keys(associationSchema.associations).length > 0
+        ) {
+          associationObject.include = associationSchema.constructAssociationInclusion(
+            newAssociations,
+            requiredOnly,
+          );
+        }
+      }
+      inclusionArray.push(associationObject);
+    }
+    return inclusionArray;
+  }
+
+  async create(query: SingleDocQuery, transaction?: Transaction) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    parsedQuery.createdAt = new Date();
+    parsedQuery.updatedAt = new Date();
+    incrementDbQueries();
+    let assocs;
+    if (this.associations) {
+      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+    }
+    let relationObjects = this.extractRelationsModification(parsedQuery);
+    let t: Transaction | undefined = transaction;
+    let transactionProvided = transaction !== undefined;
+    if (!transactionProvided) {
+      t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    }
+    return await this.model
+      .create(parsedQuery, {
+        include: this.constructAssociationInclusion(assocs, true),
+        transaction: t,
+      })
+      .then(doc => this.createWithPopulation(doc, relationObjects, t))
+      .then(doc => {
+        if (!transactionProvided) {
+          t!.commit();
+        }
+        return doc;
+      })
+      .then(doc => (doc ? doc.toJSON() : doc))
+      .catch(err => {
+        if (!transactionProvided) {
+          t!.rollback();
+        }
+        throw err;
+      });
+  }
+
+  async createMany(query: MultiDocQuery) {
+    let parsedQuery: ParsedQuery[];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    incrementDbQueries();
+    let assocs;
+    if (this.associations) {
+      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+    }
+    let relationObjects = this.extractManyRelationsModification(parsedQuery);
+    let t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    return this.model
+      .bulkCreate(parsedQuery, {
+        include: this.constructAssociationInclusion(assocs, true),
+        transaction: t,
+      })
+      .then(docs => {
+        return Promise.all(
+          docs.map((doc, index) =>
+            this.createWithPopulation(doc, relationObjects[index], t),
+          ),
+        );
+      })
+      .then(docs => {
+        t.commit();
+        return docs;
+      })
+      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs))
+      .catch(err => {
+        t.rollback();
+        throw err;
+      });
+  }
+
+  async findOne(query: Query, select?: string, populate?: string[]) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    let parsingResult = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      populate,
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+    const options: FindOptions = {
+      where: filter,
+      nest: true,
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+    };
+    options.attributes = {
+      exclude: [...this.excludedFields],
+    } as unknown as FindAttributeOptions;
+    if (!isNil(select) && select !== '') {
+      options.attributes = this.parseSelect(select);
+    }
+    incrementDbQueries();
+    const document = await this.model
+      .findOne(options)
+      .then(doc => (doc ? doc.toJSON() : doc));
+
+    return document;
   }
 
   sync() {
     const syncOptions = { alter: true };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
+    for (const association in this.associations) {
+      if (this.associations.hasOwnProperty(association)) {
+        const value = this.associations[association];
+        if (Array.isArray(value)) {
+          promiseChain = promiseChain.then(() => value[0].sync());
+        } else {
+          promiseChain = promiseChain.then(() => value.sync());
+        }
+      }
+    }
     return promiseChain;
   }
 
@@ -201,36 +402,195 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return order;
   }
 
-  abstract countDocuments(query: Query): Promise<number>;
+  async findMany(
+    query: Query,
+    skip?: number,
+    limit?: number,
+    select?: string,
+    sort?: { [field: string]: -1 | 1 },
+    populate?: string[],
+  ): Promise<any> {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    let parsingResult = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      populate,
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+    const options: FindOptions = {
+      where: filter,
+      nest: true,
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+    };
+    options.attributes = {
+      exclude: [...this.excludedFields],
+    } as unknown as FindAttributeOptions;
+    if (!isNil(skip)) {
+      options.offset = skip;
+    }
+    if (!isNil(limit)) {
+      options.limit = limit;
+    }
+    if (!isNil(select) && select !== '') {
+      options.attributes = this.parseSelect(select);
+    }
+    if (!isNil(sort)) {
+      options.order = this.parseSort(sort);
+    }
 
-  abstract create(query: SingleDocQuery): Promise<any>;
+    const documents = await this.model
+      .findAll(options)
+      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
 
-  abstract createMany(query: MultiDocQuery): Promise<any>;
+    return documents;
+  }
 
-  abstract deleteMany(query: Query): Promise<any>;
+  deleteMany(query: Query) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    incrementDbQueries();
+    let parsingResult = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      undefined,
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+    return this.model
+      .findAll({
+        where: filter,
+        include: this.constructAssociationInclusion(
+          parsingResult.requiredAssociations,
+        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      })
+      .then(docs => {
+        if (docs) {
+          return Promise.all(docs.map(doc => doc.destroy()));
+        }
+      });
+  }
 
-  abstract deleteOne(query: Query): Promise<any>;
+  deleteOne(query: Query) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    incrementDbQueries();
+    let parsingResult = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      undefined,
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+    return this.model
+      .findOne({
+        where: filter,
+        include: this.constructAssociationInclusion(
+          parsingResult.requiredAssociations,
+        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      })
+      .then(doc => {
+        doc?.destroy();
+      });
+  }
+
+  countDocuments(query: Query): Promise<number> {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    incrementDbQueries();
+    let parsingResult = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      [],
+      this.associations,
+    );
+    return this.model.count({
+      where: parsingResult.query,
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+    });
+  }
+
+  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    let parsedFilter: ParsedQuery | undefined;
+    if (typeof filterQuery === 'string') {
+      parsedFilter = JSON.parse(filterQuery);
+    } else {
+      parsedFilter = filterQuery;
+    }
+
+    let parsingResult = parseQuery(
+      parsedFilter!,
+      this.extractedRelations,
+      undefined,
+      this.associations,
+    );
+    parsedFilter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      parsedFilter = arrayPatch(
+        parsedFilter,
+        this.originalSchema.fields,
+        this.associations,
+      );
+    }
+
+    incrementDbQueries();
+    let docs = await this.model.findAll({
+      where: parsedFilter,
+      attributes: ['_id'],
+    });
+    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    try {
+      let data = await Promise.all(
+        docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),
+      );
+      await t.commit();
+      return data;
+    } catch (e) {
+      await t.rollback();
+      throw e;
+    }
+  }
 
   abstract findByIdAndUpdate(
     id: any,
     document: SingleDocQuery,
     populate?: string[],
-  ): Promise<any>;
-
-  abstract findMany(
-    query: Query,
-    skip?: number,
-    limit?: number,
-    select?: string,
-    sort?: any,
-    populate?: string[],
-  ): Promise<any>;
-
-  abstract findOne(query: Query, select?: string, populate?: string[]): Promise<any>;
-
-  abstract updateMany(
-    filterQuery: Query,
-    query: SingleDocQuery,
-    populate?: string[],
+    transaction?: Transaction,
   ): Promise<any>;
 }
