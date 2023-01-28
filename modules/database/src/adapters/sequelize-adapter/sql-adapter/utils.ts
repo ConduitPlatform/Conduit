@@ -4,15 +4,30 @@ import { isArray, isBoolean, isString, merge } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ParsedQuery } from '../../../interfaces';
 
-function arrayHandler(value: any) {
+function arrayHandler(
+  value: any,
+  relations: Indexable,
+  relationsDirectory: string[],
+  associations?: Indexable,
+  associationsDirectory?: { [key: string]: string[] },
+) {
   const newArray = [];
   for (const val of value) {
-    newArray.push(parseQuery(val)[0]);
+    newArray.push(
+      parseQuery(val, relations, relationsDirectory, associations, associationsDirectory),
+    );
   }
   return newArray;
 }
 
-function matchOperation(operator: string, value: any) {
+function matchOperation(
+  operator: string,
+  value: any,
+  relations: Indexable,
+  relationsDirectory: string[],
+  associations?: Indexable,
+  associationsDirectory?: { [key: string]: string[] },
+) {
   switch (operator) {
     case '$eq':
       return { [Op.eq]: value };
@@ -39,65 +54,127 @@ function matchOperation(operator: string, value: any) {
     case '$lte':
       return { [Op.lte]: value };
     case '$in':
-      return { [Op.in]: arrayHandler(value) };
+      return {
+        [Op.in]: arrayHandler(
+          value,
+          relations,
+          relationsDirectory,
+          associations,
+          associationsDirectory,
+        ),
+      };
     case '$or':
-      return arrayHandler(value);
+      return arrayHandler(
+        value,
+        relations,
+        relationsDirectory,
+        associations,
+        associationsDirectory,
+      );
     case '$and':
-      return arrayHandler(value);
+      return arrayHandler(
+        value,
+        relations,
+        relationsDirectory,
+        associations,
+        associationsDirectory,
+      );
     case '$nin':
-      return { [Op.notIn]: arrayHandler(value) };
+      return {
+        [Op.notIn]: arrayHandler(
+          value,
+          relations,
+          relationsDirectory,
+          associations,
+          associationsDirectory,
+        ),
+      };
     default:
       return value;
   }
 }
 
-export function parseQuery(query: ParsedQuery, associations?: Indexable) {
+export function parseQuery(
+  query: ParsedQuery,
+  relations: Indexable,
+  relationsDirectory: string[],
+  associations?: Indexable,
+  associationsDirectory?: { [key: string]: string[] },
+) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  let requiredAssociations: { [key: string]: string[] } = {};
-  if (isString(query) || isBoolean(query)) return [query, requiredAssociations];
+  if (isString(query) || isBoolean(query)) return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
-        [Op.or]: query[key].map((operation: ParsedQuery) => {
-          let [result, assoc] = parseQuery(operation, associations);
-          requiredAssociations = merge(requiredAssociations, assoc);
-          return result;
-        }),
+        [Op.or]: query[key].map((operation: ParsedQuery) =>
+          parseQuery(
+            operation,
+            relations,
+            relationsDirectory,
+            associations,
+            associationsDirectory,
+          ),
+        ),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
-        [Op.and]: query[key].map((operation: ParsedQuery) => {
-          let [result, assoc] = parseQuery(operation, associations);
-          requiredAssociations = merge(requiredAssociations, assoc);
-          return result;
-        }),
+        [Op.and]: query[key].map((operation: ParsedQuery) =>
+          parseQuery(
+            operation,
+            relations,
+            relationsDirectory,
+            associations,
+            associationsDirectory,
+          ),
+        ),
       });
     } else if (key === '$regex') {
       Object.assign(parsed, { [Op.regexp]: query[key] });
     } else if (key === '$options') {
       continue;
     } else {
-      const [subQuery, assoc] = parseQuery(query[key], associations);
-      requiredAssociations = merge(requiredAssociations, assoc);
+      const subQuery = parseQuery(
+        query[key],
+        relations,
+        relationsDirectory,
+        associations,
+        associationsDirectory,
+      );
       if (subQuery === undefined) continue;
-      const matched = matchOperation(key, subQuery);
+      const matched = matchOperation(
+        key,
+        subQuery,
+        relations,
+        relationsDirectory,
+        associations,
+        associationsDirectory,
+      );
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
         continue;
       }
-      // Check if key contains an association
-      let assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
-      if (associations && associations[assocKey]) {
-        // if it is not already in the requiredAssociations array
-        if (!requiredAssociations[assocKey]) {
-          requiredAssociations[assocKey] = [key];
+      const relationKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
+      if (relations && relations[relationKey]) {
+        if (relationsDirectory.indexOf(key) === -1) {
+          relationsDirectory.push(key);
         }
-        if (key.indexOf('.') !== -1) {
-          parsed[`$${key}$`] = matched;
-        } else {
-          parsed[`$${key}._id$`] = matched;
-        }
+        parsed[`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`] = matched;
         continue;
+      } else {
+        // Check if key contains an association
+        let assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
+        if (associations && associations[assocKey]) {
+          // if it is not already in the requiredAssociations array
+          if (!associationsDirectory![assocKey]) {
+            associationsDirectory![assocKey] = [key];
+          }
+          if (key.indexOf('.') !== -1) {
+            parsed[`$${key}$`] = matched;
+          } else {
+            parsed[`$${key}._id$`] = matched;
+          }
+          continue;
+        }
       }
       parsed[key] = matched;
     }
@@ -106,8 +183,8 @@ export function parseQuery(query: ParsedQuery, associations?: Indexable) {
     Object.keys(parsed).length === 0 &&
     Object.getOwnPropertySymbols(parsed).length === 0
   )
-    return [undefined, requiredAssociations];
-  return [parsed, requiredAssociations];
+    return;
+  return parsed;
 }
 
 function patch(query: Indexable, key: string) {

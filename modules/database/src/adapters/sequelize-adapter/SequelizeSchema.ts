@@ -44,7 +44,16 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
     return promiseChain;
   }
-  constructRelationInclusion(populate?: string[]) {
+
+  includeRelations(relationDirectory: string[], populate: string[]) {
+    return this.constructRelationInclusion(relationDirectory, true).concat(
+      this.constructRelationInclusion(
+        populate?.filter(p => !relationDirectory.includes(p)) || [],
+      ),
+    );
+  }
+
+  constructRelationInclusion(populate?: string[], required?: boolean) {
     let inclusionArray: {
       model: ModelStatic<any>;
       as: string;
@@ -74,11 +83,14 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         } = {
           model: associationSchema.model,
           as: associationName,
-          required: false,
+          required: required || false,
           attributes: { exclude: associationSchema.excludedFields },
         };
         path.shift();
-        associationObject.include = associationSchema.constructRelationInclusion(path);
+        associationObject.include = associationSchema.constructRelationInclusion(
+          path,
+          required,
+        );
         inclusionArray.push(associationObject);
       } else {
         let associationTarget = this.extractedRelations[population];
@@ -98,7 +110,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         } = {
           model: associationSchema.model,
           as: population,
-          required: false,
+          required: required || false,
           attributes: { exclude: associationSchema.excludedFields },
         };
         inclusionArray.push(associationObject);
