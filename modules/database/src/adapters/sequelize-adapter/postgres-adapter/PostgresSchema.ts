@@ -123,11 +123,7 @@ export class PostgresSchema extends SequelizeSchema {
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructRelationInclusion(
-        relationDirectory.concat(
-          ...(populate?.filter(p => !relationDirectory.includes(p)) || []),
-        ),
-      ),
+      include: this.includeRelations(relationDirectory, populate || []),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -162,11 +158,7 @@ export class PostgresSchema extends SequelizeSchema {
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructRelationInclusion(
-        relationDirectory.concat(
-          ...(populate?.filter(p => !relationDirectory.includes(p)) || []),
-        ),
-      ),
+      include: this.includeRelations(relationDirectory, populate || []),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -349,11 +341,7 @@ export class PostgresSchema extends SequelizeSchema {
     let docs = await this.model.findAll({
       where: parsedFilter,
       attributes: ['_id'],
-      include: this.constructRelationInclusion(
-        relationDirectory.concat(
-          ...(populate?.filter(p => !relationDirectory.includes(p)) || []),
-        ),
-      ),
+      include: this.includeRelations(relationDirectory, populate || []),
     });
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
@@ -381,7 +369,7 @@ export class PostgresSchema extends SequelizeSchema {
     const filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
     return this.model.count({
       where: filter,
-      include: this.constructRelationInclusion(relationDirectory),
+      include: this.includeRelations(relationDirectory, []),
     });
   }
 }
