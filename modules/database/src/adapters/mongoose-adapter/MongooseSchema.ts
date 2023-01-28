@@ -92,7 +92,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         $set: parsedQuery,
       };
     }
-    let affectedIds = this.model
+    const affectedIds = this.model
       .find(parsedFilter, '_id')
       .lean()
       .exec()
