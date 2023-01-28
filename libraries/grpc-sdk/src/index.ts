@@ -8,11 +8,11 @@ import {
   DatabaseProvider,
   Email,
   Forms,
+  Functions,
   PushNotifications,
   Router,
   SMS,
   Storage,
-  Functions,
 } from './modules';
 import Crypto from 'crypto';
 import { EventBus } from './utilities/EventBus';
@@ -88,7 +88,7 @@ export default class ConduitGrpcSdk {
 
   constructor(
     serverUrl: string,
-    serviceHealthStatusGetter: Function,
+    serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
     name?: string,
     watchModules = true,
     private readonly urlRemap?: string,
