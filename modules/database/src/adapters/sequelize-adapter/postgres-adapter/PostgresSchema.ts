@@ -34,7 +34,7 @@ export class PostgresSchema extends SequelizeSchema {
     transaction?: Transaction,
   ): Promise<{ [key: string]: any }> {
     let t: Transaction | undefined = transaction;
-    let transactionProvided = transaction !== undefined;
+    const transactionProvided = transaction !== undefined;
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -48,13 +48,13 @@ export class PostgresSchema extends SequelizeSchema {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     try {
-      let parentDoc = await this.model.findByPk(id, {
+      const parentDoc = await this.model.findByPk(id, {
         nest: true,
         include: this.constructRelationInclusion(populate),
         transaction: t,
       });
       if (parsedQuery.hasOwnProperty('$inc')) {
-        let inc = parsedQuery['$inc'];
+        const inc = parsedQuery['$inc'];
         for (const key in inc) {
           if (!inc.hasOwnProperty(key)) continue;
           if (this.extractedRelations[key]) {
@@ -70,7 +70,7 @@ export class PostgresSchema extends SequelizeSchema {
       }
 
       if (parsedQuery.hasOwnProperty('$push')) {
-        let push = parsedQuery['$push'];
+        const push = parsedQuery['$push'];
         for (const key in push) {
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
@@ -83,7 +83,7 @@ export class PostgresSchema extends SequelizeSchema {
               }
               parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
             } else {
-              let actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+              const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
               parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
             }
             continue;
@@ -100,11 +100,11 @@ export class PostgresSchema extends SequelizeSchema {
 
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
-      let relationObjects = this.extractRelationsModification(parsedQuery);
+      const relationObjects = this.extractRelationsModification(parsedQuery);
       await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
       incrementDbQueries();
 
-      let data = await this.model
+      const data = await this.model
         .findByPk(id, {
           nest: true,
           include: this.constructRelationInclusion(populate),

@@ -85,13 +85,13 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         attributes: { exclude: associationSchema.excludedFields },
       };
       if (requiredAssociations.hasOwnProperty(association)) {
-        let newAssociations: { [key: string]: string[] } = {};
+        const newAssociations: { [key: string]: string[] } = {};
         requiredAssociations[association].forEach(v => {
           // if v contains ".", which may be contained multiple times, remove the first occurrence of "." and everything before it
           if (v.indexOf('.') > -1) {
-            let path = v.substring(v.indexOf('.') + 1);
+            const path = v.substring(v.indexOf('.') + 1);
             if (v.indexOf('.') > -1) {
-              let associationName = v.substring(0, v.indexOf('.'));
+              const associationName = v.substring(0, v.indexOf('.'));
               if (!newAssociations.hasOwnProperty(associationName)) {
                 newAssociations[associationName] = [];
               }
@@ -128,9 +128,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (this.associations) {
       assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     }
-    let relationObjects = this.extractRelationsModification(parsedQuery);
+    const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
-    let transactionProvided = transaction !== undefined;
+    const transactionProvided = transaction !== undefined;
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
@@ -167,8 +167,8 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (this.associations) {
       assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     }
-    let relationObjects = this.extractManyRelationsModification(parsedQuery);
-    let t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+    const relationObjects = this.extractManyRelationsModification(parsedQuery);
+    const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
         include: this.constructAssociationInclusion(assocs, true),
@@ -199,7 +199,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     } else {
       parsedQuery = query;
     }
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
       populate,
@@ -255,7 +255,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   constructRelationInclusion(populate?: string[], required?: boolean) {
-    let inclusionArray: {
+    const inclusionArray: {
       model: ModelStatic<any>;
       as: string;
       required: boolean;
@@ -265,9 +265,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!populate) return inclusionArray;
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
-        let path = population.split('.');
-        let associationName = path[0];
-        let associationTarget = this.extractedRelations[associationName];
+        const path = population.split('.');
+        const associationName = path[0];
+        const associationTarget = this.extractedRelations[associationName];
         if (associationTarget) continue;
         let associationSchema = (
           Array.isArray(associationTarget)
@@ -294,7 +294,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         );
         inclusionArray.push(associationObject);
       } else {
-        let associationTarget = this.extractedRelations[population];
+        const associationTarget = this.extractedRelations[population];
         if (!associationTarget) continue;
         let associationSchema = (
           Array.isArray(associationTarget)
@@ -335,7 +335,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         // @ts-ignore
         doc[`set${modelName}`](relationObjects[relation], doc._id);
       } else {
-        let actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
+        const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
         // @ts-ignore
         doc[`set${actualRel}`](relationObjects[relation], doc._id);
       }
@@ -344,7 +344,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
-    let relationObjects = [{}];
+    const relationObjects = [{}];
     for (const queries of parsedQuery) {
       relationObjects.push(this.extractRelationsModification(queries));
     }
@@ -352,7 +352,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   extractRelationsModification(parsedQuery: ParsedQuery) {
-    let relationObjects = {};
+    const relationObjects = {};
     for (const target in parsedQuery) {
       if (!parsedQuery.hasOwnProperty(target)) continue;
       if (this.extractedRelations.hasOwnProperty(target)) {
@@ -416,7 +416,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     } else {
       parsedQuery = query;
     }
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
       populate,
@@ -464,7 +464,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       parsedQuery = query;
     }
     incrementDbQueries();
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
       undefined,
@@ -496,7 +496,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       parsedQuery = query;
     }
     incrementDbQueries();
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
       undefined,
@@ -526,7 +526,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       parsedQuery = query;
     }
     incrementDbQueries();
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
       [],
@@ -554,7 +554,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       parsedFilter = filterQuery;
     }
 
-    let parsingResult = parseQuery(
+    const parsingResult = parseQuery(
       parsedFilter!,
       this.extractedRelations,
       undefined,
@@ -570,13 +570,13 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
 
     incrementDbQueries();
-    let docs = await this.model.findAll({
+    const docs = await this.model.findAll({
       where: parsedFilter,
       attributes: ['_id'],
     });
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
-      let data = await Promise.all(
+      const data = await Promise.all(
         docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),
       );
       await t.commit();

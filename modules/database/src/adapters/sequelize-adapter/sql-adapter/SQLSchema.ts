@@ -32,7 +32,7 @@ export class SQLSchema extends SequelizeSchema {
     transaction?: Transaction,
   ): Promise<{ [key: string]: any }> {
     let t: Transaction | undefined = transaction;
-    let transactionProvided = transaction !== undefined;
+    const transactionProvided = transaction !== undefined;
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -46,7 +46,7 @@ export class SQLSchema extends SequelizeSchema {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     try {
-      let parentDoc = await this.model.findByPk(id, {
+      const parentDoc = await this.model.findByPk(id, {
         nest: true,
         include: this.constructAssociationInclusion({}).concat(
           this.constructRelationInclusion(populate),
@@ -54,11 +54,11 @@ export class SQLSchema extends SequelizeSchema {
         transaction: t,
       });
       if (parsedQuery.hasOwnProperty('$inc')) {
-        let inc = parsedQuery['$inc'];
+        const inc = parsedQuery['$inc'];
         for (const key in inc) {
           if (!inc.hasOwnProperty(key)) continue;
           if (key.indexOf('.') > -1) {
-            let [assoc, field] = [
+            const [assoc, field] = [
               key.substring(0, key.indexOf('.')),
               key.substring(key.indexOf('.') + 1),
             ];
@@ -91,10 +91,10 @@ export class SQLSchema extends SequelizeSchema {
       }
 
       if (parsedQuery.hasOwnProperty('$push')) {
-        let push = parsedQuery['$push'];
+        const push = parsedQuery['$push'];
         for (const key in push) {
           if (key.indexOf('.') > -1) {
-            let [assoc, field] = [
+            const [assoc, field] = [
               key.substring(0, key.indexOf('.') - 1),
               key.substring(key.indexOf('.') + 1),
             ];
@@ -143,7 +143,7 @@ export class SQLSchema extends SequelizeSchema {
               }
               parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
             } else {
-              let actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+              const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
               parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
             }
             continue;
@@ -160,8 +160,8 @@ export class SQLSchema extends SequelizeSchema {
 
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
-      let assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-      let associationObjects: { [key: string]: any } = {};
+      const assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+      const associationObjects: { [key: string]: any } = {};
       for (const assoc in assocs) {
         if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
           throw new Error(`Cannot update association ${assoc} with non-array value`);
@@ -172,11 +172,11 @@ export class SQLSchema extends SequelizeSchema {
         associationObjects[assoc] = parsedQuery[assoc];
         delete parsedQuery[assoc];
       }
-      let relationObjects = this.extractRelationsModification(parsedQuery);
+      const relationObjects = this.extractRelationsModification(parsedQuery);
       await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
       incrementDbQueries();
 
-      let data = await this.model
+      const data = await this.model
         .findByPk(id, {
           nest: true,
           include: this.constructAssociationInclusion(assocs).concat(
@@ -202,7 +202,7 @@ export class SQLSchema extends SequelizeSchema {
                   );
                 } else {
                   promises.push(async () => {
-                    let returned = await (this.associations[assoc] as SQLSchema).create(
+                    const returned = await (this.associations[assoc] as SQLSchema).create(
                       obj,
                       t,
                     );
@@ -222,7 +222,7 @@ export class SQLSchema extends SequelizeSchema {
                 );
               } else {
                 promises.push(async () => {
-                  let returned = (this.associations[assoc] as SQLSchema).create(
+                  const returned = (this.associations[assoc] as SQLSchema).create(
                     associationObjects[assoc],
                     t,
                   );

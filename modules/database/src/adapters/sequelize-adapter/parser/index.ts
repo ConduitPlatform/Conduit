@@ -145,7 +145,7 @@ function handleAssoc(
 ) {
   if (!associations || !requiredAssociations) return null;
   // Check if key contains an association
-  let assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
+  const assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
   if (associations && associations[assocKey]) {
     // if it is not already in the requiredAssociations array
     if (!requiredAssociations![assocKey]) {

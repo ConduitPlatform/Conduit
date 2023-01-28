@@ -33,10 +33,10 @@ export function arrayFind(
       return true;
     }
   } else if (key.indexOf('.') !== -1) {
-    let assocKey = key.split('.')[0];
-    let remain = key.split('.').slice(1).join('.');
+    const assocKey = key.split('.')[0];
+    const remain = key.split('.').slice(1).join('.');
     if (associations && associations[assocKey]) {
-      let assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+      const assoc: SequelizeSchema = Array.isArray(associations[assocKey])
         ? (associations[assocKey] as SequelizeSchema[])[0]
         : (associations[assocKey] as SequelizeSchema);
       return arrayFind(remain, assoc.originalSchema.fields, assoc.associations);
@@ -51,7 +51,7 @@ export function arrayPatch(
   associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   if (!query) return query;
-  let newQuery = JSON.parse(JSON.stringify(query));
+  const newQuery = JSON.parse(JSON.stringify(query));
   for (const key in query) {
     if (fields[key]) {
       if (Array.isArray(fields[key])) {
@@ -60,12 +60,12 @@ export function arrayPatch(
         patch(newQuery, key);
       }
     } else if (key.indexOf('.') !== -1) {
-      let assocKey = key.split('.')[0];
+      const assocKey = key.split('.')[0];
       if (associations && associations[assocKey]) {
-        let assoc: SQLSchema = Array.isArray(associations[assocKey])
+        const assoc: SQLSchema = Array.isArray(associations[assocKey])
           ? (associations[assocKey] as SQLSchema[])[0]
           : (associations[assocKey] as SQLSchema);
-        let found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
+        const found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
         if (found) patch(newQuery, key);
       }
     }
@@ -90,10 +90,10 @@ export function extractAssociationsFromObject(
       if (!requiredAssociations[assoc]) {
         requiredAssociations[assoc] = [assoc];
       }
-      let newAssoc = Array.isArray(associations[assoc])
+      const newAssoc = Array.isArray(associations[assoc])
         ? (associations[assoc] as any[])[0]
         : associations[assoc];
-      let embeddedAssociations = extractAssociationsFromObject(
+      const embeddedAssociations = extractAssociationsFromObject(
         query[assoc],
         newAssoc.associations,
       );
