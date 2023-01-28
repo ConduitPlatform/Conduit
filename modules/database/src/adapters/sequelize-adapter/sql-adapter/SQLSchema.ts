@@ -7,15 +7,15 @@ import {
   Transaction,
 } from 'sequelize';
 import { MultiDocQuery, ParsedQuery, Query, SingleDocQuery } from '../../../interfaces';
+import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { SQLAdapter } from './index';
+import { SequelizeSchema } from '../SequelizeSchema';
 import {
   arrayPatch,
   extractAssociations,
   extractAssociationsFromObject,
   parseQuery,
-} from './utils';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-import { SQLAdapter } from './index';
-import { SequelizeSchema } from '../SequelizeSchema';
+} from '../parser';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -184,27 +184,23 @@ export class SQLSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    let filter = parseQuery(
+    let parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      relationDirectory,
+      populate,
       this.associations,
-      requiredAssociations,
     );
-    filter = arrayPatch(
-      this.sequelize.getDialect(),
-      filter!,
+    let filter = arrayPatch(
+      parsingResult.query,
       this.originalSchema.fields,
       this.associations,
     );
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructAssociationInclusion(requiredAssociations).concat(
-        ...this.includeRelations(relationDirectory, populate || []),
-      ),
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -234,27 +230,23 @@ export class SQLSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    let filter = parseQuery(
+    let parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      relationDirectory,
+      populate,
       this.associations,
-      requiredAssociations,
     );
-    filter = arrayPatch(
-      this.sequelize.getDialect(),
-      filter!,
+    let filter = arrayPatch(
+      parsingResult.query,
       this.originalSchema.fields,
       this.associations,
     );
     const options: FindOptions = {
       where: filter,
       nest: true,
-      include: this.constructAssociationInclusion(requiredAssociations).concat(
-        ...this.includeRelations(relationDirectory, populate || []),
-      ),
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -287,22 +279,27 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    let filter = parseQuery(
+    let parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      relationDirectory,
+      undefined,
       this.associations,
-      requiredAssociations,
     );
-    filter = arrayPatch(
-      this.sequelize.getDialect(),
-      filter!,
+    let filter = arrayPatch(
+      parsingResult.query,
       this.originalSchema.fields,
       this.associations,
     );
-    return this.model.destroy({ where: filter, limit: 1 });
+    return this.model
+      .findOne({
+        where: filter,
+        include: this.constructAssociationInclusion(
+          parsingResult.requiredAssociations,
+        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      })
+      .then(doc => {
+        doc?.destroy();
+      });
   }
 
   deleteMany(query: Query) {
@@ -313,22 +310,29 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    let filter = parseQuery(
+    let parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      relationDirectory,
+      undefined,
       this.associations,
-      requiredAssociations,
     );
-    filter = arrayPatch(
-      this.sequelize.getDialect(),
-      filter!,
+    let filter = arrayPatch(
+      parsingResult.query,
       this.originalSchema.fields,
       this.associations,
     );
-    return this.model.destroy({ where: filter });
+    return this.model
+      .findAll({
+        where: filter,
+        include: this.constructAssociationInclusion(
+          parsingResult.requiredAssociations,
+        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      })
+      .then(docs => {
+        if (docs) {
+          return Promise.all(docs.map(doc => doc.destroy()));
+        }
+      });
   }
 
   async findByIdAndUpdate(
@@ -578,18 +582,14 @@ export class SQLSchema extends SequelizeSchema {
       parsedFilter = filterQuery;
     }
 
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    parsedFilter = parseQuery(
+    let parsingResult = parseQuery(
       parsedFilter!,
       this.extractedRelations,
-      relationDirectory,
+      undefined,
       this.associations,
-      requiredAssociations,
     );
     parsedFilter = arrayPatch(
-      this.sequelize.getDialect(),
-      parsedFilter!,
+      parsingResult.query,
       this.originalSchema.fields,
       this.associations,
     );
@@ -613,27 +613,24 @@ export class SQLSchema extends SequelizeSchema {
   }
 
   countDocuments(query: Query): Promise<number> {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
+    let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
     } else {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-    const requiredAssociations: { [key: string]: string[] } = {};
-    const filter = parseQuery(
+    let parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      relationDirectory,
+      [],
       this.associations,
-      requiredAssociations,
     );
     return this.model.count({
-      where: filter,
-      include: this.constructAssociationInclusion(requiredAssociations).concat(
-        ...this.includeRelations(relationDirectory, []),
-      ),
+      where: parsingResult.query,
+      include: this.constructAssociationInclusion(
+        parsingResult.requiredAssociations,
+      ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
     });
   }
 }

@@ -7,10 +7,10 @@ import {
   Transaction,
 } from 'sequelize';
 import { MultiDocQuery, ParsedQuery, Query, SingleDocQuery } from '../../../interfaces';
-import { parseQuery } from './utils';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { PostgresAdapter } from './index';
+import { parseQuery } from '../parser';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -117,13 +117,12 @@ export class PostgresSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    const relationDirectory: string[] = [];
-    let filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
+    let parsingResult = parseQuery(parsedQuery, this.extractedRelations, populate);
 
     const options: FindOptions = {
-      where: filter,
+      where: parsingResult.query,
       nest: true,
-      include: this.includeRelations(relationDirectory, populate || []),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -153,12 +152,11 @@ export class PostgresSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    const relationDirectory: string[] = [];
-    let filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
+    let parsingResult = parseQuery(parsedQuery, this.extractedRelations, populate);
     const options: FindOptions = {
-      where: filter,
+      where: parsingResult.query,
       nest: true,
-      include: this.includeRelations(relationDirectory, populate || []),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
     options.attributes = {
       exclude: [...this.excludedFields],
@@ -191,10 +189,15 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-
-    let filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
-    return this.model.destroy({ where: filter, limit: 1 });
+    let parsingResult = parseQuery(parsedQuery, this.extractedRelations, undefined);
+    return this.model
+      .findOne({
+        where: parsingResult.query,
+        include: this.includeRelations(parsingResult.requiredRelations, []),
+      })
+      .then(doc => {
+        doc?.destroy();
+      });
   }
 
   deleteMany(query: Query) {
@@ -205,10 +208,17 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-
-    let filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
-    return this.model.destroy({ where: filter });
+    let parsingResult = parseQuery(parsedQuery, this.extractedRelations);
+    return this.model
+      .findAll({
+        where: parsingResult.query,
+        include: this.includeRelations(parsingResult.requiredRelations, []),
+      })
+      .then(docs => {
+        if (docs) {
+          return Promise.all(docs.map(doc => doc.destroy()));
+        }
+      });
   }
 
   async findByIdAndUpdate(
@@ -324,24 +334,18 @@ export class PostgresSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let parsedFilter: ParsedQuery | ParsedQuery[] | undefined;
+    let parsedFilter: ParsedQuery;
     if (typeof filterQuery === 'string') {
       parsedFilter = JSON.parse(filterQuery);
     } else {
       parsedFilter = filterQuery;
     }
-    const relationDirectory: string[] = [];
-
-    parsedFilter = parseQuery(
-      parsedFilter as ParsedQuery | ParsedQuery[],
-      this.extractedRelations,
-      relationDirectory,
-    );
+    let parsingResult = parseQuery(parsedFilter, this.extractedRelations, populate);
     incrementDbQueries();
     let docs = await this.model.findAll({
-      where: parsedFilter,
+      where: parsingResult.query,
       attributes: ['_id'],
-      include: this.includeRelations(relationDirectory, populate || []),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     });
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
@@ -364,12 +368,10 @@ export class PostgresSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const relationDirectory: string[] = [];
-
-    const filter = parseQuery(parsedQuery, this.extractedRelations, relationDirectory);
+    let parsingResult = parseQuery(parsedQuery, this.extractedRelations);
     return this.model.count({
-      where: filter,
-      include: this.includeRelations(relationDirectory, []),
+      where: parsingResult.query,
+      include: this.includeRelations(parsingResult.requiredRelations, []),
     });
   }
 }
