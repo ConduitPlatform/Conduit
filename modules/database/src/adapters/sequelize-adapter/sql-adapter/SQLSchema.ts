@@ -2,7 +2,6 @@ import { isNil } from 'lodash';
 import {
   FindAttributeOptions,
   FindOptions,
-  Model,
   ModelStatic,
   Sequelize,
   Transaction,
@@ -39,8 +38,7 @@ export class SQLSchema extends SequelizeSchema {
   }
 
   sync() {
-    const syncOptions = { alter: true };
-    let promiseChain: Promise<any> = this.model.sync(syncOptions);
+    let promiseChain: Promise<any> = super.sync();
     incrementDbQueries();
     for (const association in this.associations) {
       if (this.associations.hasOwnProperty(association)) {
@@ -105,113 +103,6 @@ export class SQLSchema extends SequelizeSchema {
       inclusionArray.push(associationObject);
     }
     return inclusionArray;
-  }
-
-  constructRelationInclusion(populate?: string[]) {
-    let inclusionArray: {
-      model: ModelStatic<any>;
-      as: string;
-      required: boolean;
-      include?: any;
-      attributes?: { exclude: string[] };
-    }[] = [];
-    if (!populate) return inclusionArray;
-    for (const population of populate) {
-      if (population.indexOf('.') > -1) {
-        let path = population.split('.');
-        let associationName = path[0];
-        let associationTarget = this.extractedRelations[associationName];
-        if (associationTarget) continue;
-        let associationSchema = (
-          Array.isArray(associationTarget)
-            ? (associationTarget as any[])[0]
-            : (associationTarget as any)
-        ).model;
-        associationSchema = this.adapter.models[associationSchema];
-        const associationObject: {
-          model: ModelStatic<any>;
-          as: string;
-          required: boolean;
-          include?: any;
-          attributes?: { exclude: string[] };
-        } = {
-          model: associationSchema.model,
-          as: Array.isArray(associationTarget) ? associationName : associationName + 'Id',
-          required: false,
-          attributes: { exclude: associationSchema.excludedFields },
-        };
-        path.shift();
-        associationObject.include = associationSchema.constructRelationInclusion(path);
-        inclusionArray.push(associationObject);
-      } else {
-        let associationTarget = this.extractedRelations[population];
-        if (!associationTarget) continue;
-        let associationSchema = (
-          Array.isArray(associationTarget)
-            ? (associationTarget as any[])[0]
-            : (associationTarget as any)
-        ).model;
-        associationSchema = this.adapter.models[associationSchema];
-        const associationObject: {
-          model: ModelStatic<any>;
-          as: string;
-          required: boolean;
-          include?: any;
-          attributes?: { exclude: string[] };
-        } = {
-          model: associationSchema.model,
-          as: Array.isArray(associationTarget) ? population : population + 'Id',
-          required: false,
-          attributes: { exclude: associationSchema.excludedFields },
-        };
-        inclusionArray.push(associationObject);
-      }
-    }
-    return inclusionArray;
-  }
-
-  createWithPopulation(doc: Model<any>, relationObjects: any, transaction?: Transaction) {
-    let hasOne = false;
-    for (const relation in this.extractedRelations) {
-      if (!this.extractedRelations.hasOwnProperty(relation)) continue;
-      if (!relationObjects.hasOwnProperty(relation)) continue;
-      const relationTarget = this.extractedRelations[relation];
-      hasOne = true;
-      if (Array.isArray(relationTarget)) {
-        let modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
-        if (!modelName.endsWith('s')) {
-          modelName = modelName + 's';
-        }
-        // @ts-ignore
-        doc[`set${modelName}`](relationObjects[relation], doc._id);
-      } else {
-        let actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
-        // @ts-ignore
-        doc[`set${actualRel}Id`](relationObjects[relation], doc._id);
-      }
-    }
-    return hasOne ? doc.save({ transaction }) : doc;
-  }
-
-  extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
-    let relationObjects = [{}];
-    for (const queries of parsedQuery) {
-      relationObjects.push(this.extractRelationsModification(queries));
-    }
-    return relationObjects;
-  }
-
-  extractRelationsModification(parsedQuery: ParsedQuery) {
-    let relationObjects = {};
-    for (const target in parsedQuery) {
-      if (!parsedQuery.hasOwnProperty(target)) continue;
-      if (this.extractedRelations.hasOwnProperty(target)) {
-        // @ts-ignore
-        relationObjects[target] = parsedQuery[target];
-        delete parsedQuery[target];
-      }
-    }
-    return relationObjects;
   }
 
   async create(query: SingleDocQuery, transaction?: Transaction) {
@@ -293,7 +184,15 @@ export class SQLSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
+    let filter = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      relationDirectory,
+      this.associations,
+      requiredAssociations,
+    );
     filter = arrayPatch(
       this.sequelize.getDialect(),
       filter!,
@@ -304,7 +203,7 @@ export class SQLSchema extends SequelizeSchema {
       where: filter,
       nest: true,
       include: this.constructAssociationInclusion(requiredAssociations).concat(
-        this.constructRelationInclusion(populate),
+        ...this.includeRelations(relationDirectory, populate || []),
       ),
     };
     options.attributes = {
@@ -335,7 +234,15 @@ export class SQLSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
+    let filter = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      relationDirectory,
+      this.associations,
+      requiredAssociations,
+    );
     filter = arrayPatch(
       this.sequelize.getDialect(),
       filter!,
@@ -346,7 +253,7 @@ export class SQLSchema extends SequelizeSchema {
       where: filter,
       nest: true,
       include: this.constructAssociationInclusion(requiredAssociations).concat(
-        this.constructRelationInclusion(populate),
+        ...this.includeRelations(relationDirectory, populate || []),
       ),
     };
     options.attributes = {
@@ -380,7 +287,15 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
+    let filter = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      relationDirectory,
+      this.associations,
+      requiredAssociations,
+    );
     filter = arrayPatch(
       this.sequelize.getDialect(),
       filter!,
@@ -398,7 +313,15 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    let [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
+    let filter = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      relationDirectory,
+      this.associations,
+      requiredAssociations,
+    );
     filter = arrayPatch(
       this.sequelize.getDialect(),
       filter!,
@@ -648,17 +571,22 @@ export class SQLSchema extends SequelizeSchema {
     } else {
       parsedQuery = query;
     }
-    let parsedFilter: ParsedQuery | ParsedQuery[] | undefined;
+    let parsedFilter: ParsedQuery | undefined;
     if (typeof filterQuery === 'string') {
       parsedFilter = JSON.parse(filterQuery);
     } else {
       parsedFilter = filterQuery;
     }
 
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
     parsedFilter = parseQuery(
-      parsedFilter as ParsedQuery | ParsedQuery[],
+      parsedFilter!,
+      this.extractedRelations,
+      relationDirectory,
       this.associations,
-    )[0];
+      requiredAssociations,
+    );
     parsedFilter = arrayPatch(
       this.sequelize.getDialect(),
       parsedFilter!,
@@ -692,7 +620,20 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery = query;
     }
     incrementDbQueries();
-    const [filter, requiredAssociations] = parseQuery(parsedQuery, this.associations);
-    return this.model.count({ where: filter });
+    const relationDirectory: string[] = [];
+    const requiredAssociations: { [key: string]: string[] } = {};
+    const filter = parseQuery(
+      parsedQuery,
+      this.extractedRelations,
+      relationDirectory,
+      this.associations,
+      requiredAssociations,
+    );
+    return this.model.count({
+      where: filter,
+      include: this.constructAssociationInclusion(requiredAssociations).concat(
+        ...this.includeRelations(relationDirectory, []),
+      ),
+    });
   }
 }
