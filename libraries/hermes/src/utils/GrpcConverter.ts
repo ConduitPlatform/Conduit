@@ -99,7 +99,7 @@ function createHandlers(
     if (instanceOfSocketProtoDescription(r)) {
       route = createHandlerForSocket(r, client, metadata, moduleName);
     } else if (instanceOfConduitProxy(r)) {
-      route = createHandlerForProxy(r.options, moduleName);
+      route = createHandlerForProxy(r.options);
     } else {
       route = createHandlerForRoute(r as RouteT, client, metadata, moduleName);
     }
@@ -247,6 +247,6 @@ function createHandlerForSocket(
   return new ConduitSocket(socket.options, eventHandlers);
 }
 
-export function createHandlerForProxy(options: ProxyRouteOptions, moduleName?: string) {
+export function createHandlerForProxy(options: ProxyRouteOptions) {
   return new ProxyRoute(options);
 }

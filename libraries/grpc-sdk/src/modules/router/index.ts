@@ -44,7 +44,7 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
     paths: RegisterProxyRouteRequest_ProxyRouteDefinition[],
     protoFile: string,
     url?: string,
-  ): Promise<any> {
+  ) {
     const request: RegisterProxyRouteRequest = {
       proxyRoutes: paths,
       protoFile: protoFile,
