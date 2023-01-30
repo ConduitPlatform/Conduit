@@ -33,6 +33,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
+  readonly idField;
 
   protected constructor(
     readonly sequelize: Sequelize,
@@ -40,20 +41,23 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     readonly originalSchema: ConduitSchema,
     protected readonly adapter: SequelizeAdapter<SequelizeSchema>,
     protected readonly extractedRelations: {
-      [key: string]:
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+      [key: string]: SequelizeSchema | SequelizeSchema[];
     },
     readonly associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     this.excludedFields = [];
-    sqlTypesProcess(sequelize, originalSchema, schema, this.excludedFields);
+    this.idField = sqlTypesProcess(
+      sequelize,
+      originalSchema,
+      schema,
+      this.excludedFields,
+    );
     incrementDbQueries();
     this.model = sequelize.define(schema.collectionName, schema.fields, {
       ...schema.modelOptions,
       freezeTableName: true,
     });
-    extractRelations(this.originalSchema.name, this.model, extractedRelations, adapter);
+    extractRelations(this.originalSchema.name, this.model, extractedRelations);
     if (associations) {
       extractAssociations(this.model, associations);
     }
@@ -268,55 +272,53 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
         const path = population.split('.');
-        const associationName = path[0];
-        const associationTarget = this.extractedRelations[associationName];
-        if (associationTarget) continue;
-        let associationSchema = (
-          Array.isArray(associationTarget)
-            ? (associationTarget as any[])[0]
-            : (associationTarget as any)
+        const relationName = path[0];
+        const relationTarget = this.extractedRelations[relationName];
+        if (relationTarget) continue;
+        let relationSchema: SequelizeSchema = (
+          Array.isArray(relationTarget)
+            ? (relationTarget as any[])[0]
+            : (relationTarget as any)
         ).model;
-        associationSchema = this.adapter.models[associationSchema];
-        const associationObject: {
+        const relationObject: {
           model: ModelStatic<any>;
           as: string;
           required: boolean;
           include?: any;
           attributes?: { exclude: string[] };
         } = {
-          model: associationSchema.model,
-          as: associationName,
+          model: relationSchema.model,
+          as: relationName,
           required: required || false,
-          attributes: { exclude: associationSchema.excludedFields },
+          attributes: { exclude: relationSchema.excludedFields },
         };
         path.shift();
-        associationObject.include = associationSchema.constructRelationInclusion(
+        relationObject.include = relationSchema.constructRelationInclusion(
           path,
           required,
         );
-        inclusionArray.push(associationObject);
+        inclusionArray.push(relationObject);
       } else {
-        const associationTarget = this.extractedRelations[population];
-        if (!associationTarget) continue;
-        let associationSchema = (
-          Array.isArray(associationTarget)
-            ? (associationTarget as any[])[0]
-            : (associationTarget as any)
+        const relationTarget = this.extractedRelations[population];
+        if (!relationTarget) continue;
+        let relationSchema = (
+          Array.isArray(relationTarget)
+            ? (relationTarget as any[])[0]
+            : (relationTarget as any)
         ).model;
-        associationSchema = this.adapter.models[associationSchema];
-        const associationObject: {
+        const relationObject: {
           model: ModelStatic<any>;
           as: string;
           required: boolean;
           include?: any;
           attributes?: { exclude: string[] };
         } = {
-          model: associationSchema.model,
+          model: relationSchema.model,
           as: population,
           required: required || false,
-          attributes: { exclude: associationSchema.excludedFields },
+          attributes: { exclude: relationSchema.excludedFields },
         };
-        inclusionArray.push(associationObject);
+        inclusionArray.push(relationObject);
       }
     }
     return inclusionArray;

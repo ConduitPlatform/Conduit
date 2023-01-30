@@ -18,11 +18,7 @@ export class PostgresSchema extends SequelizeSchema {
     schema: Indexable,
     originalSchema: ConduitSchema,
     adapter: PostgresAdapter,
-    extractedRelations: {
-      [key: string]:
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
-    },
+    extractedRelations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     super(sequelize, schema, originalSchema, adapter as any, extractedRelations);
   }

@@ -1,38 +1,33 @@
 import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { SequelizeAdapter } from '../index';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 const deepdash = require('deepdash/standalone');
 
 export const extractRelations = (
   name: string,
   model: ModelStatic<any>,
-  relations: {
-    [key: string]:
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
-  },
-  adapter: SequelizeAdapter<any>,
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) => {
   for (const relation in relations) {
     if (relations.hasOwnProperty(relation)) {
       const value = relations[relation];
       if (Array.isArray(value)) {
         const item = value[0];
-        model.belongsToMany(adapter.models[item.model].model, {
-          foreignKey: adapter.models[item.model].originalSchema.name,
+        model.belongsToMany(item.model, {
+          foreignKey: item.originalSchema.name,
           as: relation,
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
-          through: model.name + '_' + item.model,
+          through: model.name + '_' + item.originalSchema.name,
         });
-        adapter.models[item.model].model.belongsToMany(model, {
+        item.model.belongsToMany(model, {
           foreignKey: name,
           as: relation,
-          through: model.name + '_' + item.model,
+          through: model.name + '_' + item.originalSchema.name,
         });
       } else {
-        model.belongsTo(adapter.models[value.model].model, {
+        model.belongsTo(value.model, {
           foreignKey: relation + 'Id',
           as: relation,
           onUpdate: 'CASCADE',
@@ -86,4 +81,5 @@ export const sqlTypesProcess = (
       },
     };
   }
+  return idField ?? '_id';
 };

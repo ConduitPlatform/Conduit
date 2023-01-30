@@ -6,6 +6,7 @@ import { sqlSchemaConverter } from '../../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -107,6 +108,8 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
+    const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+
     if (Object.keys(extractedRelations).length > 0) {
       let pendingModels: string[] = [];
       for (const relation in extractedRelations) {
@@ -117,6 +120,11 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
+        }
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [this.models[rel.model]];
+        } else {
+          relatedSchemas[relation] = this.models[rel.model];
         }
       }
       while (pendingModels.length > 0) {
@@ -131,7 +139,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       newSchema,
       schema,
       this,
-      extractedRelations,
+      relatedSchemas,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;

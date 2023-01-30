@@ -6,6 +6,7 @@ import { sqlSchemaConverter } from '../../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -136,6 +137,8 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
+    const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+
     if (Object.keys(extractedRelations).length > 0) {
       let pendingModels: string[] = [];
       for (const relation in extractedRelations) {
@@ -146,6 +149,11 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
+        }
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [this.models[rel.model]];
+        } else {
+          relatedSchemas[relation] = this.models[rel.model];
         }
       }
       while (pendingModels.length > 0) {
@@ -165,7 +173,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       newSchema,
       schema,
       this,
-      extractedRelations,
+      relatedSchemas,
       associatedSchemas,
     );
 

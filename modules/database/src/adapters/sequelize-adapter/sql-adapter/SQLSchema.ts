@@ -15,11 +15,7 @@ export class SQLSchema extends SequelizeSchema {
     schema: Indexable,
     originalSchema: ConduitSchema,
     adapter: SQLAdapter,
-    extractedRelations: {
-      [key: string]:
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-        | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
-    },
+    extractedRelations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
     readonly associations: { [key: string]: SQLSchema | SQLSchema[] },
   ) {
     super(sequelize, schema, originalSchema, adapter, extractedRelations, associations);

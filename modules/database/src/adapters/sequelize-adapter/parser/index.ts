@@ -2,15 +2,16 @@ import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isString } from 'lodash';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
   value: any,
   relations: {
-    relations: Indexable;
+    relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
   },
   associations?: {
-    associations: Indexable;
+    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     associationsDirectory: { [key: string]: string[] };
   },
 ) {
@@ -25,11 +26,11 @@ function matchOperation(
   operator: string,
   value: any,
   relations: {
-    relations: Indexable;
+    relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
   },
   associations?: {
-    associations: Indexable;
+    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     associationsDirectory: { [key: string]: string[] };
   },
 ) {
@@ -78,11 +79,11 @@ function matchOperation(
 function _parseQuery(
   query: ParsedQuery,
   relations: {
-    relations: Indexable;
+    relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
   },
   associations?: {
-    associations: Indexable;
+    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     associationsDirectory: { [key: string]: string[] };
   },
 ) {
@@ -140,18 +141,24 @@ function _parseQuery(
 function handleAssoc(
   key: string,
   value: any,
-  associations?: Indexable,
-  requiredAssociations?: Indexable,
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  requiredAssociations?: { [key: string]: string[] },
 ) {
   if (!associations || !requiredAssociations) return null;
   // Check if key contains an association
-  const assocKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
+  const assocKey: string = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
   if (associations && associations[assocKey]) {
     // if it is not already in the requiredAssociations array
     if (!requiredAssociations![assocKey]) {
       requiredAssociations![assocKey] = [key];
     }
-    return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
+    let idField: any;
+    if (Array.isArray(associations[assocKey])) {
+      idField = (associations[assocKey] as SequelizeSchema[])[0].idField;
+    } else {
+      idField = (associations[assocKey] as SequelizeSchema).idField;
+    }
+    return { [`$${key}${key.indexOf('.') !== -1 ? '' : idField}$`]: value };
   }
   return null;
 }
@@ -159,8 +166,8 @@ function handleAssoc(
 function handleRelation(
   key: string,
   value: any,
-  relations: Indexable,
-  requiredRelations: Indexable,
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  requiredRelations: string[],
 ) {
   const relationKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
   if (relations && relations[relationKey]) {
@@ -173,14 +180,14 @@ function handleRelation(
 
 export function parseQuery(
   query: ParsedQuery,
-  relations: Indexable,
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   populate?: string[],
-  associations?: Indexable,
+  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   const parsingResult: {
     query?: WhereOptions;
     requiredRelations: string[];
-    requiredAssociations: Indexable;
+    requiredAssociations: { [key: string]: string[] };
   } = {
     query: {},
     requiredRelations: [],
