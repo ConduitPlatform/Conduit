@@ -221,6 +221,8 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     } as unknown as FindAttributeOptions;
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
+    } else {
+      options.attributes = this.renameRelations();
     }
     incrementDbQueries();
     const document = await this.model
@@ -364,34 +366,77 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return relationObjects;
   }
 
-  protected parseSelect(select: string): string[] | { exclude: string[] } {
-    const include = [];
+  protected parseSelect(select: string): { exclude: string[]; include?: string[] } {
+    const include: string[] = [];
     const exclude = [...this.excludedFields];
     const attributes = select.split(' ');
-    let returnInclude = false;
+    let includedRelations = [];
 
     for (const attribute of attributes) {
-      if (attribute[0] === '+') {
-        const tmp = attribute.slice(1);
-        include.push(tmp);
-
+      if (attribute[0] === '+' || attribute[0] !== '-') {
+        let tmp = attribute;
+        if (attribute[0] === '+') {
+          tmp = attribute.slice(1);
+        }
         const ind = exclude.indexOf(tmp);
         if (ind > -1) {
           exclude.splice(ind, 1);
         }
-      } else if (attribute[0] === '-') {
-        exclude.push(attribute.slice(1));
+        if (this.extractedRelations[tmp]) {
+          includedRelations.push(tmp);
+          if (!Array.isArray(this.extractedRelations[tmp])) {
+            // @ts-ignore
+            include.push([tmp + 'Id', tmp]);
+          } else {
+            include.push(tmp);
+          }
+        } else {
+          include.push(tmp);
+        }
       } else {
-        include.push(attribute);
-        returnInclude = true;
+        if (this.extractedRelations[attribute.slice(1)]) {
+          includedRelations.push(attribute.slice(1));
+          if (!Array.isArray(this.extractedRelations[attribute.slice(1)])) {
+            // @ts-ignore
+            exclude.push(attribute.slice(1) + 'Id');
+          } else {
+            exclude.push(attribute.slice(1));
+          }
+        } else {
+          exclude.push(attribute.slice(1));
+        }
+      }
+    }
+    for (const relation in this.extractedRelations) {
+      if (includedRelations.indexOf(relation) > -1) continue;
+
+      if (!Array.isArray(this.extractedRelations[relation])) {
+        // @ts-ignore
+        include.push([relation + 'Id', relation]);
       }
     }
 
-    if (returnInclude) {
-      return include;
+    return {
+      exclude,
+      ...(include.length > 0 && {
+        include: include,
+      }),
+    };
+  }
+
+  protected renameRelations(): { include: string[] } {
+    const include: string[] = [];
+
+    for (const relation in this.extractedRelations) {
+      if (!Array.isArray(this.extractedRelations[relation])) {
+        // @ts-ignore
+        include.push([relation + 'Id', relation]);
+      }
     }
 
-    return { exclude };
+    return {
+      include,
+    };
   }
 
   protected parseSort(sort: { [field: string]: -1 | 1 }) {
@@ -444,6 +489,8 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
+    } else {
+      options.attributes = this.renameRelations();
     }
     if (!isNil(sort)) {
       options.order = this.parseSort(sort);
