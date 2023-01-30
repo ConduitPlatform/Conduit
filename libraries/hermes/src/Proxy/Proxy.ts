@@ -40,7 +40,7 @@ export class ProxyRouteController extends ConduitRouter {
   }
 
   registerProxyRoute(route: ProxyRoute) {
-    const key = `${route.input.path}`;
+    const key = `${route.input.path}-${route.input.target}`;
     const registered = this._proxyRoutes.has(key);
     this._proxyRoutes.set(key, route);
     if (registered) {
@@ -60,11 +60,13 @@ export class ProxyRouteController extends ConduitRouter {
       this.checkMiddlewares(req, route.input.middlewares)
         .then(() => {
           this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
-          createProxyMiddleware({ target: route.input.target, changeOrigin: true })(
-            req,
-            res,
-            next,
-          );
+          // should discuss what other options we need to pass in here by default
+          // the important ones are changeOrigin and autoRewrite, but we should also consider other options like secure, ws, etc
+          createProxyMiddleware({
+            target: route.input.target,
+            changeOrigin: true,
+            autoRewrite: true,
+          })(req, res, next);
         })
         .catch(err => {
           next(err);

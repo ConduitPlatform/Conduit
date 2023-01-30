@@ -63,11 +63,38 @@ export class AdminHandlers {
     this.routingManager.route(
       {
         path: '/proxy',
+        action: ConduitRouteActions.GET,
+        description: `Returns proxy routes.`,
+      },
+      new ConduitRouteReturnDefinition('GetProxyRoutes', {
+        response: TYPE.JSON,
+      }),
+      this.routerAdmin.getProxyRoutes.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns proxy route by id.`,
+        urlParams: {
+          id: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetProxyRouteById', ProxyRoute.name),
+      this.routerAdmin.getProxyRoute.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy',
         action: ConduitRouteActions.POST,
         description: `Creates a new proxy route.`,
         bodyParams: {
           path: ConduitString.Required,
           target: ConduitString.Required,
+          action: ConduitString.Optional,
+          description: ConduitString.Optional,
+          middlewares: [ConduitString.Optional],
+          // TODO: Add all the other fields
         },
       },
       new ConduitRouteReturnDefinition('CreateProxyRoute', {
@@ -143,6 +170,10 @@ export class AdminHandlers {
         bodyParams: {
           path: ConduitString.Optional,
           target: ConduitString.Optional,
+          action: ConduitString.Optional,
+          description: ConduitString.Optional,
+          middlewares: [ConduitString.Optional],
+          // TODO: Add all the other fields
         },
       },
       new ConduitRouteReturnDefinition('UpdateProxyRoute', ProxyRoute.name),

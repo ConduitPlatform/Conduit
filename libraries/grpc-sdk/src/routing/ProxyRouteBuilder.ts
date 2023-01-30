@@ -1,11 +1,16 @@
 import { RoutingManager } from './RoutingManager';
-import { ConduitProxyOptions } from './interfaces';
+import { ConduitProxyOptions, ProxyRouteActions } from './interfaces';
 
 export class ProxyRouteBuilder {
   private _options: ConduitProxyOptions;
 
   constructor(private readonly manager?: RoutingManager, options?: ConduitProxyOptions) {
     this._options = options || { path: '', target: '' };
+  }
+
+  method(action: ProxyRouteActions): ProxyRouteBuilder {
+    this._options.action = action;
+    return this;
   }
 
   path(path: string): ProxyRouteBuilder {

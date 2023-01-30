@@ -38,6 +38,7 @@ import {
   RouteT,
   ProtoGenerator,
   ProxyRoute,
+  ProxyRouteOptions,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -49,6 +50,7 @@ import metricsSchema from './metrics';
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
   private _router: ConduitRoutingController;
+
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
     adminRoutes.getCreateAdminRoute(),
@@ -62,6 +64,8 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
   ];
+
+  private _proxyRoutes: ProxyRoute[] = [];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -135,6 +139,10 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes.forEach(route => {
       this._router.registerConduitRoute(route);
     }, this);
+
+    this._proxyRoutes.forEach(route => {
+      this._router.registerProxyRoute(route);
+    }, this);
   }
 
   async subscribeToBusEvents() {
@@ -180,6 +188,7 @@ export default class AdminModule extends IConduitAdmin {
   protected onConfig() {
     let restEnabled = ConfigController.getInstance().config.transports.rest;
     const graphqlEnabled = ConfigController.getInstance().config.transports.graphql;
+    const proxyEnabled = ConfigController.getInstance().config.transports.proxy;
     if (!restEnabled && !graphqlEnabled) {
       ConduitGrpcSdk.Logger.warn(
         'Cannot disable both REST and GraphQL admin transport APIs. Falling back to REST...',
@@ -195,6 +204,11 @@ export default class AdminModule extends IConduitAdmin {
       this._router.initGraphQL();
     } else {
       this._router.stopGraphQL();
+    }
+    if (proxyEnabled) {
+      this._router.initProxy();
+    } else {
+      this._router.stopProxy();
     }
     if (ConfigController.getInstance().config.transports.sockets) {
       this._router.initSockets();
@@ -273,6 +287,11 @@ export default class AdminModule extends IConduitAdmin {
     this._sdkRoutes.push(route);
     this._router.registerConduitRoute(route);
     this.cleanupRoutes();
+  }
+
+  registerProxyRoute(options: ProxyRouteOptions): void {
+    const route = new ProxyRoute(options);
+    this._router.registerProxyRoute(route);
   }
 
   private async highAvailability() {

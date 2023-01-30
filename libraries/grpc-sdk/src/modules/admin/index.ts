@@ -5,7 +5,7 @@ import {
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '../../protoUtils/core';
-import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
+import { ConduitProxy, ConduitRouteObject, SocketProtoDescription } from '../../routing';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
@@ -15,7 +15,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
 
   generateProtoFile(
     moduleName: string,
-    routes: (ConduitRouteObject | SocketProtoDescription)[],
+    routes: (ConduitRouteObject | SocketProtoDescription | ConduitProxy)[],
   ) {
     const request: GenerateProtoRequest = {
       moduleName,

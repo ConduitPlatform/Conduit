@@ -23,6 +23,7 @@ import {
   ProxyRouteT,
   SocketPush,
   ProxyRoute,
+  ProxyRouteOptions,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
@@ -36,7 +37,6 @@ import {
   GenerateProtoResponse,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
-  RegisterProxyRouteRequest,
   SocketData,
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
@@ -52,7 +52,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
       generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
-      registerProxyRoute: this.registerGrpcProxyRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     },
   };
@@ -307,56 +306,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
   }
 
-  async registerGrpcProxyRoute(
-    call: GrpcRequest<RegisterProxyRouteRequest>,
-    callback: GrpcCallback<null>,
-  ) {
-    const moduleName = call.metadata!.get('module-name')[0];
-    try {
-      if (!call.request.routerUrl) {
-        const result = await this.grpcSdk.config.getModuleUrlByName(
-          call.metadata!.get('module-name')![0] as string,
-        );
-        if (!result) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Error when registering routes',
-          });
-        }
-        call.request.routerUrl = result.url;
-      }
-      this.internalRegisterRoute(
-        call.request.protoFile,
-        call.request.proxyRoutes as ProxyRouteT[],
-        call.request.routerUrl,
-        moduleName as string,
-      );
-      this.updateState(
-        call.request.protoFile,
-        call.request.proxyRoutes,
-        call.request.routerUrl,
-      );
-      for (const proxyRoute of call.request.proxyRoutes) {
-        const path = proxyRoute.options?.path;
-        const target = proxyRoute.options?.target;
-        const description = proxyRoute.options?.description;
-        const middlewares = proxyRoute.options?.middlewares;
-        await models.ProxyRoute.getInstance().create({
-          path: path,
-          target: target,
-          description: description,
-          middlewares: middlewares,
-        });
-      }
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({
-        code: status.INTERNAL,
-        message: 'Error when registering routes',
-      });
-    }
-  }
-
   async registerGrpcRoute(
     call: GrpcRequest<RegisterConduitRouteRequest>,
     callback: GrpcCallback<null>,
@@ -376,12 +325,29 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routerUrl = result.url;
       }
 
+      const routes = call.request.routes.filter(
+        route => !route.proxy || !route.proxy.target,
+      );
+      const proxyRoutes = call.request.routes.filter(
+        route => route.proxy && route.proxy.target,
+      );
+
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.routes as RouteT[],
+        routes as RouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
+
+      if (proxyRoutes.length > 0) {
+        this.internalRegisterRoute(
+          call.request.protoFile,
+          proxyRoutes as ProxyRouteT[],
+          call.request.routerUrl,
+          moduleName as string,
+        );
+      }
+
       this.updateState(
         call.request.protoFile,
         call.request.routes,
@@ -479,8 +445,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this._internalRouter.registerConduitRoute(route);
   }
 
-  registerProxyRoute(path: string, target: string): void {
-    const route = new ProxyRoute({ path, target });
+  registerProxyRoute(options: ProxyRouteOptions): void {
+    const route = new ProxyRoute(options);
     this._internalRouter.registerProxyRoute(route);
   }
 }

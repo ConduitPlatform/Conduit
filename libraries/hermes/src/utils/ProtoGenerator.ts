@@ -23,7 +23,7 @@ export class ProtoGenerator {
 
   generateProtoFile(
     moduleName: string,
-    paths: (ConduitRouteObject | SocketProtoDescription)[],
+    paths: (ConduitRouteObject | SocketProtoDescription | ConduitProxy)[],
   ) {
     const formattedModuleName = this.getFormattedModuleName(moduleName);
     const protoFunctions = this.createProtoFunctions(paths);
@@ -95,9 +95,7 @@ export class ProtoGenerator {
   }
 
   private createProtoFunctionForProxy(path: ConduitProxy, protoFunctions: string) {
-    const newFunction = this.createGrpcFunctionName(
-      path.options.name || path.options.path,
-    );
+    const newFunction = this.createGrpcFunctionName(path.options.path);
 
     if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
       return '';

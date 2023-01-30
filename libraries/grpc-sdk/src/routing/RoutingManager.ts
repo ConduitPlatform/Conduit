@@ -2,6 +2,7 @@ import {
   ConduitProxy,
   ConduitProxyOptions,
   GrpcServer,
+  ProxyRouteActions,
   ProxyRouteBuilder,
 } from '../index';
 import { Admin, Router } from '../modules';
@@ -9,10 +10,7 @@ import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { wrapFunctionsAsync } from './RoutingUtilities';
-import {
-  RegisterConduitRouteRequest_PathDefinition,
-  RegisterProxyRouteRequest_ProxyRouteDefinition,
-} from '../protoUtils/router';
+import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
 import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
@@ -67,6 +65,10 @@ export class RoutingManager {
 
   patch(path: string): RouteBuilder {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
+  }
+
+  all(path: string): ProxyRouteBuilder {
+    return new ProxyRouteBuilder(this).method(ProxyRouteActions.ALL).path(path);
   }
 
   options(input: ConduitProxyOptions): ProxyRouteBuilder {
@@ -159,22 +161,12 @@ export class RoutingManager {
       modifiedFunctions,
     );
     const paths = Object.values(this._moduleRoutes);
-    const proxyRoutes = Object.values(this._moduleProxyRoutes);
-    return this._router
-      .register(
-        this.isAdmin
-          ? (paths as RegisterAdminRouteRequest_PathDefinition[])
-          : (paths as RegisterConduitRouteRequest_PathDefinition[]),
-        protoDescriptions.protoFile,
-      )
-      .then(() => {
-        if (proxyRoutes && proxyRoutes.length > 0) {
-          return (this._router as Router).registerGrpcProxyRoute(
-            proxyRoutes as RegisterProxyRouteRequest_ProxyRouteDefinition[],
-            protoDescriptions.protoFile,
-          );
-        }
-      });
+    return this._router.register(
+      this.isAdmin
+        ? (paths as RegisterAdminRouteRequest_PathDefinition[])
+        : (paths as RegisterConduitRouteRequest_PathDefinition[]),
+      protoDescriptions.protoFile,
+    );
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {

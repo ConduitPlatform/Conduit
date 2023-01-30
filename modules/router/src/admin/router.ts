@@ -57,8 +57,26 @@ export class RouterAdmin {
     return response;
   }
 
+  async getProxyRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const proxyRoutes = await ProxyRoute.getInstance().findMany({});
+    return proxyRoutes;
+  }
+
+  async getProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const existingProxy = await ProxyRoute.getInstance().findOne({ _id: id });
+    if (!existingProxy) {
+      throw new ConduitError(
+        'NOT_FOUND',
+        404,
+        `A proxy route with an id of '${id}' does not exist`,
+      );
+    }
+    return { ...existingProxy };
+  }
+
   async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target } = call.request.params;
+    const { path, target, action, middlewares, description } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -80,14 +98,22 @@ export class RouterAdmin {
     const newProxy = await ProxyRoute.getInstance().create({
       path,
       target,
+      action,
+      middlewares,
+      description,
     });
-
-    this.router.registerProxyRoute(newProxy.path, newProxy.target);
+    const options = {
+      path: newProxy.path,
+      target: newProxy.target,
+      middlewares: newProxy.middlewares,
+      description: newProxy.description,
+    };
+    this.router.registerProxyRoute(options);
     return `Proxy route created for path '${path}' and target '${target}'`;
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, id } = call.request.params;
+    const { path, target, action, middlewares, description, id } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -110,6 +136,9 @@ export class RouterAdmin {
       {
         path,
         target,
+        action,
+        middlewares,
+        description,
       },
     );
 
