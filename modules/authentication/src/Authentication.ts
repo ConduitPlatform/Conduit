@@ -63,8 +63,8 @@ export default class Authentication extends ManagedModule<Config> {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     Object.values(models).map(async model => {
-      const modelInstance = model.getInstance(this.database);
-      await this.database.migrate(modelInstance);
+      const modelInstance = model.getInstance();
+      await this.database.migrate(modelInstance.name);
     });
   }
 

@@ -254,12 +254,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  migrate(schema: ConduitSchema) {
-    return this.client!.migrate({
-      name: schema.name,
-      fields: JSON.stringify(schema.fields),
-      modelOptions: JSON.stringify(schema.modelOptions),
-      collectionName: schema.collectionName,
-    });
+  migrate(schemaName: string) {
+    return this.client!.migrate({ schemaName });
   }
 }

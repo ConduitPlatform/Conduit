@@ -10,7 +10,6 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   private readonly model: SchemaAdapter<Schema>;
   extensions: DeclaredSchemaExtension[];
   compiledFields: ConduitModel;
-  droppedFields: ConduitModel;
 
   constructor(
     model: SchemaAdapter<Schema>,

@@ -235,6 +235,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
+    await this.compareAndStoreMigratedSchema(schema);
     await this.saveSchemaToDatabase(schema);
     if (indexes) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);

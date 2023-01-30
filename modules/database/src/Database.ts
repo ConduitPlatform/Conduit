@@ -94,8 +94,9 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async onServerStart() {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (model.name === '_DeclaredSchema') return [];
+      if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
@@ -606,38 +607,9 @@ export default class DatabaseModule extends ManagedModule<void> {
     call: GrpcRequest<MigrateRequest>,
     callback: GrpcResponse<MigrateResponse>,
   ) {
-    const { name, fields, modelOptions, collectionName } = call.request;
-    const schema = await this._activeAdapter
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({ name });
-    const droppedFields = schema.droppedFields;
-    const compiledFields = schema.compiledFields;
-    for (const key of Object.keys(droppedFields)) {
-      delete compiledFields[key];
-    }
-    await this._activeAdapter
-      .getSchemaModel('_DeclaredSchema')
-      .model.findByIdAndUpdate(schema._id, {
-        compiledFields: compiledFields,
-        droppedFields: {},
-      });
-    const conduitSchema = new ConduitSchema(
-      name,
-      JSON.parse(fields),
-      JSON.parse(modelOptions),
-      collectionName,
-    );
-    conduitSchema.ownerModule = call.metadata!.get('module-name')![0] as string;
-    await this._activeAdapter
-      .createSchemaFromAdapter(conduitSchema, false, true)
-      .catch(err => {
-        callback({
-          code: status.INTERNAL,
-          message: err.message,
-        });
-      });
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
-      await this._activeAdapter.syncSchema(conduitSchema.name);
+      await this._activeAdapter.syncSchema(call.request.schemaName);
     }
+    callback(null, {});
   }
 }

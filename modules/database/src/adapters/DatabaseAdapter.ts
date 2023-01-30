@@ -5,12 +5,11 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
-  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isEqual, isNil } from 'lodash';
 import ObjectHash from 'object-hash';
 
 export abstract class DatabaseAdapter<T extends Schema> {
@@ -124,7 +123,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
-    await this.storeDroppedFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = await this._createSchemaFromAdapter(schema);
@@ -194,7 +192,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract syncSchema(name: string): Promise<void>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
+    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }
@@ -214,25 +212,37 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return true;
   }
 
-  protected async storeDroppedFields(schema: ConduitDatabaseSchema) {
-    if (schema.name === '_DeclaredSchema') {
-      schema.droppedFields = {};
+  async compareAndStoreMigratedSchema(schema: ConduitSchema) {
+    if (['_DeclaredSchema', 'MigratedSchemas'].includes(schema.name)) {
       return;
     }
     const storedSchema = await this.models['_DeclaredSchema'].findOne({
       name: schema.name,
     });
     if (isNil(storedSchema)) {
-      schema.droppedFields = {};
       return;
     }
-    const droppedFields: ConduitModel = {};
-    for (const [fieldName, fieldValue] of Object.entries(storedSchema.fields)) {
-      if (!Object.keys(schema.fields).includes(fieldName)) {
-        droppedFields[fieldName] = fieldValue as any;
-      }
+    if (isEqual(schema.fields, storedSchema.fields)) {
+      return;
     }
-    schema.droppedFields = droppedFields;
+    const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
+      { name: storedSchema.name },
+      undefined,
+      1,
+      undefined,
+      { version: -1 },
+    );
+    const lastVersion =
+      lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
+    const storedData = await this.models[schema.name].findMany({});
+    for (const data of storedData) {
+      await this.models['MigratedSchemas'].create({
+        name: storedSchema.name,
+        ownerModule: storedSchema.ownerModule,
+        version: lastVersion + 1,
+        schema: data,
+      });
+    }
   }
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
@@ -245,7 +255,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
         parentSchema: schema.parentSchema,
         extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
         compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-        droppedFields: (schema as ConduitDatabaseSchema).droppedFields, //@dirty-type-cast
         modelOptions: schema.modelOptions,
         ownerModule: schema.ownerModule,
         collectionName: schema.collectionName,
@@ -257,7 +266,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
         parentSchema: schema.parentSchema,
         extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
         compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-        droppedFields: (schema as ConduitDatabaseSchema).droppedFields, //@dirty-type-cast
         modelOptions: schema.modelOptions,
         ownerModule: schema.ownerModule,
         collectionName: schema.collectionName,
