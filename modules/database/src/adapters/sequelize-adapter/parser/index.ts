@@ -198,7 +198,7 @@ export function parseQuery(
   };
   if (
     Object.keys(parsingResult.query).length === 0 &&
-    Object.getOwnPropertySymbols(parsingResult).length === 0
+    Object.getOwnPropertySymbols(parsingResult.query).length === 0
   )
     parsingResult.query = undefined;
   return parsingResult;
