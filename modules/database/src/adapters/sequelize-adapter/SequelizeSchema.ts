@@ -222,7 +222,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     } else {
-      options.attributes = this.renameRelations();
+      options.attributes = this.renameRelations(populate || []);
     }
     incrementDbQueries();
     const document = await this.model
@@ -424,10 +424,11 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     };
   }
 
-  protected renameRelations(): { include: string[] } {
+  protected renameRelations(population: string[]): { include: string[] } {
     const include: string[] = [];
 
     for (const relation in this.extractedRelations) {
+      if (population.indexOf(relation) !== -1) continue;
       if (!Array.isArray(this.extractedRelations[relation])) {
         // @ts-ignore
         include.push([relation + 'Id', relation]);
@@ -490,7 +491,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!isNil(select) && select !== '') {
       options.attributes = this.parseSelect(select);
     } else {
-      options.attributes = this.renameRelations();
+      options.attributes = this.renameRelations(populate || []);
     }
     if (!isNil(sort)) {
       options.order = this.parseSort(sort);
