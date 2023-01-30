@@ -9,6 +9,7 @@ import {
   ListObjectsCommand,
   PutObjectCommand,
   S3Client,
+  S3ClientConfig,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils';
@@ -23,13 +24,18 @@ export class AWSS3Storage implements IStorageProvider {
   private _activeContainer: string = '';
 
   constructor(options: StorageConfig) {
-    const config = {
+    const config: S3ClientConfig = {
       region: options.aws.region,
       credentials: {
         accessKeyId: options.aws.accessKeyId,
         secretAccessKey: options.aws.secretAccessKey,
       },
     };
+
+    if (options.aws.endpoint !== '') {
+      config.endpoint = options.aws.endpoint;
+    }
+
     this._storage = new S3Client(config);
   }
 
