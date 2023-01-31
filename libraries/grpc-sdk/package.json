@@ -54,7 +54,6 @@
     "@types/ioredis": "^4.28.10",
     "@types/lodash": "^4.14.182",
     "@types/node": "14.14.31",
-    "@types/sequelize": "^4.28.14",
     "copyfiles": "^2.4.1",
     "rimraf": "^3.0.2",
     "ts-proto": "^1.117.0",
