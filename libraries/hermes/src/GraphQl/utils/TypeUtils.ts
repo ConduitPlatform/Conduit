@@ -43,5 +43,5 @@ export function findPopulation(
       }
     },
   );
-  return result;
+  return result.length > 0 ? result : undefined;
 }
