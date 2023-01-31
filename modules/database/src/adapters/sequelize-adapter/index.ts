@@ -23,9 +23,6 @@ export abstract class SequelizeAdapter<
 > extends DatabaseAdapter<T> {
   connectionUri: string;
   sequelize!: Sequelize;
-  syncedSchemas: string[] = [];
-  scheduledSync: NodeJS.Timeout;
-  syncEmitter: NodeJS.EventEmitter = new EventEmitter();
   readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb', 'mssql'];
 
   constructor(connectionUri: string) {
@@ -150,27 +147,6 @@ export abstract class SequelizeAdapter<
     schema: ConduitSchema,
     options?: { parentSchema: string },
   ): Promise<T>;
-
-  scheduleSync() {
-    if (this.scheduledSync) {
-      clearInterval(this.scheduledSync);
-    }
-    const self = this;
-    this.scheduledSync = setTimeout(async () => {
-      await self.sequelize.sync({ alter: true });
-      self.syncEmitter.emit('sync');
-    }, 1000);
-  }
-
-  waitForSync() {
-    const self = this;
-    //return promise that resolves once syncEmitter emits sync
-    return new Promise<void>((resolve, reject) => {
-      self.syncEmitter.once('sync', () => {
-        resolve();
-      });
-    });
-  }
 
   async deleteSchema(
     schemaName: string,
