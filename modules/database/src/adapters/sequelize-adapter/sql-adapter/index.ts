@@ -145,21 +145,42 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
         const rel = Array.isArray(extractedRelations[relation])
           ? (extractedRelations[relation] as any[])[0]
           : extractedRelations[relation];
-        if (!this.syncedSchemas.includes(rel.model)) {
+        if (!this.models[rel.model]) {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
-        }
-        if (Array.isArray(extractedRelations[relation])) {
-          relatedSchemas[relation] = [this.models[rel.model]];
+          if (Array.isArray(extractedRelations[relation])) {
+            relatedSchemas[relation] = [rel.model];
+          } else {
+            relatedSchemas[relation] = rel.model;
+          }
         } else {
-          relatedSchemas[relation] = this.models[rel.model];
+          if (Array.isArray(extractedRelations[relation])) {
+            relatedSchemas[relation] = [this.models[rel.model]];
+          } else {
+            relatedSchemas[relation] = this.models[rel.model];
+          }
         }
       }
       while (pendingModels.length > 0) {
         await sleep(500);
         pendingModels = pendingModels.filter(model => {
-          return !this.syncedSchemas.includes(model);
+          if (!this.models[model]) {
+            return true;
+          } else {
+            for (const schema in relatedSchemas) {
+              // @ts-ignore
+              let simple = Array.isArray(relatedSchemas[schema])
+                ? (relatedSchemas[schema] as SequelizeSchema[])[0]
+                : relatedSchemas[schema];
+              // @ts-ignore
+              if (simple === model) {
+                relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
+                  ? [this.models[model]]
+                  : this.models[model];
+              }
+            }
+          }
         });
       }
     }
@@ -180,19 +201,11 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
     // do not sync extracted schemas
     if ((isNil(noSync) || !noSync) && !options) {
-      // await this.models[schema.name].sync();
-      if (!this.syncedSchemas.includes(schema.name)) {
-        this.syncedSchemas.push(schema.name);
-      }
-      this.scheduleSync();
-      // await this.sequelize.sync({ alter: true });
+      await this.models[schema.name].sync();
     }
     // do not store extracted schemas to db
     if (!options) {
       await this.saveSchemaToDatabase(schema);
-    }
-    if ((isNil(noSync) || !noSync) && !options) {
-      await this.waitForSync();
     }
 
     return this.models[schema.name];

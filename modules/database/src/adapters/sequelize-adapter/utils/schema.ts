@@ -26,6 +26,7 @@ export const extractRelations = (
           as: relation,
           through: model.name + '_' + item.originalSchema.name,
         });
+        item.sync();
       } else {
         model.belongsTo(value.model, {
           foreignKey: relation + 'Id',
