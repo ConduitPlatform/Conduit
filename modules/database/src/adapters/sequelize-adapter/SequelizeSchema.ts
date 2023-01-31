@@ -206,7 +206,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      populate,
+      { populate, select, exclude: [...this.excludedFields] },
       this.associations,
     );
     let filter = parsingResult.query;
@@ -216,18 +216,12 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const options: FindOptions = {
       where: filter,
       nest: true,
+      attributes: parsingResult.attributes! as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
-    options.attributes = {
-      exclude: [...this.excludedFields],
-    } as unknown as FindAttributeOptions;
-    if (!isNil(select) && select !== '') {
-      options.attributes = this.parseSelect(select);
-    } else {
-      options.attributes = this.renameRelations(populate || []);
-    }
+
     incrementDbQueries();
     const document = await this.model
       .findOne(options)
@@ -275,11 +269,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationName = path[0];
         const relationTarget = this.extractedRelations[relationName];
         if (relationTarget) continue;
-        let relationSchema: SequelizeSchema = (
-          Array.isArray(relationTarget)
-            ? (relationTarget as any[])[0]
-            : (relationTarget as any)
-        ).model;
+        let relationSchema: SequelizeSchema = Array.isArray(relationTarget)
+          ? (relationTarget as any[])[0]
+          : (relationTarget as any);
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -301,11 +293,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       } else {
         const relationTarget = this.extractedRelations[population];
         if (!relationTarget) continue;
-        let relationSchema = (
-          Array.isArray(relationTarget)
-            ? (relationTarget as any[])[0]
-            : (relationTarget as any)
-        ).model;
+        let relationSchema = Array.isArray(relationTarget)
+          ? (relationTarget as any[])[0]
+          : (relationTarget as any);
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -368,80 +358,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return relationObjects;
   }
 
-  protected parseSelect(select: string): { exclude: string[]; include?: string[] } {
-    const include: string[] = [];
-    const exclude = [...this.excludedFields];
-    const attributes = select.split(' ');
-    let includedRelations = [];
-
-    for (const attribute of attributes) {
-      if (attribute[0] === '+' || attribute[0] !== '-') {
-        let tmp = attribute;
-        if (attribute[0] === '+') {
-          tmp = attribute.slice(1);
-        }
-        const ind = exclude.indexOf(tmp);
-        if (ind > -1) {
-          exclude.splice(ind, 1);
-        }
-        if (this.extractedRelations[tmp]) {
-          includedRelations.push(tmp);
-          if (!Array.isArray(this.extractedRelations[tmp])) {
-            // @ts-ignore
-            include.push([tmp + 'Id', tmp]);
-          } else {
-            include.push(tmp);
-          }
-        } else {
-          include.push(tmp);
-        }
-      } else {
-        if (this.extractedRelations[attribute.slice(1)]) {
-          includedRelations.push(attribute.slice(1));
-          if (!Array.isArray(this.extractedRelations[attribute.slice(1)])) {
-            // @ts-ignore
-            exclude.push(attribute.slice(1) + 'Id');
-          } else {
-            exclude.push(attribute.slice(1));
-          }
-        } else {
-          exclude.push(attribute.slice(1));
-        }
-      }
-    }
-    for (const relation in this.extractedRelations) {
-      if (includedRelations.indexOf(relation) > -1) continue;
-
-      if (!Array.isArray(this.extractedRelations[relation])) {
-        // @ts-ignore
-        include.push([relation + 'Id', relation]);
-      }
-    }
-
-    return {
-      exclude,
-      ...(include.length > 0 && {
-        include: include,
-      }),
-    };
-  }
-
-  protected renameRelations(population: string[]): { include: string[] } {
-    const include: string[] = [];
-
-    for (const relation in this.extractedRelations) {
-      if (population.indexOf(relation) !== -1) continue;
-      if (!Array.isArray(this.extractedRelations[relation])) {
-        // @ts-ignore
-        include.push([relation + 'Id', relation]);
-      }
-    }
-
-    return {
-      include,
-    };
-  }
-
   protected parseSort(sort: { [field: string]: -1 | 1 }) {
     const order: Order = [];
     Object.keys(sort).forEach(field => {
@@ -467,7 +383,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      populate,
+      { populate, select, exclude: [...this.excludedFields] },
       this.associations,
     );
     let filter = parsingResult.query;
@@ -477,23 +393,16 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const options: FindOptions = {
       where: filter,
       nest: true,
+      attributes: parsingResult.attributes as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
-    options.attributes = {
-      exclude: [...this.excludedFields],
-    } as unknown as FindAttributeOptions;
     if (!isNil(skip)) {
       options.offset = skip;
     }
     if (!isNil(limit)) {
       options.limit = limit;
-    }
-    if (!isNil(select) && select !== '') {
-      options.attributes = this.parseSelect(select);
-    } else {
-      options.attributes = this.renameRelations(populate || []);
     }
     if (!isNil(sort)) {
       options.order = this.parseSort(sort);
@@ -517,7 +426,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      undefined,
+      {},
       this.associations,
     );
     let filter = parsingResult.query;
@@ -549,7 +458,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      undefined,
+      {},
       this.associations,
     );
     let filter = parsingResult.query;
@@ -579,7 +488,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedQuery,
       this.extractedRelations,
-      [],
+      {},
       this.associations,
     );
     return this.model.count({
@@ -607,7 +516,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const parsingResult = parseQuery(
       parsedFilter!,
       this.extractedRelations,
-      undefined,
+      {},
       this.associations,
     );
     parsedFilter = parsingResult.query;
