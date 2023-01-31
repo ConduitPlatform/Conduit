@@ -1,7 +1,7 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { isArray, isBoolean, isString, isNumber } from 'lodash';
+import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
@@ -251,7 +251,6 @@ function parseSelect(
       if (ind > -1) {
         exclude.splice(ind, 1);
       }
-      returnIncludes = true;
       if (relations[tmp]) {
         includedRelations.push(tmp);
         if (!Array.isArray(relations[tmp])) {
@@ -276,6 +275,7 @@ function parseSelect(
         exclude.push(attribute.slice(1));
       }
     } else {
+      returnIncludes = true;
       let tmp = attribute;
       const ind = exclude.indexOf(tmp);
       if (ind > -1) {
@@ -294,7 +294,7 @@ function parseSelect(
       }
     }
   }
-  return returnIncludes ? { include, exclude } : [...include];
+  return returnIncludes ? [...include] : { include, exclude };
 }
 
 export function renameRelations(
