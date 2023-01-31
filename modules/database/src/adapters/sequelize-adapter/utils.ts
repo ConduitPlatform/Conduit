@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import _, { isArray, isBoolean, isObject, isString } from 'lodash';
+import _, { isArray, isBoolean, isNumber, isObject, isString } from 'lodash';
 import {
   ConduitModel,
   Indexable,
@@ -64,7 +64,7 @@ function matchOperation(operator: string, value: any) {
 
 export function parseQuery(query: ParsedQuery) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query)) return query;
+  if (isString(query) || isBoolean(query) || isNumber(query)) return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {

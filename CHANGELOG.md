@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.11](https://github.com/ConduitPlatform/Conduit/compare/v0.15.10...v0.15.11) (2023-01-31)
+
+
+### Features
+
+* **storage:** make s3 storage generic with endpoint  fix [#497](https://github.com/ConduitPlatform/Conduit/issues/497) ([#498](https://github.com/ConduitPlatform/Conduit/issues/498)) ([331ae73](https://github.com/ConduitPlatform/Conduit/commit/331ae736ef20c28009e8879741eff7d9ae7f8115))
+
+
+### Bug Fixes
+
+* **database,grpc-sdk:** sql parseQuery numeric parsing, grpc-sdk depending on sequelize ([#500](https://github.com/ConduitPlatform/Conduit/issues/500)) ([6c58302](https://github.com/ConduitPlatform/Conduit/commit/6c58302067b7ea7eb7d24d95c23da8472f2e5749))
+* **database:** sequelize populates cache identifier uniqueness ([#489](https://github.com/ConduitPlatform/Conduit/issues/489)) ([a37d388](https://github.com/ConduitPlatform/Conduit/commit/a37d38813fc91b15c3d20542a96c22933cb0ceb6))
+* **hermes:** numeric param parsing, REST middleware running before param validation ([#491](https://github.com/ConduitPlatform/Conduit/issues/491)) ([d0cff88](https://github.com/ConduitPlatform/Conduit/commit/d0cff8842d578367b215d195e408db052b8393b5))
+* migrations ([#493](https://github.com/ConduitPlatform/Conduit/issues/493)) ([c01cb16](https://github.com/ConduitPlatform/Conduit/commit/c01cb16bc7fae7cd9c6affa7e039db164ffc4f64))
+
 ### [0.15.10](https://github.com/ConduitPlatform/Conduit/compare/v0.15.9...v0.15.10) (2023-01-13)
 
 
