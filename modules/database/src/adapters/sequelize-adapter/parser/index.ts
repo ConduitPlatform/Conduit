@@ -181,13 +181,14 @@ function handleRelation(
 export function parseQuery(
   query: ParsedQuery,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  populate?: string[],
+  queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
   associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   const parsingResult: {
     query?: WhereOptions;
     requiredRelations: string[];
     requiredAssociations: { [key: string]: string[] };
+    attributes?: { include?: string[]; exclude?: string[] } | string[];
   } = {
     query: {},
     requiredRelations: [],
@@ -203,12 +204,116 @@ export function parseQuery(
       },
     ),
   };
+  if (queryOptions.select) {
+    if (queryOptions.select === '') {
+      parsingResult.attributes = [];
+    } else {
+      for (const relation of queryOptions.populate || []) {
+        while (queryOptions.select.indexOf(relation) !== -1) {
+          queryOptions.select = queryOptions.select.replace(relation, ``);
+        }
+      }
+      parsingResult.attributes = parseSelect(
+        queryOptions.select,
+        queryOptions.exclude || [],
+        relations,
+      );
+    }
+  } else {
+    parsingResult.attributes = renameRelations(queryOptions.populate || [], relations);
+  }
   if (
     Object.keys(parsingResult.query).length === 0 &&
     Object.getOwnPropertySymbols(parsingResult.query).length === 0
   )
     parsingResult.query = undefined;
   return parsingResult;
+}
+
+function parseSelect(
+  select: string,
+  excludedFields: string[],
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+): { exclude?: string[]; include?: string[] } | string[] {
+  const include: string[] = [];
+  const exclude = [...excludedFields];
+  const attributes = select.split(' ');
+  let includedRelations = [];
+  let returnIncludes = false;
+
+  for (const attribute of attributes) {
+    if (attribute[0] === '+') {
+      let tmp = attribute;
+      if (attribute[0] === '+') {
+        tmp = attribute.slice(1);
+      }
+      const ind = exclude.indexOf(tmp);
+      if (ind > -1) {
+        exclude.splice(ind, 1);
+      }
+      returnIncludes = true;
+      if (relations[tmp]) {
+        includedRelations.push(tmp);
+        if (!Array.isArray(relations[tmp])) {
+          // @ts-ignore
+          include.push([tmp + 'Id', tmp]);
+        } else {
+          include.push(tmp);
+        }
+      } else {
+        include.push(tmp);
+      }
+    } else if (attribute[0] === '-') {
+      if (relations[attribute.slice(1)]) {
+        includedRelations.push(attribute.slice(1));
+        if (!Array.isArray(relations[attribute.slice(1)])) {
+          // @ts-ignore
+          exclude.push(attribute.slice(1) + 'Id');
+        } else {
+          exclude.push(attribute.slice(1));
+        }
+      } else {
+        exclude.push(attribute.slice(1));
+      }
+    } else {
+      let tmp = attribute;
+      const ind = exclude.indexOf(tmp);
+      if (ind > -1) {
+        exclude.splice(ind, 1);
+      }
+      if (relations[tmp]) {
+        includedRelations.push(tmp);
+        if (!Array.isArray(relations[tmp])) {
+          // @ts-ignore
+          include.push([tmp + 'Id', tmp]);
+        } else {
+          include.push(tmp);
+        }
+      } else {
+        include.push(tmp);
+      }
+    }
+  }
+  return returnIncludes ? { include, exclude } : [...include];
+}
+
+export function renameRelations(
+  population: string[],
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+): { include: string[] } {
+  const include: string[] = [];
+
+  for (const relation in relations) {
+    if (population.indexOf(relation) !== -1) continue;
+    if (!Array.isArray(relations[relation])) {
+      // @ts-ignore
+      include.push([relation + 'Id', relation]);
+    }
+  }
+
+  return {
+    include,
+  };
 }
 
 export * from './sql';
