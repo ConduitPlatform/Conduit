@@ -1,7 +1,7 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { isArray, isBoolean, isString } from 'lodash';
+import { isArray, isBoolean, isString, isNumber } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
@@ -88,7 +88,7 @@ function _parseQuery(
   },
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query)) return query;
+  if (isString(query) || isBoolean(query) || isNumber(query)) return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
