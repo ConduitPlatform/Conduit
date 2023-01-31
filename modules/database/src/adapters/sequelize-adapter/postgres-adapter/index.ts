@@ -142,7 +142,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
             for (const schema in relatedSchemas) {
               // @ts-ignore
               let simple = Array.isArray(relatedSchemas[schema])
-                ? relatedSchemas[schema][0]
+                ? (relatedSchemas[schema] as SequelizeSchema[])[0]
                 : relatedSchemas[schema];
               // @ts-ignore
               if (simple === model) {
