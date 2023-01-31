@@ -116,7 +116,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
         const rel = Array.isArray(extractedRelations[relation])
           ? (extractedRelations[relation] as any[])[0]
           : extractedRelations[relation];
-        if (!this.syncedSchemas.includes(rel.model)) {
+        if (!this.models[rel.model]) {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
@@ -136,7 +136,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       while (pendingModels.length > 0) {
         await sleep(500);
         pendingModels = pendingModels.filter(model => {
-          if (!this.syncedSchemas.includes(model)) {
+          if (!this.models[model]) {
             return true;
           } else {
             for (const schema in relatedSchemas) {
@@ -165,17 +165,10 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
     if (isNil(noSync) || !noSync) {
-      if (!this.syncedSchemas.includes(schema.name)) {
-        this.syncedSchemas.push(schema.name);
-      }
-      this.scheduleSync();
+      await this.models[schema.name].sync();
     }
 
     await this.saveSchemaToDatabase(schema);
-
-    if (isNil(noSync) || !noSync) {
-      await this.waitForSync();
-    }
 
     return this.models[schema.name];
   }
