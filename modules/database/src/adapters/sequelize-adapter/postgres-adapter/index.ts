@@ -120,17 +120,38 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
-        }
-        if (Array.isArray(extractedRelations[relation])) {
-          relatedSchemas[relation] = [this.models[rel.model]];
+          if (Array.isArray(extractedRelations[relation])) {
+            relatedSchemas[relation] = [rel.model];
+          } else {
+            relatedSchemas[relation] = rel.model;
+          }
         } else {
-          relatedSchemas[relation] = this.models[rel.model];
+          if (Array.isArray(extractedRelations[relation])) {
+            relatedSchemas[relation] = [this.models[rel.model]];
+          } else {
+            relatedSchemas[relation] = this.models[rel.model];
+          }
         }
       }
       while (pendingModels.length > 0) {
         await sleep(500);
         pendingModels = pendingModels.filter(model => {
-          return !this.syncedSchemas.includes(model);
+          if (!this.syncedSchemas.includes(model)) {
+            return true;
+          } else {
+            for (const schema in relatedSchemas) {
+              // @ts-ignore
+              let simple = Array.isArray(relatedSchemas[schema])
+                ? relatedSchemas[schema][0]
+                : relatedSchemas[schema];
+              // @ts-ignore
+              if (simple === model) {
+                relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
+                  ? [this.models[model]]
+                  : this.models[model];
+              }
+            }
+          }
         });
       }
     }
