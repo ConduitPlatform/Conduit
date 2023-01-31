@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
-import { ProxyRoute } from '../models';
+import { RouterProxyRoute } from '../models';
 
 export class RouterAdmin {
   constructor(
@@ -58,13 +58,21 @@ export class RouterAdmin {
   }
 
   async getProxyRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const proxyRoutes = await ProxyRoute.getInstance().findMany({});
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const { sort } = call.request.params;
+    const proxyRoutes = await RouterProxyRoute.getInstance().findMany(
+      {},
+      skip,
+      limit,
+      sort,
+    );
     return proxyRoutes;
   }
 
   async getProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const existingProxy = await ProxyRoute.getInstance().findOne({ _id: id });
+    const existingProxy = await RouterProxyRoute.getInstance().findOne({ _id: id });
     if (!existingProxy) {
       throw new ConduitError(
         'NOT_FOUND',
@@ -84,7 +92,7 @@ export class RouterAdmin {
         `Target '${target}' is not a valid URL`,
       );
     }
-    const existingProxy = await ProxyRoute.getInstance().findOne({
+    const existingProxy = await RouterProxyRoute.getInstance().findOne({
       path,
       target,
     });
@@ -95,7 +103,7 @@ export class RouterAdmin {
         `A proxy route with a path of '${path}' for target '${target}' already exists`,
       );
     }
-    const newProxy = await ProxyRoute.getInstance().create({
+    const newProxy = await RouterProxyRoute.getInstance().create({
       path,
       target,
       action,
@@ -121,7 +129,7 @@ export class RouterAdmin {
         `Target '${target}' is not a valid URL`,
       );
     }
-    const existingProxy = await ProxyRoute.getInstance().findOne({
+    const existingProxy = await RouterProxyRoute.getInstance().findOne({
       _id: id,
     });
     if (!existingProxy) {
@@ -131,7 +139,7 @@ export class RouterAdmin {
         `A proxy route with a path of '${path}' for target '${target}' does not exist`,
       );
     }
-    const updatedProxy = await ProxyRoute.getInstance().findByIdAndUpdate(
+    const updatedProxy = await RouterProxyRoute.getInstance().findByIdAndUpdate(
       existingProxy._id,
       {
         path,
@@ -147,7 +155,7 @@ export class RouterAdmin {
 
   async deleteProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
-    const existingProxy = await ProxyRoute.getInstance().findOne({ _id: id });
+    const existingProxy = await RouterProxyRoute.getInstance().findOne({ _id: id });
     if (!existingProxy) {
       throw new ConduitError(
         'NOT_FOUND',
@@ -155,7 +163,7 @@ export class RouterAdmin {
         `A proxy route with an id of '${id}' does not exist`,
       );
     }
-    await ProxyRoute.getInstance().deleteOne({ _id: id });
+    await RouterProxyRoute.getInstance().deleteOne({ _id: id });
     return 'Proxy route deleted';
   }
 

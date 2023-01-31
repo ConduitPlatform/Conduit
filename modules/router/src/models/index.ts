@@ -1,2 +1,2 @@
 export * from './Client.schema';
-export * from './ProxyRoute.schema';
+export * from './RouterProxyRoute.schema';

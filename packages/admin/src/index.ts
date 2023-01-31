@@ -47,6 +47,7 @@ import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
 import {
+  createProxyRoute,
   deleteProxyRoute,
   getProxyRoute,
   getProxyRoutesRoute,
@@ -55,7 +56,7 @@ import {
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
-  private _router: ConduitRoutingController;
+  private _router!: ConduitRoutingController;
 
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
@@ -69,13 +70,13 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
+    createProxyRoute(),
     deleteProxyRoute(),
     updateProxyRoute(),
     getProxyRoute(),
     getProxyRoutesRoute(),
   ];
 
-  private _proxyRoutes: ProxyRoute[] = [];
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -330,6 +331,17 @@ export default class AdminModule extends IConduitAdmin {
           ConduitGrpcSdk.Logger.error(err as Error);
         }
       }, this);
+      const proxyRoutes = await models.AdminProxyRoute.getInstance().findMany({});
+      if (proxyRoutes.length > 0) {
+        proxyRoutes.forEach(route => {
+          this.registerProxyRoute({
+            path: route.path,
+            target: route.target,
+            middlewares: route.middlewares,
+            description: route.description,
+          });
+        });
+      }
       ConduitGrpcSdk.Logger.log('Recovered routes');
       await Promise.all(promises);
     }
@@ -460,6 +472,12 @@ export default class AdminModule extends IConduitAdmin {
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._router.registerConduitRoute(r);
+      }
+      if (r instanceof ProxyRoute) {
+        ConduitGrpcSdk.Logger.http(
+          `New proxy route registered: ${r.input.path} target: ${r.input.target}`,
+        );
+        this._router.registerProxyRoute(r);
       }
     });
     this._grpcRoutes[url] = routes;

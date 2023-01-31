@@ -5,7 +5,7 @@ import {
   ConduitString,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ProxyRoute } from '../../models';
+import { AdminProxyRoute } from '../../models';
 
 export function getProxyRoute() {
   return new ConduitRoute(
@@ -22,7 +22,7 @@ export function getProxyRoute() {
     }),
     async (req: ConduitRouteParameters) => {
       const proxyId = req.params!.id;
-      return ProxyRoute.getInstance().findOne({ _id: proxyId });
+      return AdminProxyRoute.getInstance().findOne({ _id: proxyId });
     },
   );
 }

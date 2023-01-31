@@ -1,6 +1,6 @@
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { ConduitRouteActions, ConduitString } from '@conduitplatform/grpc-sdk';
-import { ProxyRoute } from '../../models';
+import { AdminProxyRoute } from '../../models';
 
 export function createProxyRoute() {
   return new ConduitRoute(
@@ -22,8 +22,12 @@ export function createProxyRoute() {
     }),
     async req => {
       const { path, target, action, description, middlewares } = req.params!;
+      const existingRoute = await AdminProxyRoute.getInstance().findOne({ path, target });
+      if (existingRoute) {
+        throw new Error('Proxy route already exists.');
+      }
       // discuss the other fields
-      await ProxyRoute.getInstance().create({
+      await AdminProxyRoute.getInstance().create({
         path,
         target,
         action,
@@ -31,7 +35,6 @@ export function createProxyRoute() {
         middlewares,
       });
 
-      //TODO finish this
       return { message: 'Proxy created.' };
     },
   );

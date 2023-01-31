@@ -1,6 +1,6 @@
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
-import { ProxyRoute } from '../../models';
+import { AdminProxyRoute } from '../../models';
 
 export function getProxyRoutesRoute() {
   return new ConduitRoute(
@@ -13,7 +13,7 @@ export function getProxyRoutesRoute() {
       response: TYPE.JSON,
     }),
     async () => {
-      return ProxyRoute.getInstance().findMany({});
+      return AdminProxyRoute.getInstance().findMany({});
     },
   );
 }

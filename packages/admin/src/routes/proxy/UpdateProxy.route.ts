@@ -6,7 +6,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
-import { ProxyRoute } from '../../models';
+import { AdminProxyRoute } from '../../models';
 
 export function updateProxyRoute() {
   return new ConduitRoute(
@@ -31,11 +31,11 @@ export function updateProxyRoute() {
     }),
     async (req: ConduitRouteParameters) => {
       const { id, path, target, action, description, middlewares } = req.params!;
-      const existingProxy = await ProxyRoute.getInstance().findOne({ _id: id });
+      const existingProxy = await AdminProxyRoute.getInstance().findOne({ _id: id });
       if (isNil(existingProxy)) {
         throw new ConduitError('NOT_FOUND', 404, 'Proxy not found');
       }
-      await ProxyRoute.getInstance().findByIdAndUpdate(id, {
+      await AdminProxyRoute.getInstance().findByIdAndUpdate(id, {
         path,
         target,
         action,

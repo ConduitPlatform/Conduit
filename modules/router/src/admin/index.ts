@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitBoolean,
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -11,7 +12,7 @@ import ConduitGrpcSdk, {
 import { RouterAdmin } from './router';
 import { SecurityAdmin } from './security';
 import ConduitDefaultRouter from '../Router';
-import { Client, ProxyRoute } from '../models';
+import { Client, RouterProxyRoute } from '../models';
 
 export class AdminHandlers {
   private readonly routerAdmin: RouterAdmin;
@@ -65,6 +66,11 @@ export class AdminHandlers {
         path: '/proxy',
         action: ConduitRouteActions.GET,
         description: `Returns proxy routes.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('GetProxyRoutes', {
         response: TYPE.JSON,
@@ -80,7 +86,7 @@ export class AdminHandlers {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('GetProxyRouteById', ProxyRoute.name),
+      new ConduitRouteReturnDefinition('GetProxyRouteById', RouterProxyRoute.name),
       this.routerAdmin.getProxyRoute.bind(this.routerAdmin),
     );
     this.routingManager.route(
@@ -176,7 +182,7 @@ export class AdminHandlers {
           // TODO: Add all the other fields
         },
       },
-      new ConduitRouteReturnDefinition('UpdateProxyRoute', ProxyRoute.name),
+      new ConduitRouteReturnDefinition('UpdateProxyRoute', RouterProxyRoute.name),
       this.routerAdmin.updateProxyRoute.bind(this.routerAdmin),
     );
     this.routingManager.route(

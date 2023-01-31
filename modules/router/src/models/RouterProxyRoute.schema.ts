@@ -91,8 +91,8 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class ProxyRoute extends ConduitActiveSchema<ProxyRoute> {
-  private static _instance: ProxyRoute;
+export class RouterProxyRoute extends ConduitActiveSchema<RouterProxyRoute> {
+  private static _instance: RouterProxyRoute;
   _id!: string;
   path!: string;
   target!: string;
@@ -117,15 +117,15 @@ export class ProxyRoute extends ConduitActiveSchema<ProxyRoute> {
   createdAt!: Date;
   updatedAt!: Date;
   private constructor(database: DatabaseProvider) {
-    super(database, ProxyRoute.name, schema, modelOptions, collectionName);
+    super(database, RouterProxyRoute.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (ProxyRoute._instance) return ProxyRoute._instance;
+    if (RouterProxyRoute._instance) return RouterProxyRoute._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    ProxyRoute._instance = new ProxyRoute(database);
-    return ProxyRoute._instance;
+    RouterProxyRoute._instance = new RouterProxyRoute(database);
+    return RouterProxyRoute._instance;
   }
 }

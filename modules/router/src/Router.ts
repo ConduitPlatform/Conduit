@@ -184,7 +184,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   private async recoverFromState() {
     const r = await this.grpcSdk.state!.getKey('router');
-    const proxyRoutes = await models.ProxyRoute.getInstance().findMany({});
+    const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
     if (!r || r.length === 0 || !proxyRoutes || proxyRoutes.length === 0) return;
     const state = JSON.parse(r);
     if (state.routes) {
@@ -198,7 +198,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     if (proxyRoutes) {
       proxyRoutes.forEach(route => {
-        const proxyRoute = new ProxyRoute({ path: route.path, target: route.target });
+        const proxyRoute = new ProxyRoute({
+          path: route.path,
+          target: route.target,
+          middlewares: route.middlewares,
+          description: route.description,
+        });
         this._internalRouter.registerProxyRoute(proxyRoute);
       });
     }
