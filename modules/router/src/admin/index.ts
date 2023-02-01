@@ -100,7 +100,10 @@ export class AdminHandlers {
           action: ConduitString.Optional,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          // TODO: Add all the other fields
+          options: {
+            type: TYPE.JSON,
+            required: false,
+          },
         },
       },
       new ConduitRouteReturnDefinition('CreateProxyRoute', {
@@ -179,7 +182,10 @@ export class AdminHandlers {
           action: ConduitString.Optional,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          // TODO: Add all the other fields
+          options: {
+            type: TYPE.JSON,
+            required: false,
+          },
         },
       },
       new ConduitRouteReturnDefinition('UpdateProxyRoute', RouterProxyRoute.name),

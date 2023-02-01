@@ -2,7 +2,6 @@ import {
   ConduitProxy,
   ConduitProxyOptions,
   GrpcServer,
-  ProxyRouteActions,
   ProxyRouteBuilder,
 } from '../index';
 import { Admin, Router } from '../modules';
@@ -67,12 +66,8 @@ export class RoutingManager {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
-  all(path: string): ProxyRouteBuilder {
-    return new ProxyRouteBuilder(this).method(ProxyRouteActions.ALL).path(path);
-  }
-
-  options(input: ConduitProxyOptions): ProxyRouteBuilder {
-    return new ProxyRouteBuilder(this).options(input);
+  proxy(options: ConduitProxyOptions) {
+    return new ProxyRouteBuilder(this, options);
   }
 
   clear() {

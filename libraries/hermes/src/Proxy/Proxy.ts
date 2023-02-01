@@ -1,17 +1,11 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { IRouterMatcher, Router } from 'express';
 import { ConduitRouter } from '../Router';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 import { ProxyRoute, TypeRegistry } from '../classes';
+import { ProxyRouteActions } from '../interfaces';
 
 export class ProxyRouteController extends ConduitRouter {
   private _proxyRoutes: Map<string, ProxyRoute>;
-  private globalMiddlewares: ((
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => void)[];
-
   constructor(
     grpcSdk: ConduitGrpcSdk,
     private readonly metrics?: {
@@ -22,25 +16,33 @@ export class ProxyRouteController extends ConduitRouter {
   ) {
     super(grpcSdk);
     this._proxyRoutes = new Map();
-    this.globalMiddlewares = [];
     this.initializeRouter();
   }
 
   private initializeRouter() {
     this.createRouter();
-    this._expressRouter!.use((req: Request, res: Response, next: NextFunction) => {
-      this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
-    });
   }
 
-  registerGlobalMiddleware(
-    middleware: (req: Request, res: Response, next: NextFunction) => void,
-  ) {
-    this.globalMiddlewares.push(middleware);
+  private getRouterMethod(action: ProxyRouteActions): IRouterMatcher<Router> {
+    switch (action) {
+      case ProxyRouteActions.GET:
+        return this._expressRouter!.get.bind(this._expressRouter);
+      case ProxyRouteActions.POST:
+        return this._expressRouter!.post.bind(this._expressRouter);
+      case ProxyRouteActions.UPDATE:
+        return this._expressRouter!.put.bind(this._expressRouter);
+      case ProxyRouteActions.DELETE:
+        return this._expressRouter!.delete.bind(this._expressRouter);
+      case ProxyRouteActions.PATCH:
+        return this._expressRouter!.patch.bind(this._expressRouter);
+      case ProxyRouteActions.ALL:
+      default:
+        return this._expressRouter!.all.bind(this._expressRouter);
+    }
   }
 
   registerProxyRoute(route: ProxyRoute) {
-    const key = `${route.input.path}-${route.input.target}`;
+    const key = `${route.input.action}-${route.input.path}-${route.input.target}`;
     const registered = this._proxyRoutes.has(key);
     this._proxyRoutes.set(key, route);
     if (registered) {
@@ -54,19 +56,13 @@ export class ProxyRouteController extends ConduitRouter {
       }
     }
   }
-
   private addProxyRoute(route: ProxyRoute) {
-    this._expressRouter!.use(route.input.path, (req, res, next) => {
+    const routerMethod = this.getRouterMethod(route.input.action);
+    routerMethod(route.input.path, (req, res, next) => {
       this.checkMiddlewares(req, route.input.middlewares)
         .then(() => {
-          this.globalMiddlewares.forEach(middleware => middleware(req, res, next));
-          // should discuss what other options we need to pass in here by default
-          // the important ones are changeOrigin and autoRewrite, but we should also consider other options like secure, ws, etc
-          createProxyMiddleware({
-            target: route.input.target,
-            changeOrigin: true,
-            autoRewrite: true,
-          })(req, res, next);
+          const proxyOptions = { target: route.input.target, ...route.input.options };
+          return route.executeRequest(proxyOptions)(req, res, next);
         })
         .catch(err => {
           next(err);

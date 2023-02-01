@@ -1,4 +1,5 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { HttpProxyMiddlewareOptions, ProxyRouteActions } from '@conduitplatform/hermes';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -22,56 +23,8 @@ const schema = {
     type: [TYPE.String],
     required: false,
   },
-  changeOrigin: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  secure: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  context: {
-    type: [TYPE.String],
-    required: false,
-  },
-  pathRewrite: {
+  options: {
     type: TYPE.JSON,
-    required: false,
-  },
-  headers: {
-    type: TYPE.JSON,
-    required: false,
-  },
-  proxyTimeout: {
-    type: TYPE.Number,
-    required: false,
-  },
-  cookieDomainRewrite: {
-    type: TYPE.JSON,
-    required: false,
-  },
-  autoRewrite: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  followRedirects: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  xfwd: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  ws: {
-    type: TYPE.Boolean,
-    required: false,
-  },
-  router: {
-    type: TYPE.JSON,
-    required: false,
-  },
-  preserveHeaderKeyCase: {
-    type: TYPE.Boolean,
     required: false,
   },
   createdAt: TYPE.Date,
@@ -96,26 +49,13 @@ export class RouterProxyRoute extends ConduitActiveSchema<RouterProxyRoute> {
   _id!: string;
   path!: string;
   target!: string;
-  action?: string;
-
+  action!: ProxyRouteActions;
   description?: string;
-
   middlewares?: string[];
-  changeOrigin?: boolean;
-  secure?: boolean;
-  context?: string | string[];
-  pathRewrite?: { [path: string]: string };
-  headers?: { [name: string]: string };
-  proxyTimeout?: number;
-  cookieDomainRewrite?: { [hostname: string]: string };
-  autoRewrite?: boolean;
-  followRedirects?: boolean;
-  xfwd?: boolean;
-  ws?: boolean;
-  router?: { [path: string]: string };
-  preserveHeaderKeyCase?: boolean;
+  options?: HttpProxyMiddlewareOptions;
   createdAt!: Date;
   updatedAt!: Date;
+
   private constructor(database: DatabaseProvider) {
     super(database, RouterProxyRoute.name, schema, modelOptions, collectionName);
   }

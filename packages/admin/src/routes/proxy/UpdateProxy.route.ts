@@ -3,6 +3,7 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
@@ -23,14 +24,17 @@ export function updateProxyRoute() {
         action: ConduitString.Optional,
         description: ConduitString.Optional,
         middlewares: [ConduitString.Optional],
-        // discuss  the other fields
+        options: {
+          type: TYPE.JSON,
+          required: false,
+        },
       },
     },
     new ConduitRouteReturnDefinition('UpdateProxyRoute', {
       message: ConduitString.Required,
     }),
     async (req: ConduitRouteParameters) => {
-      const { id, path, target, action, description, middlewares } = req.params!;
+      const { id, path, target, action, description, middlewares, options } = req.params!;
       const existingProxy = await AdminProxyRoute.getInstance().findOne({ _id: id });
       if (isNil(existingProxy)) {
         throw new ConduitError('NOT_FOUND', 404, 'Proxy not found');
@@ -41,6 +45,7 @@ export function updateProxyRoute() {
         action,
         description,
         middlewares,
+        options,
       });
       return { message: 'Proxy updated.' };
     },

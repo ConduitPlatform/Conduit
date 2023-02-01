@@ -337,8 +337,10 @@ export default class AdminModule extends IConduitAdmin {
           this.registerProxyRoute({
             path: route.path,
             target: route.target,
+            action: route.action,
             middlewares: route.middlewares,
             description: route.description,
+            options: route.options,
           });
         });
       }

@@ -227,7 +227,6 @@ export class ConduitRoutingController {
         );
         this.registerConduitSocket(r);
       } else if (isInstanceOfProxyRoute(r)) {
-        r.input.target = url;
         ConduitGrpcSdk.Logger.log(
           'New proxy route registered: ' +
             r.input.action +

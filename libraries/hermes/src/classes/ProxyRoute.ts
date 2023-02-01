@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { ProxyRouteOptions } from '../interfaces';
+import { HttpProxyMiddlewareOptions, ProxyRouteOptions } from '../interfaces';
 import { ConduitProxy, Indexable } from '@conduitplatform/grpc-sdk';
 
 export class ProxyRoute {
@@ -14,8 +13,8 @@ export class ProxyRoute {
     return this._input;
   }
 
-  executeRequest(req: Request, res: Response, next: NextFunction) {
-    createProxyMiddleware(this._input)(req, res, next);
+  executeRequest(request: HttpProxyMiddlewareOptions) {
+    return createProxyMiddleware({ ...request });
   }
 }
 export function instanceOfConduitProxy(object: Indexable): object is ConduitProxy {

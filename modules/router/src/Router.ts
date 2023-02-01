@@ -185,24 +185,28 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private async recoverFromState() {
     const r = await this.grpcSdk.state!.getKey('router');
     const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
-    if (!r || r.length === 0 || !proxyRoutes || proxyRoutes.length === 0) return;
-    const state = JSON.parse(r);
-    if (state.routes) {
-      state.routes.forEach((r: any) => {
-        try {
-          this.internalRegisterRoute(r.protofile, r.routes, r.url);
-        } catch (err) {
-          ConduitGrpcSdk.Logger.error(err as Error);
-        }
-      });
+    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
+    if (r) {
+      const state = JSON.parse(r);
+      if (state.routes) {
+        state.routes.forEach((r: any) => {
+          try {
+            this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          } catch (err) {
+            ConduitGrpcSdk.Logger.error(err as Error);
+          }
+        });
+      }
     }
     if (proxyRoutes) {
       proxyRoutes.forEach(route => {
         const proxyRoute = new ProxyRoute({
           path: route.path,
+          action: route.action,
           target: route.target,
           middlewares: route.middlewares,
           description: route.description,
+          options: route.options ?? {},
         });
         this._internalRouter.registerProxyRoute(proxyRoute);
       });
@@ -330,28 +334,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routerUrl = result.url;
       }
 
-      const routes = call.request.routes.filter(
-        route => !route.proxy || !route.proxy.target,
-      );
-      const proxyRoutes = call.request.routes.filter(
-        route => route.proxy && route.proxy.target,
-      );
-
       this.internalRegisterRoute(
         call.request.protoFile,
-        routes as RouteT[],
+        call.request.routes as any,
         call.request.routerUrl,
         moduleName as string,
       );
-
-      if (proxyRoutes.length > 0) {
-        this.internalRegisterRoute(
-          call.request.protoFile,
-          proxyRoutes as ProxyRouteT[],
-          call.request.routerUrl,
-          moduleName as string,
-        );
-      }
 
       this.updateState(
         call.request.protoFile,
