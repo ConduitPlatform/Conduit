@@ -235,6 +235,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
+    await this.compareAndStoreMigratedSchema(schema);
     await this.saveSchemaToDatabase(schema);
     if (indexes) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
@@ -380,6 +381,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.INTERNAL, e.message);
     }
     return result;
+  }
+
+  async syncSchema(name: string) {
+    throw new GrpcError(status.UNIMPLEMENTED, 'Cannot sync module schema in Mongoose');
   }
 
   private checkIndexes(

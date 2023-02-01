@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { EventEmitter } from 'events';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import { checkIfPostgresOptions, tableFetch } from './utils';
@@ -275,7 +274,11 @@ export abstract class SequelizeAdapter<
       });
   }
 
-  protected checkAndConvertIndexes(
+  async syncSchema(name: string) {
+    await this.models[name].model.sync({ alter: true });
+  }
+
+  private checkAndConvertIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
     callerModule: string,

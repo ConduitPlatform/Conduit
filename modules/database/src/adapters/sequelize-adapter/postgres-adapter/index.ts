@@ -167,7 +167,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
-
+    await this.compareAndStoreMigratedSchema(schema);
     await this.saveSchemaToDatabase(schema);
 
     return this.models[schema.name];
