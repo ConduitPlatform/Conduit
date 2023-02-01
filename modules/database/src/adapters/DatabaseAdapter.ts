@@ -238,7 +238,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
       name: storedSchema.name,
       ownerModule: storedSchema.ownerModule,
       version: lastVersion + 1,
-      schema: storedSchema.fields,
+      schema: storedSchema,
     });
   }
 
