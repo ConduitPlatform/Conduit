@@ -191,10 +191,10 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async registerAppConfig() {
-    await this.grpcSdk.database!.createSchemaFromAdapter(
-      models.Config.getInstance(this.grpcSdk.database!),
-    );
+    const modelInstance = models.Config.getInstance(this.grpcSdk.database!);
+    await this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
     await runMigrations(this.grpcSdk);
+    await this.grpcSdk.database!.migrate(modelInstance.name);
     this._configStorage.onDatabaseAvailable();
   }
 

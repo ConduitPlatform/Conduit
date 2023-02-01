@@ -17,6 +17,7 @@ import {
   FindRequest,
   GetSchemaRequest,
   GetSchemasRequest,
+  MigrateRequest,
   QueryRequest,
   QueryResponse,
   RawQueryRequest,
@@ -64,6 +65,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
+      migrate: this.migrate.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -91,8 +93,9 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async onServerStart() {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (model.name === '_DeclaredSchema') return [];
+      if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
@@ -597,5 +600,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
+    if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      await this._activeAdapter.syncSchema(call.request.schemaName);
+    }
+    callback(null, null);
   }
 }

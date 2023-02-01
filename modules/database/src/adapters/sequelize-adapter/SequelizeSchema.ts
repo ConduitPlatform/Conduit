@@ -231,7 +231,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   sync() {
-    const syncOptions = { alter: true };
+    const syncOptions = { alter: { drop: false } };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
     for (const association in this.associations) {
       if (this.associations.hasOwnProperty(association)) {

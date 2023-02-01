@@ -1,6 +1,6 @@
 import { ConduitSchema, ConduitError } from '@conduitplatform/grpc-sdk';
 import { Fields } from '../../interfaces';
-import { isString, isArray } from 'lodash';
+import { isString, isArray, isNil } from 'lodash';
 import { DataTypes } from 'sequelize';
 
 /*
@@ -24,6 +24,7 @@ function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
       tempObj[key] = validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
     } else {
       const oldType = oldSchemaFields[key].type ?? oldSchemaFields[key];
+      if (isNil(newSchemaFields)) return;
       const newType = newSchemaFields[key]?.type ?? null;
       if (!newType) return;
       if (oldType === DataTypes.JSONB && newType === 'JSON') return;

@@ -253,4 +253,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       return JSON.parse(res.result);
     });
   }
+
+  migrate(schemaName: string) {
+    return this.client!.migrate({ schemaName });
+  }
 }
