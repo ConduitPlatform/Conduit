@@ -18,7 +18,6 @@ import {
   GetSchemaRequest,
   GetSchemasRequest,
   MigrateRequest,
-  MigrateResponse,
   QueryRequest,
   QueryResponse,
   RawQueryRequest,
@@ -603,13 +602,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     }
   }
 
-  async migrate(
-    call: GrpcRequest<MigrateRequest>,
-    callback: GrpcResponse<MigrateResponse>,
-  ) {
+  async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
       await this._activeAdapter.syncSchema(call.request.schemaName);
     }
-    callback(null, {});
+    callback(null, null);
   }
 }

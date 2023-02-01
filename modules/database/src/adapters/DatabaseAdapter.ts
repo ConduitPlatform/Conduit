@@ -234,15 +234,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
     const lastVersion =
       lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
-    const storedData = await this.models[schema.name].findMany({});
-    for (const data of storedData) {
-      await this.models['MigratedSchemas'].create({
-        name: storedSchema.name,
-        ownerModule: storedSchema.ownerModule,
-        version: lastVersion + 1,
-        schema: data,
-      });
-    }
+    await this.models['MigratedSchemas'].create({
+      name: storedSchema.name,
+      ownerModule: storedSchema.ownerModule,
+      version: lastVersion + 1,
+      schema: storedSchema.fields,
+    });
   }
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {

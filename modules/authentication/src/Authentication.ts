@@ -63,8 +63,12 @@ export default class Authentication extends ManagedModule<Config> {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     for (const model of Object.values(models)) {
-      if (model.name === 'Client') continue;
       const modelInstance = model.getInstance();
+      if (
+        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
+          .length === 0
+      )
+        continue;
       await this.database.migrate(modelInstance.name);
     }
   }
