@@ -205,6 +205,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     }
     // do not store extracted schemas to db
     if (!options) {
+      await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }
 
