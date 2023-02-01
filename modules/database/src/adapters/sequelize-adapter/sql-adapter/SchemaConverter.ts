@@ -132,7 +132,13 @@ function extractArrayType(arrayField: any[], field: string) {
 }
 
 function extractObjectType(objectField: any) {
-  const res: { type: any; defaultValue?: any; primaryKey?: boolean } = { type: null };
+  const res: {
+    type: any;
+    defaultValue?: any;
+    primaryKey?: boolean;
+    unique?: boolean;
+    allowNull?: boolean;
+  } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
     res.type = extractType(objectField.type);
@@ -145,6 +151,12 @@ function extractObjectType(objectField: any) {
 
   if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
     res.primaryKey = objectField.primaryKey ?? false;
+  }
+  if (objectField.hasOwnProperty('unique') && objectField.unique) {
+    res.unique = objectField.unique ?? false;
+  }
+  if (objectField.hasOwnProperty('required') && objectField.required) {
+    res.allowNull = !objectField.required ?? true;
   }
 
   return res;
