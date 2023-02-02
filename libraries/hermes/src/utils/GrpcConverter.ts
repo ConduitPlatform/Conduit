@@ -99,7 +99,7 @@ function createHandlers(
     if (instanceOfSocketProtoDescription(r)) {
       route = createHandlerForSocket(r, client, metadata, moduleName);
     } else if (instanceOfConduitProxy(r)) {
-      route = createHandlerForProxy(r.options);
+      route = createHandlerForProxy(r.options, moduleName);
     } else {
       route = createHandlerForRoute(r as RouteT, client, metadata, moduleName);
     }
@@ -247,6 +247,15 @@ function createHandlerForSocket(
   return new ConduitSocket(socket.options, eventHandlers);
 }
 
-export function createHandlerForProxy(options: ProxyRouteOptions) {
+export function createHandlerForProxy(options: ProxyRouteOptions, moduleName?: string) {
+  if (!options.path.startsWith('/')) {
+    options.path = `/${options.path}`;
+  }
+  if (moduleName && !options.path.startsWith(`/${moduleName}/`)) {
+    options.path = `/${moduleName}${options.path}`;
+  }
+  if (!options.path.startsWith('/proxy')) {
+    options.path = `/proxy${options.path}`;
+  }
   return new ProxyRoute(options);
 }
