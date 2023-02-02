@@ -198,6 +198,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         });
       }
     }
+    const proxies: ProxyRoute[] = [];
     if (proxyRoutes) {
       proxyRoutes.forEach(route => {
         const proxyRoute = new ProxyRoute({
@@ -208,7 +209,8 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           description: route.description,
           options: route.options ?? {},
         });
-        this._internalRouter.registerProxyRoute(proxyRoute);
+        proxies.push(proxyRoute);
+        this._internalRouter.registerRoutes(proxies, route.target);
       });
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');

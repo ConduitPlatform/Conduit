@@ -1,4 +1,4 @@
-import { IRouterMatcher, Router } from 'express';
+import { IRouterMatcher, NextFunction, Request, Response, Router } from 'express';
 import { ConduitRouter } from '../Router';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ProxyRoute, TypeRegistry } from '../classes';
@@ -21,6 +21,9 @@ export class ProxyRouteController extends ConduitRouter {
 
   private initializeRouter() {
     this.createRouter();
+    this._expressRouter!.use((req: Request, res: Response, next: NextFunction) => {
+      next();
+    });
   }
 
   private getRouterMethod(action: ProxyRouteActions): IRouterMatcher<Router> {

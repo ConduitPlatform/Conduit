@@ -342,6 +342,9 @@ export default class AdminModule extends IConduitAdmin {
             description: route.description,
             options: route.options,
           });
+          ConduitGrpcSdk.Logger.http(
+            `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
+          );
         });
       }
       ConduitGrpcSdk.Logger.log('Recovered routes');
@@ -477,7 +480,7 @@ export default class AdminModule extends IConduitAdmin {
       }
       if (r instanceof ProxyRoute) {
         ConduitGrpcSdk.Logger.http(
-          `New proxy route registered: ${r.input.path} target: ${r.input.target}`,
+          `New proxy route registered:  ${r.input.action} ${r.input.path} target: ${r.input.target}`,
         );
         this._router.registerProxyRoute(r);
       }
