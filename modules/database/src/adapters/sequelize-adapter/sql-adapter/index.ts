@@ -1,14 +1,11 @@
 import { SQLSchema } from './SQLSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitModel, ConduitSchema, Indexable, sleep } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, sleep } from '@conduitplatform/grpc-sdk';
 import { validateSchema } from '../../utils/validateSchema';
-import { sqlSchemaConverter } from '../../../introspection/sequelize/utils';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
 import { SequelizeSchema } from '../SequelizeSchema';
-
-const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
 export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
   constructor(connectionUri: string) {
@@ -17,56 +14,6 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
   protected async hasLegacyCollections() {
     return false;
-  }
-
-  // todo rewrite this
-  async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
-    sqlSchemaConverter(table);
-
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`,
-    );
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`,
-    );
-
-    const schema = new ConduitSchema(originalName, table as ConduitModel, {
-      timestamps: true,
-      conduit: {
-        noSync: true,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-        cms: {
-          authentication: false,
-          crudOperations: {
-            create: {
-              enabled: false,
-              authenticated: false,
-            },
-            read: {
-              enabled: false,
-              authenticated: false,
-            },
-            update: {
-              enabled: false,
-              authenticated: false,
-            },
-            delete: {
-              enabled: false,
-              authenticated: false,
-            },
-          },
-          enabled: true,
-        },
-      },
-    });
-    schema.ownerModule = 'database';
-
-    return schema;
   }
 
   private async processExtractedSchemas(
