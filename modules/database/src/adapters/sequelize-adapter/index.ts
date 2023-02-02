@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import ConduitGrpcSdk, {
+  ConduitModel,
   ConduitSchema,
   GrpcError,
   Indexable,
@@ -14,6 +15,7 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import { checkIfPostgresOptions, tableFetch } from './utils';
+import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -131,10 +133,46 @@ export abstract class SequelizeAdapter<
     return introspectedSchemas;
   }
 
-  abstract introspectSchema(
-    table: Indexable,
-    originalName: string,
-  ): Promise<ConduitSchema>;
+  async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
+    sqlSchemaConverter(table);
+    const schema = new ConduitSchema(originalName, table as ConduitModel, {
+      timestamps: true,
+      conduit: {
+        noSync: true,
+        permissions: {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing',
+          canDelete: false,
+        },
+        cms: {
+          authentication: false,
+          crudOperations: {
+            create: {
+              enabled: false,
+              authenticated: false,
+            },
+            read: {
+              enabled: false,
+              authenticated: false,
+            },
+            update: {
+              enabled: false,
+              authenticated: false,
+            },
+            delete: {
+              enabled: false,
+              authenticated: false,
+            },
+          },
+          enabled: true,
+        },
+      },
+    });
+    schema.ownerModule = 'database';
+
+    return schema;
+  }
 
   getCollectionName(schema: ConduitSchema) {
     return schema.collectionName && schema.collectionName !== ''

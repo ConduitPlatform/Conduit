@@ -31,55 +31,6 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     return res;
   }
 
-  async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
-    sqlSchemaConverter(table);
-
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`,
-    );
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`,
-    );
-
-    const schema = new ConduitSchema(originalName, table as ConduitModel, {
-      timestamps: true,
-      conduit: {
-        noSync: true,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-        cms: {
-          authentication: false,
-          crudOperations: {
-            create: {
-              enabled: false,
-              authenticated: false,
-            },
-            read: {
-              enabled: false,
-              authenticated: false,
-            },
-            update: {
-              enabled: false,
-              authenticated: false,
-            },
-            delete: {
-              enabled: false,
-              authenticated: false,
-            },
-          },
-          enabled: true,
-        },
-      },
-    });
-    schema.ownerModule = 'database';
-
-    return schema;
-  }
-
   getCollectionName(schema: ConduitSchema) {
     return schema.collectionName && schema.collectionName !== ''
       ? schema.collectionName
