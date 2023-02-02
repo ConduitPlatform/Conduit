@@ -635,7 +635,7 @@ export class AdminHandlers {
         urlParams: {
           id: { type: RouteOptionType.String, required: true },
         },
-        bodyParams: {
+        queryParams: {
           indexNames: [ConduitString.Required],
         },
       },
