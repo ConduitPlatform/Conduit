@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.13](https://github.com/ConduitPlatform/Conduit/compare/v0.15.12...v0.15.13) (2023-02-02)
+
+
+### Bug Fixes
+
+* **database:** delete indexes route param type ([#501](https://github.com/ConduitPlatform/Conduit/issues/501)) ([8b4831e](https://github.com/ConduitPlatform/Conduit/commit/8b4831e128d585eccff308e6e5578101cdd832ba))
+
 ### [0.15.12](https://github.com/ConduitPlatform/Conduit/compare/v0.15.11...v0.15.12) (2023-02-02)
 
 
