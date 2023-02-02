@@ -1,6 +1,6 @@
-import { ConduitSchema, ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { Fields } from '../../interfaces';
-import { isString, isArray } from 'lodash';
+import { isArray, isEqual, isString } from 'lodash';
 import { DataTypes } from 'sequelize';
 
 /*
@@ -30,7 +30,7 @@ function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
       if (isArray(oldType) && isArray(newType)) {
         if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
           throw ConduitError.forbidden('Invalid schema types');
-      } else if (oldType !== newType) {
+      } else if (!isEqual(oldType, newType)) {
         // TODO: Support schema field type migration
         throw ConduitError.forbidden('Invalid schema types');
       }

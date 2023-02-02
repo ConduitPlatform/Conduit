@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.12](https://github.com/ConduitPlatform/Conduit/compare/v0.15.11...v0.15.12) (2023-02-02)
+
+
+### Bug Fixes
+
+* **database:** object comparison failing due to wrong check ([#502](https://github.com/ConduitPlatform/Conduit/issues/502)) ([fb525eb](https://github.com/ConduitPlatform/Conduit/commit/fb525eb06062e4614038e4bc8cb3f9fbbeb21286))
+
 ### [0.15.11](https://github.com/ConduitPlatform/Conduit/compare/v0.15.10...v0.15.11) (2023-01-31)
 
 
