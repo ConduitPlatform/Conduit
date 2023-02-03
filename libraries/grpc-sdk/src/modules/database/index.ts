@@ -166,7 +166,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  createMany<T>(schemaName: string, query: Query<T>): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: Query<T>[]): Promise<T[] | any[]> {
     return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);

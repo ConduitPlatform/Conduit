@@ -1,4 +1,4 @@
-import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
+import { BaseNotificationProvider } from './base.provider';
 import { IOneSignalSettings } from '../interfaces/IOneSignalSettings';
 import {
   ISendNotification,
@@ -9,12 +9,13 @@ import { isNil, keyBy, isEmpty } from 'lodash';
 import { NotificationToken } from '../models';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
-export class OneSignalProvider implements IPushNotificationsProvider {
+export class OneSignalProvider extends BaseNotificationProvider {
   private client?: OneSignal.DefaultApi;
   private readonly appId: string;
   private _initialized: boolean = false;
 
   constructor(settings: IOneSignalSettings) {
+    super();
     this.updateProvider(settings);
     this.appId = settings.appId;
   }

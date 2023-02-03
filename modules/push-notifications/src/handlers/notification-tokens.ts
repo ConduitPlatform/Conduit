@@ -1,45 +1,82 @@
-import { isNil } from 'lodash';
 import {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { NotificationToken } from '../models';
+import { Notification, NotificationToken } from '../models';
 
 export class NotificationTokensHandler {
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const context = call.request.context;
     const { token, platform } = call.request.params;
-    if (isNil(context) || isNil(context.user)) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Unauthorized');
-    }
-    if (isNil(token)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'token is required');
-    }
-    if (isNil(platform)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'platform is required');
-    }
-    const userId = context.user._id;
-    NotificationToken.getInstance()
-      .findOne({ userId, platform })
-      .then(oldToken => {
-        if (!isNil(oldToken)) return NotificationToken.getInstance().deleteOne(oldToken);
-      })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    const newTokenDocument = await NotificationToken.getInstance()
-      .create({
-        userId,
-        token,
-        platform,
-      })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    await NotificationToken.getInstance().deleteMany({
+      userId: context.user._id,
+      platform,
+    });
+    const newTokenDocument = await NotificationToken.getInstance().create({
+      userId: context.user._id,
+      token,
+      platform,
+    });
+
     return {
       newTokenDocument,
     };
+  }
+
+  async clearNotificationTokens(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const context = call.request.context;
+
+    let query: { userId: string; platform?: string } = { userId: context.user._id };
+    if (call.request.params.platform) {
+      query = { ...query, platform: call.request.params.platform };
+    }
+    await NotificationToken.getInstance().deleteMany(query);
+
+    return 'OK';
+  }
+
+  async getUserNotifications(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { read, skip, limit, platform } = call.request.params;
+
+    let query: { user: string; platform?: string; read?: boolean } = { user: user._id };
+    if (platform) {
+      query = { ...query, platform };
+    }
+    if (read) {
+      query = { ...query, read };
+    }
+    return await Notification.getInstance().findMany(query, undefined, skip ?? 0, limit, {
+      createdAt: -1,
+    });
+  }
+
+  async readUserNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { before, id } = call.request.params;
+
+    if (!before && !id) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Either before or id must be provided',
+      );
+    }
+
+    if (before) {
+      await Notification.getInstance().updateMany(
+        { createdAt: { $lt: before } },
+        { read: true, readAt: Date.now() },
+      );
+    } else {
+      await Notification.getInstance().findByIdAndUpdate(id, {
+        read: true,
+        readAt: Date.now(),
+      });
+    }
+    return 'OK';
   }
 }

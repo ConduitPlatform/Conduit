@@ -20,7 +20,7 @@ import {
 } from './types';
 import { FirebaseProvider } from './providers/Firebase.provider';
 import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { IPushNotificationsProvider } from './interfaces/IPushNotificationsProvider';
+import { BaseNotificationProvider } from './providers/base.provider';
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -44,7 +44,7 @@ export default class PushNotifications extends ManagedModule<Config> {
       setNotificationToken: this.setNotificationToken.bind(this),
       getNotificationTokens: this.getNotificationTokens.bind(this),
       sendNotification: this.sendNotification.bind(this),
-      SendNotificationToManyDevices: this.sendToManyDevices.bind(this),
+      sendNotificationToManyDevices: this.sendToManyDevices.bind(this),
       sendManyNotifications: this.sendMany.bind(this),
     },
   };
@@ -53,7 +53,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   private adminRouter!: AdminHandlers;
   private userRouter!: PushNotificationsRoutes;
   private database!: DatabaseProvider;
-  private _provider: IPushNotificationsProvider | undefined;
+  private _provider: BaseNotificationProvider | undefined;
 
   constructor() {
     super('pushNotifications');
@@ -223,6 +223,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         data: data ? JSON.parse(data) : {},
         type: call.request.type,
         platform: call.request.platform,
+        doNotStore: call.request.doNotStore,
       };
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
@@ -252,6 +253,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         data: data ? JSON.parse(data) : {},
         type: call.request.type,
         platform: call.request.platform,
+        doNotStore: call.request.doNotStore,
       };
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
@@ -276,6 +278,7 @@ export default class PushNotifications extends ManagedModule<Config> {
         data: notification.data ? JSON.parse(notification.data) : {},
         type: notification.type,
         platform: notification.platform,
+        doNotStore: notification.doNotStore,
       }));
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
