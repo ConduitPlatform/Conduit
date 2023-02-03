@@ -16,11 +16,7 @@ export function validateFieldConstraints(schema: ConduitSchema) {
 export function fieldsValidator(schemaName: string, schemaFields: ConduitModel) {
   Object.keys(schemaFields).forEach(f => {
     if (typeof schemaFields[f] === 'object') {
-      const target: ConduitModel | ConduitModelField | ConduitModelField[] =
-        Array.isArray(schemaFields[f])
-          ? (schemaFields[f] as ConduitModelField[])[0]
-          : (schemaFields[f] as ConduitModelField);
-
+      const target: ConduitModelField = schemaFields[f] as ConduitModelField;
       const isUnique = !!target.unique;
       const isRequired = !!target.required;
       if (isUnique && !isRequired) {
@@ -32,7 +28,18 @@ export function fieldsValidator(schemaName: string, schemaFields: ConduitModel) 
       }
 
       if (typeof target.type === 'object') {
-        fieldsValidator(schemaName, target.type as ConduitModel);
+        if (Array.isArray(target.type)) {
+          if ((target.type as unknown[]).length !== 1) {
+            throw new ConduitError(
+              'INVALID_ARGUMENTS',
+              400,
+              `Schema '${schemaName}' array field '${f}' has invalid format (array should contain a single type).`,
+            );
+          }
+          fieldsValidator(schemaName, target.type[0] as ConduitModel);
+        } else {
+          fieldsValidator(schemaName, target.type as ConduitModel);
+        }
       }
     }
   });
