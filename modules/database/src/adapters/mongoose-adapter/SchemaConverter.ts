@@ -23,10 +23,47 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
+  iterDeep(copy.fields, copy.fields);
   return copy;
 }
 
-function convert(value: any, key: any, parentValue: any, context: any) {
+function iterDeep(schema: any, resSchema: any) {
+  for (const key of Object.keys(schema)) {
+    if (isObject(schema[key]) && !isArray(schema[key])) {
+      resSchema[key] = extractObjectType(schema[key]);
+      if (Object.keys(resSchema[key]).length === 0) delete resSchema[key];
+      if (schema[key] && !schema[key].hasOwnProperty('type')) {
+        iterDeep(schema[key], resSchema[key]);
+      }
+    }
+  }
+}
+
+function extractObjectType(objectField: any) {
+  const res: {
+    type?: any;
+    default?: any;
+    primaryKey?: boolean;
+    unique?: boolean;
+    required?: boolean;
+  } = {
+    ...(objectField.type !== undefined && { type: objectField.type }),
+    ...(objectField.default !== undefined && { default: objectField.default }),
+  };
+  if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
+    res.primaryKey = objectField.primaryKey ?? false;
+    res.unique = true;
+    res.required = true;
+  } else if (objectField.hasOwnProperty('unique') && objectField.unique) {
+    res.unique = objectField.unique ?? false;
+    res.required = true;
+  } else if (objectField.hasOwnProperty('required') && objectField.required) {
+    res.required = objectField.required ?? false;
+  }
+  return res;
+}
+
+function convert(value: any, key: any, parentValue: any) {
   if (!parentValue?.hasOwnProperty(key)) {
     return true;
   }

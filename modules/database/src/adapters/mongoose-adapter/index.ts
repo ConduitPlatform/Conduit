@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
   RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { validateSchema } from '../utils/validateSchema';
+import { validateFieldChanges, validateFieldConstraints } from '../utils';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
@@ -210,10 +210,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
+    validateFieldConstraints(compiledSchema);
     (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
+        compiledSchema = validateFieldChanges(
           this.registeredSchemas.get(compiledSchema.name)!,
           compiledSchema,
         );
