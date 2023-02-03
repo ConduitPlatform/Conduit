@@ -13,7 +13,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   MiddlewareOrder,
   MiddlewarePatch,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {

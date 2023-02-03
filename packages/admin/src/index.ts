@@ -14,7 +14,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   MiddlewareOrder,
   MiddlewarePatch,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,

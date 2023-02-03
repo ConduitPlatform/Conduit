@@ -14,7 +14,6 @@ export function injectMiddleware(grpcSdk: ConduitGrpcSdk) {
     {
       path: '/inject-middleware',
       action: ConduitRouteActions.PATCH,
-      description: `Injects a middleware into an admin route with a specific order (1 = first, -1 = last).`,
       queryParams: {
         path: ConduitString.Required,
         action: ConduitString.Required,

@@ -69,10 +69,18 @@ message RegisterConduitRouteRequest {
 message Empty {
 }
 
+<<<<<<< HEAD
 message PatchMiddlewareRequest {
   string path = 1;
   string action = 2;
   string middlewareName = 3;
   bool remove = 4;
   optional string order = 5;
+=======
+message InjectMiddlewareRequest {
+  string path = 1;
+  string action = 2;
+  string name = 3;
+  string position = 4;
+>>>>>>> ccf83f0f1356e8a65586a81c16ff1912488e0323
 }
