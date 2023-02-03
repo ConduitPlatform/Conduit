@@ -60,7 +60,7 @@ export class NotificationTokensHandler {
       },
     );
 
-    let countAll = { ...query };
+    const countAll = { ...query };
     delete countAll.read;
     const notificationCount = await Notification.getInstance().countDocuments(countAll);
     const unreadCount = await Notification.getInstance().countDocuments({
@@ -87,11 +87,12 @@ export class NotificationTokensHandler {
 
     if (before) {
       await Notification.getInstance().updateMany(
-        { createdAt: { $lt: before } },
+        { user: user._id, createdAt: { $lt: before } },
         { read: true, readAt: Date.now() },
       );
     } else {
       await Notification.getInstance().findByIdAndUpdate(id, {
+        user: user._id,
         read: true,
         readAt: Date.now(),
       });

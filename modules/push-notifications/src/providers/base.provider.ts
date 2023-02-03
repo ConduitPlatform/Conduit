@@ -35,7 +35,7 @@ export class BaseNotificationProvider {
   }
 
   async sendMany(params: ISendNotification[]): Promise<any> {
-    let notifications: {
+    const notifications: {
       user: string | User;
       title: string;
       body?: string;
