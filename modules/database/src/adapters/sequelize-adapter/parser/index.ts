@@ -1,6 +1,6 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { Op, WhereOptions } from 'sequelize';
+import sequelize, { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
@@ -107,6 +107,27 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
+      if (!!query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
+        const likeCandidates = Object.keys(query[key]);
+        if (likeCandidates.includes('$like')) {
+          // TODO: support native ilike in postgres
+          Object.assign(parsed, {
+            [key]: sequelize.where(sequelize.col(key), 'LIKE', query[key].$like),
+          });
+          continue;
+        }
+        if (likeCandidates.includes('$ilike')) {
+          // TODO: support native ilike in postgres
+          Object.assign(parsed, {
+            [key]: sequelize.where(
+              sequelize.fn('lower', sequelize.col(key)),
+              'LIKE',
+              query[key].$ilike.toLowerCase(),
+            ),
+          });
+          continue;
+        }
+      }
       const subQuery = _parseQuery(query[key], relations, associations);
       if (subQuery === undefined) continue;
       const matched = matchOperation(key, subQuery, relations, associations);

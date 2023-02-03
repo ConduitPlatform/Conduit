@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { isNil } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { CustomEndpointsQuery } from '../../interfaces';
+import { CustomEndpointsQuery, LikeComparison } from '../../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -58,7 +58,7 @@ function _constructQuery(
   query: {
     schemaField: string;
     operation: number;
-    comparisonField: { type: string; value: any; like: boolean };
+    comparisonField: { type: string; value: any; like: LikeComparison };
   },
   inputs: {
     name: string;
@@ -119,7 +119,7 @@ function _translateQuery(
   schemaField: string,
   operation: number,
   comparisonField: any,
-  like?: boolean,
+  like?: LikeComparison,
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -135,7 +135,11 @@ function _translateQuery(
     comparisonField = { $date: comparisonField };
   } else if (like) {
     comparisonField = escapeStringRegexp(comparisonField);
-    comparisonField = { $regex: `.*${comparisonField}.*`, $options: 'i' };
+    if (like === 'sensitive') {
+      comparisonField = { $like: `%${comparisonField}%` }; // TODO: %abc% instead...
+    } else {
+      comparisonField = { $ilike: `%${comparisonField}%` };
+    }
   }
 
   switch (operation) {

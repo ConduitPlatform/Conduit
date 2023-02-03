@@ -9,6 +9,7 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
+import { parseQuery } from './parser';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
@@ -37,7 +38,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
 
   async create(query: SingleDocQuery) {
     const parsedQuery = {
-      ...(typeof query === 'string' ? EJSON.parse(query) : query),
+      ...parseQuery(typeof query === 'string' ? EJSON.parse(query) : query),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -45,22 +46,14 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async createMany(query: MultiDocQuery) {
-    let docs: ParsedQuery[] = [];
-    if (typeof query === 'string') {
-      docs = EJSON.parse(query);
-    } else {
-      docs = query;
-    }
+    const docs = parseQuery(typeof query === 'string' ? EJSON.parse(query) : query);
     return this.model.insertMany(docs).then(r => r);
   }
 
   async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    let parsedQuery: ParsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     parsedQuery['updatedAt'] = new Date();
     if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
@@ -75,18 +68,10 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
-    let parsedFilter: ParsedQuery | ParsedQuery[];
-    if (typeof filterQuery === 'string') {
-      parsedFilter = EJSON.parse(filterQuery);
-    } else {
-      parsedFilter = filterQuery;
-    }
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedFilter = parseQuery(
+      typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
+    );
+    let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
         $set: parsedQuery,
@@ -102,7 +87,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model
       .updateMany(parsedFilter, parsedQuery)
       .exec()
-      .then(r => {
+      .then(() => {
         let finalQuery = this.model.find({ _id: { $in: affectedIds } });
         if (populate !== undefined && populate !== null) {
           finalQuery = this.calculatePopulates(finalQuery, populate);
@@ -112,22 +97,16 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   deleteOne(query: Query) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     return this.model.deleteOne(parsedQuery).exec();
   }
 
   deleteMany(query: Query) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     return this.model.deleteMany(parsedQuery).exec();
   }
 
@@ -163,12 +142,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     sort?: { [key: string]: number },
     populate?: string[],
   ) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     let finalQuery = this.model.find(parsedQuery, select);
     if (!isNil(skip)) {
       finalQuery = finalQuery.skip(skip!);
@@ -186,12 +162,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   findOne(query: Query, select?: string, populate?: string[]) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     let finalQuery = this.model.findOne(parsedQuery, select);
     if (populate !== undefined && populate !== null) {
       finalQuery = this.calculatePopulates(finalQuery, populate);
@@ -200,12 +173,9 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   countDocuments(query: Query) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = EJSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+    const parsedQuery = parseQuery(
+      typeof query === 'string' ? EJSON.parse(query) : query,
+    );
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 
