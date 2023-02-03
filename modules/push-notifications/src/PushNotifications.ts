@@ -151,6 +151,8 @@ export default class PushNotifications extends ManagedModule<Config> {
       this._provider = new FirebaseProvider(settings as IFirebaseSettings);
     } else if (name === 'onesignal') {
       this._provider = new OneSignalProvider(settings as IOneSignalSettings);
+    } else if (name === 'basic') {
+      this._provider = new BaseNotificationProvider();
     } else {
       throw new Error('Provider not supported');
     }

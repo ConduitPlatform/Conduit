@@ -50,9 +50,28 @@ export class NotificationTokensHandler {
     if (read) {
       query = { ...query, read };
     }
-    return await Notification.getInstance().findMany(query, undefined, skip ?? 0, limit, {
-      createdAt: -1,
+    const notifications = await Notification.getInstance().findMany(
+      query,
+      undefined,
+      skip ?? 0,
+      limit,
+      {
+        createdAt: -1,
+      },
+    );
+
+    let countAll = { ...query };
+    delete countAll.read;
+    const notificationCount = await Notification.getInstance().countDocuments(countAll);
+    const unreadCount = await Notification.getInstance().countDocuments({
+      ...query,
+      read: false,
     });
+    return {
+      notifications,
+      count: notificationCount,
+      unreadCount,
+    };
   }
 
   async readUserNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

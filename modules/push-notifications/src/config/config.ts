@@ -5,7 +5,7 @@ export default {
   },
   providerName: {
     format: 'String',
-    default: 'firebase',
+    default: 'basic',
   },
   firebase: {
     projectId: {

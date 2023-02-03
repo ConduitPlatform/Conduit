@@ -8,9 +8,9 @@ import ConduitGrpcSdk, {
   ConduitString,
   GrpcServer,
   RoutingManager,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { NotificationToken } from '../models';
-import { Notification } from '../models';
+import { Notification, NotificationToken } from '../models';
 
 export class PushNotificationsRoutes {
   private readonly handlers: NotificationTokensHandler;
@@ -66,7 +66,11 @@ export class PushNotificationsRoutes {
         middlewares: ['authMiddleware'],
         path: '/notifications',
       },
-      new ConduitRouteReturnDefinition('GetNotificationsResponse', Notification.name),
+      new ConduitRouteReturnDefinition('GetNotificationsResponse', {
+        notifications: [Notification.name],
+        count: TYPE.Number,
+        unreadCount: TYPE.Number,
+      }),
       this.handlers.getUserNotifications.bind(this.handlers),
     );
     this._routingManager.route(

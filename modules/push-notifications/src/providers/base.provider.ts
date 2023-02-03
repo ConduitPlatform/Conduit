@@ -5,8 +5,10 @@ import {
 import { Notification, NotificationToken, User } from '../models';
 import { PlatformTypesEnum } from '@conduitplatform/grpc-sdk';
 
-export abstract class BaseNotificationProvider {
-  abstract get isInitialized(): boolean;
+export class BaseNotificationProvider {
+  get isInitialized(): boolean {
+    return true;
+  }
 
   sendToDevice(params: ISendNotification): Promise<any> {
     if (params.doNotStore) return Promise.resolve();
