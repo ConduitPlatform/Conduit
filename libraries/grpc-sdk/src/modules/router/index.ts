@@ -43,13 +43,14 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
     return this.client!.registerConduitRoute(request);
   }
 
-  injectMiddleware(
+  patchMiddleware(
     path: string,
     action: ConduitRouteActions,
-    name: string,
-    position: MiddlewareOrder,
+    middlewareName: string,
+    remove: boolean,
+    order?: MiddlewareOrder,
   ) {
-    return this.client!.injectMiddleware({ path, action, name, position });
+    return this.client!.patchMiddleware({ path, action, middlewareName, remove, order });
   }
 
   socketPush(data: SocketData) {

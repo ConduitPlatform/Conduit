@@ -1,45 +1,36 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
   GrpcError,
-  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 
-export function injectMiddleware(grpcSdk: ConduitGrpcSdk) {
+export function removeMiddleware(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(
     {
-      path: '/inject-middleware',
+      path: '/remove-middleware',
       action: ConduitRouteActions.PATCH,
-      description: `Injects a middleware into an admin route with a specific order (1 = first, -1 = last).`,
+      description: `Removes a patched middleware from an admin route.`,
       queryParams: {
         path: ConduitString.Required,
         action: ConduitString.Required,
-      },
-      bodyParams: {
         middlewareName: ConduitString.Required,
-        order: ConduitNumber.Required,
       },
     },
-    new ConduitRouteReturnDefinition('InjectAdminMiddleware', 'String'),
+    new ConduitRouteReturnDefinition('RemoveAdminMiddleware', 'String'),
     async (req: ConduitRouteParameters) => {
-      const { path, action, middlewareName, order } = req.params!;
+      const { path, action, middlewareName } = req.params!;
       if (!(action in ConduitRouteActions)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
       }
-      if (Math.abs(order) !== 1) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Order should be 1 or -1');
-      }
-      const middlewareOrder = order === 1 ? MiddlewareOrder.FIRST : MiddlewareOrder.LAST;
       await grpcSdk
-        .admin!.patchMiddleware(path, action, middlewareName, false, middlewareOrder)
+        .admin!.patchMiddleware(path, action, middlewareName, true)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      return 'Middleware injected successfully';
+      return 'Middleware removed successfully';
     },
   );
 }
