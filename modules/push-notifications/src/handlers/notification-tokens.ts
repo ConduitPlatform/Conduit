@@ -91,7 +91,7 @@ export class NotificationTokensHandler {
         { read: true, readAt: Date.now() },
       );
     } else {
-      let notification = await Notification.getInstance().findOne({
+      const notification = await Notification.getInstance().findOne({
         _id: id,
         user: user._id,
       });
