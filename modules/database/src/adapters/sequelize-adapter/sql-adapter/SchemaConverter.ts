@@ -151,11 +151,12 @@ function extractObjectType(objectField: any) {
 
   if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
     res.primaryKey = objectField.primaryKey ?? false;
-  }
-  if (objectField.hasOwnProperty('unique') && objectField.unique) {
+    res.unique = true;
+    res.allowNull = false;
+  } else if (objectField.hasOwnProperty('unique') && objectField.unique) {
     res.unique = objectField.unique ?? false;
-  }
-  if (objectField.hasOwnProperty('required') && objectField.required) {
+    res.allowNull = false;
+  } else if (objectField.hasOwnProperty('required') && objectField.required) {
     res.allowNull = !objectField.required ?? true;
   }
 
