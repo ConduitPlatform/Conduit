@@ -5,6 +5,7 @@ export interface ISendNotification {
   body?: string;
   platform?: string;
   data?: { [key: string]: string };
+  doNotStore?: boolean;
 }
 
 export interface ISendNotificationToManyDevices {
@@ -14,4 +15,5 @@ export interface ISendNotificationToManyDevices {
   body?: string;
   platform?: string;
   data?: { [key: string]: string };
+  doNotStore?: boolean;
 }
