@@ -52,15 +52,31 @@ export class AdminHandlers {
         path: '/router/inject-middleware',
         action: ConduitRouteActions.PATCH,
         description: `Injects a middleware into an app route with a specific order (1 = first, -1 = last).`,
-        bodyParams: {
+        queryParams: {
           path: ConduitString.Required,
           action: ConduitString.Required,
+        },
+        bodyParams: {
           middlewareName: ConduitString.Required,
           order: ConduitNumber.Required,
         },
       },
       new ConduitRouteReturnDefinition('InjectAppMiddleware', 'String'),
       this.routerAdmin.injectMiddleware.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/router/remove-middleware',
+        action: ConduitRouteActions.PATCH,
+        description: `Removes a patched middleware from an app route.`,
+        queryParams: {
+          path: ConduitString.Required,
+          action: ConduitString.Required,
+          middlewareName: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('RemoveAppMiddleware', 'String'),
+      this.routerAdmin.removeMiddleware.bind(this.routerAdmin),
     );
     this.routingManager.route(
       {

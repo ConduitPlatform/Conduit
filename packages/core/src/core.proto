@@ -19,7 +19,7 @@ service Config {
 service Admin {
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
-  rpc InjectMiddleware(InjectMiddlewareRequest) returns (Empty);
+  rpc PatchMiddleware(PatchMiddlewareRequest) returns (Empty);
 }
 
 message GenerateProtoRequest {
@@ -63,11 +63,12 @@ message RegisterAdminRouteRequest {
   }
 }
 
-message InjectMiddlewareRequest {
+message PatchMiddlewareRequest {
   string path = 1;
   string action = 2;
-  string name = 3;
-  string position = 4;
+  string middlewareName = 3;
+  bool remove = 4;
+  optional string order = 5;
 }
 
 message Empty {

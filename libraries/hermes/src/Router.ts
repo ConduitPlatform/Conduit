@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   MiddlewareOrder,
+  MiddlewarePatch,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitMiddleware } from './interfaces';
 import { ConduitRoute } from './classes';
@@ -15,10 +16,12 @@ export abstract class ConduitRouter {
   protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
+  protected _patchedMiddlewareOwners: Map<string, string>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
+    this._patchedMiddlewareOwners = new Map();
   }
 
   createRouter() {
@@ -44,29 +47,30 @@ export abstract class ConduitRouter {
     this.scheduleRouterRefresh();
   }
 
-  patchRouteMiddleware(
-    path: string,
-    action: ConduitRouteActions,
-    middleware: string,
-    order: MiddlewareOrder,
-  ) {
+  patchRouteMiddleware(patch: MiddlewarePatch) {
+    const { path, action, middlewareName, moduleName, remove, order } = patch;
     const [key, route] = this.findRoute(path, action);
-    const middlewareArray = route.input.middlewares;
-    if (!this._middlewares || !this._middlewares[middleware]) {
+    const middlewareArray = route.input.middlewares!;
+    const exists = middlewareArray.includes(middlewareName);
+
+    if (!this._middlewares || !this._middlewares[middlewareName]) {
       throw new Error('Middleware not registered');
     }
-    if (!route.input.middlewares!.includes(middleware)) {
-      if (order === MiddlewareOrder.FIRST) {
-        route.input.middlewares = middlewareArray
-          ? [middleware, ...middlewareArray]
-          : [middleware];
-      } else {
-        route.input.middlewares = middlewareArray
-          ? [...middlewareArray, middleware]
-          : [middleware];
-      }
-      this._registeredRoutes.set(key, route);
+    if (remove !== exists) {
+      throw new Error(
+        `Middleware ${middlewareName} already applied or not existent for removal`,
+      );
     }
+    if (remove) {
+      route.input.middlewares = middlewareArray!.filter(m => m !== middlewareName);
+    } else {
+      route.input.middlewares =
+        order === MiddlewareOrder.FIRST
+          ? [middlewareName, ...middlewareArray]
+          : [...middlewareArray, middlewareName];
+      this._patchedMiddlewareOwners.set(middlewareName, moduleName);
+    }
+    this._registeredRoutes.set(key, route);
     const routes: { action: string; path: string }[] = [];
     for (const conduitRoute of this._registeredRoutes.values()) {
       routes.push({ action: conduitRoute.input.action, path: conduitRoute.input.path });

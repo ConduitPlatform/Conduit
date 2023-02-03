@@ -13,6 +13,8 @@ import ConduitGrpcSdk, {
   merge,
   GrpcError,
   MiddlewareOrder,
+  MiddlewarePatch,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -21,7 +23,7 @@ import {
   GenerateProtoResponse,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-  InjectMiddlewareRequest,
+  PatchMiddlewareRequest,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
@@ -84,6 +86,7 @@ export default class AdminModule extends IConduitAdmin {
       adminRoutes.verifyTwoFaRoute(),
       adminRoutes.changeUsersPasswordRoute(),
       adminRoutes.injectMiddleware(this.grpcSdk),
+      adminRoutes.removeMiddleware(this.grpcSdk),
     ];
     this.registerMetrics();
   }
@@ -125,7 +128,7 @@ export default class AdminModule extends IConduitAdmin {
       {
         generateProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
-        injectMiddleware: this.injectMiddleware.bind(this),
+        patchMiddleware: this.patchMiddleware.bind(this),
       },
     );
     this.grpcSdk
@@ -274,11 +277,12 @@ export default class AdminModule extends IConduitAdmin {
     callback(null, null);
   }
 
-  async injectMiddleware(
-    call: GrpcRequest<InjectMiddlewareRequest>,
+  async patchMiddleware(
+    call: GrpcRequest<PatchMiddlewareRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, name, position } = call.request;
+    const { path, action, middlewareName, remove, order } = call.request;
+    const moduleName = call.metadata!.get('module-name')[0] as string;
     let middlewareArray: string[] | undefined;
 
     outer: for (const key of Object.keys(this._grpcRoutes)) {
@@ -287,18 +291,23 @@ export default class AdminModule extends IConduitAdmin {
         if (r.options?.path !== path || r.options?.action !== action) {
           continue;
         }
-        if (r.options?.middlewares.includes(name)) {
+        const exists = r.options.middlewares.includes(middlewareName);
+        if (remove !== exists) {
           return callback({
-            code: status.ALREADY_EXISTS,
-            message: `Middleware ${name} already assigned to ${action} ${path}`,
+            code: status.FAILED_PRECONDITION,
+            message: `Middleware ${middlewareName} already applied or not existent for removal`,
           });
         }
-        if (position === MiddlewareOrder.FIRST) {
-          r.options?.middlewares.unshift(name);
+        middlewareArray = r.options.middlewares!;
+        if (remove) {
+          r.options.middlewares = middlewareArray!.filter(m => m !== middlewareName);
         } else {
-          r.options?.middlewares.push(name);
+          r.options.middlewares =
+            order === MiddlewareOrder.FIRST
+              ? [middlewareName, ...middlewareArray!]
+              : [...middlewareArray!, middlewareName];
         }
-        middlewareArray = r.options.middlewares;
+        await this.updateStateForMiddlewarePatch(r.options.middlewares, path, action);
         break outer;
       }
     }
@@ -308,13 +317,15 @@ export default class AdminModule extends IConduitAdmin {
         message: `Route ${action} ${path} not found`,
       });
     }
-    this._router.patchRouteMiddleware(
-      path,
-      action as ConduitRouteActions,
-      name,
-      position as MiddlewareOrder,
-    );
-    await this.updateStateForMiddlewarePatch(middlewareArray, path, action);
+    const patch: MiddlewarePatch = {
+      path: path,
+      action: action as ConduitRouteActions,
+      middlewareName: middlewareName,
+      moduleName: moduleName,
+      remove: remove,
+      order: order as MiddlewareOrder | undefined,
+    };
+    this._router.patchRouteMiddleware(patch);
     callback(null, null);
   }
 
