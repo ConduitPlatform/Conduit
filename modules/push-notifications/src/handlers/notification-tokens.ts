@@ -91,8 +91,14 @@ export class NotificationTokensHandler {
         { read: true, readAt: Date.now() },
       );
     } else {
-      await Notification.getInstance().findByIdAndUpdate(id, {
+      let notification = await Notification.getInstance().findOne({
+        _id: id,
         user: user._id,
+      });
+      if (!notification) {
+        throw new GrpcError(status.NOT_FOUND, 'Notification not found');
+      }
+      await Notification.getInstance().findByIdAndUpdate(id, {
         read: true,
         readAt: Date.now(),
       });
