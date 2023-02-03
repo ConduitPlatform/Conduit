@@ -1,8 +1,7 @@
 import { PostgresSchema } from './PostgresSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitModel, ConduitSchema, Indexable, sleep } from '@conduitplatform/grpc-sdk';
-import { validateSchema } from '../../utils/validateSchema';
-import { sqlSchemaConverter } from '../../../introspection/sequelize/utils';
+import { ConduitSchema, sleep } from '@conduitplatform/grpc-sdk';
+import { validateFieldChanges, validateFieldConstraints } from '../../utils';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
@@ -41,12 +40,13 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     schema: ConduitSchema,
   ): Promise<PostgresSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
+    validateFieldConstraints(compiledSchema);
     (compiledSchema as any).fields = JSON.parse(
       JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
     );
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
+        compiledSchema = validateFieldChanges(
           this.registeredSchemas.get(compiledSchema.name)!,
           compiledSchema,
         );
