@@ -7,7 +7,7 @@ import { DataTypes } from 'sequelize';
  * Validates base schema fields for type changes.
  * Extension fields are ignored.
  */
-export function validateSchema(oldSchema: ConduitSchema, newSchema: ConduitSchema) {
+export function validateFieldChanges(oldSchema: ConduitSchema, newSchema: ConduitSchema) {
   validateSchemaFields(oldSchema.fields, newSchema.fields);
   return newSchema;
 }

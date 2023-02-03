@@ -1,7 +1,7 @@
 import { SQLSchema } from './SQLSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema, sleep } from '@conduitplatform/grpc-sdk';
-import { validateSchema } from '../../utils/validateSchema';
+import { validateFieldChanges, validateFieldConstraints } from '../../utils';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
@@ -65,12 +65,13 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     options?: { parentSchema: string },
   ): Promise<SQLSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
+    validateFieldConstraints(compiledSchema);
     (compiledSchema as any).fields = JSON.parse(
       JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
     );
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
+        compiledSchema = validateFieldChanges(
           this.registeredSchemas.get(compiledSchema.name)!,
           compiledSchema,
         );
