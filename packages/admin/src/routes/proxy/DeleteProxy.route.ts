@@ -11,7 +11,7 @@ import { AdminProxyRoute } from '../../models';
 export function deleteProxyRoute() {
   return new ConduitRoute(
     {
-      path: '/proxy/:id',
+      path: '/admin/proxy/:id',
       action: ConduitRouteActions.DELETE,
       description: `Deletes a proxy route.`,
       urlParams: {

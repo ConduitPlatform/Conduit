@@ -12,7 +12,7 @@ import { AdminProxyRoute } from '../../models';
 export function updateProxyRoute() {
   return new ConduitRoute(
     {
-      path: '/proxy/:id',
+      path: '/admin/proxy/:id',
       action: ConduitRouteActions.UPDATE,
       description: `Updates a proxy route.`,
       urlParams: {

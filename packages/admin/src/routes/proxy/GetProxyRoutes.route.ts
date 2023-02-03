@@ -5,7 +5,7 @@ import { AdminProxyRoute } from '../../models';
 export function getProxyRoutesRoute() {
   return new ConduitRoute(
     {
-      path: '/proxy',
+      path: '/admin/proxy',
       action: ConduitRouteActions.GET,
       description: `Returns proxy routes.`,
     },

@@ -74,7 +74,9 @@ export class ConduitRoutingController {
             .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (!req.url.startsWith('/graphql')) {
+      } else if (req.url.startsWith('/proxy')) {
+        self._proxyRouter?.handleRequest(req, res, next);
+      } else {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
       }

@@ -46,13 +46,7 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-import {
-  createProxyRoute,
-  deleteProxyRoute,
-  getProxyRoute,
-  getProxyRoutesRoute,
-  updateProxyRoute,
-} from './routes/proxy';
+import * as adminProxyRoutes from './routes/proxy';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -70,11 +64,11 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
-    createProxyRoute(),
-    deleteProxyRoute(),
-    updateProxyRoute(),
-    getProxyRoute(),
-    getProxyRoutesRoute(),
+    adminProxyRoutes.createProxyRoute(),
+    adminProxyRoutes.deleteProxyRoute(),
+    adminProxyRoutes.updateProxyRoute(),
+    adminProxyRoutes.getProxyRoute(),
+    adminProxyRoutes.getProxyRoutesRoute(),
   ];
 
   private readonly _grpcRoutes: {
@@ -480,7 +474,7 @@ export default class AdminModule extends IConduitAdmin {
       }
       if (r instanceof ProxyRoute) {
         ConduitGrpcSdk.Logger.http(
-          `New proxy route registered:  ${r.input.action} ${r.input.path} target: ${r.input.target}`,
+          `New admin proxy route registered:  ${r.input.action} ${r.input.path} target: ${r.input.target}`,
         );
         this._router.registerProxyRoute(r);
       }
