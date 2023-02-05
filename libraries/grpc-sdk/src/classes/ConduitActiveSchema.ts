@@ -48,7 +48,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.create<T>(this.name, query);
   }
 
-  createMany(query: Query<T>): Promise<T[]> {
+  createMany(query: Query<T>[]): Promise<T[]> {
     return this.dbInstance.createMany<T>(this.name, query);
   }
 

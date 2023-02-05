@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ConduitBoolean,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -12,25 +13,25 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
+import { BaseNotificationProvider } from '../providers/base.provider';
 import { NotificationToken } from '../models';
 import { ISendNotification } from '../interfaces/ISendNotification';
 
 export class AdminHandlers {
-  private provider: IPushNotificationsProvider;
+  private provider: BaseNotificationProvider;
   private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    provider: IPushNotificationsProvider,
+    provider: BaseNotificationProvider,
   ) {
     this.provider = provider;
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
-  updateProvider(provider: IPushNotificationsProvider) {
+  updateProvider(provider: BaseNotificationProvider) {
     this.provider = provider;
   }
 
@@ -48,6 +49,7 @@ export class AdminHandlers {
           body: ConduitString.Optional,
           data: ConduitString.Optional,
           platform: ConduitString.Optional,
+          doNotStore: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendNotification', 'String'),
@@ -64,6 +66,7 @@ export class AdminHandlers {
           body: ConduitString.Optional,
           data: ConduitString.Optional,
           platform: ConduitString.Optional,
+          doNotStore: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('SendNotificationToManyDevices', 'String'),
@@ -83,6 +86,7 @@ export class AdminHandlers {
                 body: ConduitString.Optional,
                 data: ConduitString.Optional,
                 platform: ConduitString.Optional,
+                doNotStore: ConduitBoolean.Optional,
               },
             ],
             required: true,
@@ -116,6 +120,7 @@ export class AdminHandlers {
       body: call.request.params.body,
       data: call.request.params.data,
       platform: call.request.params.platform,
+      doNotStore: call.request.params.doNotStore,
     };
     await this.provider.sendToDevice(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
@@ -139,6 +144,7 @@ export class AdminHandlers {
       title: call.request.params.title,
       body: call.request.params.body,
       data: call.request.params.data,
+      doNotStore: call.request.params.doNotStore,
     };
     await this.provider.sendToManyDevices(params).catch(e => {
       throw new GrpcError(status.INTERNAL, e.message);
