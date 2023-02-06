@@ -215,7 +215,7 @@ export class ConduitRoutingController {
 
   registerRoutes(
     processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[],
-    url: string,
+    url?: string,
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {

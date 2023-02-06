@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
 import { RouterProxyRoute } from '../models';
+import { ProxyRouteT } from '@conduitplatform/hermes';
 
 export class RouterAdmin {
   constructor(
@@ -61,13 +62,7 @@ export class RouterAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const { sort } = call.request.params;
-    const proxyRoutes = await RouterProxyRoute.getInstance().findMany(
-      {},
-      skip,
-      limit,
-      sort,
-    );
-    return proxyRoutes;
+    return RouterProxyRoute.getInstance().findMany({}, skip, limit, sort);
   }
 
   async getProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -104,7 +99,7 @@ export class RouterAdmin {
         `A proxy route with a path of '${path}' for target '${target}' already exists`,
       );
     }
-    const newProxy = await RouterProxyRoute.getInstance().create({
+    await RouterProxyRoute.getInstance().create({
       path,
       target,
       action,
@@ -112,16 +107,23 @@ export class RouterAdmin {
       description,
       options,
     });
-    const proxyOptions = {
-      path: newProxy.path,
-      target: newProxy.target,
-      action: newProxy.action,
-      middlewares: newProxy.middlewares,
-      description: newProxy.description,
-      options: newProxy.options ?? {},
-    };
-    this.router.registerProxyRoute(proxyOptions);
-    return `Proxy route created for path '${path}' and target '${target}'`;
+    const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
+    const proxies: ProxyRouteT[] = [];
+    proxyRoutes.forEach(route => {
+      proxies.push({
+        options: {
+          path: route.path,
+          target: route.target,
+          action: route.action,
+          description: route.description,
+          middlewares: route.middlewares,
+          options: route.options,
+        },
+      });
+    });
+    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
+
+    return 'Proxy route created';
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -155,6 +157,21 @@ export class RouterAdmin {
         options,
       },
     );
+    const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
+    const proxies: ProxyRouteT[] = [];
+    proxyRoutes.forEach(route => {
+      proxies.push({
+        options: {
+          path: route.path,
+          target: route.target,
+          action: route.action,
+          description: route.description,
+          middlewares: route.middlewares,
+          options: route.options,
+        },
+      });
+    });
+    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
 
     return { ...updatedProxy };
   }
@@ -170,6 +187,22 @@ export class RouterAdmin {
       );
     }
     await RouterProxyRoute.getInstance().deleteOne({ _id: id });
+    const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
+    if (proxyRoutes.length === 0) return 'No proxy routes found';
+    const proxies: ProxyRouteT[] = [];
+    proxyRoutes.forEach(route => {
+      proxies.push({
+        options: {
+          path: route.path,
+          target: route.target,
+          action: route.action,
+          description: route.description,
+          middlewares: route.middlewares,
+          options: route.options,
+        },
+      });
+    });
+    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
     return 'Proxy route deleted';
   }
 

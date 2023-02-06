@@ -42,7 +42,6 @@ export function createProxyRoute() {
         middlewares,
         options,
       });
-
       return { message: 'Proxy created.' };
     },
   );

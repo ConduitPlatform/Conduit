@@ -81,6 +81,13 @@ export function grpcToConduitRoute(
   return createHandlers(routes, client, moduleName, grpcToken);
 }
 
+export function proxyToConduitRoute(
+  routes: ProxyRouteT[],
+  moduleName?: string,
+): ProxyRoute[] {
+  return routes.map(r => createHandlerForProxy(r.options, moduleName));
+}
+
 function createHandlers(
   routes: RouteT[] | ProxyRouteT[],
   client: Client,
