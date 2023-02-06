@@ -4,24 +4,24 @@ import ConduitGrpcSdk, {
   ConduitRouteParameters,
   GrpcError,
   Indexable,
-  MiddlewareOrder,
   MiddlewarePatch,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitMiddleware } from './interfaces';
 import { ConduitRoute } from './classes';
 import ObjectHash from 'object-hash';
 import { status } from '@grpc/grpc-js';
+import { difference } from 'lodash';
 
 export abstract class ConduitRouter {
   protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
-  protected _patchedMiddlewareOwners: Map<string, string>;
+  protected _injectedMiddlewareOwners: Map<string, string>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
-    this._patchedMiddlewareOwners = new Map();
+    this._injectedMiddlewareOwners = new Map();
   }
 
   createRouter() {
@@ -48,28 +48,15 @@ export abstract class ConduitRouter {
   }
 
   patchRouteMiddleware(patch: MiddlewarePatch) {
-    const { path, action, middlewareName, moduleName, remove, order } = patch;
+    const { path, action, middleware, moduleName } = patch;
+    middleware.forEach(m => {
+      if (!this._middlewares || !this._middlewares[m]) {
+        throw new Error('Middleware not registered');
+      }
+    });
     const [key, route] = this.findRoute(path, action);
-    const middlewareArray = route.input.middlewares!;
-    const exists = middlewareArray.includes(middlewareName);
-
-    if (!this._middlewares || !this._middlewares[middlewareName]) {
-      throw new Error('Middleware not registered');
-    }
-    if (remove !== exists) {
-      throw new Error(
-        `Middleware ${middlewareName} already applied or not existent for removal`,
-      );
-    }
-    if (remove) {
-      route.input.middlewares = middlewareArray!.filter(m => m !== middlewareName);
-    } else {
-      route.input.middlewares =
-        order === MiddlewareOrder.FIRST
-          ? [middlewareName, ...middlewareArray]
-          : [...middlewareArray, middlewareName];
-      this._patchedMiddlewareOwners.set(middlewareName, moduleName);
-    }
+    this.validateMiddlewarePatch(route.input.middlewares!, middleware, moduleName);
+    route.input.middlewares = middleware;
     this._registeredRoutes.set(key, route);
     const routes: { action: string; path: string }[] = [];
     for (const conduitRoute of this._registeredRoutes.values()) {
@@ -168,5 +155,35 @@ export abstract class ConduitRouter {
     } else {
       return true;
     }
+  }
+
+  validateMiddlewarePatch(
+    routeMiddleware: string[],
+    patchMiddleware: string[],
+    module: string,
+  ) {
+    const injected = patchMiddleware.filter(m => !routeMiddleware.includes(m));
+    const removed = routeMiddleware.filter(m => !routeMiddleware.includes(m));
+    removed.forEach(m => {
+      if (this._injectedMiddlewareOwners.get(m) !== module) {
+        throw new GrpcError(status.PERMISSION_DENIED, `Removal of ${m} not allowed`);
+      }
+    });
+    for (const m of patchMiddleware) {
+      if (!this._injectedMiddlewareOwners.has(m)) {
+        continue;
+      }
+      if (
+        patchMiddleware.indexOf(m) !== routeMiddleware.indexOf(m) &&
+        this._injectedMiddlewareOwners.get(m) !== module
+      ) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          `Not allowed to change middleware order`,
+        );
+      }
+    }
+    injected.forEach(m => this._injectedMiddlewareOwners.set(m, module));
+    removed.forEach(m => this._injectedMiddlewareOwners.delete(m));
   }
 }

@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   ConduitRouteActions,
   GrpcError,
-  MiddlewareOrder,
   MiddlewarePatch,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
@@ -400,9 +399,10 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     call: GrpcRequest<PatchMiddlewareRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, middlewareName, remove, order } = call.request;
+    const { path, action } = call.request;
+    const middleware: string[] = JSON.parse(call.request.middleware);
     const moduleName = call.metadata!.get('module-name')[0] as string;
-    let middlewareArray: string[] | undefined;
+    let found = false;
 
     outer: for (const key of Object.keys(this._grpcRoutes)) {
       const routesArray = this._grpcRoutes[key];
@@ -410,27 +410,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         if (r.options.path !== path || r.options.action !== action) {
           continue;
         }
-        const exists = r.options.middlewares.includes(middlewareName);
-        if (remove !== exists) {
-          return callback({
-            code: status.FAILED_PRECONDITION,
-            message: `Middleware ${middlewareName} already applied or not existent for removal`,
-          });
-        }
-        middlewareArray = r.options.middlewares!;
-        if (remove) {
-          r.options.middlewares = middlewareArray!.filter(m => m !== middlewareName);
-        } else {
-          r.options.middlewares =
-            order === MiddlewareOrder.FIRST
-              ? [middlewareName, ...middlewareArray!]
-              : [...middlewareArray!, middlewareName];
-        }
-        await this.updateStateForMiddlewarePatch(r.options.middlewares, path, action);
+        found = true;
+        r.options.middlewares = middleware;
         break outer;
       }
     }
-    if (!middlewareArray) {
+    if (!found) {
       return callback({
         code: status.NOT_FOUND,
         message: `Route ${action} ${path} not found`,
@@ -439,12 +424,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     const patch: MiddlewarePatch = {
       path: path,
       action: action as ConduitRouteActions,
-      middlewareName: middlewareName,
+      middleware: middleware,
       moduleName: moduleName,
-      remove: remove,
-      order: order as MiddlewareOrder | undefined,
     };
     this._internalRouter.patchRouteMiddleware(patch);
+    await this.updateStateForMiddlewarePatch(middleware, path, action);
     callback(null, null);
   }
 

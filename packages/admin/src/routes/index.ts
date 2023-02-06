@@ -9,5 +9,4 @@ export * from './ToggleTwoFa.route';
 export * from './VerifyQrCode.route';
 export * from './VerifyTwoFa.route';
 export * from './ChangeUsersPassword.route';
-export * from './InjectMiddleware.route';
-export * from './RemoveMiddleware.route';
+export * from './PatchMiddleware.route';

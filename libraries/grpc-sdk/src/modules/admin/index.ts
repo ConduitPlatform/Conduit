@@ -8,8 +8,8 @@ import {
 import {
   ConduitRouteActions,
   ConduitRouteObject,
+  MiddlewarePatch,
   SocketProtoDescription,
-  MiddlewareOrder,
 } from '../../routing';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
@@ -43,13 +43,11 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     return this.client!.registerAdminRoute(request);
   }
 
-  patchMiddleware(
-    path: string,
-    action: ConduitRouteActions,
-    middlewareName: string,
-    remove: boolean,
-    order?: MiddlewareOrder,
-  ) {
-    return this.client!.patchMiddleware({ path, action, middlewareName, remove, order });
+  patchMiddleware(path: string, action: ConduitRouteActions, middleware: string[]) {
+    return this.client!.patchMiddleware({
+      path: path,
+      action: action,
+      middleware: JSON.stringify(middleware),
+    });
   }
 }

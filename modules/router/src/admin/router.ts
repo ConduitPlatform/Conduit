@@ -1,7 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
-  MiddlewareOrder,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -37,36 +36,18 @@ export class RouterAdmin {
     return Array.from(new Set(response));
   }
 
-  async injectMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, action, middlewareName, order } = call.request.params;
-    if (!(action in ConduitRouteActions)) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
-    }
-    if (Math.abs(order) !== 1) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Order should be 1 or -1');
-    }
-    const middlewareOrder = order === 1 ? MiddlewareOrder.FIRST : MiddlewareOrder.LAST;
-    this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
-    await this.grpcSdk
-      .router!.patchMiddleware(path, action, middlewareName, false, middlewareOrder)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    return 'Middleware injected successfully';
-  }
-
-  async removeMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, action, middlewareName } = call.request.params;
+  async patchMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, action, middleware } = call.request.params;
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
     }
     this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
     await this.grpcSdk
-      .router!.patchMiddleware(path, action, middlewareName, true)
+      .router!.patchMiddleware(path, action, middleware)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-    return 'Middleware removed successfully';
+    return 'Middleware patched successfully';
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

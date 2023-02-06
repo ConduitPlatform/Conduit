@@ -72,7 +72,5 @@ message Empty {
 message PatchMiddlewareRequest {
   string path = 1;
   string action = 2;
-  string middlewareName = 3;
-  bool remove = 4;
-  optional string order = 5;
+  string middleware = 3;
 }

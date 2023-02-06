@@ -9,8 +9,8 @@ import {
 import {
   ConduitRouteActions,
   ConduitRouteObject,
+  MiddlewarePatch,
   SocketProtoDescription,
-  MiddlewareOrder,
 } from '../../routing';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
@@ -43,14 +43,12 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
     return this.client!.registerConduitRoute(request);
   }
 
-  patchMiddleware(
-    path: string,
-    action: ConduitRouteActions,
-    middlewareName: string,
-    remove: boolean,
-    order?: MiddlewareOrder,
-  ) {
-    return this.client!.patchMiddleware({ path, action, middlewareName, remove, order });
+  patchMiddleware(path: string, action: ConduitRouteActions, middleware: string[]) {
+    return this.client!.patchMiddleware({
+      path: path,
+      action: action,
+      middleware: JSON.stringify(middleware),
+    });
   }
 
   socketPush(data: SocketData) {
