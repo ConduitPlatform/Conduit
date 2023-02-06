@@ -60,9 +60,7 @@ export class NotificationTokensHandler {
       },
     );
 
-    const countAll = { ...query };
-    delete countAll.read;
-    const notificationCount = await Notification.getInstance().countDocuments(countAll);
+    const notificationCount = await Notification.getInstance().countDocuments(query);
     const unreadCount = await Notification.getInstance().countDocuments({
       ...query,
       read: false,
