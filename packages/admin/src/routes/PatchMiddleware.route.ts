@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   ConduitRouteParameters,
   ConduitString,
   GrpcError,
-  MiddlewareOrder,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
@@ -26,19 +25,19 @@ export function injectMiddleware(grpcSdk: ConduitGrpcSdk) {
     },
     new ConduitRouteReturnDefinition('InjectAdminMiddleware', 'String'),
     async (req: ConduitRouteParameters) => {
-      const { path, action, middlewareName, order } = req.params!;
-      if (!(action in ConduitRouteActions)) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
-      }
-      if (Math.abs(order) !== 1) {
-        throw new GrpcError(status.INVALID_ARGUMENT, 'Order should be 1 or -1');
-      }
-      const middlewareOrder = order === 1 ? MiddlewareOrder.FIRST : MiddlewareOrder.LAST;
-      await grpcSdk
-        .admin!.patchMiddleware(path, action, middlewareName, false, middlewareOrder)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+      // const { path, action, middlewareName, order } = req.params!;
+      // if (!(action in ConduitRouteActions)) {
+      //   throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+      // }
+      // if (Math.abs(order) !== 1) {
+      //   throw new GrpcError(status.INVALID_ARGUMENT, 'Order should be 1 or -1');
+      // }
+      // const middlewareOrder = order === 1 ? MiddlewareOrder.FIRST : MiddlewareOrder.LAST;
+      // await grpcSdk
+      //   .admin!.patchMiddleware(path, action, middlewareName, false, middlewareOrder)
+      //   .catch((e: Error) => {
+      //     throw new GrpcError(status.INTERNAL, e.message);
+      //   });
       return 'Middleware injected successfully';
     },
   );
