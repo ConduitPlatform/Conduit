@@ -23,17 +23,16 @@ export function schemaConverter(jsonSchema: ConduitSchema) {
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  iterDeep(copy.fields, copy.fields);
+  iterDeep(copy.fields);
   return copy;
 }
 
-function iterDeep(schema: any, resSchema: any) {
+function iterDeep(schema: any) {
   for (const key of Object.keys(schema)) {
     if (isObject(schema[key]) && !isArray(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key]);
-      if (Object.keys(resSchema[key]).length === 0) delete resSchema[key];
+      schema[key] = extractObjectType(schema[key]);
       if (schema[key] && !schema[key].hasOwnProperty('type')) {
-        iterDeep(schema[key], resSchema[key]);
+        iterDeep(schema[key]);
       }
     }
   }
