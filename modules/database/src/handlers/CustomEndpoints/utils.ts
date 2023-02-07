@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { isNil } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { CustomEndpointsQuery, LikeComparison } from '../../interfaces';
+import { CustomEndpointsQuery } from '../../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -58,7 +58,12 @@ function _constructQuery(
   query: {
     schemaField: string;
     operation: number;
-    comparisonField: { type: string; value: any; like: LikeComparison };
+    comparisonField: {
+      type: string;
+      value: any;
+      like?: boolean;
+      caseSensitiveLike?: boolean;
+    };
   },
   inputs: {
     name: string;
@@ -87,6 +92,7 @@ function _constructQuery(
       query.operation,
       params[query.comparisonField.value],
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
@@ -104,6 +110,7 @@ function _constructQuery(
       query.operation,
       context,
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   } else {
     return _translateQuery(
@@ -111,6 +118,7 @@ function _constructQuery(
       query.operation,
       query.comparisonField.value,
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   }
 }
@@ -119,7 +127,8 @@ function _translateQuery(
   schemaField: string,
   operation: number,
   comparisonField: any,
-  like?: LikeComparison,
+  like?: boolean,
+  caseSensitiveLike?: boolean,
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -135,7 +144,7 @@ function _translateQuery(
     comparisonField = { $date: comparisonField };
   } else if (like) {
     comparisonField = escapeStringRegexp(comparisonField);
-    if (like === 'sensitive') {
+    if (caseSensitiveLike) {
       comparisonField = { $like: `%${comparisonField}%` };
     } else {
       comparisonField = { $ilike: `%${comparisonField}%` };
