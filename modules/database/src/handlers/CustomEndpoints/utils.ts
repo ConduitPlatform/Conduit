@@ -136,7 +136,7 @@ function _translateQuery(
   } else if (like) {
     comparisonField = escapeStringRegexp(comparisonField);
     if (like === 'sensitive') {
-      comparisonField = { $like: `%${comparisonField}%` }; // TODO: %abc% instead...
+      comparisonField = { $like: `%${comparisonField}%` };
     } else {
       comparisonField = { $ilike: `%${comparisonField}%` };
     }
