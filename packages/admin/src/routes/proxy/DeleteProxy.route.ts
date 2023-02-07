@@ -5,10 +5,15 @@ import {
   ConduitString,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import {
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  ProxyRouteT,
+} from '@conduitplatform/hermes';
 import { AdminProxyRoute } from '../../models';
+import AdminModule from '../../index';
 
-export function deleteProxyRoute() {
+export function deleteProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(
     {
       path: '/admin/proxy/:id',
@@ -28,6 +33,23 @@ export function deleteProxyRoute() {
         throw new ConduitError('NOT_FOUND', 404, 'Proxy not found');
       }
       await AdminProxyRoute.getInstance().deleteOne({ _id: id });
+      const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
+      if (proxyRoutes.length !== 0) {
+        const proxies: ProxyRouteT[] = [];
+        proxyRoutes.forEach(route => {
+          proxies.push({
+            options: {
+              path: route.path,
+              target: route.target,
+              action: route.action,
+              description: route.description,
+              middlewares: route.middlewares,
+              options: route.options,
+            },
+          });
+        });
+        adminModule.internalRegisterRoute(undefined, proxies, 'admin-package', 'admin');
+      }
       return { message: 'Proxy deleted.' };
     },
   );

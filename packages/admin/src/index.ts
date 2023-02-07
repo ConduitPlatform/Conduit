@@ -65,9 +65,9 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
-    adminProxyRoutes.createProxyRoute(),
-    adminProxyRoutes.deleteProxyRoute(),
-    adminProxyRoutes.updateProxyRoute(),
+    adminProxyRoutes.createProxyRoute(this),
+    adminProxyRoutes.deleteProxyRoute(this),
+    adminProxyRoutes.updateProxyRoute(this),
     adminProxyRoutes.getProxyRoute(),
     adminProxyRoutes.getProxyRoutesRoute(),
   ];
@@ -445,7 +445,7 @@ export default class AdminModule extends IConduitAdmin {
     });
   }
 
-  private internalRegisterRoute(
+  public internalRegisterRoute(
     protofile: any,
     routes: RegisterAdminRouteRequest_PathDefinition[] | ProxyRouteT[],
     url: string,

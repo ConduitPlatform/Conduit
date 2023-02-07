@@ -5,11 +5,16 @@ import {
   ConduitString,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import {
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  ProxyRouteT,
+} from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
 import { AdminProxyRoute } from '../../models';
+import AdminModule from '../../index';
 
-export function updateProxyRoute() {
+export function updateProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(
     {
       path: '/admin/proxy/:id',
@@ -47,6 +52,21 @@ export function updateProxyRoute() {
         middlewares,
         options,
       });
+      const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
+      const proxies: ProxyRouteT[] = [];
+      proxyRoutes.forEach(route => {
+        proxies.push({
+          options: {
+            path: route.path,
+            target: route.target,
+            action: route.action,
+            description: route.description,
+            middlewares: route.middlewares,
+            options: route.options,
+          },
+        });
+      });
+      adminModule.internalRegisterRoute(undefined, proxies, 'admin-package', 'admin');
       return { message: 'Proxy updated.' };
     },
   );
