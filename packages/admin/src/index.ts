@@ -332,11 +332,13 @@ export default class AdminModule extends IConduitAdmin {
         proxies.push({
           options: {
             path: route.path,
-            target: route.target,
             action: route.action,
             description: route.description,
             middlewares: route.middlewares,
-            options: route.options,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
           },
         });
         ConduitGrpcSdk.Logger.http(
@@ -460,11 +462,11 @@ export default class AdminModule extends IConduitAdmin {
 
     // @ts-ignore
     const proxyRoutes = routes.filter(r => {
-      return (r as ProxyRouteT).options && (r as ProxyRouteT).options.target;
+      return (r as ProxyRouteT).options && (r as ProxyRouteT)?.proxy?.target;
     });
     // @ts-ignore
     const regularRoutes = routes.filter(r => {
-      return !r.options.target;
+      return !r?.proxy;
     });
     if (proxyRoutes.length > 0) {
       processedRoutes = proxyToConduitRoute(proxyRoutes as ProxyRouteT[]);
@@ -494,7 +496,7 @@ export default class AdminModule extends IConduitAdmin {
       }
       if (r instanceof ProxyRoute) {
         ConduitGrpcSdk.Logger.http(
-          `New admin proxy route registered:  ${r.input.action} ${r.input.path} target: ${r.input.target}`,
+          `New admin proxy route registered:  ${r.input.options.action} ${r.input.options.path} target: ${r.input.proxy.target}`,
         );
         this._router.registerProxyRoute(r);
       }

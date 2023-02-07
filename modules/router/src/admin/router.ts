@@ -105,7 +105,7 @@ export class RouterAdmin {
       action,
       middlewares,
       description,
-      options,
+      proxyMiddlewareOptions: options,
     });
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
     const proxies: ProxyRouteT[] = [];
@@ -113,11 +113,13 @@ export class RouterAdmin {
       proxies.push({
         options: {
           path: route.path,
-          target: route.target,
           action: route.action,
           description: route.description,
           middlewares: route.middlewares,
-          options: route.options,
+        },
+        proxy: {
+          target: route.target,
+          ...route.proxyMiddlewareOptions,
         },
       });
     });
@@ -154,7 +156,7 @@ export class RouterAdmin {
         action,
         middlewares,
         description,
-        options,
+        proxyMiddlewareOptions: options,
       },
     );
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
@@ -163,11 +165,13 @@ export class RouterAdmin {
       proxies.push({
         options: {
           path: route.path,
-          target: route.target,
           action: route.action,
           description: route.description,
           middlewares: route.middlewares,
-          options: route.options,
+        },
+        proxy: {
+          target: route.target,
+          ...route.proxyMiddlewareOptions,
         },
       });
     });
@@ -194,11 +198,13 @@ export class RouterAdmin {
       proxies.push({
         options: {
           path: route.path,
-          target: route.target,
           action: route.action,
           description: route.description,
           middlewares: route.middlewares,
-          options: route.options,
+        },
+        proxy: {
+          target: route.target,
+          ...route.proxyMiddlewareOptions,
         },
       });
     });

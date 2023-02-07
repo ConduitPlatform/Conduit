@@ -85,7 +85,7 @@ export function proxyToConduitRoute(
   routes: ProxyRouteT[],
   moduleName?: string,
 ): ProxyRoute[] {
-  return routes.map(r => createHandlerForProxy(r.options, moduleName));
+  return routes.map(r => createHandlerForProxy(r, moduleName));
 }
 
 function createHandlers(
@@ -254,15 +254,16 @@ function createHandlerForSocket(
   return new ConduitSocket(socket.options, eventHandlers);
 }
 
-export function createHandlerForProxy(options: ProxyRouteOptions, moduleName?: string) {
-  if (!options.path.startsWith('/')) {
-    options.path = `/${options.path}`;
+export function createHandlerForProxy(route: ProxyRouteT, moduleName?: string) {
+  if (!route.options.path.startsWith('/')) {
+    route.options.path = `/${route.options.path}`;
   }
-  if (moduleName && !options.path.startsWith(`/${moduleName}/`)) {
-    options.path = `/${moduleName}${options.path}`;
+  if (moduleName && !route.options.path.startsWith(`/${moduleName}/`)) {
+    route.options.path = `/${moduleName}${route.options.path}`;
   }
-  if (!options.path.startsWith('/proxy')) {
-    options.path = `/proxy${options.path}`;
+  if (!route.options.path.startsWith('/proxy')) {
+    route.options.path = `/proxy${route.options.path}`;
   }
-  return new ProxyRoute(options);
+  const routeInput = { options: route.options, proxy: route.proxy };
+  return new ProxyRoute(routeInput);
 }

@@ -1,5 +1,6 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { HttpProxyMiddlewareOptions, ProxyRouteOptions } from '../interfaces';
+import { ProxyRouteOptions } from '../interfaces';
+import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class ProxyRoute {
   private readonly _input: ProxyRouteOptions;
@@ -12,8 +13,8 @@ export class ProxyRoute {
     return this._input;
   }
 
-  executeRequest(request: HttpProxyMiddlewareOptions) {
-    return createProxyMiddleware({ ...request });
+  executeRequest(proxyInput: Indexable) {
+    return createProxyMiddleware(proxyInput);
   }
 }
 export function instanceOfConduitProxy(route: any) {

@@ -231,11 +231,11 @@ export class ConduitRoutingController {
       } else if (isInstanceOfProxyRoute(r)) {
         ConduitGrpcSdk.Logger.log(
           'New proxy route registered: ' +
-            r.input.action +
+            r.input.options.action +
             ' ' +
-            r.input.path +
+            r.input.options.path +
             ' target url: ' +
-            r.input.target,
+            r.input.proxy.target,
         );
         this._proxyRouter?.registerProxyRoute(r);
       } else {

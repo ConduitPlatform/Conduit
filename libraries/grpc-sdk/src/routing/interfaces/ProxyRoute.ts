@@ -6,12 +6,15 @@ export enum ProxyRouteActions {
   DELETE = 'DELETE',
   ALL = 'ALL',
 }
-export interface ConduitProxyOptions {
+
+export interface ProxyRouteOptions {
   path: string;
-  target: string;
   action?: ProxyRouteActions;
   description?: string;
   middlewares?: string[];
+}
+export interface ProxyMiddlewareOptions {
+  target: string;
   changeOrigin?: boolean;
   secure?: boolean;
   context?: string | string[];
@@ -27,6 +30,7 @@ export interface ConduitProxyOptions {
   preserveHeaderKeyCase?: boolean;
 }
 
-export interface ConduitProxy {
-  options: ConduitProxyOptions;
+export interface ConduitProxyObject {
+  options: ProxyRouteOptions;
+  proxy: ProxyMiddlewareOptions;
 }

@@ -23,7 +23,7 @@ const schema = {
     type: [TYPE.String],
     required: false,
   },
-  options: {
+  proxyMiddlewareOptions: {
     type: TYPE.JSON,
     required: false,
   },
@@ -52,7 +52,7 @@ export class RouterProxyRoute extends ConduitActiveSchema<RouterProxyRoute> {
   action!: ProxyRouteActions;
   description?: string;
   middlewares?: string[];
-  options?: HttpProxyMiddlewareOptions;
+  proxyMiddlewareOptions?: HttpProxyMiddlewareOptions;
   createdAt!: Date;
   updatedAt!: Date;
 

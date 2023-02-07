@@ -40,11 +40,13 @@ export function deleteProxyRoute(adminModule: AdminModule) {
           proxies.push({
             options: {
               path: route.path,
-              target: route.target,
               action: route.action,
               description: route.description,
               middlewares: route.middlewares,
-              options: route.options,
+            },
+            proxy: {
+              target: route.target,
+              ...route.proxyMiddlewareOptions,
             },
           });
         });

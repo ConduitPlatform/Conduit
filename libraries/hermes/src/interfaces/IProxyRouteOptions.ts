@@ -8,17 +8,37 @@ export enum ProxyRouteActions {
 }
 
 export interface ProxyRouteOptions {
-  path: string;
+  options: {
+    path: string;
+    action?: ProxyRouteActions;
+    description?: string;
+    middlewares?: string[];
+  };
+  proxy: {
+    target: string;
+    changeOrigin?: boolean;
 
-  target: string;
+    secure?: boolean;
 
-  action: ProxyRouteActions;
+    context?: string | string[];
 
-  description?: string;
+    pathRewrite?: { [path: string]: string };
 
-  middlewares?: string[];
+    headers?: { [name: string]: string };
 
-  options?: HttpProxyMiddlewareOptions;
+    proxyTimeout?: number;
+
+    cookieDomainRewrite?: { [hostname: string]: string };
+
+    autoRewrite?: boolean;
+
+    followRedirects?: boolean;
+    xfwd?: boolean;
+    ws?: boolean;
+    router?: { [path: string]: string };
+
+    preserveHeaderKeyCase?: boolean;
+  };
 }
 
 export interface HttpProxyMiddlewareOptions {

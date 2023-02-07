@@ -1,11 +1,17 @@
 import { RoutingManager } from './RoutingManager';
-import { ConduitProxyOptions, ProxyRouteActions } from './interfaces';
+import {
+  ProxyMiddlewareOptions,
+  ProxyRouteActions,
+  ProxyRouteOptions,
+} from './interfaces';
 
 export class ProxyRouteBuilder {
-  private _options: ConduitProxyOptions;
+  private _options!: ProxyRouteOptions;
+  private _proxy!: ProxyMiddlewareOptions;
 
-  constructor(private readonly manager?: RoutingManager, options?: ConduitProxyOptions) {
-    this._options = options || { path: '', target: '' };
+  constructor(private readonly manager?: RoutingManager) {
+    this._options = {} as any;
+    this._proxy = {} as any;
   }
 
   method(action: ProxyRouteActions): ProxyRouteBuilder {
@@ -19,12 +25,17 @@ export class ProxyRouteBuilder {
   }
 
   target(target: string): ProxyRouteBuilder {
-    this._options.target = target;
+    this._proxy.target = target;
     return this;
   }
 
-  options(options: ConduitProxyOptions): ProxyRouteBuilder {
+  options(options: ProxyRouteOptions): ProxyRouteBuilder {
     this._options = options;
+    return this;
+  }
+
+  proxy(proxy: ProxyMiddlewareOptions): ProxyRouteBuilder {
+    this._proxy = proxy;
     return this;
   }
 
@@ -49,16 +60,25 @@ export class ProxyRouteBuilder {
   add() {
     if (!this.manager) throw new Error('Builder not setup with manager');
     if (!this._options.path) throw new Error('Cannot build route without path');
-    if (!this._options.target) throw new Error('Cannot build route without target');
-    this.manager.proxyRoute(this._options);
+    if (!this._proxy.target) throw new Error('Cannot build route without target');
+    const input = {
+      options: this._options,
+      proxy: this._proxy,
+    };
+
+    this.manager.proxyRoute(input);
   }
 
   build() {
     if (!this.manager) throw new Error('Builder not setup with manager');
     if (!this._options.path) throw new Error('Cannot build route without path');
-    if (!this._options.target) throw new Error('Cannot build route without target');
+    if (!this._proxy.target) throw new Error('Cannot build route without target');
+    if (!this._options.action) throw new Error('Cannot build route without action');
     return {
-      input: this._options,
+      input: {
+        options: this._options,
+        proxy: this._proxy,
+      },
     };
   }
 }

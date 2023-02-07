@@ -50,7 +50,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         action,
         description,
         middlewares,
-        options,
+        proxyMiddlewareOptions: options,
       });
       const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
       const proxies: ProxyRouteT[] = [];
@@ -58,11 +58,13 @@ export function updateProxyRoute(adminModule: AdminModule) {
         proxies.push({
           options: {
             path: route.path,
-            target: route.target,
             action: route.action,
             description: route.description,
             middlewares: route.middlewares,
-            options: route.options,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
           },
         });
       });

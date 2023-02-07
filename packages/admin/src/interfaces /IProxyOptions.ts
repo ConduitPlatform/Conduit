@@ -1,4 +1,4 @@
-export interface IProxyOptions {
+export interface IProxyMiddlewareOptions {
   changeOrigin?: boolean;
   secure?: boolean;
   context?: string | string[];

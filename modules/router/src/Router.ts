@@ -204,11 +204,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         proxies.push({
           options: {
             path: route.path,
-            target: route.target,
             action: route.action,
             description: route.description,
             middlewares: route.middlewares,
-            options: route.options,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
           },
         });
       });
@@ -367,11 +369,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   ) {
     // @ts-ignore
     const proxyRoutes = routes.filter(r => {
-      return (r as ProxyRouteT).options && (r as ProxyRouteT).options.target;
+      return (r as ProxyRouteT).options && (r as ProxyRouteT)?.proxy?.target;
     });
     // @ts-ignore
     const regularRoutes = routes.filter(r => {
-      return !r.options.target;
+      return !r?.proxy;
     });
     let processedRoutes: (
       | ConduitRoute

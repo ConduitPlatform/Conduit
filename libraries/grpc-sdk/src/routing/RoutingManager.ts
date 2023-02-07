@@ -1,8 +1,9 @@
 import {
-  ConduitProxy,
-  ConduitProxyOptions,
+  ConduitProxyObject,
   GrpcServer,
+  ProxyMiddlewareOptions,
   ProxyRouteBuilder,
+  ProxyRouteOptions,
 } from '../index';
 import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
@@ -30,7 +31,7 @@ export class RoutingManager {
   private _moduleRoutes: {
     [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
-  private _moduleProxyRoutes: { [key: string]: ConduitProxy } = {};
+  private _moduleProxyRoutes: { [key: string]: ConduitProxyObject } = {};
 
   private _routeHandlers: {
     [key: string]: RequestHandlers;
@@ -66,8 +67,8 @@ export class RoutingManager {
     return new RouteBuilder(this).method(ConduitRouteActions.PATCH).path(path);
   }
 
-  proxy(options: ConduitProxyOptions) {
-    return new ProxyRouteBuilder(this, options);
+  proxy(): ProxyRouteBuilder {
+    return new ProxyRouteBuilder(this);
   }
 
   clear() {
@@ -105,11 +106,11 @@ export class RoutingManager {
     this._routeHandlers[routeObject.grpcFunction] = handler;
   }
 
-  proxyRoute(input: ConduitProxyOptions) {
-    const routeObject: ConduitProxy = this.parseRouteObject({
+  proxyRoute(input: { options: ProxyRouteOptions; proxy: ProxyMiddlewareOptions }) {
+    const routeObject: ConduitProxyObject = this.parseRouteObject({
       options: input,
-    }) as ConduitProxy;
-    this._moduleProxyRoutes[routeObject.options.path + routeObject.options.target] =
+    }) as ConduitProxyObject;
+    this._moduleProxyRoutes[routeObject.options.path + routeObject.proxy.target] =
       routeObject;
   }
 
@@ -186,7 +187,7 @@ export class RoutingManager {
 
   private parseRouteObject(
     routeObject: any,
-  ): ConduitRouteObject | SocketProtoDescription | ConduitProxy {
+  ): ConduitRouteObject | SocketProtoDescription | ConduitProxyObject {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }

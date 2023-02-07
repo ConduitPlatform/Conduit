@@ -1,5 +1,5 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
-import { IProxyOptions } from '../interfaces ';
+import { IProxyMiddlewareOptions } from '../interfaces ';
 import { ProxyRouteActions } from '@conduitplatform/hermes';
 
 const schema = {
@@ -24,7 +24,7 @@ const schema = {
     type: [TYPE.String],
     required: false,
   },
-  options: {
+  proxyMiddlewareOptions: {
     type: TYPE.JSON,
     required: false,
   },
@@ -56,7 +56,7 @@ export class AdminProxyRoute extends ConduitActiveSchema<AdminProxyRoute> {
 
   middlewares?: string[];
 
-  options?: IProxyOptions;
+  proxyMiddlewareOptions?: IProxyMiddlewareOptions;
 
   createdAt!: Date;
   updatedAt!: Date;

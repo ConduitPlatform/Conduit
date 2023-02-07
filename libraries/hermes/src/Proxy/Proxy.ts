@@ -45,7 +45,7 @@ export class ProxyRouteController extends ConduitRouter {
   }
 
   registerProxyRoute(route: ProxyRoute) {
-    const key = `${route.input.action}-${route.input.path}-${route.input.target}`;
+    const key = `${route.input.options.action}-${route.input.options.path}-${route.input.proxy.target}`;
     const registered = this._proxyRoutes.has(key);
     this._proxyRoutes.set(key, route);
     if (registered) {
@@ -60,12 +60,11 @@ export class ProxyRouteController extends ConduitRouter {
     }
   }
   private addProxyRoute(route: ProxyRoute) {
-    const routerMethod = this.getRouterMethod(route.input.action);
-    routerMethod(route.input.path, (req, res, next) => {
-      this.checkMiddlewares(req, route.input.middlewares)
+    const routerMethod = this.getRouterMethod(route.input.options.action!);
+    routerMethod(route.input.options.path, (req, res, next) => {
+      this.checkMiddlewares(req, route.input.options.middlewares)
         .then(() => {
-          const proxyOptions = { target: route.input.target, ...route.input.options };
-          return route.executeRequest(proxyOptions)(req, res, next);
+          return route.executeRequest(route.input.proxy)(req, res, next);
         })
         .catch(err => {
           next(err);
