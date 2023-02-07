@@ -97,7 +97,7 @@ export class AdminHandlers {
         bodyParams: {
           path: ConduitString.Required,
           target: ConduitString.Required,
-          action: ConduitString.Optional,
+          action: ConduitString.Required,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
           options: {
