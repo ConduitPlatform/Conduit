@@ -29,14 +29,14 @@ export function _parseQuery(query?: ParsedQuery | null): ParsedQuery | null | un
         const likeCandidates = Object.keys(query[key]);
         if (likeCandidates.includes('$like')) {
           Object.assign(parsed, {
-            [key]: { $regex: `.*${query[key].$like.slice(1).slice(0, -1)}.*` },
+            [key]: { $regex: query[key].$like.replace(/%/g, '.*') },
           });
           continue;
         }
         if (likeCandidates.includes('$ilike')) {
           Object.assign(parsed, {
             [key]: {
-              $regex: `.*${query[key].$ilike.slice(1).slice(0, -1)}.*`,
+              $regex: query[key].$ilike.replace(/%/g, '.*'),
               $options: 'i',
             },
           });
