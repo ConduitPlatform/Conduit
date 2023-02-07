@@ -38,7 +38,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
 
   async create(query: SingleDocQuery) {
     const parsedQuery = {
-      ...parseQuery(typeof query === 'string' ? EJSON.parse(query) : query),
+      ...(typeof query === 'string' ? EJSON.parse(query) : query),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -46,7 +46,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async createMany(query: MultiDocQuery) {
-    const docs = parseQuery(typeof query === 'string' ? EJSON.parse(query) : query);
+    const docs = typeof query === 'string' ? EJSON.parse(query) : query;
     return this.model.insertMany(docs).then(r => r);
   }
 
