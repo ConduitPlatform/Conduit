@@ -6,13 +6,10 @@ import {
 } from './interfaces';
 
 export class ProxyRouteBuilder {
-  private _options!: ProxyRouteOptions;
-  private _proxy!: ProxyMiddlewareOptions;
+  private _options: ProxyRouteOptions = { path: '' };
+  private _proxy: ProxyMiddlewareOptions = { target: '' };
 
-  constructor(private readonly manager?: RoutingManager) {
-    this._options = {} as any;
-    this._proxy = {} as any;
-  }
+  constructor(private readonly manager?: RoutingManager) {}
 
   method(action: ProxyRouteActions): ProxyRouteBuilder {
     this._options.action = action;

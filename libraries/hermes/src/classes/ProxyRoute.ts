@@ -17,7 +17,7 @@ export class ProxyRoute {
     return createProxyMiddleware(proxyInput);
   }
 }
-export function instanceOfConduitProxy(route: any) {
+export function instanceOfConduitProxy(route: Indexable) {
   return (
     route &&
     route.hasOwnProperty('options') &&

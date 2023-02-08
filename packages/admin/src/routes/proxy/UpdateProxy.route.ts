@@ -29,7 +29,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         action: ConduitString.Optional,
         description: ConduitString.Optional,
         middlewares: [ConduitString.Optional],
-        options: {
+        proxyMiddlewareOptions: {
           type: TYPE.JSON,
           required: false,
         },
@@ -39,7 +39,15 @@ export function updateProxyRoute(adminModule: AdminModule) {
       message: ConduitString.Required,
     }),
     async (req: ConduitRouteParameters) => {
-      const { id, path, target, action, description, middlewares, options } = req.params!;
+      const {
+        id,
+        path,
+        target,
+        action,
+        description,
+        middlewares,
+        proxyMiddlewareOptions,
+      } = req.params!;
       const existingProxy = await AdminProxyRoute.getInstance().findOne({ _id: id });
       if (isNil(existingProxy)) {
         throw new ConduitError('NOT_FOUND', 404, 'Proxy not found');
@@ -50,7 +58,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         action,
         description,
         middlewares,
-        proxyMiddlewareOptions: options,
+        proxyMiddlewareOptions,
       });
       const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
       const proxies: ProxyRouteT[] = [];

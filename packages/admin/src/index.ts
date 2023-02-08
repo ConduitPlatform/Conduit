@@ -460,14 +460,15 @@ export default class AdminModule extends IConduitAdmin {
       | ProxyRoute
     )[] = [];
 
-    // @ts-ignore
-    const proxyRoutes = routes.filter(r => {
-      return (r as ProxyRouteT).options && (r as ProxyRouteT)?.proxy?.target;
-    });
-    // @ts-ignore
-    const regularRoutes = routes.filter(r => {
-      return !r?.proxy;
-    });
+    const proxyRoutes: ProxyRouteT[] = [];
+    const regularRoutes: RegisterAdminRouteRequest_PathDefinition[] = [];
+    for (const route of routes) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy?.target) {
+        proxyRoutes.push(route as ProxyRouteT);
+      } else {
+        regularRoutes.push(route as RegisterAdminRouteRequest_PathDefinition);
+      }
+    }
     if (proxyRoutes.length > 0) {
       processedRoutes = proxyToConduitRoute(proxyRoutes as ProxyRouteT[]);
     }

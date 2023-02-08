@@ -79,7 +79,7 @@ export class RouterAdmin {
   }
 
   async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, options } =
+    const { path, target, action, middlewares, description, proxyMiddlewareOptions } =
       call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
@@ -105,7 +105,7 @@ export class RouterAdmin {
       action,
       middlewares,
       description,
-      proxyMiddlewareOptions: options,
+      proxyMiddlewareOptions,
     });
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
     const proxies: ProxyRouteT[] = [];
@@ -129,7 +129,7 @@ export class RouterAdmin {
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, id, options } =
+    const { path, target, action, middlewares, description, id, proxyMiddlewareOptions } =
       call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
@@ -156,7 +156,7 @@ export class RouterAdmin {
         action,
         middlewares,
         description,
-        proxyMiddlewareOptions: options,
+        proxyMiddlewareOptions,
       },
     );
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});

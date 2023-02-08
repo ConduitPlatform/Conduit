@@ -100,7 +100,7 @@ export class AdminHandlers {
           action: ConduitString.Required,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          options: {
+          proxyMiddlewareOptions: {
             type: TYPE.JSON,
             required: false,
           },
@@ -182,7 +182,7 @@ export class AdminHandlers {
           action: ConduitString.Optional,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          options: {
+          proxyMiddlewareOptions: {
             type: TYPE.JSON,
             required: false,
           },

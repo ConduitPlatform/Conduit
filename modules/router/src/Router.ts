@@ -341,7 +341,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.routes as any,
+        call.request.routes as RouteT[] | ProxyRouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
@@ -367,14 +367,15 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     url: string,
     moduleName?: string,
   ) {
-    // @ts-ignore
-    const proxyRoutes = routes.filter(r => {
-      return (r as ProxyRouteT).options && (r as ProxyRouteT)?.proxy?.target;
-    });
-    // @ts-ignore
-    const regularRoutes = routes.filter(r => {
-      return !r?.proxy;
-    });
+    const proxyRoutes: ProxyRouteT[] = [];
+    const regularRoutes: RouteT[] = [];
+    for (const route of routes) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy?.target) {
+        proxyRoutes.push(route as ProxyRouteT);
+      } else {
+        regularRoutes.push(route as RouteT);
+      }
+    }
     let processedRoutes: (
       | ConduitRoute
       | ConduitMiddleware

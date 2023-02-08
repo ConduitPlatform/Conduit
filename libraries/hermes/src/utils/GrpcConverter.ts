@@ -21,7 +21,6 @@ import {
   EventResponse,
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
-  ProxyRouteOptions,
   ProxyRouteT,
   RouterDescriptor,
   RouteT,

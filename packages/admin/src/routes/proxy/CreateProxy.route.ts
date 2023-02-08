@@ -24,7 +24,7 @@ export function createProxyRoute(adminModule: AdminModule) {
         action: ConduitString.Required,
         description: ConduitString.Optional,
         middlewares: [ConduitString.Optional],
-        options: {
+        proxyMiddlewareOptions: {
           type: TYPE.JSON,
           required: false,
         },
@@ -34,7 +34,8 @@ export function createProxyRoute(adminModule: AdminModule) {
       message: ConduitString.Required,
     }),
     async req => {
-      const { path, target, action, description, middlewares, options } = req.params!;
+      const { path, target, action, description, middlewares, proxyMiddlewareOptions } =
+        req.params!;
       const existingRoute = await AdminProxyRoute.getInstance().findOne({ path, target });
       if (existingRoute) {
         throw ConduitError.userInput('Proxy route already exists.');
@@ -45,7 +46,7 @@ export function createProxyRoute(adminModule: AdminModule) {
         action,
         description,
         middlewares,
-        proxyMiddlewareOptions: options,
+        proxyMiddlewareOptions,
       });
       const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
       const proxies: ProxyRouteT[] = [];
