@@ -1,4 +1,8 @@
-import { ConduitRouteObject, SocketProtoDescription } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitProxyObject,
+  ConduitRouteObject,
+  SocketProtoDescription,
+} from '@conduitplatform/grpc-sdk';
 
 type ProtoTemplate = {
   request: string;
@@ -19,7 +23,7 @@ export class ProtoGenerator {
 
   generateProtoFile(
     moduleName: string,
-    paths: (ConduitRouteObject | SocketProtoDescription)[],
+    paths: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
   ) {
     const formattedModuleName = this.getFormattedModuleName(moduleName);
     const protoFunctions = this.createProtoFunctions(paths);
@@ -35,7 +39,9 @@ export class ProtoGenerator {
     return moduleName.replace('-', '_');
   }
 
-  private createProtoFunctions(paths: (ConduitRouteObject | SocketProtoDescription)[]) {
+  private createProtoFunctions(
+    paths: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
+  ) {
     let protoFunctions = '';
 
     paths.forEach(r => {

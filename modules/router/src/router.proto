@@ -45,6 +45,7 @@ message RegisterConduitRouteRequest {
     optional string grpcFunction = 3;
     optional bool isMiddleware = 4;
     optional string events = 5;
+    optional ProxyRouteOptions proxy = 6;
   }
 
   message ConduitRouteOptions {
@@ -57,6 +58,23 @@ message RegisterConduitRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+  }
+
+  message ProxyRouteOptions {
+    optional string target = 1;
+    optional bool changeOrigin = 2;
+    optional bool secure = 3;
+    optional string context = 4;
+    optional string pathRewrite = 5;
+    optional string headers = 6;
+    optional int32 proxyTimeout = 7;
+    optional string cookieDomainRewrite = 8;
+    optional bool autoRewrite = 9;
+    optional bool followRedirects = 10;
+    optional bool xfwd = 11;
+    optional bool ws = 12;
+    optional string router = 13;
+    optional bool preserveHeaderKeyCase = 14;
   }
 
   message ConduitRouteReturnDefinition {

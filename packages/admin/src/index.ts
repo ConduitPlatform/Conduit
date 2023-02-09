@@ -37,6 +37,9 @@ import {
   grpcToConduitRoute,
   RouteT,
   ProtoGenerator,
+  ProxyRoute,
+  ProxyRouteT,
+  proxyToConduitRoute,
 } from '@conduitplatform/hermes';
 import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
@@ -44,10 +47,12 @@ import { Response, NextFunction, Request } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
+import * as adminProxyRoutes from './routes/proxy';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
-  private _router: ConduitRoutingController;
+  private _router!: ConduitRoutingController;
+
   private _sdkRoutes: ConduitRoute[] = [
     adminRoutes.getLoginRoute(),
     adminRoutes.getCreateAdminRoute(),
@@ -60,7 +65,13 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
+    adminProxyRoutes.createProxyRoute(this),
+    adminProxyRoutes.deleteProxyRoute(this),
+    adminProxyRoutes.updateProxyRoute(this),
+    adminProxyRoutes.getProxyRoute(),
+    adminProxyRoutes.getProxyRoutesRoute(),
   ];
+
   private readonly _grpcRoutes: {
     [field: string]: RegisterAdminRouteRequest_PathDefinition[];
   } = {};
@@ -179,6 +190,7 @@ export default class AdminModule extends IConduitAdmin {
   protected onConfig() {
     let restEnabled = ConfigController.getInstance().config.transports.rest;
     const graphqlEnabled = ConfigController.getInstance().config.transports.graphql;
+    const proxyEnabled = ConfigController.getInstance().config.transports.proxy;
     if (!restEnabled && !graphqlEnabled) {
       ConduitGrpcSdk.Logger.warn(
         'Cannot disable both REST and GraphQL admin transport APIs. Falling back to REST...',
@@ -194,6 +206,11 @@ export default class AdminModule extends IConduitAdmin {
       this._router.initGraphQL();
     } else {
       this._router.stopGraphQL();
+    }
+    if (proxyEnabled) {
+      this._router.initProxy();
+    } else {
+      this._router.stopProxy();
     }
     if (ConfigController.getInstance().config.transports.sockets) {
       this._router.initSockets();
@@ -276,37 +293,61 @@ export default class AdminModule extends IConduitAdmin {
 
   private async highAvailability() {
     const r = await this.grpcSdk.state!.getKey('admin');
-    if (!r || r.length === 0) {
+    const proxyRoutes = await models.AdminProxyRoute.getInstance().findMany({});
+    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) {
       this.cleanupRoutes();
       return;
     }
-    const state = JSON.parse(r);
-    if (state.routes) {
-      const promises = state.routes.map((r: Indexable) => {
-        try {
-          if (r.moduleName) {
-            return this.commons
-              .getConfigManager()
-              .isModuleUp(r.moduleName)
-              .then(isUp => {
-                if (isUp) {
-                  return this.internalRegisterRoute(
-                    r.protofile,
-                    r.routes,
-                    r.url,
-                    r.moduleName,
-                  );
-                }
-              });
+    if (r) {
+      const state = JSON.parse(r);
+      if (state.routes) {
+        const promises = state.routes.map((r: Indexable) => {
+          try {
+            if (r.moduleName) {
+              return this.commons
+                .getConfigManager()
+                .isModuleUp(r.moduleName)
+                .then(isUp => {
+                  if (isUp) {
+                    return this.internalRegisterRoute(
+                      r.protofile,
+                      r.routes,
+                      r.url,
+                      r.moduleName,
+                    );
+                  }
+                });
+            }
+            return this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          } catch (err) {
+            ConduitGrpcSdk.Logger.error(err as Error);
           }
-          return this.internalRegisterRoute(r.protofile, r.routes, r.url);
-        } catch (err) {
-          ConduitGrpcSdk.Logger.error(err as Error);
-        }
-      }, this);
-      ConduitGrpcSdk.Logger.log('Recovered routes');
-      await Promise.all(promises);
+        }, this);
+        await Promise.all(promises);
+      }
     }
+    const proxies: ProxyRouteT[] = [];
+    if (proxyRoutes.length > 0) {
+      proxyRoutes.forEach(route => {
+        proxies.push({
+          options: {
+            path: route.path,
+            action: route.action,
+            description: route.description,
+            middlewares: route.middlewares,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
+          },
+        });
+        ConduitGrpcSdk.Logger.http(
+          `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
+        );
+      });
+      return this.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
+    }
+    ConduitGrpcSdk.Logger.log('Recovered routes');
 
     this.grpcSdk.bus!.subscribe('admin', (message: string) => {
       const messageParsed = JSON.parse(message);
@@ -406,23 +447,46 @@ export default class AdminModule extends IConduitAdmin {
     });
   }
 
-  private internalRegisterRoute(
+  public internalRegisterRoute(
     protofile: any,
-    routes: RegisterAdminRouteRequest_PathDefinition[],
+    routes: RegisterAdminRouteRequest_PathDefinition[] | ProxyRouteT[],
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
-      grpcToConduitRoute(
+    let processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+      | ProxyRoute
+    )[] = [];
+
+    const proxyRoutes: ProxyRouteT[] = [];
+    const regularRoutes: RegisterAdminRouteRequest_PathDefinition[] = [];
+    for (const route of routes) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
+        proxyRoutes.push(route as ProxyRouteT);
+      } else {
+        regularRoutes.push(route as RegisterAdminRouteRequest_PathDefinition);
+      }
+    }
+    if (proxyRoutes.length > 0) {
+      processedRoutes = proxyToConduitRoute(proxyRoutes as ProxyRouteT[]);
+    }
+    if (regularRoutes.length > 0) {
+      if (!protofile) {
+        throw new Error('Protofile is required');
+      }
+      processedRoutes = grpcToConduitRoute(
         'Admin',
         {
           protoFile: protofile,
-          routes: routes as RouteT[],
+          routes: regularRoutes as RouteT[],
           routerUrl: url,
         },
         moduleName,
         this.grpcSdk.grpcToken,
       );
+    }
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {
@@ -431,7 +495,14 @@ export default class AdminModule extends IConduitAdmin {
         );
         this._router.registerConduitRoute(r);
       }
+      if (r instanceof ProxyRoute) {
+        ConduitGrpcSdk.Logger.http(
+          `New admin proxy route registered:  ${r.input.options.action} ${r.input.options.path} target: ${r.input.proxy.target}`,
+        );
+        this._router.registerProxyRoute(r);
+      }
     });
+    // @ts-ignore
     this._grpcRoutes[url] = routes;
     this.cleanupRoutes();
   }

@@ -47,10 +47,10 @@ export class RouteBuilder {
       this._options.middlewares?.length !== 0
     ) {
       if (allowDuplicates) {
-        this._options.middlewares?.concat(middleware);
+        this._options.middlewares = this._options.middlewares?.concat(middleware);
       } else {
         // add to existing middlewares and filter out potential duplicates
-        this._options.middlewares?.concat(
+        this._options.middlewares = this._options.middlewares?.concat(
           middleware.filter(mid => this._options.middlewares?.indexOf(mid) === -1),
         );
       }

@@ -6,7 +6,11 @@ import {
   RouterDefinition,
   SocketData,
 } from '../../protoUtils/router';
-import { ConduitRouteObject, SocketProtoDescription } from '../../routing';
+import {
+  ConduitProxyObject,
+  ConduitRouteObject,
+  SocketProtoDescription,
+} from '../../routing';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
@@ -16,7 +20,7 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
 
   generateProtoFile(
     moduleName: string,
-    routes: (ConduitRouteObject | SocketProtoDescription)[],
+    routes: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
   ) {
     const request: GenerateProtoRequest = {
       moduleName,

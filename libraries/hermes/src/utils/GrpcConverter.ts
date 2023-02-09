@@ -21,11 +21,17 @@ import {
   EventResponse,
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
+  ProxyRouteT,
   RouterDescriptor,
   RouteT,
   SocketProtoDescription,
 } from '../interfaces';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '../classes';
+import {
+  ConduitRoute,
+  ConduitRouteReturnDefinition,
+  instanceOfConduitProxy,
+  ProxyRoute,
+} from '../classes';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -47,12 +53,12 @@ export function grpcToConduitRoute(
   routerName: string,
   request: {
     protoFile: string;
-    routes: RouteT[];
+    routes: RouteT[] | ProxyRouteT[];
     routerUrl: string;
   },
   moduleName?: string,
   grpcToken?: string,
-): (ConduitRoute | ConduitMiddleware | ConduitSocket)[] {
+): (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] {
   const routes = request.routes;
 
   let routerDescriptor: RouterDescriptor = getDescriptor(request.protoFile);
@@ -74,13 +80,21 @@ export function grpcToConduitRoute(
   return createHandlers(routes, client, moduleName, grpcToken);
 }
 
+export function proxyToConduitRoute(
+  routes: ProxyRouteT[],
+  moduleName?: string,
+): ProxyRoute[] {
+  return routes.map(r => createHandlerForProxy(r, moduleName));
+}
+
 function createHandlers(
-  routes: RouteT[],
+  routes: RouteT[] | ProxyRouteT[],
   client: Client,
   moduleName?: string,
   grpcToken?: string,
 ) {
-  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] = [];
+  const finalRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] =
+    [];
 
   routes.forEach(r => {
     let route;
@@ -90,8 +104,10 @@ function createHandlers(
     }
     if (instanceOfSocketProtoDescription(r)) {
       route = createHandlerForSocket(r, client, metadata, moduleName);
+    } else if (instanceOfConduitProxy(r)) {
+      route = createHandlerForProxy(r.options, moduleName);
     } else {
-      route = createHandlerForRoute(r, client, metadata, moduleName);
+      route = createHandlerForRoute(r as RouteT, client, metadata, moduleName);
     }
 
     if (route != undefined) {
@@ -235,4 +251,22 @@ function createHandlerForSocket(
   }
 
   return new ConduitSocket(socket.options, eventHandlers);
+}
+
+export function createHandlerForProxy(route: ProxyRouteT, moduleName?: string) {
+  if (!route.options.path.startsWith('/')) {
+    route.options.path = `/${route.options.path}`;
+  }
+  if (moduleName && !route.options.path.startsWith(`/${moduleName}/`)) {
+    if (route.options.path.startsWith('/proxy')) {
+      route.options.path = route.options.path.replace('/proxy', `/proxy/${moduleName}`);
+    } else {
+      route.options.path = `/${moduleName}${route.options.path}`;
+    }
+  }
+  if (!route.options.path.startsWith('/proxy')) {
+    route.options.path = `/proxy${route.options.path}`;
+  }
+  const routeInput = { options: route.options, proxy: route.proxy };
+  return new ProxyRoute(routeInput);
 }
