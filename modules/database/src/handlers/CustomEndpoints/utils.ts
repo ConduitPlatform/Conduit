@@ -58,7 +58,12 @@ function _constructQuery(
   query: {
     schemaField: string;
     operation: number;
-    comparisonField: { type: string; value: any; like: boolean };
+    comparisonField: {
+      type: string;
+      value: any;
+      like?: boolean;
+      caseSensitiveLike?: boolean;
+    };
   },
   inputs: {
     name: string;
@@ -87,6 +92,7 @@ function _constructQuery(
       query.operation,
       params[query.comparisonField.value],
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   } else if (query.comparisonField.type === 'Context') {
     if (isNil(context)) {
@@ -104,6 +110,7 @@ function _constructQuery(
       query.operation,
       context,
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   } else {
     return _translateQuery(
@@ -111,6 +118,7 @@ function _constructQuery(
       query.operation,
       query.comparisonField.value,
       query.comparisonField.like,
+      query.comparisonField.caseSensitiveLike,
     );
   }
 }
@@ -120,6 +128,7 @@ function _translateQuery(
   operation: number,
   comparisonField: any,
   like?: boolean,
+  caseSensitiveLike?: boolean,
 ) {
   //   EQUAL: 0, //'equal to'
   //   NEQUAL: 1, //'not equal to'
@@ -135,7 +144,11 @@ function _translateQuery(
     comparisonField = { $date: comparisonField };
   } else if (like) {
     comparisonField = escapeStringRegexp(comparisonField);
-    comparisonField = { $regex: `.*${comparisonField}.*`, $options: 'i' };
+    if (caseSensitiveLike) {
+      comparisonField = { $like: `%${comparisonField}%` };
+    } else {
+      comparisonField = { $ilike: `%${comparisonField}%` };
+    }
   }
 
   switch (operation) {

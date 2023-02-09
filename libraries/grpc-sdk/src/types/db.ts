@@ -1,6 +1,16 @@
 type documentKeys<T> = keyof T;
 type documentValues<T> = T[keyof T];
-type operators = '$eq' | '$ne' | '$gt' | '$gte' | '$lt' | '$lte' | '$regex' | '$options';
+type operators =
+  | '$eq'
+  | '$ne'
+  | '$gt'
+  | '$gte'
+  | '$lt'
+  | '$lte'
+  | '$regex'
+  | '$options'
+  | '$like'
+  | '$ilike';
 type arrayOperators = '$in' | '$nin';
 type conditionOperators = '$or' | '$and';
 

@@ -1,11 +1,12 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { Op, WhereOptions } from 'sequelize';
+import sequelize, { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
   value: any,
+  dialect: string,
   relations: {
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
@@ -17,7 +18,7 @@ function arrayHandler(
 ) {
   const newArray = [];
   for (const val of value) {
-    newArray.push(_parseQuery(val, relations, associations));
+    newArray.push(_parseQuery(val, dialect, relations, associations));
   }
   return newArray;
 }
@@ -25,6 +26,7 @@ function arrayHandler(
 function matchOperation(
   operator: string,
   value: any,
+  dialect: string,
   relations: {
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
@@ -61,15 +63,15 @@ function matchOperation(
       return { [Op.lte]: value };
     case '$in':
       return {
-        [Op.in]: arrayHandler(value, relations, associations),
+        [Op.in]: arrayHandler(value, dialect, relations, associations),
       };
     case '$or':
-      return arrayHandler(value, relations, associations);
+      return arrayHandler(value, dialect, relations, associations);
     case '$and':
-      return arrayHandler(value, relations, associations);
+      return arrayHandler(value, dialect, relations, associations);
     case '$nin':
       return {
-        [Op.notIn]: arrayHandler(value, relations, associations),
+        [Op.notIn]: arrayHandler(value, dialect, relations, associations),
       };
     default:
       return value;
@@ -78,6 +80,7 @@ function matchOperation(
 
 function _parseQuery(
   query: ParsedQuery,
+  dialect: string,
   relations: {
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
@@ -93,13 +96,13 @@ function _parseQuery(
     if (key === '$or') {
       Object.assign(parsed, {
         [Op.or]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, relations, associations),
+          _parseQuery(operation, dialect, relations, associations),
         ),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
         [Op.and]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, relations, associations),
+          _parseQuery(operation, dialect, relations, associations),
         ),
       });
     } else if (key === '$regex') {
@@ -107,9 +110,34 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
-      const subQuery = _parseQuery(query[key], relations, associations);
+      if (!!query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
+        const likeCandidates = Object.keys(query[key]);
+        if (likeCandidates.includes('$like')) {
+          Object.assign(parsed, {
+            [key]: sequelize.where(sequelize.col(key), 'LIKE', query[key].$like),
+          });
+          continue;
+        }
+        if (likeCandidates.includes('$ilike')) {
+          if (dialect === 'postgres') {
+            Object.assign(parsed, {
+              [key]: sequelize.where(sequelize.col(key), 'ILIKE', query[key].$ilike),
+            });
+          } else {
+            Object.assign(parsed, {
+              [key]: sequelize.where(
+                sequelize.fn('lower', sequelize.col(key)),
+                'LIKE',
+                query[key].$ilike.toLowerCase(),
+              ),
+            });
+          }
+          continue;
+        }
+      }
+      const subQuery = _parseQuery(query[key], dialect, relations, associations);
       if (subQuery === undefined) continue;
-      const matched = matchOperation(key, subQuery, relations, associations);
+      const matched = matchOperation(key, subQuery, dialect, relations, associations);
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
         continue;
@@ -180,6 +208,7 @@ function handleRelation(
 
 export function parseQuery(
   query: ParsedQuery,
+  dialect: string,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
   associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
@@ -197,6 +226,7 @@ export function parseQuery(
   parsingResult.query = {
     ..._parseQuery(
       query,
+      dialect,
       { relations, relationsDirectory: parsingResult.requiredRelations },
       associations && {
         associations,
