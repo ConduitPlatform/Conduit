@@ -1,12 +1,14 @@
 import {
   ConduitModelField,
   ConduitSchema,
+  Indexable,
   PostgresIndexOptions,
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isBoolean, isNumber, isObject, isString } from 'lodash';
 import { checkIfPostgresOptions } from '../utils';
+import { ConduitDatabaseSchema } from '../../../interfaces';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -27,6 +29,10 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
+  enforceFieldConstraints((copy as ConduitDatabaseSchema).compiledFields); // @dirty-type-cast
+  Object.keys(copy.fields).forEach(f => {
+    if (f !== '_id') copy.fields[f] = (copy as ConduitDatabaseSchema).compiledFields[f]; // @dirty-type-cast
+  });
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
@@ -75,6 +81,28 @@ function iterDeep(schema: any, resSchema: any) {
   }
 }
 
+function enforceFieldConstraints(schema: Indexable) {
+  for (const key of Object.keys(schema)) {
+    if (isArray(schema[key])) {
+      schema[key].map((item: any) => enforceFieldConstraints(item));
+    } else if (isObject(schema[key])) {
+      if (schema[key].hasOwnProperty('primaryKey') && schema[key].primaryKey) {
+        schema[key].primaryKey = schema[key].primaryKey ?? false;
+        schema[key].unique = true;
+        schema[key].allowNull = false;
+      } else if (schema[key].hasOwnProperty('unique') && schema[key].unique) {
+        schema[key].unique = schema[key].unique ?? false;
+        schema[key].allowNull = false;
+      } else if (schema[key].hasOwnProperty('required') && schema[key].required) {
+        schema[key].allowNull = !schema[key].required ?? true;
+      }
+      if (!schema[key].hasOwnProperty('type')) {
+        enforceFieldConstraints(schema[key]);
+      }
+    }
+  }
+}
+
 function extractArrayType(arrayField: any[]) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
@@ -105,17 +133,6 @@ function extractObjectType(objectField: any) {
     }
   } else {
     res.type = DataTypes.JSON;
-  }
-
-  if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
-    res.primaryKey = objectField.primaryKey ?? false;
-    res.unique = true;
-    res.allowNull = false;
-  } else if (objectField.hasOwnProperty('unique') && objectField.unique) {
-    res.unique = objectField.unique ?? false;
-    res.allowNull = false;
-  } else if (objectField.hasOwnProperty('required') && objectField.required) {
-    res.allowNull = !objectField.required ?? true;
   }
 
   return res;
