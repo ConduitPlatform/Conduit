@@ -268,7 +268,7 @@ function parseSelect(
   const include: string[] = [];
   const exclude = [...excludedFields];
   const attributes = select.split(' ');
-  let includedRelations = [];
+  const includedRelations = [];
   let returnIncludes = false;
 
   for (const attribute of attributes) {
@@ -306,7 +306,7 @@ function parseSelect(
       }
     } else {
       returnIncludes = true;
-      let tmp = attribute;
+      const tmp = attribute;
       const ind = exclude.indexOf(tmp);
       if (ind > -1) {
         exclude.splice(ind, 1);
