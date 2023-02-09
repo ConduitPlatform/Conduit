@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.14](https://github.com/ConduitPlatform/Conduit/compare/v0.15.13...v0.15.14) (2023-02-09)
+
+
+### Features
+
+* **push-notifications:** add a notifications center ([#506](https://github.com/ConduitPlatform/Conduit/issues/506)) ([38e2f56](https://github.com/ConduitPlatform/Conduit/commit/38e2f566130382719e0b88d8685578834a1ab510))
+
+
+### Bug Fixes
+
+* **push-notifications:** notifications count query being modified ([#507](https://github.com/ConduitPlatform/Conduit/issues/507)) ([31d297e](https://github.com/ConduitPlatform/Conduit/commit/31d297e5fce30ee6304aa87131e630e47d183354))
+
 ### [0.15.13](https://github.com/ConduitPlatform/Conduit/compare/v0.15.12...v0.15.13) (2023-02-02)
 
 
