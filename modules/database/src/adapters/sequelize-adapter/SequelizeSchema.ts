@@ -270,7 +270,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationName = path[0];
         const relationTarget = this.extractedRelations[relationName];
         if (relationTarget) continue;
-        let relationSchema: SequelizeSchema = Array.isArray(relationTarget)
+        const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? (relationTarget as any[])[0]
           : (relationTarget as any);
         const relationObject: {
@@ -294,7 +294,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       } else {
         const relationTarget = this.extractedRelations[population];
         if (!relationTarget) continue;
-        let relationSchema = Array.isArray(relationTarget)
+        const relationSchema = Array.isArray(relationTarget)
           ? (relationTarget as any[])[0]
           : (relationTarget as any);
         const relationObject: {

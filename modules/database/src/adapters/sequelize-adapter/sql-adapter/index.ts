@@ -118,7 +118,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
           } else {
             for (const schema in relatedSchemas) {
               // @ts-ignore
-              let simple = Array.isArray(relatedSchemas[schema])
+              const simple = Array.isArray(relatedSchemas[schema])
                 ? (relatedSchemas[schema] as SequelizeSchema[])[0]
                 : relatedSchemas[schema];
               // @ts-ignore
