@@ -192,7 +192,7 @@ export class RouterAdmin {
     }
     await RouterProxyRoute.getInstance().deleteOne({ _id: id });
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
-    if (proxyRoutes.length === 0) return 'No proxy routes found';
+    if (proxyRoutes.length === 0) return 'Proxy route deleted';
     const proxies: ProxyRouteT[] = [];
     proxyRoutes.forEach(route => {
       proxies.push({

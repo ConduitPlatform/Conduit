@@ -370,7 +370,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     const proxyRoutes: ProxyRouteT[] = [];
     const regularRoutes: RouteT[] = [];
     for (const route of routes) {
-      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy?.target) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
         proxyRoutes.push(route as ProxyRouteT);
       } else {
         regularRoutes.push(route as RouteT);

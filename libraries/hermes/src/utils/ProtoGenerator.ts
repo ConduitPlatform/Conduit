@@ -50,11 +50,6 @@ export class ProtoGenerator {
           r as SocketProtoDescription,
           protoFunctions,
         );
-      } else if (r.hasOwnProperty('proxy')) {
-        protoFunctions += this.createProtoFunctionForProxy(
-          r as ConduitProxyObject,
-          protoFunctions,
-        );
       } else {
         protoFunctions += this.createProtoFunctionForRoute(
           r as ConduitRouteObject,
@@ -92,15 +87,6 @@ export class ProtoGenerator {
       return '';
     }
     return `rpc ${newFunction}(${this.protoTemplate.request}) returns (${this.protoTemplate.response});\n`;
-  }
-
-  private createProtoFunctionForProxy(path: ConduitProxyObject, protoFunctions: string) {
-    const newFunction = this.createGrpcFunctionName(path.options.path);
-
-    if (protoFunctions.indexOf(`rpc ${newFunction}(`) !== -1) {
-      return '';
-    }
-    return `rpc ${newFunction}(ProxyRequest) returns (ProxyResponse);\n`;
   }
 
   private createGrpcFunctionName(grpcFunction: string) {

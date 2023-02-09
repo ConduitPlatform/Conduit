@@ -258,7 +258,11 @@ export function createHandlerForProxy(route: ProxyRouteT, moduleName?: string) {
     route.options.path = `/${route.options.path}`;
   }
   if (moduleName && !route.options.path.startsWith(`/${moduleName}/`)) {
-    route.options.path = `/${moduleName}${route.options.path}`;
+    if (route.options.path.startsWith('/proxy')) {
+      route.options.path = route.options.path.replace('/proxy', `/proxy/${moduleName}`);
+    } else {
+      route.options.path = `/${moduleName}${route.options.path}`;
+    }
   }
   if (!route.options.path.startsWith('/proxy')) {
     route.options.path = `/proxy${route.options.path}`;

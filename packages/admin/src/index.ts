@@ -345,7 +345,7 @@ export default class AdminModule extends IConduitAdmin {
           `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
         );
       });
-      return this.internalRegisterRoute(undefined, proxies, 'admin-package');
+      return this.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
 
@@ -463,7 +463,7 @@ export default class AdminModule extends IConduitAdmin {
     const proxyRoutes: ProxyRouteT[] = [];
     const regularRoutes: RegisterAdminRouteRequest_PathDefinition[] = [];
     for (const route of routes) {
-      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy?.target) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
         proxyRoutes.push(route as ProxyRouteT);
       } else {
         regularRoutes.push(route as RegisterAdminRouteRequest_PathDefinition);

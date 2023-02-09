@@ -76,7 +76,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
           },
         });
       });
-      adminModule.internalRegisterRoute(undefined, proxies, 'admin-package', 'admin');
+      adminModule.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
       return { message: 'Proxy updated.' };
     },
   );
