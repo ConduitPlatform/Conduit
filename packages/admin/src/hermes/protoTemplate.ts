@@ -26,23 +26,6 @@ message AdminResponse {
   repeated Cookie removeCookies = 4;
 }
 
-message ProxyRequest {
-  string params = 1;
-  string path = 2;
-  string headers = 3;
-  string context = 4;
-  string cookies = 5;
-  string bodyParams = 6;
-  string urlParams = 7;
-  string queryParams = 8;
-}
-
-message ProxyResponse {
-  string result = 1;
-  string redirect = 2;
-  repeated Cookie setCookies = 3;
-  repeated Cookie removeCookies = 4;
-}
 
 message SocketRequest {
   string event = 1;
