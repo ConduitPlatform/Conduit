@@ -125,9 +125,9 @@ export class SchemaAdmin {
     }
 
     Object.assign(fields, {
-      _id: TYPE.ObjectId,
-      createdAt: TYPE.Date,
-      updatedAt: TYPE.Date,
+      _id: { type: TYPE.ObjectId, required: true, unique: true, primaryKey: true },
+      createdAt: { type: TYPE.Date, required: true },
+      updatedAt: { type: TYPE.Date, required: true },
     });
 
     await this.schemaController.createSchema(
