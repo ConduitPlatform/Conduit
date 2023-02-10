@@ -25,15 +25,19 @@
     "deepdash-es": "^5.3.9",
     "escape-string-regexp": "^4.0.0",
     "lodash": "^4.17.21",
+    "mariadb": "^3.0.2",
     "mongodb-extended-json": "^1.11.0",
     "mongodb-schema": "^9.0.0",
     "mongoose": "6.4.6",
     "mongoose-deep-populate": "^3.2.0",
+    "mysql2": "^3.0.1",
     "object-hash": "^3.0.0",
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.21.2",
-    "sequelize-auto": "^0.8.8"
+    "sequelize-auto": "^0.8.8",
+    "sqlite3": "^5.1.4",
+    "tedious": "^15.1.2"
   },
   "directories": {
     "lib": "src"

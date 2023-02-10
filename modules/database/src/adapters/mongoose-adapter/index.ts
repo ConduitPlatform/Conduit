@@ -10,7 +10,7 @@ import ConduitGrpcSdk, {
   RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
 import { DatabaseAdapter } from '../DatabaseAdapter';
-import { validateSchema } from '../utils/validateSchema';
+import { validateFieldChanges, validateFieldConstraints } from '../utils';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
@@ -210,10 +210,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     schema: ConduitSchema,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
+    validateFieldConstraints(compiledSchema);
     (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
+        compiledSchema = validateFieldChanges(
           this.registeredSchemas.get(compiledSchema.name)!,
           compiledSchema,
         );
@@ -235,6 +236,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
+    await this.compareAndStoreMigratedSchema(schema);
     await this.saveSchemaToDatabase(schema);
     if (indexes) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
@@ -242,9 +244,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return this.models[schema.name];
   }
 
-  getSchemaModel(schemaName: string): { model: MongooseSchema; relations: null } {
+  getSchemaModel(schemaName: string): { model: MongooseSchema } {
     if (this.models && this.models[schemaName]) {
-      return { model: this.models[schemaName], relations: null };
+      return { model: this.models[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
@@ -380,6 +382,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.INTERNAL, e.message);
     }
     return result;
+  }
+
+  async syncSchema(name: string) {
+    throw new GrpcError(status.UNIMPLEMENTED, 'Cannot sync module schema in Mongoose');
   }
 
   private checkIndexes(

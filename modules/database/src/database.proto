@@ -95,15 +95,14 @@ message UpdateRequest {
     string schemaName = 1;
     string id = 2;
     string query = 3;
-    optional bool updateProvidedOnly = 4;
-    repeated string populate = 5;
+    repeated string populate = 4;
 }
 
 message UpdateManyRequest {
     string schemaName = 1;
     string filterQuery = 2;
     string query = 3;
-    optional bool updateProvidedOnly = 4;
+    repeated string populate = 4;
 }
 
 message DropCollectionRequest {
@@ -111,12 +110,19 @@ message DropCollectionRequest {
     bool deleteData = 2;
 }
 
+message MigrateRequest {
+    string schemaName = 1;
+}
+
+message Empty {}
+
 service DatabaseProvider {
     rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
     rpc GetSchema(GetSchemaRequest) returns (Schema);
     rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
     rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
     rpc SetSchemaExtension(SchemaExtension) returns (Schema);
+    rpc Migrate(MigrateRequest) returns (Empty);
     // Database queries
     rpc findOne(FindOneRequest) returns (QueryResponse);
     rpc findMany(FindRequest) returns (QueryResponse);

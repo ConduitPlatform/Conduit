@@ -1,13 +1,13 @@
 import { ConduitError, ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { Fields } from '../../interfaces';
-import { isArray, isEqual, isString } from 'lodash';
+import { isArray, isEqual, isString, isNil } from 'lodash';
 import { DataTypes } from 'sequelize';
 
 /*
  * Validates base schema fields for type changes.
  * Extension fields are ignored.
  */
-export function validateSchema(oldSchema: ConduitSchema, newSchema: ConduitSchema) {
+export function validateFieldChanges(oldSchema: ConduitSchema, newSchema: ConduitSchema) {
   validateSchemaFields(oldSchema.fields, newSchema.fields);
   return newSchema;
 }
@@ -24,6 +24,7 @@ function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
       tempObj[key] = validateSchemaFields(oldSchemaFields[key], newSchemaFields[key]);
     } else {
       const oldType = oldSchemaFields[key].type ?? oldSchemaFields[key];
+      if (isNil(newSchemaFields)) return;
       const newType = newSchemaFields[key]?.type ?? null;
       if (!newType) return;
       if (oldType === DataTypes.JSONB && newType === 'JSON') return;

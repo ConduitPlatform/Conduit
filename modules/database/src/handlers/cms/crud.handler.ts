@@ -92,21 +92,18 @@ export class CmsHandlers {
     const schemaName = await findSchema(call, this.database).catch((e: Error) => {
       throw e;
     });
-    return getUpdatedDocument(
-      schemaName,
-      call.request.params,
-      this.database,
-      false,
-    ).catch((e: Error) => {
-      throw e;
-    });
+    return getUpdatedDocument(schemaName, call.request.params, this.database).catch(
+      (e: Error) => {
+        throw e;
+      },
+    );
   }
 
   async patchDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const schemaName = await findSchema(call, this.database).catch((e: Error) => {
       throw e;
     });
-    return getUpdatedDocument(schemaName, call.request.params, this.database, true).catch(
+    return getUpdatedDocument(schemaName, call.request.params, this.database).catch(
       (e: Error) => {
         throw e;
       },
@@ -122,7 +119,6 @@ export class CmsHandlers {
       schemaName,
       call.request.params,
       this.database,
-      false,
     ).catch((e: Error) => {
       throw e;
     });
@@ -137,7 +133,6 @@ export class CmsHandlers {
       schemaName,
       call.request.params,
       this.database,
-      true,
     ).catch((e: Error) => {
       throw e;
     });

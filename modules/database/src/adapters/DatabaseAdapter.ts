@@ -5,12 +5,11 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
-  Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { Schema, _ConduitSchema, ConduitDatabaseSchema } from '../interfaces';
+import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
+import { isEqual, isNil } from 'lodash';
 import ObjectHash from 'object-hash';
 
 export abstract class DatabaseAdapter<T extends Schema> {
@@ -35,7 +34,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.grpcSdk = grpcSdk;
     this.connect();
     await this.ensureConnected();
-    this.legacyDeployment = await this.hasLegacyCollections();
+    // this.legacyDeployment = await this.hasLegacyCollections();
   }
 
   async registerSystemSchema(schema: ConduitSchema) {
@@ -126,7 +125,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = this._createSchemaFromAdapter(schema);
+    const createdSchema = await this._createSchemaFromAdapter(schema);
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -171,7 +170,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getSchemaModel(schemaName: string): {
     model: Schema;
-    relations: null | Indexable;
   };
 
   abstract getDatabaseType(): string;
@@ -191,8 +189,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     rawQuery: RawMongoQuery | RawSQLQuery,
   ): Promise<any>;
 
+  abstract syncSchema(name: string): Promise<void>;
+
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints', '_PendingSchemas'];
+    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }
@@ -202,9 +202,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.fixDatabaseSchemaOwnership(schema);
     if (schema.name === '_DeclaredSchema') return true;
 
-    const model = await this.models['_DeclaredSchema'].findOne(
-      JSON.stringify({ name: schema.name }),
-    );
+    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    if (model && model.parentSchema) return false;
     if (model && model.ownerModule === schema.ownerModule) {
       return true;
     } else if (model) {
@@ -213,42 +212,73 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return true;
   }
 
+  async compareAndStoreMigratedSchema(schema: ConduitSchema) {
+    if (['_DeclaredSchema', 'MigratedSchemas'].includes(schema.name)) {
+      return;
+    }
+    const storedSchema = await this.models['_DeclaredSchema'].findOne({
+      name: schema.name,
+    });
+    if (isNil(storedSchema)) {
+      return;
+    }
+    if (isEqual(schema.fields, storedSchema.fields)) {
+      return;
+    }
+    const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
+      { name: storedSchema.name },
+      undefined,
+      1,
+      undefined,
+      { version: -1 },
+    );
+    const lastVersion =
+      lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
+    await this.models['MigratedSchemas'].create({
+      name: storedSchema.name,
+      ownerModule: storedSchema.ownerModule,
+      version: lastVersion + 1,
+      schema: storedSchema,
+    });
+  }
+
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
     if (schema.name === '_DeclaredSchema') return;
-    const model = await this.models['_DeclaredSchema'].findOne(
-      JSON.stringify({ name: schema.name }),
-    );
+    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
     if (model) {
-      await this.models['_DeclaredSchema'].findByIdAndUpdate(
-        model._id,
-        JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-          modelOptions: schema.modelOptions,
-          ownerModule: schema.ownerModule,
-          collectionName: schema.collectionName,
-        }),
-        true,
-      );
+      await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
+        name: schema.name,
+        fields: schema.fields,
+        parentSchema: schema.parentSchema,
+        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        modelOptions: schema.modelOptions,
+        ownerModule: schema.ownerModule,
+        collectionName: schema.collectionName,
+      });
     } else {
-      await this.models['_DeclaredSchema'].create(
-        JSON.stringify({
-          name: schema.name,
-          fields: schema.fields,
-          extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-          compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-          modelOptions: schema.modelOptions,
-          ownerModule: schema.ownerModule,
-          collectionName: schema.collectionName,
-        }),
-      );
+      await this.models['_DeclaredSchema'].create({
+        name: schema.name,
+        fields: schema.fields,
+        parentSchema: schema.parentSchema,
+        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        modelOptions: schema.modelOptions,
+        ownerModule: schema.ownerModule,
+        collectionName: schema.collectionName,
+      });
     }
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models = await this.models!['_DeclaredSchema'].findMany('{}');
+    let models = await this.models!['_DeclaredSchema'].findMany({
+      $or: [
+        {
+          parentSchema: null,
+        },
+        { parentSchema: { $exists: false } },
+      ],
+    });
     models = models
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(

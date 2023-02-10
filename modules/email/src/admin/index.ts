@@ -295,7 +295,7 @@ export class AdminHandlers {
     }
 
     const updatedTemplate = await EmailTemplate.getInstance()
-      .findByIdAndUpdate(call.request.params.id, templateDocument, true)
+      .findByIdAndUpdate(call.request.params.id, templateDocument)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });

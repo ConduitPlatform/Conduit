@@ -1,36 +1,36 @@
 import ConduitGrpcSdk, {
+  ConduitModel,
   ConduitSchema,
   GrpcError,
-  HealthCheckStatus,
-  ManagedModule,
   GrpcRequest,
   GrpcResponse,
-  ConduitModel,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
-  Schema as SchemaDto,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
   FindRequest,
   GetSchemaRequest,
   GetSchemasRequest,
+  MigrateRequest,
   QueryRequest,
   QueryResponse,
+  RawQueryRequest,
+  Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
-  RawQueryRequest,
 } from './protoTypes/database';
 import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
 import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { SequelizeAdapter } from './adapters/sequelize-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { Schema, ConduitDatabaseSchema } from './interfaces';
+import { ConduitDatabaseSchema, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -40,6 +40,8 @@ import { status } from '@grpc/grpc-js';
 import path from 'path';
 import metricsSchema from './metrics';
 import { isNil } from 'lodash';
+import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
+import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -63,6 +65,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
+      migrate: this.migrate.bind(this),
     },
   };
   private adminRouter?: AdminHandlers;
@@ -74,9 +77,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
     if (dbType === 'mongodb') {
       this._activeAdapter = new MongooseAdapter(dbUri);
-    } else if (dbType === 'postgres' || dbType === 'sql') {
-      // Compat (<=0.12.2): sql
-      this._activeAdapter = new SequelizeAdapter(dbUri);
+    } else if (dbType === 'postgres') {
+      this._activeAdapter = new PostgresAdapter(dbUri);
+    } else if (['sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)) {
+      this._activeAdapter = new SQLAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
     }
@@ -89,8 +93,9 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async onServerStart() {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
     const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (model.name === '_DeclaredSchema') return [];
+      if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
@@ -432,7 +437,6 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.updateProvidedOnly,
         call.request.populate,
       );
       const resultString = JSON.stringify(result);
@@ -466,7 +470,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.updateProvidedOnly,
+        call.request.populate,
       );
       const resultString = JSON.stringify(result);
 
@@ -563,7 +567,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     const dbType = this._activeAdapter.getDatabaseType();
     if (
       (dbType === 'MongoDB' && isNil(query?.mongoQuery)) ||
-      (dbType === 'PostgreSQL' && isNil(query?.sqlQuery))
+      (dbType !== 'MongoDB' && isNil(query?.sqlQuery))
     ) {
       callback({
         code: status.INVALID_ARGUMENT,
@@ -596,5 +600,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
+    if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      await this._activeAdapter.syncSchema(call.request.schemaName);
+    }
+    callback(null, null);
   }
 }

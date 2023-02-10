@@ -183,7 +183,7 @@ export class UserAdmin {
     if (users.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
     }
-    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block }, true);
+    await User.getInstance().updateMany({ _id: { $in: ids } }, { active: block });
     if (block) {
       this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(users));
       return 'Users were blocked';

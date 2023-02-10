@@ -46,7 +46,7 @@ export class CustomEndpointsAdmin {
       query: Query = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
-      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      query['name'] = { $ilike: `%${identifier}%` };
     }
     if (!isNil(call.request.params.operation)) {
       query['operation'] = call.request.params.operation;
