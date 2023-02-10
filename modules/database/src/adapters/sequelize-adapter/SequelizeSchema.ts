@@ -444,9 +444,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
       })
       .then(docs => {
-        if (docs) {
-          return Promise.all(docs.map(doc => doc.destroy()));
-        }
+        return Promise.all(docs.map(doc => doc.destroy({ returning: true })));
+      })
+      .then(r => {
+        return { deletedCount: r.length };
       });
   }
 
@@ -477,7 +478,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
       })
       .then(doc => {
-        doc?.destroy();
+        return doc?.destroy({ returning: true });
+      })
+      .then(r => {
+        return { deletedCount: r ? 1 : 0 };
       });
   }
 
