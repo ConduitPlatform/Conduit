@@ -19,13 +19,14 @@ export function fieldsValidator(schemaName: string, schemaFields: ConduitModel) 
       const target: ConduitModelField = schemaFields[f] as ConduitModelField;
       const isUnique = !!target.unique;
       const isRequired = !!target.required;
-      if (isUnique && !isRequired) {
-        throw new ConduitError(
-          'INVALID_ARGUMENTS',
-          400,
-          `Schema '${schemaName}' violates unique field '${f}' constraint (field should be 'required').`,
-        );
-      }
+      // temporary disable
+      // if (isUnique && !isRequired) {
+      //   throw new ConduitError(
+      //     'INVALID_ARGUMENTS',
+      //     400,
+      //     `Schema '${schemaName}' violates unique field '${f}' constraint (field should be 'required').`,
+      //   );
+      // }
 
       if (typeof target.type === 'object') {
         if (Array.isArray(target.type)) {
