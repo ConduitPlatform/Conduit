@@ -57,7 +57,12 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       ...schema.modelOptions,
       freezeTableName: true,
     });
-    extractRelations(this.originalSchema.name, this.model, extractedRelations);
+    extractRelations(
+      this.originalSchema.name,
+      originalSchema,
+      this.model,
+      extractedRelations,
+    );
     if (associations) {
       extractAssociations(this.model, associations);
     }
