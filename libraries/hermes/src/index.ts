@@ -5,8 +5,8 @@ import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, { ConduitError, MiddlewarePatch } from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
-  ConduitRequest,
   ConduitMiddleware,
+  ConduitRequest,
   ConduitSocket,
   SocketPush,
 } from './interfaces';
@@ -165,6 +165,37 @@ export class ConduitRoutingController {
   patchRouteMiddleware(patch: MiddlewarePatch) {
     this._restRouter?.patchRouteMiddleware(patch);
     this._graphQLRouter?.patchRouteMiddleware(patch);
+  }
+
+  processMiddlewarePatch(
+    routeMiddleware: string[],
+    patchMiddleware: string[],
+    moduleName: string,
+  ) {
+    return (
+      this._restRouter?.processMiddlewarePatch(
+        routeMiddleware,
+        patchMiddleware,
+        moduleName,
+      ) ??
+      this._graphQLRouter?.processMiddlewarePatch(
+        routeMiddleware,
+        patchMiddleware,
+        moduleName,
+      )
+    );
+  }
+
+  getConduitMiddleware(middlewareName: string) {
+    return (
+      this._restRouter?.getMiddleware(middlewareName) ??
+      this._graphQLRouter?.getMiddleware(middlewareName)
+    );
+  }
+
+  setMiddlewareOwners(middlewareName: string, moduleName: string) {
+    this._restRouter?.setMiddlewareOwner(middlewareName, moduleName);
+    this._graphQLRouter?.setMiddlewareOwner(middlewareName, moduleName);
   }
 
   cleanupRoutes(routes: any[]) {

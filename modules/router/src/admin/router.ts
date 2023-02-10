@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
 import { status } from '@grpc/grpc-js';
+import { AppMiddleware } from '../models';
 
 export class RouterAdmin {
   constructor(
@@ -34,6 +35,18 @@ export class RouterAdmin {
       else response = response.sort((a, b) => b.localeCompare(a));
     }
     return Array.from(new Set(response));
+  }
+
+  getRouteMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, action } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    const route = this.router.getGrpcRoute(path, action);
+    if (!route) {
+      throw new GrpcError(status.NOT_FOUND, 'Route not found');
+    }
+    return route.options.middlewares;
   }
 
   async patchMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

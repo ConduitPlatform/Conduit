@@ -47,7 +47,7 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
     return this.client!.patchMiddleware({
       path: path,
       action: action,
-      middleware: JSON.stringify(middleware),
+      middleware: middleware,
     });
   }
 

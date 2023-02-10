@@ -37,7 +37,8 @@
     "crypto": "^1.0.1",
     "helmet": "^5.1.0",
     "jsonwebtoken": "^9.0.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "vm2": "^3.9.14"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",

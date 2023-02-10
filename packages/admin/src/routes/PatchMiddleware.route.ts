@@ -12,7 +12,7 @@ export function patchMiddleware(grpcSdk: ConduitGrpcSdk) {
     {
       path: '/patch-middleware',
       action: ConduitRouteActions.PATCH,
-      description: `Patches the middleware of an admin route with a specific order.`,
+      description: `Patches the middleware of an admin route.`,
       queryParams: {
         path: ConduitString.Required,
         action: ConduitString.Required,

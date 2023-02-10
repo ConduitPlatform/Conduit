@@ -49,9 +49,22 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/router/middlewares',
+        action: ConduitRouteActions.GET,
+        description: `Returns the middleware of an app route.`,
+        queryParams: {
+          path: ConduitString.Required,
+          action: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetAppRouteMiddleware', 'String'),
+      this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/router/patch-middleware',
         action: ConduitRouteActions.PATCH,
-        description: `Patches the middleware of an app route with a specific order.`,
+        description: `Patches the middleware of an app route.`,
         queryParams: {
           path: ConduitString.Required,
           action: ConduitString.Required,

@@ -47,7 +47,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     return this.client!.patchMiddleware({
       path: path,
       action: action,
-      middleware: JSON.stringify(middleware),
+      middleware: middleware,
     });
   }
 }

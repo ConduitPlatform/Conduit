@@ -31,7 +31,8 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "rate-limiter-flexible": "^2.3.7",
-    "swagger-ui-express": "4.4.0"
+    "swagger-ui-express": "4.4.0",
+    "vm2": "^3.9.14"
   },
   "directories": {
     "lib": "src"

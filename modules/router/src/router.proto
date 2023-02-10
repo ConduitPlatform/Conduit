@@ -72,5 +72,5 @@ message Empty {
 message PatchMiddlewareRequest {
   string path = 1;
   string action = 2;
-  string middleware = 3;
+  repeated string middleware = 3;
 }
