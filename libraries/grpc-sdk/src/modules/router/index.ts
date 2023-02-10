@@ -9,7 +9,6 @@ import {
 import {
   ConduitRouteActions,
   ConduitRouteObject,
-  MiddlewarePatch,
   SocketProtoDescription,
 } from '../../routing';
 

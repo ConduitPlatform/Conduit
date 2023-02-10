@@ -12,7 +12,6 @@ import ConduitGrpcSdk, {
   GrpcServer,
   Indexable,
   merge,
-  sleep,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -51,7 +50,6 @@ import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
 import { NodeVM, VMScript } from 'vm2';
-import { getAdminMiddleware } from './middleware';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;

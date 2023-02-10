@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   ConduitBoolean,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,

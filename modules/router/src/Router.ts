@@ -11,8 +11,6 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   ConduitRouteActions,
   GrpcError,
-  MiddlewarePatch,
-  sleep,
   ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';

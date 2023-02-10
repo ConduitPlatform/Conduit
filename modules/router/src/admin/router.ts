@@ -7,7 +7,6 @@ import ConduitGrpcSdk, {
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
 import { status } from '@grpc/grpc-js';
-import { AppMiddleware } from '../models';
 
 export class RouterAdmin {
   constructor(
