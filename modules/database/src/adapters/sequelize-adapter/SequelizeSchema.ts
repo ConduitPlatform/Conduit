@@ -344,7 +344,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
-    const relationObjects = [{}];
+    const relationObjects = [];
     for (const queries of parsedQuery) {
       relationObjects.push(this.extractRelationsModification(queries));
     }
