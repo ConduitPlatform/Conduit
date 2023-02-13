@@ -202,23 +202,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      { populate, select, exclude: [...this.excludedFields] },
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.parseQueryFilter(query, populate, select);
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -380,23 +364,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     sort?: { [field: string]: -1 | 1 },
     populate?: string[],
   ): Promise<any> {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      { populate, select, exclude: [...this.excludedFields] },
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.parseQueryFilter(query, populate, select);
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -423,24 +391,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   deleteMany(query: Query) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    incrementDbQueries();
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      {},
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.deleteParseQueryFilter(query);
     return this.model
       .findAll({
         where: filter,
@@ -457,24 +408,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   deleteOne(query: Query) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    incrementDbQueries();
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      {},
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.deleteParseQueryFilter(query);
     return this.model
       .findOne({
         where: filter,
@@ -559,6 +493,50 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       await t.rollback();
       throw e;
     }
+  }
+
+  parseQueryFilter(query: Query, populate?: string[], select?: string) {
+    let parsedQuery: ParsedQuery | ParsedQuery[];
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    const parsingResult = parseQuery(
+      parsedQuery,
+      this.adapter.sequelize.getDialect(),
+      this.extractedRelations,
+      { populate, select, exclude: [...this.excludedFields] },
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+    return { filter, parsingResult };
+  }
+
+  deleteParseQueryFilter(query: Query) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    incrementDbQueries();
+    const parsingResult = parseQuery(
+      parsedQuery,
+      this.adapter.sequelize.getDialect(),
+      this.extractedRelations,
+      {},
+      this.associations,
+    );
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+
+    return { filter, parsingResult };
   }
 
   abstract findByIdAndUpdate(

@@ -15,7 +15,7 @@ import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
 import { checkIfMongoOptions } from './utils';
-import { ConduitDatabaseSchema } from '../../interfaces';
+import { cmsInstance, ConduitDatabaseSchema } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
 let deepPopulate = require('mongoose-deep-populate');
@@ -132,28 +132,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
           canModify: 'Nothing' as 'Everything' | 'Nothing' | 'ExtensionOnly',
           canDelete: false,
         },
-        cms: {
-          authentication: false,
-          crudOperations: {
-            create: {
-              enabled: false,
-              authenticated: false,
-            },
-            read: {
-              enabled: false,
-              authenticated: false,
-            },
-            update: {
-              enabled: false,
-              authenticated: false,
-            },
-            delete: {
-              enabled: false,
-              authenticated: false,
-            },
-          },
-          enabled: true,
-        },
+        cms: cmsInstance,
       },
     };
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
