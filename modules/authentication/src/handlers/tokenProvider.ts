@@ -49,7 +49,7 @@ export class TokenProvider {
         }
         return {
           redirect: redirectUrlWithParams.toString(),
-          setCookies: cookies,
+          setCookies: Object.values(cookies).map(obj => obj),
         };
       } else {
         return {
@@ -57,7 +57,7 @@ export class TokenProvider {
             accessToken: cookies.accessToken ?? undefined,
             refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
           },
-          setCookies: cookies,
+          setCookies: Object.values(cookies).map(obj => obj),
         };
       }
     }
