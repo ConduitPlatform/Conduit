@@ -15,13 +15,12 @@ export abstract class ConduitRouter {
   protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
-  protected _injectedMiddlewareOwners: Map<string, string>;
+  private _middlewareOwners: Map<string, string>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
-  private middlewareOwners = new Map<string, string>();
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
-    this._injectedMiddlewareOwners = new Map();
+    this._middlewareOwners = new Map();
   }
 
   createRouter() {
@@ -67,7 +66,7 @@ export abstract class ConduitRouter {
   processMiddlewarePatch(
     routeMiddleware: string[],
     patchMiddleware: string[],
-    moduleName: string,
+    moduleUrl: string,
   ) {
     const injected = patchMiddleware.filter(m => !routeMiddleware.includes(m));
     const moved = patchMiddleware.filter(
@@ -77,12 +76,12 @@ export abstract class ConduitRouter {
     );
     const removed = routeMiddleware.filter(m => !patchMiddleware.includes(m));
     removed.forEach(m => {
-      if (this.middlewareOwners.get(m) !== moduleName) {
+      if (this._middlewareOwners.get(m) !== moduleUrl) {
         throw new GrpcError(status.PERMISSION_DENIED, `Removal of ${m} not allowed`);
       }
     });
     moved.forEach(m => {
-      if (this.middlewareOwners.get(m) !== moduleName) {
+      if (this._middlewareOwners.get(m) !== moduleUrl) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           `Not allowed to change middleware order`,
@@ -90,17 +89,6 @@ export abstract class ConduitRouter {
       }
     });
     return [injected, removed];
-  }
-
-  getMiddleware(middlewareName: string) {
-    if (!this._middlewares || !this._middlewares[middlewareName]) {
-      throw Error('Middleware not registered');
-    }
-    return this._middlewares[middlewareName];
-  }
-
-  setMiddlewareOwner(middlewareName: string, moduleName: string) {
-    this.middlewareOwners.set(middlewareName, moduleName);
   }
 
   cleanupRoutes(routes: { action: string; path: string }[]) {
@@ -139,11 +127,12 @@ export abstract class ConduitRouter {
     return [key, this._registeredRoutes.get(key)!];
   }
 
-  registerMiddleware(middleware: ConduitMiddleware) {
+  registerMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
     if (!this._middlewares) {
       this._middlewares = {};
     }
     this._middlewares[middleware.name] = middleware;
+    this._middlewareOwners.set(middleware.name, moduleUrl);
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {

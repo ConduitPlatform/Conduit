@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteObject,
-  ConduitRouteParameters,
   ConfigController,
   GrpcCallback,
   GrpcError,
@@ -35,7 +34,6 @@ import { protoTemplate, swaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
-  ConduitMiddlewareOptions,
   ConduitRequest,
   ConduitRoute,
   ConduitRoutingController,
@@ -49,7 +47,6 @@ import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-import { NodeVM, VMScript } from 'vm2';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -61,7 +58,6 @@ export default class AdminModule extends IConduitAdmin {
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
-  private testcounter = 0;
 
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
@@ -289,16 +285,24 @@ export default class AdminModule extends IConduitAdmin {
     callback: GrpcCallback<null>,
   ) {
     const { path, action, middleware } = call.request;
-    const moduleName = call.metadata!.get('module-name')[0] as string;
     let injected: string[] = [];
     let removed: string[] = [];
+    const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
+      call.metadata!.get('module-name')![0] as string,
+    );
+    if (!moduleUrl) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Something went wrong',
+      });
+    }
     // Update grpcRoutes
     try {
       const route = this.getGrpcRoute(path, action)!;
       [injected, removed] = this._router.processMiddlewarePatch(
         route.options!.middlewares,
         middleware,
-        moduleName,
+        moduleUrl.url,
       )!;
       this.setGrpcRouteMiddleware(path, action, middleware);
     } catch (e) {
@@ -319,26 +323,22 @@ export default class AdminModule extends IConduitAdmin {
       action,
     });
     for (const m of storedMiddleware) {
-      if (removed.includes(m.name)) {
+      if (removed.includes(m.middleware)) {
         await AdminMiddleware.getInstance().deleteOne({ _id: m._id });
       } else {
         await AdminMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middleware.indexOf(m.name),
+          position: middleware.indexOf(m.middleware),
         });
       }
     }
     for (const m of injected) {
-      const conduitMiddleware: ConduitMiddleware = this._router.getConduitMiddleware(m)!;
-      const query = {
+      await AdminMiddleware.getInstance().create({
         path: path,
         action: action,
-        name: conduitMiddleware.name,
-        description: conduitMiddleware.input.description,
-        handler: conduitMiddleware.handler.toString(),
+        middleware: m,
         position: middleware.indexOf(m),
-        module: moduleName,
-      };
-      await AdminMiddleware.getInstance().create(query);
+        owner: moduleUrl.url,
+      });
     }
     callback(null, null);
   }
@@ -363,26 +363,8 @@ export default class AdminModule extends IConduitAdmin {
         if (middleware.length === 0) {
           continue;
         }
-        const vm = new NodeVM({
-          console: 'inherit',
-          sandbox: {},
-          require: { external: true },
-        });
         for (const m of middleware) {
-          //todo: a catch is missing somewhere in here
-          const script = new VMScript(`module.exports = ${m.handler}`).compile();
-          const handler = vm.run(script) as (
-            request: ConduitRouteParameters,
-          ) => Promise<any>;
-          const input: ConduitMiddlewareOptions = {
-            action: m.action as ConduitRouteActions,
-            path: m.path,
-            name: m.name,
-            description: m.description,
-          };
-          const newMiddleware = new ConduitMiddleware(input, m.name, handler);
-          this._router.registerRouteMiddleware(newMiddleware);
-          middlewares.splice(m.position, 0, m.name);
+          middlewares.splice(m.position, 0, m.middleware);
         }
         await this.grpcSdk.admin.patchMiddleware(
           r.options!.path,
@@ -540,8 +522,6 @@ export default class AdminModule extends IConduitAdmin {
   private async handleDatabase() {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-    const storedMiddleware = await AdminMiddleware.getInstance().findMany({});
-    storedMiddleware.forEach(m => this._router.setMiddlewareOwners(m.name, m.module));
     await this.applyStoredMiddleware();
     this.databaseHandled = true;
     models.Admin.getInstance()
@@ -593,11 +573,6 @@ export default class AdminModule extends IConduitAdmin {
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._router.registerConduitRoute(r);
-        if (moduleName && r.input.middlewares!.length !== 0) {
-          r.input.middlewares!.forEach(m =>
-            this._router.setMiddlewareOwners(m, moduleName),
-          );
-        }
       }
     });
     this._grpcRoutes[url] = routes;
@@ -654,29 +629,28 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   setGrpcRouteMiddleware(path: string, action: string, middleware: string[]) {
-    const position: { moduleIP: string; routeIndex: number } | null = this.findGrpcRoute(
+    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
       path,
       action,
     );
     if (!position) {
       throw Error('Route not found');
     }
-    this._grpcRoutes[position.moduleIP][position.routeIndex].options!.middlewares =
-      middleware;
+    this._grpcRoutes[position.url][position.routeIndex].options!.middlewares = middleware;
   }
 
   getGrpcRoute(
     path: string,
     action: string,
   ): RegisterAdminRouteRequest_PathDefinition | null {
-    const position: { moduleIP: string; routeIndex: number } | null = this.findGrpcRoute(
+    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
       path,
       action,
     );
     if (!position) {
       return null;
     }
-    return this._grpcRoutes[position.moduleIP][position.routeIndex];
+    return this._grpcRoutes[position.url][position.routeIndex];
   }
 
   findGrpcRoute(path: string, action: string) {
@@ -684,7 +658,7 @@ export default class AdminModule extends IConduitAdmin {
       const routeArray = this._grpcRoutes[key];
       for (const r of routeArray) {
         if (r.options?.path === path && r.options.action === action) {
-          return { moduleIP: key, routeIndex: routeArray.indexOf(r) };
+          return { url: key, routeIndex: routeArray.indexOf(r) };
         }
       }
     }

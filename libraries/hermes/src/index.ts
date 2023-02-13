@@ -137,10 +137,10 @@ export class ConduitRoutingController {
     }
   }
 
-  registerRouteMiddleware(middleware: ConduitMiddleware) {
-    this._restRouter?.registerMiddleware(middleware);
-    this._graphQLRouter?.registerMiddleware(middleware);
-    this._socketRouter?.registerMiddleware(middleware);
+  registerRouteMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
+    this._restRouter?.registerMiddleware(middleware, moduleUrl);
+    this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
+    this._socketRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
   registerRoute(
@@ -186,18 +186,6 @@ export class ConduitRoutingController {
     );
   }
 
-  getConduitMiddleware(middlewareName: string) {
-    return (
-      this._restRouter?.getMiddleware(middlewareName) ??
-      this._graphQLRouter?.getMiddleware(middlewareName)
-    );
-  }
-
-  setMiddlewareOwners(middlewareName: string, moduleName: string) {
-    this._restRouter?.setMiddlewareOwner(middlewareName, moduleName);
-    this._graphQLRouter?.setMiddlewareOwner(middlewareName, moduleName);
-  }
-
   cleanupRoutes(routes: any[]) {
     if (this._cleanupTimeoutMs === 0) {
       this._cleanupRoutes(routes);
@@ -235,7 +223,7 @@ export class ConduitRoutingController {
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
-        this.registerRouteMiddleware(r);
+        this.registerRouteMiddleware(r, url);
       } else if (r instanceof ConduitSocket) {
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,

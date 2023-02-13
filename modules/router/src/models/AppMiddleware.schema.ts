@@ -10,15 +10,7 @@ const schema = {
     type: TYPE.String,
     required: true,
   },
-  name: {
-    type: TYPE.String,
-    required: true,
-  },
-  description: {
-    type: TYPE.String,
-    required: false,
-  },
-  handler: {
+  middleware: {
     type: TYPE.String,
     required: true,
   },
@@ -26,7 +18,7 @@ const schema = {
     type: TYPE.Number,
     required: true,
   },
-  module: {
+  owner: {
     type: TYPE.String,
     required: true,
   },
@@ -51,11 +43,9 @@ export class AppMiddleware extends ConduitActiveSchema<AppMiddleware> {
   _id!: string;
   path!: string;
   action!: string;
-  name!: string;
-  description: string | undefined;
-  handler!: string;
+  middleware!: string;
   position!: number;
-  module!: string;
+  owner!: string;
   createdAt!: Date;
   updatedAt!: Date;
 

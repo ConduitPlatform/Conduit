@@ -11,12 +11,10 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   ConduitRouteActions,
   GrpcError,
-  ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
   ConduitMiddleware,
-  ConduitMiddlewareOptions,
   ConduitRequest,
   ConduitRoute,
   ConduitRoutingController,
@@ -44,7 +42,6 @@ import {
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
 import { AppMiddleware } from './models';
-import { NodeVM, VMScript } from 'vm2';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -212,10 +209,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
-    const storedMiddleware = await AppMiddleware.getInstance().findMany({});
-    storedMiddleware.forEach(m =>
-      this._internalRouter.setMiddlewareOwners(m.name, m.module),
-    );
     await this.applyStoredMiddleware();
   }
 
@@ -401,15 +394,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       );
     this._grpcRoutes[url] = routes;
     this._internalRouter.registerRoutes(processedRoutes, url);
-    if (moduleName) {
-      processedRoutes.forEach(r => {
-        if (r instanceof ConduitRoute && r.input.middlewares!.length !== 0) {
-          r.input.middlewares!.forEach(m =>
-            this._internalRouter.setMiddlewareOwners(m, moduleName),
-          );
-        }
-      });
-    }
     this.cleanupRoutes();
   }
 
@@ -418,16 +402,24 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     callback: GrpcCallback<null>,
   ) {
     const { path, action, middleware } = call.request;
-    const moduleName = call.metadata!.get('module-name')[0] as string;
     let injected: string[] = [];
     let removed: string[] = [];
+    const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
+      call.metadata!.get('module-name')![0] as string,
+    );
+    if (!moduleUrl) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Something went wrong',
+      });
+    }
     // Update grpcRoutes
     try {
       const route = this.getGrpcRoute(path, action)!;
       [injected, removed] = this._internalRouter.processMiddlewarePatch(
         route.options!.middlewares,
         middleware,
-        moduleName,
+        moduleUrl.url,
       )!;
       this.setGrpcRouteMiddleware(path, action, middleware);
     } catch (e) {
@@ -445,27 +437,22 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.updateStateForMiddlewarePatch(middleware, path, action);
     const storedMiddleware = await AppMiddleware.getInstance().findMany({ path, action });
     for (const m of storedMiddleware) {
-      if (removed.includes(m.name)) {
+      if (removed.includes(m.middleware)) {
         await AppMiddleware.getInstance().deleteOne({ _id: m._id });
       } else {
         await AppMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middleware.indexOf(m.name),
+          position: middleware.indexOf(m.middleware),
         });
       }
     }
     for (const m of injected) {
-      const conduitMiddleware: ConduitMiddleware =
-        this._internalRouter.getConduitMiddleware(m)!;
-      const query = {
+      await AppMiddleware.getInstance().create({
         path: path,
         action: action,
-        name: conduitMiddleware.name,
-        description: conduitMiddleware.input.description,
-        handler: conduitMiddleware.executeRequest.toString(),
+        middleware: m,
         position: middleware.indexOf(m),
-        module: moduleName,
-      };
-      await AppMiddleware.getInstance().create(query);
+        owner: moduleUrl.url,
+      });
     }
     callback(null, null);
   }
@@ -481,28 +468,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         if (middleware.length === 0) {
           continue;
         }
-        const vm = new NodeVM({
-          console: 'inherit',
-          sandbox: {},
-          require: { external: true },
-        });
         for (const m of middleware) {
-          //todo: a catch is missing somewhere in here
-          const script = new VMScript(`module.exports = ${m.handler}`).compile();
-          const handler = vm.run(script) as (
-            request: ConduitRouteParameters,
-          ) => Promise<any>;
-          const input: ConduitMiddlewareOptions = {
-            action: m.action as ConduitRouteActions,
-            path: m.path,
-            name: m.name,
-            description: m.description,
-          };
-          const newMiddleware = new ConduitMiddleware(input, m.name, handler);
-          this._internalRouter.registerRouteMiddleware(newMiddleware);
-          middlewares.splice(m.position, 0, m.name);
+          middlewares.splice(m.position, 0, m.middleware);
         }
-        await this.grpcSdk.admin.patchMiddleware(
+        const routerModule = this.grpcSdk.router;
+        if (!routerModule) {
+          this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
+        }
+        await this.grpcSdk.router!.patchMiddleware(
           r.options!.path,
           r.options!.action as ConduitRouteActions,
           middlewares,
