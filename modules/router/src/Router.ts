@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   SocketProtoDescription,
   ConduitRouteActions,
   GrpcError,
-  sleep,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -72,7 +71,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
   private hasAppliedMiddleware: string[] = [];
-  private testcounter = 0;
 
   constructor() {
     super('router');
@@ -468,20 +466,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'Something went wrong',
       });
-    }
-    // stuff for debugging
-    if (this.testcounter === 0) {
-      const test = new ConduitMiddleware(
-        {},
-        'testAppMiddleware',
-        async function testAppMiddleware() {
-          await sleep(500);
-          console.log('Test');
-          return {};
-        },
-      );
-      this._internalRouter.registerRouteMiddleware(test, moduleUrl.url);
-      this.testcounter += 1;
     }
     try {
       const route = this.getGrpcRoute(path, action)!;

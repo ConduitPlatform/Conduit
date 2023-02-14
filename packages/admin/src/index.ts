@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   GrpcServer,
   Indexable,
   merge,
-  sleep,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -51,7 +50,6 @@ import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
-import * as adminProxyRoutes from './routes/proxy';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -63,7 +61,6 @@ export default class AdminModule extends IConduitAdmin {
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
-  private testcounter = 0;
 
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
@@ -307,20 +304,6 @@ export default class AdminModule extends IConduitAdmin {
         code: status.INTERNAL,
         message: 'Something went wrong',
       });
-    }
-    // stuff for debugging
-    if (this.testcounter === 0) {
-      const test = new ConduitMiddleware(
-        {},
-        'testMiddleware',
-        async function testMiddleware() {
-          await sleep(500);
-          console.log('Test');
-          return {};
-        },
-      );
-      this._router.registerRouteMiddleware(test, moduleUrl.url);
-      this.testcounter += 1;
     }
     try {
       const route = this.getGrpcRoute(path, action)!;

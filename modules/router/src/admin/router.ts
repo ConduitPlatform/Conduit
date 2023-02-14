@@ -39,7 +39,7 @@ export class RouterAdmin {
     return Array.from(new Set(response));
   }
 
-  getRouteMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async getRouteMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { path, action } = call.request.params;
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
