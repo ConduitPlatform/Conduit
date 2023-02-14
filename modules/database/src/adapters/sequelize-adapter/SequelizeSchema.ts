@@ -177,7 +177,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (this.associations) {
       assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     }
-    const relationObjects = this.extractManyRelationsModification(parsedQuery);
+    const relationObjectsArray = this.extractManyRelationsModification(parsedQuery);
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
@@ -187,7 +187,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       .then(docs => {
         return Promise.all(
           docs.map((doc, index) =>
-            this.createWithPopulation(doc, relationObjects[index], t),
+            this.createWithPopulation(doc, relationObjectsArray[index], t),
           ),
         );
       })
@@ -233,6 +233,17 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
           promiseChain = promiseChain.then(() => value.sync());
         }
       }
+    }
+    for (const relation in this.extractedRelations) {
+      if (!this.extractedRelations.hasOwnProperty(relation)) continue;
+      const value = this.extractedRelations[relation];
+      // many-to-many relations cannot be null
+      if (!Array.isArray(value)) continue;
+      const item = value[0];
+      let name = this.model.name + '_' + item.originalSchema.name;
+      promiseChain = promiseChain.then(() =>
+        this.sequelize.models[name].sync({ alter: { drop: false } }),
+      );
     }
     promiseChain = promiseChain.then(() => (this.synced = true));
     return promiseChain;
@@ -342,9 +353,14 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     for (const target in parsedQuery) {
       if (!parsedQuery.hasOwnProperty(target)) continue;
       if (this.extractedRelations.hasOwnProperty(target)) {
-        // @ts-ignore
-        relationObjects[target] = parsedQuery[target];
-        delete parsedQuery[target];
+        if (Array.isArray(parsedQuery[target])) {
+          // @ts-ignore
+          relationObjects[target] = parsedQuery[target];
+          delete parsedQuery[target];
+        } else {
+          parsedQuery[target + 'Id'] = parsedQuery[target];
+          delete parsedQuery[target];
+        }
       }
     }
     return relationObjects;

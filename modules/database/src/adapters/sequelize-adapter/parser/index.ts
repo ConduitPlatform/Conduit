@@ -291,6 +291,7 @@ function parseSelect(
         if (!Array.isArray(relations[tmp])) {
           // @ts-ignore
           include.push([tmp + 'Id', tmp]);
+          exclude.push(tmp + 'Id');
         } else {
           include.push(tmp);
         }
@@ -335,19 +336,22 @@ function parseSelect(
 export function renameRelations(
   population: string[],
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-): { include: string[] } {
+): { include: string[]; exclude: string[] } {
   const include: string[] = [];
+  const exclude: string[] = [];
 
   for (const relation in relations) {
     if (population.indexOf(relation) !== -1) continue;
     if (!Array.isArray(relations[relation])) {
       // @ts-ignore
       include.push([relation + 'Id', relation]);
+      exclude.push(relation + 'Id');
     }
   }
 
   return {
     include,
+    exclude,
   };
 }
 
