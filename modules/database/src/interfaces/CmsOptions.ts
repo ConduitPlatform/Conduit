@@ -1,17 +1,23 @@
+const crudOperationDefaults = {
+  enabled: false,
+  authenticated: false,
+};
+
 export interface CmsOptions {
-  enabled: boolean;
-  authentication: boolean;
+  authentication: false;
+  enabled: true;
+
   crudOperations: {
-    [key: string]: {
-      enabled: boolean;
-      authenticated: boolean;
-    };
+    create: typeof crudOperationDefaults;
+    read: typeof crudOperationDefaults;
+    update: typeof crudOperationDefaults;
+    delete: typeof crudOperationDefaults;
   };
 }
 
 export const introspectedSchemaCmsOptionsDefaults: CmsOptions = {
-  enabled: true,
   authentication: false,
+  enabled: true,
   crudOperations: {
     create: {
       enabled: false,
