@@ -54,7 +54,6 @@ export class ServiceAdmin {
     const service: Service | null = await Service.getInstance().findByIdAndUpdate(
       call.request.params.id,
       { hashedToken },
-      true,
     );
     if (isNil(service)) {
       throw new GrpcError(status.NOT_FOUND, 'Service does not exist');

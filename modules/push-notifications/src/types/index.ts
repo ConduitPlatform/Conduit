@@ -25,6 +25,7 @@ export type SendNotificationRequest = GrpcRequest<{
   data?: string;
   type?: string;
   platform?: string;
+  doNotStore?: boolean;
 }>;
 
 export type SendToManyDevicesNotificationRequest = GrpcRequest<{
@@ -34,6 +35,7 @@ export type SendToManyDevicesNotificationRequest = GrpcRequest<{
   data?: string;
   type?: string;
   platform?: string;
+  doNotStore?: boolean;
 }>;
 
 export type SendManyNotificationsRequest = GrpcRequest<{
@@ -45,6 +47,7 @@ export type SendManyNotificationsRequest = GrpcRequest<{
       data?: string;
       type?: string;
       platform?: string;
+      doNotStore?: boolean;
     },
   ];
 }>;

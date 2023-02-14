@@ -16,8 +16,8 @@ export type UnparsedRouterResponse =
   | {
       result?: Indexable;
       redirect?: string;
-      setCookies: Indexable;
-      removeCookies: Indexable;
+      setCookies: Cookies[];
+      removeCookies: Cookies[];
     }
   | Indexable
   | string;

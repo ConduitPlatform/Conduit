@@ -31,5 +31,9 @@ export default {
       type: 'Boolean',
       default: false,
     },
+    proxy: {
+      format: 'Boolean',
+      default: true,
+    },
   },
 };

@@ -51,7 +51,7 @@ export class SchemaAdmin {
     let identifier;
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
-      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      query['name'] = { $ilike: `%${identifier}%` };
     }
     if (!isNil(enabled)) {
       const enabledQuery = {
@@ -125,9 +125,9 @@ export class SchemaAdmin {
     }
 
     Object.assign(fields, {
-      _id: TYPE.ObjectId,
-      createdAt: TYPE.Date,
-      updatedAt: TYPE.Date,
+      _id: { type: TYPE.ObjectId, required: true, unique: true, primaryKey: true },
+      createdAt: { type: TYPE.Date, required: true },
+      updatedAt: { type: TYPE.Date, required: true },
     });
 
     await this.schemaController.createSchema(
@@ -487,7 +487,7 @@ export class SchemaAdmin {
     let query = {};
     if (!isNil(search)) {
       const identifier = escapeStringRegexp(search);
-      query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
+      query = { name: { $ilike: `%${identifier}%` } };
     }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')

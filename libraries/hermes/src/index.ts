@@ -14,13 +14,17 @@ import { SwaggerRouterMetadata } from './types';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { ConduitRoute } from './classes';
+import { ConduitRoute, ProxyRoute } from './classes';
 import { createRouteMiddleware } from './utils/logger';
+import { ProxyRouteController } from './Proxy';
+import { isInstanceOfProxyRoute } from './Proxy/utils';
 
 export class ConduitRoutingController {
   private _restRouter?: RestController;
   private _graphQLRouter?: GraphQLController;
   private _socketRouter?: SocketController;
+
+  private _proxyRouter?: ProxyRouteController;
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
@@ -70,7 +74,9 @@ export class ConduitRoutingController {
             .json({ message: 'GraphQL is not enabled on this server!' });
         }
         this._graphQLRouter?.handleRequest(req, res, next);
-      } else if (!req.url.startsWith('/graphql')) {
+      } else if (req.url.startsWith('/proxy')) {
+        self._proxyRouter?.handleRequest(req, res, next);
+      } else {
         // this needs to be a function to hook on whatever the current router is
         self._restRouter?.handleRequest(req, res, next);
       }
@@ -109,6 +115,11 @@ export class ConduitRoutingController {
     );
   }
 
+  initProxy() {
+    if (this._proxyRouter) return;
+    this._proxyRouter = new ProxyRouteController(this.grpcSdk, this.metrics);
+  }
+
   stopRest() {
     if (!this._restRouter) return;
     this._restRouter.shutDown();
@@ -125,6 +136,12 @@ export class ConduitRoutingController {
     if (!this._socketRouter) return;
     this._socketRouter.shutDown();
     delete this._socketRouter;
+  }
+
+  stopProxy() {
+    if (!this._proxyRouter) return;
+    this._proxyRouter.shutDown();
+    delete this._proxyRouter;
   }
 
   registerMiddleware(
@@ -156,6 +173,10 @@ export class ConduitRoutingController {
   registerConduitRoute(route: ConduitRoute) {
     this._graphQLRouter?.registerConduitRoute(route);
     this._restRouter?.registerConduitRoute(route);
+  }
+
+  registerProxyRoute(route: ProxyRoute) {
+    this._proxyRouter?.registerProxyRoute(route);
   }
 
   registerConduitSocket(socket: ConduitSocket) {
@@ -208,6 +229,7 @@ export class ConduitRoutingController {
   private _cleanupRoutes(routes: any[]) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
+    this._proxyRouter?.cleanupRoutes(routes);
   }
 
   async socketPush(data: SocketPush) {
@@ -215,20 +237,30 @@ export class ConduitRoutingController {
   }
 
   registerRoutes(
-    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[],
-    url: string,
+    processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[],
+    url?: string,
   ) {
     processedRoutes.forEach(r => {
       if (r instanceof ConduitMiddleware) {
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
-        this.registerRouteMiddleware(r, url);
+        this.registerRouteMiddleware(r, url!);
       } else if (r instanceof ConduitSocket) {
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
         );
         this.registerConduitSocket(r);
+      } else if (isInstanceOfProxyRoute(r)) {
+        ConduitGrpcSdk.Logger.log(
+          'New proxy route registered: ' +
+            r.input.options.action +
+            ' ' +
+            r.input.options.path +
+            ' target url: ' +
+            r.input.proxy.target,
+        );
+        this._proxyRouter?.registerProxyRoute(r);
       } else {
         ConduitGrpcSdk.Logger.log(
           'New route registered: ' +
@@ -243,6 +275,7 @@ export class ConduitRoutingController {
     });
     this._restRouter?.scheduleRouterRefresh();
     this._graphQLRouter?.scheduleRouterRefresh();
+    this._proxyRouter?.scheduleRouterRefresh();
   }
 
   onError(error: any) {

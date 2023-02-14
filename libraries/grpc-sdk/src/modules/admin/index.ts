@@ -7,6 +7,7 @@ import {
 } from '../../protoUtils/core';
 import {
   ConduitRouteActions,
+  ConduitProxyObject,
   ConduitRouteObject,
   SocketProtoDescription,
 } from '../../routing';
@@ -19,7 +20,7 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
 
   generateProtoFile(
     moduleName: string,
-    routes: (ConduitRouteObject | SocketProtoDescription)[],
+    routes: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
   ) {
     const request: GenerateProtoRequest = {
       moduleName,

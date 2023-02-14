@@ -1,6 +1,4 @@
 import { Sequelize } from 'sequelize';
-import { SequelizeSchema } from './SequelizeSchema';
-import { schemaConverter } from './SchemaConverter';
 import ConduitGrpcSdk, {
   ConduitModel,
   ConduitSchema,
@@ -12,20 +10,21 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   sleep,
 } from '@conduitplatform/grpc-sdk';
-import { DatabaseAdapter } from '../DatabaseAdapter';
-import { validateSchema } from '../utils/validateSchema';
-import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { isNil } from 'lodash';
-import { checkIfPostgresOptions } from './utils';
-import { ConduitDatabaseSchema } from '../../interfaces';
+import { DatabaseAdapter } from '../DatabaseAdapter';
+import { SequelizeSchema } from './SequelizeSchema';
+import { checkIfPostgresOptions, tableFetch } from './utils';
+import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
-export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
+export abstract class SequelizeAdapter<
+  T extends SequelizeSchema,
+> extends DatabaseAdapter<T> {
   connectionUri: string;
   sequelize!: Sequelize;
+  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb', 'mssql'];
 
   constructor(connectionUri: string) {
     super();
@@ -42,6 +41,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
       try {
         await this.sequelize.authenticate();
+        if (!this.SUPPORTED_DIALECTS.includes(this.sequelize.getDialect())) {
+          console.error(`Unsupported dialect: ${this.sequelize.getDialect()}`);
+          process.exit(1);
+        }
         ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
         return;
       } catch (err: any) {
@@ -56,32 +59,13 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     }
   }
 
-  protected async hasLegacyCollections() {
-    return (
-      (
-        await this.sequelize.query(
-          `SELECT EXISTS (
-    SELECT FROM 
-        information_schema.tables 
-    WHERE 
-        table_schema LIKE '${sqlSchemaName}' AND 
-        table_type LIKE 'BASE TABLE' AND
-        table_name = '_DeclaredSchema'
-    );`,
-        )
-      )[0][0] as { exists: boolean }
-    ).exists;
-  }
+  protected abstract hasLegacyCollections(): Promise<boolean>;
 
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
     );
-    const tableNames: string[] = (
-      await this.sequelize.query(
-        `select * from pg_tables where schemaname='${sqlSchemaName}';`,
-      )
-    )[0].map((t: any) => t.tablename);
+    const tableNames: string[] = await tableFetch(this.sequelize, sqlSchemaName);
     const declaredSchemaTableName =
       this.models['_DeclaredSchema'].originalSchema.collectionName;
     for (const table of tableNames) {
@@ -151,14 +135,6 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
 
   async introspectSchema(table: Indexable, originalName: string): Promise<ConduitSchema> {
     sqlSchemaConverter(table);
-
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()`,
-    );
-    await this.sequelize.query(
-      `ALTER TABLE ${sqlSchemaName}.${originalName} ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()`,
-    );
-
     const schema = new ConduitSchema(originalName, table as ConduitModel, {
       timestamps: true,
       conduit: {
@@ -204,41 +180,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       : schema.name;
   }
 
-  protected async _createSchemaFromAdapter(
+  protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
-  ): Promise<SequelizeSchema> {
-    let compiledSchema = JSON.parse(JSON.stringify(schema));
-    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
-    if (this.registeredSchemas.has(compiledSchema.name)) {
-      if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateSchema(
-          this.registeredSchemas.get(compiledSchema.name)!,
-          compiledSchema,
-        );
-      }
-      delete this.sequelize.models[compiledSchema.collectionName];
-    }
-
-    const newSchema = schemaConverter(compiledSchema);
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
-    this.models[schema.name] = new SequelizeSchema(
-      this.sequelize,
-      newSchema,
-      schema,
-      this,
-    );
-
-    const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
-    if (isNil(noSync) || !noSync) {
-      await this.models[schema.name].sync();
-    }
-    await this.saveSchemaToDatabase(schema);
-
-    return this.models[schema.name];
-  }
+    options?: { parentSchema: string },
+  ): Promise<T>;
 
   async deleteSchema(
     schemaName: string,
@@ -259,22 +204,19 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     if (deleteData) {
       await this.models[schemaName].model.drop();
     }
-    this.models['_DeclaredSchema']
-      .findOne(JSON.stringify({ name: schemaName }))
-      .then(model => {
-        if (model) {
-          this.models['_DeclaredSchema']
-            .deleteOne(JSON.stringify({ name: schemaName }))
-            .catch((e: Error) => {
-              throw new GrpcError(status.INTERNAL, e.message);
-            });
-          if (!instanceSync) {
-            ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
-              imported: String(!!model.modelOptions.conduit?.imported),
-            });
-          }
-        }
+    const model = await this.models['_DeclaredSchema'].findOne(
+      JSON.stringify({ name: schemaName }),
+    );
+    if (model) {
+      await this.models['_DeclaredSchema']
+        .deleteOne(JSON.stringify({ name: schemaName }))
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      ConduitGrpcSdk.Metrics?.decrement('registered_schemas_total', 1, {
+        imported: String(!!model.modelOptions.conduit?.imported),
       });
+    }
     delete this.models[schemaName];
     delete this.sequelize.models[schemaName];
     this.registeredSchemas.delete(schemaName);
@@ -282,19 +224,14 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
     return 'Schema deleted!';
   }
 
-  getSchemaModel(schemaName: string): { model: SequelizeSchema; relations: Indexable } {
+  getSchemaModel(schemaName: string): { model: T } {
     if (this.models && this.models[schemaName]) {
-      const self = this;
-      const relations: Indexable = {};
-      for (const key in this.models[schemaName].relations) {
-        relations[this.models[schemaName].relations[key]] =
-          self.models[this.models[schemaName].relations[key]];
-      }
-      return { model: this.models[schemaName], relations };
+      return { model: this.models[schemaName] };
     }
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
+  // change to dialect
   getDatabaseType(): string {
     return 'PostgreSQL';
   }
@@ -373,6 +310,10 @@ export class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
+  }
+
+  async syncSchema(name: string) {
+    await this.models[name].model.sync({ alter: true });
   }
 
   private checkAndConvertIndexes(

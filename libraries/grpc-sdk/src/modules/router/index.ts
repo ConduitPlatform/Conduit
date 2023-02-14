@@ -8,6 +8,7 @@ import {
 } from '../../protoUtils/router';
 import {
   ConduitRouteActions,
+  ConduitProxyObject,
   ConduitRouteObject,
   SocketProtoDescription,
 } from '../../routing';
@@ -20,7 +21,7 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
 
   generateProtoFile(
     moduleName: string,
-    routes: (ConduitRouteObject | SocketProtoDescription)[],
+    routes: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
   ) {
     const request: GenerateProtoRequest = {
       moduleName,

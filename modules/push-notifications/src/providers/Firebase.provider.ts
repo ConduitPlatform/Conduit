@@ -1,4 +1,4 @@
-import { IPushNotificationsProvider } from '../interfaces/IPushNotificationsProvider';
+import { BaseNotificationProvider } from './base.provider';
 import { IFirebaseSettings } from '../interfaces/IFirebaseSettings';
 import * as firebase from 'firebase-admin';
 import {
@@ -9,11 +9,12 @@ import { isNil, keyBy } from 'lodash';
 import { NotificationToken } from '../models';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
-export class FirebaseProvider implements IPushNotificationsProvider {
+export class FirebaseProvider extends BaseNotificationProvider {
   private fcm?: firebase.messaging.Messaging;
   private _initialized: boolean = false;
 
   constructor(settings: IFirebaseSettings) {
+    super();
     this.updateProvider(settings);
   }
 
@@ -53,13 +54,12 @@ export class FirebaseProvider implements IPushNotificationsProvider {
   // TODO check for disabled notifications for users
   async sendToDevice(params: ISendNotification) {
     if (!this._initialized) throw new Error('Provider not initialized');
+    await super.sendToDevice(params);
     const { sendTo, type } = params;
-    const userId = sendTo;
-    if (isNil(userId)) return;
+    if (isNil(sendTo)) return;
 
-    const notificationToken = await NotificationToken.getInstance().findOne({
-      userId,
-    });
+    const notificationToken = (await super.fetchTokens(sendTo)) as NotificationToken;
+
     if (isNil(notificationToken)) {
       return;
     }
@@ -79,13 +79,15 @@ export class FirebaseProvider implements IPushNotificationsProvider {
   }
 
   async sendMany(params: ISendNotification[]) {
+    if (!this._initialized) throw new Error('Provider not initialized');
+
+    await super.sendMany(params);
     const userIds = params.map(param => param.sendTo);
     const notificationsObj = keyBy(params, param => param.sendTo);
 
-    const notificationTokens = await NotificationToken.getInstance().findMany({
-      userId: { $in: userIds },
-    });
-
+    const notificationTokens = (await super.fetchTokens(userIds)) as NotificationToken[];
+    if (!notificationTokens || notificationTokens.length === 0)
+      throw new Error('Could not find tokens');
     const promises = notificationTokens.map(async token => {
       const id = token.userId.toString();
       const data = notificationsObj[id];
@@ -110,9 +112,13 @@ export class FirebaseProvider implements IPushNotificationsProvider {
   }
 
   async sendToManyDevices(params: ISendNotificationToManyDevices) {
-    const notificationTokens = await NotificationToken.getInstance().findMany({
-      userId: { $in: params.sendTo },
-    });
+    if (!this._initialized) throw new Error('Provider not initialized');
+
+    await super.sendToManyDevices(params);
+    const notificationTokens = (await super.fetchTokens(
+      params.sendTo,
+    )) as NotificationToken[];
+
     if (notificationTokens.length === 0) return;
 
     const promises = notificationTokens.map(async notToken => {

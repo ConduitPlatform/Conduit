@@ -23,7 +23,10 @@ import {
   grpcToConduitRoute,
   ProtoGenerator,
   RouteT,
+  ProxyRouteT,
   SocketPush,
+  ProxyRoute,
+  proxyToConduitRoute,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
@@ -64,7 +67,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private readonly _routes: string[];
   private readonly _globalMiddlewares: string[];
   private _grpcRoutes: {
-    [field: string]: RouteT[];
+    [field: string]: RouteT[] | ProxyRouteT[];
   } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
@@ -140,6 +143,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     } else {
       this._internalRouter.stopRest();
     }
+    if (config.transports.proxy) {
+      this._internalRouter.initProxy();
+      atLeastOne = true;
+    } else {
+      this._internalRouter.stopProxy();
+    }
     if (config.transports.sockets) {
       this._internalRouter.initSockets();
       atLeastOne = true;
@@ -184,18 +193,39 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
   private async recoverFromState() {
     const r = await this.grpcSdk.state!.getKey('router');
-    if (!r || r.length === 0) return;
-    const state = JSON.parse(r);
-    if (state.routes) {
-      state.routes.forEach((r: any) => {
-        try {
-          this.internalRegisterRoute(r.protofile, r.routes, r.url);
-        } catch (err) {
-          ConduitGrpcSdk.Logger.error(err as Error);
-        }
-      });
-      ConduitGrpcSdk.Logger.log('Recovered routes');
+    const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
+    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
+    if (r) {
+      const state = JSON.parse(r);
+      if (state.routes) {
+        state.routes.forEach((r: any) => {
+          try {
+            this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          } catch (err) {
+            ConduitGrpcSdk.Logger.error(err as Error);
+          }
+        });
+      }
     }
+    const proxies: ProxyRouteT[] = [];
+    if (proxyRoutes) {
+      proxyRoutes.forEach(route => {
+        proxies.push({
+          options: {
+            path: route.path,
+            action: route.action,
+            description: route.description,
+            middlewares: route.middlewares,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
+          },
+        });
+      });
+      this.internalRegisterRoute(undefined, proxies, 'router', 'router');
+    }
+    ConduitGrpcSdk.Logger.log('Recovered routes');
   }
 
   async highAvailability() {
@@ -359,10 +389,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
 
       this.internalRegisterRoute(
         call.request.protoFile,
-        call.request.routes as RouteT[],
+        call.request.routes as RouteT[] | ProxyRouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
+
       this.updateState(
         call.request.protoFile,
         call.request.routes,
@@ -379,23 +410,45 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   internalRegisterRoute(
-    protofile: string,
-    routes: RouteT[],
+    protofile: string | undefined,
+    routes: RouteT[] | ProxyRouteT[],
     url: string,
     moduleName?: string,
   ) {
-    const processedRoutes: (ConduitRoute | ConduitMiddleware | ConduitSocket)[] =
-      grpcToConduitRoute(
+    const proxyRoutes: ProxyRouteT[] = [];
+    const regularRoutes: RouteT[] = [];
+    for (const route of routes) {
+      if ((route as ProxyRouteT).options && (route as ProxyRouteT)?.proxy) {
+        proxyRoutes.push(route as ProxyRouteT);
+      } else {
+        regularRoutes.push(route as RouteT);
+      }
+    }
+    let processedRoutes: (
+      | ConduitRoute
+      | ConduitMiddleware
+      | ConduitSocket
+      | ProxyRoute
+    )[] = [];
+    if (proxyRoutes && proxyRoutes.length > 0) {
+      processedRoutes = proxyToConduitRoute(proxyRoutes, 'router');
+    }
+    if (regularRoutes.length > 0) {
+      if (!protofile) {
+        throw new Error('Protofile is required');
+      }
+      processedRoutes = grpcToConduitRoute(
         'Router',
         {
           protoFile: protofile,
-          routes: routes,
+          routes: regularRoutes as RouteT[],
           routerUrl: url,
         },
         moduleName === 'core' ? undefined : moduleName,
         this.grpcSdk.grpcToken,
       );
-    this._grpcRoutes[url] = routes;
+      this._grpcRoutes[url] = routes;
+    }
     this._internalRouter.registerRoutes(processedRoutes, url);
     this.cleanupRoutes();
   }
@@ -554,14 +607,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       const routeArray = this._grpcRoutes[key];
       for (const r of routeArray) {
         if (r.options.path === path && r.options.action === action) {
-          return { url: key, routeIndex: routeArray.indexOf(r) };
+          return { url: key, routeIndex: routeArray.indexOf(r as RouteT & ProxyRouteT) };
         }
       }
     }
     return null;
   }
 
-  getGrpcRoute(path: string, action: string): RouteT | null {
+  getGrpcRoute(path: string, action: string): RouteT | ProxyRouteT | null {
     const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
       path,
       action,

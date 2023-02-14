@@ -62,6 +62,15 @@ export default class Authentication extends ManagedModule<Config> {
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+    for (const model of Object.values(models)) {
+      const modelInstance = model.getInstance();
+      if (
+        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
+          .length === 0
+      )
+        continue;
+      await this.database.migrate(modelInstance.name);
+    }
   }
 
   async preConfig(config: Config) {
@@ -266,13 +275,9 @@ export default class Authentication extends ManagedModule<Config> {
       }
 
       const hashedPassword = await AuthUtils.hashPassword(password);
-      await models.User.getInstance().findByIdAndUpdate(
-        user._id,
-        {
-          hashedPassword,
-        },
-        true,
-      );
+      await models.User.getInstance().findByIdAndUpdate(user._id, {
+        hashedPassword,
+      });
 
       return callback(null, { password });
     } catch (e) {

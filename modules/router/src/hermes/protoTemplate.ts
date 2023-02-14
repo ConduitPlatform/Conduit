@@ -19,6 +19,7 @@ message RouterRequest {
   string queryParams = 8;
 }
 
+
 message RouterResponse {
   string result = 1;
   string redirect = 2;

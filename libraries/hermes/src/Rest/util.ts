@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { ConduitError, TYPE, Indexable, Params } from '@conduitplatform/grpc-sdk';
+import { ConduitError, Indexable, Params, TYPE } from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 type ConduitRequest = Request & { conduit?: Indexable };
@@ -100,7 +100,9 @@ function validateArray(
 function validateObject(fieldName: string, param: Params, routeDefinedObject: Params) {
   if (routeDefinedObject.required && isNil(param)) {
     throw ConduitError.userInput(`${fieldName} is required`);
-  } else if (isNil(param)) {
+  } else if (param === null) {
+    return param;
+  } else if (param === undefined) {
     return;
   }
 
@@ -118,7 +120,9 @@ function validateType(
 ): any {
   if (required && isNil(value)) {
     throw ConduitError.userInput(`${fieldName} is required`);
-  } else if (isNil(value)) {
+  } else if (value === null) {
+    return value;
+  } else if (value === undefined) {
     return;
   }
 

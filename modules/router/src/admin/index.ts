@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitBoolean,
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -11,7 +12,7 @@ import ConduitGrpcSdk, {
 import { RouterAdmin } from './router';
 import { SecurityAdmin } from './security';
 import ConduitDefaultRouter from '../Router';
-import { Client } from '../models';
+import { Client, RouterProxyRoute } from '../models';
 
 export class AdminHandlers {
   private readonly routerAdmin: RouterAdmin;
@@ -93,6 +94,56 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/proxy',
+        action: ConduitRouteActions.GET,
+        description: `Returns proxy routes.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetProxyRoutes', {
+        response: TYPE.JSON,
+      }),
+      this.routerAdmin.getProxyRoutes.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy/:id',
+        action: ConduitRouteActions.GET,
+        description: `Returns proxy route by id.`,
+        urlParams: {
+          id: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetProxyRouteById', RouterProxyRoute.name),
+      this.routerAdmin.getProxyRoute.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new proxy route.`,
+        bodyParams: {
+          path: ConduitString.Required,
+          target: ConduitString.Required,
+          action: ConduitString.Required,
+          description: ConduitString.Optional,
+          middlewares: [ConduitString.Optional],
+          proxyMiddlewareOptions: {
+            type: TYPE.JSON,
+            required: false,
+          },
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateProxyRoute', {
+        message: ConduitString.Required,
+      }),
+      this.routerAdmin.createProxyRoute.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
         path: '/security/client',
         action: ConduitRouteActions.POST,
         description: `Creates a security client.`,
@@ -147,6 +198,43 @@ export class AdminHandlers {
       },
       new ConduitRouteReturnDefinition('UpdateSecurityClient', Client.name),
       this.securityAdmin.updateSecurityClient.bind(this.securityAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy/:id',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        action: ConduitRouteActions.UPDATE,
+        description: `Updates a proxy route.`,
+        bodyParams: {
+          path: ConduitString.Optional,
+          target: ConduitString.Optional,
+          action: ConduitString.Optional,
+          description: ConduitString.Optional,
+          middlewares: [ConduitString.Optional],
+          proxyMiddlewareOptions: {
+            type: TYPE.JSON,
+            required: false,
+          },
+        },
+      },
+      new ConduitRouteReturnDefinition('UpdateProxyRoute', RouterProxyRoute.name),
+      this.routerAdmin.updateProxyRoute.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/proxy/:id',
+        urlParams: {
+          id: ConduitString.Required,
+        },
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes a proxy route.`,
+      },
+      new ConduitRouteReturnDefinition('DeleteProxyRoute', {
+        message: ConduitString.Required,
+      }),
+      this.routerAdmin.deleteProxyRoute.bind(this.routerAdmin),
     );
     this.routingManager.registerRoutes();
   }

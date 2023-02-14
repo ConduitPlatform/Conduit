@@ -166,7 +166,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  createMany<T>(schemaName: string, query: Query<T>): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: Query<T>[]): Promise<T[] | any[]> {
     return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -178,7 +178,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     schemaName: string,
     id: string,
     document: Query<T>,
-    updateProvidedOnly: boolean = false,
     populate?: string | string[],
   ): Promise<T | any> {
     let populateArray = populate;
@@ -189,7 +188,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       schemaName,
       id,
       query: this.processQuery(document),
-      updateProvidedOnly,
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -200,13 +198,17 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     schemaName: string,
     filterQuery: Query<T>,
     query: Query<T>,
-    updateProvidedOnly: boolean = false,
+    populate?: string | string[],
   ) {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
     return this.client!.updateMany({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
-      updateProvidedOnly,
+      populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -250,5 +252,9 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
+  }
+
+  migrate(schemaName: string) {
+    return this.client!.migrate({ schemaName });
   }
 }

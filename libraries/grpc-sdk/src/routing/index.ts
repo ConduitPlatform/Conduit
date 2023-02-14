@@ -5,3 +5,4 @@ export * from './RoutingManager';
 export * from './RoutingUtilities';
 export * from './wrapRouterFunctions';
 export * from './middlewarePatch';
+export * from './ProxyRouteBuilder';
