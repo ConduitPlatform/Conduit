@@ -240,7 +240,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       // many-to-many relations cannot be null
       if (!Array.isArray(value)) continue;
       const item = value[0];
-      let name = this.model.name + '_' + item.originalSchema.name;
+      const name = this.model.name + '_' + item.originalSchema.name;
       promiseChain = promiseChain.then(() =>
         this.sequelize.models[name].sync({ alter: { drop: false } }),
       );
