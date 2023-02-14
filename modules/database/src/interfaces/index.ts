@@ -6,5 +6,5 @@ export * from './DeclaredSchema';
 export * from './DeclaredSchemaExtension';
 export * from './SchemaAdapter';
 export * from './TypeHacks';
-export * from './ICms';
+export * from './CmsOptions';
 export * from './ConduitOptions';

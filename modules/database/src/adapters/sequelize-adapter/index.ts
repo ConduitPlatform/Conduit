@@ -16,7 +16,7 @@ import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import { checkIfPostgresOptions, tableFetch } from './utils';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
-import { cmsInstance } from '../../interfaces';
+import { introspectedSchemaCmsOptionsDefaults } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -146,7 +146,7 @@ export abstract class SequelizeAdapter<
           canModify: 'Nothing',
           canDelete: false,
         },
-        cms: cmsInstance,
+        cms: introspectedSchemaCmsOptionsDefaults,
       },
     });
     schema.ownerModule = 'database';
