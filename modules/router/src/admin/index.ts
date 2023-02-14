@@ -48,7 +48,7 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/router/middlewares',
+        path: '/router/route-middlewares',
         action: ConduitRouteActions.GET,
         description: `Returns the middleware of an app route.`,
         queryParams: {
@@ -56,7 +56,9 @@ export class AdminHandlers {
           action: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('GetAppRouteMiddleware', 'String'),
+      new ConduitRouteReturnDefinition('GetAppRouteMiddleware', {
+        response: [TYPE.String],
+      }),
       this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
     );
     this.routingManager.route(

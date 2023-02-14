@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   Indexable,
   merge,
+  sleep,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -58,6 +59,7 @@ export default class AdminModule extends IConduitAdmin {
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
+  private testcounter = 0;
 
   constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
     super(commons);
@@ -296,7 +298,20 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Something went wrong',
       });
     }
-    // Update grpcRoutes
+    // stuff for debugging
+    if (this.testcounter === 0) {
+      const test = new ConduitMiddleware(
+        {},
+        'testMiddleware',
+        async function testMiddleware() {
+          await sleep(500);
+          console.log('Test');
+          return {};
+        },
+      );
+      this._router.registerRouteMiddleware(test, moduleUrl.url);
+      this.testcounter += 1;
+    }
     try {
       const route = this.getGrpcRoute(path, action)!;
       [injected, removed] = this._router.processMiddlewarePatch(
@@ -305,18 +320,17 @@ export default class AdminModule extends IConduitAdmin {
         moduleUrl.url,
       )!;
       this.setGrpcRouteMiddleware(path, action, middleware);
+      this._router.patchRouteMiddleware({
+        path: path,
+        action: action as ConduitRouteActions,
+        middleware: middleware,
+      });
     } catch (e) {
       return callback({
-        code: status.UNKNOWN,
+        code: status.INTERNAL,
         message: (e as Error).message,
       });
     }
-    // Perform router patch, update state and save changes to db
-    this._router.patchRouteMiddleware({
-      path: path,
-      action: action as ConduitRouteActions,
-      middleware: middleware,
-    });
     await this.updateStateForMiddlewarePatch(middleware, path, action);
     const storedMiddleware = await AdminMiddleware.getInstance().findMany({
       path,
@@ -366,11 +380,13 @@ export default class AdminModule extends IConduitAdmin {
         for (const m of middleware) {
           middlewares.splice(m.position, 0, m.middleware);
         }
-        await this.grpcSdk.admin.patchMiddleware(
-          r.options!.path,
-          r.options!.action as ConduitRouteActions,
-          middlewares,
-        );
+        await this.grpcSdk.admin
+          .patchMiddleware(
+            r.options!.path,
+            r.options!.action as ConduitRouteActions,
+            middlewares,
+          )
+          .catch(() => {});
         this.hasAppliedMiddleware.push(key);
       }
     }

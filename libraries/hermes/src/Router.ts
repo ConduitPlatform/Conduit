@@ -50,7 +50,7 @@ export abstract class ConduitRouter {
     const { path, action, middleware } = patch;
     middleware.forEach(m => {
       if (!this._middlewares || !this._middlewares[m]) {
-        throw new Error('Middleware not registered');
+        throw new GrpcError(status.NOT_FOUND, 'Middleware not registered');
       }
     });
     const [key, route] = this.findRoute(path, action);

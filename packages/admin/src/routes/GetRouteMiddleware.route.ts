@@ -3,6 +3,7 @@ import {
   ConduitRouteParameters,
   ConduitString,
   GrpcError,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
@@ -11,7 +12,7 @@ import AdminModule from '../index';
 export function getRouteMiddleware(admin: AdminModule) {
   return new ConduitRoute(
     {
-      path: '/middlewares',
+      path: '/route-middlewares',
       action: ConduitRouteActions.GET,
       description: `Returns the middleware of an admin route.`,
       queryParams: {
@@ -19,7 +20,9 @@ export function getRouteMiddleware(admin: AdminModule) {
         action: ConduitString.Required,
       },
     },
-    new ConduitRouteReturnDefinition('GetAdminRouteMiddleware', 'String'),
+    new ConduitRouteReturnDefinition('GetAdminRouteMiddleware', {
+      response: [TYPE.String],
+    }),
     async (req: ConduitRouteParameters) => {
       const { path, action } = req.params!;
       if (!(action in ConduitRouteActions)) {

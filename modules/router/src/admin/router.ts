@@ -1,6 +1,7 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -53,7 +54,6 @@ export class RouterAdmin {
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
     }
-    this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
     await this.grpcSdk
       .router!.patchMiddleware(path, action, middleware)
       .catch((e: Error) => {
