@@ -1,5 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
+  BlobClient,
   BlobSASPermissions,
   BlobSASSignatureValues,
   BlobServiceClient,
@@ -128,7 +129,14 @@ export class AzureStorage implements IStorageProvider {
       expiresOn: new Date(new Date().valueOf() + 3600 * 1000),
       permissions: BlobSASPermissions.parse('r'),
     };
-    return containerClient.getBlobClient(fileName).generateSasUrl(sasOptions);
+    return this.blobClient(fileName).generateSasUrl(sasOptions);
+  }
+
+  private blobClient(fileName: string) {
+    return new BlobClient(
+      this._storage.url + this._activeContainer + '/' + fileName,
+      this._storage.credential,
+    );
   }
 
   async getPublicUrl(fileName: string): Promise<any | Error> {
@@ -141,7 +149,7 @@ export class AzureStorage implements IStorageProvider {
       permissions: BlobSASPermissions.parse('r'),
     };
 
-    return containerClient.getBlobClient(fileName).generateSasUrl(sasOptions);
+    return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
   async store(
