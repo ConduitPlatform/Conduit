@@ -33,6 +33,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
+  synced: boolean;
   readonly idField;
 
   protected constructor(
@@ -233,6 +234,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         }
       }
     }
+    promiseChain = promiseChain.then(() => (this.synced = true));
     return promiseChain;
   }
 

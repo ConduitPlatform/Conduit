@@ -199,10 +199,15 @@ function handleRelation(
 ) {
   const relationKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
   if (relations && relations[relationKey]) {
-    if (requiredRelations.indexOf(key) === -1) {
-      requiredRelations.push(key);
+    // many-to-many relations and querying of fields other than id
+    if (Array.isArray(relations[key]) || key.indexOf('.') !== -1) {
+      if (requiredRelations.indexOf(key) === -1) {
+        requiredRelations.push(key);
+      }
+      return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
+    } else {
+      return { [`${key}Id`]: value };
     }
-    return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
   }
 }
 

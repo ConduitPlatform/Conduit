@@ -17,39 +17,43 @@ export const extractRelations = (
       if (Array.isArray(value)) {
         const item = value[0];
         model.belongsToMany(item.model, {
-          foreignKey: item.originalSchema.name,
-          // foreignKey: {
-          //   name: item.originalSchema.name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
+          // foreignKey: item.originalSchema.name,
+          foreignKey: {
+            name: item.originalSchema.name,
+            allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
+            defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
+          },
           as: relation,
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
           through: model.name + '_' + item.originalSchema.name,
         });
         item.model.belongsToMany(model, {
-          foreignKey: name,
-          // foreignKey: {
-          //   name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
+          // foreignKey: name,
+          foreignKey: {
+            name,
+            allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
+            defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
+          },
           as: relation,
           through: model.name + '_' + item.originalSchema.name,
         });
         item.sync();
       } else {
         model.belongsTo(value.model, {
-          foreignKey: relation + 'Id',
-          // foreignKey: {
-          //   name: relation + 'Id',
-          //   allowNull: !(originalSchema.fields[relation] as any).required,
-          //   defaultValue: (originalSchema.fields[relation] as any).default,
-          // },
+          // foreignKey: relation + 'Id',
+          foreignKey: {
+            name: relation + 'Id',
+            allowNull: !(originalSchema.fields[relation] as any).required,
+            defaultValue: (originalSchema.fields[relation] as any).default,
+          },
           as: relation,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
+          onUpdate: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'NO ACTION',
+          onDelete: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'SET NULL',
         });
       }
     }
