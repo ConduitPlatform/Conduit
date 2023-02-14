@@ -316,6 +316,11 @@ export class FileHandlers {
     fileSizeDiff < 0
       ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
       : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
+    if (found.isPublic) {
+      found.url = await this.storageProvider
+        .container(container)
+        .getPublicUrl((folder ?? '') + name);
+    }
     found.name = name;
     found.folder = folder;
     found.container = container;
