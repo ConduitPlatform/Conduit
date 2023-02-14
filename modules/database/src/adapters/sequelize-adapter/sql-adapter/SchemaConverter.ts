@@ -7,7 +7,6 @@ import {
   convertSchemaFieldIndexes,
   extractFieldProperties,
   extractRelations,
-  extractType,
 } from '../../utils';
 
 /**
@@ -63,6 +62,25 @@ function extractEmbedded(ogSchema: any, schema: any) {
   return extracted;
 }
 
+function extractType(type: string) {
+  switch (type) {
+    case 'String':
+      return DataTypes.STRING;
+    case 'Number':
+      return DataTypes.FLOAT;
+    case 'Boolean':
+      return DataTypes.BOOLEAN;
+    case 'Date':
+      return DataTypes.DATE;
+    case 'JSON':
+      return DataTypes.JSON;
+    case 'Relation':
+    case 'ObjectId':
+      return DataTypes.UUID;
+  }
+
+  throw new Error('Failed to extract embedded object type');
+}
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {

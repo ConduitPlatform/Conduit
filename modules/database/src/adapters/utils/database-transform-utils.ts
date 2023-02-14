@@ -6,27 +6,6 @@ import {
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
 import { checkIfPostgresOptions } from '../sequelize-adapter/utils';
-import { DataTypes } from 'sequelize';
-
-export function extractType(type: string) {
-  switch (type) {
-    case 'String':
-      return DataTypes.STRING;
-    case 'Number':
-      return DataTypes.FLOAT;
-    case 'Boolean':
-      return DataTypes.BOOLEAN;
-    case 'Date':
-      return DataTypes.DATE;
-    case 'JSON':
-      return DataTypes.JSONB;
-    case 'Relation':
-    case 'ObjectId':
-      return DataTypes.UUID;
-  }
-
-  throw new Error('Failed to extract embedded object type');
-}
 
 export function checkDefaultValue(type: string, value: string) {
   switch (type) {
