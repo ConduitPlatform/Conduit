@@ -19,6 +19,7 @@ import { SchemaAdmin } from './schema.admin';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models';
+import { ConduitOptions } from '../interfaces';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;
@@ -134,34 +135,7 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           fields: ConduitJson.Required,
-          conduitOptions: {
-            cms: {
-              crudOperations: {
-                create: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                read: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                update: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                delete: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-              },
-            },
-            permissions: {
-              extendable: ConduitBoolean.Optional,
-              canCreate: ConduitBoolean.Optional,
-              canModify: ConduitString.Optional,
-              canDelete: ConduitBoolean.Optional,
-            },
-          },
+          conduitOptions: ConduitOptions,
         },
       },
       new ConduitRouteReturnDefinition('CreateSchema', '_DeclaredSchema'),
@@ -177,34 +151,7 @@ export class AdminHandlers {
         },
         bodyParams: {
           fields: ConduitJson.Optional,
-          conduitOptions: {
-            cms: {
-              crudOperations: {
-                create: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                read: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                update: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-                delete: {
-                  enabled: ConduitBoolean.Optional,
-                  authenticated: ConduitBoolean.Optional,
-                },
-              },
-            },
-            permissions: {
-              extendable: ConduitBoolean.Optional,
-              canCreate: ConduitBoolean.Optional,
-              canModify: ConduitString.Optional,
-              canDelete: ConduitBoolean.Optional,
-            },
-          },
+          conduitOptions: ConduitOptions,
         },
       },
       new ConduitRouteReturnDefinition('PatchSchema', '_DeclaredSchema'),
