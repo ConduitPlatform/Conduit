@@ -8,11 +8,11 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
-  assignmentValidation,
   inputValidation,
   paramValidation,
   operationValidation,
   paginationAndSortingValidation,
+  validateAssignments,
 } from './utils';
 import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
@@ -21,15 +21,7 @@ import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
 import { IDeclaredSchema } from '../../interfaces';
-
-export const OperationsEnum = {
-  // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
-  GET: 0, //'FIND/GET'
-  POST: 1, //'CREATE'
-  PUT: 2, //'UPDATE/EDIT'
-  DELETE: 3, //'DELETE'
-  PATCH: 4, //'PATCH'
-};
+import { OperationsEnum } from '../../enums';
 
 export class CustomEndpointsAdmin {
   constructor(
@@ -125,25 +117,7 @@ export class CustomEndpointsAdmin {
       operation === OperationsEnum.PUT ||
       operation === OperationsEnum.PATCH
     ) {
-      assignments.forEach(
-        (r: {
-          schemaField: string;
-          action: number;
-          assignmentField: { type: string; value: Indexable };
-        }) => {
-          const error = assignmentValidation(
-            fields,
-            inputs,
-            operation,
-            r.schemaField,
-            r.assignmentField,
-            r.action,
-          );
-          if (error !== true) {
-            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-          }
-        },
-      );
+      validateAssignments(assignments, fields, inputs, operation);
       endpoint.assignments = assignments;
     }
 
@@ -198,25 +172,7 @@ export class CustomEndpointsAdmin {
       operation === OperationsEnum.PUT ||
       operation === OperationsEnum.PATCH
     ) {
-      assignments.forEach(
-        (r: {
-          schemaField: string;
-          action: number;
-          assignmentField: { type: string; value: Indexable };
-        }) => {
-          const error = assignmentValidation(
-            fields,
-            inputs,
-            operation,
-            r.schemaField,
-            r.assignmentField,
-            r.action,
-          );
-          if (error !== true) {
-            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-          }
-        },
-      );
+      validateAssignments(assignments, fields, inputs, operation);
     }
 
     delete call.request.params.id;
