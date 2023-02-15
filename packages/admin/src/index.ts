@@ -89,7 +89,7 @@ export default class AdminModule extends IConduitAdmin {
       adminRoutes.verifyQrCodeRoute(),
       adminRoutes.verifyTwoFaRoute(),
       adminRoutes.changeUsersPasswordRoute(),
-      adminRoutes.patchMiddleware(this.grpcSdk),
+      adminRoutes.patchMiddleware(this),
       adminRoutes.getRouteMiddleware(this),
       adminProxyRoutes.createProxyRoute(this),
       adminProxyRoutes.deleteProxyRoute(this),
@@ -300,8 +300,6 @@ export default class AdminModule extends IConduitAdmin {
     callback: GrpcCallback<null>,
   ) {
     const { path, action, middleware } = call.request;
-    let injected: string[] = [];
-    let removed: string[] = [];
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -311,25 +309,46 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Something went wrong',
       });
     }
-    try {
-      const route = this.getGrpcRoute(path, action)!;
-      [injected, removed] = this._router.processMiddlewarePatch(
-        route.options!.middlewares,
-        middleware,
-        moduleUrl.url,
-      )!;
-      this.setGrpcRouteMiddleware(path, action, middleware);
-      this._router.patchRouteMiddleware({
-        path: path,
-        action: action as ConduitRouteActions,
-        middleware: middleware,
-      });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: (e as Error).message,
-      });
+    await this.internalPatchMiddleware(path, action, middleware, moduleUrl.url).catch(
+      e => {
+        return callback({
+          code: status.INTERNAL,
+          message: (e as Error).message,
+        });
+      },
+    );
+    callback(null, null);
+  }
+
+  registerRoute(route: ConduitRoute): void {
+    this._sdkRoutes.push(route);
+    this._router.registerConduitRoute(route);
+    this.cleanupRoutes();
+  }
+
+  async internalPatchMiddleware(
+    path: string,
+    action: string,
+    middleware: string[],
+    moduleUrl?: string,
+  ) {
+    let injected: string[] = [];
+    let removed: string[] = [];
+    if (!moduleUrl) {
+      moduleUrl = await this.grpcSdk.config.getModuleUrlByName('core').then(r => r.url);
     }
+    const route = this.getGrpcRoute(path, action)!;
+    [injected, removed] = this._router.processMiddlewarePatch(
+      route.options!.middlewares,
+      middleware,
+      moduleUrl!,
+    )!;
+    this.setGrpcRouteMiddleware(path, action, middleware);
+    this._router.patchRouteMiddleware({
+      path: path,
+      action: action as ConduitRouteActions,
+      middleware: middleware,
+    });
     await this.updateStateForMiddlewarePatch(middleware, path, action);
     const storedMiddleware = await AdminMiddleware.getInstance().findMany({
       path,
@@ -350,16 +369,9 @@ export default class AdminModule extends IConduitAdmin {
         action: action,
         middleware: m,
         position: middleware.indexOf(m),
-        owner: moduleUrl.url,
+        owner: moduleUrl,
       });
     }
-    callback(null, null);
-  }
-
-  registerRoute(route: ConduitRoute): void {
-    this._sdkRoutes.push(route);
-    this._router.registerConduitRoute(route);
-    this.cleanupRoutes();
   }
 
   private async applyStoredMiddleware() {
@@ -372,20 +384,23 @@ export default class AdminModule extends IConduitAdmin {
         if (r.isMiddleware) {
           continue;
         }
-        const middleware = await AdminMiddleware.getInstance().findMany({ path, action });
-        if (middleware.length === 0) {
+        const storedMiddleware = await AdminMiddleware.getInstance().findMany({
+          path,
+          action,
+        });
+        if (storedMiddleware.length === 0) {
           continue;
         }
-        for (const m of middleware) {
-          middlewares.splice(m.position, 0, m.middleware);
+        for (const m of storedMiddleware) {
+          if (m.position !== middlewares.indexOf(m.middleware)) {
+            middlewares.splice(m.position, 0, m.middleware);
+          }
         }
-        await this.grpcSdk.admin
-          .patchMiddleware(
-            r.options!.path,
-            r.options!.action as ConduitRouteActions,
-            middlewares,
-          )
-          .catch(() => {});
+        await this.internalPatchMiddleware(
+          r.options!.path,
+          r.options!.action as ConduitRouteActions,
+          middlewares,
+        ).catch(() => {});
         this.hasAppliedMiddleware.push(key);
       }
     }

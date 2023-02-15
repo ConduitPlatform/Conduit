@@ -48,11 +48,6 @@ export abstract class ConduitRouter {
 
   patchRouteMiddleware(patch: MiddlewarePatch) {
     const { path, action, middleware } = patch;
-    middleware.forEach(m => {
-      if (!this._middlewares || !this._middlewares[m]) {
-        throw new GrpcError(status.NOT_FOUND, 'Middleware not registered');
-      }
-    });
     const [key, route] = this.findRoute(path, action);
     route.input.middlewares = middleware;
     this._registeredRoutes.set(key, route);
@@ -75,6 +70,11 @@ export abstract class ConduitRouter {
         patchMiddleware.indexOf(m) !== routeMiddleware.indexOf(m),
     );
     const removed = routeMiddleware.filter(m => !patchMiddleware.includes(m));
+    injected.forEach(m => {
+      if (!this._middlewares || !this._middlewares[m]) {
+        throw new GrpcError(status.NOT_FOUND, 'Middleware not registered');
+      }
+    });
     removed.forEach(m => {
       if (this._middlewareOwners.get(m) !== moduleUrl) {
         throw new GrpcError(status.PERMISSION_DENIED, `Removal of ${m} not allowed`);

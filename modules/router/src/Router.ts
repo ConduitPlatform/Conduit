@@ -397,6 +397,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routes,
         call.request.routerUrl,
       );
+      await this.applyStoredMiddleware();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
@@ -456,8 +457,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     callback: GrpcCallback<null>,
   ) {
     const { path, action, middleware } = call.request;
-    let injected: string[] = [];
-    let removed: string[] = [];
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -467,25 +466,39 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         message: 'Something went wrong',
       });
     }
-    try {
-      const route = this.getGrpcRoute(path, action)!;
-      [injected, removed] = this._internalRouter.processMiddlewarePatch(
-        route.options!.middlewares,
-        middleware,
-        moduleUrl.url,
-      )!;
-      this.setGrpcRouteMiddleware(path, action, middleware);
-      this._internalRouter.patchRouteMiddleware({
-        path: path,
-        action: action as ConduitRouteActions,
-        middleware: middleware,
-      });
-    } catch (e) {
-      return callback({
-        code: status.INTERNAL,
-        message: (e as Error).message,
-      });
+    await this.internalPatchMiddleware(path, action, middleware, moduleUrl.url).catch(
+      e => {
+        return callback({
+          code: status.INTERNAL,
+          message: (e as Error).message,
+        });
+      },
+    );
+  }
+
+  async internalPatchMiddleware(
+    path: string,
+    action: string,
+    middleware: string[],
+    moduleUrl?: string,
+  ) {
+    let injected: string[] = [];
+    let removed: string[] = [];
+    if (!moduleUrl) {
+      moduleUrl = await this.grpcSdk.config.getModuleUrlByName('core').then(r => r.url);
     }
+    const route = this.getGrpcRoute(path, action)!;
+    [injected, removed] = this._internalRouter.processMiddlewarePatch(
+      route.options!.middlewares,
+      middleware,
+      moduleUrl!,
+    )!;
+    this.setGrpcRouteMiddleware(path, action, middleware);
+    this._internalRouter.patchRouteMiddleware({
+      path: path,
+      action: action as ConduitRouteActions,
+      middleware: middleware,
+    });
     await this.updateStateForMiddlewarePatch(middleware, path, action);
     const storedMiddleware = await AppMiddleware.getInstance().findMany({ path, action });
     for (const m of storedMiddleware) {
@@ -503,10 +516,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         action: action,
         middleware: m,
         position: middleware.indexOf(m),
-        owner: moduleUrl.url,
+        owner: moduleUrl,
       });
     }
-    callback(null, null);
   }
 
   private async applyStoredMiddleware() {
@@ -516,20 +528,23 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       }
       for (const r of this._grpcRoutes[key]) {
         const { path, action, middlewares } = r.options!;
-        const middleware = await AppMiddleware.getInstance().findMany({ path, action });
-        if (middleware.length === 0) {
+        const storedMiddleware = await AppMiddleware.getInstance().findMany({
+          path,
+          action,
+        });
+        if (storedMiddleware.length === 0) {
           continue;
         }
-        for (const m of middleware) {
-          middlewares.splice(m.position, 0, m.middleware);
+        for (const m of storedMiddleware) {
+          if (m.position !== middlewares.indexOf(m.middleware)) {
+            middlewares.splice(m.position, 0, m.middleware);
+          }
         }
-        await this.grpcSdk
-          .router!.patchMiddleware(
-            r.options!.path,
-            r.options!.action as ConduitRouteActions,
-            middlewares,
-          )
-          .catch(() => {});
+        await this.internalPatchMiddleware(
+          r.options!.path,
+          r.options!.action as ConduitRouteActions,
+          middlewares,
+        ).catch(() => {});
         this.hasAppliedMiddleware.push(key);
       }
     }

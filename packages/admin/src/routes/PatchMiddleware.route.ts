@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, {
+import {
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
@@ -6,8 +6,9 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
+import AdminModule from '../index';
 
-export function patchMiddleware(grpcSdk: ConduitGrpcSdk) {
+export function patchMiddleware(admin: AdminModule) {
   return new ConduitRoute(
     {
       path: '/patch-middleware',
@@ -27,7 +28,7 @@ export function patchMiddleware(grpcSdk: ConduitGrpcSdk) {
       if (!(action in ConduitRouteActions)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
       }
-      await grpcSdk.admin!.patchMiddleware(path, action, middleware).catch((e: Error) => {
+      await admin.internalPatchMiddleware(path, action, middleware).catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
       return 'Middleware patched successfully';

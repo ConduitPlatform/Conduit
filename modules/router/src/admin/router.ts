@@ -56,8 +56,8 @@ export class RouterAdmin {
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
     }
-    await this.grpcSdk
-      .router!.patchMiddleware(path, action, middleware)
+    await this.router
+      .internalPatchMiddleware(path, action, middleware)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
