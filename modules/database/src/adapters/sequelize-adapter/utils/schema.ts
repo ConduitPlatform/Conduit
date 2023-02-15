@@ -190,11 +190,20 @@ export function compileSchema(
   }
   return compiledSchema;
 }
+type Relation = {
+  type: 'Relation';
+  model: string;
+  required?: boolean;
+  select?: boolean;
+};
 
+type ExtractedRelations = {
+  [p: string]: Relation | Relation[];
+};
 export async function registerAndResolveRelatedSchemas(
   schema: ConduitDatabaseSchema,
   registeredSchemas: Map<string, ConduitSchema>,
-  extractedRelations: any,
+  extractedRelations: ExtractedRelations,
   models: { [name: string]: any },
 ) {
   registeredSchemas.set(schema.name, Object.freeze(JSON.parse(JSON.stringify(schema))));

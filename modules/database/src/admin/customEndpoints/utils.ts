@@ -351,8 +351,8 @@ export function validateAssignments(
     action: number;
     assignmentField: { type: string; value: Indexable };
   }[],
-  fields: any,
-  inputs: any,
+  fields: ConduitModel,
+  inputs: Indexable,
   operation: OperationsEnum,
 ): void {
   assignments.forEach(

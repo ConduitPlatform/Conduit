@@ -217,23 +217,10 @@ export class SchemaAdmin {
 
   async deleteSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, deleteData } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument ids is required and must be a non-empty array!',
-      );
-    }
-
-    const requestedSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
-      });
+    const requestedSchemas = await this.retrieveSchemasByIds(ids);
     if (requestedSchemas.length === 0) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
-
     for (const schema of requestedSchemas) {
       const endpoints = await this.database
         .getSchemaModel('CustomEndpoints')
@@ -312,23 +299,10 @@ export class SchemaAdmin {
 
   async toggleSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, enabled } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument ids is required and must be a non-empty array!',
-      );
-    }
-
-    const requestedSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
-      });
+    const requestedSchemas = await this.retrieveSchemasByIds(ids);
     if (isNil(requestedSchemas)) {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
-
     const updatedSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.updateMany(
@@ -587,5 +561,22 @@ export class SchemaAdmin {
       );
     }
     return this.database.deleteIndexes(requestedSchema.name, indexNames);
+  }
+
+  private async retrieveSchemasByIds(ids: string[]) {
+    if (ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Argument ids is required and must be a non-empty array!',
+      );
+    }
+
+    const requestedSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
+      });
+    return requestedSchemas;
   }
 }

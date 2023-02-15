@@ -58,7 +58,7 @@ export class PostgresSchema extends SequelizeSchema {
 
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
-        await processPushOperations(parentDoc, push, this.extractedRelations);
+        processPushOperations(parentDoc, push, this.extractedRelations);
         await parentDoc.save();
         delete parsedQuery['$push'];
       }
