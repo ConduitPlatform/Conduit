@@ -74,7 +74,7 @@ export class RelationHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('DeleteRelation'),
+      new ConduitRouteReturnDefinition('DeleteRelation', 'String'),
       this.deleteRelation.bind(this),
     );
   }
