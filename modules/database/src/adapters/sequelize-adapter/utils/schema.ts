@@ -190,6 +190,7 @@ export function compileSchema(
   }
   return compiledSchema;
 }
+
 type Relation = {
   type: 'Relation';
   model: string;
@@ -200,13 +201,12 @@ type Relation = {
 type ExtractedRelations = {
   [p: string]: Relation | Relation[];
 };
-export async function registerAndResolveRelatedSchemas(
+
+export async function resolveRelatedSchemas(
   schema: ConduitDatabaseSchema,
-  registeredSchemas: Map<string, ConduitSchema>,
   extractedRelations: ExtractedRelations,
   models: { [name: string]: any },
 ) {
-  registeredSchemas.set(schema.name, Object.freeze(JSON.parse(JSON.stringify(schema))));
   const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
 
   if (Object.keys(extractedRelations).length > 0) {

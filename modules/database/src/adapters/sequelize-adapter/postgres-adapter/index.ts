@@ -4,7 +4,7 @@ import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
-import { compileSchema, registerAndResolveRelatedSchemas } from '../utils';
+import { compileSchema, resolveRelatedSchemas } from '../utils';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -45,9 +45,12 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     );
 
     const [newSchema, extractedRelations] = schemaConverter(compiledSchema);
-    const relatedSchemas = await registerAndResolveRelatedSchemas(
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
+    const relatedSchemas = await resolveRelatedSchemas(
       schema as ConduitDatabaseSchema,
-      this.registeredSchemas,
       extractedRelations,
       this.models,
     );

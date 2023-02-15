@@ -4,7 +4,7 @@ import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
-import { compileSchema, registerAndResolveRelatedSchemas } from '../utils';
+import { compileSchema, resolveRelatedSchemas } from '../utils';
 
 export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
   constructor(connectionUri: string) {
@@ -71,9 +71,12 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
     const [newSchema, extractedSchemas, extractedRelations] =
       schemaConverter(compiledSchema);
-    const relatedSchemas = await registerAndResolveRelatedSchemas(
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
+    const relatedSchemas = await resolveRelatedSchemas(
       schema as ConduitDatabaseSchema,
-      this.registeredSchemas,
       extractedRelations,
       this.models,
     );
