@@ -1,10 +1,10 @@
-import { isNil } from 'lodash';
 import { Sequelize, Transaction } from 'sequelize';
-import { ParsedQuery, SingleDocQuery } from '../../../interfaces';
+import { SingleDocQuery } from '../../../interfaces';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { SQLAdapter } from './index';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { extractAssociationsFromObject } from '../parser';
+import { getTransactionAndParsedQuery } from '../utils';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -27,20 +27,11 @@ export class SQLSchema extends SequelizeSchema {
     populate?: string[],
     transaction?: Transaction,
   ): Promise<{ [key: string]: any }> {
-    let t: Transaction | undefined = transaction;
-    const transactionProvided = transaction !== undefined;
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    if (parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = parsedQuery['$set'];
-    }
-    if (isNil(t)) {
-      t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    }
+    const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
+      transaction,
+      query,
+      this.sequelize,
+    );
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -128,6 +119,7 @@ export class SQLSchema extends SequelizeSchema {
             }
             continue;
           }
+
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
               throw new Error(`Cannot push in non-array field: ${key}`);

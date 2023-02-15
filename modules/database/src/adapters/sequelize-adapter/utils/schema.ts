@@ -1,6 +1,9 @@
-import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
+import { ConduitSchema, Indexable, sleep } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
+import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
+import { isNil } from 'lodash';
+import { validateFieldChanges, validateFieldConstraints } from '../../utils';
 
 const deepdash = require('deepdash/standalone');
 
@@ -115,3 +118,132 @@ export const sqlTypesProcess = (
   }
   return idField ?? '_id';
 };
+
+export async function getTransactionAndParsedQuery(
+  transaction: Transaction | undefined,
+  query: string | ParsedQuery,
+  sequelize: Sequelize,
+): Promise<{ t: Transaction; parsedQuery: ParsedQuery; transactionProvided: boolean }> {
+  let t: Transaction | undefined = transaction;
+  const transactionProvided = transaction !== undefined;
+  let parsedQuery: ParsedQuery;
+  if (typeof query === 'string') {
+    parsedQuery = JSON.parse(query);
+  } else {
+    parsedQuery = query;
+  }
+  if (parsedQuery.hasOwnProperty('$set')) {
+    parsedQuery = parsedQuery['$set'];
+  }
+  if (isNil(t)) {
+    t = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+  }
+  return { t, parsedQuery, transactionProvided };
+}
+
+export function processPushOperations(
+  parentDoc: any,
+  push: any,
+  extractedRelations: any,
+) {
+  for (const key in push) {
+    if (extractedRelations[key]) {
+      if (!Array.isArray(extractedRelations[key])) {
+        throw new Error(`Cannot push in non-array field: ${key}`);
+      }
+      let modelName = key.charAt(0).toUpperCase() + key.slice(1);
+      if (push[key]['$each']) {
+        if (!modelName.endsWith('s')) {
+          modelName = modelName + 's';
+        }
+        parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
+      } else {
+        const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+        parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
+      }
+      continue;
+    }
+    if (push[key]['$each']) {
+      parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
+    } else {
+      parentDoc[key] = [...parentDoc[key], push[key]];
+    }
+  }
+}
+
+export function compileSchema(
+  schema: ConduitDatabaseSchema,
+  registeredSchemas: Map<string, ConduitSchema>,
+  sequelizeModels: { [key: string]: any },
+): ConduitDatabaseSchema {
+  let compiledSchema = JSON.parse(JSON.stringify(schema));
+  validateFieldConstraints(compiledSchema);
+  (compiledSchema as any).fields = JSON.parse(JSON.stringify(schema.compiledFields));
+  if (registeredSchemas.has(compiledSchema.name)) {
+    if (compiledSchema.name !== 'Config') {
+      compiledSchema = validateFieldChanges(
+        registeredSchemas.get(compiledSchema.name)!,
+        compiledSchema,
+      );
+    }
+    delete sequelizeModels[compiledSchema.collectionName];
+  }
+  return compiledSchema;
+}
+
+export async function registerAndResolveRelatedSchemas(
+  schema: ConduitDatabaseSchema,
+  registeredSchemas: Map<string, ConduitSchema>,
+  extractedRelations: any,
+  models: { [name: string]: any },
+) {
+  registeredSchemas.set(schema.name, Object.freeze(JSON.parse(JSON.stringify(schema))));
+  const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+
+  if (Object.keys(extractedRelations).length > 0) {
+    let pendingModels: string[] = [];
+    for (const relation in extractedRelations) {
+      const rel = Array.isArray(extractedRelations[relation])
+        ? (extractedRelations[relation] as any[])[0]
+        : extractedRelations[relation];
+      if (!models[rel.model] || !models[rel.model].synced) {
+        if (!pendingModels.includes(rel.model)) {
+          pendingModels.push(rel.model);
+        }
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [rel.model];
+        } else {
+          relatedSchemas[relation] = rel.model;
+        }
+      } else {
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [models[rel.model]];
+        } else {
+          relatedSchemas[relation] = models[rel.model];
+        }
+      }
+    }
+    while (pendingModels.length > 0) {
+      await sleep(500);
+      pendingModels = pendingModels.filter(model => {
+        if (!models[model] || !models[model].synced) {
+          return true;
+        } else {
+          for (const schema in relatedSchemas) {
+            // @ts-ignore
+            const simple = Array.isArray(relatedSchemas[schema])
+              ? (relatedSchemas[schema] as SequelizeSchema[])[0]
+              : relatedSchemas[schema];
+            // @ts-ignore
+            if (simple === model) {
+              relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
+                ? [models[model]]
+                : models[model];
+            }
+          }
+        }
+      });
+    }
+  }
+  return relatedSchemas;
+}
