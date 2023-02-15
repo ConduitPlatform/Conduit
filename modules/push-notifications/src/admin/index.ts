@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitBoolean,
+  ConduitJson,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
@@ -47,7 +48,7 @@ export class AdminHandlers {
           userId: ConduitString.Required,
           title: ConduitString.Required,
           body: ConduitString.Optional,
-          data: ConduitString.Optional,
+          data: ConduitJson.Optional,
           platform: ConduitString.Optional,
           doNotStore: ConduitBoolean.Optional,
         },
@@ -64,7 +65,7 @@ export class AdminHandlers {
           userIds: { type: [TYPE.String], required: true }, // handler array check is still required
           title: ConduitString.Required,
           body: ConduitString.Optional,
-          data: ConduitString.Optional,
+          data: ConduitJson.Optional,
           platform: ConduitString.Optional,
           doNotStore: ConduitBoolean.Optional,
         },
@@ -84,7 +85,7 @@ export class AdminHandlers {
                 sendTo: ConduitString.Required,
                 title: ConduitString.Required,
                 body: ConduitString.Optional,
-                data: ConduitString.Optional,
+                data: ConduitJson.Optional,
                 platform: ConduitString.Optional,
                 doNotStore: ConduitBoolean.Optional,
               },
