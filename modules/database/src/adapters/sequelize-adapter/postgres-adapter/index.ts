@@ -67,7 +67,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
         const rel = Array.isArray(extractedRelations[relation])
           ? (extractedRelations[relation] as any[])[0]
           : extractedRelations[relation];
-        if (!this.models[rel.model]) {
+        if (!this.models[rel.model] || !this.models[rel.model].synced) {
           if (!pendingModels.includes(rel.model)) {
             pendingModels.push(rel.model);
           }
@@ -87,7 +87,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       while (pendingModels.length > 0) {
         await sleep(500);
         pendingModels = pendingModels.filter(model => {
-          if (!this.models[model]) {
+          if (!this.models[model] || !this.models[model].synced) {
             return true;
           } else {
             for (const schema in relatedSchemas) {

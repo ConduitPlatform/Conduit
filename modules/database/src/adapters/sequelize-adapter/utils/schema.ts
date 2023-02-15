@@ -1,7 +1,6 @@
 import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
 import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
-import assert from 'assert';
 
 const deepdash = require('deepdash/standalone');
 
@@ -14,42 +13,57 @@ export const extractRelations = (
   for (const relation in relations) {
     if (relations.hasOwnProperty(relation)) {
       const value = relations[relation];
+      // many-to-many relations cannot be null
       if (Array.isArray(value)) {
         const item = value[0];
-        model.belongsToMany(item.model, {
-          foreignKey: item.originalSchema.name,
-          // foreignKey: {
-          //   name: item.originalSchema.name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
-          as: relation,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-          through: model.name + '_' + item.originalSchema.name,
-        });
-        item.model.belongsToMany(model, {
-          foreignKey: name,
-          // foreignKey: {
-          //   name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
-          as: relation,
-          through: model.name + '_' + item.originalSchema.name,
-        });
-        item.sync();
+        if (
+          item.model.associations[relation] &&
+          item.model.associations[relation].foreignKey === name
+        ) {
+          model.belongsToMany(item.model, {
+            foreignKey: item.originalSchema.name,
+            as: relation,
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          continue;
+        } else if (
+          item.model.associations[relation] &&
+          item.model.associations[relation].foreignKey !== name
+        ) {
+          throw new Error(
+            `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
+          );
+        } else {
+          model.belongsToMany(item.model, {
+            foreignKey: item.originalSchema.name,
+            as: relation,
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          item.model.belongsToMany(model, {
+            foreignKey: name,
+            as: relation,
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          item.sync();
+        }
       } else {
         model.belongsTo(value.model, {
-          foreignKey: relation + 'Id',
-          // foreignKey: {
-          //   name: relation + 'Id',
-          //   allowNull: !(originalSchema.fields[relation] as any).required,
-          //   defaultValue: (originalSchema.fields[relation] as any).default,
-          // },
+          foreignKey: {
+            name: relation + 'Id',
+            allowNull: !(originalSchema.fields[relation] as any).required,
+            defaultValue: (originalSchema.fields[relation] as any).default,
+          },
           as: relation,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
+          onUpdate: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'NO ACTION',
+          onDelete: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'SET NULL',
         });
       }
     }
