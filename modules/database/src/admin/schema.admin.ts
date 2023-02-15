@@ -218,9 +218,6 @@ export class SchemaAdmin {
   async deleteSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, deleteData } = call.request.params;
     const requestedSchemas = await this.retrieveSchemasByIds(ids);
-    if (requestedSchemas.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
     for (const schema of requestedSchemas) {
       const endpoints = await this.database
         .getSchemaModel('CustomEndpoints')
@@ -299,10 +296,7 @@ export class SchemaAdmin {
 
   async toggleSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, enabled } = call.request.params;
-    const requestedSchemas = await this.retrieveSchemasByIds(ids);
-    if (isNil(requestedSchemas)) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
+    await this.retrieveSchemasByIds(ids);
     const updatedSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.updateMany(
@@ -577,6 +571,9 @@ export class SchemaAdmin {
       .model.findMany({
         $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
       });
+    if (!requestedSchemas || requestedSchemas.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
+    }
     return requestedSchemas;
   }
 }

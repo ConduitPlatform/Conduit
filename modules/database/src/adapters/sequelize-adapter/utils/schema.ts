@@ -239,7 +239,6 @@ export async function registerAndResolveRelatedSchemas(
           return true;
         } else {
           for (const schema in relatedSchemas) {
-            // @ts-ignore
             const simple = Array.isArray(relatedSchemas[schema])
               ? (relatedSchemas[schema] as SequelizeSchema[])[0]
               : relatedSchemas[schema];
