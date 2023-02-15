@@ -50,6 +50,7 @@ import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
+import * as adminProxyRoutes from './routes/proxy';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -90,6 +91,11 @@ export default class AdminModule extends IConduitAdmin {
       adminRoutes.changeUsersPasswordRoute(),
       adminRoutes.patchMiddleware(this.grpcSdk),
       adminRoutes.getRouteMiddleware(this),
+      adminProxyRoutes.createProxyRoute(this),
+      adminProxyRoutes.deleteProxyRoute(this),
+      adminProxyRoutes.updateProxyRoute(this),
+      adminProxyRoutes.getProxyRoute(),
+      adminProxyRoutes.getProxyRoutesRoute(),
     ];
     this.registerMetrics();
   }

@@ -158,6 +158,7 @@ export class ConduitRoutingController {
     this._restRouter?.registerMiddleware(middleware, moduleUrl);
     this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
     this._socketRouter?.registerMiddleware(middleware, moduleUrl);
+    this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
   registerRoute(
