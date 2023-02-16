@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.15](https://github.com/ConduitPlatform/Conduit/compare/v0.15.14...v0.15.15) (2023-02-16)
+
+
+### Features
+
+* **router, admin, hermes, grpc-sdk:** proxy routes support ([#488](https://github.com/ConduitPlatform/Conduit/issues/488)) ([9b76974](https://github.com/ConduitPlatform/Conduit/commit/9b769742dbeceb4f19c08e2707a8ee5a5d8d83f2))
+
+
+### Bug Fixes
+
+* **authorization:** missing type for delete resource/relation ([#520](https://github.com/ConduitPlatform/Conduit/issues/520)) ([15f3dc4](https://github.com/ConduitPlatform/Conduit/commit/15f3dc46062d2c3c7becbf0863391c259b3a3ac4))
+* **database:** admin createSchema() invalid id,createdAt,updatedAt field constraints ([#511](https://github.com/ConduitPlatform/Conduit/issues/511)) ([4ddea48](https://github.com/ConduitPlatform/Conduit/commit/4ddea48e0d12dc6fbe6d78d54fa8b643d1dbf564))
+* **database:** admin schema creation adding explicit primaryKey ([691650f](https://github.com/ConduitPlatform/Conduit/commit/691650f3d59ae7da72432db88a3a73a0a97f51d1))
+* **push-notifications:** expecting string instead of JSON in send admin requests ([#521](https://github.com/ConduitPlatform/Conduit/issues/521)) ([15bb9a4](https://github.com/ConduitPlatform/Conduit/commit/15bb9a4415e95de96e375fb5161710c696696486))
+* **storage:** public url not updating & azure Sas urls ([c4f8130](https://github.com/ConduitPlatform/Conduit/commit/c4f813037d8179e832df5c686188d5d71f60f2b7))
+
 ### [0.15.14](https://github.com/ConduitPlatform/Conduit/compare/v0.15.13...v0.15.14) (2023-02-09)
 
 
