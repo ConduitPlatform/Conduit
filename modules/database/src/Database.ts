@@ -103,9 +103,11 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter.recoverSchemasFromDatabase();
     await runMigrations(this._activeAdapter);
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      return this._activeAdapter
-        .registerSystemSchema(model)
-        .then(() => this.database.migrate(modelInstance.name));
+      return this._activeAdapter.registerSystemSchema(model).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+          return this._activeAdapter.syncSchema(model.name);
+        }
+      });
     });
     await Promise.all(modelPromises);
     this.updateHealth(HealthCheckStatus.SERVING);
