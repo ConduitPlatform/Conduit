@@ -84,10 +84,19 @@ export class SchemaController {
         ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
-    this.grpcSdk.bus?.publish(
-      'database:customSchema:create',
-      createdSchema.originalSchema.name,
-    );
+    if (operation === 'create') {
+      this.grpcSdk.bus?.publish(
+        'database:customSchema:create',
+        createdSchema.originalSchema.name,
+      );
+    } else {
+      await this.database.syncSchema(createdSchema.originalSchema.name);
+      this.grpcSdk.bus?.publish(
+        'database:customSchema:update',
+        createdSchema.originalSchema.name,
+      );
+    }
+
     this.refreshRoutes();
     return createdSchema.originalSchema;
   }
