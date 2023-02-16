@@ -1,25 +1,10 @@
 import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { User } from './User.schema';
+import { userTokenSchema } from '../constants';
 
 const schema = {
   _id: TYPE.ObjectId,
-  user: {
-    type: TYPE.Relation,
-    model: 'User',
-    required: true,
-  },
-  clientId: {
-    type: TYPE.String,
-    required: false,
-  },
-  token: {
-    type: TYPE.String,
-    required: true,
-  },
-  expiresOn: {
-    type: TYPE.Date,
-    required: true,
-  },
+  ...userTokenSchema,
   securityDetails: {
     macAddress: TYPE.String,
     userAgent: TYPE.String,
