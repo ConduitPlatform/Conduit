@@ -96,7 +96,7 @@ export class ResourceHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('DeleteResource'),
+      new ConduitRouteReturnDefinition('DeleteResource', 'String'),
       this.deleteResource.bind(this),
     );
   }

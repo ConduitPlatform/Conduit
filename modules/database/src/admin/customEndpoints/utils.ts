@@ -5,10 +5,9 @@ import {
   ParsedRouterRequest,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { OperationsEnum } from './customEndpoints.admin';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { LocationEnum } from '../../controllers/customEndpoints/utils';
+import { LocationEnum, OperationsEnum } from '../../enums';
 
 /**
  * Query schema:
@@ -344,4 +343,35 @@ export function paginationAndSortingValidation(
     }
   }
   return true;
+}
+
+export function validateAssignments(
+  assignments: {
+    schemaField: string;
+    action: number;
+    assignmentField: { type: string; value: Indexable };
+  }[],
+  fields: ConduitModel,
+  inputs: Indexable,
+  operation: OperationsEnum,
+): void {
+  assignments.forEach(
+    (r: {
+      schemaField: string;
+      action: number;
+      assignmentField: { type: string; value: Indexable };
+    }) => {
+      const error = assignmentValidation(
+        fields,
+        inputs,
+        operation,
+        r.schemaField,
+        r.assignmentField,
+        r.action,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+    },
+  );
 }
