@@ -125,7 +125,7 @@ export class SchemaAdmin {
     }
 
     Object.assign(fields, {
-      _id: { type: TYPE.ObjectId, required: true, unique: true, primaryKey: true },
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
       createdAt: { type: TYPE.Date, required: true },
       updatedAt: { type: TYPE.Date, required: true },
     });
