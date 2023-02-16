@@ -79,7 +79,8 @@ function matchOperation(
       if (dialect === 'postgres') {
         return { [Op.iLike]: value };
       } else {
-        return { [Op.like]: value.toLowerCase };
+        // fall back to case-sensitive $like
+        return { [Op.like]: value };
       }
     default:
       return value;
