@@ -1,6 +1,6 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import sequelize, { Op, WhereOptions } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
@@ -73,6 +73,15 @@ function matchOperation(
       return {
         [Op.notIn]: arrayHandler(value, dialect, relations, associations),
       };
+    case '$like':
+      return { [Op.like]: value };
+    case '$ilike':
+      if (dialect === 'postgres') {
+        return { [Op.iLike]: value };
+      } else {
+        // fall back to case-sensitive $like
+        return { [Op.like]: value };
+      }
     default:
       return value;
   }
@@ -110,31 +119,6 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
-      if (!!query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
-        const likeCandidates = Object.keys(query[key]);
-        if (likeCandidates.includes('$like')) {
-          Object.assign(parsed, {
-            [key]: sequelize.where(sequelize.col(key), 'LIKE', query[key].$like),
-          });
-          continue;
-        }
-        if (likeCandidates.includes('$ilike')) {
-          if (dialect === 'postgres') {
-            Object.assign(parsed, {
-              [key]: sequelize.where(sequelize.col(key), 'ILIKE', query[key].$ilike),
-            });
-          } else {
-            Object.assign(parsed, {
-              [key]: sequelize.where(
-                sequelize.fn('lower', sequelize.col(key)),
-                'LIKE',
-                query[key].$ilike.toLowerCase(),
-              ),
-            });
-          }
-          continue;
-        }
-      }
       const subQuery = _parseQuery(query[key], dialect, relations, associations);
       if (subQuery === undefined) continue;
       const matched = matchOperation(key, subQuery, dialect, relations, associations);
