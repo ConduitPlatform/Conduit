@@ -184,7 +184,7 @@ export class RestController extends ConduitRouter {
             return route.executeRequest(context);
           }
         })
-        .then((r: any) => {
+        .then(r => {
           if (r.setCookies && r.setCookies.length) {
             r.setCookies.forEach((cookie: Cookie) => {
               if (cookie.options.path === '') delete cookie.options.path;

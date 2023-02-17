@@ -547,7 +547,7 @@ export default class AdminModule extends IConduitAdmin {
     return Promise.all(promises);
   }
 
-  async setConfig(moduleConfig: any): Promise<any> {
+  async setConfig(moduleConfig: any) {
     const previousConfig = await this.commons.getConfigManager().get('admin');
     const config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);

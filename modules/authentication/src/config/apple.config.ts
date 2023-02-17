@@ -1,21 +1,8 @@
+import { oauth2Schema } from '../constants';
+
 export default {
   apple: {
-    enabled: {
-      format: 'Boolean',
-      default: false,
-    },
-    clientId: {
-      doc: 'The client id that is provided by apple developer console for a specific app',
-      format: 'String',
-      default: '',
-    },
-    redirect_uri: {
-      doc:
-        'Defines the uri that the user will be redirected to, ' +
-        'on successful apple login, when using the redirect method',
-      format: 'String',
-      default: '',
-    },
+    ...oauth2Schema,
     privateKey: {
       doc: 'The private key that is provided by apple developer console for a specific app',
       format: 'String',

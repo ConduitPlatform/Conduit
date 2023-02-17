@@ -18,6 +18,8 @@ import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
+type GetResult = Buffer | Error;
+type StoreResult = boolean | Error;
 
 export class AWSS3Storage implements IStorageProvider {
   private _storage: S3Client;
@@ -49,7 +51,7 @@ export class AWSS3Storage implements IStorageProvider {
     return this;
   }
 
-  async store(fileName: string, data: any, isPublic?: boolean): Promise<boolean | Error> {
+  async store(fileName: string, data: any, isPublic?: boolean): Promise<StoreResult> {
     await this._storage.send(
       new PutObjectCommand({
         Bucket: this._activeContainer,
@@ -63,7 +65,7 @@ export class AWSS3Storage implements IStorageProvider {
     return true;
   }
 
-  async get(fileName: string, downloadPath?: string): Promise<any | Error> {
+  async get(fileName: string, downloadPath?: string): Promise<GetResult> {
     const stream = await this._storage.send(
       new GetObjectCommand({
         Bucket: this._activeContainer,

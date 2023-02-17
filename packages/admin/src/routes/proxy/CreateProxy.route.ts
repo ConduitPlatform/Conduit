@@ -1,8 +1,4 @@
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  ProxyRouteT,
-} from '@conduitplatform/hermes';
+import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import {
   ConduitError,
   ConduitRouteActions,
@@ -11,6 +7,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { AdminProxyRoute } from '../../models';
 import AdminModule from '../../index';
+import { getProxies } from '../../utils';
 
 export function createProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(
@@ -48,22 +45,7 @@ export function createProxyRoute(adminModule: AdminModule) {
         middlewares,
         proxyMiddlewareOptions,
       });
-      const proxyRoutes = await AdminProxyRoute.getInstance().findMany({});
-      const proxies: ProxyRouteT[] = [];
-      proxyRoutes.forEach(route => {
-        proxies.push({
-          options: {
-            path: route.path,
-            action: route.action,
-            description: route.description,
-            middlewares: route.middlewares,
-          },
-          proxy: {
-            target: route.target,
-            ...route.proxyMiddlewareOptions,
-          },
-        });
-      });
+      const proxies = await getProxies();
       adminModule.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
       return { message: 'Proxy created.' };
     },
