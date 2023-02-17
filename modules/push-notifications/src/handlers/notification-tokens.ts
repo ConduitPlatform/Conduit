@@ -5,6 +5,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { Notification, NotificationToken } from '../models';
+import { isNil } from 'lodash';
 
 export class NotificationTokensHandler {
   async setNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -47,7 +48,7 @@ export class NotificationTokensHandler {
     if (platform) {
       query = { ...query, platform };
     }
-    if (read) {
+    if (!isNil(read)) {
       query = { ...query, read };
     }
     const notifications = await Notification.getInstance().findMany(
