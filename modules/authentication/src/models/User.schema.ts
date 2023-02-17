@@ -5,7 +5,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
-interface AuthProvider {
+interface AuthProviderBase {
   id: string;
   token: string;
   tokenExpires?: Date;
@@ -99,15 +99,15 @@ export class User extends ConduitActiveSchema<User> {
   _id: string;
   email: string;
   hashedPassword?: string;
-  google?: AuthProvider;
-  facebook?: AuthProvider;
-  twitch?: AuthProvider & {
+  google?: AuthProviderBase;
+  facebook?: AuthProviderBase;
+  twitch?: AuthProviderBase & {
     profile_image_url?: string;
   };
-  slack?: AuthProvider;
-  figma?: AuthProvider;
-  microsoft?: AuthProvider;
-  github?: AuthProvider;
+  slack?: AuthProviderBase;
+  figma?: AuthProviderBase;
+  microsoft?: AuthProviderBase;
+  github?: AuthProviderBase;
   active: boolean;
   isVerified: boolean;
   hasTwoFA: boolean;

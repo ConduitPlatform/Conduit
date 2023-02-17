@@ -1,6 +1,6 @@
 export interface FetchMembersParams {
   relations: FindRelationResponse;
-  skip?: any;
+  skip?: number;
   limit?: number;
   sort?: string;
   search?: string;
