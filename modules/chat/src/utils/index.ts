@@ -90,9 +90,9 @@ export async function sendInvitations(
   return 'Invitations sent';
 }
 
-export function populateArray(pop: any) {
+export function populateArray(pop: string | string[] | undefined) {
   if (!pop) return pop;
-  if (pop.indexOf(',') !== -1) {
+  if (typeof pop === 'string' && pop.indexOf(',') !== -1) {
     pop = pop.split(',');
   } else if (Array.isArray(pop)) {
     return pop;

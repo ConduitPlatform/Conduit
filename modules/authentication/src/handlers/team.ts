@@ -12,14 +12,13 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { Team, Token, User } from '../models';
-import { TokenType } from '../constants/TokenType';
 import { Config } from '../config';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
 import { TeamInviteTemplate } from '../templates';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import escapeStringRegexp from 'escape-string-regexp';
+import { AuthUtils } from '../utils';
+import { IAuthenticationStrategy } from '../interfaces';
+import { TokenType } from '../constants';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private initialized = false;
@@ -262,26 +261,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       return { members: [], count: 0 };
     }
 
-    let query: any = {
-      _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
-    };
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
-      } else {
-        const searchString = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
-      }
-    }
-
-    const count = relations.relations.length;
-    const members = await User.getInstance().findMany(
-      query,
-      undefined,
+    const { members, count } = await AuthUtils.fetchMembers({
+      relations,
+      search,
       skip,
       limit,
       sort,
-    );
+    });
     return { members: members, count };
   }
 
@@ -350,21 +336,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
-    if (!members || members.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members is required and must be a non-empty array',
-      );
-    }
-    const existingUsers = await User.getInstance().findMany({
-      _id: { $in: members },
-    });
-    if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
-    }
+    await AuthUtils.validateMembers(members);
     if (members.indexOf(user._id) !== -1) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot change self role');
     }

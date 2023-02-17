@@ -121,19 +121,11 @@ export class ChatRoutes {
       );
     }
 
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
+    const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
+      (e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
-      });
-
-    if (isNil(room) || !room.participants.includes(user._id)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
-    }
-
+      },
+    );
     try {
       usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
@@ -179,18 +171,11 @@ export class ChatRoutes {
     const { roomId } = call.request.params;
     const { user } = call.request.context;
 
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
+    const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
+      (e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
-      });
-
-    if (isNil(room) || !room.participants.includes(user._id)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
-    }
+      },
+    );
 
     const index = room.participants.indexOf(user._id);
     if (index > -1) {
@@ -231,17 +216,9 @@ export class ChatRoutes {
       );
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
-      const room = await ChatRoom.getInstance()
-        .findOne({ _id: roomId })
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-      if (isNil(room) || !room.participants.includes(user._id)) {
-        throw new GrpcError(
-          status.NOT_FOUND,
-          "Room does not exist or you don't have access",
-        );
-      }
+      await this.fetchAndValidateRoomById(roomId, user._id).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
       messagesPromise = ChatMessage.getInstance()
         .findMany(
           {
@@ -422,6 +399,24 @@ export class ChatRoutes {
       receivers: [room._id],
       data: { room: room._id, readBy: user._id },
     };
+  }
+
+  private async fetchAndValidateRoomById(
+    roomId: string,
+    userId: string & User,
+  ): Promise<ChatRoom> {
+    const room = await ChatRoom.getInstance()
+      .findOne({ _id: roomId })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (isNil(room) || !room.participants.includes(userId)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Room does not exist or you don't have access",
+      );
+    }
+    return room;
   }
 
   async registerRoutes() {

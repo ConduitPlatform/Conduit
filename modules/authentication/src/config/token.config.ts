@@ -1,3 +1,34 @@
+const cookieOptions = {
+  httpOnly: {
+    format: 'Boolean',
+    default: true,
+  },
+  secure: {
+    format: 'Boolean',
+    default: false,
+  },
+  signed: {
+    format: 'Boolean',
+    default: false,
+  },
+  maxAge: {
+    format: 'Number',
+    default: 900000,
+  },
+  domain: {
+    format: 'String',
+    default: '',
+  },
+  path: {
+    format: 'String',
+    default: '',
+  },
+  sameSite: {
+    format: 'String',
+    default: 'Lax',
+  },
+};
+
 export default {
   clients: {
     multipleUserSessions: {
@@ -28,36 +59,7 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    cookieOptions: {
-      httpOnly: {
-        format: 'Boolean',
-        default: true,
-      },
-      secure: {
-        format: 'Boolean',
-        default: false,
-      },
-      signed: {
-        format: 'Boolean',
-        default: false,
-      },
-      maxAge: {
-        format: 'Number',
-        default: 900000,
-      },
-      domain: {
-        format: 'String',
-        default: '',
-      },
-      path: {
-        format: 'String',
-        default: '',
-      },
-      sameSite: {
-        format: 'String',
-        default: 'Lax',
-      },
-    },
+    cookieOptions,
   },
   refreshTokens: {
     enabled: {
@@ -74,35 +76,6 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    cookieOptions: {
-      httpOnly: {
-        format: 'Boolean',
-        default: true,
-      },
-      secure: {
-        format: 'Boolean',
-        default: false,
-      },
-      signed: {
-        format: 'Boolean',
-        default: false,
-      },
-      maxAge: {
-        format: 'Number',
-        default: 900000,
-      },
-      domain: {
-        format: 'String',
-        default: '',
-      },
-      path: {
-        format: 'String',
-        default: '',
-      },
-      sameSite: {
-        format: 'String',
-        default: 'Lax',
-      },
-    },
+    cookieOptions,
   },
 };

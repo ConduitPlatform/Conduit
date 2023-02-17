@@ -130,9 +130,8 @@ export class AdminHandlers {
     const { sort, search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {},
-      populates;
-    let identifier;
+    const query: Query = {};
+    let identifier, populates;
     if (!isNil(populate)) {
       populates = populateArray(populate);
     }

@@ -7,6 +7,8 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import axios from 'axios';
+import escapeStringRegexp from 'escape-string-regexp';
+import { FetchMembersParams } from '../interfaces';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -139,5 +141,50 @@ export namespace AuthUtils {
       },
     );
     return response.data.success;
+  }
+
+  export async function fetchMembers(params: FetchMembersParams) {
+    const { relations, search, sort } = params;
+    const skip = params.skip ?? 0;
+    const limit = params.limit ?? 25;
+    let query: any = {
+      _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
+    };
+    if (!isNil(search)) {
+      if (search.match(/^[a-fA-F0-9]{24}$/)) {
+        query = { _id: search };
+      } else {
+        const searchString = escapeStringRegexp(search);
+        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
+      }
+    }
+
+    const count = relations.relations.length;
+    const members = await User.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+    );
+    return { members, count };
+  }
+
+  export async function validateMembers(members: string[]): Promise<void> {
+    if (!members || members.length === 0) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members is required and must be a non-empty array',
+      );
+    }
+    const existingUsers = await User.getInstance().findMany({
+      _id: { $in: members },
+    });
+    if (existingUsers.length !== members.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'members array contains invalid user ids',
+      );
+    }
   }
 }
