@@ -106,7 +106,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   protected registerSchemas() {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
-      return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
+      return this.grpcSdk
+        .database!.createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
     });
     return Promise.all(promises);
   }

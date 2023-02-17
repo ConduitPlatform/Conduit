@@ -422,6 +422,7 @@ export default class AdminModule extends IConduitAdmin {
   private async handleDatabase() {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
+    await this.migrateSchemas();
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async existing => {
@@ -534,6 +535,14 @@ export default class AdminModule extends IConduitAdmin {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.grpcSdk.database!);
       return this.grpcSdk.database!.createSchemaFromAdapter(modelInstance);
+    });
+    return Promise.all(promises);
+  }
+
+  private migrateSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.migrate(modelInstance.name);
     });
     return Promise.all(promises);
   }

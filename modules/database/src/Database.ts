@@ -94,7 +94,7 @@ export default class DatabaseModule extends ManagedModule<void> {
   async onServerStart() {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
-    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+    let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
@@ -102,6 +102,14 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await runMigrations(this._activeAdapter);
+    modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+      return this._activeAdapter.registerSystemSchema(model).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+          return this._activeAdapter.syncSchema(model.name);
+        }
+      });
+    });
+    await Promise.all(modelPromises);
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 

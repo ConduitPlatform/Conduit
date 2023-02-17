@@ -1,12 +1,12 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
-  DatabaseProvider,
-  ConfigController,
-  HealthCheckStatus,
-  GrpcRequest,
-  GrpcCallback,
   ConduitActiveSchema,
+  ConfigController,
+  DatabaseProvider,
+  GrpcCallback,
   GrpcError,
+  GrpcRequest,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -137,7 +137,9 @@ export default class Chat extends ManagedModule<Config> {
           .length !== 0
       ) {
         // borrowed foreign model
-        return this.database.createSchemaFromAdapter(modelInstance);
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
       }
     });
     return Promise.all(promises);
