@@ -9,7 +9,6 @@ module.exports = {
 
         setCookie.forEach((cookie: Cookie) => {
           if (cookie.options!.path === '') {
-            // @ts-ignore
             delete cookie.options.path;
           }
           res.cookie(cookie.name, cookie.value, cookie.options);

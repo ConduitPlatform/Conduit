@@ -28,7 +28,7 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
   findMany(
     query: Query<T>,
     select?: string,
-    skip?: -1 | 1,
+    skip?: number,
     limit?: number,
     sort?: { [field: string]: -1 | 1 } | string[] | string,
     populate?: string | string[],

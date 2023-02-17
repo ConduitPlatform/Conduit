@@ -217,25 +217,15 @@ export default class PushNotifications extends ManagedModule<Config> {
     call: SendNotificationRequest,
     callback: SendNotificationResponse,
   ) {
-    const data = call.request.data;
-    let params: ISendNotification;
+    let errorMessage: string | null = null;
     try {
-      params = {
-        sendTo: call.request.sendTo,
-        title: call.request.title,
-        body: call.request.body,
-        data: data ? JSON.parse(data) : {},
-        type: call.request.type,
-        platform: call.request.platform,
-        doNotStore: call.request.doNotStore,
-      };
+      const params: ISendNotification = this.parseParams(call, call.request.data);
+      await this._provider!.sendToDevice(params).catch(e => {
+        errorMessage = e;
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    let errorMessage: string | null = null;
-    await this._provider!.sendToDevice(params).catch(e => {
-      errorMessage = e;
-    });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -246,26 +236,18 @@ export default class PushNotifications extends ManagedModule<Config> {
     call: SendToManyDevicesNotificationRequest,
     callback: SendNotificationResponse,
   ) {
-    const data = call.request.data;
-    let params: ISendNotificationToManyDevices;
-
+    let errorMessage: string | null = null;
     try {
-      params = {
-        sendTo: call.request.sendTo,
-        title: call.request.title,
-        body: call.request.body,
-        data: data ? JSON.parse(data) : {},
-        type: call.request.type,
-        platform: call.request.platform,
-        doNotStore: call.request.doNotStore,
-      };
+      const params: ISendNotificationToManyDevices = this.parseParams(
+        call,
+        call.request.data,
+      );
+      await this._provider!.sendToManyDevices(params).catch(e => {
+        errorMessage = e;
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    let errorMessage: string | null = null;
-    await this._provider!.sendToManyDevices(params).catch(e => {
-      errorMessage = e;
-    });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -295,5 +277,21 @@ export default class PushNotifications extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
     return callback(null, { message: 'Ok' });
+  }
+
+  parseParams(call: any, data?: string) {
+    try {
+      return {
+        sendTo: call.request.sendTo,
+        title: call.request.title,
+        body: call.request.body,
+        data: data ? JSON.parse(data) : {},
+        type: call.request.type,
+        platform: call.request.platform,
+        doNotStore: call.request.doNotStore,
+      };
+    } catch (e) {
+      throw new Error((e as Error).message);
+    }
   }
 }

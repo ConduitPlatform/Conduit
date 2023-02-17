@@ -4,54 +4,24 @@ import {
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 
+interface AuthProvider {
+  id: string;
+  token: string;
+  tokenExpires?: Date;
+  data: Indexable;
+}
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;
   _id!: string;
   email!: string;
   hashedPassword?: string;
-  google?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  facebook?: {
-    id: string;
-    token: string;
-    // tokenExpires: string;
-    data: Indexable;
-  };
-  twitch?: {
-    id: string;
-    token: string;
-    tokenExpires: string;
-    profile_image_url?: string;
-    data: Indexable;
-  };
-  slack?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  figma?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  microsoft?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  github?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
+  google?: AuthProvider;
+  facebook?: AuthProvider;
+  twitch?: AuthProvider & { profile_image_url?: string };
+  slack?: AuthProvider;
+  figma?: AuthProvider;
+  microsoft?: AuthProvider;
+  github?: AuthProvider;
   active!: boolean;
   isVerified!: boolean;
   hasTwoFA!: boolean;
