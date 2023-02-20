@@ -40,7 +40,9 @@ function matchOperation(
     case '$eq':
       return { [Op.eq]: value };
     case '$exists':
-      return value ? { [Op.ne]: null } : { [Op.eq]: null };
+      return value
+        ? { [Op.and]: [{ [Op.not]: null }, { [Op.ne]: '' }] }
+        : { [Op.or]: [{ [Op.is]: null }, { [Op.eq]: '' }] };
     case '$ne':
       // replace the parsed query with the sequelize-native equivalent
       if (value[Op.regexp]) {
