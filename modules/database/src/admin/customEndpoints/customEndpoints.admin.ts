@@ -22,6 +22,7 @@ import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchem
 import escapeStringRegexp from 'escape-string-regexp';
 import { IDeclaredSchema } from '../../interfaces';
 import { OperationsEnum } from '../../enums';
+import { parseSortParam } from '../../handlers/utils';
 
 export class CustomEndpointsAdmin {
   constructor(
@@ -48,9 +49,13 @@ export class CustomEndpointsAdmin {
         $and: [query, { selectedSchemaName: { $in: schemaName } }],
       };
     }
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const count: number = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments(query);
@@ -227,9 +232,13 @@ export class CustomEndpointsAdmin {
     const { limit } = call.request.params ?? 25;
     const schemaIds: string[] = [];
     const schemaNames: string[] = [];
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', sort);
+      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', parsedSort);
     customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());
