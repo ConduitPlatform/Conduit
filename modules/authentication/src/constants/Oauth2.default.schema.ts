@@ -19,7 +19,3 @@ export const oauth2Schema = {
     optional: true,
   },
 };
-
-export default {
-  oauth2default: oauth2Schema,
-};
