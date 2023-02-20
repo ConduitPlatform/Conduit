@@ -51,9 +51,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+    let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     parsedQuery['updatedAt'] = new Date();
     if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
