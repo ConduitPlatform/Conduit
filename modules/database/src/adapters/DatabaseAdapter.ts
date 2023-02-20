@@ -271,14 +271,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async recoverSchemasFromDatabase(): Promise<any> {
-    let models = await this.models!['_DeclaredSchema'].findMany({
-      $or: [
-        {
-          parentSchema: null,
-        },
-        { parentSchema: { $exists: false } },
-      ],
-    });
+    let models = await this.models!['_DeclaredSchema'].findMany({ parentSchema: null });
     models = models
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(
