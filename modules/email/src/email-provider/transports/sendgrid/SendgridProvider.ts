@@ -78,7 +78,7 @@ export class SendgridProvider extends EmailProviderClass {
         id: version.id,
         subject: version.subject,
         updatedAt: version.updated_at,
-        active: Boolean(version.active),
+        active: version.active,
         body: version.html_content,
         variables: Object.keys(getHandleBarsValues(version.html_content)),
       };
