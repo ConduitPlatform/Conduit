@@ -10,6 +10,7 @@ import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { ConduitDatabaseSchema, Doc } from '../interfaces';
+import { parseSortParam } from '../handlers/utils';
 
 export class DocumentsAdmin {
   constructor(
@@ -48,10 +49,13 @@ export class DocumentsAdmin {
     if (!query || query.length === '') {
       query = {};
     }
-
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const documentsPromise = this.database
       .getSchemaModel(schemaName)
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const countPromise = this.database
       .getSchemaModel(schemaName)
       .model.countDocuments(query);

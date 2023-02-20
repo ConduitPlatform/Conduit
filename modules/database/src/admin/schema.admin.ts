@@ -16,6 +16,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import escapeStringRegexp = require('escape-string-regexp');
+import { parseSortParam } from '../handlers/utils';
 
 export class SchemaAdmin {
   constructor(
@@ -66,10 +67,13 @@ export class SchemaAdmin {
         $and: [query, enabled ? enabledQuery : disabledQuery],
       };
     }
-
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemasPromise = this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const documentsCountPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
@@ -84,13 +88,17 @@ export class SchemaAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query = '{}';
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
     const schemasExtensionsPromise = schemaAdapter.model.findMany(
       query,
       skip,
       limit,
       'name extensions',
-      sort,
+      parsedSort,
     );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
@@ -381,9 +389,13 @@ export class SchemaAdmin {
   async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sort } = call.request.params;
     const modules: string[] = [];
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemas = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({}, undefined, undefined, 'ownerModule', sort);
+      .model.findMany({}, undefined, undefined, 'ownerModule', parsedSort);
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
@@ -455,9 +467,13 @@ export class SchemaAdmin {
       const identifier = escapeStringRegexp(search);
       query = { name: { $ilike: `%${identifier}%` } };
     }
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const schemasCountPromise = this.database
       .getSchemaModel('_PendingSchemas')
       .model.countDocuments(query);
