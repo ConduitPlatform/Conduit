@@ -202,7 +202,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   ) {
     const userId = call.request.userId;
     let errorMessage: string | null = null;
-    const tokenDocuments: any = await models.NotificationToken.getInstance()
+    const tokenDocuments = await models.NotificationToken.getInstance()
       .findMany({ userId })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -210,7 +210,12 @@ export default class PushNotifications extends ManagedModule<Config> {
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-    return callback(null, { tokenDocuments });
+    const tokenDocs: string[] = [];
+    for (const tokenDocument of tokenDocuments || []) {
+      const tokenDocumentString = JSON.stringify(tokenDocument);
+      tokenDocs.push(tokenDocumentString);
+    }
+    return callback(null, { tokenDocuments: tokenDocs });
   }
 
   async sendNotification(

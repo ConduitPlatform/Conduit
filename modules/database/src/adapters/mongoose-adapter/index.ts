@@ -193,7 +193,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema);
-    (compiledSchema as any).fields = (schema as ConduitDatabaseSchema).compiledFields;
+    compiledSchema.fields = (schema as ConduitDatabaseSchema).compiledFields;
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {
         compiledSchema = validateFieldChanges(
@@ -348,7 +348,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'Indexes deleted';
   }
 
-  async execRawQuery(schemaName: string, rawQuery: RawMongoQuery): Promise<any> {
+  async execRawQuery(schemaName: string, rawQuery: RawMongoQuery) {
     const collection = this.models[schemaName].model.collection;
     let result;
     try {

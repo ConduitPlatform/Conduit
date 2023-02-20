@@ -26,7 +26,7 @@ export class MandrillProvider extends EmailProviderClass {
       this._mandrillSdk?.templates.list({ key: this.apiKey }, resolve),
     );
     const retList = response.map(
-      async (element: any) => await this.getTemplateInfo(element.slug),
+      async element => await this.getTemplateInfo(element.slug),
     );
     return Promise.all(retList);
   }

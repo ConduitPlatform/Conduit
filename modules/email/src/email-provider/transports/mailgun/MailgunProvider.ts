@@ -69,9 +69,9 @@ export class MailgunProvider extends EmailProviderClass {
       tag: data.versionName,
     };
 
-    const [err, response] = (await to(
+    const [err, response] = await to(
       this._mailgunSdk.post(`/${this.domain}/templates`, mailgun_input),
-    )) as any;
+    );
     if (err) {
       throw new Error(err.message);
     }
@@ -93,7 +93,7 @@ export class MailgunProvider extends EmailProviderClass {
   }
 
   async updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
-    const [err, template]: any = await to(
+    const [err, template] = await to(
       this._mailgunSdk.put(`/${this.domain}/templates/${data.id}/versions/initial`, {
         template: data.body,
         active: data.active,

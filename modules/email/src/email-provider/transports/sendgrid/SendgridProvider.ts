@@ -7,7 +7,10 @@ import { CreateEmailTemplate } from '../../interfaces/CreateEmailTemplate';
 import { SendgridMailBuilder } from './sendgridMailBuilder';
 import { getHandleBarsValues } from '../../utils';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate';
-import { SendgridTemplate } from '../../interfaces/sendgrid/SendgridTemplate';
+import {
+  SendgridTemplate,
+  TemplateVersion,
+} from '../../interfaces/sendgrid/SendgridTemplate';
 
 const sgTransport = require('nodemailer-sendgrid');
 
@@ -67,19 +70,18 @@ export class SendgridProvider extends EmailProviderClass {
       url: '/v3/templates/' + template_id,
     };
 
-    const response = (await this._sgClient.request(request))[0];
+    const response = (await this._sgClient.request(request))[0] as SendgridTemplate;
     const versions = response.body.versions;
-    const retVersions: any = [];
-    versions.forEach((version: any) => {
-      retVersions.push({
+    const retVersions: TemplateVersion[] = versions.map(version => {
+      return {
         name: version.name,
         id: version.id,
         subject: version.subject,
         updatedAt: version.updated_at,
-        active: version.active,
+        active: Boolean(version.active),
         body: version.html_content,
         variables: Object.keys(getHandleBarsValues(version.html_content)),
-      });
+      };
     });
     return {
       name: response.body.name,
@@ -98,7 +100,7 @@ export class SendgridProvider extends EmailProviderClass {
       },
     };
     const resp = (await this._sgClient.request(request))[0];
-    const retList = (resp.body.templates as any[]).map(
+    const retList = resp.body.templates.map(
       async (element: Template) => await this.getTemplateInfo(element.id),
     );
 

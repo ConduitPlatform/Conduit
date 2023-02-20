@@ -21,7 +21,7 @@ export class CustomEndpointController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe('database:customEndpoints:refresh', (message: string) => {
+    this.grpcSdk.bus?.subscribe('database:customEndpoints:refresh', () => {
       this.refreshRoutes();
     });
   }
