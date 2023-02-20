@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.0](https://github.com/ConduitPlatform/Conduit/compare/v0.15.14...v0.16.0-alpha.0) (2023-02-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **database:** re-work SQL support (#492)
+
+### Features
+
+* **database:** duplication and code refactoring ([#519](https://github.com/ConduitPlatform/Conduit/issues/519)) ([6856ede](https://github.com/ConduitPlatform/Conduit/commit/6856ede55ee27f94fbaf2c8da52c6d7187f82ff9))
+* **router, admin, hermes, grpc-sdk:** proxy routes support ([#488](https://github.com/ConduitPlatform/Conduit/issues/488)) ([9b76974](https://github.com/ConduitPlatform/Conduit/commit/9b769742dbeceb4f19c08e2707a8ee5a5d8d83f2))
+
+
+### Bug Fixes
+
+* **authorization:** missing type for delete resource/relation ([#520](https://github.com/ConduitPlatform/Conduit/issues/520)) ([fc44213](https://github.com/ConduitPlatform/Conduit/commit/fc442135dbb6740f07dbb08cdce9f86a0f8996ae))
+* **database:** admin createSchema() invalid id,createdAt,updatedAt field constraints ([#511](https://github.com/ConduitPlatform/Conduit/issues/511)) ([4ddea48](https://github.com/ConduitPlatform/Conduit/commit/4ddea48e0d12dc6fbe6d78d54fa8b643d1dbf564))
+* **database:** admin schema creation adding explicit primaryKey ([#522](https://github.com/ConduitPlatform/Conduit/issues/522)) ([a5ee620](https://github.com/ConduitPlatform/Conduit/commit/a5ee620b4131656253cb2d7bb4f880baffba4d71))
+* **database:** ambiguous SQL like/ilike query fields ([#518](https://github.com/ConduitPlatform/Conduit/issues/518)) ([47abfaa](https://github.com/ConduitPlatform/Conduit/commit/47abfaaf341b93525c14397c4f1d2056049fe2e9))
+* **database:** findByIdAndUpdate crashing when storing embedded documents ([#528](https://github.com/ConduitPlatform/Conduit/issues/528)) ([ec97366](https://github.com/ConduitPlatform/Conduit/commit/ec973661a5510837e50b04811bc4d6208c37ae25))
+* **database:** relation issues ([#517](https://github.com/ConduitPlatform/Conduit/issues/517)) ([e8f1cdc](https://github.com/ConduitPlatform/Conduit/commit/e8f1cdcb935a23bac2e1fa9f8f8a7dcf23769d7d))
+* **database:** relationObjects ([#513](https://github.com/ConduitPlatform/Conduit/issues/513)) ([9b3a353](https://github.com/ConduitPlatform/Conduit/commit/9b3a353145cea77afaf276caa31f62b8cc563d3c))
+* **database:** wrong legacyCollections comment-out ([#527](https://github.com/ConduitPlatform/Conduit/issues/527)) ([bddab3c](https://github.com/ConduitPlatform/Conduit/commit/bddab3cb899eec9a1d1cc04f90213cc2e0c3ee20))
+* **grpc-sdk:** add missing collectionName in getSchema(s) database grpc-sdk wrapper ([#525](https://github.com/ConduitPlatform/Conduit/issues/525)) ([8f18212](https://github.com/ConduitPlatform/Conduit/commit/8f18212cb4bc6cf0062099b0f953bbd7236fcfc8))
+* **hermes,grpc-sdk,authentication:** redirect requests not setting cookies, invalid setCookies format ([#514](https://github.com/ConduitPlatform/Conduit/issues/514)) ([453c956](https://github.com/ConduitPlatform/Conduit/commit/453c956e2b1fdfc9ae4c9b5734e6eca3ce425e37))
+* **push-notifications:** expecting string instead of JSON in send admin requests ([#521](https://github.com/ConduitPlatform/Conduit/issues/521)) ([0a62623](https://github.com/ConduitPlatform/Conduit/commit/0a62623331a9c010ce26076356f971cf7015cfd1))
+* **push-notifications:** param read in getNotifications not working when false ([#526](https://github.com/ConduitPlatform/Conduit/issues/526)) ([c036871](https://github.com/ConduitPlatform/Conduit/commit/c036871ef9791785041d97a4b0b9c12a95b8c7ef))
+* **storage:** public url not updated when updating file properties ([#516](https://github.com/ConduitPlatform/Conduit/issues/516)) ([f3cbdfe](https://github.com/ConduitPlatform/Conduit/commit/f3cbdfe3276d37399566e008713cad15f97cc2b0))
+
+
+* **database:** re-work SQL support ([#492](https://github.com/ConduitPlatform/Conduit/issues/492)) ([c833e2f](https://github.com/ConduitPlatform/Conduit/commit/c833e2fc0024a1ac1ec846535134cb7a675fc60b))
+
 ### [0.15.14](https://github.com/ConduitPlatform/Conduit/compare/v0.15.13...v0.15.14) (2023-02-09)
 
 
