@@ -276,6 +276,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
         {
           parentSchema: null,
         },
+        {
+          parentSchema: '',
+        },
         { parentSchema: { $exists: false } },
       ],
     });
