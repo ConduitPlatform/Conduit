@@ -126,7 +126,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         population[index] = r.join('.');
       }
     });
-    // @ts-ignore
     queryObj = queryObj.deepPopulate(population);
 
     return queryObj;

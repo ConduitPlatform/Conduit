@@ -1,4 +1,9 @@
-import { loadPackageDefinition, Server, ServerCredentials } from '@grpc/grpc-js';
+import {
+  loadPackageDefinition,
+  Server,
+  ServerCredentials,
+  UntypedServiceImplementation,
+} from '@grpc/grpc-js';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -40,6 +45,6 @@ export function addServiceToServer(
   objs.forEach((r: string) => {
     descObj = descObj[r] as any;
   });
-  // @ts-ignore
-  server.addService(descObj.service, functions);
+
+  server.addService(descObj.service, functions as UntypedServiceImplementation);
 }
