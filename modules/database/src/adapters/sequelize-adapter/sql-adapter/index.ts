@@ -82,7 +82,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     );
     const associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
     await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
-    if (options?.parentSchema) {
+    if (options && options.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
     this.models[schema.name] = new SQLSchema(
@@ -103,6 +103,16 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     if (!options) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
+      if (associatedSchemas && Object.keys(associatedSchemas).length > 0) {
+        for (const associatedSchema in associatedSchemas) {
+          const schema = associatedSchemas[associatedSchema];
+          if (Array.isArray(schema)) {
+            await this.saveSchemaToDatabase(schema[0].originalSchema);
+          } else {
+            await this.saveSchemaToDatabase(schema.originalSchema);
+          }
+        }
+      }
     }
 
     return this.models[schema.name];

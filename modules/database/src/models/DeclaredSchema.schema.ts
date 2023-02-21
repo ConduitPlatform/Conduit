@@ -9,7 +9,7 @@ export const DeclaredSchema = new ConduitSchema(
       unique: true,
       required: true,
     },
-    parentSchema: TYPE.String,
+    parentSchema: { type: TYPE.String, default: null, required: false },
     fields: {
       type: TYPE.JSON,
       required: true,
