@@ -2,7 +2,6 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   ConduitString,
-  ConfigController,
   GrpcError,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
@@ -55,7 +54,6 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
 
   declareRoutes(routingManager: RoutingManager) {
     super.declareRoutes(routingManager);
-    const captchaConfig = ConfigController.getInstance().config.captcha;
     routingManager.route(
       {
         path: '/google',

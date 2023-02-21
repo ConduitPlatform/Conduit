@@ -5,17 +5,23 @@ import { CustomEndpointsQuery } from '../../interfaces';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
+interface Inputs {
+  name: string;
+  type: string;
+  location: number;
+  optional?: boolean;
+  array?: boolean;
+}
+
+interface constructQueryParams {
+  inputs: Inputs[];
+  params: Indexable;
+  context: Indexable;
+}
+
 export function constructQuery(
   endpointQuery: Indexable,
-  inputs: {
-    name: string;
-    type: string;
-    location: number;
-    optional?: boolean;
-    array?: boolean;
-  }[],
-  params: Indexable,
-  context: Indexable,
+  { inputs, params, context }: constructQueryParams,
 ) {
   const res: Indexable = {};
   let resTopLevel: string;
@@ -34,12 +40,12 @@ export function constructQuery(
   res[resTopLevel] = [];
   endpointQuery[endpointTopLevel].forEach((query: CustomEndpointsQuery) => {
     if (query.hasOwnProperty('schemaField')) {
-      const r = _constructQuery(query, inputs, params, context);
+      const r = _constructQuery(query, { inputs, params, context });
       if (!isNil(r)) {
         res[resTopLevel].push(r);
       }
     } else if (query.hasOwnProperty('AND') || query.hasOwnProperty('OR')) {
-      const r = constructQuery(query, inputs, params, context);
+      const r = constructQuery(query, { inputs, params, context });
       if (!isNil(r)) {
         res[resTopLevel].push(r);
       }
@@ -65,15 +71,7 @@ function _constructQuery(
       caseSensitiveLike?: boolean;
     };
   },
-  inputs: {
-    name: string;
-    type: string;
-    location: number;
-    optional?: boolean;
-    array?: boolean;
-  }[],
-  params: Indexable,
-  context: Indexable,
+  { inputs, params, context }: constructQueryParams,
 ) {
   if (query.comparisonField.type === 'Input') {
     if (isNil(params[query.comparisonField.value])) {

@@ -22,6 +22,7 @@ import { EmailService } from '../services/email.service';
 import { EmailTemplate } from '../models';
 import { Config } from '../config';
 import { Template } from '../email-provider/interfaces/Template';
+import { TemplateDocument } from '../email-provider/interfaces/TemplateDocument';
 
 const escapeStringRegexp = require('escape-string-regexp');
 
@@ -243,7 +244,7 @@ export class AdminHandlers {
             name,
             body,
             subject,
-          }) as any,
+          }),
         );
         if (err) {
           throw new GrpcError(status.INTERNAL, err.message);
@@ -433,7 +434,7 @@ export class AdminHandlers {
     if (isNil(externalTemplates)) {
       throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
     }
-    let templateDocuments: any = [];
+    let templateDocuments: TemplateDocument[] = [];
     (externalTemplates as Template[]).forEach((element: Template) => {
       templateDocuments.push({
         _id: element.id,
@@ -449,12 +450,12 @@ export class AdminHandlers {
     return { templateDocuments, count };
   }
 
-  async syncExternalTemplates(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
+  async syncExternalTemplates(): Promise<UnparsedRouterResponse> {
     let errorMessage: string | null = null;
-    const externalTemplates: any = await this.emailService.getExternalTemplates();
-
+    const externalTemplates = await this.emailService.getExternalTemplates();
+    if (isNil(externalTemplates)) {
+      throw new GrpcError(status.NOT_FOUND, 'No external templates could be retrieved');
+    }
     const updated = [];
     for (const element of externalTemplates) {
       const templateDocument = await EmailTemplate.getInstance().findOne({

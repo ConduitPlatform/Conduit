@@ -10,7 +10,7 @@ export interface SendgridTemplate {
         id: string;
         user_id: number;
         template_id: string;
-        active: number;
+        active: boolean;
         name: string;
         html_content: string;
         plain_content: string;
@@ -22,4 +22,21 @@ export interface SendgridTemplate {
       },
     ];
   };
+}
+
+export interface TemplateVersion {
+  name: string;
+  id: string;
+  subject?: string;
+  body: string;
+  active: boolean;
+  updatedAt: string;
+  variables?: string[];
+}
+
+export interface Template {
+  name: string;
+  id: string;
+  createdAt: string;
+  versions: TemplateVersion[];
 }

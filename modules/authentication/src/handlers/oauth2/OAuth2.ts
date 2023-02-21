@@ -16,15 +16,16 @@ import { Payload } from './interfaces/Payload';
 import { OAuth2Settings } from './interfaces/OAuth2Settings';
 import { RedirectOptions } from './interfaces/RedirectOptions';
 import { AuthParams } from './interfaces/AuthParams';
-import { IAuthenticationStrategy } from '../../interfaces/AuthenticationStrategy';
 import { ConnectionParams } from './interfaces/ConnectionParams';
 import { OAuthRequest } from './interfaces/MakeRequest';
 import { TokenProvider } from '../tokenProvider';
-import { TokenType } from '../../constants/TokenType';
+
 import { v4 as uuid } from 'uuid';
-import moment from 'moment/moment';
 import { createHash } from 'crypto';
 import { TeamsHandler } from '../team';
+import { validateStateToken } from './utils';
+import { IAuthenticationStrategy } from '../../interfaces';
+import { TokenType } from '../../constants';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -115,15 +116,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
-    const stateToken: Token | null = await Token.getInstance().findOne({
-      token: params.state,
-    });
-    if (isNil(stateToken))
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
-    if (moment().isAfter(moment(stateToken.data.expiresAt))) {
-      await Token.getInstance().deleteOne(stateToken);
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
-    }
+    const stateToken = await validateStateToken(params.state);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,

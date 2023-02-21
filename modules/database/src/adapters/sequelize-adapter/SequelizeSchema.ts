@@ -214,11 +214,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     };
 
     incrementDbQueries();
-    const document = await this.model
-      .findOne(options)
-      .then(doc => (doc ? doc.toJSON() : doc));
-
-    return document;
+    return this.model.findOne(options).then(doc => (doc ? doc.toJSON() : doc));
   }
 
   sync() {
@@ -274,7 +270,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         if (relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? (relationTarget as any[])[0]
-          : (relationTarget as any);
+          : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -298,7 +294,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         if (!relationTarget) continue;
         const relationSchema = Array.isArray(relationTarget)
           ? (relationTarget as any[])[0]
-          : (relationTarget as any);
+          : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -401,11 +397,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       options.order = this.parseSort(sort);
     }
 
-    const documents = await this.model
+    return this.model
       .findAll(options)
       .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
-
-    return documents;
   }
 
   deleteMany(query: Query) {

@@ -1,5 +1,6 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
 import { StorageConfig } from '../interfaces';
+import { isNil } from 'lodash';
 
 export async function streamToBuffer(readableStream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -23,5 +24,9 @@ export async function getAwsAccountId(config: StorageConfig) {
     },
   });
   const res = await iamClient.send(new GetUserCommand({}));
-  return res!.User!.UserId;
+  const userId = res?.User?.UserId;
+  if (isNil(userId)) {
+    throw new Error('Unable to get AWS account ID');
+  }
+  return userId;
 }

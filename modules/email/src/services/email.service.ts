@@ -1,16 +1,14 @@
 import { isNil } from 'lodash';
 import { EmailTemplate } from '../models';
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import handlebars from 'handlebars';
 import { EmailProvider } from '../email-provider';
 import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTemplate';
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate';
 import { Attachment } from 'nodemailer/lib/mailer';
+import { Template } from '../email-provider/interfaces/Template';
 
 export class EmailService {
-  private database: any;
-
   constructor(private emailer: EmailProvider) {}
 
   updateProvider(emailer: EmailProvider) {
@@ -25,8 +23,11 @@ export class EmailService {
     return this.emailer._transport?.getTemplateInfo(id);
   }
 
-  createExternalTemplate(data: CreateEmailTemplate) {
-    return this.emailer._transport?.createTemplate(data);
+  createExternalTemplate(data: CreateEmailTemplate): Promise<Template> {
+    return (
+      this.emailer._transport?.createTemplate(data) ??
+      Promise.reject(new Error('Transport is not available'))
+    );
   }
 
   updateTemplate(data: UpdateEmailTemplate) {

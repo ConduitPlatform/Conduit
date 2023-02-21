@@ -184,7 +184,7 @@ export class RestController extends ConduitRouter {
             return route.executeRequest(context);
           }
         })
-        .then((r: any) => {
+        .then(r => {
           if (r.setCookies && r.setCookies.length) {
             r.setCookies.forEach((cookie: Cookie) => {
               if (cookie.options.path === '') delete cookie.options.path;
@@ -287,7 +287,7 @@ export class RestController extends ConduitRouter {
     this.initializeRouter();
     this._swagger?.cleanup();
     this._registeredLocalRoutes.forEach((route, key) => {
-      const [method, path] = key.split('-');
+      const [_, path] = key.split('-');
       this.addRoute(path, route);
     });
     this._registeredRoutes.forEach(route => {
