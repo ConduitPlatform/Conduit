@@ -86,7 +86,11 @@ export const sqlTypesProcess = (
     originalSchema.fields,
     //@ts-ignore
     (value: Indexable, key: string, parentValue: Indexable) => {
-      if (!parentValue?.hasOwnProperty(key!)) {
+      if (
+        isNil(parentValue) ||
+        !parentValue.hasOwnProperty(key) ||
+        isNil(parentValue[key])
+      ) {
         return true;
       }
 
