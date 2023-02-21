@@ -440,8 +440,6 @@ export class SchemaAdmin {
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.modelOptions,
-            ownerModule: schema.ownerModule,
-            extensions: (schema as any).extensions,
           }),
         );
       }),

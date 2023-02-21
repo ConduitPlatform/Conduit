@@ -46,7 +46,7 @@ export class ChatRoutes {
       .then(() => {
         ConduitGrpcSdk.Logger.log('Email templates registered');
       })
-      .catch((e: Error) => {
+      .catch(() => {
         ConduitGrpcSdk.Logger.error('Internal error while registering email templates');
       });
   }

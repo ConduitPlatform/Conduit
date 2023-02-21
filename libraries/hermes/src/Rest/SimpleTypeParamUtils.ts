@@ -1,7 +1,7 @@
 import { ConduitRouteOptionExtended, TYPE } from '@conduitplatform/grpc-sdk';
 
 function extractParam(param: string, required: boolean = false) {
-  let res: { type: string; format?: string; required?: boolean } = { type: 'string' };
+  const res: { type: string; format?: string; required?: boolean } = { type: 'string' };
   switch (param) {
     case TYPE.JSON:
       res.type = 'object';

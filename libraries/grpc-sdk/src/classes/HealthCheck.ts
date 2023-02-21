@@ -23,7 +23,7 @@ export async function checkModuleHealth(
   const _healthClient = clientFactory.create(HealthDefinition, channel);
 
   let error;
-  let status = await _healthClient
+  const status = await _healthClient
     .check({ service })
     .then((res: HealthCheckResponse) => {
       return res.status;
