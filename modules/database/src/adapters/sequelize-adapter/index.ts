@@ -162,6 +162,7 @@ export abstract class SequelizeAdapter<
 
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean,
     options?: { parentSchema: string },
   ): Promise<T>;
 

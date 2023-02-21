@@ -37,6 +37,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
 
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean = true,
   ): Promise<PostgresSchema> {
     const compiledSchema = compileSchema(
       schema as ConduitDatabaseSchema,
@@ -66,9 +67,10 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
     }
-    await this.compareAndStoreMigratedSchema(schema);
-    await this.saveSchemaToDatabase(schema);
-
+    if (saveToDb) {
+      await this.compareAndStoreMigratedSchema(schema);
+      await this.saveSchemaToDatabase(schema);
+    }
     return this.models[schema.name];
   }
 
