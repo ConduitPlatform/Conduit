@@ -26,7 +26,7 @@ export function findPopulation(
           keys.length > 0 &&
           relations.indexOf(keys[0]) !== -1 &&
           result.indexOf(key) === -1 &&
-          !context.obj[key]
+          (!context.obj[key] || context.obj[key].fieldsByTypeName[keys[0]])
         ) {
           let path = context._item.strPath;
           path = path.split('.')[0];

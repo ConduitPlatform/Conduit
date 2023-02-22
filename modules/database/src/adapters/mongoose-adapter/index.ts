@@ -190,6 +190,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean = true,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema);
@@ -218,8 +219,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       deepPopulate,
       this,
     );
-    await this.compareAndStoreMigratedSchema(schema);
-    await this.saveSchemaToDatabase(schema);
+    if (saveToDb) {
+      await this.compareAndStoreMigratedSchema(schema);
+      await this.saveSchemaToDatabase(schema);
+    }
+
     if (indexes) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
