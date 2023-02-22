@@ -178,12 +178,14 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async columnExistence(columns: string[]): Promise<boolean> {
-    const array: any = [];
+    const array: object[] = [];
     for (const column of columns) {
       array.push({ [column]: { $exists: true } });
     }
-    const result = await this.model.find({ $and: array }).exec();
-    return result.length > 0;
+    const result = await this.model.db
+      .collection(this.originalSchema.collectionName)
+      .findOne({ $and: array });
+    return result !== null;
   }
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {
