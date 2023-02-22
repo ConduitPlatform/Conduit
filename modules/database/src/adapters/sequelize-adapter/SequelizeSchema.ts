@@ -144,7 +144,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
-    return await this.model
+    return this.model
       .create(parsedQuery, {
         include: this.constructAssociationInclusion(assocs, true),
         transaction: t,

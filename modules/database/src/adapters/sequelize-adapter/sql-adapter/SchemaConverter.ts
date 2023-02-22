@@ -81,6 +81,7 @@ function extractType(type: string) {
 
   throw new Error('Failed to extract embedded object type');
 }
+
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {

@@ -11,6 +11,7 @@ import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash';
 import ObjectHash from 'object-hash';
+import * as systemModels from '../models';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
@@ -125,7 +126,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = await this._createSchemaFromAdapter(schema);
+    const createdSchema = await this._createSchemaFromAdapter(schema, instanceSync);
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -136,7 +137,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return createdSchema;
   }
 
-  protected abstract _createSchemaFromAdapter(schema: ConduitSchema): Promise<Schema>;
+  protected abstract _createSchemaFromAdapter(
+    schema: ConduitSchema,
+    saveToDb: boolean,
+  ): Promise<Schema>;
 
   abstract getCollectionName(schema: ConduitSchema): string;
 
@@ -274,12 +278,20 @@ export abstract class DatabaseAdapter<T extends Schema> {
     let models = await this.models!['_DeclaredSchema'].findMany({
       $or: [
         {
-          parentSchema: null,
+          parentSchema: '',
         },
         { parentSchema: { $exists: false } },
       ],
     });
     models = models
+      // do not recover system schemas as they have already been
+      .filter((model: _ConduitSchema) => {
+        let isSystemModel = false;
+        Object.values(systemModels).forEach((systemModel: ConduitSchema) => {
+          systemModel.name === model.name && (isSystemModel = true);
+        });
+        return !isSystemModel;
+      })
       .map((model: _ConduitSchema) => {
         const schema = new ConduitSchema(
           model.name,

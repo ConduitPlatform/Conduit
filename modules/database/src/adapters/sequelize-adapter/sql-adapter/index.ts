@@ -52,7 +52,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       modeledSchema.ownerModule = schema.ownerModule;
       (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
       // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, {
+      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, false, {
         parentSchema: schema.name,
       });
       associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
@@ -61,6 +61,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean = true,
     options?: { parentSchema: string },
   ): Promise<SQLSchema> {
     const compiledSchema = compileSchema(
@@ -82,7 +83,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     );
     const associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
     await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
-    if (options?.parentSchema) {
+    if (options && options.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
     this.models[schema.name] = new SQLSchema(
@@ -100,11 +101,20 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       await this.models[schema.name].sync();
     }
     // do not store extracted schemas to db
-    if (!options) {
+    if (!options && saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
+      if (associatedSchemas && Object.keys(associatedSchemas).length > 0) {
+        for (const associatedSchema in associatedSchemas) {
+          const schema = associatedSchemas[associatedSchema];
+          if (Array.isArray(schema)) {
+            await this.saveSchemaToDatabase(schema[0].originalSchema);
+          } else {
+            await this.saveSchemaToDatabase(schema.originalSchema);
+          }
+        }
+      }
     }
-
     return this.models[schema.name];
   }
 
