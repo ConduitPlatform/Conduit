@@ -53,9 +53,19 @@ function extractEmbedded(ogSchema: any, schema: any) {
       }
     } else if (isObject(schema[key])) {
       if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
-        extracted[key] = schema[key];
-        delete schema[key];
-        delete ogSchema[key];
+        if (
+          schema[key].hasOwnProperty('type') &&
+          Array.isArray(schema[key].type) &&
+          typeof schema[key].type[0] !== 'string'
+        ) {
+          extracted[key] = schema[key];
+          delete schema[key];
+          delete ogSchema[key];
+        } else {
+          extracted[key] = schema[key];
+          delete schema[key];
+          delete ogSchema[key];
+        }
       }
     }
   }
@@ -81,6 +91,7 @@ function extractType(type: string) {
 
   throw new Error('Failed to extract embedded object type');
 }
+
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
