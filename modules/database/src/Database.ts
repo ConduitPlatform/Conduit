@@ -95,7 +95,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
     let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
+      if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
