@@ -1,6 +1,7 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   TYPE,
   UnparsedRouterResponse,
@@ -44,7 +45,7 @@ export class SchemaAdmin {
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
-    const queryArray: any[] = [{ name: { $nin: this.database.systemSchemas } }];
+    const queryArray: Indexable[] = [{ name: { $nin: this.database.systemSchemas } }];
     if (owner && owner?.length !== 0) {
       queryArray.push({ ownerModule: { $in: owner } });
     }
