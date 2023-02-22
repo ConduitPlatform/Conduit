@@ -11,6 +11,8 @@ import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
+  ColumnExistenceRequest,
+  ColumnExistenceResponse,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -65,6 +67,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
+      columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
     },
   };
@@ -608,6 +611,15 @@ export default class DatabaseModule extends ManagedModule<void> {
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async columnExistence(
+    call: GrpcRequest<ColumnExistenceRequest>,
+    callback: GrpcResponse<ColumnExistenceResponse>,
+  ) {
+    const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+    const exist = await schemaAdapter.model.columnExistence(call.request.columns);
+    callback(null, { result: exist });
   }
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {

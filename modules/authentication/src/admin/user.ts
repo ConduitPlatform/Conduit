@@ -25,6 +25,10 @@ export class UserAdmin {
       if (provider === 'local') {
         query['hashedPassword'] = { $exists: true, $ne: null };
       } else {
+        const exists = this.grpcSdk.database!.columnExistence('User', [provider]);
+        if (!exists) {
+          throw new GrpcError(status.NOT_FOUND, `Provider ${provider} is not supported`);
+        }
         query[provider] = { $exists: true, $ne: null };
       }
     }

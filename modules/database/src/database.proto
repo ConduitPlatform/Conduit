@@ -114,6 +114,15 @@ message MigrateRequest {
     string schemaName = 1;
 }
 
+message ColumnExistenceRequest {
+    string schemaName = 1;
+    repeated string columns = 2;
+}
+
+message ColumnExistenceResponse {
+    bool result = 1;
+}
+
 message Empty {}
 
 service DatabaseProvider {
@@ -134,4 +143,5 @@ service DatabaseProvider {
     rpc updateMany(UpdateManyRequest) returns (QueryResponse);
     rpc countDocuments(QueryRequest) returns (QueryResponse);
     rpc rawQuery(RawQueryRequest) returns (QueryResponse);
+    rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
 }
