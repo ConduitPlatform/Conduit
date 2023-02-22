@@ -1,13 +1,13 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
-  TYPE,
   ParsedRouterRequest,
+  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil, merge, isEmpty } from 'lodash';
-import { validateSchemaInput, validatePermissions } from '../utils/utilities';
+import { isEmpty, isNil, merge } from 'lodash';
+import { validatePermissions, validateSchemaInput } from '../utils/utilities';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
@@ -15,8 +15,8 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
-import escapeStringRegexp = require('escape-string-regexp');
 import { parseSortParam } from '../handlers/utils';
+import escapeStringRegexp = require('escape-string-regexp');
 
 export class SchemaAdmin {
   constructor(
@@ -43,30 +43,25 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: ParsedQuery = {};
+
+    const queryArray: any[] = [{ name: { $nin: this.database.systemSchemas } }];
     if (owner && owner?.length !== 0) {
-      query = {
-        $and: [query, { ownerModule: { $in: owner } }],
-      };
+      queryArray.push({ ownerModule: { $in: owner } });
     }
     let identifier;
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
-      query['name'] = { $ilike: `%${identifier}%` };
+      queryArray.push({ name: { $ilike: `%${identifier}%` } });
     }
     if (!isNil(enabled)) {
-      const enabledQuery = {
+      queryArray.push({
         $or: [
-          { name: { $in: this.database.systemSchemas } },
-          { ownerModule: { $ne: 'database' } },
-          { 'modelOptions.conduit.cms.enabled': true },
+          { 'modelOptions.conduit.cms.enabled': enabled },
+          { 'modelOptions.conduit.permissions.extendable': enabled },
         ],
-      };
-      const disabledQuery = { 'modelOptions.conduit.cms.enabled': false };
-      query = {
-        $and: [query, enabled ? enabledQuery : disabledQuery],
-      };
+      });
     }
+    const query: ParsedQuery = { $and: queryArray };
     let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
     if (sort) {
       parsedSort = parseSortParam(sort);
