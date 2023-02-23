@@ -9,8 +9,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { Service, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
+import { IAuthenticationStrategy } from '../interfaces';
 
 export class ServiceHandler implements IAuthenticationStrategy {
   private initialized: boolean = false;

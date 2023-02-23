@@ -372,7 +372,7 @@ export default class AdminModule extends IConduitAdmin {
   ) {
     this.grpcSdk
       .state!.getKey('admin')
-      .then((r: any) => {
+      .then(r => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
@@ -547,7 +547,7 @@ export default class AdminModule extends IConduitAdmin {
     return Promise.all(promises);
   }
 
-  async setConfig(moduleConfig: any): Promise<any> {
+  async setConfig(moduleConfig: any) {
     const previousConfig = await this.commons.getConfigManager().get('admin');
     const config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);

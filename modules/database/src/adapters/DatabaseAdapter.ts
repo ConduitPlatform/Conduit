@@ -85,9 +85,24 @@ export abstract class DatabaseAdapter<T extends Schema> {
     gRPC = false,
     instanceSync = false,
   ): Promise<Schema> {
-    if (!this.models) {
-      this.models = {};
+    this.models = this.models || {};
+    await this.updateCollectionName(schema, imported);
+    await this.checkModelOwnershipAndPermissions(schema);
+    await this.addExtensionsFromSchemaModel(schema, gRPC);
+    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    const schemaUpdate = this.registeredSchemas.has(schema.name);
+    const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
+    this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    if (!instanceSync && !schemaUpdate) {
+      ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
+        imported: imported ? 'true' : 'false',
+      });
     }
+    if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+    return createdSchema;
+  }
+
+  private async updateCollectionName(schema: ConduitSchema, imported: boolean) {
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
     } else {
@@ -111,11 +126,17 @@ export abstract class DatabaseAdapter<T extends Schema> {
       }
       (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
     }
+  }
+
+  private async checkModelOwnershipAndPermissions(schema: ConduitSchema) {
     const owned = await this.checkModelOwnership(schema);
     if (!owned) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
     }
     this.addSchemaPermissions(schema);
+  }
+
+  private async addExtensionsFromSchemaModel(schema: ConduitSchema, gRPC: boolean) {
     if (schema.name !== '_DeclaredSchema' && gRPC) {
       const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
         name: schema.name,
@@ -124,17 +145,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
         (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
-    stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
-    this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    if (!instanceSync && !schemaUpdate) {
-      ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
-        imported: imported ? 'true' : 'false',
-      });
-    }
-    if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
-    return createdSchema;
   }
 
   protected abstract _createSchemaFromAdapter(

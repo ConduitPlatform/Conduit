@@ -16,7 +16,6 @@ import { AppleUser } from './apple.user';
 import * as jwt from 'jsonwebtoken';
 import { TokenProvider } from '../../tokenProvider';
 import { Token } from '../../../models';
-import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
@@ -24,6 +23,7 @@ import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
 import qs from 'querystring';
 import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
 import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
+import { validateStateToken } from '../utils';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
@@ -60,15 +60,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
   async authorize(call: ParsedRouterRequest) {
     const params = call.request.params;
-    const stateToken: Token | null = await Token.getInstance().findOne({
-      token: params.state,
-    });
-    if (isNil(stateToken))
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid parameters');
-    if (moment().isAfter(moment(stateToken.data.expiresAt))) {
-      await Token.getInstance().deleteOne(stateToken);
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Token expired');
-    }
+    const stateToken = await validateStateToken(params.state);
     const decoded_id_token = jwt.decode(params.id_token, { complete: true });
 
     const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');

@@ -107,23 +107,7 @@ export class RouterAdmin {
       description,
       proxyMiddlewareOptions,
     });
-    const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
-    const proxies: ProxyRouteT[] = [];
-    proxyRoutes.forEach(route => {
-      proxies.push({
-        options: {
-          path: route.path,
-          action: route.action,
-          description: route.description,
-          middlewares: route.middlewares,
-        },
-        proxy: {
-          target: route.target,
-          ...route.proxyMiddlewareOptions,
-        },
-      });
-    });
-    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
+    await this.registerProxyRoutes(this.router);
 
     return 'Proxy route created';
   }
@@ -159,24 +143,7 @@ export class RouterAdmin {
         proxyMiddlewareOptions,
       },
     );
-    const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
-    const proxies: ProxyRouteT[] = [];
-    proxyRoutes.forEach(route => {
-      proxies.push({
-        options: {
-          path: route.path,
-          action: route.action,
-          description: route.description,
-          middlewares: route.middlewares,
-        },
-        proxy: {
-          target: route.target,
-          ...route.proxyMiddlewareOptions,
-        },
-      });
-    });
-    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
-
+    await this.registerProxyRoutes(this.router);
     return { ...updatedProxy };
   }
 
@@ -191,8 +158,26 @@ export class RouterAdmin {
       );
     }
     await RouterProxyRoute.getInstance().deleteOne({ _id: id });
+    await RouterProxyRoute.getInstance().findMany({});
+    const proxies = await this.getProxies();
+    if (proxies.length === 0) {
+      return 'Proxy route deleted';
+    }
+    await this.registerProxyRoutes(this.router);
+    return 'Proxy route deleted';
+  }
+
+  isValidUrl(url: string) {
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  private async getProxies(): Promise<ProxyRouteT[]> {
     const proxyRoutes = await RouterProxyRoute.getInstance().findMany({});
-    if (proxyRoutes.length === 0) return 'Proxy route deleted';
     const proxies: ProxyRouteT[] = [];
     proxyRoutes.forEach(route => {
       proxies.push({
@@ -208,16 +193,11 @@ export class RouterAdmin {
         },
       });
     });
-    this.router.internalRegisterRoute(undefined, proxies, 'router', 'router');
-    return 'Proxy route deleted';
+    return proxies;
   }
 
-  isValidUrl(url: string) {
-    try {
-      new URL(url);
-      return true;
-    } catch (e) {
-      return false;
-    }
+  private async registerProxyRoutes(router: ConduitDefaultRouter) {
+    const proxies = await this.getProxies();
+    router.internalRegisterRoute(undefined, proxies, 'router', 'router');
   }
 }

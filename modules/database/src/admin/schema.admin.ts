@@ -142,18 +142,7 @@ export class SchemaAdmin {
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, fields } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.fields = fields ?? requestedSchema.fields;
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
@@ -179,19 +168,7 @@ export class SchemaAdmin {
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, deleteData } = call.request.params;
-
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const requestedSchema = await this.checkRequestedSchema(id);
     // Temp: error out until Admin handles this case
     const endpoints = await this.database
       .getSchemaModel('CustomEndpoints')
@@ -251,21 +228,8 @@ export class SchemaAdmin {
   }
 
   async toggleSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [
-          { 'modelOptions.conduit.cms': { $exists: true } },
-          { _id: call.request.params.id },
-        ],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const { id } = call.request.params;
+    const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.modelOptions.conduit.cms.enabled =
       !requestedSchema.modelOptions.conduit.cms.enabled;
 
@@ -585,5 +549,20 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
     return requestedSchemas;
+  }
+
+  async checkRequestedSchema(id: string) {
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
+      });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
+    }
+    return requestedSchema;
   }
 }

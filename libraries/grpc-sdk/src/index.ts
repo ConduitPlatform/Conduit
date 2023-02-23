@@ -306,7 +306,7 @@ export default class ConduitGrpcSdk {
   watchModules() {
     const emitter = this.config.getModuleWatcher();
     this.config.watchModules().then();
-    emitter.on('serving-modules-update', (modules: any) => {
+    emitter.on('serving-modules-update', modules => {
       Object.keys(this._modules).forEach(r => {
         if (r !== this.name) {
           const found = modules.filter(

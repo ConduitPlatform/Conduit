@@ -37,12 +37,11 @@ export class CustomEndpointHandler {
 
     if (endpoint.operation !== OperationsEnum.POST) {
       try {
-        searchQuery = constructQuery(
-          endpoint.query,
-          endpoint.inputs,
-          params,
-          call.request.context,
-        );
+        searchQuery = constructQuery(endpoint.query, {
+          inputs: endpoint.inputs,
+          params: params,
+          context: call.request.context,
+        });
       } catch (e) {
         throw new GrpcError(status.INTERNAL, (e as Error).message);
       }
