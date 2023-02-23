@@ -73,7 +73,7 @@ function extractType(type: string) {
     case 'Date':
       return DataTypes.DATE;
     case 'JSON':
-      return DataTypes.JSONB;
+      return DataTypes.JSON;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;

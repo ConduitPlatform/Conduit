@@ -96,7 +96,7 @@ function extractObjectType(objectField: any) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    res.type = DataTypes.JSON;
+    res.type = DataTypes.JSONB;
   }
 
   return extractFieldProperties(objectField, res);
