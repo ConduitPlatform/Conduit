@@ -73,4 +73,6 @@ export interface SchemaAdapter<T> {
   ): Promise<any>;
 
   countDocuments(query: Query): Promise<number>;
+
+  columnExistence(columns: string[]): Promise<boolean>;
 }

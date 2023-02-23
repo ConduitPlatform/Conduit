@@ -507,6 +507,24 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
   }
 
+  async columnExistence(columns: string[]): Promise<boolean> {
+    const dialect = this.adapter.sequelize.getDialect();
+    let result: string[];
+    if (dialect === 'sqlite') {
+      result = await this.model
+        .sequelize!.query(`PRAGMA table_info(${this.originalSchema.collectionName});`)
+        .then(r => r[0].map((obj: any) => obj.name));
+    } else {
+      result = await this.model
+        .sequelize!.query(
+          `SELECT column_name FROM information_schema.columns
+                WHERE table_name = '${this.originalSchema.collectionName}';`,
+        )
+        .then(r => r[0].map((obj: any) => obj.column_name));
+    }
+    return columns.every(column => result.includes(column));
+  }
+
   parseQueryFilter(query: Query, options?: { populate?: string[]; select?: string }) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {

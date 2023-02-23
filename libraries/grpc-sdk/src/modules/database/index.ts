@@ -258,6 +258,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
+  columnExistence(schemaName: string, columns: string[]) {
+    return this.client!.columnExistence({ schemaName, columns }).then(r => r.result);
+  }
+
   migrate(schemaName: string) {
     return this.client!.migrate({ schemaName });
   }

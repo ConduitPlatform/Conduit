@@ -143,7 +143,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
         name: schema.name,
       });
       if (schemaModel?.extensions?.length > 0) {
-        (schema as _ConduitSchema).extensions = schemaModel.extensions;
+        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
       }
     }
   }

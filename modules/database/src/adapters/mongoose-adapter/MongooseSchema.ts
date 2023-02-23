@@ -176,6 +176,17 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 
+  async columnExistence(columns: string[]): Promise<boolean> {
+    const array: object[] = [];
+    for (const column of columns) {
+      array.push({ [column]: { $exists: true } });
+    }
+    const result = await this.model.db
+      .collection(this.originalSchema.collectionName)
+      .findOne({ $and: array });
+    return result !== null;
+  }
+
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {
     return sort as { [p: string]: SortOrder };
   }
