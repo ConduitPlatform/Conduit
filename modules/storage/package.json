@@ -30,9 +30,9 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-iam": "^3.121.0",
+    "@aws-sdk/client-iam": "^3.276.0",
     "@aws-sdk/client-s3": "^3.276.0",
-    "@aws-sdk/client-sts": "^3.121.0",
+    "@aws-sdk/client-sts": "^3.276.0",
     "@aws-sdk/s3-request-presigner": "^3.121.0",
     "@azure/storage-blob": "^12.10.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
