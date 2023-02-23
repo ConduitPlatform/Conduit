@@ -2,7 +2,7 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitError, UntypedArray } from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
   ConduitRequest,
@@ -184,7 +184,7 @@ export class ConduitRoutingController {
     this._socketRouter?.registerConduitSocket(socket);
   }
 
-  cleanupRoutes(routes: any[]) {
+  cleanupRoutes(routes: UntypedArray) {
     if (this._cleanupTimeoutMs === 0) {
       this._cleanupRoutes(routes);
     } else {
@@ -203,7 +203,7 @@ export class ConduitRoutingController {
     }
   }
 
-  private _cleanupRoutes(routes: any[]) {
+  private _cleanupRoutes(routes: UntypedArray) {
     this._restRouter?.cleanupRoutes(routes);
     this._graphQLRouter?.cleanupRoutes(routes);
     this._proxyRouter?.cleanupRoutes(routes);

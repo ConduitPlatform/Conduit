@@ -4,3 +4,4 @@ export * from './Model';
 export * from './GrpcCallback';
 export * from './Indexable';
 export * from './RawQuery';
+export * from './UntypedArray';

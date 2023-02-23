@@ -1,4 +1,4 @@
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -81,7 +81,7 @@ function extractArrayType(arrayField: any[]) {
   return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: any) {
+function extractObjectType(objectField: Indexable) {
   const res: {
     type: any;
     defaultValue?: any;
