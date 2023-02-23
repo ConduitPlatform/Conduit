@@ -30,7 +30,7 @@ export interface SwaggerObject extends SwaggerDefinition {
 export interface ProcessingObject {
   type: 'object' | 'string' | 'array' | 'boolean' | 'number' | undefined;
   format?: string;
-  properties?: { [key: string]: any };
+  properties: { [key: string]: any };
   required?: (string | keyof ProcessingObject['properties'])[];
   items?: SwaggerDefinition | SwaggerObject | SwaggerString;
 }
@@ -136,13 +136,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     description?: string,
   ): void {
     if (description && name === 'body') {
-      processingObject.properties = processingObject.properties || {};
       processingObject.properties[fieldName] = {
         type: 'string',
         description,
       };
     } else {
-      processingObject.properties = processingObject.properties || {};
       processingObject.properties[fieldName] = {
         type: 'object',
         properties: this.extractTypes(name, value, this.isInput).properties,
@@ -160,7 +158,6 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     nestedType?: boolean,
     description?: string,
   ): void {
-    processingObject.properties = processingObject.properties || {};
     processingObject.properties[name] = {
       type: 'array',
       description,
@@ -179,13 +176,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
   ): void {
     if (this.isInput) {
-      processingObject.properties = processingObject.properties || {};
       processingObject.properties[name] = {
         type: 'string',
         format: 'uuid',
       };
     } else {
-      processingObject.properties = processingObject.properties || {};
       processingObject.properties[name] = {
         oneOf: [
           {

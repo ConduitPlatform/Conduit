@@ -88,7 +88,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.models = this.models || {};
     await this.updateCollectionName(schema, imported);
     await this.checkModelOwnershipAndPermissions(schema);
-    this.addSchemaPermissions(schema);
     await this.addExtensionsFromSchemaModel(schema, gRPC);
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
