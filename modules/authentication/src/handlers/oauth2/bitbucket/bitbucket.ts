@@ -9,6 +9,7 @@ import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { isNil } from 'lodash';
 import { AuthParams } from '../interfaces/AuthParams';
+import { makeRequest } from '../utils';
 
 export class BitbucketHandlers extends OAuth2<BitbucketUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { bitbucket: ProviderConfig }) {
@@ -51,19 +52,6 @@ export class BitbucketHandlers extends OAuth2<BitbucketUser, OAuth2Settings> {
     };
   }
   makeRequest(data: AuthParams) {
-    const requestData: string = Object.keys(data)
-      .map(k => {
-        return k + '=' + data[k as keyof AuthParams];
-      })
-      .join('&');
-
-    return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
-      data: requestData,
-      headers: {
-        Accept: 'application/json',
-      },
-    };
+    return makeRequest(data, this.settings);
   }
 }

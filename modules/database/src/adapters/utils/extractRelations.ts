@@ -1,11 +1,14 @@
 import { isArray, isObject } from 'lodash';
+import { ConduitModel } from '@conduitplatform/grpc-sdk';
 
-export function extractRelations(ogSchema: any, schema: any) {
-  const extracted: {
-    [key: string]:
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
-  } = {};
+interface RelationType {
+  type: 'Relation';
+  model: string;
+  required?: boolean;
+  select?: boolean;
+}
+export function extractRelations(ogSchema: ConduitModel, schema: any) {
+  const extracted: { [key: string]: RelationType | RelationType[] } = {};
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
       const arrayField = schema[key];
