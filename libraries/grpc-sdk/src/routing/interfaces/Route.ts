@@ -1,14 +1,14 @@
-import { ConduitModel } from '../../interfaces';
+import { ConduitModel, Indexable } from '../../interfaces';
 
 export interface ConduitRouteParameters {
-  params?: { [field: string]: any };
+  params?: Indexable;
   path?: string;
-  headers: { [field: string]: any };
-  context?: { [field: string]: any };
-  cookies?: { [field: string]: any };
-  bodyParams?: { [field: string]: any };
-  urlParams?: { [field: string]: any };
-  queryParams?: { [field: string]: any };
+  headers: Indexable;
+  context?: Indexable;
+  cookies?: Indexable;
+  bodyParams?: Indexable;
+  urlParams?: Indexable;
+  queryParams?: Indexable;
 }
 
 export enum RouteOptionType {

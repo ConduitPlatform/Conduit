@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   RequestHandlers,
   RoutingManager,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { Functions } from '../models';
 import { createFunctionRoute } from './utils';
@@ -36,7 +37,7 @@ export class FunctionController {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No functions to register');
         }
-        const routes: any[] = [];
+        const routes: UntypedArray = [];
 
         r.forEach(func => {
           routes.push(createFunctionRoute(func, this.grpcSdk));
