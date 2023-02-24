@@ -1,4 +1,4 @@
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -67,7 +67,7 @@ function iterDeep(schema: any, resSchema: any) {
   }
 }
 
-function extractArrayType(arrayField: any[]) {
+function extractArrayType(arrayField: UntypedArray) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
     if (arrayField[0].hasOwnProperty('type')) {

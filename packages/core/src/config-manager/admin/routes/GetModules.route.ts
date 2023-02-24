@@ -5,6 +5,7 @@ import {
   ConduitString,
   ConduitBoolean,
   ConduitRouteParameters,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
@@ -31,7 +32,7 @@ export function getModulesRoute(registeredModules: Map<string, RegisteredModule>
     async (call: ConduitRouteParameters) => {
       const sortByName = call.params!.sortByName;
       if (registeredModules.size !== 0) {
-        const modules: any[] = [];
+        const modules: UntypedArray = [];
         registeredModules.forEach((value: RegisteredModule, key: string) => {
           modules.push({
             moduleName: key,
