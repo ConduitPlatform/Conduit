@@ -1,4 +1,4 @@
-import { ConduitSchema, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -37,7 +37,7 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
 }
 
 function extractEmbedded(ogSchema: any, schema: any) {
-  const extracted: { [key: string]: any } = {};
+  const extracted: Indexable = {};
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
       const arrayField = schema[key];
@@ -125,7 +125,7 @@ function extractArrayType(arrayField: UntypedArray, field: string) {
   }
 }
 
-function extractObjectType(objectField: any) {
+function extractObjectType(objectField: Indexable) {
   const res: {
     type: any;
     defaultValue?: any;
