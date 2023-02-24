@@ -1,4 +1,4 @@
-import { ConduitError, ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { Fields } from '../../interfaces';
 import { isArray, isEqual, isString, isNil } from 'lodash';
 import { DataTypes } from 'sequelize';
@@ -12,7 +12,7 @@ export function validateFieldChanges(oldSchema: ConduitSchema, newSchema: Condui
   return newSchema;
 }
 
-function validateSchemaFields(oldSchemaFields: any, newSchemaFields: any) {
+function validateSchemaFields(oldSchemaFields: Indexable, newSchemaFields: Indexable) {
   const tempObj: Fields = {};
 
   Object.keys(oldSchemaFields).forEach(key => {

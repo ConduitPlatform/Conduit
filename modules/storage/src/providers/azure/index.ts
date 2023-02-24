@@ -109,7 +109,7 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
-  async get(fileName: string, downloadPath?: string): Promise<any | Error> {
+  async get(fileName: string, downloadPath?: string): Promise<Buffer | Error> {
     const promise = await this._storage
       .getContainerClient(this._activeContainer)
       .getBlockBlobClient(fileName)

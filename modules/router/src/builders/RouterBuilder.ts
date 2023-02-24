@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { RouteBuilder } from './RouteBuilder';
-import { ConduitRouteOptions } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteOptions, UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export class RouterBuilder {
   private _path: string;
-  private _middleware?: any[];
+  private _middleware?: UntypedArray;
   private _router: Router;
 
-  constructor(routePath: string, middleware?: any[]) {
+  constructor(routePath: string, middleware?: UntypedArray) {
     this._path = routePath;
     this._router = Router();
     if (middleware) {

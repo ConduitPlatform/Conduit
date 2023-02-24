@@ -32,7 +32,7 @@ export interface IStorageProvider {
 
   exists(fileName: string): Promise<boolean | Error>;
 
-  get(fileName: string, downloadPath?: string): Promise<any | Error>;
+  get(fileName: string, downloadPath?: string): Promise<Buffer | Error>;
 
   getSignedUrl(fileName: string): Promise<any | Error>;
 
