@@ -1,4 +1,4 @@
-import { ConduitRouteOptionExtended } from '@conduitplatform/grpc-sdk';
+import { ConduitRouteOptionExtended, Indexable } from '@conduitplatform/grpc-sdk';
 
 const GQL_PRIMITIVES = ['Number', 'Boolean', 'Date', 'String'];
 
@@ -28,7 +28,7 @@ function extractArrayParam(
   }
 }
 
-export function processParams(paramObj: any, sourceParams: string) {
+export function processParams(paramObj: Indexable, sourceParams: string) {
   let params = sourceParams;
 
   for (const k in paramObj) {
