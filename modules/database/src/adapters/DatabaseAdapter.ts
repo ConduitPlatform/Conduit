@@ -284,7 +284,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
   }
 
-  async recoverSchemasFromDatabase(): Promise<any> {
+  async recoverSchemasFromDatabase() {
     let models = await this.models!['_DeclaredSchema'].findMany({
       $or: [
         {

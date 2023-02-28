@@ -32,7 +32,7 @@ export class ConduitMiddleware {
     return this._middlewareName;
   }
 
-  executeRequest(request: ConduitRouteParameters): Promise<any> {
+  executeRequest(request: ConduitRouteParameters) {
     return this._handler(request);
   }
 }

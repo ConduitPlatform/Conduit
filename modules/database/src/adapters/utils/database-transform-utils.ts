@@ -2,6 +2,7 @@ import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import {
   ConduitModelField,
   ConduitSchema,
+  Indexable,
   PostgresIndexOptions,
   PostgresIndexType,
 } from '@conduitplatform/grpc-sdk';
@@ -86,7 +87,7 @@ export function convertSchemaFieldIndexes(copy: ConduitSchema) {
 }
 
 export function extractFieldProperties(
-  objectField: any,
+  objectField: Indexable,
   res: {
     type: any;
     defaultValue?: any;

@@ -80,7 +80,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .lean()
       .exec()
       .then(r => {
-        r.map((r: any) => r._id);
+        r.map(r => r._id);
       });
     return this.model
       .updateMany(parsedFilter, parsedQuery)

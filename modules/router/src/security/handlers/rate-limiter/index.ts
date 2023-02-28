@@ -4,7 +4,7 @@ import { RateLimiterRedis } from 'rate-limiter-flexible';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
 
 export class RateLimiter {
-  private _limiter: any;
+  private _limiter: RateLimiterRedis;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     const redisClient: Redis | Cluster = this.grpcSdk.redisManager.getClient({

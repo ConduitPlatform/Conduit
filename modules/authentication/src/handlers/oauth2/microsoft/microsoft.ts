@@ -8,6 +8,7 @@ import { AuthParams } from '../interfaces/AuthParams';
 import { Payload } from '../interfaces/Payload';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
 import { OAuth2Settings } from '../interfaces/OAuth2Settings';
+import { makeRequest } from '../utils';
 
 export class MicrosoftHandlers extends OAuth2<MicrosoftUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { microsoft: ProviderConfig }) {
@@ -39,19 +40,6 @@ export class MicrosoftHandlers extends OAuth2<MicrosoftUser, OAuth2Settings> {
   }
 
   makeRequest(data: AuthParams) {
-    const requestData: string = Object.keys(data)
-      .map(k => {
-        return k + '=' + data[k as keyof AuthParams];
-      })
-      .join('&');
-
-    return {
-      method: this.settings.accessTokenMethod,
-      url: this.settings.tokenUrl,
-      data: requestData,
-      headers: {
-        Accept: 'application/json',
-      },
-    };
+    return makeRequest(data, this.settings);
   }
 }
