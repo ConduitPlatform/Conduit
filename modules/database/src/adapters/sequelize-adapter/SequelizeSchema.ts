@@ -313,7 +313,11 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return inclusionArray;
   }
 
-  createWithPopulation(doc: Model, relationObjects: any, transaction?: Transaction) {
+  createWithPopulation(
+    doc: Model,
+    relationObjects: Indexable,
+    transaction?: Transaction,
+  ) {
     let hasOne = false;
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;

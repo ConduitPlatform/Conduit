@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '../index';
+import ConduitGrpcSdk, { UntypedArray } from '../index';
 import { Indexable } from '../interfaces';
 import { linearBackoffTimeoutAsync } from '../utilities';
 import winston, { format, LogCallback, Logger } from 'winston';
@@ -116,7 +116,7 @@ export class ConduitLogger {
 
 async function lokiReadyCheck(lokiUrl: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const data: any[] = [];
+    const data: UntypedArray = [];
     get(`${lokiUrl}/ready`, r => {
       r.on('data', chunk => data.push(chunk));
       r.on('end', () => {

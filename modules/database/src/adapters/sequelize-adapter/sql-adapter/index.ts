@@ -1,6 +1,6 @@
 import { SQLSchema } from './SQLSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
@@ -17,7 +17,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
   private async processExtractedSchemas(
     schema: ConduitSchema,
-    extractedSchemas: { [key: string]: any },
+    extractedSchemas: Indexable,
     associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {

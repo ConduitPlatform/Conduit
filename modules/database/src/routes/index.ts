@@ -22,7 +22,8 @@ export class DatabaseRoutes {
     returnType: ConduitRouteReturnDefinition;
     handler: RequestHandlers;
   }[] = [];
-  private _scheduledTimeout: any = null;
+  private _scheduledTimeout: NodeJS.Timeout | null = null;
+
   private _routingManager: RoutingManager;
 
   constructor(
