@@ -268,7 +268,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationName = path[0];
         const relationTarget = this.extractedRelations[relationName];
         if (relationTarget) continue;
-        let relationSchema: SequelizeSchema = Array.isArray(relationTarget)
+        const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? relationTarget[0]
           : relationTarget;
         const relationObject: {
