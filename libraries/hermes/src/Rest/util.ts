@@ -1,19 +1,16 @@
 import { Request } from 'express';
-import { ConduitError, Indexable, Params, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  BodyParams,
+  ConduitError,
+  Indexable,
+  Params,
+  QueryParams,
+  TYPE,
+  UrlParams,
+} from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 type ConduitRequest = Request & { conduit?: Indexable };
-type UrlParams = {
-  [key: string]: string;
-};
-
-type QueryParams = {
-  [key: string]: string | string[];
-};
-
-type BodyParams = {
-  [key: string]: any;
-};
 
 export function extractRequestData(req: ConduitRequest) {
   const context = req.conduit || {};

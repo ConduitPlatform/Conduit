@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   PostgresIndexType,
   RawSQLQuery,
   sleep,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -241,7 +242,7 @@ export abstract class SequelizeAdapter<
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const queryInterface = this.sequelize.getQueryInterface();
-    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as Array<any>;
+    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as UntypedArray;
     result.filter(index => {
       const fieldNames = [];
       for (const field of index.fields) {
@@ -285,7 +286,7 @@ export abstract class SequelizeAdapter<
     return 'Indexes deleted';
   }
 
-  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery): Promise<any> {
+  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery) {
     return await this.sequelize
       .query(rawQuery.query, rawQuery.options)
       .catch((e: Error) => {

@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   ManagedModule,
   ConduitRouteObject,
   SocketProtoDescription,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import {
@@ -248,7 +249,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
-        (state.routes as any[]).forEach((val, i) => {
+        (state.routes as UntypedArray).forEach((val, i) => {
           if (val.url === url) {
             index = i;
           }

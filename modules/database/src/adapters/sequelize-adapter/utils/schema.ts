@@ -1,5 +1,5 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { ConduitSchema, Indexable, sleep } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
 import { isNil } from 'lodash';
@@ -178,7 +178,7 @@ export function processPushOperations(
 export function compileSchema(
   schema: ConduitDatabaseSchema,
   registeredSchemas: Map<string, ConduitSchema>,
-  sequelizeModels: { [key: string]: any },
+  sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));
   validateFieldConstraints(compiledSchema);
@@ -209,7 +209,7 @@ type ExtractedRelations = {
 export async function resolveRelatedSchemas(
   schema: ConduitDatabaseSchema,
   extractedRelations: ExtractedRelations,
-  models: { [name: string]: any },
+  models: Indexable,
 ) {
   const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
 
@@ -217,7 +217,7 @@ export async function resolveRelatedSchemas(
     let pendingModels: string[] = [];
     for (const relation in extractedRelations) {
       const rel = Array.isArray(extractedRelations[relation])
-        ? (extractedRelations[relation] as any[])[0]
+        ? (extractedRelations[relation] as UntypedArray)[0]
         : extractedRelations[relation];
       if (!models[rel.model] || !models[rel.model].synced) {
         if (!pendingModels.includes(rel.model)) {

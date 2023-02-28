@@ -1,4 +1,10 @@
-import { ConduitModel, ConduitRouteOption, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitRouteOption,
+  Indexable,
+  TYPE,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitParser } from '../classes';
 
 export interface ParseResult {
@@ -30,7 +36,7 @@ export interface SwaggerObject extends SwaggerDefinition {
 export interface ProcessingObject {
   type: 'object' | 'string' | 'array' | 'boolean' | 'number' | undefined;
   format?: string;
-  properties: { [key: string]: any };
+  properties: Indexable;
   required?: (string | keyof ProcessingObject['properties'])[];
   items?: SwaggerDefinition | SwaggerObject | SwaggerString;
 }
@@ -153,7 +159,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     resolverName: string,
     name: string,
-    value: any[],
+    value: UntypedArray,
     isRequired: boolean = false,
     nestedType?: boolean,
     description?: string,

@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
+  Indexable,
   RequestHandlers,
   RouteBuilder,
   TYPE,
@@ -35,7 +36,7 @@ function extractParams(
     array?: boolean;
   }[],
 ) {
-  const resultingObject: any = {};
+  const resultingObject: Indexable = {};
   inputs.forEach(
     (r: {
       name: string;

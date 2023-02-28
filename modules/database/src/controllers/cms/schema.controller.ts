@@ -1,4 +1,8 @@
-import ConduitGrpcSdk, { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  GrpcError,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
@@ -40,7 +44,7 @@ export class SchemaController {
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then(r => {
         if (r) {
-          const routeSchemas: any = {};
+          const routeSchemas: Indexable = {};
           r.forEach((schema: ConduitSchema) => {
             if (typeof schema.modelOptions === 'string') {
               (schema as any).modelOptions = JSON.parse(schema.modelOptions);
@@ -128,7 +132,7 @@ export class SchemaController {
             });
           });
           promise.then(() => {
-            const routeSchemas: any = {};
+            const routeSchemas: Indexable = {};
             r.forEach((schema: ConduitSchema) => {
               if (schema.modelOptions.conduit?.cms?.crudOperations) {
                 routeSchemas[schema.name] = schema;

@@ -2,6 +2,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
@@ -127,7 +128,7 @@ export class DocumentsAdmin {
         'Schema does not exist or disallows doc modifications',
       );
     }
-    const updatedDocuments: any[] = [];
+    const updatedDocuments: UntypedArray = [];
     for (const doc of changedDocuments) {
       const dbDocument: Doc = await this.database
         .getSchemaModel(schemaName)

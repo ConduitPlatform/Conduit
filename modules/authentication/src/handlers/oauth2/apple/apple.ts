@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   ConduitString,
   ConfigController,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   RoutingManager,
 } from '@conduitplatform/grpc-sdk';
@@ -65,7 +66,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const publicKeys = await axios.get('https://appleid.apple.com/auth/keys');
     const publicKey = publicKeys.data.keys.find(
-      (key: any) => key.kid === decoded_id_token!.header.kid,
+      (key: Indexable) => key.kid === decoded_id_token!.header.kid,
     );
     const applePublicKey = await this.generateApplePublicKey(publicKey.kid);
     this.verifyIdentityToken(applePublicKey, params.id_token);
@@ -85,7 +86,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       sub: this.settings.clientId,
     };
 
-    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key as any, {
+    const apple_client_secret = jwt.sign(jwtPayload, apple_private_key, {
       algorithm: 'ES256',
       header: jwtHeader,
     });

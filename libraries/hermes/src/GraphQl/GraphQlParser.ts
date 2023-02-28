@@ -1,4 +1,9 @@
-import { ConduitModel, ConduitRouteOption, Indexable } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitRouteOption,
+  Indexable,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitParser, TypeRegistry } from '../classes';
 
 export interface ResolverDefinition {
@@ -131,7 +136,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     resolverName: string,
     name: string,
-    value: any[],
+    value: UntypedArray,
     isRequired: boolean = false,
     nestedType?: boolean,
     description?: string,
