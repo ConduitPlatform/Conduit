@@ -1,7 +1,6 @@
 import {
   ConduitProxyObject,
   GrpcServer,
-  Indexable,
   ProxyMiddlewareOptions,
   ProxyRouteBuilder,
   ProxyRouteOptions,
