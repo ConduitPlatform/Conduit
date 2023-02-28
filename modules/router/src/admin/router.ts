@@ -2,6 +2,7 @@ import ConduitGrpcSdk, {
   ConduitError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import ConduitDefaultRouter from '../Router';
@@ -38,7 +39,7 @@ export class RouterAdmin {
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sortByName } = call.request.params;
-    let response: any[] = [];
+    let response: UntypedArray = [];
     const module = this.router.getGrpcRoutes();
     ConduitGrpcSdk.Logger.logObject(module);
 

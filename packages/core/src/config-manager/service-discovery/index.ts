@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
   linearBackoffTimeout,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
@@ -209,7 +210,7 @@ export class ServiceDiscovery {
   watchModules(call: ServerWritableStream<void, ModuleListResponse>) {
     const self = this;
     this.moduleRegister.on('serving-modules-update', () => {
-      const modules: any[] = [];
+      const modules: UntypedArray = [];
       self.registeredModules.forEach((value: RegisteredModule, key: string) => {
         modules.push({
           moduleName: key,

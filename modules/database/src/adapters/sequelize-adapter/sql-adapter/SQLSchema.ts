@@ -26,7 +26,7 @@ export class SQLSchema extends SequelizeSchema {
     query: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
-  ): Promise<{ [key: string]: any }> {
+  ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
       transaction,
       query,
@@ -149,7 +149,7 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-      const associationObjects: { [key: string]: any } = {};
+      const associationObjects: Indexable = {};
       for (const assoc in assocs) {
         if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
           throw new Error(`Cannot update association ${assoc} with non-array value`);
@@ -178,7 +178,7 @@ export class SQLSchema extends SequelizeSchema {
           for (const assoc in associationObjects) {
             if (!associationObjects.hasOwnProperty(assoc)) continue;
             if (Array.isArray(associationObjects[assoc])) {
-              associationObjects[assoc].forEach((obj: any) => {
+              associationObjects[assoc].forEach((obj: Indexable) => {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
                     (this.associations[assoc] as SQLSchema).findByIdAndUpdate(

@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -17,7 +18,7 @@ export class UserAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
-    let query: any = {};
+    let query: Indexable = {};
     if (!isNil(isActive)) {
       query.active = isActive;
     }
