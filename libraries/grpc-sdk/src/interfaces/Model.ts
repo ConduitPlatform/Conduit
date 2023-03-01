@@ -8,6 +8,27 @@ export enum TYPE {
   Relation = 'Relation',
 }
 
+export enum SQLDataType {
+  VARCHAR = 'VARCHAR',
+  TEXT = 'TEXT',
+  CHAR = 'CHAR',
+  BOOLEAN = 'BOOLEAN',
+  INT = 'INT',
+  BIGINT = 'BIGINT',
+  FLOAT = 'FLOAT',
+  DOUBLE = 'DOUBLE',
+  DECIMAL = 'DECIMAL',
+  DATE = 'DATE',
+  TIME = 'TIME',
+  DATETIME = 'DATETIME',
+  TIMESTAMP = 'TIMESTAMP',
+  BLOB = 'BLOB',
+  UUID = 'UUID',
+  JSON = 'JSON',
+
+  STRING = 'STRING',
+}
+
 export enum MongoIndexType {
   Ascending = 1,
   Descending = -1,
@@ -30,7 +51,7 @@ export enum PostgresIndexType {
 export type Array = any[];
 
 export interface ConduitModelField {
-  type?: TYPE | Array | ConduitModel | ConduitModelField;
+  type?: TYPE | Array | ConduitModel | ConduitModelField | SQLDataType;
   enum?: any;
   default?: any;
   model?: string;
@@ -49,6 +70,8 @@ export interface ConduitModel {
     | ConduitModel
     | TYPE
     | TYPE[]
+    | SQLDataType
+    | SQLDataType[]
     | any[]; // removing this caused multiple issues
 }
 
@@ -76,6 +99,7 @@ export interface ConduitSchemaOptions {
 export interface SchemaFieldIndex {
   type?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 
@@ -83,6 +107,7 @@ export interface ModelOptionsIndexes {
   fields: string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 

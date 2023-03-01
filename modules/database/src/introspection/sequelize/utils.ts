@@ -1,4 +1,4 @@
-import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, SQLDataType, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { Sequelize } from 'sequelize';
 
@@ -17,33 +17,42 @@ function extractType(type: string) {
   switch (type) {
     case 'TEXT':
     case type.match(/^CHARACTER VARYING/)?.input:
-    case 'ENUM':
-      return TYPE.String;
-    case 'INTEGER':
-    case 'SMALLINT':
+      return SQLDataType.TEXT;
+    case 'VARCHAR':
+      return SQLDataType.VARCHAR;
+    case 'CHAR':
+      return SQLDataType.CHAR;
+    case 'BOOLEAN':
+      return SQLDataType.BOOLEAN;
+    case 'INT':
+      return SQLDataType.INT;
     case 'BIGINT':
+      return SQLDataType.BIGINT;
     case 'FLOAT':
+      return SQLDataType.FLOAT;
     case 'DOUBLE':
+      return SQLDataType.DOUBLE;
     case 'DECIMAL':
     case 'NUMERIC':
-      return TYPE.Number;
-    case 'BIT':
-    case 'BOOLEAN':
-      return TYPE.Boolean;
+      return SQLDataType.DECIMAL;
     case 'DATE':
+      return SQLDataType.DATE;
     case 'TIME':
-    case 'TIME WITH TIME ZONE':
-    case 'TIME WITHOUT TIME ZONE':
+      return SQLDataType.TIME;
+    case 'DATETIME':
+      return SQLDataType.DATETIME;
     case 'TIMESTAMP':
     case 'TIMESTAMP WITHOUT TIME ZONE':
     case 'TIMESTAMP WITH TIME ZONE':
-      return TYPE.Date;
+      return SQLDataType.TIMESTAMP;
+    case 'BLOB':
+      return SQLDataType.BLOB;
     case 'JSON':
-      return TYPE.JSON;
+      return SQLDataType.JSON;
     case 'UUID':
-      return TYPE.ObjectId;
+      return SQLDataType.UUID;
     default:
-      return TYPE.String;
+      return SQLDataType.STRING;
   }
 }
 
