@@ -138,7 +138,8 @@ function _parseQuery(
             matched,
             associations?.associations,
             associations?.associationsDirectory,
-          ) || { [key]: matched }),
+          ) ||
+          handleEmbeddedJson(key, matched, dialect) || { [key]: matched }),
       });
     }
   }
@@ -193,6 +194,18 @@ function handleRelation(
       return { [`${key}Id`]: value };
     }
   }
+}
+
+function handleEmbeddedJson(key: string, value: any, dialect: string) {
+  if (dialect === 'postgres' || key.indexOf('.') === -1) return null;
+  const keyArray = key.split('.');
+  let embeddedJson = {};
+  for (let i = keyArray.length - 1; i >= 0; i--) {
+    const k = i !== 0 ? `"${keyArray[i]}"` : keyArray[i];
+    const v = i !== keyArray.length - 1 ? embeddedJson : value;
+    embeddedJson = { [k]: v };
+  }
+  return embeddedJson;
 }
 
 export function parseQuery(
