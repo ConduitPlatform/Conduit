@@ -20,7 +20,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
-import { IDeclaredSchema } from '../../interfaces';
+import { ConduitPermissions, IDeclaredSchema } from '../../interfaces';
 import { OperationsEnum } from '../../enums';
 import { parseSortParam } from '../../handlers/utils';
 
@@ -295,14 +295,7 @@ export class CustomEndpointsAdmin {
     }
     schemaId = schema._id.toString();
     schemaName = schema.name;
-    // Field Accessibility Checks
-    const perms = schema.modelOptions.conduit?.permissions!;
-    if (!perms && operation !== OperationsEnum.GET) {
-      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
-      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
-      ConduitGrpcSdk.Logger.error(error);
-      throw new GrpcError(status.FAILED_PRECONDITION, error);
-    }
+    const perms = this.checkFieldAccessibility(operation, schema);
     if (operation === OperationsEnum.GET) {
       return {
         schemaId,
@@ -314,20 +307,46 @@ export class CustomEndpointsAdmin {
       const fields = perms.canCreate ? schema.compiledFields : {};
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if ([OperationsEnum.PATCH, OperationsEnum.PUT].includes(operation)) {
-      const fields =
-        perms.canModify === 'Everything'
-          ? schema.compiledFields
-          : perms.canModify === 'ExtensionOnly'
-          ? perms.extendable
-            ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
-            : {}
-          : {};
+      const fields = this.getFieldsForModifyOperation(perms, schema);
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if (operation === OperationsEnum.DELETE) {
       const fields = perms.canDelete ? schema.compiledFields : {};
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
+    }
+  }
+
+  private checkFieldAccessibility(operation: number, schema: IDeclaredSchema) {
+    const perms = schema.modelOptions.conduit?.permissions!;
+    if (!perms && operation !== OperationsEnum.GET) {
+      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
+      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
+      ConduitGrpcSdk.Logger.error(error);
+      throw new GrpcError(status.FAILED_PRECONDITION, error);
+    }
+    return perms;
+  }
+
+  private getFieldsForModifyOperation(
+    perms: ConduitPermissions,
+    schema: IDeclaredSchema,
+  ): ConduitModel {
+    const canModify = this.checkCanModify(perms);
+    return canModify === 'Everything'
+      ? schema.compiledFields
+      : canModify === 'ExtensionOnly'
+      ? perms.extendable
+        ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
+        : {}
+      : {};
+  }
+
+  private checkCanModify(perms: ConduitPermissions | undefined) {
+    if (perms?.canModify === 'Everything' || perms?.canModify === 'ExtensionOnly') {
+      return perms.canModify;
+    } else {
+      return null;
     }
   }
 }

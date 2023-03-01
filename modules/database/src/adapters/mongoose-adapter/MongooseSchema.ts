@@ -10,7 +10,7 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -80,7 +80,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .lean()
       .exec()
       .then(r => {
-        r.map((r: any) => r._id);
+        r.map(r => r._id);
       });
     return this.model
       .updateMany(parsedFilter, parsedQuery)
@@ -126,7 +126,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         population[index] = r.join('.');
       }
     });
-    // @ts-ignore
     queryObj = queryObj.deepPopulate(population);
 
     return queryObj;

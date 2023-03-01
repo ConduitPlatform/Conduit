@@ -1,5 +1,6 @@
 import {
   ConduitModel,
+  Indexable,
   MongoIndexOptions,
   PostgresIndexOptions,
 } from '@conduitplatform/grpc-sdk';
@@ -11,7 +12,7 @@ import { Doc, Fields } from '../../interfaces';
 /**
  * @throws {Error}
  */
-async function _createOrUpdate(obj: any, model: MongooseSchema) {
+async function _createOrUpdate(obj: Indexable, model: MongooseSchema) {
   if (obj.hasOwnProperty('_id')) {
     const _id = obj._id;
     delete obj._id;
@@ -44,7 +45,7 @@ async function _createWithPopulations(
 
     if (isArray(document[key])) {
       for (let i = 0; i < document[key].length; i++) {
-        const val: any = document[key][i];
+        const val = document[key][i];
         if (!isObject(val)) {
           continue;
         }

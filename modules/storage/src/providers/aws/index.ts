@@ -22,7 +22,7 @@ type GetResult = Buffer | Error;
 type StoreResult = boolean | Error;
 
 export class AWSS3Storage implements IStorageProvider {
-  private _storage: S3Client;
+  private readonly _storage: S3Client;
   private _activeContainer: string = '';
 
   constructor(options: StorageConfig) {

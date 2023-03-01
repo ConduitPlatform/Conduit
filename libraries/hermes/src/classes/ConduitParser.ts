@@ -4,6 +4,7 @@ import {
   ConduitModelField,
   TYPE,
   ConduitRouteOption,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 
 const baseTypes = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'JSON'];
@@ -62,7 +63,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
     processingObject: ProcessingObject,
     resolverName: string,
     name: string,
-    value: any[],
+    value: UntypedArray,
     isRequired: boolean,
     nestedType?: boolean,
     description?: string,

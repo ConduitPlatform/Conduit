@@ -269,7 +269,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationTarget = this.extractedRelations[relationName];
         if (relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
-          ? (relationTarget as any[])[0]
+          ? relationTarget[0]
           : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
@@ -293,7 +293,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationTarget = this.extractedRelations[population];
         if (!relationTarget) continue;
         const relationSchema = Array.isArray(relationTarget)
-          ? (relationTarget as any[])[0]
+          ? relationTarget[0]
           : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
@@ -313,7 +313,11 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return inclusionArray;
   }
 
-  createWithPopulation(doc: Model<any>, relationObjects: any, transaction?: Transaction) {
+  createWithPopulation(
+    doc: Model,
+    relationObjects: Indexable,
+    transaction?: Transaction,
+  ) {
     let hasOne = false;
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;
@@ -377,7 +381,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     select?: string,
     sort?: { [field: string]: -1 | 1 },
     populate?: string[],
-  ): Promise<any> {
+  ) {
     const { filter, parsingResult } = this.parseQueryFilter(query, { populate, select });
     const options: FindOptions = {
       where: filter,

@@ -15,14 +15,14 @@ export function extractCaching(
   reqCacheHeader?: string,
 ): { caching: boolean; cacheAge?: number; scope?: string } {
   let caching: boolean = false;
-  let cacheAge: any | undefined;
+  let cacheAge: number | undefined;
   let scope: string | undefined;
   if (route.input.cacheControl && route.input.cacheControl.indexOf(',') !== -1) {
     caching = true;
     const cache: string[] = route.input.cacheControl.split(',');
     scope = cache[0];
-    cacheAge = cache[1].replace('max-age=', '');
-    cacheAge = Number.parseInt(cacheAge);
+    const cacheAgeStr = cache[1].replace('max-age=', '');
+    cacheAge = Number.parseInt(cacheAgeStr);
   }
 
   if (reqCacheHeader && reqCacheHeader === 'no-cache') {

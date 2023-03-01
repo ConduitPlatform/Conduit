@@ -18,6 +18,19 @@ import {
 
 const deepdash = require('deepdash/standalone');
 
+type CrudOperations = {
+  create?: { enabled?: boolean; authenticated?: boolean };
+  read?: { enabled?: boolean; authenticated?: boolean };
+  update?: { enabled?: boolean; authenticated?: boolean };
+  delete?: { enabled?: boolean; authenticated?: boolean };
+};
+
+interface Permissions {
+  extendable?: boolean;
+  canCreate?: boolean;
+  canModify?: 'Everything' | 'Nothing' | 'ExtensionOnly';
+  canDelete?: boolean;
+}
 export function wrongFields(schemaFields: string[], updateFields: string[]): boolean {
   const blackList = ['updatedAt', 'createdAt', '_id', '__v'];
   for (const element of blackList) {
@@ -163,18 +176,19 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
   });
 }
 
-function validateCrudOperations(crudOperations: {
-  create?: { enabled?: boolean; authenticated?: boolean };
-  read?: { enabled?: boolean; authenticated?: boolean };
-  update?: { enabled?: boolean; authenticated?: boolean };
-  delete?: { enabled?: boolean; authenticated?: boolean };
-}) {
+function validateCrudOperations(crudOperations: CrudOperations) {
+  const allowedCrudOperations: Array<keyof CrudOperations> = [
+    'create',
+    'read',
+    'update',
+    'delete',
+  ];
+
   if (!isObject(crudOperations))
     throw new Error(`CMS field 'crudOperations' must be of type Object`);
+
   Object.keys(crudOperations).forEach(op => {
-    // @ts-ignore
-    if (!crudOperations[op] === undefined) return;
-    if (!['create', 'read', 'update', 'delete'].includes(op)) {
+    if (!allowedCrudOperations.includes(op as keyof CrudOperations)) {
       throw new Error(`Unrecognized CRUD operation '${op}' provided`);
     }
     // @ts-ignore
@@ -183,8 +197,6 @@ function validateCrudOperations(crudOperations: {
     }
     // @ts-ignore
     Object.keys(crudOperations[op]).forEach(opField => {
-      // @ts-ignore
-      if (!crudOperations[op][opField] === undefined) return;
       if (!['enabled', 'authenticated'].includes(opField)) {
         throw new Error(
           `Unrecognized crud operation field '${opField}' for operation '${op}' provided`,
@@ -200,24 +212,18 @@ function validateCrudOperations(crudOperations: {
   });
 }
 
-export function validatePermissions(permissions: {
-  extendable?: boolean;
-  canCreate?: boolean;
-  canModify?: 'Everything' | 'Nothing' | 'ExtensionOnly';
-  canDelete?: boolean;
-}) {
+export function validatePermissions(permissions: Permissions) {
   Object.keys(permissions).forEach(perm => {
-    // @ts-ignore
-    if (permissions[perm] === undefined) return;
-    if (!['extendable', 'canCreate', 'canModify', 'canDelete'].includes(perm)) {
-      throw new Error(`Unrecognized permission '${perm}' provided`);
+    const key = perm as keyof Permissions;
+    if (permissions[key] === undefined) return;
+    if (!['extendable', 'canCreate', 'canModify', 'canDelete'].includes(key)) {
+      throw new Error(`Unrecognized permission '${key}' provided`);
     }
-    if (perm !== 'canModify') {
-      // @ts-ignore
-      if (!isBoolean(permissions[perm]))
-        throw new Error(`Permission field '${perm}' must be of type Boolean`);
+    if (key !== 'canModify') {
+      if (!isBoolean(permissions[key]))
+        throw new Error(`Permission field '${key}' must be of type Boolean`);
     } else if (
-      !isString(permissions[perm]) ||
+      !isString(permissions[key]) ||
       !ValidModifyPermValues.includes(
         permissions.canModify as 'Everything' | 'Nothing' | 'ExtensionOnly',
       )

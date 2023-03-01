@@ -201,14 +201,14 @@ export class FileHandlers {
       }
 
       let data: Buffer;
-      if (file.folder) {
-        data = await this.storageProvider
-          .container(file.container)
-          .get(file.folder + file.name);
+      const result = await this.storageProvider
+        .container(file.container)
+        .get(file.folder ? file.folder + file.name : file.name);
+      if (result instanceof Error) {
+        throw result;
       } else {
-        data = await this.storageProvider.container(file.container).get(file.name);
+        data = result;
       }
-
       return { data: data.toString('base64') };
     } catch (e) {
       throw new GrpcError(

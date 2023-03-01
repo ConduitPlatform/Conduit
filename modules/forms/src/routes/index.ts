@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   RoutingManager,
   UnparsedRouterResponse,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { FormReplies, Forms } from '../models';
 import { isNil } from 'lodash';
@@ -12,7 +13,7 @@ import axios from 'axios';
 
 export class FormsRoutes {
   public readonly _routingManager: RoutingManager;
-  private forms: any[] = [];
+  private forms: UntypedArray = [];
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
