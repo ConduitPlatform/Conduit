@@ -78,7 +78,6 @@ function extractType(type: SQLDataType) {
       return DataTypes.JSONB;
   }
 }
-
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
