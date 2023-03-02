@@ -1,9 +1,7 @@
 import {
   ConduitSchema,
-  DataType,
   Indexable,
   SQLDataType,
-  TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
@@ -41,47 +39,43 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   return [copy, extractedRelations];
 }
 
-function extractType(type: DataType) {
+function extractType(type: string, sqlType?: SQLDataType) {
   switch (type) {
-    case TYPE.String:
-    case SQLDataType.VARCHAR:
-      return DataTypes.STRING;
-    case SQLDataType.TEXT:
-      return DataTypes.TEXT;
-    case SQLDataType.CHAR:
-      return DataTypes.CHAR;
-    case TYPE.Number:
-    case SQLDataType.FLOAT:
-      return DataTypes.FLOAT;
-    case TYPE.Boolean:
+    case 'String':
+      if (sqlType === SQLDataType.CHAR) {
+        return DataTypes.CHAR;
+      } else if (sqlType === SQLDataType.VARCHAR) {
+        return DataTypes.STRING;
+      } else if (sqlType === SQLDataType.TEXT) {
+        return DataTypes.TEXT;
+      } else {
+        return DataTypes.STRING;
+      }
+    case 'Number':
+      if (sqlType === SQLDataType.INT) {
+        return DataTypes.INTEGER;
+      } else if (sqlType === SQLDataType.BIGINT) {
+        return DataTypes.BIGINT;
+      } else if (sqlType === SQLDataType.FLOAT) {
+        return DataTypes.FLOAT;
+      } else if (sqlType === SQLDataType.DOUBLE) {
+        return DataTypes.DOUBLE;
+      } else if (sqlType === SQLDataType.DECIMAL) {
+        return DataTypes.DECIMAL;
+      } else {
+        return DataTypes.FLOAT;
+      }
+    case 'Boolean':
       return DataTypes.BOOLEAN;
-    case TYPE.Date:
+    case 'Date':
       return DataTypes.DATE;
-    case TYPE.JSON:
-      return DataTypes.JSON;
-    case TYPE.Relation:
-    case TYPE.ObjectId:
-    case SQLDataType.UUID:
-      return DataTypes.UUID;
-    case SQLDataType.INT:
-      return DataTypes.INTEGER;
-    case SQLDataType.BIGINT:
-      return DataTypes.BIGINT;
-    case SQLDataType.DOUBLE:
-      return DataTypes.DOUBLE;
-    case SQLDataType.DECIMAL:
-      return DataTypes.DECIMAL;
-    case SQLDataType.TIME:
-      return DataTypes.TIME;
-    case SQLDataType.DATETIME:
-    case SQLDataType.TIMESTAMP:
-      return DataTypes.DATE;
-    case SQLDataType.BLOB:
-      return DataTypes.BLOB;
-    case SQLDataType.JSONB:
-    default:
+    case 'JSON':
       return DataTypes.JSONB;
+    case 'Relation':
+    case 'ObjectId':
+      return DataTypes.UUID;
   }
+  return DataTypes.JSONB;
 }
 
 function iterDeep(schema: any, resSchema: any) {
@@ -123,7 +117,7 @@ function extractObjectType(objectField: Indexable) {
   } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
-    res.type = extractType(objectField.type);
+    res.type = extractType(objectField.type, objectField.sqlType);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }

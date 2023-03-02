@@ -1,6 +1,6 @@
-import { DataType, Indexable, SQLDataType, TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { DataTypes, Sequelize } from 'sequelize';
+import { Sequelize } from 'sequelize';
 
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
@@ -13,47 +13,37 @@ export function sqlSchemaConverter(sqlSchema: Indexable) {
   }
 }
 
-function extractType(type: DataType) {
+function extractType(type: string) {
   switch (type) {
-    case TYPE.String:
-    case SQLDataType.VARCHAR:
-      return DataTypes.STRING;
-    case SQLDataType.TEXT:
-      return DataTypes.TEXT;
-    case SQLDataType.CHAR:
-      return DataTypes.CHAR;
-    case TYPE.Number:
-    case SQLDataType.FLOAT:
-      return DataTypes.FLOAT;
-    case TYPE.Boolean:
-      return DataTypes.BOOLEAN;
-    case TYPE.Date:
-      return DataTypes.DATE;
-    case TYPE.JSON:
-      return DataTypes.JSON;
-    case TYPE.Relation:
-    case TYPE.ObjectId:
-    case SQLDataType.UUID:
-      return DataTypes.UUID;
-    case SQLDataType.INT:
-      return DataTypes.INTEGER;
-    case SQLDataType.BIGINT:
-      return DataTypes.BIGINT;
-    case SQLDataType.DOUBLE:
-      return DataTypes.DOUBLE;
-    case SQLDataType.DECIMAL:
-      return DataTypes.DECIMAL;
-    case SQLDataType.TIME:
-      return DataTypes.TIME;
-    case SQLDataType.DATETIME:
-    case SQLDataType.TIMESTAMP:
-      return DataTypes.DATE;
-    case SQLDataType.BLOB:
-      return DataTypes.BLOB;
-    case SQLDataType.JSONB:
-      return DataTypes.JSONB;
+    case 'TEXT':
+    case type.match(/^CHARACTER VARYING/)?.input:
+    case 'ENUM':
+      return TYPE.String;
+    case 'INTEGER':
+    case 'SMALLINT':
+    case 'BIGINT':
+    case 'FLOAT':
+    case 'DOUBLE':
+    case 'DECIMAL':
+    case 'NUMERIC':
+      return TYPE.Number;
+    case 'BIT':
+    case 'BOOLEAN':
+      return TYPE.Boolean;
+    case 'DATE':
+    case 'TIME':
+    case 'TIME WITH TIME ZONE':
+    case 'TIME WITHOUT TIME ZONE':
+    case 'TIMESTAMP':
+    case 'TIMESTAMP WITHOUT TIME ZONE':
+    case 'TIMESTAMP WITH TIME ZONE':
+      return TYPE.Date;
+    case 'JSON':
+      return TYPE.JSON;
+    case 'UUID':
+      return TYPE.ObjectId;
     default:
-      return DataTypes.STRING;
+      return TYPE.String;
   }
 }
 

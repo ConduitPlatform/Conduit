@@ -1,3 +1,5 @@
+import { UntypedArray } from './UntypedArray';
+
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -25,8 +27,6 @@ export enum SQLDataType {
   JSONB = 'JSONB', // Postgres Specific
 }
 
-export type DataType = TYPE | SQLDataType;
-
 export enum MongoIndexType {
   Ascending = 1,
   Descending = -1,
@@ -49,7 +49,8 @@ export enum PostgresIndexType {
 export type Array = any[];
 
 export interface ConduitModelField {
-  type?: TYPE | Array | ConduitModel | ConduitModelField | SQLDataType;
+  type?: TYPE | Array | ConduitModel | ConduitModelField;
+  sqlType?: SQLDataType;
   enum?: any;
   default?: any;
   model?: string;
@@ -68,11 +69,7 @@ export interface ConduitModel {
     | ConduitModel
     | TYPE
     | TYPE[]
-    | SQLDataType
-    | SQLDataType[]
-    | DataType
-    | DataType[]
-    | any[]; // removing this caused multiple issues
+    | UntypedArray; // removing this caused multiple issues
 }
 
 export const ConduitModelOptionsPermModifyType = [
