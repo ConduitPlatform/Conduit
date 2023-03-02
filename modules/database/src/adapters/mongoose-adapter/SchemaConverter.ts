@@ -45,10 +45,7 @@ function extractObjectType(objectField: any) {
     primaryKey?: boolean;
     unique?: boolean;
     required?: boolean;
-  } = {
-    ...(objectField.type !== undefined && { type: objectField.type }),
-    ...(objectField.default !== undefined && { default: objectField.default }),
-  };
+  } = { ...objectField };
   if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
     res.primaryKey = objectField.primaryKey ?? false;
     res.unique = true;
