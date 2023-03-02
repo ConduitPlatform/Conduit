@@ -1,4 +1,9 @@
-import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitSchema,
+  Indexable,
+  SQLDataType,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -33,25 +38,47 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extractedRelations];
 }
-function extractType(type: string) {
-  switch (type) {
-    case 'String':
-      return DataTypes.STRING;
-    case 'Number':
-      return DataTypes.FLOAT;
-    case 'Boolean':
-      return DataTypes.BOOLEAN;
-    case 'Date':
-      return DataTypes.DATE;
-    case 'JSON':
-      return DataTypes.JSONB;
-    case 'Relation':
-    case 'ObjectId':
-      return DataTypes.UUID;
-  }
 
-  return DataTypes.JSONB;
+function extractType(type: SQLDataType) {
+  switch (type) {
+    case SQLDataType.VARCHAR:
+      return DataTypes.STRING;
+    case SQLDataType.TEXT:
+      return DataTypes.TEXT;
+    case SQLDataType.CHAR:
+      return DataTypes.CHAR;
+    case SQLDataType.BOOLEAN:
+      return DataTypes.BOOLEAN;
+    case SQLDataType.INT:
+      return DataTypes.INTEGER;
+    case SQLDataType.BIGINT:
+      return DataTypes.BIGINT;
+    case SQLDataType.FLOAT:
+      return DataTypes.FLOAT;
+    case SQLDataType.DOUBLE:
+      return DataTypes.DOUBLE;
+    case SQLDataType.DECIMAL:
+      return DataTypes.DECIMAL;
+    case SQLDataType.DATE:
+      return DataTypes.DATE;
+    case SQLDataType.TIME:
+      return DataTypes.TIME;
+    case SQLDataType.DATETIME:
+      return DataTypes.DATE;
+    case SQLDataType.TIMESTAMP:
+      return DataTypes.DATE;
+    case SQLDataType.BLOB:
+      return DataTypes.BLOB;
+    case SQLDataType.UUID:
+      return DataTypes.UUID;
+    case SQLDataType.JSON:
+      return DataTypes.JSON;
+    case SQLDataType.JSONB:
+    default:
+      return DataTypes.JSONB;
+  }
 }
+
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {

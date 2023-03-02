@@ -61,7 +61,6 @@ function extractEmbedded(ogSchema: any, schema: any) {
   }
   return extracted;
 }
-
 function extractType(type: string) {
   switch (type) {
     case 'String':
@@ -77,6 +76,26 @@ function extractType(type: string) {
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;
+    case 'Text':
+      return DataTypes.TEXT;
+    case 'Char':
+      return DataTypes.CHAR;
+    case 'Int':
+      return DataTypes.INTEGER;
+    case 'BigInt':
+      return DataTypes.BIGINT;
+    case 'Double':
+      return DataTypes.DOUBLE;
+    case 'Decimal':
+      return DataTypes.DECIMAL;
+    case 'Time':
+      return DataTypes.TIME;
+    case 'DateTime':
+      return DataTypes.DATE;
+    case 'Timestamp':
+      return DataTypes.DATE;
+    case 'Blob':
+      return DataTypes.BLOB;
   }
 
   throw new Error('Failed to extract embedded object type');
