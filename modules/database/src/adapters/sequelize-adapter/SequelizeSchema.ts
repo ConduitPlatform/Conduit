@@ -264,10 +264,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!populate) return inclusionArray;
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
-        const path = population.split('.');
+        let path = population.split('.');
         const relationName = path[0];
         const relationTarget = this.extractedRelations[relationName];
-        if (relationTarget) continue;
+        if (!relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? relationTarget[0]
           : relationTarget;
@@ -284,6 +284,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
           attributes: { exclude: relationSchema.excludedFields },
         };
         path.shift();
+        path = [path.join('.')];
         relationObject.include = relationSchema.constructRelationInclusion(
           path,
           required,

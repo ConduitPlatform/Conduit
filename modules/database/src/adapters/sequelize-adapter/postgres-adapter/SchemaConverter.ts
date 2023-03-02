@@ -33,6 +33,7 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extractedRelations];
 }
+
 function extractType(type: string) {
   switch (type) {
     case 'String':
@@ -49,9 +50,9 @@ function extractType(type: string) {
     case 'ObjectId':
       return DataTypes.UUID;
   }
-
   return DataTypes.JSONB;
 }
+
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
