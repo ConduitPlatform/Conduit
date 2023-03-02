@@ -1,4 +1,9 @@
-import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitSchema,
+  Indexable,
+  SQLDataType,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -61,40 +66,36 @@ function extractEmbedded(ogSchema: any, schema: any) {
   }
   return extracted;
 }
-function extractType(type: string) {
+
+function extractType(type: SQLDataType) {
   switch (type) {
-    case 'String':
+    case SQLDataType.STRING:
       return DataTypes.STRING;
-    case 'Number':
+    case SQLDataType.FLOAT:
       return DataTypes.FLOAT;
-    case 'Boolean':
+    case SQLDataType.BOOLEAN:
       return DataTypes.BOOLEAN;
-    case 'Date':
+    case SQLDataType.DATE:
       return DataTypes.DATE;
-    case 'JSON':
+    case SQLDataType.JSON:
       return DataTypes.JSON;
-    case 'Relation':
-    case 'ObjectId':
+    case SQLDataType.UUID:
       return DataTypes.UUID;
-    case 'Text':
+    case SQLDataType.TEXT:
       return DataTypes.TEXT;
-    case 'Char':
+    case SQLDataType.CHAR:
       return DataTypes.CHAR;
-    case 'Int':
+    case SQLDataType.INT:
       return DataTypes.INTEGER;
-    case 'BigInt':
+    case SQLDataType.BIGINT:
       return DataTypes.BIGINT;
-    case 'Double':
+    case SQLDataType.DOUBLE:
       return DataTypes.DOUBLE;
-    case 'Decimal':
+    case SQLDataType.DECIMAL:
       return DataTypes.DECIMAL;
-    case 'Time':
+    case SQLDataType.TIME:
       return DataTypes.TIME;
-    case 'DateTime':
-      return DataTypes.DATE;
-    case 'Timestamp':
-      return DataTypes.DATE;
-    case 'Blob':
+    case SQLDataType.BLOB:
       return DataTypes.BLOB;
   }
 

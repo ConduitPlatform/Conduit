@@ -25,10 +25,7 @@ export enum SQLDataType {
   BLOB = 'BLOB',
   UUID = 'UUID',
   JSON = 'JSON',
-
-  // Postgres Specific
-
-  JSONB = 'JSONB',
+  JSONB = 'JSONB', // Postgres Specific
   STRING = 'STRING',
 }
 
