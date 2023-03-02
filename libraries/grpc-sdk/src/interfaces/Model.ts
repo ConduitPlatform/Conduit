@@ -12,22 +12,20 @@ export enum SQLDataType {
   VARCHAR = 'VARCHAR',
   TEXT = 'TEXT',
   CHAR = 'CHAR',
-  BOOLEAN = 'BOOLEAN',
   INT = 'INT',
   BIGINT = 'BIGINT',
   FLOAT = 'FLOAT',
   DOUBLE = 'DOUBLE',
   DECIMAL = 'DECIMAL',
-  DATE = 'DATE',
   TIME = 'TIME',
   DATETIME = 'DATETIME',
   TIMESTAMP = 'TIMESTAMP',
   BLOB = 'BLOB',
   UUID = 'UUID',
-  JSON = 'JSON',
   JSONB = 'JSONB', // Postgres Specific
-  STRING = 'STRING',
 }
+
+export type DataType = TYPE | SQLDataType;
 
 export enum MongoIndexType {
   Ascending = 1,
@@ -72,6 +70,8 @@ export interface ConduitModel {
     | TYPE[]
     | SQLDataType
     | SQLDataType[]
+    | DataType
+    | DataType[]
     | any[]; // removing this caused multiple issues
 }
 

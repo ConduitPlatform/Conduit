@@ -1,6 +1,6 @@
-import { Indexable, SQLDataType, TYPE } from '@conduitplatform/grpc-sdk';
+import { DataType, Indexable, SQLDataType, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
-import { Sequelize } from 'sequelize';
+import { DataTypes, Sequelize } from 'sequelize';
 
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
@@ -13,46 +13,47 @@ export function sqlSchemaConverter(sqlSchema: Indexable) {
   }
 }
 
-function extractType(type: string) {
+function extractType(type: DataType) {
   switch (type) {
-    case 'TEXT':
-    case type.match(/^CHARACTER VARYING/)?.input:
-      return SQLDataType.TEXT;
-    case 'VARCHAR':
-      return SQLDataType.VARCHAR;
-    case 'CHAR':
-      return SQLDataType.CHAR;
-    case 'BOOLEAN':
-      return SQLDataType.BOOLEAN;
-    case 'INT':
-      return SQLDataType.INT;
-    case 'BIGINT':
-      return SQLDataType.BIGINT;
-    case 'FLOAT':
-      return SQLDataType.FLOAT;
-    case 'DOUBLE':
-      return SQLDataType.DOUBLE;
-    case 'DECIMAL':
-    case 'NUMERIC':
-      return SQLDataType.DECIMAL;
-    case 'DATE':
-      return SQLDataType.DATE;
-    case 'TIME':
-      return SQLDataType.TIME;
-    case 'DATETIME':
-      return SQLDataType.DATETIME;
-    case 'TIMESTAMP':
-    case 'TIMESTAMP WITHOUT TIME ZONE':
-    case 'TIMESTAMP WITH TIME ZONE':
-      return SQLDataType.TIMESTAMP;
-    case 'BLOB':
-      return SQLDataType.BLOB;
-    case 'JSON':
-      return SQLDataType.JSON;
-    case 'UUID':
-      return SQLDataType.UUID;
+    case TYPE.String:
+    case SQLDataType.VARCHAR:
+      return DataTypes.STRING;
+    case SQLDataType.TEXT:
+      return DataTypes.TEXT;
+    case SQLDataType.CHAR:
+      return DataTypes.CHAR;
+    case TYPE.Number:
+    case SQLDataType.FLOAT:
+      return DataTypes.FLOAT;
+    case TYPE.Boolean:
+      return DataTypes.BOOLEAN;
+    case TYPE.Date:
+      return DataTypes.DATE;
+    case TYPE.JSON:
+      return DataTypes.JSON;
+    case TYPE.Relation:
+    case TYPE.ObjectId:
+    case SQLDataType.UUID:
+      return DataTypes.UUID;
+    case SQLDataType.INT:
+      return DataTypes.INTEGER;
+    case SQLDataType.BIGINT:
+      return DataTypes.BIGINT;
+    case SQLDataType.DOUBLE:
+      return DataTypes.DOUBLE;
+    case SQLDataType.DECIMAL:
+      return DataTypes.DECIMAL;
+    case SQLDataType.TIME:
+      return DataTypes.TIME;
+    case SQLDataType.DATETIME:
+    case SQLDataType.TIMESTAMP:
+      return DataTypes.DATE;
+    case SQLDataType.BLOB:
+      return DataTypes.BLOB;
+    case SQLDataType.JSONB:
+      return DataTypes.JSONB;
     default:
-      return SQLDataType.STRING;
+      return DataTypes.STRING;
   }
 }
 

@@ -1,7 +1,9 @@
 import {
   ConduitSchema,
+  DataType,
   Indexable,
   SQLDataType,
+  TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
@@ -67,18 +69,23 @@ function extractEmbedded(ogSchema: any, schema: any) {
   return extracted;
 }
 
-function extractType(type: SQLDataType) {
+function extractType(type: DataType) {
   switch (type) {
-    case SQLDataType.STRING:
+    case TYPE.String:
       return DataTypes.STRING;
+    case TYPE.Number:
+      return DataTypes.FLOAT;
+    case TYPE.Boolean:
+      return DataTypes.BOOLEAN;
+    case TYPE.Date:
+      return DataTypes.DATE;
+    case TYPE.JSON:
+      return DataTypes.JSONB;
+    case TYPE.Relation:
+    case TYPE.ObjectId:
+      return DataTypes.UUID;
     case SQLDataType.FLOAT:
       return DataTypes.FLOAT;
-    case SQLDataType.BOOLEAN:
-      return DataTypes.BOOLEAN;
-    case SQLDataType.DATE:
-      return DataTypes.DATE;
-    case SQLDataType.JSON:
-      return DataTypes.JSON;
     case SQLDataType.UUID:
       return DataTypes.UUID;
     case SQLDataType.TEXT:
