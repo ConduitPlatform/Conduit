@@ -22,9 +22,6 @@ export enum SQLDataType {
   TIME = 'TIME',
   DATETIME = 'DATETIME',
   TIMESTAMP = 'TIMESTAMP',
-  BLOB = 'BLOB',
-  UUID = 'UUID',
-  JSONB = 'JSONB', // Postgres Specific
 }
 
 export enum MongoIndexType {

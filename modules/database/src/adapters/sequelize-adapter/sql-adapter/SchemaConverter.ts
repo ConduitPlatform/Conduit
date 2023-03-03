@@ -13,6 +13,7 @@ import {
   extractFieldProperties,
   extractRelations,
 } from '../../utils';
+import { sqlDataTypeMap } from '../utils/sqlTypeMap';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -68,6 +69,14 @@ function extractEmbedded(ogSchema: any, schema: any) {
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
+  if (sqlType) {
+    const expectedType = sqlDataTypeMap.get(sqlType);
+    if (expectedType && type !== expectedType) {
+      throw new Error(
+        `Invalid data type for SQL data type ${sqlType}: expected ${expectedType}, but got ${type}`,
+      );
+    }
+  }
   switch (type) {
     case 'String':
       if (sqlType === SQLDataType.CHAR) {
@@ -96,7 +105,13 @@ function extractType(type: string, sqlType?: SQLDataType) {
     case 'Boolean':
       return DataTypes.BOOLEAN;
     case 'Date':
-      return DataTypes.DATE;
+      if (sqlType === SQLDataType.TIME) {
+        return DataTypes.TIME;
+      } else if (sqlType === SQLDataType.DATETIME || sqlType === SQLDataType.TIMESTAMP) {
+        return DataTypes.DATE;
+      } else {
+        return DataTypes.DATE;
+      }
     case 'JSON':
       return DataTypes.JSON;
     case 'Relation':
