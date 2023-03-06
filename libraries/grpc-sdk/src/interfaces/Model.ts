@@ -1,3 +1,5 @@
+import { UntypedArray } from './UntypedArray';
+
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -6,6 +8,20 @@ export enum TYPE {
   ObjectId = 'ObjectId',
   JSON = 'JSON',
   Relation = 'Relation',
+}
+
+export enum SQLDataType {
+  VARCHAR = 'VARCHAR',
+  TEXT = 'TEXT',
+  CHAR = 'CHAR',
+  INT = 'INT',
+  BIGINT = 'BIGINT',
+  FLOAT = 'FLOAT',
+  DOUBLE = 'DOUBLE',
+  DECIMAL = 'DECIMAL',
+  TIME = 'TIME',
+  DATETIME = 'DATETIME',
+  TIMESTAMP = 'TIMESTAMP',
 }
 
 export enum MongoIndexType {
@@ -31,6 +47,7 @@ export type Array = any[];
 
 export interface ConduitModelField {
   type?: TYPE | Array | ConduitModel | ConduitModelField;
+  sqlType?: SQLDataType;
   enum?: any;
   default?: any;
   model?: string;
@@ -49,7 +66,7 @@ export interface ConduitModel {
     | ConduitModel
     | TYPE
     | TYPE[]
-    | any[]; // removing this caused multiple issues
+    | UntypedArray; // removing this caused multiple issues
 }
 
 export const ConduitModelOptionsPermModifyType = [
@@ -76,6 +93,7 @@ export interface ConduitSchemaOptions {
 export interface SchemaFieldIndex {
   type?: MongoIndexType | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 
@@ -83,6 +101,7 @@ export interface ModelOptionsIndexes {
   fields: string[];
   types?: MongoIndexType[] | PostgresIndexType;
   options?: MongoIndexOptions | PostgresIndexOptions;
+
   [field: string]: any;
 }
 

@@ -1,4 +1,9 @@
-import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitSchema,
+  Indexable,
+  SQLDataType,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { DataTypes } from 'sequelize';
 import { cloneDeep, isArray, isObject } from 'lodash';
 import {
@@ -8,6 +13,7 @@ import {
   extractFieldProperties,
   extractRelations,
 } from '../../utils';
+import { sqlDataTypeMap } from '../utils/sqlTypeMap';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -34,16 +40,50 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   return [copy, extractedRelations];
 }
 
-function extractType(type: string) {
+function extractType(type: string, sqlType?: SQLDataType) {
+  if (sqlType) {
+    const expectedType = sqlDataTypeMap.get(sqlType);
+    if (expectedType && type !== expectedType) {
+      throw new Error(
+        `Invalid data type for SQL data type ${sqlType}: expected ${expectedType}, but got ${type}`,
+      );
+    }
+  }
   switch (type) {
     case 'String':
-      return DataTypes.STRING;
+      if (sqlType === SQLDataType.CHAR) {
+        return DataTypes.CHAR;
+      } else if (sqlType === SQLDataType.VARCHAR) {
+        return DataTypes.STRING;
+      } else if (sqlType === SQLDataType.TEXT) {
+        return DataTypes.TEXT;
+      } else {
+        return DataTypes.STRING;
+      }
     case 'Number':
-      return DataTypes.FLOAT;
+      if (sqlType === SQLDataType.INT) {
+        return DataTypes.INTEGER;
+      } else if (sqlType === SQLDataType.BIGINT) {
+        return DataTypes.BIGINT;
+      } else if (sqlType === SQLDataType.FLOAT) {
+        return DataTypes.FLOAT;
+      } else if (sqlType === SQLDataType.DOUBLE) {
+        return DataTypes.DOUBLE;
+      } else if (sqlType === SQLDataType.DECIMAL) {
+        return DataTypes.DECIMAL;
+      } else {
+        return DataTypes.FLOAT;
+      }
     case 'Boolean':
       return DataTypes.BOOLEAN;
     case 'Date':
-      return DataTypes.DATE;
+      if (sqlType === SQLDataType.TIME) {
+        return DataTypes.TIME;
+      } else if (sqlType === SQLDataType.DATETIME || sqlType === SQLDataType.TIMESTAMP) {
+        return DataTypes.DATE;
+      } else {
+        return DataTypes.DATE;
+      }
     case 'JSON':
       return DataTypes.JSONB;
     case 'Relation':
@@ -92,7 +132,7 @@ function extractObjectType(objectField: Indexable) {
   } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
-    res.type = extractType(objectField.type);
+    res.type = extractType(objectField.type, objectField.sqlType);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
