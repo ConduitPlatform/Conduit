@@ -139,13 +139,7 @@ function _parseQuery(
             associations?.associations,
             associations?.associationsDirectory,
           ) ||
-          handleEmbeddedJson(
-            key,
-            matched,
-            dialect,
-            relations.relations,
-            associations?.associations,
-          ) || { [key]: matched }),
+          handleEmbeddedJson(key, matched, dialect) || { [key]: matched }),
       });
     }
   }
@@ -202,20 +196,13 @@ function handleRelation(
   }
 }
 
-function handleEmbeddedJson(
-  key: string,
-  value: any,
-  dialect: string,
-  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-) {
+function handleEmbeddedJson(key: string, value: any, dialect: string) {
   if (dialect === 'postgres' || key.indexOf('.') === -1) return null;
   const keyArray = key.split('.');
-  if (
-    (relations && relations[keyArray[0]]) ||
-    (associations && associations[keyArray[0]])
-  )
-    return null;
+  // Should not be a relation or association
+  // if ((relations && relations[keyArray[0]]) ||
+  //   (associations && associations[keyArray[0]]))
+  //   return null;
   let embeddedJson = {};
   for (let i = keyArray.length - 1; i >= 0; i--) {
     const k = i !== 0 ? `"${keyArray[i]}"` : keyArray[i];
