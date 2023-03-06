@@ -1,10 +1,15 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ParsedQuery } from '../../../interfaces';
+import { Types } from 'mongoose';
 
 export function parseQuery(query: ParsedQuery): ParsedQuery {
   if (Array.isArray(query)) {
     return query.map(item => parseQuery(item));
-  } else if (typeof query === 'object' && query !== null) {
+  } else if (
+    typeof query === 'object' &&
+    query !== null &&
+    !(query instanceof Types.ObjectId)
+  ) {
     const parsedQuery: Indexable = {};
     Object.keys(query).forEach(key => {
       if (key === '$like') {
