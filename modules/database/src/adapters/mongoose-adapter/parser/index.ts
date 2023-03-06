@@ -8,7 +8,7 @@ export function parseQuery(query: ParsedQuery): ParsedQuery {
   } else if (
     typeof query === 'object' &&
     query !== null &&
-    !(query instanceof Types.ObjectId)
+    !(query instanceof Types.ObjectId || query instanceof Buffer || query instanceof Date)
   ) {
     const parsedQuery: Indexable = {};
     Object.keys(query).forEach(key => {
