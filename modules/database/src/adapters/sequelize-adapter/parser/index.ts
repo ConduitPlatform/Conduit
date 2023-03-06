@@ -100,7 +100,14 @@ function _parseQuery(
   },
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query) || isNumber(query)) return query;
+  if (
+    isString(query) ||
+    isBoolean(query) ||
+    isNumber(query) ||
+    query instanceof Buffer ||
+    query instanceof Date
+  )
+    return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
