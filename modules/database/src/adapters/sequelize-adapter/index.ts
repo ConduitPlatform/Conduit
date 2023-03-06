@@ -26,7 +26,7 @@ export abstract class SequelizeAdapter<
 > extends DatabaseAdapter<T> {
   connectionUri: string;
   sequelize!: Sequelize;
-  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb', 'mssql'];
+  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb'];
 
   constructor(connectionUri: string) {
     super();
