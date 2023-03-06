@@ -82,7 +82,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       this._activeAdapter = new MongooseAdapter(dbUri);
     } else if (dbType === 'postgres') {
       this._activeAdapter = new PostgresAdapter(dbUri);
-    } else if (['sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)) {
+    } else if (['mariadb', 'mysql', 'sqlite'].includes(dbType)) {
       this._activeAdapter = new SQLAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');

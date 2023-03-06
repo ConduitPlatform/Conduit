@@ -37,8 +37,6 @@ export function tableFetch(
       return sqliteTableFetch(sequelize, sqlSchemaName);
     case 'mariadb':
       return mysqlTableFetch(sequelize, sqlSchemaName);
-    case 'mssql':
-      return mysqlTableFetch(sequelize, sqlSchemaName);
     default:
       return Promise.resolve([]);
   }
