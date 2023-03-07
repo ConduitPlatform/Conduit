@@ -31,6 +31,16 @@ export class CustomEndpointsAdmin {
     private readonly customEndpointController: CustomEndpointController,
   ) {}
 
+  async exportCustomEndpoints(): Promise<UnparsedRouterResponse> {
+    return 'Unimplemented';
+  }
+
+  async importCustomEndpoints(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    return 'Unimplemented';
+  }
+
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
