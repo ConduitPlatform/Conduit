@@ -3,6 +3,7 @@ import OSS from 'ali-oss';
 import fs from 'fs';
 import { basename } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
 export class AliyunStorage implements IStorageProvider {
   private _activeContainer: string = '';
@@ -19,6 +20,15 @@ export class AliyunStorage implements IStorageProvider {
       accessKeyId: conf.accessKeyId,
       accessKeySecret: conf.accessKeySecret,
     });
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    const url = this._ossClient.signatureUrl(fileName, {
+      expires: SIGNED_URL_EXPIRY_SECONDS,
+      method: 'PUT',
+    });
+
+    return Promise.resolve(url);
   }
 
   async containerExists(name: string): Promise<boolean | Error> {
@@ -128,7 +138,7 @@ export class AliyunStorage implements IStorageProvider {
 
   async getSignedUrl(fileName: string): Promise<any | Error> {
     const url = this._ossClient.signatureUrl(fileName, {
-      expires: 3600,
+      expires: SIGNED_URL_EXPIRY_SECONDS,
       method: 'GET',
     });
 

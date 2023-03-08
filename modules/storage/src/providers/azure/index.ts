@@ -9,6 +9,7 @@ import {
 import fs from 'fs';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils';
+import { SIGNED_URL_EXPIRY, SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -126,7 +127,7 @@ export class AzureStorage implements IStorageProvider {
     const sasOptions: BlobSASSignatureValues = {
       containerName: containerClient.containerName,
       blobName: fileName,
-      expiresOn: new Date(new Date().valueOf() + 3600 * 1000),
+      expiresOn: new Date(SIGNED_URL_EXPIRY_DATE()),
       permissions: BlobSASPermissions.parse('r'),
     };
     return this.blobClient(fileName).generateSasUrl(sasOptions);
@@ -212,5 +213,16 @@ export class AzureStorage implements IStorageProvider {
     newContainer: string,
   ): Promise<boolean | Error> {
     throw new Error('Not Implemented yet!');
+  }
+
+  getUploadUrl(fileName: string): Promise<string> {
+    const containerClient = this._storage.getContainerClient(this._activeContainer);
+    const sasOptions: BlobSASSignatureValues = {
+      containerName: containerClient.containerName,
+      blobName: fileName,
+      expiresOn: new Date(SIGNED_URL_EXPIRY_DATE()),
+      permissions: BlobSASPermissions.from({ read: true, create: true, write: true }),
+    };
+    return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 }

@@ -71,6 +71,24 @@ export class StorageRoutes {
         new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
       );
+      this._routingManager.route(
+        {
+          bodyParams: {
+            name: { type: TYPE.String, required: true },
+            mimeType: TYPE.String,
+            folder: { type: TYPE.String, required: false },
+            size: { type: TYPE.Number, required: false },
+            container: { type: TYPE.String, required: false },
+            isPublic: TYPE.Boolean,
+          },
+          action: ConduitRouteActions.POST,
+          path: '/storage/fileByUrl',
+          description: `Creates a new file and provides a URL to upload it to.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('CreateFileByUrl', File.name),
+        this.fileHandlers.createFileUploadUrl.bind(this.fileHandlers),
+      );
 
       this._routingManager.route(
         {

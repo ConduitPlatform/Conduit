@@ -37,6 +37,7 @@ export interface IStorageProvider {
   getSignedUrl(fileName: string): Promise<any | Error>;
 
   getPublicUrl(fileName: string): Promise<any | Error>;
+  getUploadUrl(fileName: string): Promise<string | Error>;
 
   rename(currentFilename: string, newFilename: string): Promise<boolean | Error>;
 
