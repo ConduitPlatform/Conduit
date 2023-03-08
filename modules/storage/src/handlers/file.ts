@@ -79,6 +79,48 @@ export class FileHandlers {
     }
   }
 
+  async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, folder, container, size = 0, mimeType, isPublic } = call.request.params;
+    let newFolder;
+    if (isNil(folder)) {
+      newFolder = '/';
+    } else {
+      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    }
+    const config = ConfigController.getInstance().config;
+    const usedContainer = isNil(container)
+      ? config.defaultContainer
+      : await this.findOrCreateContainer(container, isPublic);
+    if (!isNil(folder)) {
+      await this.findOrCreateFolder(newFolder, usedContainer, isPublic);
+    }
+
+    const exists = await File.getInstance().findOne({
+      name,
+      container: usedContainer,
+      folder: newFolder,
+    });
+    if (exists) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+
+    try {
+      return this.getFileUploadUrl(
+        usedContainer,
+        newFolder,
+        isPublic,
+        name,
+        size,
+        mimeType,
+      );
+    } catch (e) {
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
+  }
+
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, data, name, container, folder, mimeType } = call.request.params;
     try {
@@ -292,6 +334,38 @@ export class FileHandlers {
       isPublic,
       url: publicUrl,
     });
+  }
+
+  private async getFileUploadUrl(
+    container: string,
+    folder: string,
+    isPublic: boolean,
+    name: string,
+    size: number,
+    mimeType: string,
+  ): Promise<string> {
+    await this.storageProvider
+      .container(container)
+      .store((folder ?? '') + name, Buffer.from('PENDING UPLOAD'), isPublic);
+    const publicUrl = isPublic
+      ? await this.storageProvider
+          .container(container)
+          .getPublicUrl((folder ?? '') + name)
+      : null;
+    ConduitGrpcSdk.Metrics?.increment('files_total');
+    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
+    await File.getInstance().create({
+      name,
+      mimeType,
+      folder: folder,
+      container: container,
+      isPublic,
+      url: publicUrl,
+    });
+
+    return (await this.storageProvider
+      .container(container)
+      .getUploadUrl((folder ?? '') + name)) as string;
   }
 
   private async storeUpdatedFile(

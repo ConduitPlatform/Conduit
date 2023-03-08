@@ -39,6 +39,10 @@ export class LocalStorage implements IStorageProvider {
     }
   }
 
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    throw new Error('Method not implemented.');
+  }
+
   deleteContainer(name: string): Promise<boolean | Error> {
     return this.deleteFolder(name);
   }

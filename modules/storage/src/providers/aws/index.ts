@@ -16,6 +16,7 @@ import { streamToBuffer } from '../../utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
@@ -209,7 +210,9 @@ export class AWSS3Storage implements IStorageProvider {
       Bucket: this._activeContainer,
       Key: fileName,
     });
-    return await awsGetSignedUrl(this._storage, command);
+    return awsGetSignedUrl(this._storage, command, {
+      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
+    });
   }
 
   async getPublicUrl(fileName: string) {
@@ -256,5 +259,15 @@ export class AWSS3Storage implements IStorageProvider {
     );
     if (!files.Contents) return [];
     return files.Contents;
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    const command = new PutObjectCommand({
+      Bucket: this._activeContainer,
+      Key: fileName,
+    });
+    return awsGetSignedUrl(this._storage, command, {
+      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
+    });
   }
 }

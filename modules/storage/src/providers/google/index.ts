@@ -1,6 +1,7 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -19,6 +20,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   deleteContainer(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   deleteFolder(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
@@ -129,7 +131,7 @@ export class GoogleCloudStorage implements IStorageProvider {
       .file(fileName)
       .getSignedUrl({
         action: 'read',
-        expires: Date.now() + 14400000,
+        expires: SIGNED_URL_EXPIRY_DATE(),
       })
       .then((r: any) => {
         if (r.data && r.data[0]) {
@@ -174,5 +176,21 @@ export class GoogleCloudStorage implements IStorageProvider {
     newFolder: string,
   ): Promise<boolean | Error> {
     throw new Error('Method not implemented!');
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    return this._storage
+      .bucket(this._activeBucket)
+      .file(fileName)
+      .getSignedUrl({
+        action: 'write',
+        expires: SIGNED_URL_EXPIRY_DATE(),
+      })
+      .then((r: any) => {
+        if (r.data && r.data[0]) {
+          return r.data[0];
+        }
+        return r;
+      });
   }
 }
