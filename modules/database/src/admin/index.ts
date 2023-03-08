@@ -60,7 +60,7 @@ export class AdminHandlers {
         description: `Export custom schemas.`,
       },
       new ConduitRouteReturnDefinition('ExportSchemas', {
-        schemas: [ConduitString.Required],
+        schemas: [ConduitJson.Required],
       }),
       this.schemaAdmin.exportCustomSchemas.bind(this.schemaAdmin),
     );
@@ -463,7 +463,7 @@ export class AdminHandlers {
         description: `Export custom endpoints.`,
       },
       new ConduitRouteReturnDefinition('ExportCustomEndpoints', {
-        endpoints: [ConduitString.Required],
+        endpoints: [ConduitJson.Required],
       }),
       this.customEndpointsAdmin.exportCustomEndpoints.bind(this.customEndpointsAdmin),
     );
