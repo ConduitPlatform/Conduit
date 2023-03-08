@@ -465,7 +465,7 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('ExportCustomEndpoints', {
         endpoints: [ConduitString.Required],
       }),
-      this.customEndpointsAdmin.exportCustomEndpoints.bind(this.schemaAdmin),
+      this.customEndpointsAdmin.exportCustomEndpoints.bind(this.customEndpointsAdmin),
     );
     this.routingManager.route(
       {
@@ -473,11 +473,11 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Import custom endpoints.`,
         bodyParams: {
-          schemas: { type: [TYPE.JSON], required: true },
+          endpoints: { type: [TYPE.JSON], required: true },
         },
       },
       new ConduitRouteReturnDefinition('ImportCustomEndpoints', 'String'),
-      this.customEndpointsAdmin.importCustomEndpoints.bind(this.schemaAdmin),
+      this.customEndpointsAdmin.importCustomEndpoints.bind(this.customEndpointsAdmin),
     );
     this.routingManager.route(
       {

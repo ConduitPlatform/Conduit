@@ -58,6 +58,15 @@ export class SchemaAdmin {
         operation,
         schema.ownerModule,
       );
+      if (schema.extensions.length > 0) {
+        for (const extension of schema.extensions) {
+          await this.database.setSchemaExtension(
+            schema.name,
+            extension.owner,
+            extension.fields,
+          );
+        }
+      }
     }
     return 'Schemas imported successfully';
   }

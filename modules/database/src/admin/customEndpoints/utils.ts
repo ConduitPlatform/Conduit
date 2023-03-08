@@ -8,6 +8,7 @@ import {
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { LocationEnum, OperationsEnum } from '../../enums';
+import { ICustomEndpoint } from '../../interfaces';
 
 /**
  * Query schema:
@@ -317,11 +318,11 @@ export function operationValidation(
 
 export function paginationAndSortingValidation(
   operation: number,
-  call: ParsedRouterRequest,
+  params: ICustomEndpoint,
   fields: ConduitModel,
   endpoint: Indexable | null,
 ) {
-  const { query, inputs, sorted, paginated } = call.request.params;
+  const { query, inputs, sorted, paginated } = params;
 
   if (paginated && operation !== OperationsEnum.GET) {
     return 'Cannot add pagination to non-get endpoint';
