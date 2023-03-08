@@ -20,7 +20,7 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ConduitPermissions, IDeclaredSchema } from '../../interfaces';
+import { ConduitPermissions, ICustomEndpoint, IDeclaredSchema } from '../../interfaces';
 import { OperationsEnum } from '../../enums';
 import { parseSortParam } from '../../handlers/utils';
 
@@ -30,6 +30,88 @@ export class CustomEndpointsAdmin {
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
     private readonly customEndpointController: CustomEndpointController,
   ) {}
+
+  async exportCustomEndpoints(): Promise<UnparsedRouterResponse> {
+    return await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findMany({})
+      .then(r =>
+        r.map(obj => {
+          delete obj._id;
+          delete obj.createdAt;
+          delete obj.updatedAt;
+          delete obj.__v;
+          return obj;
+        }),
+      );
+  }
+
+  async importCustomEndpoints(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const endpoints = call.request.params.endpoints;
+    for (const endpoint of endpoints) {
+      const { schemaId, fields, compiledFields } = await this.getAccessibleSchemaFields(
+        endpoint.operation,
+        undefined,
+        endpoint.selectedSchemaName,
+      );
+      let error = paramValidation(endpoint);
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      error = operationValidation(
+        endpoint.operation,
+        endpoint.query,
+        endpoint.assignments,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      error = inputValidation(endpoint.operation, endpoint.inputs);
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      endpoint.selectedSchema = schemaId;
+      error = paginationAndSortingValidation(
+        endpoint.operation,
+        endpoint,
+        compiledFields,
+        null,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      if (
+        [OperationsEnum.POST, OperationsEnum.PUT, OperationsEnum.PATCH].includes(
+          endpoint.operation,
+        )
+      ) {
+        validateAssignments(
+          endpoint.assignments,
+          fields,
+          endpoint.inputs,
+          endpoint.operation,
+        );
+      }
+      const existing = await this.database
+        .getSchemaModel('CustomEndpoints')
+        .model.findOne({ name: endpoint.name });
+      if (!isNil(existing)) {
+        await this.database
+          .getSchemaModel('CustomEndpoints')
+          .model.deleteOne({ _id: existing._id });
+      }
+      const customEndpoint = await this.database
+        .getSchemaModel('CustomEndpoints')
+        .model.create(endpoint);
+      if (isNil(customEndpoint)) {
+        throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
+      }
+    }
+    this.customEndpointController.refreshEndpoints();
+    return 'Custom endpoints imported successfully';
+  }
 
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, sort } = call.request.params;
@@ -112,7 +194,12 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(operation, call, compiledFields, endpoint);
+    error = paginationAndSortingValidation(
+      operation,
+      call.request.params as ICustomEndpoint,
+      compiledFields,
+      endpoint,
+    );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -167,7 +254,12 @@ export class CustomEndpointsAdmin {
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    error = paginationAndSortingValidation(operation, call, compiledFields, null);
+    error = paginationAndSortingValidation(
+      operation,
+      call.request.params as ICustomEndpoint,
+      compiledFields,
+      null,
+    );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }

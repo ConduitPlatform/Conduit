@@ -27,6 +27,50 @@ export class SchemaAdmin {
     private readonly customEndpointController: CustomEndpointController,
   ) {}
 
+  async exportCustomSchemas(): Promise<UnparsedRouterResponse> {
+    return await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany(
+        { 'modelOptions.conduit.cms.enabled': true },
+        undefined,
+        undefined,
+        'name parentSchema fields extensions modelOptions ownerModule collectionName',
+      );
+  }
+
+  async importCustomSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const schemas = call.request.params.schemas;
+    for (const schema of schemas) {
+      const existingSchema = await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findOne({ name: schema.name });
+      const operation = isNil(existingSchema) ? 'create' : 'update';
+      const modelOptions = SchemaConverter.getModelOptions({
+        existingModelOptions: schema.modelOptions,
+      });
+      try {
+        validateSchemaInput(schema.name, schema.fields, modelOptions);
+      } catch (err: unknown) {
+        throw new GrpcError(status.INTERNAL, (err as Error).message);
+      }
+      await this.schemaController.createSchema(
+        new ConduitSchema(schema.name, schema.fields, modelOptions),
+        operation,
+        schema.ownerModule,
+      );
+      if (schema.extensions.length > 0) {
+        for (const extension of schema.extensions) {
+          await this.database.setSchemaExtension(
+            schema.name,
+            extension.owner,
+            extension.fields,
+          );
+        }
+      }
+    }
+    return 'Schemas imported successfully';
+  }
+
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {
       _id: call.request.params.id,

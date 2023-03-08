@@ -73,6 +73,7 @@ export class SchemaController {
   async createSchema(
     schema: ConduitSchema,
     operation: 'create' | 'update' = 'create',
+    ownerModule: string = 'database',
   ): Promise<ConduitSchema> {
     if (this.database.schemaInSystemSchemas(schema.name)) {
       throw new GrpcError(
@@ -80,7 +81,7 @@ export class SchemaController {
         'Cannot modify database-owned system schema.',
       );
     }
-    schema.ownerModule = 'database';
+    schema.ownerModule = ownerModule;
     const createdSchema = await this.database
       .createSchemaFromAdapter(schema)
       .catch(err => {
