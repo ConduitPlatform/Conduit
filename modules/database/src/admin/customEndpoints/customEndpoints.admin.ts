@@ -32,12 +32,33 @@ export class CustomEndpointsAdmin {
   ) {}
 
   async exportCustomEndpoints(): Promise<UnparsedRouterResponse> {
-    return 'Unimplemented';
+    return await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findMany({})
+      .then(r =>
+        r.map(obj => {
+          delete obj._id;
+          delete obj.createdAt;
+          delete obj.updatedAt;
+        }),
+      );
   }
 
   async importCustomEndpoints(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
+    const endpoints = call.request.params.endpoints;
+    for (const endpoint of endpoints) {
+      const selectedSchema = await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findOne({ name: endpoint.selectedSchemaName });
+      if (isNil(selectedSchema)) {
+        throw new GrpcError(
+          status.NOT_FOUND,
+          `${endpoint.selectedSchemaName} schema not found`,
+        );
+      }
+    }
     return 'Unimplemented';
   }
 
