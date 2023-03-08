@@ -1,10 +1,4 @@
-import {
-  ConduitModel,
-  GrpcError,
-  Indexable,
-  ParsedRouterRequest,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { LocationEnum, OperationsEnum } from '../../enums';
