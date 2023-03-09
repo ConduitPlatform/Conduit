@@ -100,7 +100,14 @@ function _parseQuery(
   },
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query) || isNumber(query)) return query;
+  if (
+    isString(query) ||
+    isBoolean(query) ||
+    isNumber(query) ||
+    query instanceof Buffer ||
+    query instanceof Date
+  )
+    return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
@@ -138,7 +145,8 @@ function _parseQuery(
             matched,
             associations?.associations,
             associations?.associationsDirectory,
-          ) || { [key]: matched }),
+          ) ||
+          handleEmbeddedJson(key, matched, dialect) || { [key]: matched }),
       });
     }
   }
@@ -193,6 +201,22 @@ function handleRelation(
       return { [`${key}Id`]: value };
     }
   }
+}
+
+function handleEmbeddedJson(key: string, value: any, dialect: string) {
+  if (dialect === 'postgres' || key.indexOf('.') === -1) return null;
+  const keyArray = key.split('.');
+  // Should not be a relation or association
+  // if ((relations && relations[keyArray[0]]) ||
+  //   (associations && associations[keyArray[0]]))
+  //   return null;
+  let embeddedJson = {};
+  for (let i = keyArray.length - 1; i >= 0; i--) {
+    const k = i !== 0 ? `"${keyArray[i]}"` : keyArray[i];
+    const v = i !== keyArray.length - 1 ? embeddedJson : value;
+    embeddedJson = { [k]: v };
+  }
+  return embeddedJson;
 }
 
 export function parseQuery(

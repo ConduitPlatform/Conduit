@@ -39,6 +39,7 @@ function iterDeep(schema: any) {
 }
 
 function extractObjectType(objectField: any) {
+  if (!objectField.hasOwnProperty('type')) return objectField;
   const res: {
     type?: any;
     default?: any;
