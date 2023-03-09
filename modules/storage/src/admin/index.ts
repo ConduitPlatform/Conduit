@@ -100,6 +100,25 @@ export class AdminRoutes {
     );
     this.routingManager.route(
       {
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          name: { type: TYPE.String, required: false },
+          mimeType: { type: TYPE.String, required: false },
+          folder: { type: TYPE.String, required: false },
+          size: { type: TYPE.Number, required: false },
+          container: { type: TYPE.String, required: false },
+        },
+        action: ConduitRouteActions.PATCH,
+        path: '/files/updateByUrl',
+        description: `Updates a file and provides a URL to upload it to.`,
+      },
+      new ConduitRouteReturnDefinition('UpdateFileByUrl', 'String'),
+      this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
         path: '/files/:id',
         action: ConduitRouteActions.PATCH,
         description: `Updates a file.`,

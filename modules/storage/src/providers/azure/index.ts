@@ -9,7 +9,7 @@ import {
 import fs from 'fs';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils';
-import { SIGNED_URL_EXPIRY, SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';

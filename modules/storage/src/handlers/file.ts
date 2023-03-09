@@ -105,13 +105,62 @@ export class FileHandlers {
     }
 
     try {
-      return this.getFileUploadUrl(
+      return await this._createFileUploadUrl(
         usedContainer,
         newFolder,
         isPublic,
         name,
         size,
         mimeType,
+      );
+    } catch (e) {
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
+  }
+
+  async updateFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, name, folder, container, size, mimeType } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    const newName = name ?? found.name;
+    const usedContainer = isNil(container)
+      ? found.container
+      : await this.findOrCreateContainer(container);
+    const newFolder = isNil(folder)
+      ? found.folder
+      : folder.trim().slice(-1) !== '/'
+      ? folder.trim() + '/'
+      : folder.trim();
+    if (newFolder !== found.folder) {
+      await this.findOrCreateFolder(newFolder, usedContainer);
+    }
+    const newMimeType = mimeType ?? found.mimeType;
+    const isDataUpdate =
+      newName === found.name &&
+      usedContainer === found.container &&
+      newFolder === found.folder;
+    const exists = await File.getInstance().findOne({
+      name: newName,
+      container: usedContainer,
+      folder: newFolder,
+    });
+    if (!isDataUpdate && exists) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+    try {
+      return await this._updateFileUploadUrl(
+        found,
+        usedContainer,
+        newFolder,
+        newName,
+        newMimeType,
+        isDataUpdate,
+        size,
       );
     } catch (e) {
       throw new GrpcError(
@@ -336,7 +385,7 @@ export class FileHandlers {
     });
   }
 
-  private async getFileUploadUrl(
+  private async _createFileUploadUrl(
     container: string,
     folder: string,
     isPublic: boolean,
@@ -363,6 +412,41 @@ export class FileHandlers {
       url: publicUrl,
     });
 
+    return (await this.storageProvider
+      .container(container)
+      .getUploadUrl((folder ?? '') + name)) as string;
+  }
+
+  private async _updateFileUploadUrl(
+    file: File,
+    container: string,
+    folder: string,
+    name: string,
+    mimeType: string,
+    isDataUpdate: boolean,
+    size?: number,
+  ) {
+    await this.storageProvider
+      .container(container)
+      .store((folder ?? '') + name, Buffer.from('PENDING UPLOAD'), file.isPublic);
+    if (!isDataUpdate) {
+      await this.storageProvider
+        .container(file.container)
+        .delete((file.folder ?? '') + file.name);
+    }
+    if (!isNil(size)) {
+      const fileSizeDiff = Math.abs(file.size - size);
+      fileSizeDiff < 0
+        ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
+        : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
+    }
+    await File.getInstance().findByIdAndUpdate(file._id, {
+      container: container,
+      folder: folder,
+      name: name,
+      mimeType: mimeType,
+      size: size ?? file.size,
+    });
     return (await this.storageProvider
       .container(container)
       .getUploadUrl((folder ?? '') + name)) as string;

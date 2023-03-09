@@ -89,7 +89,26 @@ export class StorageRoutes {
         new ConduitRouteReturnDefinition('CreateFileByUrl', File.name),
         this.fileHandlers.createFileUploadUrl.bind(this.fileHandlers),
       );
-
+      this._routingManager.route(
+        {
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          bodyParams: {
+            name: { type: TYPE.String, required: false },
+            mimeType: { type: TYPE.String, required: false },
+            folder: { type: TYPE.String, required: false },
+            size: { type: TYPE.Number, required: false },
+            container: { type: TYPE.String, required: false },
+          },
+          action: ConduitRouteActions.PATCH,
+          path: '/storage/updateByUrl',
+          description: `Updates a file and provides a URL to upload it to.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('UpdateFileByUrl', 'String'),
+        this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
+      );
       this._routingManager.route(
         {
           urlParams: {
