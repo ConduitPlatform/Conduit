@@ -441,10 +441,10 @@ export class FileHandlers {
         : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
     }
     await File.getInstance().findByIdAndUpdate(file._id, {
-      container: container,
-      folder: folder,
-      name: name,
-      mimeType: mimeType,
+      container,
+      folder,
+      name,
+      mimeType,
       size: size ?? file.size,
     });
     return (await this.storageProvider
