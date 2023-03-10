@@ -464,7 +464,12 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     });
   }
 
-  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
+  async updateMany(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    populate?: string[],
+    updateProvidedOnly = true,
+  ) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -502,7 +507,9 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
       const data = await Promise.all(
-        docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),
+        docs.map(doc =>
+          this.findByIdAndUpdate(doc._id, parsedQuery, populate, t, updateProvidedOnly),
+        ),
       );
       await t.commit();
       return data;
@@ -561,5 +568,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     document: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
+    updateProvidedOnly?: boolean,
   ): Promise<any>;
 }

@@ -28,11 +28,14 @@ export class PostgresSchema extends SequelizeSchema {
     query: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
-  ): Promise<{ [key: string]: any }> {
+    updateProvidedOnly = true,
+  ): Promise<Indexable> {
+    const method = updateProvidedOnly ? 'PATCH' : 'PUT';
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
       transaction,
       query,
       this.sequelize,
+      method,
     );
     try {
       const parentDoc = await this.model.findByPk(id, {

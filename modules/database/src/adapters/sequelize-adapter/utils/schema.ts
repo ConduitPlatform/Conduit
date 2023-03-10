@@ -127,6 +127,7 @@ export async function getTransactionAndParsedQuery(
   transaction: Transaction | undefined,
   query: string | ParsedQuery,
   sequelize: Sequelize,
+  method?: 'PUT' | 'PATCH',
 ): Promise<{ t: Transaction; parsedQuery: ParsedQuery; transactionProvided: boolean }> {
   let t: Transaction | undefined = transaction;
   const transactionProvided = transaction !== undefined;
@@ -136,12 +137,23 @@ export async function getTransactionAndParsedQuery(
   } else {
     parsedQuery = query;
   }
-  if (parsedQuery.hasOwnProperty('$set')) {
-    parsedQuery = parsedQuery['$set'];
+  if (method === 'PUT') {
+    const allFields = Object.keys(parsedQuery);
+    for (const field of Object.keys(parsedQuery)) {
+      if (allFields.indexOf(field) === -1) {
+        parsedQuery[field] = null;
+      }
+    }
+    parsedQuery = { $set: parsedQuery };
+  } else if (method === 'PATCH') {
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
+    }
   }
   if (isNil(t)) {
     t = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
   }
+
   return { t, parsedQuery, transactionProvided };
 }
 

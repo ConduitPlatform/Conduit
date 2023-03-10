@@ -26,11 +26,14 @@ export class SQLSchema extends SequelizeSchema {
     query: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
+    updateProvidedOnly = true,
   ): Promise<Indexable> {
+    const method = updateProvidedOnly ? 'PATCH' : 'PUT';
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
       transaction,
       query,
       this.sequelize,
+      method,
     );
     try {
       const parentDoc = await this.model.findByPk(id, {
