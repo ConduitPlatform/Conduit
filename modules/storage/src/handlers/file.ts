@@ -121,47 +121,14 @@ export class FileHandlers {
     }
   }
 
-  async updateFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, folder, container, size, mimeType } = call.request.params;
+  async updateFileData(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, data, mimeType } = call.request.params;
     const found = await File.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
-    const newName = name ?? found.name;
-    const usedContainer = isNil(container)
-      ? found.container
-      : await this.findOrCreateContainer(container);
-    const newFolder = isNil(folder)
-      ? found.folder
-      : folder.trim().slice(-1) !== '/'
-      ? folder.trim() + '/'
-      : folder.trim();
-    if (newFolder !== found.folder) {
-      await this.findOrCreateFolder(newFolder, usedContainer);
-    }
-    const newMimeType = mimeType ?? found.mimeType;
-    const isDataUpdate =
-      newName === found.name &&
-      usedContainer === found.container &&
-      newFolder === found.folder;
-    const exists = await File.getInstance().findOne({
-      name: newName,
-      container: usedContainer,
-      folder: newFolder,
-    });
-    if (!isDataUpdate && exists) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-    }
     try {
-      return await this._updateFileUploadUrl(
-        found,
-        usedContainer,
-        newFolder,
-        newName,
-        newMimeType,
-        isDataUpdate,
-        size,
-      );
+      return await this._updateFileData(found, data, mimeType ?? found.mimeType);
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -171,56 +138,35 @@ export class FileHandlers {
   }
 
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, data, name, container, folder, mimeType } = call.request.params;
+    const { id, name, container, folder } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    const newName = name ?? found.name;
+    const newContainer = container ?? found.container;
+    if (newContainer !== found.container) {
+      await this.findOrCreateContainer(newContainer);
+    }
+    // Existing folder names are currently suffixed by "/" upon creation
+    const newFolder = isNil(folder)
+      ? found.folder
+      : folder.trim().slice(-1) !== '/'
+      ? folder.trim() + '/'
+      : folder.trim();
+    if (newFolder !== found.folder) {
+      await this.findOrCreateFolder(newFolder, newContainer);
+    }
+    const exists = await File.getInstance().findOne({
+      name: newName,
+      container: newContainer,
+      folder: newFolder,
+    });
+    if (!isNil(exists)) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
     try {
-      const found = await File.getInstance().findOne({ _id: id });
-      if (isNil(found)) {
-        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
-      }
-      let fileData = await this.storageProvider
-        .container(found.container)
-        .get((found.folder ?? '') + found.name);
-
-      if (!isNil(data)) {
-        fileData = Buffer.from(data, 'base64');
-      }
-
-      const newName = name ?? found.name;
-      let newFolder = folder ?? found.folder;
-      if (!newFolder.endsWith('/')) {
-        // existing folder names are currently suffixed by "/" upon creation
-        newFolder += '/';
-      }
-      const newContainer = container ?? found.container;
-      found.mimeType = mimeType ?? found.mimeType;
-      const isDataUpdate =
-        newName === found.name &&
-        newContainer === found.container &&
-        newFolder === found.folder;
-
-      if (newContainer !== found.container) {
-        await this.findOrCreateContainer(newContainer);
-      }
-      if (newFolder !== found.folder) {
-        await this.findOrCreateFolder(newFolder, newContainer);
-      }
-
-      const exists = await File.getInstance().findOne({
-        name: newName,
-        container: newContainer,
-        folder: newFolder,
-      });
-      if (!isDataUpdate && exists) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-      }
-      return this.storeUpdatedFile(
-        newContainer,
-        newFolder,
-        newName,
-        found,
-        fileData,
-        isDataUpdate,
-      );
+      return await this._updateFile(newContainer, newFolder, newName, found);
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -411,78 +357,68 @@ export class FileHandlers {
       isPublic,
       url: publicUrl,
     });
-
     return (await this.storageProvider
       .container(container)
       .getUploadUrl((folder ?? '') + name)) as string;
   }
 
-  private async _updateFileUploadUrl(
+  private async _updateFileData(
     file: File,
-    container: string,
-    folder: string,
-    name: string,
+    data: any,
     mimeType: string,
-    isDataUpdate: boolean,
-    size?: number,
-  ) {
-    await this.storageProvider
-      .container(container)
-      .store((folder ?? '') + name, Buffer.from('PENDING UPLOAD'), file.isPublic);
-    if (!isDataUpdate) {
+  ): Promise<File | string> {
+    if (isNil(data)) {
       await this.storageProvider
         .container(file.container)
-        .delete((file.folder ?? '') + file.name);
-    }
-    if (!isNil(size)) {
+        .store(
+          (file.folder ?? '') + file.name,
+          Buffer.from('PENDING UPLOAD'),
+          file.isPublic,
+        );
+      //TODO: Metrics (specify size in case of upload with url?)
+      await File.getInstance().findByIdAndUpdate(file._id, { mimeType });
+      return (await this.storageProvider
+        .container(file.container)
+        .getUploadUrl((file.folder ?? '') + file.name)) as string;
+    } else {
+      const buffer = Buffer.from(data, 'base64');
+      const size = buffer.byteLength;
+      await this.storageProvider
+        .container(file.container)
+        .store((file.folder ?? '') + file.name, buffer, file.isPublic);
       const fileSizeDiff = Math.abs(file.size - size);
       fileSizeDiff < 0
         ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
         : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
+      return (await File.getInstance().findByIdAndUpdate(file._id, {
+        mimeType,
+        size,
+      })) as File;
     }
-    await File.getInstance().findByIdAndUpdate(file._id, {
-      container,
-      folder,
-      name,
-      mimeType,
-      size: size ?? file.size,
-    });
-    return (await this.storageProvider
-      .container(container)
-      .getUploadUrl((folder ?? '') + name)) as string;
   }
 
-  private async storeUpdatedFile(
+  private async _updateFile(
     container: string,
     folder: string,
     name: string,
-    found: File,
-    fileData: any,
-    isDataUpdate: boolean,
+    file: File,
   ): Promise<File> {
-    await this.storageProvider
-      .container(container)
-      .store((folder ?? '') + name, fileData);
-    // calling delete after store call succeeds
-    if (!isDataUpdate) {
-      await this.storageProvider
-        .container(found.container)
-        .delete((found.folder ?? '') + found.name);
+    if (container === file.container) {
+      await this.storageProvider.moveToFolderAndRename(file.name, name, folder);
+    } else {
+      // TODO: Search for the copy/delete thing
+      await this.storageProvider.moveToContainerAndRename(file.name, name, container);
     }
-
-    const fileSizeDiff = Math.abs(found.size - fileData.byteLength);
-    fileSizeDiff < 0
-      ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
-      : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
-    if (found.isPublic) {
-      found.url = await this.storageProvider
-        .container(container)
-        .getPublicUrl((folder ?? '') + name);
-    }
-    found.name = name;
-    found.folder = folder;
-    found.container = container;
-    found.size = fileData.byteLength;
-    return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
+    const url = file.isPublic
+      ? await this.storageProvider
+          .container(container)
+          .getPublicUrl((folder ?? '') + name)
+      : null;
+    return (await File.getInstance().findByIdAndUpdate(file._id, {
+      container,
+      name,
+      folder,
+      url,
+    })) as File;
   }
 }

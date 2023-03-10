@@ -2,6 +2,7 @@ import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { basename } from 'path';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -167,7 +168,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   }
 
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
+    return this.rename(filename, newFolder + basename(filename));
   }
 
   async moveToFolderAndRename(
@@ -175,7 +176,7 @@ export class GoogleCloudStorage implements IStorageProvider {
     newFilename: string,
     newFolder: string,
   ): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
+    return this.rename(currentFilename, newFolder + newFilename);
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {

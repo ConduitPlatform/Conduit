@@ -178,7 +178,7 @@ export default class Storage extends ManagedModule<Config> {
       });
     await this._fileHandlers.createFile(call);
   }
-
+  // TODO: This needs to be changed too & add updateData
   async updateFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({

@@ -1,5 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
+  CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
   DeleteObjectCommand,
@@ -17,6 +18,7 @@ import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
+import { basename } from 'path';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
@@ -220,11 +222,27 @@ export class AWSS3Storage implements IStorageProvider {
   }
 
   async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    throw new Error('Not implemented');
+    await this._storage
+      .send(
+        new CopyObjectCommand({
+          Bucket: this._activeContainer,
+          CopySource: this._activeContainer + currentFilename,
+          Key: newFilename,
+        }),
+      )
+      .then(() => {
+        this._storage.send(
+          new DeleteObjectCommand({
+            Bucket: this._activeContainer,
+            Key: currentFilename,
+          }),
+        );
+      });
+    return true;
   }
 
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    return this.rename(filename, newFolder + basename(filename));
   }
 
   async moveToFolderAndRename(
@@ -232,7 +250,7 @@ export class AWSS3Storage implements IStorageProvider {
     newFilename: string,
     newFolder: string,
   ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
+    return this.rename(currentFilename, newFolder + newFilename);
   }
 
   async moveToContainer(

@@ -82,7 +82,7 @@ export class StorageRoutes {
             isPublic: TYPE.Boolean,
           },
           action: ConduitRouteActions.POST,
-          path: '/storage/fileByUrl',
+          path: '/storage/file-by-url',
           description: `Creates a new file and provides a URL to upload it to.`,
           middlewares: ['authMiddleware'],
         },
@@ -95,19 +95,16 @@ export class StorageRoutes {
             id: { type: TYPE.String, required: true },
           },
           bodyParams: {
-            name: { type: TYPE.String, required: false },
+            data: { type: TYPE.String, required: false },
             mimeType: { type: TYPE.String, required: false },
-            folder: { type: TYPE.String, required: false },
-            size: { type: TYPE.Number, required: false },
-            container: { type: TYPE.String, required: false },
           },
           action: ConduitRouteActions.PATCH,
-          path: '/storage/updateByUrl',
-          description: `Updates a file and provides a URL to upload it to.`,
+          path: '/storage/update-by-url/:id',
+          description: `Updates the data of a file. If data is not provided, a url will be returned for file upload.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('UpdateFileByUrl', 'String'),
-        this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
+        new ConduitRouteReturnDefinition('UpdateFileData', 'String'),
+        this.fileHandlers.updateFileData.bind(this.fileHandlers),
       );
       this._routingManager.route(
         {
@@ -148,8 +145,6 @@ export class StorageRoutes {
           },
           bodyParams: {
             name: TYPE.String,
-            mimeType: TYPE.String,
-            data: TYPE.String,
             folder: TYPE.String,
             container: TYPE.String,
           },

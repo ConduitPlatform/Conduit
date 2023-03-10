@@ -10,6 +10,7 @@ import fs from 'fs';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { basename } from 'path';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -166,16 +167,33 @@ export class AzureStorage implements IStorageProvider {
   }
 
   async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    // await this._storage.getContainerClient(this._activeContainer).getBlockBlobClient(currentFilename).move(newFilename);
-    // return true;
-    throw new Error('Not Implemented yet!');
+    const blobClient = this._storage
+      .getContainerClient(this._activeContainer)
+      .getBlockBlobClient(currentFilename);
+    const newBlobClient = this._storage
+      .getContainerClient(this._activeContainer)
+      .getBlockBlobClient(newFilename);
+    const poller = await newBlobClient.beginCopyFromURL(blobClient.url);
+    await poller.pollUntilDone();
+    /* Test code to ensure that blob and its properties/metadata are copied over
+    const prop1 = await blobClient.getProperties();
+    const prop2 = await newBlobClient.getProperties();
+    if (prop1.contentLength !== prop2.contentLength) {
+      throw new Error("Expecting same size between copy source and destination");
+    }
+    if (prop1.contentEncoding !== prop2.contentEncoding) {
+      throw new Error("Expecting same content encoding between copy source and destination");
+    }
+    if (prop1.metadata.keya !== prop2.metadata.keya) {
+      throw new Error("Expecting same metadata between copy source and destination");
+    }
+    */
+    await blobClient.delete();
+    return true;
   }
 
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    // let newBucketFile = this._storage.getContainerClient(newFolder).file(filename)
-    // await this._storage.getContainerClient(this._activeContainer).file(filename).move(newBucketFile);
-    // return true;
-    throw new Error('Not Implemented yet!');
+    return this.rename(filename, newFolder + basename(filename));
   }
 
   async moveToFolderAndRename(
@@ -183,10 +201,7 @@ export class AzureStorage implements IStorageProvider {
     newFilename: string,
     newFolder: string,
   ): Promise<boolean | Error> {
-    // let newBucketFile = this._storage.getContainerClient(newFolder).file(newFilename)
-    // await this._storage.getContainerClient(this._activeContainer).file(currentFilename).move(newBucketFile);
-    // return true;
-    throw new Error('Not Implemented yet!');
+    return this.rename(currentFilename, newFolder + newFilename);
   }
 
   async containerExists(name: string): Promise<boolean | Error> {

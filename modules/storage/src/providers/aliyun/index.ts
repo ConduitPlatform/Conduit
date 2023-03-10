@@ -161,9 +161,7 @@ export class AliyunStorage implements IStorageProvider {
   }
 
   async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + basename(filename), filename);
-    await this.delete(filename);
-    return true;
+    return this.rename(filename, newFolder + basename(filename));
   }
 
   async moveToFolderAndRename(
@@ -171,9 +169,7 @@ export class AliyunStorage implements IStorageProvider {
     newFilename: string,
     newFolder: string,
   ): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + newFilename, currentFilename);
-    await this.delete(currentFilename);
-    return true;
+    return this.rename(currentFilename, newFolder + newFilename);
   }
 
   async moveToContainer(
