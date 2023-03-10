@@ -131,44 +131,6 @@ export class AdminRoutes {
       new ConduitRouteReturnDefinition('UpdateFileData', 'String'),
       this.fileHandlers.updateFileData.bind(this.fileHandlers),
     );
-    // this.routingManager.route(
-    //   {
-    //     urlParams: {
-    //       id: { type: TYPE.String, required: true },
-    //     },
-    //     bodyParams: {
-    //       name: { type: TYPE.String, required: false },
-    //       mimeType: { type: TYPE.String, required: false },
-    //       folder: { type: TYPE.String, required: false },
-    //       size: { type: TYPE.Number, required: false },
-    //       container: { type: TYPE.String, required: false },
-    //     },
-    //     action: ConduitRouteActions.PATCH,
-    //     path: '/files/updateByUrl',
-    //     description: `Updates a file and provides a URL to upload it to.`,
-    //   },
-    //   new ConduitRouteReturnDefinition('UpdateFileByUrl', 'String'),
-    //   this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
-    // );
-    // this.routingManager.route(
-    //   {
-    //     path: '/files/:id',
-    //     action: ConduitRouteActions.PATCH,
-    //     description: `Updates a file.`,
-    //     urlParams: {
-    //       id: { type: RouteOptionType.String, required: true },
-    //     },
-    //     bodyParams: {
-    //       name: ConduitString.Optional,
-    //       data: ConduitString.Optional,
-    //       folder: ConduitString.Optional,
-    //       container: ConduitString.Optional,
-    //       mimeType: ConduitString.Optional,
-    //     },
-    //   },
-    //   new ConduitRouteReturnDefinition('PatchFile', File.name),
-    //   this.fileHandlers.updateFile.bind(this.fileHandlers),
-    // );
     this.routingManager.route(
       {
         path: '/files/:id',
