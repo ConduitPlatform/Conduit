@@ -19,6 +19,7 @@ import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils';
 import { IAuthenticationStrategy } from '../interfaces';
 import { TokenType } from '../constants';
+import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private initialized = false;
@@ -73,6 +74,52 @@ export class TeamsHandler implements IAuthenticationStrategy {
     await Token.getInstance().deleteOne({ _id: inviteToken!._id });
   }
 
+  async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    let invites = await Token.getInstance().findMany({
+      type: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-ignore
+      'data.email': call.request.context.user.email,
+    });
+    return {
+      invites: invites.map(invite => ({
+        teamId: invite.data.teamId,
+        invitationToken: invite.token,
+        role: invite.data.role,
+      })),
+    };
+  }
+
+  async addUserToTeamRequest(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { teamId, userId, role } = call.request.params;
+    const { user } = call.request.context;
+    const config: Config = ConfigController.getInstance().config;
+    const allowed = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['edit'],
+      resource: 'Team:' + teamId,
+    });
+    if (!allowed || !config.teams.allowAdminsToAddUsers) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not add user to team, user does not have permission ' +
+          'or admin adding users without invite is disabled',
+      );
+    }
+    const userToAdd = await User.getInstance().findOne({ _id: userId });
+    if (!userToAdd) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not add user to team, user does not exist',
+      );
+    }
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'User:' + userId,
+      relation: role || 'member',
+      resource: 'Team:' + teamId,
+    });
+    return 'User added to team';
+  }
+
   async addUserToDefault(user: User) {
     if (!this.initialized) return;
     const config: Config = ConfigController.getInstance().config;
@@ -96,6 +143,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }) {
     return Token.getInstance().create({
       type: TokenType.TEAM_INVITE_TOKEN,
+      token: uuid(),
       data: {
         teamId: invite.teamId,
         role: invite.role || 'member',
@@ -390,6 +438,24 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
+        path: '/teams/invites',
+        description: `Gets pending team invites.`,
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('Invites', {
+        invites: [
+          {
+            teamId: ConduitObjectId.Required,
+            invitationToken: ConduitString.Required,
+            role: ConduitString.Required,
+          },
+        ],
+      }),
+      this.getUserInvites.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/teams/:teamId/members',
         description: `Deletes the specified users from a team.`,
         urlParams: {
@@ -482,6 +548,24 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
+    );
+
+    routingManager.route(
+      {
+        path: '/teams/:teamId/add',
+        description: `Adds an existing user to a team without an invite.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        bodyParams: {
+          role: ConduitString.Optional,
+          userId: ConduitObjectId.Required,
+        },
+        action: ConduitRouteActions.POST,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
+      this.addUserToTeamRequest.bind(this),
     );
   }
 
