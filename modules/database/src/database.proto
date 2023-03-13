@@ -96,6 +96,7 @@ message UpdateRequest {
     string id = 2;
     string query = 3;
     repeated string populate = 4;
+    optional bool updateProvidedOnly = 5;
 }
 
 message UpdateManyRequest {
@@ -103,6 +104,8 @@ message UpdateManyRequest {
     string filterQuery = 2;
     string query = 3;
     repeated string populate = 4;
+    optional bool updateProvidedOnly = 5;
+
 }
 
 message DropCollectionRequest {

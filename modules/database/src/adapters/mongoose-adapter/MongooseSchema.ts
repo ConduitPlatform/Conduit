@@ -50,13 +50,16 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.insertMany(docs).then(r => r);
   }
 
-  async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
+  async findByIdAndUpdate(
+    id: string,
+    query: SingleDocQuery,
+    populate?: string[],
+    updateProvidedOnly = true,
+  ) {
     let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     parsedQuery['updatedAt'] = new Date();
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+    if (updateProvidedOnly && !parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = { $set: parsedQuery };
     }
     let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true });
     if (populate !== undefined && populate !== null) {
@@ -65,15 +68,18 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return finalQuery.lean().exec();
   }
 
-  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
+  async updateMany(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    populate?: string[],
+    updateProvidedOnly = true,
+  ) {
     const parsedFilter = parseQuery(
       typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
     );
     let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+    if (updateProvidedOnly && !parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = { $set: parsedQuery };
     }
     const affectedIds = await this.model
       .find(parsedFilter, '_id')
