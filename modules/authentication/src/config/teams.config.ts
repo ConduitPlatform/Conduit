@@ -8,6 +8,10 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    allowAddWithoutInvite: {
+      format: 'Boolean',
+      default: false,
+    },
     invites: {
       enabled: {
         format: 'Boolean',
