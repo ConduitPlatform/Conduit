@@ -178,7 +178,7 @@ export default class Storage extends ManagedModule<Config> {
       });
     await this._fileHandlers.createFile(call);
   }
-  // TODO: This needs to be changed too & add updateData
+
   async updateFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
@@ -186,5 +186,14 @@ export default class Storage extends ManagedModule<Config> {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.updateFile(call);
+  }
+
+  async updateFileData(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    await this._fileHandlers.updateFileData(call);
   }
 }
