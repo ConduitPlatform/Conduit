@@ -75,7 +75,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let invites = await Token.getInstance().findMany({
+    const invites = await Token.getInstance().findMany({
       type: TokenType.TEAM_INVITE_TOKEN,
       // @ts-ignore
       'data.email': call.request.context.user.email,
