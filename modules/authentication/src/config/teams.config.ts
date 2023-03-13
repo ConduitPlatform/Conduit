@@ -8,7 +8,7 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    allowAdminsToAddUsers: {
+    allowAddWithoutInvite: {
       format: 'Boolean',
       default: false,
     },

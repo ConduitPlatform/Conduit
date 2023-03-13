@@ -95,14 +95,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const config: Config = ConfigController.getInstance().config;
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
-      actions: ['edit'],
+      actions: ['invite'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed || !config.teams.allowAdminsToAddUsers) {
+    if (!allowed || !config.teams.allowAddWithoutInvite) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Could not add user to team, user does not have permission ' +
-          'or admin adding users without invite is disabled',
+          'or adding users without invite is disabled',
       );
     }
     const userToAdd = await User.getInstance().findOne({ _id: userId });
@@ -422,6 +422,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   declareRoutes(routingManager: RoutingManager): void {
+    const config: Config = ConfigController.getInstance().config;
+
     routingManager.route(
       {
         path: '/teams',
@@ -549,24 +551,25 @@ export class TeamsHandler implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
     );
-
-    routingManager.route(
-      {
-        path: '/teams/:teamId/add',
-        description: `Adds an existing user to a team without an invite.`,
-        urlParams: {
-          teamId: ConduitObjectId.Required,
+    if (config.teams.allowAddWithoutInvite) {
+      routingManager.route(
+        {
+          path: '/teams/:teamId/add',
+          description: `Adds an existing user to a team without an invite.`,
+          urlParams: {
+            teamId: ConduitObjectId.Required,
+          },
+          bodyParams: {
+            role: ConduitString.Optional,
+            userId: ConduitObjectId.Required,
+          },
+          action: ConduitRouteActions.POST,
+          middlewares: ['authMiddleware'],
         },
-        bodyParams: {
-          role: ConduitString.Optional,
-          userId: ConduitObjectId.Required,
-        },
-        action: ConduitRouteActions.POST,
-        middlewares: ['authMiddleware'],
-      },
-      new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
-      this.addUserToTeamRequest.bind(this),
-    );
+        new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
+        this.addUserToTeamRequest.bind(this),
+      );
+    }
   }
 
   async validate() {
