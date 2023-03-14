@@ -122,37 +122,20 @@ export class FileHandlers {
   }
 
   async updateFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, folder, container, mimeType, size } = call.request.params;
+    const { id, mimeType, size } = call.request.params;
     const found = await File.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
-    const newContainer = container ?? found.container;
-    if (newContainer !== found.container) {
-      await this.findOrCreateContainer(newContainer);
-    }
-    // Existing folder names are currently suffixed by "/" upon creation
-    const newFolder = isNil(folder)
-      ? found.folder
-      : folder.trim().slice(-1) !== '/'
-      ? folder.trim() + '/'
-      : folder.trim();
-    if (newFolder !== found.folder) {
-      await this.findOrCreateFolder(newFolder, newContainer);
-    }
-    const exists = await File.getInstance().findOne({
-      name,
-      container: newContainer,
-      folder: newFolder,
-    });
-    if (!isNil(exists)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-    }
+    const { name, folder, container } = await this.validateFilenameAndContainer(
+      call,
+      found,
+    );
     try {
       return await this._updateFile(
-        name ?? found.name,
-        newFolder,
-        newContainer,
+        name,
+        folder,
+        container,
         null,
         mimeType ?? found.mimeType,
         found,
@@ -167,37 +150,20 @@ export class FileHandlers {
   }
 
   async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, container, folder, data, mimeType } = call.request.params;
+    const { id, data, mimeType } = call.request.params;
     const found = await File.getInstance().findOne({ _id: id });
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
-    const newContainer = container ?? found.container;
-    if (newContainer !== found.container) {
-      await this.findOrCreateContainer(newContainer);
-    }
-    // Existing folder names are currently suffixed by "/" upon creation
-    const newFolder = isNil(folder)
-      ? found.folder
-      : folder.trim().slice(-1) !== '/'
-      ? folder.trim() + '/'
-      : folder.trim();
-    if (newFolder !== found.folder) {
-      await this.findOrCreateFolder(newFolder, newContainer);
-    }
-    const exists = await File.getInstance().findOne({
-      name,
-      container: newContainer,
-      folder: newFolder,
-    });
-    if (!isNil(exists)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-    }
+    const { name, folder, container } = await this.validateFilenameAndContainer(
+      call,
+      found,
+    );
     try {
       return await this._updateFile(
-        name ?? found.name,
-        newFolder,
-        newContainer,
+        name,
+        folder,
+        container,
         data,
         mimeType ?? found.mimeType,
         found,
@@ -395,6 +361,37 @@ export class FileHandlers {
     return (await this.storageProvider
       .container(container)
       .getUploadUrl((folder ?? '') + name)) as string;
+  }
+
+  private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {
+    const { name, folder, container } = call.request.params;
+    const newName = name ?? file.name;
+    const newContainer = container ?? file.container;
+    if (newContainer !== file.container) {
+      await this.findOrCreateContainer(newContainer);
+    }
+    // Existing folder names are currently suffixed by "/" upon creation
+    const newFolder = isNil(folder)
+      ? file.folder
+      : folder.trim().slice(-1) !== '/'
+      ? folder.trim() + '/'
+      : folder.trim();
+    if (newFolder !== file.folder) {
+      await this.findOrCreateFolder(newFolder, newContainer);
+    }
+    const exists = await File.getInstance().findOne({
+      name: newName,
+      container: newContainer,
+      folder: newFolder,
+    });
+    if (!isNil(exists)) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+    return {
+      name: newName,
+      folder: newFolder,
+      container: newContainer,
+    };
   }
 
   private async _updateFile(
