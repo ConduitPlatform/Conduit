@@ -10,7 +10,6 @@ import fs from 'fs';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
-import { basename } from 'path';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -166,44 +165,6 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    const blobClient = this._storage
-      .getContainerClient(this._activeContainer)
-      .getBlockBlobClient(currentFilename);
-    const newBlobClient = this._storage
-      .getContainerClient(this._activeContainer)
-      .getBlockBlobClient(newFilename);
-    const poller = await newBlobClient.beginCopyFromURL(blobClient.url);
-    await poller.pollUntilDone();
-    /* Test code to ensure that blob and its properties/metadata are copied over
-    const prop1 = await blobClient.getProperties();
-    const prop2 = await newBlobClient.getProperties();
-    if (prop1.contentLength !== prop2.contentLength) {
-      throw new Error("Expecting same size between copy source and destination");
-    }
-    if (prop1.contentEncoding !== prop2.contentEncoding) {
-      throw new Error("Expecting same content encoding between copy source and destination");
-    }
-    if (prop1.metadata.keya !== prop2.metadata.keya) {
-      throw new Error("Expecting same metadata between copy source and destination");
-    }
-    */
-    await blobClient.delete();
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    return this.rename(filename, newFolder + basename(filename));
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    return this.rename(currentFilename, newFolder + newFilename);
-  }
-
   async containerExists(name: string): Promise<boolean | Error> {
     return await this._storage.getContainerClient(name).exists();
   }
@@ -213,21 +174,6 @@ export class AzureStorage implements IStorageProvider {
     this._activeContainer = name;
     ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Not Implemented yet!');
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Not Implemented yet!');
   }
 
   getUploadUrl(fileName: string): Promise<string> {

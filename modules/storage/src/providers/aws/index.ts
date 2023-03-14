@@ -18,7 +18,6 @@ import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
-import { basename } from 'path';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
@@ -219,53 +218,6 @@ export class AWSS3Storage implements IStorageProvider {
 
   async getPublicUrl(fileName: string) {
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._storage
-      .send(
-        new CopyObjectCommand({
-          Bucket: this._activeContainer,
-          CopySource: this._activeContainer + currentFilename,
-          Key: newFilename,
-        }),
-      )
-      .then(() => {
-        this._storage.send(
-          new DeleteObjectCommand({
-            Bucket: this._activeContainer,
-            Key: currentFilename,
-          }),
-        );
-      });
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    return this.rename(filename, newFolder + basename(filename));
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    return this.rename(currentFilename, newFolder + newFilename);
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
   }
 
   private async listFiles(name: string) {

@@ -95,16 +95,19 @@ export class StorageRoutes {
             id: { type: TYPE.String, required: true },
           },
           bodyParams: {
-            data: { type: TYPE.String, required: false },
+            name: { type: TYPE.String, required: false },
+            folder: { type: TYPE.String, required: false },
+            container: { type: TYPE.String, required: false },
             mimeType: { type: TYPE.String, required: false },
+            size: { type: TYPE.Number, required: false },
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/update-by-url/:id',
-          description: `Updates the data of a file. If data is not provided, a url will be returned for file upload.`,
+          description: `Updates a file and provides a URL to upload its data to.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('UpdateFileData', 'String'),
-        this.fileHandlers.updateFileData.bind(this.fileHandlers),
+        new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+        this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
       );
       this._routingManager.route(
         {
@@ -144,16 +147,18 @@ export class StorageRoutes {
             id: { type: TYPE.String, required: true },
           },
           bodyParams: {
-            name: TYPE.String,
-            folder: TYPE.String,
-            container: TYPE.String,
+            name: { type: TYPE.String, required: false },
+            folder: { type: TYPE.String, required: false },
+            container: { type: TYPE.String, required: false },
+            data: { type: TYPE.String, required: false },
+            mimeType: { type: TYPE.String, required: false },
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/file/:id',
           description: `Updates a file.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('FileUpdateResponse', File.name),
+        new ConduitRouteReturnDefinition('PatchFile', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),
       );
     }

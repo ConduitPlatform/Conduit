@@ -2,7 +2,6 @@ import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
-import { basename } from 'path';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -42,28 +41,6 @@ export class GoogleCloudStorage implements IStorageProvider {
   async containerExists(name: string): Promise<boolean | Error> {
     const exists = await this._storage.bucket(name).exists();
     return exists[0];
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(filename);
-    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
-    return true;
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(newFilename);
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newBucketFile);
-    return true;
   }
 
   /**
@@ -157,26 +134,6 @@ export class GoogleCloudStorage implements IStorageProvider {
       await this._storage.bucket(this._activeBucket).file(fileName).makePublic();
     }
     return true;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newFilename);
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    return this.rename(filename, newFolder + basename(filename));
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    return this.rename(currentFilename, newFolder + newFilename);
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {

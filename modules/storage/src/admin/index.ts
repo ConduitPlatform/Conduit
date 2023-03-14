@@ -107,9 +107,11 @@ export class AdminRoutes {
           id: { type: RouteOptionType.String, required: true },
         },
         bodyParams: {
-          name: ConduitString.Optional,
-          folder: ConduitString.Optional,
-          container: ConduitString.Optional,
+          name: { type: TYPE.String, required: false },
+          folder: { type: TYPE.String, required: false },
+          container: { type: TYPE.String, required: false },
+          data: { type: TYPE.String, required: true },
+          mimeType: { type: TYPE.String, required: false },
         },
       },
       new ConduitRouteReturnDefinition('PatchFile', File.name),
@@ -121,15 +123,18 @@ export class AdminRoutes {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
-          data: { type: TYPE.String, required: false },
+          name: { type: TYPE.String, required: false },
+          folder: { type: TYPE.String, required: false },
+          container: { type: TYPE.String, required: false },
           mimeType: { type: TYPE.String, required: false },
+          size: { type: TYPE.Number, required: false },
         },
         action: ConduitRouteActions.PATCH,
-        path: '/files/update-data/:id',
-        description: `Updates the data of a file. If data is not provided, a url will be returned for file upload.`,
+        path: '/files/update-by-url/:id',
+        description: `Updates a file and provides a URL to upload its data to.`,
       },
-      new ConduitRouteReturnDefinition('UpdateFileData', 'String'),
-      this.fileHandlers.updateFileData.bind(this.fileHandlers),
+      new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+      this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
     );
     this.routingManager.route(
       {
