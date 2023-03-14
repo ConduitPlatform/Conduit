@@ -97,12 +97,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  processQuery<T>(query: Query<T>, updateProvidedOnly = true) {
-    let parsedQuery = JSON.parse(JSON.stringify(query));
-    if (updateProvidedOnly && !parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = { $set: parsedQuery };
-    }
-    return JSON.stringify(parsedQuery);
+  processQuery<T>(query: Query<T>) {
+    return JSON.stringify(query);
   }
 
   findOne<T>(
@@ -187,7 +183,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     id: string,
     document: Query<T>,
     populate?: string | string[],
-    updateProvidedOnly = true,
   ): Promise<T | any> {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -196,7 +191,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.findByIdAndUpdate({
       schemaName,
       id,
-      query: this.processQuery(document, updateProvidedOnly),
+      query: this.processQuery(document),
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);
@@ -208,7 +203,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     filterQuery: Query<T>,
     query: Query<T>,
     populate?: string | string[],
-    updateProvidedOnly = true,
   ) {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -217,7 +211,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.updateMany({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
-      query: this.processQuery(query, updateProvidedOnly),
+      query: this.processQuery(query),
       populate: (populateArray as string[]) ?? [],
     }).then(res => {
       return JSON.parse(res.result);

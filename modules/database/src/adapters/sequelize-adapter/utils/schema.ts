@@ -144,8 +144,17 @@ export async function getTransactionAndParsedQuery(
       parsedQuery = parsedQuery['$set'];
     }
   }
-  if (method === 'PUT' && parsedQuery.hasOwnProperty('$set')) {
-    parsedQuery = parsedQuery['$set'];
+  if (method === 'PUT') {
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
+    } else {
+      const fields = Object.keys(parsedQuery);
+      for (const field of fields) {
+        if (fields.indexOf(field) === -1) {
+          parsedQuery[field] = null;
+        }
+      }
+    }
   }
   if (isNil(t)) {
     t = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
