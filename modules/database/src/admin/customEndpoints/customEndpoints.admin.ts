@@ -41,7 +41,7 @@ export class CustomEndpointsAdmin {
           delete obj.createdAt;
           delete obj.updatedAt;
           delete obj.__v;
-          return obj;
+          return { endpoints: obj };
         }),
       );
   }
