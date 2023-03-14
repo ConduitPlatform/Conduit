@@ -1,6 +1,5 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
-  CopyObjectCommand,
   CreateBucketCommand,
   DeleteBucketCommand,
   DeleteObjectCommand,
