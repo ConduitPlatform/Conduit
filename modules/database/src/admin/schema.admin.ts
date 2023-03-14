@@ -35,6 +35,7 @@ export class SchemaAdmin {
         undefined,
         undefined,
         'name parentSchema fields extensions modelOptions ownerModule collectionName',
+        { updatedAt: 1 },
       )
       .then(r => {
         return { schemas: r };
