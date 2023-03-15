@@ -35,7 +35,11 @@ export class SchemaAdmin {
         undefined,
         undefined,
         'name parentSchema fields extensions modelOptions ownerModule collectionName',
-      );
+        { updatedAt: 1 },
+      )
+      .then(r => {
+        return { schemas: r };
+      });
   }
 
   async importCustomSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -54,7 +58,12 @@ export class SchemaAdmin {
         throw new GrpcError(status.INTERNAL, (err as Error).message);
       }
       await this.schemaController.createSchema(
-        new ConduitSchema(schema.name, schema.fields, modelOptions),
+        new ConduitSchema(
+          schema.name,
+          schema.fields,
+          modelOptions,
+          schemas.collectionName,
+        ),
         operation,
         schema.ownerModule,
       );
