@@ -31,6 +31,7 @@ export class TeamsAdmin {
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
+          parentTeam: ConduitObjectId.Optional,
         },
         name: 'GetTeams',
         description: 'Gets all available teams',
@@ -169,7 +170,7 @@ export class TeamsAdmin {
   }
 
   async getTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, sort } = call.request.params;
+    const { search, sort, parentTeam } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -181,6 +182,9 @@ export class TeamsAdmin {
         const searchString = escapeStringRegexp(search);
         query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
       }
+    }
+    if (!isNil(parentTeam)) {
+      query['parentTeam'] = parentTeam;
     }
 
     const teams: Team[] = await Team.getInstance().findMany(
