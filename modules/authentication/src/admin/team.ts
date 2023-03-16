@@ -185,7 +185,7 @@ export class TeamsAdmin {
     if (!isNil(parentTeam)) {
       query['parentTeam'] = parentTeam;
     } else {
-      query['parentTeam'] = { $or: [{ $exists: false }, { $eq: null }] };
+      query['parentTeam'] = { $exists: false };
     }
 
     const teams: Team[] = await Team.getInstance().findMany(
