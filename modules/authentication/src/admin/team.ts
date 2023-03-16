@@ -12,10 +12,9 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team } from '../models';
+import { Team, User } from '../models';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
-import { User } from '../models';
 import { AuthUtils } from '../utils';
 
 export class TeamsAdmin {
@@ -185,6 +184,8 @@ export class TeamsAdmin {
     }
     if (!isNil(parentTeam)) {
       query['parentTeam'] = parentTeam;
+    } else {
+      query['parentTeam'] = { $or: [{ $exists: false }, { $eq: null }] };
     }
 
     const teams: Team[] = await Team.getInstance().findMany(
