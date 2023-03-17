@@ -211,10 +211,8 @@ export class AdminHandlers {
       }),
       this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
-    // Team Routes
-    if (TeamsHandler.getInstance(this.grpcSdk).isActive) {
-      await this.teamsAdmin.declareRoutes(this.routingManager);
-    }
+    await this.teamsAdmin.declareRoutes(this.routingManager);
+
     this.routingManager.registerRoutes();
   }
 }

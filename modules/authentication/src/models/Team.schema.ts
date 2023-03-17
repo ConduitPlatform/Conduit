@@ -10,7 +10,7 @@ const schema = {
     required: true,
   },
   isDefault: {
-    type: TYPE.String,
+    type: TYPE.Boolean,
     default: false,
   },
   createdAt: TYPE.Date,
