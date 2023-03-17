@@ -132,11 +132,10 @@ export class FileHandlers {
       found,
     );
     try {
-      return await this._updateFile(
+      return await this._updateFileUploadUrl(
         name,
         folder,
         container,
-        null,
         mimeType ?? found.mimeType,
         found,
         size,
@@ -164,7 +163,7 @@ export class FileHandlers {
         name,
         folder,
         container,
-        data,
+        Buffer.from(data, 'base64'),
         mimeType ?? found.mimeType,
         found,
       );
@@ -187,7 +186,7 @@ export class FileHandlers {
       }
       const success = await this.storageProvider
         .container(found.container)
-        .delete((found.folder ?? '') + found.name);
+        .delete((found.folder === '/' ? '' : found.folder) + found.name);
       if (!success) {
         throw new GrpcError(status.INTERNAL, 'File could not be deleted');
       }
@@ -214,7 +213,7 @@ export class FileHandlers {
       }
       const url = await this.storageProvider
         .container(found.container)
-        .getSignedUrl((found.folder ?? '') + found.name);
+        .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name);
 
       if (!call.request.params.redirect) {
         return { result: url };
@@ -241,7 +240,9 @@ export class FileHandlers {
       let data: Buffer;
       const result = await this.storageProvider
         .container(file.container)
-        .get(file.folder ? file.folder + file.name : file.name);
+        .get(
+          file.folder ? (file.folder === '/' ? '' : file.folder) + file.name : file.name,
+        );
       if (result instanceof Error) {
         throw result;
       } else {
@@ -310,14 +311,13 @@ export class FileHandlers {
   ): Promise<File> {
     const buffer = Buffer.from(data, 'base64');
     const size = buffer.byteLength;
-
     await this.storageProvider
       .container(container)
-      .store((folder ?? '') + name, buffer, isPublic);
+      .store((folder === '/' ? '' : folder) + name, buffer, isPublic);
     const publicUrl = isPublic
       ? await this.storageProvider
           .container(container)
-          .getPublicUrl((folder ?? '') + name)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
       : null;
     ConduitGrpcSdk.Metrics?.increment('files_total');
     ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
@@ -342,11 +342,15 @@ export class FileHandlers {
   ): Promise<string> {
     await this.storageProvider
       .container(container)
-      .store((folder ?? '') + name, Buffer.from('PENDING UPLOAD'), isPublic);
+      .store(
+        (folder === '/' ? '' : folder) + name,
+        Buffer.from('PENDING UPLOAD'),
+        isPublic,
+      );
     const publicUrl = isPublic
       ? await this.storageProvider
           .container(container)
-          .getPublicUrl((folder ?? '') + name)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
       : null;
     ConduitGrpcSdk.Metrics?.increment('files_total');
     ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
@@ -360,7 +364,7 @@ export class FileHandlers {
     });
     return (await this.storageProvider
       .container(container)
-      .getUploadUrl((folder ?? '') + name)) as string;
+      .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
   }
 
   private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {
@@ -394,25 +398,71 @@ export class FileHandlers {
     };
   }
 
+  private async _updateFileUploadUrl(
+    name: string,
+    folder: string,
+    container: string,
+    mimeType: string,
+    file: File,
+    size: number | undefined | null,
+  ): Promise<string> {
+    const onlyDataUpdate =
+      name === file.name && folder === file.folder && container === file.container;
+    if (onlyDataUpdate) {
+      await File.getInstance().findByIdAndUpdate(file._id, { mimeType });
+    } else {
+      await this.storageProvider
+        .container(container)
+        .store(
+          (folder === '/' ? '' : folder) + name,
+          Buffer.from('PENDING UPLOAD'),
+          file.isPublic,
+        );
+      await this.storageProvider
+        .container(file.container)
+        .delete((file.folder === '/' ? '' : file.folder) + file.name);
+      const url = file.isPublic
+        ? await this.storageProvider
+            .container(container)
+            .getPublicUrl((folder === '/' ? '' : folder) + name)
+        : null;
+      await File.getInstance().findByIdAndUpdate(file._id, {
+        name,
+        folder,
+        container,
+        url,
+        mimeType,
+      });
+    }
+    if (!isNil(size)) this.updateFileMetrics(file.size, size!);
+    return (await this.storageProvider
+      .container(container)
+      .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
+  }
+
   private async _updateFile(
     name: string,
     folder: string,
     container: string,
-    data: any,
+    data: Buffer,
     mimeType: string,
     file: File,
-    size?: number,
-  ): Promise<File | string> {
-    const newData = isNil(data)
-      ? Buffer.from('PENDING UPLOAD')
-      : Buffer.from(data, 'base64');
-    const url = file.isPublic
-      ? await this.storageProvider.container(container).getPublicUrl(folder + name)
-      : null;
+  ): Promise<File> {
+    const onlyDataUpdate =
+      name === file.name && folder === file.folder && container === file.container;
     await this.storageProvider
       .container(container)
-      .store(folder + name, newData, file.isPublic);
-    await this.storageProvider.container(file.container).delete(file.folder + file.name);
+      .store((folder === '/' ? '' : folder) + name, data, file.isPublic);
+    if (!onlyDataUpdate) {
+      await this.storageProvider
+        .container(file.container)
+        .delete((file.folder === '/' ? '' : file.folder) + file.name);
+    }
+    const url = file.isPublic
+      ? await this.storageProvider
+          .container(container)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
+      : null;
     const updatedFile = (await File.getInstance().findByIdAndUpdate(file._id, {
       name,
       folder,
@@ -420,15 +470,8 @@ export class FileHandlers {
       url,
       mimeType,
     })) as File;
-    if (isNil(data)) {
-      if (!isNil(size)) this.updateFileMetrics(file.size, size!);
-      return (await this.storageProvider
-        .container(container)
-        .getUploadUrl(folder + name)) as string;
-    } else {
-      this.updateFileMetrics(file.size, newData.byteLength);
-      return updatedFile;
-    }
+    this.updateFileMetrics(file.size, data.byteLength);
+    return updatedFile;
   }
 
   private updateFileMetrics(currentSize: number, newSize: number) {
