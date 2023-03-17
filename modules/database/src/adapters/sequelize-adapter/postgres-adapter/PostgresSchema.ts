@@ -35,6 +35,7 @@ export class PostgresSchema extends SequelizeSchema {
       transaction,
       query,
       this.sequelize,
+      this.schema,
       method,
     );
     try {

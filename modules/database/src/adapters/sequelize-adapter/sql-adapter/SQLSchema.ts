@@ -33,6 +33,7 @@ export class SQLSchema extends SequelizeSchema {
       transaction,
       query,
       this.sequelize,
+      this.schema,
       method,
     );
     try {
