@@ -25,7 +25,7 @@ export class TeamsAdmin {
       {
         path: '/teams',
         action: ConduitRouteActions.GET,
-        urlParams: {
+        queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
