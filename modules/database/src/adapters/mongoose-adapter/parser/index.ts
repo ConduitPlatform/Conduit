@@ -11,6 +11,7 @@ export function parseQuery(query: ParsedQuery): ParsedQuery {
     !(query instanceof Types.ObjectId || query instanceof Buffer || query instanceof Date)
   ) {
     const parsedQuery: Indexable = {};
+    if (Object.keys(query).length === 0) return query;
     Object.keys(query).forEach(key => {
       if (key === '$like') {
         parsedQuery.$regex = query.$like.replace(/%/g, '.*');
