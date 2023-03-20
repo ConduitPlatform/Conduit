@@ -49,8 +49,11 @@ export class SchemaAdmin {
         .getSchemaModel('_DeclaredSchema')
         .model.findOne({ name: schema.name });
       const operation = isNil(existingSchema) ? 'create' : 'update';
+      const imported = schema.modelOptions.conduit.imported === true;
       const modelOptions = SchemaConverter.getModelOptions({
+        cmsSchema: true,
         existingModelOptions: schema.modelOptions,
+        importedSchema: imported,
       });
       try {
         validateSchemaInput(schema.name, schema.fields, modelOptions);
@@ -62,10 +65,10 @@ export class SchemaAdmin {
           schema.name,
           schema.fields,
           modelOptions,
-          schemas.collectionName,
+          schema.collectionName,
         ),
         operation,
-        schema.ownerModule,
+        imported,
       );
       if (schema.extensions.length > 0) {
         for (const extension of schema.extensions) {
