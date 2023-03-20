@@ -39,16 +39,14 @@ function iterDeep(schema: any) {
 }
 
 function extractObjectType(objectField: any) {
+  if (!objectField.hasOwnProperty('type')) return objectField;
   const res: {
     type?: any;
     default?: any;
     primaryKey?: boolean;
     unique?: boolean;
     required?: boolean;
-  } = {
-    ...(objectField.type !== undefined && { type: objectField.type }),
-    ...(objectField.default !== undefined && { default: objectField.default }),
-  };
+  } = { ...objectField };
   if (objectField.hasOwnProperty('primaryKey') && objectField.primaryKey) {
     res.primaryKey = objectField.primaryKey ?? false;
     res.unique = true;

@@ -137,7 +137,9 @@ export default class PushNotifications extends ManagedModule<Config> {
       const modelInstance = model.getInstance(this.database);
       if (Object.keys(modelInstance.fields).length !== 0) {
         // borrowed foreign model
-        return this.database.createSchemaFromAdapter(modelInstance);
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
       }
     });
     return Promise.all(promises);
@@ -200,7 +202,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   ) {
     const userId = call.request.userId;
     let errorMessage: string | null = null;
-    const tokenDocuments: any = await models.NotificationToken.getInstance()
+    const tokenDocuments = await models.NotificationToken.getInstance()
       .findMany({ userId })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -208,32 +210,27 @@ export default class PushNotifications extends ManagedModule<Config> {
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
-    return callback(null, { tokenDocuments });
+    const tokenDocs: string[] = [];
+    for (const tokenDocument of tokenDocuments || []) {
+      const tokenDocumentString = JSON.stringify(tokenDocument);
+      tokenDocs.push(tokenDocumentString);
+    }
+    return callback(null, { tokenDocuments: tokenDocs });
   }
 
   async sendNotification(
     call: SendNotificationRequest,
     callback: SendNotificationResponse,
   ) {
-    const data = call.request.data;
-    let params: ISendNotification;
+    let errorMessage: string | null = null;
     try {
-      params = {
-        sendTo: call.request.sendTo,
-        title: call.request.title,
-        body: call.request.body,
-        data: data ? JSON.parse(data) : {},
-        type: call.request.type,
-        platform: call.request.platform,
-        doNotStore: call.request.doNotStore,
-      };
+      const params: ISendNotification = this.parseParams(call, call.request.data);
+      await this._provider!.sendToDevice(params).catch(e => {
+        errorMessage = e;
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    let errorMessage: string | null = null;
-    await this._provider!.sendToDevice(params).catch(e => {
-      errorMessage = e;
-    });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -244,26 +241,18 @@ export default class PushNotifications extends ManagedModule<Config> {
     call: SendToManyDevicesNotificationRequest,
     callback: SendNotificationResponse,
   ) {
-    const data = call.request.data;
-    let params: ISendNotificationToManyDevices;
-
+    let errorMessage: string | null = null;
     try {
-      params = {
-        sendTo: call.request.sendTo,
-        title: call.request.title,
-        body: call.request.body,
-        data: data ? JSON.parse(data) : {},
-        type: call.request.type,
-        platform: call.request.platform,
-        doNotStore: call.request.doNotStore,
-      };
+      const params: ISendNotificationToManyDevices = this.parseParams(
+        call,
+        call.request.data,
+      );
+      await this._provider!.sendToManyDevices(params).catch(e => {
+        errorMessage = e;
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    let errorMessage: string | null = null;
-    await this._provider!.sendToManyDevices(params).catch(e => {
-      errorMessage = e;
-    });
     if (errorMessage) {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
@@ -293,5 +282,21 @@ export default class PushNotifications extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: errorMessage });
     }
     return callback(null, { message: 'Ok' });
+  }
+
+  parseParams(call: any, data?: string) {
+    try {
+      return {
+        sendTo: call.request.sendTo,
+        title: call.request.title,
+        body: call.request.body,
+        data: data ? JSON.parse(data) : {},
+        type: call.request.type,
+        platform: call.request.platform,
+        doNotStore: call.request.doNotStore,
+      };
+    } catch (e) {
+      throw new Error((e as Error).message);
+    }
   }
 }

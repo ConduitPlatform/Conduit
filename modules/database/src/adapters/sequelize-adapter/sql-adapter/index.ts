@@ -1,11 +1,10 @@
 import { SQLSchema } from './SQLSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, sleep } from '@conduitplatform/grpc-sdk';
-import { validateFieldChanges, validateFieldConstraints } from '../../utils';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
-import { SequelizeSchema } from '../SequelizeSchema';
+import { compileSchema, resolveRelatedSchemas } from '../utils';
 
 export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
   constructor(connectionUri: string) {
@@ -18,7 +17,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
   private async processExtractedSchemas(
     schema: ConduitSchema,
-    extractedSchemas: { [key: string]: any },
+    extractedSchemas: Indexable,
     associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {
@@ -53,7 +52,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       modeledSchema.ownerModule = schema.ownerModule;
       (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
       // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, {
+      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, false, {
         parentSchema: schema.name,
       });
       associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
@@ -62,22 +61,14 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
 
   protected async _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean = true,
     options?: { parentSchema: string },
   ): Promise<SQLSchema> {
-    let compiledSchema = JSON.parse(JSON.stringify(schema));
-    validateFieldConstraints(compiledSchema);
-    (compiledSchema as any).fields = JSON.parse(
-      JSON.stringify((schema as ConduitDatabaseSchema).compiledFields),
+    const compiledSchema = compileSchema(
+      schema as ConduitDatabaseSchema,
+      this.registeredSchemas,
+      this.sequelize.models,
     );
-    if (this.registeredSchemas.has(compiledSchema.name)) {
-      if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateFieldChanges(
-          this.registeredSchemas.get(compiledSchema.name)!,
-          compiledSchema,
-        );
-      }
-      delete this.sequelize.models[compiledSchema.collectionName];
-    }
 
     const [newSchema, extractedSchemas, extractedRelations] =
       schemaConverter(compiledSchema);
@@ -85,56 +76,14 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
-    const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
-
-    if (Object.keys(extractedRelations).length > 0) {
-      let pendingModels: string[] = [];
-      for (const relation in extractedRelations) {
-        const rel = Array.isArray(extractedRelations[relation])
-          ? (extractedRelations[relation] as any[])[0]
-          : extractedRelations[relation];
-        if (!this.models[rel.model]) {
-          if (!pendingModels.includes(rel.model)) {
-            pendingModels.push(rel.model);
-          }
-          if (Array.isArray(extractedRelations[relation])) {
-            relatedSchemas[relation] = [rel.model];
-          } else {
-            relatedSchemas[relation] = rel.model;
-          }
-        } else {
-          if (Array.isArray(extractedRelations[relation])) {
-            relatedSchemas[relation] = [this.models[rel.model]];
-          } else {
-            relatedSchemas[relation] = this.models[rel.model];
-          }
-        }
-      }
-      while (pendingModels.length > 0) {
-        await sleep(500);
-        pendingModels = pendingModels.filter(model => {
-          if (!this.models[model]) {
-            return true;
-          } else {
-            for (const schema in relatedSchemas) {
-              // @ts-ignore
-              const simple = Array.isArray(relatedSchemas[schema])
-                ? (relatedSchemas[schema] as SequelizeSchema[])[0]
-                : relatedSchemas[schema];
-              // @ts-ignore
-              if (simple === model) {
-                relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
-                  ? [this.models[model]]
-                  : this.models[model];
-              }
-            }
-          }
-        });
-      }
-    }
+    const relatedSchemas = await resolveRelatedSchemas(
+      schema as ConduitDatabaseSchema,
+      extractedRelations,
+      this.models,
+    );
     const associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
     await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
-    if (options?.parentSchema) {
+    if (options && options.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
     this.models[schema.name] = new SQLSchema(
@@ -152,11 +101,20 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       await this.models[schema.name].sync();
     }
     // do not store extracted schemas to db
-    if (!options) {
+    if (!options && saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
+      if (associatedSchemas && Object.keys(associatedSchemas).length > 0) {
+        for (const associatedSchema in associatedSchemas) {
+          const schema = associatedSchemas[associatedSchema];
+          if (Array.isArray(schema)) {
+            await this.saveSchemaToDatabase(schema[0].originalSchema);
+          } else {
+            await this.saveSchemaToDatabase(schema.originalSchema);
+          }
+        }
+      }
     }
-
     return this.models[schema.name];
   }
 

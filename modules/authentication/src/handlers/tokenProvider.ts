@@ -1,12 +1,12 @@
-import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Indexable, Query } from '@conduitplatform/grpc-sdk';
 import { AccessToken, RefreshToken, User } from '../models';
 import moment from 'moment/moment';
 import { AuthUtils } from '../utils';
 import * as jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 import { Config } from '../config';
-import { Cookie } from '../interfaces/Cookie';
 import { isNil } from 'lodash';
+import { Cookie } from '../interfaces';
 
 export interface TokenOptions {
   user: User;
@@ -170,7 +170,7 @@ export class TokenProvider {
     return cookies;
   }
 
-  private signToken(data: { [key: string]: any }, secret: string, options: SignOptions) {
+  private signToken(data: Indexable, secret: string, options: SignOptions) {
     return jwt.sign(data, secret, options);
   }
 

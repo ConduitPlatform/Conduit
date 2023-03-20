@@ -1,6 +1,6 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import sequelize, { Op, WhereOptions } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
@@ -73,6 +73,15 @@ function matchOperation(
       return {
         [Op.notIn]: arrayHandler(value, dialect, relations, associations),
       };
+    case '$like':
+      return { [Op.like]: value };
+    case '$ilike':
+      if (dialect === 'postgres') {
+        return { [Op.iLike]: value };
+      } else {
+        // fall back to case-sensitive $like
+        return { [Op.like]: value };
+      }
     default:
       return value;
   }
@@ -91,7 +100,14 @@ function _parseQuery(
   },
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
-  if (isString(query) || isBoolean(query) || isNumber(query)) return query;
+  if (
+    isString(query) ||
+    isBoolean(query) ||
+    isNumber(query) ||
+    query instanceof Buffer ||
+    query instanceof Date
+  )
+    return query;
   for (const key in query) {
     if (key === '$or') {
       Object.assign(parsed, {
@@ -110,31 +126,6 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
-      if (!!query[key] && typeof query[key] === 'object' && !Array.isArray(query[key])) {
-        const likeCandidates = Object.keys(query[key]);
-        if (likeCandidates.includes('$like')) {
-          Object.assign(parsed, {
-            [key]: sequelize.where(sequelize.col(key), 'LIKE', query[key].$like),
-          });
-          continue;
-        }
-        if (likeCandidates.includes('$ilike')) {
-          if (dialect === 'postgres') {
-            Object.assign(parsed, {
-              [key]: sequelize.where(sequelize.col(key), 'ILIKE', query[key].$ilike),
-            });
-          } else {
-            Object.assign(parsed, {
-              [key]: sequelize.where(
-                sequelize.fn('lower', sequelize.col(key)),
-                'LIKE',
-                query[key].$ilike.toLowerCase(),
-              ),
-            });
-          }
-          continue;
-        }
-      }
       const subQuery = _parseQuery(query[key], dialect, relations, associations);
       if (subQuery === undefined) continue;
       const matched = matchOperation(key, subQuery, dialect, relations, associations);
@@ -154,7 +145,8 @@ function _parseQuery(
             matched,
             associations?.associations,
             associations?.associationsDirectory,
-          ) || { [key]: matched }),
+          ) ||
+          handleEmbeddedJson(key, matched, dialect) || { [key]: matched }),
       });
     }
   }
@@ -199,11 +191,32 @@ function handleRelation(
 ) {
   const relationKey = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
   if (relations && relations[relationKey]) {
-    if (requiredRelations.indexOf(key) === -1) {
-      requiredRelations.push(key);
+    // many-to-many relations and querying of fields other than id
+    if (Array.isArray(relations[key]) || key.indexOf('.') !== -1) {
+      if (requiredRelations.indexOf(key) === -1) {
+        requiredRelations.push(key);
+      }
+      return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
+    } else {
+      return { [`${key}Id`]: value };
     }
-    return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
   }
+}
+
+function handleEmbeddedJson(key: string, value: any, dialect: string) {
+  if (dialect === 'postgres' || key.indexOf('.') === -1) return null;
+  const keyArray = key.split('.');
+  // Should not be a relation or association
+  // if ((relations && relations[keyArray[0]]) ||
+  //   (associations && associations[keyArray[0]]))
+  //   return null;
+  let embeddedJson = {};
+  for (let i = keyArray.length - 1; i >= 0; i--) {
+    const k = i !== 0 ? `"${keyArray[i]}"` : keyArray[i];
+    const v = i !== keyArray.length - 1 ? embeddedJson : value;
+    embeddedJson = { [k]: v };
+  }
+  return embeddedJson;
 }
 
 export function parseQuery(
@@ -286,6 +299,7 @@ function parseSelect(
         if (!Array.isArray(relations[tmp])) {
           // @ts-ignore
           include.push([tmp + 'Id', tmp]);
+          exclude.push(tmp + 'Id');
         } else {
           include.push(tmp);
         }
@@ -330,19 +344,22 @@ function parseSelect(
 export function renameRelations(
   population: string[],
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-): { include: string[] } {
+): { include: string[]; exclude: string[] } {
   const include: string[] = [];
+  const exclude: string[] = [];
 
   for (const relation in relations) {
     if (population.indexOf(relation) !== -1) continue;
     if (!Array.isArray(relations[relation])) {
       // @ts-ignore
       include.push([relation + 'Id', relation]);
+      exclude.push(relation + 'Id');
     }
   }
 
   return {
     include,
+    exclude,
   };
 }
 

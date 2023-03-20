@@ -1,4 +1,4 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointHandler } from '../../handlers/CustomEndpoints/customEndpoint.handler';
 import { PopulatedCustomEndpoint } from '../../interfaces';
 import { DatabaseRoutes } from '../../routes';
@@ -21,7 +21,7 @@ export class CustomEndpointController {
   }
 
   initializeState() {
-    this.grpcSdk.bus?.subscribe('database:customEndpoints:refresh', (message: string) => {
+    this.grpcSdk.bus?.subscribe('database:customEndpoints:refresh', () => {
       this.refreshRoutes();
     });
   }
@@ -44,7 +44,7 @@ export class CustomEndpointController {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No custom endpoints to register');
         }
-        const routes: any[] = [];
+        const routes: UntypedArray = [];
         r.forEach(endpoint => {
           routes.push(
             createCustomEndpointRoute(

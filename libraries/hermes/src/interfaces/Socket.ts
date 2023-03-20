@@ -1,10 +1,10 @@
 import { ConduitRouteReturnDefinition } from '../classes';
-import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { Indexable, TYPE, UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export interface ConduitSocketParameters {
   event: string;
   socketId: string;
-  params?: any[];
+  params?: UntypedArray;
   context?: Indexable;
 }
 
@@ -23,7 +23,7 @@ export type EventResponse = {
   receivers?: string[];
 };
 
-export function isInstanceOfEventResponse(object: any): object is EventResponse {
+export function isInstanceOfEventResponse(object: Indexable): object is EventResponse {
   if (!('receivers' in object)) return false;
   if (!('data' in object)) return false;
 
@@ -88,7 +88,7 @@ export interface SocketProtoDescription {
 }
 
 export function instanceOfSocketProtoDescription(
-  object: any,
+  object: Indexable,
 ): object is SocketProtoDescription {
   if (!('options' in object)) {
     return false;

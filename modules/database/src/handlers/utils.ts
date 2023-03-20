@@ -10,3 +10,7 @@ export function constructSortObj(sort: string[]) {
   });
   return sortObj;
 }
+
+export function parseSortParam(sort: string) {
+  return constructSortObj(sort.split(' '));
+}

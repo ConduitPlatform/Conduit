@@ -1,17 +1,17 @@
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { ChatRoom, InvitationToken, User } from '../models';
 import { v4 as uuid } from 'uuid';
 
-export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: any[]) {
+export async function validateUsersInput(grpcSdk: ConduitGrpcSdk, users: UntypedArray) {
   const uniqueUsers = Array.from(new Set(users));
   let errorMessage: string | null = null;
   const usersToBeAdded = (await User.getInstance()
     .findMany({ _id: { $in: uniqueUsers } })
     .catch((e: Error) => {
       errorMessage = e.message;
-    })) as any[];
+    })) as UntypedArray;
   if (!isNil(errorMessage)) {
     return Promise.reject({ code: status.INTERNAL, message: errorMessage });
   }
@@ -90,9 +90,9 @@ export async function sendInvitations(
   return 'Invitations sent';
 }
 
-export function populateArray(pop: any) {
+export function populateArray(pop: string | string[] | undefined) {
   if (!pop) return pop;
-  if (pop.indexOf(',') !== -1) {
+  if (typeof pop === 'string' && pop.indexOf(',') !== -1) {
     pop = pop.split(',');
   } else if (Array.isArray(pop)) {
     return pop;

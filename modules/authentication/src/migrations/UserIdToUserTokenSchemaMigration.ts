@@ -1,10 +1,14 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export async function UserIdToUserTokenSchemaMigration(grpcSdk: ConduitGrpcSdk) {
-  const tokenSchemas: any[] = await grpcSdk.databaseProvider!.findMany('Token', {
-    userId: { $exists: true },
-  });
-
+  const exists = await grpcSdk.databaseProvider!.columnExistence('Token', ['userId']);
+  if (!exists) {
+    return;
+  }
+  const tokenSchemas: UntypedArray = await grpcSdk.databaseProvider!.findMany(
+    'Token',
+    {},
+  );
   for (const tokenSchema of tokenSchemas) {
     tokenSchema.user = tokenSchema.userId;
     await grpcSdk.databaseProvider!.findByIdAndUpdate(

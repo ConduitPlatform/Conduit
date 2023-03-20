@@ -62,7 +62,7 @@ export class ResourceController {
       if (perm.indexOf('->') !== -1) {
         const found = await ResourceDefinition.getInstance().findMany({
           name: { $in: resource.relations[perm.split('->')[0]] },
-          [`permissions${perm.split('->')[1]}`]: { $exists: true },
+          [`permissions.${perm.split('->')[1]}`]: { $exists: true },
         });
         if (found.length === resource.relations[perm.split('->')[0]].length) continue;
         throw new Error(`Permission ${perm} not found in related resources`);

@@ -1,4 +1,8 @@
-import ConduitGrpcSdk, { ConduitSchema, GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  GrpcError,
+  Indexable,
+} from '@conduitplatform/grpc-sdk';
 import { DatabaseRoutes } from '../../routes';
 import { sortAndConstructRoutes } from './utils';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
@@ -40,7 +44,7 @@ export class SchemaController {
       .model.findMany({ 'modelOptions.conduit.cms.enabled': true })
       .then(r => {
         if (r) {
-          const routeSchemas: any = {};
+          const routeSchemas: Indexable = {};
           r.forEach((schema: ConduitSchema) => {
             if (typeof schema.modelOptions === 'string') {
               (schema as any).modelOptions = JSON.parse(schema.modelOptions);
@@ -69,6 +73,7 @@ export class SchemaController {
   async createSchema(
     schema: ConduitSchema,
     operation: 'create' | 'update' = 'create',
+    ownerModule: string = 'database',
   ): Promise<ConduitSchema> {
     if (this.database.schemaInSystemSchemas(schema.name)) {
       throw new GrpcError(
@@ -76,7 +81,7 @@ export class SchemaController {
         'Cannot modify database-owned system schema.',
       );
     }
-    schema.ownerModule = 'database';
+    schema.ownerModule = ownerModule;
     const createdSchema = await this.database
       .createSchemaFromAdapter(schema)
       .catch(err => {
@@ -84,10 +89,19 @@ export class SchemaController {
         ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
-    this.grpcSdk.bus?.publish(
-      'database:customSchema:create',
-      createdSchema.originalSchema.name,
-    );
+    if (operation === 'create') {
+      this.grpcSdk.bus?.publish(
+        'database:customSchema:create',
+        createdSchema.originalSchema.name,
+      );
+    } else {
+      await this.database.syncSchema(createdSchema.originalSchema.name);
+      this.grpcSdk.bus?.publish(
+        'database:customSchema:update',
+        createdSchema.originalSchema.name,
+      );
+    }
+
     this.refreshRoutes();
     return createdSchema.originalSchema;
   }
@@ -119,7 +133,7 @@ export class SchemaController {
             });
           });
           promise.then(() => {
-            const routeSchemas: any = {};
+            const routeSchemas: Indexable = {};
             r.forEach((schema: ConduitSchema) => {
               if (schema.modelOptions.conduit?.cms?.crudOperations) {
                 routeSchemas[schema.name] = schema;

@@ -11,6 +11,8 @@ import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
 import * as models from './models';
 import {
+  ColumnExistenceRequest,
+  ColumnExistenceResponse,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -65,6 +67,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       deleteMany: this.deleteMany.bind(this),
       countDocuments: this.countDocuments.bind(this),
       rawQuery: this.rawQuery.bind(this),
+      columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
     },
   };
@@ -79,7 +82,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       this._activeAdapter = new MongooseAdapter(dbUri);
     } else if (dbType === 'postgres') {
       this._activeAdapter = new PostgresAdapter(dbUri);
-    } else if (['sql', 'mariadb', 'mysql', 'sqlite', 'mssql'].includes(dbType)) {
+    } else if (['mariadb', 'mysql', 'sqlite'].includes(dbType)) {
       this._activeAdapter = new SQLAdapter(dbUri);
     } else {
       throw new Error('Database type not supported');
@@ -94,14 +97,22 @@ export default class DatabaseModule extends ManagedModule<void> {
   async onServerStart() {
     await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
     await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
-    const modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      if (['_DeclaredSchema', 'MigratedSchema'].includes(model.name)) return [];
+    let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+      if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
       return this._activeAdapter.registerSystemSchema(model);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await runMigrations(this._activeAdapter);
+    modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
+      return this._activeAdapter.registerSystemSchema(model).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+          return this._activeAdapter.syncSchema(model.name);
+        }
+      });
+    });
+    await Promise.all(modelPromises);
     this.updateHealth(HealthCheckStatus.SERVING);
   }
 
@@ -600,6 +611,15 @@ export default class DatabaseModule extends ManagedModule<void> {
     } catch (e) {
       callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async columnExistence(
+    call: GrpcRequest<ColumnExistenceRequest>,
+    callback: GrpcResponse<ColumnExistenceResponse>,
+  ) {
+    const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
+    const exist = await schemaAdapter.model.columnExistence(call.request.columns);
+    callback(null, { result: exist });
   }
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {

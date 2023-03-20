@@ -20,6 +20,8 @@ import {
   PermissionRequest,
   Relation,
   Resource,
+  Resource_Permission,
+  Resource_Relation,
 } from './protoTypes/authorization';
 import { IndexController } from './controllers/index.controller';
 import { PermissionsController } from './controllers/permissions.controller';
@@ -69,7 +71,9 @@ export default class Authorization extends ManagedModule<Config> {
   protected registerSchemas() {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
-      return this.database.createSchemaFromAdapter(modelInstance);
+      return this.database
+        .createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
     });
     return Promise.all(promises);
   }
@@ -95,21 +99,7 @@ export default class Authorization extends ManagedModule<Config> {
 
   async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<null>) {
     const { name, relations, permissions } = call.request;
-    const resource: {
-      name: string;
-      relations?: { [key: string]: string | string[] };
-      permissions?: { [key: string]: string | string[] };
-    } = {
-      name,
-    };
-    resource.relations = {};
-    relations.forEach(relation => {
-      resource.relations![relation.name] = relation.resourceType;
-    });
-    resource.permissions = {};
-    permissions.forEach(permission => {
-      resource.permissions![permission.name] = permission.roles;
-    });
+    const resource = this.createResourceObject(name, relations, permissions);
     await this.resourceController.createResource(resource);
     ConduitGrpcSdk.Logger.info(`Resource ${name} created`);
     callback(null, null);
@@ -117,21 +107,7 @@ export default class Authorization extends ManagedModule<Config> {
 
   async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
     const { name, relations, permissions } = call.request;
-    const resource: {
-      name: string;
-      relations?: { [key: string]: string | string[] };
-      permissions?: { [key: string]: string | string[] };
-    } = {
-      name,
-    };
-    resource.relations = {};
-    relations.forEach(relation => {
-      resource.relations![relation.name] = relation.resourceType;
-    });
-    resource.permissions = {};
-    permissions.forEach(permission => {
-      resource.permissions![permission.name] = permission.roles;
-    });
+    const resource = this.createResourceObject(name, relations, permissions);
     await this.resourceController.updateResourceDefinition(resource.name, resource);
     callback(null, undefined);
   }
@@ -220,5 +196,27 @@ export default class Authorization extends ManagedModule<Config> {
     // for (const metric of Object.values(metricsConfig)) {
     //   this.grpcSdk.registerMetric(metric.type, metric.config);
     // }
+  }
+  createResourceObject(
+    name: string,
+    relations: Resource_Relation[],
+    permissions: Resource_Permission[],
+  ) {
+    const resource: {
+      name: string;
+      relations?: { [key: string]: string | string[] };
+      permissions?: { [key: string]: string | string[] };
+    } = {
+      name,
+    };
+    resource.relations = {};
+    relations.forEach(relation => {
+      resource.relations![relation.name] = relation.resourceType;
+    });
+    resource.permissions = {};
+    permissions.forEach(permission => {
+      resource.permissions![permission.name] = permission.roles;
+    });
+    return resource;
   }
 }

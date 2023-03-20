@@ -12,14 +12,14 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { Team, Token, User } from '../models';
-import { TokenType } from '../constants/TokenType';
 import { Config } from '../config';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
 import { TeamInviteTemplate } from '../templates';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import escapeStringRegexp from 'escape-string-regexp';
+import { AuthUtils } from '../utils';
+import { IAuthenticationStrategy } from '../interfaces';
+import { TokenType } from '../constants';
+import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {
   private initialized = false;
@@ -74,6 +74,52 @@ export class TeamsHandler implements IAuthenticationStrategy {
     await Token.getInstance().deleteOne({ _id: inviteToken!._id });
   }
 
+  async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const invites = await Token.getInstance().findMany({
+      type: TokenType.TEAM_INVITE_TOKEN,
+      // @ts-ignore
+      'data.email': call.request.context.user.email,
+    });
+    return {
+      invites: invites.map(invite => ({
+        teamId: invite.data.teamId,
+        invitationToken: invite.token,
+        role: invite.data.role,
+      })),
+    };
+  }
+
+  async addUserToTeamRequest(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { teamId, userId, role } = call.request.params;
+    const { user } = call.request.context;
+    const config: Config = ConfigController.getInstance().config;
+    const allowed = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['invite'],
+      resource: 'Team:' + teamId,
+    });
+    if (!allowed || !config.teams.allowAddWithoutInvite) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not add user to team, user does not have permission ' +
+          'or adding users without invite is disabled',
+      );
+    }
+    const userToAdd = await User.getInstance().findOne({ _id: userId });
+    if (!userToAdd) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Could not add user to team, user does not exist',
+      );
+    }
+    await this.grpcSdk.authorization!.createRelation({
+      subject: 'User:' + userId,
+      relation: role || 'member',
+      resource: 'Team:' + teamId,
+    });
+    return 'User added to team';
+  }
+
   async addUserToDefault(user: User) {
     if (!this.initialized) return;
     const config: Config = ConfigController.getInstance().config;
@@ -97,6 +143,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }) {
     return Token.getInstance().create({
       type: TokenType.TEAM_INVITE_TOKEN,
+      token: uuid(),
       data: {
         teamId: invite.teamId,
         role: invite.role || 'member',
@@ -262,26 +309,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
       return { members: [], count: 0 };
     }
 
-    let query: any = {
-      _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
-    };
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
-      } else {
-        const searchString = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
-      }
-    }
-
-    const count = relations.relations.length;
-    const members = await User.getInstance().findMany(
-      query,
-      undefined,
+    const { members, count } = await AuthUtils.fetchMembers({
+      relations,
+      search,
       skip,
       limit,
       sort,
-    );
+    });
     return { members: members, count };
   }
 
@@ -350,21 +384,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     if (!targetTeam) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
-    if (!members || members.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members is required and must be a non-empty array',
-      );
-    }
-    const existingUsers = await User.getInstance().findMany({
-      _id: { $in: members },
-    });
-    if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
-    }
+    await AuthUtils.validateMembers(members);
     if (members.indexOf(user._id) !== -1) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Cannot change self role');
     }
@@ -402,6 +422,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   }
 
   declareRoutes(routingManager: RoutingManager): void {
+    const config: Config = ConfigController.getInstance().config;
+
     routingManager.route(
       {
         path: '/teams',
@@ -415,6 +437,24 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition(Team.name),
       this.createTeam.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/invites',
+        description: `Gets pending team invites.`,
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('Invites', {
+        invites: [
+          {
+            teamId: ConduitObjectId.Required,
+            invitationToken: ConduitString.Required,
+            role: ConduitString.Required,
+          },
+        ],
+      }),
+      this.getUserInvites.bind(this),
     );
     routingManager.route(
       {
@@ -511,6 +551,25 @@ export class TeamsHandler implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('InvitationToken', 'String'),
       this.userInvite.bind(this),
     );
+    if (config.teams.allowAddWithoutInvite) {
+      routingManager.route(
+        {
+          path: '/teams/:teamId/add',
+          description: `Adds an existing user to a team without an invite.`,
+          urlParams: {
+            teamId: ConduitObjectId.Required,
+          },
+          bodyParams: {
+            role: ConduitString.Optional,
+            userId: ConduitObjectId.Required,
+          },
+          action: ConduitRouteActions.POST,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('AddUserToTeam', 'String'),
+        this.addUserToTeamRequest.bind(this),
+      );
+    }
   }
 
   async validate() {

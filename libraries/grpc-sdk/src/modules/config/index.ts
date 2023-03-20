@@ -116,7 +116,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
           self.watchModules();
         }
       })
-      .catch(e => {
+      .catch(() => {
         if (self.coreLive) {
           ConduitGrpcSdk.Logger.warn('Core unhealthy');
           self.coreLive = false;

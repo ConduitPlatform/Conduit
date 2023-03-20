@@ -111,32 +111,16 @@ export class CmsHandlers {
   }
 
   async updateManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
-
-    const updatedDocuments = await getUpdatedDocuments(
-      schemaName,
-      call.request.params,
-      this.database,
-    ).catch((e: Error) => {
+    const updatedDocuments = await this.findAndUpdateDocuments(call).catch((e: Error) => {
       throw e;
     });
     return { docs: updatedDocuments };
   }
 
   async patchManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
+    const updatedDocuments = await this.findAndUpdateDocuments(call).catch((e: Error) => {
       throw e;
     });
-    const updatedDocuments = await getUpdatedDocuments(
-      schemaName,
-      call.request.params,
-      this.database,
-    ).catch((e: Error) => {
-      throw e;
-    });
-
     return { docs: updatedDocuments };
   }
 
@@ -152,5 +136,21 @@ export class CmsHandlers {
       });
 
     return 'Ok';
+  }
+
+  private async findAndUpdateDocuments(call: ParsedRouterRequest) {
+    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
+      throw e;
+    });
+
+    const updatedDocuments = await getUpdatedDocuments(
+      schemaName,
+      call.request.params,
+      this.database,
+    ).catch((e: Error) => {
+      throw e;
+    });
+
+    return { docs: updatedDocuments };
   }
 }

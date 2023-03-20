@@ -1,13 +1,14 @@
 import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
-  TYPE,
+  Indexable,
   ParsedRouterRequest,
+  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isNil, merge, isEmpty } from 'lodash';
-import { validateSchemaInput, validatePermissions } from '../utils/utilities';
+import { isEmpty, isNil, merge } from 'lodash';
+import { validatePermissions, validateSchemaInput } from '../utils/utilities';
 import { SchemaController } from '../controllers/cms/schema.controller';
 import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
@@ -15,6 +16,7 @@ import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
+import { parseSortParam } from '../handlers/utils';
 import escapeStringRegexp = require('escape-string-regexp');
 
 export class SchemaAdmin {
@@ -24,6 +26,59 @@ export class SchemaAdmin {
     private readonly schemaController: SchemaController,
     private readonly customEndpointController: CustomEndpointController,
   ) {}
+
+  async exportCustomSchemas(): Promise<UnparsedRouterResponse> {
+    return await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany(
+        { 'modelOptions.conduit.cms.enabled': true },
+        undefined,
+        undefined,
+        'name parentSchema fields extensions modelOptions ownerModule collectionName',
+        { updatedAt: 1 },
+      )
+      .then(r => {
+        return { schemas: r };
+      });
+  }
+
+  async importCustomSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const schemas = call.request.params.schemas;
+    for (const schema of schemas) {
+      const existingSchema = await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findOne({ name: schema.name });
+      const operation = isNil(existingSchema) ? 'create' : 'update';
+      const modelOptions = SchemaConverter.getModelOptions({
+        existingModelOptions: schema.modelOptions,
+      });
+      try {
+        validateSchemaInput(schema.name, schema.fields, modelOptions);
+      } catch (err: unknown) {
+        throw new GrpcError(status.INTERNAL, (err as Error).message);
+      }
+      await this.schemaController.createSchema(
+        new ConduitSchema(
+          schema.name,
+          schema.fields,
+          modelOptions,
+          schemas.collectionName,
+        ),
+        operation,
+        schema.ownerModule,
+      );
+      if (schema.extensions.length > 0) {
+        for (const extension of schema.extensions) {
+          await this.database.setSchemaExtension(
+            schema.name,
+            extension.owner,
+            extension.fields,
+          );
+        }
+      }
+    }
+    return 'Schemas imported successfully';
+  }
 
   async getSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const query: ParsedQuery = {
@@ -42,34 +97,32 @@ export class SchemaAdmin {
     const { search, sort, enabled, owner } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
-    let query: ParsedQuery = {};
+
+    const queryArray: Indexable[] = [{ name: { $nin: this.database.systemSchemas } }];
     if (owner && owner?.length !== 0) {
-      query = {
-        $and: [query, { ownerModule: { $in: owner } }],
-      };
+      queryArray.push({ ownerModule: { $in: owner } });
     }
     let identifier;
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
-      query['name'] = { $ilike: `%${identifier}%` };
+      queryArray.push({ name: { $ilike: `%${identifier}%` } });
     }
     if (!isNil(enabled)) {
-      const enabledQuery = {
+      queryArray.push({
         $or: [
-          { name: { $in: this.database.systemSchemas } },
-          { ownerModule: { $ne: 'database' } },
-          { 'modelOptions.conduit.cms.enabled': true },
+          { 'modelOptions.conduit.cms.enabled': enabled },
+          { 'modelOptions.conduit.permissions.extendable': enabled },
         ],
-      };
-      const disabledQuery = { 'modelOptions.conduit.cms.enabled': false };
-      query = {
-        $and: [query, enabled ? enabledQuery : disabledQuery],
-      };
+      });
     }
-
+    const query: ParsedQuery = { $and: queryArray };
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemasPromise = this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const documentsCountPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
@@ -84,13 +137,17 @@ export class SchemaAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     const query = '{}';
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
     const schemasExtensionsPromise = schemaAdapter.model.findMany(
       query,
       skip,
       limit,
       'name extensions',
-      sort,
+      parsedSort,
     );
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
@@ -125,7 +182,7 @@ export class SchemaAdmin {
     }
 
     Object.assign(fields, {
-      _id: { type: TYPE.ObjectId, required: true, unique: true, primaryKey: true },
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
       createdAt: { type: TYPE.Date, required: true },
       updatedAt: { type: TYPE.Date, required: true },
     });
@@ -138,18 +195,7 @@ export class SchemaAdmin {
 
   async patchSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, fields } = call.request.params;
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.fields = fields ?? requestedSchema.fields;
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
@@ -175,19 +221,7 @@ export class SchemaAdmin {
 
   async deleteSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id, deleteData } = call.request.params;
-
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const requestedSchema = await this.checkRequestedSchema(id);
     // Temp: error out until Admin handles this case
     const endpoints = await this.database
       .getSchemaModel('CustomEndpoints')
@@ -217,23 +251,7 @@ export class SchemaAdmin {
 
   async deleteSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, deleteData } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument ids is required and must be a non-empty array!',
-      );
-    }
-
-    const requestedSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
-      });
-    if (requestedSchemas.length === 0) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
-
+    const requestedSchemas = await this.retrieveSchemasByIds(ids);
     for (const schema of requestedSchemas) {
       const endpoints = await this.database
         .getSchemaModel('CustomEndpoints')
@@ -263,21 +281,8 @@ export class SchemaAdmin {
   }
 
   async toggleSchema(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [
-          { 'modelOptions.conduit.cms': { $exists: true } },
-          { _id: call.request.params.id },
-        ],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-
+    const { id } = call.request.params;
+    const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.modelOptions.conduit.cms.enabled =
       !requestedSchema.modelOptions.conduit.cms.enabled;
 
@@ -312,23 +317,7 @@ export class SchemaAdmin {
 
   async toggleSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { ids, enabled } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'Argument ids is required and must be a non-empty array!',
-      );
-    }
-
-    const requestedSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
-      });
-    if (isNil(requestedSchemas)) {
-      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
-    }
-
+    await this.retrieveSchemasByIds(ids);
     const updatedSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.updateMany(
@@ -413,9 +402,13 @@ export class SchemaAdmin {
   async getSchemaOwners(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sort } = call.request.params;
     const modules: string[] = [];
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemas = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({}, undefined, undefined, 'ownerModule', sort);
+      .model.findMany({}, undefined, undefined, 'ownerModule', parsedSort);
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
@@ -460,8 +453,6 @@ export class SchemaAdmin {
             name: schema.name,
             fields: schema.fields,
             modelOptions: schema.modelOptions,
-            ownerModule: schema.ownerModule,
-            extensions: (schema as any).extensions,
           }),
         );
       }),
@@ -489,9 +480,13 @@ export class SchemaAdmin {
       const identifier = escapeStringRegexp(search);
       query = { name: { $ilike: `%${identifier}%` } };
     }
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const schemasCountPromise = this.database
       .getSchemaModel('_PendingSchemas')
       .model.countDocuments(query);
@@ -587,5 +582,40 @@ export class SchemaAdmin {
       );
     }
     return this.database.deleteIndexes(requestedSchema.name, indexNames);
+  }
+
+  private async retrieveSchemasByIds(ids: string[]) {
+    if (ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Argument ids is required and must be a non-empty array!',
+      );
+    }
+
+    const requestedSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: { $in: ids } }],
+      });
+    if (!requestedSchemas || requestedSchemas.length === 0) {
+      throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
+    }
+    return requestedSchemas;
+  }
+
+  async checkRequestedSchema(id: string) {
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
+      });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
+    }
+    return requestedSchema;
   }
 }

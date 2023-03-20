@@ -1,4 +1,10 @@
-import { ConduitModel, ConduitRouteOption, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitRouteOption,
+  Indexable,
+  TYPE,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitParser } from '../classes';
 
 export interface ParseResult {
@@ -30,8 +36,8 @@ export interface SwaggerObject extends SwaggerDefinition {
 export interface ProcessingObject {
   type: 'object' | 'string' | 'array' | 'boolean' | 'number' | undefined;
   format?: string;
-  properties?: {};
-  required?: [];
+  properties: Indexable;
+  required?: (string | keyof ProcessingObject['properties'])[];
   items?: SwaggerDefinition | SwaggerObject | SwaggerString;
 }
 
@@ -47,8 +53,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     }
     this.isInput = isInput;
     this.result = this.getInitializedResult();
-    // @ts-ignore
-    this.result = super.extractTypesInternal(name, fields);
+    this.result = super.extractTypesInternal(name, fields) as ParseResult;
     return this.result;
   }
 
@@ -121,11 +126,8 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       if (!processingObject.properties) {
         processingObject.properties = {};
       }
-      // @ts-ignore
       processingObject.properties[name] = this.getType(value);
-      if (description)
-        // @ts-ignore
-        processingObject.properties[name].description = description;
+      if (description) processingObject.properties[name].description = description;
     }
     this.addFieldToRequired(processingObject, name, isRequired);
   }
@@ -140,13 +142,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     description?: string,
   ): void {
     if (description && name === 'body') {
-      // @ts-ignore
       processingObject.properties[fieldName] = {
         type: 'string',
         description,
       };
     } else {
-      // @ts-ignore
       processingObject.properties[fieldName] = {
         type: 'object',
         properties: this.extractTypes(name, value, this.isInput).properties,
@@ -159,12 +159,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     resolverName: string,
     name: string,
-    value: any[],
+    value: UntypedArray,
     isRequired: boolean = false,
     nestedType?: boolean,
     description?: string,
   ): void {
-    // @ts-ignore
     processingObject.properties[name] = {
       type: 'array',
       description,
@@ -183,13 +182,11 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
   ): void {
     if (this.isInput) {
-      // @ts-ignore
       processingObject.properties[name] = {
         type: 'string',
         format: 'uuid',
       };
     } else {
-      // @ts-ignore
       processingObject.properties[name] = {
         oneOf: [
           {
@@ -214,7 +211,6 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
       if (!processingObject.required) {
         processingObject.required = [];
       }
-      // @ts-ignore
       processingObject.required.push(name);
     }
   }

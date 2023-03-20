@@ -1,16 +1,13 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
+  Indexable,
   RequestHandlers,
   RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
-export const LocationEnum = {
-  BODY: 0,
-  QUERY: 1,
-  URL: 2,
-};
+import { LocationEnum } from '../../enums';
 
 function getOperation(op: number) {
   switch (op) {
@@ -39,7 +36,7 @@ function extractParams(
     array?: boolean;
   }[],
 ) {
-  const resultingObject: any = {};
+  const resultingObject: Indexable = {};
   inputs.forEach(
     (r: {
       name: string;

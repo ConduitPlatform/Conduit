@@ -487,7 +487,7 @@ export default class AdminModule extends IConduitAdmin {
   ) {
     this.grpcSdk
       .state!.getKey('admin')
-      .then((r: any) => {
+      .then(r => {
         const state = !r || r.length === 0 ? {} : JSON.parse(r);
         if (!state.routes) state.routes = [];
         let index;
@@ -578,6 +578,7 @@ export default class AdminModule extends IConduitAdmin {
     await runMigrations(this.grpcSdk);
     await this.applyStoredMiddleware();
     this.databaseHandled = true;
+    await this.migrateSchemas();
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
       .then(async existing => {
@@ -694,7 +695,15 @@ export default class AdminModule extends IConduitAdmin {
     return Promise.all(promises);
   }
 
-  async setConfig(moduleConfig: any): Promise<any> {
+  private migrateSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk.database!.migrate(modelInstance.name);
+    });
+    return Promise.all(promises);
+  }
+
+  async setConfig(moduleConfig: any) {
     const previousConfig = await this.commons.getConfigManager().get('admin');
     const config = merge(previousConfig, moduleConfig);
     await generateConfigDefaults(config);

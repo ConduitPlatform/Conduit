@@ -1,11 +1,16 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export async function UserIdToUserTwoFactorSchemaMigration(grpcSdk: ConduitGrpcSdk) {
-  const twoFactorSecretSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
+  const exists = await grpcSdk.databaseProvider!.columnExistence('TwoFactorSecret', [
+    'userId',
+  ]);
+  if (!exists) {
+    return;
+  }
+  const twoFactorSecretSchemas: UntypedArray = await grpcSdk.databaseProvider!.findMany(
     'TwoFactorSecret',
-    { userId: { $exists: true } },
+    {},
   );
-
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     twoFactorSecretSchema.user = twoFactorSecretSchema.userId;
     await grpcSdk.databaseProvider!.findByIdAndUpdate(

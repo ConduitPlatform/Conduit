@@ -33,6 +33,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
+  synced: boolean;
   readonly idField;
 
   protected constructor(
@@ -143,7 +144,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
-    return await this.model
+    return this.model
       .create(parsedQuery, {
         include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
@@ -176,7 +177,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (this.associations) {
       assocs = extractAssociationsFromObject(parsedQuery, this.associations);
     }
-    const relationObjects = this.extractManyRelationsModification(parsedQuery);
+    const relationObjectsArray = this.extractManyRelationsModification(parsedQuery);
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
@@ -186,7 +187,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       .then(docs => {
         return Promise.all(
           docs.map((doc, index) =>
-            this.createWithPopulation(doc, relationObjects[index], t),
+            this.createWithPopulation(doc, relationObjectsArray[index], t),
           ),
         );
       })
@@ -202,23 +203,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      { populate, select, exclude: [...this.excludedFields] },
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.parseQueryFilter(query, { populate, select });
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -229,11 +214,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     };
 
     incrementDbQueries();
-    const document = await this.model
-      .findOne(options)
-      .then(doc => (doc ? doc.toJSON() : doc));
-
-    return document;
+    return this.model.findOne(options).then(doc => (doc ? doc.toJSON() : doc));
   }
 
   sync() {
@@ -249,6 +230,18 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         }
       }
     }
+    for (const relation in this.extractedRelations) {
+      if (!this.extractedRelations.hasOwnProperty(relation)) continue;
+      const value = this.extractedRelations[relation];
+      // many-to-many relations cannot be null
+      if (!Array.isArray(value)) continue;
+      const item = value[0];
+      const name = this.model.name + '_' + item.originalSchema.name;
+      promiseChain = promiseChain.then(() =>
+        this.sequelize.models[name].sync({ alter: { drop: false } }),
+      );
+    }
+    promiseChain = promiseChain.then(() => (this.synced = true));
     return promiseChain;
   }
 
@@ -271,13 +264,13 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     if (!populate) return inclusionArray;
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
-        const path = population.split('.');
+        let path = population.split('.');
         const relationName = path[0];
         const relationTarget = this.extractedRelations[relationName];
-        if (relationTarget) continue;
+        if (!relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
-          ? (relationTarget as any[])[0]
-          : (relationTarget as any);
+          ? relationTarget[0]
+          : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -291,6 +284,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
           attributes: { exclude: relationSchema.excludedFields },
         };
         path.shift();
+        path = [path.join('.')];
         relationObject.include = relationSchema.constructRelationInclusion(
           path,
           required,
@@ -300,8 +294,8 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         const relationTarget = this.extractedRelations[population];
         if (!relationTarget) continue;
         const relationSchema = Array.isArray(relationTarget)
-          ? (relationTarget as any[])[0]
-          : (relationTarget as any);
+          ? relationTarget[0]
+          : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -320,7 +314,11 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return inclusionArray;
   }
 
-  createWithPopulation(doc: Model<any>, relationObjects: any, transaction?: Transaction) {
+  createWithPopulation(
+    doc: Model,
+    relationObjects: Indexable,
+    transaction?: Transaction,
+  ) {
     let hasOne = false;
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;
@@ -356,9 +354,14 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     for (const target in parsedQuery) {
       if (!parsedQuery.hasOwnProperty(target)) continue;
       if (this.extractedRelations.hasOwnProperty(target)) {
-        // @ts-ignore
-        relationObjects[target] = parsedQuery[target];
-        delete parsedQuery[target];
+        if (Array.isArray(parsedQuery[target])) {
+          // @ts-ignore
+          relationObjects[target] = parsedQuery[target];
+          delete parsedQuery[target];
+        } else {
+          parsedQuery[target + 'Id'] = parsedQuery[target];
+          delete parsedQuery[target];
+        }
       }
     }
     return relationObjects;
@@ -379,24 +382,8 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     select?: string,
     sort?: { [field: string]: -1 | 1 },
     populate?: string[],
-  ): Promise<any> {
-    let parsedQuery: ParsedQuery | ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      { populate, select, exclude: [...this.excludedFields] },
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+  ) {
+    const { filter, parsingResult } = this.parseQueryFilter(query, { populate, select });
     const options: FindOptions = {
       where: filter,
       nest: true,
@@ -415,32 +402,13 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       options.order = this.parseSort(sort);
     }
 
-    const documents = await this.model
+    return this.model
       .findAll(options)
       .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
-
-    return documents;
   }
 
   deleteMany(query: Query) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    incrementDbQueries();
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      {},
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.parseQueryFilter(query);
     return this.model
       .findAll({
         where: filter,
@@ -457,24 +425,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   }
 
   deleteOne(query: Query) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    incrementDbQueries();
-    const parsingResult = parseQuery(
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      {},
-      this.associations,
-    );
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
+    const { filter, parsingResult } = this.parseQueryFilter(query);
     return this.model
       .findOne({
         where: filter,
@@ -559,6 +510,50 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       await t.rollback();
       throw e;
     }
+  }
+
+  async columnExistence(columns: string[]): Promise<boolean> {
+    const dialect = this.adapter.sequelize.getDialect();
+    let result: string[];
+    if (dialect === 'sqlite') {
+      result = await this.model
+        .sequelize!.query(`PRAGMA table_info(${this.originalSchema.collectionName});`)
+        .then(r => r[0].map((obj: any) => obj.name));
+    } else {
+      result = await this.model
+        .sequelize!.query(
+          `SELECT column_name FROM information_schema.columns
+                WHERE table_name = '${this.originalSchema.collectionName}';`,
+        )
+        .then(r => r[0].map((obj: any) => obj.column_name));
+    }
+    return columns.every(column => result.includes(column));
+  }
+
+  parseQueryFilter(query: Query, options?: { populate?: string[]; select?: string }) {
+    let parsedQuery: ParsedQuery;
+    if (typeof query === 'string') {
+      parsedQuery = JSON.parse(query);
+    } else {
+      parsedQuery = query;
+    }
+    const queryOptions = !isNil(options)
+      ? { ...options, exclude: [...this.excludedFields] }
+      : {};
+    const parsingResult = parseQuery(
+      parsedQuery,
+      this.adapter.sequelize.getDialect(),
+      this.extractedRelations,
+      queryOptions,
+      this.associations,
+    );
+
+    let filter = parsingResult.query;
+    if (this.sequelize.getDialect() !== 'postgres') {
+      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+    }
+
+    return { filter, parsingResult };
   }
 
   abstract findByIdAndUpdate(

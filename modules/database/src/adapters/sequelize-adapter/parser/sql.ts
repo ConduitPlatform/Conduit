@@ -51,7 +51,7 @@ export function arrayPatch(
   associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   if (!query) return query;
-  const newQuery = JSON.parse(JSON.stringify(query));
+  const newQuery = Object.assign({}, query);
   for (const key in query) {
     if (fields[key]) {
       if (Array.isArray(fields[key])) {

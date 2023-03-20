@@ -1,10 +1,10 @@
-import { isNil } from 'lodash';
 import { Sequelize, Transaction } from 'sequelize';
-import { ParsedQuery, SingleDocQuery } from '../../../interfaces';
+import { SingleDocQuery } from '../../../interfaces';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { SQLAdapter } from './index';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { extractAssociationsFromObject } from '../parser';
+import { getTransactionAndParsedQuery } from '../utils';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -26,21 +26,12 @@ export class SQLSchema extends SequelizeSchema {
     query: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
-  ): Promise<{ [key: string]: any }> {
-    let t: Transaction | undefined = transaction;
-    const transactionProvided = transaction !== undefined;
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    if (parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = parsedQuery['$set'];
-    }
-    if (isNil(t)) {
-      t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    }
+  ): Promise<Indexable> {
+    const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
+      transaction,
+      query,
+      this.sequelize,
+    );
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -128,6 +119,7 @@ export class SQLSchema extends SequelizeSchema {
             }
             continue;
           }
+
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
               throw new Error(`Cannot push in non-array field: ${key}`);
@@ -157,7 +149,7 @@ export class SQLSchema extends SequelizeSchema {
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-      const associationObjects: { [key: string]: any } = {};
+      const associationObjects: Indexable = {};
       for (const assoc in assocs) {
         if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
           throw new Error(`Cannot update association ${assoc} with non-array value`);
@@ -186,7 +178,7 @@ export class SQLSchema extends SequelizeSchema {
           for (const assoc in associationObjects) {
             if (!associationObjects.hasOwnProperty(assoc)) continue;
             if (Array.isArray(associationObjects[assoc])) {
-              associationObjects[assoc].forEach((obj: any) => {
+              associationObjects[assoc].forEach((obj: Indexable) => {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
                     (this.associations[assoc] as SQLSchema).findByIdAndUpdate(

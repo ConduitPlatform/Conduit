@@ -60,7 +60,7 @@ export default class Storage extends ManagedModule<Config> {
     if (config.provider === 'aws') {
       if (isEmpty(config.aws)) throw new Error('Missing AWS config');
       if (isNil(config.aws.accountId)) {
-        config.aws.accountId = (await getAwsAccountId(config)) as any;
+        config.aws.accountId = await getAwsAccountId(config);
       }
     }
     return config;
@@ -120,7 +120,9 @@ export default class Storage extends ManagedModule<Config> {
       const modelInstance = model.getInstance(this.database);
       if (Object.keys(modelInstance.fields).length !== 0) {
         // borrowed foreign model
-        return this.database.createSchemaFromAdapter(modelInstance);
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
       }
     });
     return Promise.all(promises);

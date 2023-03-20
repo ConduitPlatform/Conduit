@@ -8,11 +8,11 @@ import { constructAssignment, constructQuery } from './utils';
 import { constructSortObj } from '../utils';
 import { status } from '@grpc/grpc-js';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
-import { OperationsEnum } from '../../admin/customEndpoints/customEndpoints.admin';
 import { isNil } from 'lodash';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
+import { OperationsEnum } from '../../enums';
 
 export class CustomEndpointHandler {
   private static routeControllers: Indexable = {};
@@ -37,12 +37,11 @@ export class CustomEndpointHandler {
 
     if (endpoint.operation !== OperationsEnum.POST) {
       try {
-        searchQuery = constructQuery(
-          endpoint.query,
-          endpoint.inputs,
-          params,
-          call.request.context,
-        );
+        searchQuery = constructQuery(endpoint.query, {
+          inputs: endpoint.inputs,
+          params: params,
+          context: call.request.context,
+        });
       } catch (e) {
         throw new GrpcError(status.INTERNAL, (e as Error).message);
       }

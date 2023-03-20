@@ -8,11 +8,11 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import {
-  assignmentValidation,
   inputValidation,
   paramValidation,
   operationValidation,
   paginationAndSortingValidation,
+  validateAssignments,
 } from './utils';
 import { isNil } from 'lodash';
 import { CustomEndpointController } from '../../controllers/customEndpoints/customEndpoint.controller';
@@ -20,16 +20,9 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import escapeStringRegexp from 'escape-string-regexp';
-import { IDeclaredSchema } from '../../interfaces';
-
-export const OperationsEnum = {
-  // That's a dictionary, not an enum. TODO: Rename and/or convert to enum/map.
-  GET: 0, //'FIND/GET'
-  POST: 1, //'CREATE'
-  PUT: 2, //'UPDATE/EDIT'
-  DELETE: 3, //'DELETE'
-  PATCH: 4, //'PATCH'
-};
+import { ConduitPermissions, ICustomEndpoint, IDeclaredSchema } from '../../interfaces';
+import { OperationsEnum } from '../../enums';
+import { parseSortParam } from '../../handlers/utils';
 
 export class CustomEndpointsAdmin {
   constructor(
@@ -37,6 +30,88 @@ export class CustomEndpointsAdmin {
     private readonly database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
     private readonly customEndpointController: CustomEndpointController,
   ) {}
+
+  async exportCustomEndpoints(): Promise<UnparsedRouterResponse> {
+    return await this.database
+      .getSchemaModel('CustomEndpoints')
+      .model.findMany({})
+      .then(r =>
+        r.map(obj => {
+          delete obj._id;
+          delete obj.createdAt;
+          delete obj.updatedAt;
+          delete obj.__v;
+          return { endpoints: obj };
+        }),
+      );
+  }
+
+  async importCustomEndpoints(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const endpoints = call.request.params.endpoints;
+    for (const endpoint of endpoints) {
+      const { schemaId, fields, compiledFields } = await this.getAccessibleSchemaFields(
+        endpoint.operation,
+        undefined,
+        endpoint.selectedSchemaName,
+      );
+      let error = paramValidation(endpoint);
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      error = operationValidation(
+        endpoint.operation,
+        endpoint.query,
+        endpoint.assignments,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      error = inputValidation(endpoint.operation, endpoint.inputs);
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      endpoint.selectedSchema = schemaId;
+      error = paginationAndSortingValidation(
+        endpoint.operation,
+        endpoint,
+        compiledFields,
+        null,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+      if (
+        [OperationsEnum.POST, OperationsEnum.PUT, OperationsEnum.PATCH].includes(
+          endpoint.operation,
+        )
+      ) {
+        validateAssignments(
+          endpoint.assignments,
+          fields,
+          endpoint.inputs,
+          endpoint.operation,
+        );
+      }
+      const existing = await this.database
+        .getSchemaModel('CustomEndpoints')
+        .model.findOne({ name: endpoint.name });
+      if (!isNil(existing)) {
+        await this.database
+          .getSchemaModel('CustomEndpoints')
+          .model.deleteOne({ _id: existing._id });
+      }
+      const customEndpoint = await this.database
+        .getSchemaModel('CustomEndpoints')
+        .model.create(endpoint);
+      if (isNil(customEndpoint)) {
+        throw new GrpcError(status.INTERNAL, 'Endpoint creation failed');
+      }
+    }
+    this.customEndpointController.refreshEndpoints();
+    return 'Custom endpoints imported successfully';
+  }
 
   async getCustomEndpoints(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { schemaName, sort } = call.request.params;
@@ -56,9 +131,13 @@ export class CustomEndpointsAdmin {
         $and: [query, { selectedSchemaName: { $in: schemaName } }],
       };
     }
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany(query, skip, limit, undefined, sort);
+      .model.findMany(query, skip, limit, undefined, parsedSort);
     const count: number = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments(query);
@@ -115,7 +194,12 @@ export class CustomEndpointsAdmin {
       query: null,
       assignments: null,
     };
-    error = paginationAndSortingValidation(operation, call, compiledFields, endpoint);
+    error = paginationAndSortingValidation(
+      operation,
+      call.request.params as ICustomEndpoint,
+      compiledFields,
+      endpoint,
+    );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -125,25 +209,7 @@ export class CustomEndpointsAdmin {
       operation === OperationsEnum.PUT ||
       operation === OperationsEnum.PATCH
     ) {
-      assignments.forEach(
-        (r: {
-          schemaField: string;
-          action: number;
-          assignmentField: { type: string; value: Indexable };
-        }) => {
-          const error = assignmentValidation(
-            fields,
-            inputs,
-            operation,
-            r.schemaField,
-            r.assignmentField,
-            r.action,
-          );
-          if (error !== true) {
-            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-          }
-        },
-      );
+      validateAssignments(assignments, fields, inputs, operation);
       endpoint.assignments = assignments;
     }
 
@@ -188,7 +254,12 @@ export class CustomEndpointsAdmin {
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
-    error = paginationAndSortingValidation(operation, call, compiledFields, null);
+    error = paginationAndSortingValidation(
+      operation,
+      call.request.params as ICustomEndpoint,
+      compiledFields,
+      null,
+    );
     if (error !== true) {
       throw new GrpcError(status.INVALID_ARGUMENT, error as string);
     }
@@ -198,25 +269,7 @@ export class CustomEndpointsAdmin {
       operation === OperationsEnum.PUT ||
       operation === OperationsEnum.PATCH
     ) {
-      assignments.forEach(
-        (r: {
-          schemaField: string;
-          action: number;
-          assignmentField: { type: string; value: Indexable };
-        }) => {
-          const error = assignmentValidation(
-            fields,
-            inputs,
-            operation,
-            r.schemaField,
-            r.assignmentField,
-            r.action,
-          );
-          if (error !== true) {
-            throw new GrpcError(status.INVALID_ARGUMENT, error as string);
-          }
-        },
-      );
+      validateAssignments(assignments, fields, inputs, operation);
     }
 
     delete call.request.params.id;
@@ -271,9 +324,13 @@ export class CustomEndpointsAdmin {
     const { limit } = call.request.params ?? 25;
     const schemaIds: string[] = [];
     const schemaNames: string[] = [];
+    let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
+    if (sort) {
+      parsedSort = parseSortParam(sort);
+    }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', sort);
+      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', parsedSort);
     customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());
@@ -330,14 +387,7 @@ export class CustomEndpointsAdmin {
     }
     schemaId = schema._id.toString();
     schemaName = schema.name;
-    // Field Accessibility Checks
-    const perms = schema.modelOptions.conduit?.permissions!;
-    if (!perms && operation !== OperationsEnum.GET) {
-      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
-      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
-      ConduitGrpcSdk.Logger.error(error);
-      throw new GrpcError(status.FAILED_PRECONDITION, error);
-    }
+    const perms = this.checkFieldAccessibility(operation, schema);
     if (operation === OperationsEnum.GET) {
       return {
         schemaId,
@@ -349,20 +399,46 @@ export class CustomEndpointsAdmin {
       const fields = perms.canCreate ? schema.compiledFields : {};
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if ([OperationsEnum.PATCH, OperationsEnum.PUT].includes(operation)) {
-      const fields =
-        perms.canModify === 'Everything'
-          ? schema.compiledFields
-          : perms.canModify === 'ExtensionOnly'
-          ? perms.extendable
-            ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
-            : {}
-          : {};
+      const fields = this.getFieldsForModifyOperation(perms, schema);
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else if (operation === OperationsEnum.DELETE) {
       const fields = perms.canDelete ? schema.compiledFields : {};
       return { schemaId, schemaName, fields, compiledFields: schema.compiledFields };
     } else {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Unknown Operation');
+    }
+  }
+
+  private checkFieldAccessibility(operation: number, schema: IDeclaredSchema) {
+    const perms = schema.modelOptions.conduit?.permissions!;
+    if (!perms && operation !== OperationsEnum.GET) {
+      // This is almost certainly never undefined, but adding this just in case... // TODO: Remove after type cleanup
+      const error = `Schema '${schema.name}' does not define any permissions! Can't create non-GET custom endpoint!`;
+      ConduitGrpcSdk.Logger.error(error);
+      throw new GrpcError(status.FAILED_PRECONDITION, error);
+    }
+    return perms;
+  }
+
+  private getFieldsForModifyOperation(
+    perms: ConduitPermissions,
+    schema: IDeclaredSchema,
+  ): ConduitModel {
+    const canModify = this.checkCanModify(perms);
+    return canModify === 'Everything'
+      ? schema.compiledFields
+      : canModify === 'ExtensionOnly'
+      ? perms.extendable
+        ? schema.extensions.find(ext => ext.ownerModule === 'database')?.fields ?? {}
+        : {}
+      : {};
+  }
+
+  private checkCanModify(perms: ConduitPermissions | undefined) {
+    if (perms?.canModify === 'Everything' || perms?.canModify === 'ExtensionOnly') {
+      return perms.canModify;
+    } else {
+      return null;
     }
   }
 }

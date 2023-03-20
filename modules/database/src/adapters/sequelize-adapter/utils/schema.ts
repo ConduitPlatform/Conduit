@@ -1,7 +1,9 @@
-import { DataTypes, ModelStatic, Sequelize } from 'sequelize';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
+import { ConduitSchema, Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
-import assert from 'assert';
+import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
+import { isNil } from 'lodash';
+import { validateFieldChanges, validateFieldConstraints } from '../../utils';
 
 const deepdash = require('deepdash/standalone');
 
@@ -14,42 +16,57 @@ export const extractRelations = (
   for (const relation in relations) {
     if (relations.hasOwnProperty(relation)) {
       const value = relations[relation];
+      // many-to-many relations cannot be null
       if (Array.isArray(value)) {
         const item = value[0];
-        model.belongsToMany(item.model, {
-          foreignKey: item.originalSchema.name,
-          // foreignKey: {
-          //   name: item.originalSchema.name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
-          as: relation,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-          through: model.name + '_' + item.originalSchema.name,
-        });
-        item.model.belongsToMany(model, {
-          foreignKey: name,
-          // foreignKey: {
-          //   name,
-          //   allowNull: !((originalSchema.fields[relation] as any[])[0] as any).required,
-          //   defaultValue: ((originalSchema.fields[relation] as any[])[0] as any).default,
-          // },
-          as: relation,
-          through: model.name + '_' + item.originalSchema.name,
-        });
-        item.sync();
+        if (
+          item.model.associations[relation] &&
+          item.model.associations[relation].foreignKey === name
+        ) {
+          model.belongsToMany(item.model, {
+            foreignKey: item.originalSchema.name,
+            as: relation,
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          continue;
+        } else if (
+          item.model.associations[relation] &&
+          item.model.associations[relation].foreignKey !== name
+        ) {
+          throw new Error(
+            `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
+          );
+        } else {
+          model.belongsToMany(item.model, {
+            foreignKey: item.originalSchema.name,
+            as: relation,
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          item.model.belongsToMany(model, {
+            foreignKey: name,
+            as: relation,
+            through: model.name + '_' + item.originalSchema.name,
+          });
+          item.sync();
+        }
       } else {
         model.belongsTo(value.model, {
-          foreignKey: relation + 'Id',
-          // foreignKey: {
-          //   name: relation + 'Id',
-          //   allowNull: !(originalSchema.fields[relation] as any).required,
-          //   defaultValue: (originalSchema.fields[relation] as any).default,
-          // },
+          foreignKey: {
+            name: relation + 'Id',
+            allowNull: !(originalSchema.fields[relation] as any).required,
+            defaultValue: (originalSchema.fields[relation] as any).default,
+          },
           as: relation,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
+          onUpdate: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'NO ACTION',
+          onDelete: (originalSchema.fields[relation] as any).required
+            ? 'CASCADE'
+            : 'SET NULL',
         });
       }
     }
@@ -69,7 +86,11 @@ export const sqlTypesProcess = (
     originalSchema.fields,
     //@ts-ignore
     (value: Indexable, key: string, parentValue: Indexable) => {
-      if (!parentValue?.hasOwnProperty(key!)) {
+      if (
+        isNil(parentValue) ||
+        !parentValue.hasOwnProperty(key) ||
+        isNil(parentValue[key])
+      ) {
         return true;
       }
 
@@ -101,3 +122,140 @@ export const sqlTypesProcess = (
   }
   return idField ?? '_id';
 };
+
+export async function getTransactionAndParsedQuery(
+  transaction: Transaction | undefined,
+  query: string | ParsedQuery,
+  sequelize: Sequelize,
+): Promise<{ t: Transaction; parsedQuery: ParsedQuery; transactionProvided: boolean }> {
+  let t: Transaction | undefined = transaction;
+  const transactionProvided = transaction !== undefined;
+  let parsedQuery: ParsedQuery;
+  if (typeof query === 'string') {
+    parsedQuery = JSON.parse(query);
+  } else {
+    parsedQuery = query;
+  }
+  if (parsedQuery.hasOwnProperty('$set')) {
+    parsedQuery = parsedQuery['$set'];
+  }
+  if (isNil(t)) {
+    t = await sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
+  }
+  return { t, parsedQuery, transactionProvided };
+}
+
+export function processPushOperations(
+  parentDoc: any,
+  push: any,
+  extractedRelations: any,
+) {
+  for (const key in push) {
+    if (extractedRelations[key]) {
+      if (!Array.isArray(extractedRelations[key])) {
+        throw new Error(`Cannot push in non-array field: ${key}`);
+      }
+      let modelName = key.charAt(0).toUpperCase() + key.slice(1);
+      if (push[key]['$each']) {
+        if (!modelName.endsWith('s')) {
+          modelName = modelName + 's';
+        }
+        parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
+      } else {
+        const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+        parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
+      }
+      continue;
+    }
+    if (push[key]['$each']) {
+      parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
+    } else {
+      parentDoc[key] = [...parentDoc[key], push[key]];
+    }
+  }
+}
+
+export function compileSchema(
+  schema: ConduitDatabaseSchema,
+  registeredSchemas: Map<string, ConduitSchema>,
+  sequelizeModels: Indexable,
+): ConduitDatabaseSchema {
+  let compiledSchema = JSON.parse(JSON.stringify(schema));
+  validateFieldConstraints(compiledSchema);
+  (compiledSchema as any).fields = JSON.parse(JSON.stringify(schema.compiledFields));
+  if (registeredSchemas.has(compiledSchema.name)) {
+    if (compiledSchema.name !== 'Config') {
+      compiledSchema = validateFieldChanges(
+        registeredSchemas.get(compiledSchema.name)!,
+        compiledSchema,
+      );
+    }
+    delete sequelizeModels[compiledSchema.collectionName];
+  }
+  return compiledSchema;
+}
+
+type Relation = {
+  type: 'Relation';
+  model: string;
+  required?: boolean;
+  select?: boolean;
+};
+
+type ExtractedRelations = {
+  [p: string]: Relation | Relation[];
+};
+
+export async function resolveRelatedSchemas(
+  schema: ConduitDatabaseSchema,
+  extractedRelations: ExtractedRelations,
+  models: Indexable,
+) {
+  const relatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
+
+  if (Object.keys(extractedRelations).length > 0) {
+    let pendingModels: string[] = [];
+    for (const relation in extractedRelations) {
+      const rel = Array.isArray(extractedRelations[relation])
+        ? (extractedRelations[relation] as UntypedArray)[0]
+        : extractedRelations[relation];
+      if (!models[rel.model] || !models[rel.model].synced) {
+        if (!pendingModels.includes(rel.model)) {
+          pendingModels.push(rel.model);
+        }
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [rel.model];
+        } else {
+          relatedSchemas[relation] = rel.model;
+        }
+      } else {
+        if (Array.isArray(extractedRelations[relation])) {
+          relatedSchemas[relation] = [models[rel.model]];
+        } else {
+          relatedSchemas[relation] = models[rel.model];
+        }
+      }
+    }
+    while (pendingModels.length > 0) {
+      await sleep(500);
+      pendingModels = pendingModels.filter(model => {
+        if (!models[model] || !models[model].synced) {
+          return true;
+        } else {
+          for (const schema in relatedSchemas) {
+            const simple = Array.isArray(relatedSchemas[schema])
+              ? (relatedSchemas[schema] as SequelizeSchema[])[0]
+              : relatedSchemas[schema];
+            // @ts-ignore
+            if (simple === model) {
+              relatedSchemas[schema] = Array.isArray(relatedSchemas[schema])
+                ? [models[model]]
+                : models[model];
+            }
+          }
+        }
+      });
+    }
+  }
+  return relatedSchemas;
+}

@@ -100,7 +100,7 @@ function parseResponseData(
       }
     }
   } else {
-    if (r.hasOwnProperty('data')) (r as any).data = JSON.stringify((r as any).data);
+    if (r.hasOwnProperty('data')) r.data = JSON.stringify(r.data);
     callback(null, r);
   }
   generateLog(routerRequest, requestReceive, call, undefined);
@@ -137,7 +137,7 @@ export function wrapRouterGrpcFunction(
     }
 
     const responded = { did: false };
-    fun(call, (r: any) => {
+    fun(call, r => {
       parseResponseData(r, routerRequest, requestReceive, call, callback, responded);
     })
       .then(r =>

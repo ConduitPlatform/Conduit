@@ -10,7 +10,7 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -51,9 +51,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+    let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     parsedQuery['updatedAt'] = new Date();
     if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
@@ -82,7 +80,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .lean()
       .exec()
       .then(r => {
-        r.map((r: any) => r._id);
+        r.map(r => r._id);
       });
     return this.model
       .updateMany(parsedFilter, parsedQuery)
@@ -128,7 +126,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         population[index] = r.join('.');
       }
     });
-    // @ts-ignore
     queryObj = queryObj.deepPopulate(population);
 
     return queryObj;
@@ -177,6 +174,17 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       typeof query === 'string' ? EJSON.parse(query) : query,
     );
     return this.model.find(parsedQuery).countDocuments().exec();
+  }
+
+  async columnExistence(columns: string[]): Promise<boolean> {
+    const array: object[] = [];
+    for (const column of columns) {
+      array.push({ [column]: { $exists: true } });
+    }
+    const result = await this.model.db
+      .collection(this.originalSchema.collectionName)
+      .findOne({ $and: array });
+    return result !== null;
   }
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {

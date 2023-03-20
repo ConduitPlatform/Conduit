@@ -5,7 +5,7 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { ConduitSchemaExtension, RawQuery } from '../../interfaces';
+import { ConduitSchemaExtension, RawQuery, UntypedArray } from '../../interfaces';
 import { Query } from '../../types/db';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
@@ -18,6 +18,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     name: string;
     fields: any;
     modelOptions: any;
+    collectionName: string;
     fieldHash: string;
   }> {
     return this.client!.getSchema({ schemaName: schemaName }).then(res => {
@@ -25,6 +26,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
         name: res.name,
         fields: JSON.parse(res.fields),
         modelOptions: JSON.parse(res.modelOptions),
+        collectionName: res.collectionName,
         fieldHash: res.fieldHash,
       };
     });
@@ -44,12 +46,14 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
           name: string;
           fields: string;
           modelOptions: string;
+          collectionName: string;
           fieldHash: string;
         }) => {
           return {
             name: schema.name,
             fields: JSON.parse(schema.fields),
             modelOptions: JSON.parse(schema.modelOptions),
+            collectionName: schema.collectionName,
             fieldHash: schema.fieldHash,
           };
         },
@@ -166,7 +170,7 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     );
   }
 
-  createMany<T>(schemaName: string, query: Query<T>[]): Promise<T[] | any[]> {
+  createMany<T>(schemaName: string, query: Query<T>[]): Promise<T[] | UntypedArray> {
     return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
       res => {
         return JSON.parse(res.result);
@@ -252,6 +256,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
+  }
+
+  columnExistence(schemaName: string, columns: string[]) {
+    return this.client!.columnExistence({ schemaName, columns }).then(r => r.result);
   }
 
   migrate(schemaName: string) {

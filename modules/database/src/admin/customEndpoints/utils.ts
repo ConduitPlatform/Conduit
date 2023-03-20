@@ -1,14 +1,8 @@
-import {
-  ConduitModel,
-  GrpcError,
-  Indexable,
-  ParsedRouterRequest,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
-import { OperationsEnum } from './customEndpoints.admin';
+import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
 import { isNil, isPlainObject } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { LocationEnum } from '../../controllers/customEndpoints/utils';
+import { LocationEnum, OperationsEnum } from '../../enums';
+import { ICustomEndpoint } from '../../interfaces';
 
 /**
  * Query schema:
@@ -318,11 +312,11 @@ export function operationValidation(
 
 export function paginationAndSortingValidation(
   operation: number,
-  call: ParsedRouterRequest,
+  params: ICustomEndpoint,
   fields: ConduitModel,
   endpoint: Indexable | null,
 ) {
-  const { query, inputs, sorted, paginated } = call.request.params;
+  const { query, inputs, sorted, paginated } = params;
 
   if (paginated && operation !== OperationsEnum.GET) {
     return 'Cannot add pagination to non-get endpoint';
@@ -344,4 +338,35 @@ export function paginationAndSortingValidation(
     }
   }
   return true;
+}
+
+export function validateAssignments(
+  assignments: {
+    schemaField: string;
+    action: number;
+    assignmentField: { type: string; value: Indexable };
+  }[],
+  fields: ConduitModel,
+  inputs: Indexable,
+  operation: OperationsEnum,
+): void {
+  assignments.forEach(
+    (r: {
+      schemaField: string;
+      action: number;
+      assignmentField: { type: string; value: Indexable };
+    }) => {
+      const error = assignmentValidation(
+        fields,
+        inputs,
+        operation,
+        r.schemaField,
+        r.assignmentField,
+        r.action,
+      );
+      if (error !== true) {
+        throw new GrpcError(status.INVALID_ARGUMENT, error as string);
+      }
+    },
+  );
 }

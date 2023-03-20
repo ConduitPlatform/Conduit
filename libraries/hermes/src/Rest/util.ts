@@ -1,14 +1,22 @@
 import { Request } from 'express';
-import { ConduitError, Indexable, Params, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  BodyParams,
+  ConduitError,
+  Indexable,
+  Params,
+  QueryParams,
+  TYPE,
+  UrlParams,
+} from '@conduitplatform/grpc-sdk';
 import { isArray, isNil, isObject } from 'lodash';
 
 type ConduitRequest = Request & { conduit?: Indexable };
 
 export function extractRequestData(req: ConduitRequest) {
   const context = req.conduit || {};
-  const urlParams: any = {};
-  const queryParams: any = {};
-  const bodyParams: any = {};
+  const urlParams: UrlParams = {};
+  const queryParams: QueryParams = {};
+  const bodyParams: BodyParams = {};
   const headers = req.headers;
   const cookies = req.cookies;
   if (req.query) {
@@ -36,7 +44,7 @@ export function extractRequestData(req: ConduitRequest) {
   }
 
   if (queryParams.populate) {
-    if (queryParams.populate.includes(',')) {
+    if (typeof queryParams.populate === 'string' && queryParams.populate.includes(',')) {
       queryParams.populate = queryParams.populate.split(',');
     } else if (!Array.isArray(queryParams.populate)) {
       queryParams.populate = [queryParams.populate];

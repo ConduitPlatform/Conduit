@@ -12,10 +12,10 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Team } from '../models';
+import { Team, User } from '../models';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
-import { User } from '../models';
+import { AuthUtils } from '../utils';
 
 export class TeamsAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -25,11 +25,12 @@ export class TeamsAdmin {
       {
         path: '/teams',
         action: ConduitRouteActions.GET,
-        urlParams: {
+        queryParams: {
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
           search: ConduitString.Optional,
+          parentTeam: ConduitObjectId.Optional,
         },
         name: 'GetTeams',
         description: 'Gets all available teams',
@@ -168,7 +169,7 @@ export class TeamsAdmin {
   }
 
   async getTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, sort } = call.request.params;
+    const { search, sort, parentTeam } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -180,6 +181,11 @@ export class TeamsAdmin {
         const searchString = escapeStringRegexp(search);
         query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
       }
+    }
+    if (!isNil(parentTeam)) {
+      query['parentTeam'] = parentTeam;
+    } else {
+      query['$or'] = [{ parentTeam: null }, { parentTeam: { $exists: false } }];
     }
 
     const teams: Team[] = await Team.getInstance().findMany(
@@ -228,22 +234,7 @@ export class TeamsAdmin {
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
     }
-    if (!members || members.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members is required and must be a non-empty array',
-      );
-    }
-    const existingUsers = await User.getInstance().findMany({
-      _id: { $in: members },
-    });
-    if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
-    }
-
+    await AuthUtils.validateMembers(members);
     for (const member of members) {
       const relation = await this.grpcSdk.authorization!.findRelation({
         subject: 'User:' + member,
@@ -334,21 +325,7 @@ export class TeamsAdmin {
 
   async removeTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { members, teamId } = call.request.params;
-    if (!members || members.length === 0) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members is required and must be a non-empty array',
-      );
-    }
-    const existingUsers = await User.getInstance().findMany({
-      _id: { $in: members },
-    });
-    if (existingUsers.length !== members.length) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'members array contains invalid user ids',
-      );
-    }
+    await AuthUtils.validateMembers(members);
     const team = await Team.getInstance().findOne({ _id: teamId });
     if (!team) {
       throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
@@ -376,26 +353,13 @@ export class TeamsAdmin {
       resource: 'Team:' + teamId,
       relation: 'member',
     });
-    let query: any = {
-      _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
-    };
-    if (!isNil(search)) {
-      if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
-      } else {
-        const searchString = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
-      }
-    }
-
-    const count = relations.relations.length;
-    const members = await User.getInstance().findMany(
-      query,
-      undefined,
+    const { members, count } = await AuthUtils.fetchMembers({
+      relations,
+      search,
       skip,
       limit,
       sort,
-    );
+    });
     return { members: members, count };
   }
 }

@@ -20,10 +20,7 @@ const schema = {
     type: TYPE.String,
     required: false,
   },
-  middlewares: {
-    type: [TYPE.String],
-    required: false,
-  },
+  middlewares: [TYPE.String],
   proxyMiddlewareOptions: {
     type: TYPE.JSON,
     required: false,

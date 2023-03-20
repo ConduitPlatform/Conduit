@@ -9,6 +9,7 @@ import ConduitGrpcSdk, {
   PostgresIndexType,
   RawSQLQuery,
   sleep,
+  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
@@ -16,6 +17,7 @@ import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import { checkIfPostgresOptions, tableFetch } from './utils';
 import { sqlSchemaConverter } from '../../introspection/sequelize/utils';
+import { introspectedSchemaCmsOptionsDefaults } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -24,7 +26,7 @@ export abstract class SequelizeAdapter<
 > extends DatabaseAdapter<T> {
   connectionUri: string;
   sequelize!: Sequelize;
-  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb', 'mssql'];
+  readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb'];
 
   constructor(connectionUri: string) {
     super();
@@ -145,28 +147,7 @@ export abstract class SequelizeAdapter<
           canModify: 'Nothing',
           canDelete: false,
         },
-        cms: {
-          authentication: false,
-          crudOperations: {
-            create: {
-              enabled: false,
-              authenticated: false,
-            },
-            read: {
-              enabled: false,
-              authenticated: false,
-            },
-            update: {
-              enabled: false,
-              authenticated: false,
-            },
-            delete: {
-              enabled: false,
-              authenticated: false,
-            },
-          },
-          enabled: true,
-        },
+        cms: introspectedSchemaCmsOptionsDefaults,
       },
     });
     schema.ownerModule = 'database';
@@ -182,6 +163,7 @@ export abstract class SequelizeAdapter<
 
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
+    saveToDb: boolean,
     options?: { parentSchema: string },
   ): Promise<T>;
 
@@ -260,7 +242,7 @@ export abstract class SequelizeAdapter<
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const queryInterface = this.sequelize.getQueryInterface();
-    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as Array<any>;
+    const result = (await queryInterface.showIndex('cnd_' + schemaName)) as UntypedArray;
     result.filter(index => {
       const fieldNames = [];
       for (const field of index.fields) {
@@ -304,7 +286,7 @@ export abstract class SequelizeAdapter<
     return 'Indexes deleted';
   }
 
-  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery): Promise<any> {
+  async execRawQuery(schemaName: string, rawQuery: RawSQLQuery) {
     return await this.sequelize
       .query(rawQuery.query, rawQuery.options)
       .catch((e: Error) => {

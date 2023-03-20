@@ -1,11 +1,16 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { UntypedArray } from '@conduitplatform/grpc-sdk';
 
 export async function UserIdToUserRefreshTokenSchemaMigration(grpcSdk: ConduitGrpcSdk) {
-  const refreshTokenSchemas: any[] = await grpcSdk.databaseProvider!.findMany(
+  const exists = await grpcSdk.databaseProvider!.columnExistence('RefreshToken', [
+    'userId',
+  ]);
+  if (!exists) {
+    return;
+  }
+  const refreshTokenSchemas: UntypedArray = await grpcSdk.databaseProvider!.findMany(
     'RefreshToken',
-    { userId: { $exists: true } },
+    {},
   );
-
   for (const refreshTokenSchema of refreshTokenSchemas) {
     refreshTokenSchema.user = refreshTokenSchema.userId;
     await grpcSdk.databaseProvider!.findByIdAndUpdate(

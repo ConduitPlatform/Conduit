@@ -5,6 +5,28 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
+interface AuthProviderBase {
+  id: string;
+  token: string;
+  tokenExpires?: Date;
+  data: Indexable;
+}
+
+const authProviderSchema = {
+  id: {
+    type: TYPE.String,
+  },
+  token: {
+    type: TYPE.String,
+  },
+  tokenExpires: {
+    type: TYPE.Date,
+  },
+  data: {
+    type: TYPE.JSON,
+  },
+};
+
 const schema = {
   _id: TYPE.ObjectId,
   // do not add unique again, since this will fail due to emails being null
@@ -17,103 +39,28 @@ const schema = {
     select: false,
   },
   github: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.Date,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   google: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.Date,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   microsoft: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.Date,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   figma: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.Date,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   slack: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.Date,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   facebook: {
-    id: {
-      type: TYPE.String,
-    },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.String,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
+    type: authProviderSchema,
   },
   twitch: {
-    id: {
-      type: TYPE.String,
+    type: {
+      ...authProviderSchema,
+      profile_image_url: TYPE.String,
     },
-    token: {
-      type: TYPE.String,
-    },
-    tokenExpires: {
-      type: TYPE.String,
-    },
-    data: {
-      type: TYPE.JSON,
-    },
-    profile_image_url: TYPE.String,
   },
   active: {
     type: TYPE.Boolean,
@@ -152,49 +99,15 @@ export class User extends ConduitActiveSchema<User> {
   _id: string;
   email: string;
   hashedPassword?: string;
-  google?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  facebook?: {
-    id: string;
-    token: string;
-    // tokenExpires: string;
-    data: Indexable;
-  };
-  twitch?: {
-    id: string;
-    token: string;
-    tokenExpires: string;
+  google?: AuthProviderBase;
+  facebook?: AuthProviderBase;
+  twitch?: AuthProviderBase & {
     profile_image_url?: string;
-    data: Indexable;
   };
-  slack?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  figma?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  microsoft?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
-  github?: {
-    id: string;
-    token: string;
-    tokenExpires: Date;
-    data: Indexable;
-  };
+  slack?: AuthProviderBase;
+  figma?: AuthProviderBase;
+  microsoft?: AuthProviderBase;
+  github?: AuthProviderBase;
   active: boolean;
   isVerified: boolean;
   hasTwoFA: boolean;
