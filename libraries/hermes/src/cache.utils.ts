@@ -17,16 +17,14 @@ export function extractCaching(
   let caching: boolean = false;
   let cacheAge: number | undefined;
   let scope: string | undefined;
-  if (route.input.cacheControl && route.input.cacheControl.indexOf(',') !== -1) {
+  if (reqCacheHeader === 'no-cache') {
+    caching = false;
+  } else if (route.input.cacheControl && route.input.cacheControl.indexOf(',') !== -1) {
     caching = true;
     const cache: string[] = route.input.cacheControl.split(',');
     scope = cache[0];
     const cacheAgeStr = cache[1].replace('max-age=', '');
     cacheAge = Number.parseInt(cacheAgeStr);
-  }
-
-  if (reqCacheHeader && reqCacheHeader === 'no-cache') {
-    caching = false;
   }
   return { caching, cacheAge, scope };
 }
