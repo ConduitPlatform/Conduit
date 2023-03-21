@@ -286,7 +286,6 @@ export class ConduitRoutingController {
   }
 
   private registerGlobalMiddleware() {
-    this.registerMiddleware(cors(), false);
     this.registerMiddleware(createRouteMiddleware(ConduitGrpcSdk.Logger.winston), false);
     this.registerMiddleware(express.json({ limit: '50mb' }), false);
     this.registerMiddleware(

@@ -3,26 +3,27 @@ import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
-  GrpcServer,
+  ConduitRouteObject,
   ConfigController,
   GrpcCallback,
   GrpcRequest,
+  GrpcServer,
   Indexable,
-  ConduitRouteObject,
-  SocketProtoDescription,
   merge,
+  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
-  IConduitAdmin,
   GenerateProtoRequest,
   GenerateProtoResponse,
+  IConduitAdmin,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
 import { hashPassword } from './utils/auth';
 import { runMigrations } from './migrations';
 import AdminConfigRawSchema from './config';
+import AppConfigSchema, { Config as ConfigSchema } from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
@@ -35,19 +36,19 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  RouteT,
   ProtoGenerator,
   ProxyRoute,
   ProxyRouteT,
   proxyToConduitRoute,
+  RouteT,
 } from '@conduitplatform/hermes';
-import AppConfigSchema, { Config as ConfigSchema } from './config';
 import convict from 'convict';
-import { Response, NextFunction, Request } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
 import * as adminProxyRoutes from './routes/proxy';
+import cors from 'cors';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -156,6 +157,15 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .get('admin');
     this.onConfig();
+    this._router.registerMiddleware(
+      cors({
+        origin: (origin, callback) => {
+          callback(null, ConfigController.getInstance().config.hostUrl);
+        },
+        credentials: true,
+      }),
+      false,
+    );
     // Register Middleware
     this._router.registerMiddleware(
       (req: ConduitRequest, res: Response, next: NextFunction) => {
@@ -165,6 +175,7 @@ export default class AdminModule extends IConduitAdmin {
       true,
     );
     this._router.registerMiddleware(middleware.getAdminMiddleware(this.commons), true);
+
     this._router.registerMiddleware(
       middleware.getAuthMiddleware(this.grpcSdk, this.commons),
       true,

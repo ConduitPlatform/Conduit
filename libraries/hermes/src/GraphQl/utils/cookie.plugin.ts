@@ -11,6 +11,9 @@ module.exports = {
           if (cookie.options!.path === '') {
             delete cookie.options.path;
           }
+          if (!cookie.options.domain || cookie.options.domain === '') {
+            cookie.options.domain = requestContext.context.req.hostname;
+          }
           res.cookie(cookie.name, cookie.value, cookie.options);
         });
 
