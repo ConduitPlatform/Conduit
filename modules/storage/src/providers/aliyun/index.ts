@@ -1,8 +1,8 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import OSS from 'ali-oss';
 import fs from 'fs';
-import { basename } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
 export class AliyunStorage implements IStorageProvider {
   private _activeContainer: string = '';
@@ -19,6 +19,15 @@ export class AliyunStorage implements IStorageProvider {
       accessKeyId: conf.accessKeyId,
       accessKeySecret: conf.accessKeySecret,
     });
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    const url = this._ossClient.signatureUrl(fileName, {
+      expires: SIGNED_URL_EXPIRY_SECONDS,
+      method: 'PUT',
+    });
+
+    return Promise.resolve(url);
   }
 
   async containerExists(name: string): Promise<boolean | Error> {
@@ -128,7 +137,7 @@ export class AliyunStorage implements IStorageProvider {
 
   async getSignedUrl(fileName: string): Promise<any | Error> {
     const url = this._ossClient.signatureUrl(fileName, {
-      expires: 3600,
+      expires: SIGNED_URL_EXPIRY_SECONDS,
       method: 'GET',
     });
 
@@ -142,62 +151,5 @@ export class AliyunStorage implements IStorageProvider {
     });
 
     return url;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._ossClient.copy(newFilename, currentFilename);
-    await this.delete(currentFilename);
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + basename(filename), filename);
-    await this.delete(filename);
-    return true;
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + newFilename, currentFilename);
-    await this.delete(currentFilename);
-    return true;
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const oldBucket = this._activeContainer;
-
-    this._ossClient.useBucket(newContainer);
-
-    await this._ossClient.copy(filename, filename, oldBucket);
-
-    this._ossClient.useBucket(oldBucket);
-
-    await this.delete(filename);
-
-    return true;
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const oldBucket = this._activeContainer;
-
-    this._ossClient.useBucket(newContainer);
-
-    await this._ossClient.copy(newFilename, currentFilename, oldBucket);
-
-    this._ossClient.useBucket(oldBucket);
-
-    await this.delete(currentFilename);
-
-    return true;
   }
 }

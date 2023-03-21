@@ -1,7 +1,9 @@
 import { FileHandlers } from '../handlers/file';
 import ConduitGrpcSdk, {
+  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  ConduitString,
   GrpcServer,
   RoutingManager,
   TYPE,
@@ -71,7 +73,44 @@ export class StorageRoutes {
         new ConduitRouteReturnDefinition('CreateFile', File.name),
         this.fileHandlers.createFile.bind(this.fileHandlers),
       );
-
+      this._routingManager.route(
+        {
+          bodyParams: {
+            name: { type: TYPE.String, required: true },
+            mimeType: TYPE.String,
+            folder: { type: TYPE.String, required: false },
+            size: { type: TYPE.Number, required: false },
+            container: { type: TYPE.String, required: false },
+            isPublic: TYPE.Boolean,
+          },
+          action: ConduitRouteActions.POST,
+          path: '/storage/upload',
+          description: `Creates a new file and provides a URL to upload it to.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('CreateFileByUrl', File.name),
+        this.fileHandlers.createFileUploadUrl.bind(this.fileHandlers),
+      );
+      this._routingManager.route(
+        {
+          urlParams: {
+            id: { type: TYPE.String, required: true },
+          },
+          bodyParams: {
+            name: ConduitString.Optional,
+            folder: ConduitString.Optional,
+            container: ConduitString.Optional,
+            mimeType: ConduitString.Optional,
+            size: ConduitNumber.Optional,
+          },
+          action: ConduitRouteActions.PATCH,
+          path: '/storage/upload/:id',
+          description: `Updates a file and provides a URL to upload its data to.`,
+          middlewares: ['authMiddleware'],
+        },
+        new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+        this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
+      );
       this._routingManager.route(
         {
           urlParams: {
@@ -110,18 +149,18 @@ export class StorageRoutes {
             id: { type: TYPE.String, required: true },
           },
           bodyParams: {
-            name: TYPE.String,
-            mimeType: TYPE.String,
-            data: TYPE.String,
-            folder: TYPE.String,
-            container: TYPE.String,
+            name: ConduitString.Optional,
+            folder: ConduitString.Optional,
+            container: ConduitString.Optional,
+            data: ConduitString.Required,
+            mimeType: ConduitString.Optional,
           },
           action: ConduitRouteActions.PATCH,
           path: '/storage/file/:id',
           description: `Updates a file.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('FileUpdateResponse', File.name),
+        new ConduitRouteReturnDefinition('PatchFile', File.name),
         this.fileHandlers.updateFile.bind(this.fileHandlers),
       );
     }

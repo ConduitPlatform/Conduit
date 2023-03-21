@@ -7,11 +7,9 @@ import {
   existsSync,
   mkdir,
   readFile,
-  rename,
   unlink,
   writeFile,
   rmSync,
-  statSync,
 } from 'fs';
 import { resolve } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
@@ -37,6 +35,10 @@ export class LocalStorage implements IStorageProvider {
         });
       }
     }
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    throw new Error('Method not implemented.');
   }
 
   deleteContainer(name: string): Promise<boolean | Error> {
@@ -170,50 +172,6 @@ export class LocalStorage implements IStorageProvider {
     });
   }
 
-  rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    const self = this;
-    const path = self._storagePath + '/' + self._activeContainer + '/';
-
-    return new Promise(function (res, reject) {
-      rename(resolve(path, currentFilename), resolve(path, newFilename), function (err) {
-        if (err) reject(err);
-        else res(true);
-      });
-    });
-  }
-
-  moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    const self = this;
-    return new Promise(function (res, reject) {
-      rename(
-        resolve(self._storagePath, filename),
-        resolve(self._rootStoragePath, newFolder, filename),
-        function (err) {
-          if (err) reject(err);
-          else res(true);
-        },
-      );
-    });
-  }
-
-  moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    const self = this;
-    return new Promise(function (res, reject) {
-      rename(
-        resolve(self._storagePath, currentFilename),
-        resolve(self._rootStoragePath, newFolder, newFilename),
-        function (err) {
-          if (err) reject(err);
-          else res(true);
-        },
-      );
-    });
-  }
-
   getPublicUrl(fileName: string): Promise<any | Error> {
     throw new Error('Method not implemented!');
   }
@@ -234,17 +192,5 @@ export class LocalStorage implements IStorageProvider {
   createContainer(name: string): Promise<boolean | Error> {
     this._activeContainer = name;
     return this.createFolder(name);
-  }
-
-  moveToContainer(filename: string, newContainer: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented!| Error');
-  }
-
-  moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented!| Error');
   }
 }

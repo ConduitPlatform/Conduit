@@ -38,21 +38,5 @@ export interface IStorageProvider {
 
   getPublicUrl(fileName: string): Promise<any | Error>;
 
-  rename(currentFilename: string, newFilename: string): Promise<boolean | Error>;
-
-  moveToFolder(filename: string, newFolder: string): Promise<boolean | Error>;
-
-  moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error>;
-
-  moveToContainer(filename: string, newContainer: string): Promise<boolean | Error>;
-
-  moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error>;
+  getUploadUrl(fileName: string): Promise<string | Error>;
 }
