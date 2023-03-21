@@ -1,7 +1,6 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import OSS from 'ali-oss';
 import fs from 'fs';
-import { basename } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
@@ -152,62 +151,5 @@ export class AliyunStorage implements IStorageProvider {
     });
 
     return url;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._ossClient.copy(newFilename, currentFilename);
-    await this.delete(currentFilename);
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + basename(filename), filename);
-    await this.delete(filename);
-    return true;
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    await this._ossClient.copy(newFolder + newFilename, currentFilename);
-    await this.delete(currentFilename);
-    return true;
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const oldBucket = this._activeContainer;
-
-    this._ossClient.useBucket(newContainer);
-
-    await this._ossClient.copy(filename, filename, oldBucket);
-
-    this._ossClient.useBucket(oldBucket);
-
-    await this.delete(filename);
-
-    return true;
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const oldBucket = this._activeContainer;
-
-    this._ossClient.useBucket(newContainer);
-
-    await this._ossClient.copy(newFilename, currentFilename, oldBucket);
-
-    this._ossClient.useBucket(oldBucket);
-
-    await this.delete(currentFilename);
-
-    return true;
   }
 }

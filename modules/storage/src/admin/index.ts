@@ -92,7 +92,7 @@ export class AdminRoutes {
           isPublic: TYPE.Boolean,
         },
         action: ConduitRouteActions.POST,
-        path: '/files/uploadByUrl',
+        path: '/files/upload',
         description: `Creates a new file and provides a URL to upload it to.`,
       },
       new ConduitRouteReturnDefinition('CreateFileByUrl', File.name),
@@ -108,14 +108,33 @@ export class AdminRoutes {
         },
         bodyParams: {
           name: ConduitString.Optional,
-          data: ConduitString.Optional,
           folder: ConduitString.Optional,
           container: ConduitString.Optional,
+          data: ConduitString.Required,
           mimeType: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('PatchFile', File.name),
       this.fileHandlers.updateFile.bind(this.fileHandlers),
+    );
+    this.routingManager.route(
+      {
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          name: ConduitString.Optional,
+          folder: ConduitString.Optional,
+          container: ConduitString.Optional,
+          mimeType: ConduitString.Optional,
+          size: ConduitNumber.Optional,
+        },
+        action: ConduitRouteActions.PATCH,
+        path: '/files/upload/:id',
+        description: `Updates a file and provides a URL to upload its data to.`,
+      },
+      new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+      this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
     );
     this.routingManager.route(
       {

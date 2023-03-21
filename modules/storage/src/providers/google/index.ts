@@ -43,28 +43,6 @@ export class GoogleCloudStorage implements IStorageProvider {
     return exists[0];
   }
 
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(filename);
-    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
-    return true;
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(newFilename);
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newBucketFile);
-    return true;
-  }
-
   /**
    * Used to create a new folder
    * @param name For the folder
@@ -156,26 +134,6 @@ export class GoogleCloudStorage implements IStorageProvider {
       await this._storage.bucket(this._activeBucket).file(fileName).makePublic();
     }
     return true;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newFilename);
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
   }
 
   getUploadUrl(fileName: string): Promise<string | Error> {

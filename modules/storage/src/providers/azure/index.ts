@@ -9,7 +9,7 @@ import {
 import fs from 'fs';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { streamToBuffer } from '../../utils';
-import { SIGNED_URL_EXPIRY, SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
 
 export class AzureStorage implements IStorageProvider {
   _activeContainer: string = '';
@@ -165,30 +165,6 @@ export class AzureStorage implements IStorageProvider {
     return true;
   }
 
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    // await this._storage.getContainerClient(this._activeContainer).getBlockBlobClient(currentFilename).move(newFilename);
-    // return true;
-    throw new Error('Not Implemented yet!');
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    // let newBucketFile = this._storage.getContainerClient(newFolder).file(filename)
-    // await this._storage.getContainerClient(this._activeContainer).file(filename).move(newBucketFile);
-    // return true;
-    throw new Error('Not Implemented yet!');
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    // let newBucketFile = this._storage.getContainerClient(newFolder).file(newFilename)
-    // await this._storage.getContainerClient(this._activeContainer).file(currentFilename).move(newBucketFile);
-    // return true;
-    throw new Error('Not Implemented yet!');
-  }
-
   async containerExists(name: string): Promise<boolean | Error> {
     return await this._storage.getContainerClient(name).exists();
   }
@@ -198,21 +174,6 @@ export class AzureStorage implements IStorageProvider {
     this._activeContainer = name;
     ConduitGrpcSdk.Metrics?.increment('containers_total');
     return true;
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Not Implemented yet!');
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Not Implemented yet!');
   }
 
   getUploadUrl(fileName: string): Promise<string> {

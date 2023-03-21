@@ -219,37 +219,6 @@ export class AWSS3Storage implements IStorageProvider {
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
   }
 
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    throw new Error('Not implemented');
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
   private async listFiles(name: string) {
     const files = await this._storage.send(
       new ListObjectsCommand({
