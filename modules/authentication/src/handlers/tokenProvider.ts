@@ -54,7 +54,7 @@ export class TokenProvider {
       } else {
         return {
           result: {
-            accessToken: cookies.accessToken ?? undefined,
+            accessToken: cookies.accessToken ? undefined : accessToken.token,
             refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
           },
           setCookies: Object.values(cookies).map(obj => obj),
