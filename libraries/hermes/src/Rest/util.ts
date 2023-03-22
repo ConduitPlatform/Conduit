@@ -95,8 +95,10 @@ function validateArray(
       }
       // throw ConduitError.userInput(`${fieldName} must be an array`);
     }
-    if (!param) {
+    if (param === null) {
       return null;
+    } else if (param === undefined) {
+      return;
     }
     param.forEach((obj: any, index: number) => {
       param[index] = validateType(`${fieldName}[${index}]`, type, obj, false);
