@@ -4,6 +4,36 @@ export default {
     format: 'String',
     default: '',
   },
+  cors: {
+    enabled: {
+      format: 'Boolean',
+      default: true,
+    },
+    origin: {
+      format: 'String',
+      default: '*',
+    },
+    methods: {
+      format: 'String',
+      default: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    },
+    allowedHeaders: {
+      format: 'String',
+      default: 'Content-Type,Authorization',
+    },
+    exposedHeaders: {
+      format: 'String',
+      default: 'Content-Type,Authorization',
+    },
+    credentials: {
+      format: 'Boolean',
+      default: true,
+    },
+    maxAge: {
+      format: 'Number',
+      default: 86400,
+    },
+  },
   transports: {
     rest: {
       format: 'Boolean',

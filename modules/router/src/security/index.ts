@@ -22,12 +22,21 @@ export default class SecurityModule {
     );
     this.router.registerGlobalMiddleware(
       'corsMiddleware',
-      cors({
-        origin: (origin, callback) => {
-          callback(null, ConfigController.getInstance().config.hostUrl);
-        },
-        credentials: true,
-      }),
+      (req: Request, res: Response, next: NextFunction) => {
+        const config = ConfigController.getInstance().config;
+        if (config.cors.enabled === false) return next();
+        cors({
+          origin: config.cors.origin.includes(',')
+            ? config.cors.origin.split(',')
+            : config.cors.origin,
+          credentials: config.cors.credentials,
+          methods: config.cors.methods,
+          allowedHeaders: config.cors.allowedHeaders,
+          exposedHeaders: config.cors.exposedHeaders,
+          maxAge: config.cors.maxAge,
+        })(req, res, next);
+      },
+      true,
     );
     this.router.registerGlobalMiddleware('helmetMiddleware', helmet());
     this.router.registerGlobalMiddleware(
