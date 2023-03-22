@@ -357,6 +357,7 @@ export class FileHandlers {
     await File.getInstance().create({
       name,
       mimeType,
+      size,
       folder: folder,
       container: container,
       isPublic,
@@ -409,7 +410,10 @@ export class FileHandlers {
     const onlyDataUpdate =
       name === file.name && folder === file.folder && container === file.container;
     if (onlyDataUpdate) {
-      await File.getInstance().findByIdAndUpdate(file._id, { mimeType });
+      await File.getInstance().findByIdAndUpdate(file._id, {
+        mimeType,
+        ...{ size: size ?? file.size },
+      });
     } else {
       await this.storageProvider
         .container(container)
@@ -432,6 +436,7 @@ export class FileHandlers {
         container,
         url,
         mimeType,
+        ...{ size: size ?? file.size },
       });
     }
     if (!isNil(size)) this.updateFileMetrics(file.size, size!);
