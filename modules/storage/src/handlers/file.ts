@@ -339,7 +339,7 @@ export class FileHandlers {
     name: string,
     size: number,
     mimeType: string,
-  ): Promise<string> {
+  ): Promise<{ file: File; url: string }> {
     await this.storageProvider
       .container(container)
       .store(
@@ -354,7 +354,7 @@ export class FileHandlers {
       : null;
     ConduitGrpcSdk.Metrics?.increment('files_total');
     ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
-    await File.getInstance().create({
+    const file = await File.getInstance().create({
       name,
       mimeType,
       size,
@@ -363,9 +363,13 @@ export class FileHandlers {
       isPublic,
       url: publicUrl,
     });
-    return (await this.storageProvider
+    const url = (await this.storageProvider
       .container(container)
       .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
+    return {
+      file,
+      url,
+    };
   }
 
   private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {
