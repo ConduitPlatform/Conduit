@@ -139,13 +139,17 @@ export class RelationsController {
     });
   }
 
-  async findRelations(searchQuery: {
-    subject?: string;
-    relation?: string;
-    resource?: string;
-    resourceType?: string;
-    subjectType?: string;
-  }) {
+  async findRelations(
+    searchQuery: {
+      subject?: string;
+      relation?: string;
+      resource?: string;
+      resourceType?: string;
+      subjectType?: string;
+    },
+    skip: number = 0,
+    limit = 10,
+  ) {
     const query: {
       subject?: string | { $regex: string; $options: string };
       relation?: string;
@@ -164,6 +168,9 @@ export class RelationsController {
     } else if (searchQuery.resourceType) {
       query['resource'] = { $regex: `${searchQuery.resourceType}.*`, $options: 'i' };
     }
-    return await Relationship.getInstance().findMany(query);
+    return Promise.all([
+      Relationship.getInstance().findMany(query, undefined, skip, limit),
+      Relationship.getInstance().countDocuments(query),
+    ]);
   }
 }

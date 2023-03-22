@@ -48,9 +48,12 @@ message FindRelationRequest {
   optional string resource = 3;
   optional string subjectType = 4;
   optional string resourceType = 5;
+  optional int32 skip = 6;
+  optional int32 limit = 7;
 }
 message FindRelationResponse {
   repeated Relation relations = 1;
+  int32 count = 2;
 }
 
 message PermissionCheck {
