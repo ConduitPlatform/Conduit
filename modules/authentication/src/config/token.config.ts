@@ -11,10 +11,6 @@ const cookieOptions = {
     format: 'Boolean',
     default: false,
   },
-  maxAge: {
-    format: 'Number',
-    default: 900000,
-  },
   domain: {
     format: 'String',
     default: '',
