@@ -143,16 +143,26 @@ export class RelationsController {
     subject?: string;
     relation?: string;
     resource?: string;
+    resourceType?: string;
+    subjectType?: string;
   }) {
-    const query: { subject?: string; relation?: string; resource?: string } = {};
+    const query: {
+      subject?: string | { $regex: string; $options: string };
+      relation?: string;
+      resource?: string | { $regex: string; $options: string };
+    } = {};
     if (searchQuery.subject) {
       query['subject'] = searchQuery.subject;
+    } else if (searchQuery.subjectType) {
+      query['subject'] = { $regex: `${searchQuery.subjectType}.*`, $options: 'i' };
     }
     if (searchQuery.relation) {
       query['relation'] = searchQuery.relation;
     }
     if (searchQuery.resource) {
       query['resource'] = searchQuery.resource;
+    } else if (searchQuery.resourceType) {
+      query['resource'] = { $regex: `${searchQuery.resourceType}.*`, $options: 'i' };
     }
     return await Relationship.getInstance().findMany(query);
   }

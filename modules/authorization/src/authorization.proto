@@ -46,6 +46,8 @@ message FindRelationRequest {
   optional string subject = 1;
   optional string relation = 2;
   optional string resource = 3;
+  optional string subjectType = 4;
+  optional string resourceType = 5;
 }
 message FindRelationResponse {
   repeated Relation relations = 1;
