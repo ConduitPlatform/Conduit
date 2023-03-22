@@ -73,6 +73,40 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
+  async preConfig(config: Config) {
+    if (
+      (
+        config.accessTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      ).maxAge
+    ) {
+      delete (
+        config.accessTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      )['maxAge'];
+    }
+    if (
+      (
+        config.refreshTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      ).maxAge
+    ) {
+      delete (
+        config.refreshTokens
+          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      )['maxAge'];
+    }
+    return config;
+  }
+
   async onConfig() {
     const config = ConfigController.getInstance().config;
     if (!config.active) {
