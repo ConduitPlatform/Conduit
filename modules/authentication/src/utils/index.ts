@@ -152,7 +152,14 @@ export namespace AuthUtils {
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
+        let included = relations.relations
+          .map(r => r.subject.split(':')[1])
+          .includes(search);
+        if (included) {
+          query['_id'] = search;
+        } else {
+          return { members: [], count: relations.relations.length };
+        }
       } else {
         const searchString = escapeStringRegexp(search);
         query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
