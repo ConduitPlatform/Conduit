@@ -11,7 +11,6 @@ import {
   SocketPush,
 } from './interfaces';
 import { SwaggerRouterMetadata } from './types';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute, ProxyRoute } from './classes';
