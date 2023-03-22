@@ -73,18 +73,6 @@ export default class Authentication extends ManagedModule<Config> {
     }
   }
 
-  async preConfig(config: Config) {
-    if (
-      config.accessTokens.cookieOptions.maxAge > config.accessTokens.expiryPeriod ||
-      config.refreshTokens.cookieOptions.maxAge > config.refreshTokens.expiryPeriod
-    ) {
-      throw new Error(
-        'Invalid configuration: *.cookieOptions.maxAge should not exceed *.expiryPeriod',
-      );
-    }
-    return config;
-  }
-
   async onConfig() {
     const config = ConfigController.getInstance().config;
     if (!config.active) {
