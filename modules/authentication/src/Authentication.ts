@@ -66,12 +66,34 @@ export default class Authentication extends ManagedModule<Config> {
 
   async preConfig(config: Config) {
     if (
-      config.accessTokens.cookieOptions.maxAge > config.accessTokens.expiryPeriod ||
-      config.refreshTokens.cookieOptions.maxAge > config.refreshTokens.expiryPeriod
+      (
+        config.accessTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      ).maxAge
     ) {
-      throw new Error(
-        'Invalid configuration: *.cookieOptions.maxAge should not exceed *.expiryPeriod',
-      );
+      delete (
+        config.accessTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      )['maxAge'];
+    }
+    if (
+      (
+        config.refreshTokens
+          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      ).maxAge
+    ) {
+      delete (
+        config.refreshTokens
+          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          maxAge?: number;
+        }
+      )['maxAge'];
     }
     return config;
   }
