@@ -125,11 +125,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return inclusionArray;
   }
 
-  async create(
-    query: SingleDocQuery,
-    transaction?: Transaction,
-    returnModel: boolean = false,
-  ) {
+  async create(query: SingleDocQuery, transaction?: Transaction) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -161,7 +157,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
         }
         return doc;
       })
-      .then(doc => (doc ? (returnModel ? doc : doc.toJSON()) : doc))
+      .then(doc => (doc ? doc.toJSON() : doc))
       .catch(err => {
         if (!transactionProvided) {
           t!.rollback();

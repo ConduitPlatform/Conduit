@@ -190,10 +190,12 @@ export class SQLSchema extends SequelizeSchema {
                   );
                 } else {
                   promises.push(
-                    (this.associations[assoc] as SQLSchema[])[0] // TODO: check index
-                      .create(obj, t, true)
+                    (this.associations[assoc] as SQLSchema[])[0]
+                      .create(obj, t)
                       .then(r => {
-                        doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](r);
+                        doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](
+                          r._id,
+                        );
                       }),
                   );
                 }
@@ -211,9 +213,9 @@ export class SQLSchema extends SequelizeSchema {
               } else {
                 promises.push(
                   (this.associations[assoc] as SQLSchema)
-                    .create(associationObjects[assoc], t, true)
+                    .create(associationObjects[assoc], t)
                     .then(r => {
-                      doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](r);
+                      doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](r._id);
                     }),
                 );
               }
