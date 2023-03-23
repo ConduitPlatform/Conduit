@@ -5,8 +5,8 @@ import { SocketController } from './Socket/Socket';
 import ConduitGrpcSdk, { ConduitError, UntypedArray } from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
-  ConduitRequest,
   ConduitMiddleware,
+  ConduitRequest,
   ConduitSocket,
   SocketPush,
 } from './interfaces';

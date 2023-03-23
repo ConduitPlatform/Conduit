@@ -5,7 +5,7 @@ import {
   ISendNotificationToManyDevices,
 } from '../interfaces/ISendNotification';
 import * as OneSignal from '@onesignal/node-onesignal';
-import { isNil, keyBy, isEmpty } from 'lodash';
+import { isEmpty, isNil, keyBy } from 'lodash';
 import { NotificationToken } from '../models';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 

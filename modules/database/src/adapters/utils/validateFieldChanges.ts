@@ -1,6 +1,6 @@
 import { ConduitError, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { Fields } from '../../interfaces';
-import { isArray, isEqual, isString, isNil } from 'lodash';
+import { isArray, isEqual, isNil, isString } from 'lodash';
 import { DataTypes } from 'sequelize';
 
 /*

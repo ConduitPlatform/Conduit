@@ -1,6 +1,6 @@
 import { Sequelize, Transaction } from 'sequelize';
-import { SingleDocQuery } from '../../../interfaces';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema, SingleDocQuery } from '../../../interfaces';
+import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { SQLAdapter } from './index';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { extractAssociationsFromObject } from '../parser';
@@ -13,7 +13,7 @@ export class SQLSchema extends SequelizeSchema {
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
-    originalSchema: ConduitSchema,
+    originalSchema: ConduitDatabaseSchema,
     adapter: SQLAdapter,
     extractedRelations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
     readonly associations: { [key: string]: SQLSchema | SQLSchema[] },

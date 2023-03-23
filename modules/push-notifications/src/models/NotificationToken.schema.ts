@@ -1,8 +1,8 @@
 import {
   ConduitActiveSchema,
   DatabaseProvider,
-  TYPE,
   PlatformTypesEnum,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { User } from './User.model';
 

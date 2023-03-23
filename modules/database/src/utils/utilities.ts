@@ -2,18 +2,18 @@ import {
   isArray,
   isBoolean,
   isEmpty,
+  isEqual,
   isNil,
   isObject,
   isPlainObject,
   isString,
-  isEqual,
 } from 'lodash';
 import {
   ConduitModel,
+  ConduitModelOptionsPermModifyType as ValidModifyPermValues,
   ConduitSchemaOptions,
   Indexable,
   TYPE,
-  ConduitModelOptionsPermModifyType as ValidModifyPermValues,
 } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');

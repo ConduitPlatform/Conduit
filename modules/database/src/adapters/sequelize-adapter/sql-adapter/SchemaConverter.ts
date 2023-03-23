@@ -127,7 +127,7 @@ function iterDeep(schema: any, resSchema: any) {
     if (isArray(schema[key])) {
       resSchema[key] = extractArrayType(schema[key], key);
     } else if (isObject(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key]);
+      resSchema[key] = extractObjectType(schema[key], key);
       if (!schema[key].hasOwnProperty('type')) {
         iterDeep(schema[key], resSchema[key]);
       }
@@ -165,7 +165,7 @@ function extractArrayType(arrayField: UntypedArray, field: string) {
   }
 }
 
-function extractObjectType(objectField: Indexable) {
+function extractObjectType(objectField: Indexable, field: string) {
   const res: {
     type: any;
     defaultValue?: any;
@@ -175,6 +175,11 @@ function extractObjectType(objectField: Indexable) {
   } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
+    if (isArray(objectField.type)) {
+      res.type = extractArrayType(objectField.type, field).type;
+    } else {
+      res.type = extractType(objectField.type, objectField.sqlType);
+    }
     res.type = extractType(objectField.type, objectField.sqlType);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);

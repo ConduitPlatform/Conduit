@@ -1,7 +1,7 @@
 import {
   ConduitModel,
-  ConduitSchemaOptions,
   ConduitSchema,
+  ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
 import { MultiDocQuery, ParsedQuery, Schema, SchemaAdapter } from './SchemaAdapter';

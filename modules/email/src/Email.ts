@@ -1,20 +1,19 @@
 import ConduitGrpcSdk, {
-  ManagedModule,
   ConfigController,
   DatabaseProvider,
-  HealthCheckStatus,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
+  HealthCheckStatus,
+  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import AppConfigSchema from './config';
+import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { EmailService } from './services/email.service';
 import { EmailProvider } from './email-provider';
 import * as models from './models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { Config } from './config';
 import { runMigrations } from './migrations';
 import {
   RegisterTemplateRequest,

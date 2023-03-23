@@ -9,9 +9,9 @@ import ConduitGrpcSdk, {
 import { status } from '@grpc/grpc-js';
 import {
   inputValidation,
-  paramValidation,
   operationValidation,
   paginationAndSortingValidation,
+  paramValidation,
   validateAssignments,
 } from './utils';
 import { isNil } from 'lodash';

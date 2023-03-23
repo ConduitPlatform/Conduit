@@ -1,15 +1,15 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import {
-  constants,
-  chmod,
-  accessSync,
   access,
+  accessSync,
+  chmod,
+  constants,
   existsSync,
   mkdir,
   readFile,
+  rmSync,
   unlink,
   writeFile,
-  rmSync,
 } from 'fs';
 import { resolve } from 'path';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';

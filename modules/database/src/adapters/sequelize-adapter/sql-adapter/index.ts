@@ -52,20 +52,24 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       modeledSchema.ownerModule = schema.ownerModule;
       (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
       // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(modeledSchema, false, {
-        parentSchema: schema.name,
-      });
+      const sequelizeSchema = await this._createSchemaFromAdapter(
+        modeledSchema as ConduitDatabaseSchema,
+        false,
+        {
+          parentSchema: schema.name,
+        },
+      );
       associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
     }
   }
 
   protected async _createSchemaFromAdapter(
-    schema: ConduitSchema,
+    schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
     options?: { parentSchema: string },
   ): Promise<SQLSchema> {
     const compiledSchema = compileSchema(
-      schema as ConduitDatabaseSchema,
+      schema,
       this.registeredSchemas,
       this.sequelize.models,
     );
@@ -77,7 +81,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
     const relatedSchemas = await resolveRelatedSchemas(
-      schema as ConduitDatabaseSchema,
+      schema,
       extractedRelations,
       this.models,
     );
