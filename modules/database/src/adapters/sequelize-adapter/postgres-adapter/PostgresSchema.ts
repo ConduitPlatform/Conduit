@@ -1,5 +1,5 @@
 import { ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { SingleDocQuery } from '../../../interfaces';
+import { ConduitDatabaseSchema, SingleDocQuery } from '../../../interfaces';
 import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { PostgresAdapter } from './index';
@@ -16,7 +16,7 @@ export class PostgresSchema extends SequelizeSchema {
   constructor(
     sequelize: Sequelize,
     schema: Indexable,
-    originalSchema: ConduitSchema,
+    originalSchema: ConduitDatabaseSchema,
     adapter: PostgresAdapter,
     extractedRelations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {

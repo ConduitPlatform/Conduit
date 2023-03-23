@@ -9,7 +9,7 @@ const deepdash = require('deepdash/standalone');
 
 export const extractRelations = (
   name: string,
-  originalSchema: ConduitSchema,
+  originalSchema: ConduitDatabaseSchema,
   model: ModelStatic<any>,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) => {
@@ -57,14 +57,14 @@ export const extractRelations = (
         model.belongsTo(value.model, {
           foreignKey: {
             name: relation + 'Id',
-            allowNull: !(originalSchema.fields[relation] as any).required,
-            defaultValue: (originalSchema.fields[relation] as any).default,
+            allowNull: !(originalSchema.compiledFields[relation] as any).required,
+            defaultValue: (originalSchema.compiledFields[relation] as any).default,
           },
           as: relation,
-          onUpdate: (originalSchema.fields[relation] as any).required
+          onUpdate: (originalSchema.compiledFields[relation] as any).required
             ? 'CASCADE'
             : 'NO ACTION',
-          onDelete: (originalSchema.fields[relation] as any).required
+          onDelete: (originalSchema.compiledFields[relation] as any).required
             ? 'CASCADE'
             : 'SET NULL',
         });

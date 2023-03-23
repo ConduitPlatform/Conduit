@@ -9,6 +9,7 @@ import {
   Transaction,
 } from 'sequelize';
 import {
+  ConduitDatabaseSchema,
   MultiDocQuery,
   ParsedQuery,
   Query,
@@ -39,7 +40,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   protected constructor(
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
-    readonly originalSchema: ConduitSchema,
+    readonly originalSchema: ConduitDatabaseSchema,
     protected readonly adapter: SequelizeAdapter<SequelizeSchema>,
     protected readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];

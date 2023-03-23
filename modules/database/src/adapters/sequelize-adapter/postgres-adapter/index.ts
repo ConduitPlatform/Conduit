@@ -36,11 +36,11 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
   }
 
   protected async _createSchemaFromAdapter(
-    schema: ConduitSchema,
+    schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
   ): Promise<PostgresSchema> {
     const compiledSchema = compileSchema(
-      schema as ConduitDatabaseSchema,
+      schema,
       this.registeredSchemas,
       this.sequelize.models,
     );
@@ -51,7 +51,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
     const relatedSchemas = await resolveRelatedSchemas(
-      schema as ConduitDatabaseSchema,
+      schema,
       extractedRelations,
       this.models,
     );
