@@ -1,9 +1,9 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
-  HealthCheckStatus,
-  GrpcServer as ConduitGrpcServer,
-  GrpcRequest,
   GrpcCallback,
+  GrpcRequest,
+  GrpcServer as ConduitGrpcServer,
+  HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';

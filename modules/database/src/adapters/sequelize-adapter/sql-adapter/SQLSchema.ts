@@ -1,6 +1,6 @@
 import { Sequelize, Transaction } from 'sequelize';
 import { ConduitDatabaseSchema, SingleDocQuery } from '../../../interfaces';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { SQLAdapter } from './index';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { extractAssociationsFromObject } from '../parser';

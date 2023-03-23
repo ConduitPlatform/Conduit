@@ -10,7 +10,7 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');

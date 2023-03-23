@@ -1,6 +1,6 @@
 import { ModelStatic, Sequelize, Transaction } from 'sequelize';
 import { ConduitDatabaseSchema, SingleDocQuery } from '../../../interfaces';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { PostgresAdapter } from './index';
 import { getTransactionAndParsedQuery, processPushOperations } from '../utils';

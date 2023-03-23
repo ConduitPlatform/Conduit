@@ -1,8 +1,8 @@
 import {
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
   GrpcError,
   Indexable,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { constructSortObj } from '../utils';

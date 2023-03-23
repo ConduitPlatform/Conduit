@@ -1,8 +1,8 @@
 import {
-  ConduitSchema,
   ConduitError,
   ConduitModel,
   ConduitModelField,
+  ConduitSchema,
 } from '@conduitplatform/grpc-sdk';
 
 /*

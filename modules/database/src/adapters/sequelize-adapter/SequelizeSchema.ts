@@ -18,7 +18,7 @@ import {
 } from '../../interfaces';
 import { extractRelations, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import {
   arrayPatch,
   extractAssociations,

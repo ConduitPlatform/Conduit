@@ -1,10 +1,10 @@
 import { RegisteredModule } from '@conduitplatform/commons';
 import {
-  ConduitRouteActions,
-  ConduitError,
-  ConduitString,
   ConduitBoolean,
+  ConduitError,
+  ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitString,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';

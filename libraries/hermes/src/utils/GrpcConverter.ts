@@ -1,12 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import {
-  credentials,
-  Metadata,
-  loadPackageDefinition,
-  GrpcObject,
-  ServiceClientConstructor,
   Client,
+  credentials,
+  GrpcObject,
+  loadPackageDefinition,
+  Metadata,
+  ServiceClientConstructor,
 } from '@grpc/grpc-js';
 import {
   ConduitRouteOptions,
