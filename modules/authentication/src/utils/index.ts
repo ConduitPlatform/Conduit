@@ -2,7 +2,7 @@ import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import ConduitGrpcSdk, { GrpcError, Indexable, SMS } from '@conduitplatform/grpc-sdk';
-import { Token, User } from '../models';
+import { Team, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
@@ -152,7 +152,14 @@ export namespace AuthUtils {
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        query = { _id: search };
+        let included = relations.relations
+          .map(r => r.subject.split(':')[1])
+          .includes(search);
+        if (included) {
+          query['_id'] = search;
+        } else {
+          return { members: [], count: relations.relations.length };
+        }
       } else {
         const searchString = escapeStringRegexp(search);
         query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
@@ -168,6 +175,34 @@ export namespace AuthUtils {
       sort,
     );
     return { members, count };
+  }
+
+  export async function fetchUserTeams(params: FetchMembersParams) {
+    const { relations, search, sort } = params;
+    const skip = params.skip ?? 0;
+    const limit = params.limit ?? 25;
+    let query: any = {
+      _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
+    };
+    if (!isNil(search)) {
+      if (search.match(/^[a-fA-F0-9]{24}$/)) {
+        let included = relations.relations
+          .map(r => r.subject.split(':')[1])
+          .includes(search);
+        if (included) {
+          query['_id'] = search;
+        } else {
+          return { teams: [], count: relations.relations.length };
+        }
+      } else {
+        const searchString = escapeStringRegexp(search);
+        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
+      }
+    }
+
+    const count = relations.relations.length;
+    const teams = await Team.getInstance().findMany(query, undefined, skip, limit, sort);
+    return { teams, count };
   }
 
   export async function validateMembers(members: string[]): Promise<void> {
