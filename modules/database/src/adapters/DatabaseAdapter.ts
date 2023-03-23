@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -86,6 +87,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync = false,
   ): Promise<Schema> {
     this.models = this.models || {};
+    Object.assign(schema.fields, {
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
+      createdAt: { type: TYPE.Date, required: true },
+      updatedAt: { type: TYPE.Date, required: true },
+    });
     await this.updateCollectionName(schema, imported);
     await this.checkModelOwnershipAndPermissions(schema);
     await this.addExtensionsFromSchemaModel(schema, gRPC);
