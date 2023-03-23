@@ -322,8 +322,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { search, sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
 
     const relations = await this.grpcSdk.authorization!.findRelation({
       subject: 'User:' + user._id,
@@ -347,8 +347,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getSubTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, search, sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
+    const skip = call.request.params.skip ?? 0;
+    const limit = call.request.params.limit ?? 25;
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
@@ -505,6 +505,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
       {
         path: '/teams',
         description: `Retrieves the current user's teams.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          search: ConduitString.Optional,
+          sort: ConduitString.Optional,
+        },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
@@ -568,6 +574,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
         urlParams: {
           teamId: ConduitObjectId.Required,
         },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          search: ConduitString.Optional,
+          sort: ConduitString.Optional,
+        },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
       },
@@ -583,6 +595,12 @@ export class TeamsHandler implements IAuthenticationStrategy {
         description: `Retrieves sub-teams of a team`,
         urlParams: {
           teamId: ConduitObjectId.Required,
+        },
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          search: ConduitString.Optional,
+          sort: ConduitString.Optional,
         },
         action: ConduitRouteActions.GET,
         middlewares: ['authMiddleware'],
