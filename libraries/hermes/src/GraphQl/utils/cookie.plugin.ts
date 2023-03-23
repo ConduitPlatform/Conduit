@@ -12,13 +12,19 @@ module.exports = {
             delete cookie.options.path;
           }
           if (!cookie.options.domain || cookie.options.domain === '') {
-            cookie.options.domain = requestContext.context.req.hostname;
+            delete cookie.options.domain;
           }
           res.cookie(cookie.name, cookie.value, cookie.options);
         });
 
         if (removeCookie) {
           removeCookie.forEach((cookie: Cookie) => {
+            if (cookie.options!.path === '') {
+              delete cookie.options.path;
+            }
+            if (!cookie.options.domain || cookie.options.domain === '') {
+              delete cookie.options.domain;
+            }
             res.clearCookie(cookie.name, cookie.options);
           });
         }
