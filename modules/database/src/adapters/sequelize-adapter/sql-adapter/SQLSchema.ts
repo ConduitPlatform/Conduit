@@ -167,7 +167,7 @@ export class SQLSchema extends SequelizeSchema {
       const data = await this.model
         .findByPk(id, {
           nest: true,
-          include: this.constructAssociationInclusion(assocs).concat(
+          include: this.constructAssociationInclusion({}).concat(
             this.constructRelationInclusion(populate),
           ),
           transaction: t,
@@ -178,10 +178,10 @@ export class SQLSchema extends SequelizeSchema {
           for (const assoc in associationObjects) {
             if (!associationObjects.hasOwnProperty(assoc)) continue;
             if (Array.isArray(associationObjects[assoc])) {
-              associationObjects[assoc].forEach((obj: Indexable) => {
+              for (const obj of associationObjects[assoc]) {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
-                    (this.associations[assoc] as SQLSchema).findByIdAndUpdate(
+                    (this.associations[assoc] as SQLSchema[])[0].findByIdAndUpdate(
                       obj._id,
                       obj,
                       undefined,
@@ -189,15 +189,17 @@ export class SQLSchema extends SequelizeSchema {
                     ),
                   );
                 } else {
-                  promises.push(async () => {
-                    const returned = await (this.associations[assoc] as SQLSchema).create(
-                      obj,
-                      t,
-                    );
-                    doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
-                  });
+                  promises.push(
+                    (this.associations[assoc] as SQLSchema[])[0]
+                      .create(obj, t)
+                      .then(r => {
+                        doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](
+                          r._id,
+                        );
+                      }),
+                  );
                 }
-              });
+              }
             } else {
               if (assoc.hasOwnProperty('_id')) {
                 promises.push(
@@ -209,13 +211,13 @@ export class SQLSchema extends SequelizeSchema {
                   ),
                 );
               } else {
-                promises.push(async () => {
-                  const returned = (this.associations[assoc] as SQLSchema).create(
-                    associationObjects[assoc],
-                    t,
-                  );
-                  doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](returned);
-                });
+                promises.push(
+                  (this.associations[assoc] as SQLSchema)
+                    .create(associationObjects[assoc], t)
+                    .then(r => {
+                      doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](r._id);
+                    }),
+                );
               }
             }
           }
