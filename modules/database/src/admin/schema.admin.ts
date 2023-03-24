@@ -171,25 +171,17 @@ export class SchemaAdmin {
     if (existingSchema) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Schema name is already in use!');
     }
-
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
+      timestamps: call.request.params.timestamps,
     });
-
     try {
       validateSchemaInput(name, fields, modelOptions);
     } catch (err: unknown) {
       throw new GrpcError(status.INTERNAL, (err as Error).message);
     }
-
-    Object.assign(fields, {
-      _id: { type: TYPE.ObjectId, required: true, unique: true },
-      createdAt: { type: TYPE.Date, required: true },
-      updatedAt: { type: TYPE.Date, required: true },
-    });
-
     await this.schemaController.createSchema(
       new ConduitSchema(name, fields, modelOptions),
     );

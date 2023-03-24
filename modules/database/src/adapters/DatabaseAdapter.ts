@@ -87,11 +87,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync = false,
   ): Promise<Schema> {
     this.models = this.models || {};
-    Object.assign(schema.fields, {
-      _id: { type: TYPE.ObjectId, required: true, unique: true },
-      createdAt: { type: TYPE.Date, required: true },
-      updatedAt: { type: TYPE.Date, required: true },
-    });
+    this.assignFields(schema);
     await this.updateCollectionName(schema, imported);
     await this.checkModelOwnershipAndPermissions(schema);
     await this.addExtensionsFromSchemaModel(schema, gRPC);
@@ -106,6 +102,19 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
+  }
+
+  private assignFields(schema: ConduitSchema) {
+    const fields = {
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
+    };
+    if (schema.modelOptions.timestamps) {
+      Object.assign(fields, {
+        createdAt: { type: TYPE.Date, required: false },
+        updatedAt: { type: TYPE.Date, required: false },
+      });
+    }
+    Object.assign(schema.fields, fields);
   }
 
   private async updateCollectionName(schema: ConduitSchema, imported: boolean) {
