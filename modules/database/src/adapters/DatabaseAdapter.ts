@@ -116,9 +116,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
           name: schema.name,
         });
         if (!declaredSchema) {
-          collectionName = collectionName.startsWith('_')
-            ? `cnd${collectionName}`
-            : `cnd_${collectionName}`;
+          if (!collectionName.startsWith('cnd_')) {
+            collectionName = collectionName.startsWith('_')
+              ? `cnd${collectionName}`
+              : `cnd_${collectionName}`;
+          }
         } else {
           // recover collection name from DeclaredSchema
           collectionName = declaredSchema.collectionName;
