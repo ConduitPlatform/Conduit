@@ -116,7 +116,7 @@ export class CustomEndpointHandler {
       sort = constructSortObj(params.sort);
     }
 
-    const createObj = this.parseCreateQuery(createString);
+    const createObj = JSON.parse(`{${createString}}`);
     let promise;
     if (endpoint.operation === OperationsEnum.GET) {
       if (endpoint.paginated) {
@@ -184,20 +184,5 @@ export class CustomEndpointHandler {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-  }
-
-  private parseCreateQuery(query: string) {
-    // add brackets to each field
-    const arr = query.split(',').map(val => `{${val}}`);
-    const res: Indexable = {};
-    for (const el of arr) {
-      const tmp = JSON.parse(el);
-      const key = Object.keys(tmp)[0];
-      if (!key) continue;
-      const innerKey = Object.keys(tmp[key])[0];
-      if (!res.hasOwnProperty(key)) res[key] = tmp[key];
-      else res[key][innerKey] = tmp[key][innerKey];
-    }
-    return res;
   }
 }
