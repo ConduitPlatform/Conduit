@@ -19,12 +19,7 @@ import {
 import { extractRelations, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
-import {
-  arrayPatch,
-  extractAssociations,
-  extractAssociationsFromObject,
-  parseQuery,
-} from './parser';
+import { arrayPatch, parseQuery } from './parser';
 import { isNil } from 'lodash';
 
 const incrementDbQueries = () =>
@@ -45,7 +40,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     protected readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
-    readonly associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
@@ -65,64 +59,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       this.model,
       extractedRelations,
     );
-    if (associations) {
-      extractAssociations(this.model, associations);
-    }
-  }
-
-  constructAssociationInclusion(
-    requiredAssociations?: { [key: string]: string[] },
-    requiredOnly = false,
-  ) {
-    if (isNil(requiredAssociations)) return [];
-    const inclusionArray = [];
-    for (const association in this.associations) {
-      if (!this.associations.hasOwnProperty(association)) continue;
-      const associationTarget = this.associations[association];
-      const associationSchema = Array.isArray(associationTarget)
-        ? (associationTarget as SequelizeSchema[])[0]
-        : (associationTarget as SequelizeSchema);
-      if (requiredOnly && !requiredAssociations.hasOwnProperty(association)) continue;
-      const associationObject: {
-        model: ModelStatic<any>;
-        as: string;
-        required: boolean;
-        include?: any;
-        attributes?: { exclude: string[] };
-      } = {
-        model: associationSchema.model,
-        as: association,
-        required: requiredAssociations.hasOwnProperty(association),
-        attributes: { exclude: associationSchema.excludedFields },
-      };
-      if (requiredAssociations.hasOwnProperty(association)) {
-        const newAssociations: { [key: string]: string[] } = {};
-        requiredAssociations[association].forEach(v => {
-          // if v contains ".", which may be contained multiple times, remove the first occurrence of "." and everything before it
-          if (v.indexOf('.') > -1) {
-            const path = v.substring(v.indexOf('.') + 1);
-            if (v.indexOf('.') > -1) {
-              const associationName = v.substring(0, v.indexOf('.'));
-              if (!newAssociations.hasOwnProperty(associationName)) {
-                newAssociations[associationName] = [];
-              }
-              newAssociations[associationName].push(path);
-            }
-          }
-        });
-        if (
-          associationSchema.associations &&
-          Object.keys(associationSchema.associations).length > 0
-        ) {
-          associationObject.include = associationSchema.constructAssociationInclusion(
-            newAssociations,
-            requiredOnly,
-          );
-        }
-      }
-      inclusionArray.push(associationObject);
-    }
-    return inclusionArray;
   }
 
   async create(query: SingleDocQuery, transaction?: Transaction) {
@@ -135,10 +71,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    let assocs;
-    if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-    }
     const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
     const transactionProvided = transaction !== undefined;
@@ -147,7 +79,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
     return this.model
       .create(parsedQuery, {
-        include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
       })
       .then(doc => this.createWithPopulation(doc, relationObjects, t))
@@ -174,15 +105,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       parsedQuery = query;
     }
     incrementDbQueries();
-    let assocs;
-    if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-    }
     const relationObjectsArray = this.extractManyRelationsModification(parsedQuery);
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
-        include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
       })
       .then(docs => {
@@ -209,9 +135,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       where: filter,
       nest: true,
       attributes: parsingResult.attributes! as FindAttributeOptions,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
 
     incrementDbQueries();
@@ -221,16 +145,6 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
   sync() {
     const syncOptions = { alter: { drop: false } };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
-    for (const association in this.associations) {
-      if (this.associations.hasOwnProperty(association)) {
-        const value = this.associations[association];
-        if (Array.isArray(value)) {
-          promiseChain = promiseChain.then(() => value[0].sync());
-        } else {
-          promiseChain = promiseChain.then(() => value.sync());
-        }
-      }
-    }
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;
       const value = this.extractedRelations[relation];
@@ -389,9 +303,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       where: filter,
       nest: true,
       attributes: parsingResult.attributes as FindAttributeOptions,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
     if (!isNil(skip)) {
       options.offset = skip;
@@ -413,9 +325,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return this.model
       .findAll({
         where: filter,
-        include: this.constructAssociationInclusion(
-          parsingResult.requiredAssociations,
-        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+        include: this.includeRelations(parsingResult.requiredRelations, []),
       })
       .then(docs => {
         return Promise.all(docs.map(doc => doc.destroy({ returning: true })));
@@ -430,9 +340,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     return this.model
       .findOne({
         where: filter,
-        include: this.constructAssociationInclusion(
-          parsingResult.requiredAssociations,
-        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+        include: this.includeRelations(parsingResult.requiredRelations, []),
       })
       .then(doc => {
         return doc?.destroy({ returning: true });
@@ -455,13 +363,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
-      this.associations,
     );
     return this.model.count({
       where: parsingResult.query,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      include: this.includeRelations(parsingResult.requiredRelations, []),
     });
   }
 
@@ -484,15 +389,10 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
-      this.associations,
     );
     parsedFilter = parsingResult.query;
     if (this.sequelize.getDialect() !== 'postgres') {
-      parsedFilter = arrayPatch(
-        parsedFilter,
-        this.originalSchema.fields,
-        this.associations,
-      );
+      parsedFilter = arrayPatch(parsedFilter, this.originalSchema.fields);
     }
 
     incrementDbQueries();
@@ -546,12 +446,11 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       queryOptions,
-      this.associations,
     );
 
     let filter = parsingResult.query;
     if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
+      filter = arrayPatch(filter, this.originalSchema.fields);
     }
 
     return { filter, parsingResult };

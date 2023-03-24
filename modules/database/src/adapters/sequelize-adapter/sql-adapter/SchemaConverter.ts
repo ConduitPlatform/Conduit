@@ -21,7 +21,6 @@ import { sqlDataTypeMap } from '../utils/sqlTypeMap';
  */
 export function schemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
-  { [key: string]: any },
   {
     [key: string]:
       | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
@@ -35,37 +34,10 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extractedEmbedded, extractedRelations];
-}
-
-function extractEmbedded(ogSchema: any, schema: any) {
-  const extracted: Indexable = {};
-  for (const key of Object.keys(schema)) {
-    if (isArray(schema[key])) {
-      const arrayField = schema[key];
-      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (
-          !arrayField[0].hasOwnProperty('type') ||
-          typeof arrayField[0].type !== 'string'
-        ) {
-          extracted[key] = [arrayField[0]];
-          delete schema[key];
-          delete ogSchema[key];
-        }
-      }
-    } else if (isObject(schema[key])) {
-      if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
-        extracted[key] = schema[key];
-        delete schema[key];
-        delete ogSchema[key];
-      }
-    }
-  }
-  return extracted;
+  return [copy, extractedRelations];
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
@@ -119,7 +91,7 @@ function extractType(type: string, sqlType?: SQLDataType) {
       return DataTypes.UUID;
   }
 
-  throw new Error('Failed to extract embedded object type');
+  return DataTypes.JSON;
 }
 
 function iterDeep(schema: any, resSchema: any) {
@@ -143,7 +115,7 @@ function extractArrayType(arrayField: UntypedArray, field: string) {
     if (arrayField[0].hasOwnProperty('type')) {
       arrayElementType = extractType(arrayField[0].type);
     } else {
-      throw new Error('Failed to extract embedded object type');
+      arrayElementType = DataTypes.JSON;
     }
   } else {
     arrayElementType = extractType(arrayField[0]);
@@ -185,7 +157,7 @@ function extractObjectType(objectField: Indexable, field: string) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    throw new Error('Failed to extract embedded object type');
+    res.type = DataTypes.JSON;
   }
 
   return extractFieldProperties(objectField, res);

@@ -39,7 +39,7 @@ export function arrayFind(
       const assoc: SequelizeSchema = Array.isArray(associations[assocKey])
         ? (associations[assocKey] as SequelizeSchema[])[0]
         : (associations[assocKey] as SequelizeSchema);
-      return arrayFind(remain, assoc.originalSchema.fields, assoc.associations);
+      return arrayFind(remain, assoc.originalSchema.fields);
     }
   }
   return false;
@@ -65,7 +65,7 @@ export function arrayPatch(
         const assoc: SQLSchema = Array.isArray(associations[assocKey])
           ? (associations[assocKey] as SQLSchema[])[0]
           : (associations[assocKey] as SQLSchema);
-        const found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
+        const found = arrayFind(key, assoc.originalSchema.fields);
         if (found) patch(newQuery, key);
       }
     }

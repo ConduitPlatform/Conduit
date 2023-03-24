@@ -74,8 +74,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       this.sequelize.models,
     );
 
-    const [newSchema, extractedSchemas, extractedRelations] =
-      schemaConverter(compiledSchema);
+    const [newSchema, extractedRelations] = schemaConverter(compiledSchema);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -85,8 +84,6 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       extractedRelations,
       this.models,
     );
-    const associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] } = {};
-    await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
     if (options && options.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
@@ -96,7 +93,6 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
       schema,
       this,
       relatedSchemas,
-      associatedSchemas,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
@@ -108,16 +104,6 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     if (!options && saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
-      if (associatedSchemas && Object.keys(associatedSchemas).length > 0) {
-        for (const associatedSchema in associatedSchemas) {
-          const schema = associatedSchemas[associatedSchema];
-          if (Array.isArray(schema)) {
-            await this.saveSchemaToDatabase(schema[0].originalSchema);
-          } else {
-            await this.saveSchemaToDatabase(schema.originalSchema);
-          }
-        }
-      }
     }
     return this.models[schema.name];
   }
@@ -128,30 +114,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     callerModule: string = 'database',
     instanceSync = false,
   ): Promise<string> {
-    if (instanceSync) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-        } else {
-          delete this.models[associationSchema.schema.name];
-        }
-      }
-      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
-    } else if (deleteData) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-          await associationSchema[0].model.drop();
-        } else {
-          delete this.models[associationSchema.schema.name];
-          await associationSchema.model.drop();
-        }
-      }
-      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
-    }
-    return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
+    return super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
   }
 
   getDatabaseType(): string {

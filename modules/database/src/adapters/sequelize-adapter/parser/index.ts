@@ -11,14 +11,10 @@ function arrayHandler(
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
   },
-  associations?: {
-    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
-    associationsDirectory: { [key: string]: string[] };
-  },
 ) {
   const newArray = [];
   for (const val of value) {
-    newArray.push(_parseQuery(val, dialect, relations, associations));
+    newArray.push(_parseQuery(val, dialect, relations));
   }
   return newArray;
 }
@@ -30,10 +26,6 @@ function matchOperation(
   relations: {
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
-  },
-  associations?: {
-    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
-    associationsDirectory: { [key: string]: string[] };
   },
 ) {
   switch (operator) {
@@ -63,15 +55,15 @@ function matchOperation(
       return { [Op.lte]: value };
     case '$in':
       return {
-        [Op.in]: arrayHandler(value, dialect, relations, associations),
+        [Op.in]: arrayHandler(value, dialect, relations),
       };
     case '$or':
-      return arrayHandler(value, dialect, relations, associations);
+      return arrayHandler(value, dialect, relations);
     case '$and':
-      return arrayHandler(value, dialect, relations, associations);
+      return arrayHandler(value, dialect, relations);
     case '$nin':
       return {
-        [Op.notIn]: arrayHandler(value, dialect, relations, associations),
+        [Op.notIn]: arrayHandler(value, dialect, relations),
       };
     case '$like':
       return { [Op.like]: value };
@@ -94,10 +86,6 @@ function _parseQuery(
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
   },
-  associations?: {
-    associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
-    associationsDirectory: { [key: string]: string[] };
-  },
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
   if (
@@ -112,13 +100,13 @@ function _parseQuery(
     if (key === '$or') {
       Object.assign(parsed, {
         [Op.or]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, dialect, relations, associations),
+          _parseQuery(operation, dialect, relations),
         ),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
         [Op.and]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, dialect, relations, associations),
+          _parseQuery(operation, dialect, relations),
         ),
       });
     } else if (key === '$regex') {
@@ -126,9 +114,9 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
-      const subQuery = _parseQuery(query[key], dialect, relations, associations);
+      const subQuery = _parseQuery(query[key], dialect, relations);
       if (subQuery === undefined) continue;
-      const matched = matchOperation(key, subQuery, dialect, relations, associations);
+      const matched = matchOperation(key, subQuery, dialect, relations);
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
         continue;
@@ -140,12 +128,6 @@ function _parseQuery(
           relations.relations,
           relations.relationsDirectory,
         ) ||
-          handleAssoc(
-            key,
-            matched,
-            associations?.associations,
-            associations?.associationsDirectory,
-          ) ||
           handleEmbeddedJson(key, matched, dialect) || { [key]: matched }),
       });
     }
@@ -156,31 +138,6 @@ function _parseQuery(
   )
     return;
   return parsed;
-}
-
-function handleAssoc(
-  key: string,
-  value: any,
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  requiredAssociations?: { [key: string]: string[] },
-) {
-  if (!associations || !requiredAssociations) return null;
-  // Check if key contains an association
-  const assocKey: string = key.indexOf('.') !== -1 ? key.split('.')[0] : key;
-  if (associations && associations[assocKey]) {
-    // if it is not already in the requiredAssociations array
-    if (!requiredAssociations![assocKey]) {
-      requiredAssociations![assocKey] = [key];
-    }
-    let idField: any;
-    if (Array.isArray(associations[assocKey])) {
-      idField = (associations[assocKey] as SequelizeSchema[])[0].idField;
-    } else {
-      idField = (associations[assocKey] as SequelizeSchema).idField;
-    }
-    return { [`$${key}${key.indexOf('.') !== -1 ? '' : idField}$`]: value };
-  }
-  return null;
 }
 
 function handleRelation(
@@ -206,10 +163,6 @@ function handleRelation(
 function handleEmbeddedJson(key: string, value: any, dialect: string) {
   if (dialect === 'postgres' || key.indexOf('.') === -1) return null;
   const keyArray = key.split('.');
-  // Should not be a relation or association
-  // if ((relations && relations[keyArray[0]]) ||
-  //   (associations && associations[keyArray[0]]))
-  //   return null;
   let embeddedJson = {};
   for (let i = keyArray.length - 1; i >= 0; i--) {
     const k = i !== 0 ? `"${keyArray[i]}"` : keyArray[i];
@@ -224,7 +177,6 @@ export function parseQuery(
   dialect: string,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   const parsingResult: {
     query?: WhereOptions;
@@ -237,15 +189,10 @@ export function parseQuery(
     requiredAssociations: {},
   };
   parsingResult.query = {
-    ..._parseQuery(
-      query,
-      dialect,
-      { relations, relationsDirectory: parsingResult.requiredRelations },
-      associations && {
-        associations,
-        associationsDirectory: parsingResult.requiredAssociations,
-      },
-    ),
+    ..._parseQuery(query, dialect, {
+      relations,
+      relationsDirectory: parsingResult.requiredRelations,
+    }),
   };
   if (queryOptions.select) {
     if (queryOptions.select === '') {
