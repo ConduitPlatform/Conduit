@@ -1,5 +1,5 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { ConduitSchema, Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
 import { isNil } from 'lodash';
