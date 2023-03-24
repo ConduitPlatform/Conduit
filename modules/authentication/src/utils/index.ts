@@ -162,7 +162,7 @@ export namespace AuthUtils {
         }
       } else {
         const searchString = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${searchString}.*`, $options: 'i' };
+        query['email'] = { $regex: `.*${searchString}.*`, $options: 'i' };
       }
     }
 
