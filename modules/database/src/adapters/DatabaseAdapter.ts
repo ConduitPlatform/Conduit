@@ -17,7 +17,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
   private legacyDeployment = false; // unprefixed declared schema collection
-  registeredSchemas: Map<string, ConduitSchema>;
+  registeredSchemas: Map<string, ConduitDatabaseSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   private readonly _systemSchemas: Set<string> = new Set();

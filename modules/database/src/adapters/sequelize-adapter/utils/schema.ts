@@ -1,5 +1,5 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { ConduitSchema, Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
 import { isNil } from 'lodash';
@@ -177,7 +177,7 @@ export function processPushOperations(
 
 export function compileSchema(
   schema: ConduitDatabaseSchema,
-  registeredSchemas: Map<string, ConduitSchema>,
+  registeredSchemas: Map<string, ConduitDatabaseSchema>,
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));
