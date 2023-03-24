@@ -351,8 +351,13 @@ export class TeamsAdmin {
 
     const relations = await this.grpcSdk.authorization!.findRelation({
       resource: 'Team:' + teamId,
-      relation: 'member',
+      subjectType: 'User',
     });
+
+    if (!relations || relations.relations.length === 0) {
+      return { members: [], count: 0 };
+    }
+
     const { members, count } = await AuthUtils.fetchMembers({
       relations,
       search,
