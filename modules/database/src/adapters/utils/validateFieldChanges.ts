@@ -4,8 +4,7 @@ import { isArray, isEqual, isNil, isString } from 'lodash';
 import { DataTypes } from 'sequelize';
 
 /*
- * Validates base schema fields for type changes.
- * Extension fields are ignored.
+ * Validates schema compiled fields for type changes.
  */
 export function validateFieldChanges(
   oldSchema: ConduitDatabaseSchema,
