@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ParsedRouterRequest,
-  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
