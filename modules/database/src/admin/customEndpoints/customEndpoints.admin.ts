@@ -32,7 +32,7 @@ export class CustomEndpointsAdmin {
   ) {}
 
   async exportCustomEndpoints(): Promise<UnparsedRouterResponse> {
-    return await this.database
+    const endpoints = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.findMany({})
       .then(r =>
@@ -41,9 +41,10 @@ export class CustomEndpointsAdmin {
           delete obj.createdAt;
           delete obj.updatedAt;
           delete obj.__v;
-          return { endpoints: obj };
+          return obj;
         }),
       );
+    return { endpoints: endpoints };
   }
 
   async importCustomEndpoints(

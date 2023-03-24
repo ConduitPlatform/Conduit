@@ -177,7 +177,7 @@ export function processPushOperations(
 
 export function compileSchema(
   schema: ConduitDatabaseSchema,
-  registeredSchemas: Map<string, ConduitSchema>,
+  registeredSchemas: Map<string, ConduitDatabaseSchema>,
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));

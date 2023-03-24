@@ -1,5 +1,5 @@
-import { ConduitError, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-import { Fields } from '../../interfaces';
+import { ConduitError, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema, Fields } from '../../interfaces';
 import { isArray, isEqual, isNil, isString } from 'lodash';
 import { DataTypes } from 'sequelize';
 
@@ -7,8 +7,11 @@ import { DataTypes } from 'sequelize';
  * Validates base schema fields for type changes.
  * Extension fields are ignored.
  */
-export function validateFieldChanges(oldSchema: ConduitSchema, newSchema: ConduitSchema) {
-  validateSchemaFields(oldSchema.fields, newSchema.fields);
+export function validateFieldChanges(
+  oldSchema: ConduitDatabaseSchema,
+  newSchema: ConduitDatabaseSchema,
+) {
+  validateSchemaFields(oldSchema.compiledFields, newSchema.compiledFields);
   return newSchema;
 }
 
