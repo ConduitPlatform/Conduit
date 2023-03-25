@@ -155,7 +155,7 @@ function handleRelation(
       }
       return { [`$${key}${key.indexOf('.') !== -1 ? '' : '._id'}$`]: value };
     } else {
-      return { [`${key}Id`]: value };
+      return { [`${key}`]: value };
     }
   }
 }
@@ -207,8 +207,6 @@ export function parseQuery(
         relations,
       );
     }
-  } else {
-    parsingResult.attributes = renameRelations(queryOptions.populate || [], relations);
   }
   if (
     Object.keys(parsingResult.query).length === 0 &&
@@ -241,28 +239,13 @@ function parseSelect(
       }
       if (relations[tmp]) {
         includedRelations.push(tmp);
-        if (!Array.isArray(relations[tmp])) {
-          // @ts-ignore
-          include.push([tmp + 'Id', tmp]);
-          exclude.push(tmp + 'Id');
-        } else {
-          include.push(tmp);
-        }
-      } else {
-        include.push(tmp);
       }
+      include.push(tmp);
     } else if (attribute[0] === '-') {
       if (relations[attribute.slice(1)]) {
         includedRelations.push(attribute.slice(1));
-        if (!Array.isArray(relations[attribute.slice(1)])) {
-          // @ts-ignore
-          exclude.push(attribute.slice(1) + 'Id');
-        } else {
-          exclude.push(attribute.slice(1));
-        }
-      } else {
-        exclude.push(attribute.slice(1));
       }
+      exclude.push(attribute.slice(1));
     } else {
       returnIncludes = true;
       const tmp = attribute;
@@ -272,40 +255,11 @@ function parseSelect(
       }
       if (relations[tmp]) {
         includedRelations.push(tmp);
-        if (!Array.isArray(relations[tmp])) {
-          // @ts-ignore
-          include.push([tmp + 'Id', tmp]);
-        } else {
-          include.push(tmp);
-        }
-      } else {
-        include.push(tmp);
       }
+      include.push(tmp);
     }
   }
   return returnIncludes ? [...include] : { include, exclude };
-}
-
-export function renameRelations(
-  population: string[],
-  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-): { include: string[]; exclude: string[] } {
-  const include: string[] = [];
-  const exclude: string[] = [];
-
-  for (const relation in relations) {
-    if (population.indexOf(relation) !== -1) continue;
-    if (!Array.isArray(relations[relation])) {
-      // @ts-ignore
-      include.push([relation + 'Id', relation]);
-      exclude.push(relation + 'Id');
-    }
-  }
-
-  return {
-    include,
-    exclude,
-  };
 }
 
 export * from './sql';
