@@ -181,12 +181,10 @@ export function parseQuery(
   const parsingResult: {
     query?: WhereOptions;
     requiredRelations: string[];
-    requiredAssociations: { [key: string]: string[] };
     attributes?: { include?: string[]; exclude?: string[] } | string[];
   } = {
     query: {},
     requiredRelations: [],
-    requiredAssociations: {},
   };
   parsingResult.query = {
     ..._parseQuery(query, dialect, {

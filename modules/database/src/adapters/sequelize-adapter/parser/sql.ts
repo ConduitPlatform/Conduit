@@ -1,8 +1,5 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { ModelStatic, Op } from 'sequelize';
-import { SQLSchema } from '../sql-adapter/SQLSchema';
-import { ParsedQuery } from '../../../interfaces';
-import { merge } from 'lodash';
+import { Op } from 'sequelize';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function patch(query: Indexable, key: string) {
@@ -62,9 +59,9 @@ export function arrayPatch(
     } else if (key.indexOf('.') !== -1) {
       const assocKey = key.split('.')[0];
       if (associations && associations[assocKey]) {
-        const assoc: SQLSchema = Array.isArray(associations[assocKey])
-          ? (associations[assocKey] as SQLSchema[])[0]
-          : (associations[assocKey] as SQLSchema);
+        const assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+          ? (associations[assocKey] as SequelizeSchema[])[0]
+          : (associations[assocKey] as SequelizeSchema);
         const found = arrayFind(key, assoc.originalSchema.fields);
         if (found) patch(newQuery, key);
       }
@@ -72,62 +69,3 @@ export function arrayPatch(
   }
   return newQuery;
 }
-
-export function extractAssociationsFromObject(
-  query: ParsedQuery | ParsedQuery[],
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-): { [key: string]: string[] } {
-  const requiredAssociations: { [key: string]: string[] } = {};
-  if (!associations) return {};
-  if (Array.isArray(query)) {
-    query
-      .map(q => extractAssociationsFromObject(q, associations))
-      .forEach(assoc => merge(requiredAssociations, assoc));
-    return requiredAssociations;
-  }
-  for (const assoc in associations) {
-    if (query[assoc]) {
-      if (!requiredAssociations[assoc]) {
-        requiredAssociations[assoc] = [assoc];
-      }
-      const newAssoc = Array.isArray(associations[assoc])
-        ? (associations[assoc] as any[])[0]
-        : associations[assoc];
-      const embeddedAssociations = extractAssociationsFromObject(
-        query[assoc],
-        newAssoc.associations,
-      );
-      for (const embeddedAssoc in embeddedAssociations) {
-        requiredAssociations[assoc].push(`${assoc}.${embeddedAssoc}`);
-      }
-    }
-  }
-  return requiredAssociations;
-}
-
-export const extractAssociations = (
-  model: ModelStatic<any>,
-  associations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-) => {
-  for (const association in associations) {
-    if (associations.hasOwnProperty(association)) {
-      const value = associations[association];
-      if (Array.isArray(value)) {
-        const item = value[0];
-        model.hasMany(item.model, {
-          foreignKey: association,
-          as: association,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-        });
-      } else {
-        model.hasOne(value.model, {
-          foreignKey: association,
-          as: association,
-          onUpdate: 'CASCADE',
-          onDelete: 'CASCADE',
-        });
-      }
-    }
-  }
-};

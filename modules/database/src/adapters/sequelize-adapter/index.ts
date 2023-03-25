@@ -21,9 +21,7 @@ import { introspectedSchemaCmsOptionsDefaults } from '../../interfaces';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
-export abstract class SequelizeAdapter<
-  T extends SequelizeSchema,
-> extends DatabaseAdapter<T> {
+export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> {
   connectionUri: string;
   sequelize!: Sequelize;
   readonly SUPPORTED_DIALECTS = ['postgres', 'mysql', 'sqlite', 'mariadb'];
@@ -165,7 +163,7 @@ export abstract class SequelizeAdapter<
     schema: ConduitSchema,
     saveToDb: boolean,
     options?: { parentSchema: string },
-  ): Promise<T>;
+  ): Promise<SequelizeSchema>;
 
   async deleteSchema(
     schemaName: string,
@@ -206,7 +204,7 @@ export abstract class SequelizeAdapter<
     return 'Schema deleted!';
   }
 
-  getSchemaModel(schemaName: string): { model: T } {
+  getSchemaModel(schemaName: string): { model: SequelizeSchema } {
     if (this.models && this.models[schemaName]) {
       return { model: this.models[schemaName] };
     }

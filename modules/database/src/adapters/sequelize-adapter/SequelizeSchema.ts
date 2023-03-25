@@ -16,7 +16,12 @@ import {
   SchemaAdapter,
   SingleDocQuery,
 } from '../../interfaces';
-import { extractRelations, sqlTypesProcess } from './utils';
+import {
+  extractRelations,
+  getTransactionAndParsedQuery,
+  processPushOperations,
+  sqlTypesProcess,
+} from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { arrayPatch, parseQuery } from './parser';
@@ -25,18 +30,18 @@ import { isNil } from 'lodash';
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
-export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
+export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
   synced: boolean;
   readonly idField;
 
-  protected constructor(
+  constructor(
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitDatabaseSchema,
-    protected readonly adapter: SequelizeAdapter<SequelizeSchema>,
+    protected readonly adapter: SequelizeAdapter,
     protected readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
@@ -370,6 +375,81 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     });
   }
 
+  async findByIdAndUpdate(
+    id: string,
+    query: SingleDocQuery,
+    populate?: string[],
+    transaction?: Transaction,
+  ): Promise<{ [key: string]: any }> {
+    const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
+      transaction,
+      query,
+      this.sequelize,
+    );
+    try {
+      const parentDoc = await this.model.findByPk(id, {
+        nest: true,
+        include: this.constructRelationInclusion(populate),
+        transaction: t,
+      });
+      if (parsedQuery.hasOwnProperty('$inc')) {
+        const inc = parsedQuery['$inc'];
+        for (const key in inc) {
+          if (!inc.hasOwnProperty(key)) continue;
+          if (this.extractedRelations[key]) {
+            throw new Error(`Cannot increment relation: ${key}`);
+          }
+          if (inc[key] > 0) {
+            parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
+          } else {
+            parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
+          }
+        }
+        delete parsedQuery['$inc'];
+      }
+
+      if (parsedQuery.hasOwnProperty('$push')) {
+        const push = parsedQuery['$push'];
+        processPushOperations(parentDoc, push, this.extractedRelations);
+        await parentDoc.save();
+        delete parsedQuery['$push'];
+      }
+
+      parsedQuery.updatedAt = new Date();
+      incrementDbQueries();
+      const relationObjects = this.extractRelationsModification(parsedQuery);
+      await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
+      incrementDbQueries();
+
+      const data = await this.model
+        .findByPk(id, {
+          nest: true,
+          include: this.constructRelationInclusion(populate),
+          transaction: t,
+        })
+        .then(doc => this.createWithPopulation(doc, relationObjects, t!))
+        .then(() => {
+          if (!transactionProvided) {
+            return t!.commit();
+          }
+          return;
+        })
+        .then(() => {
+          return this.model.findByPk(id, {
+            nest: true,
+            include: this.constructRelationInclusion(populate),
+          });
+        })
+        .then(doc => (doc ? doc.toJSON() : doc));
+      return data;
+    } catch (e) {
+      if (!transactionProvided) {
+        await t!.rollback();
+      }
+      throw e;
+    }
+  }
+
   async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -455,11 +535,4 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
 
     return { filter, parsingResult };
   }
-
-  abstract findByIdAndUpdate(
-    id: any,
-    document: SingleDocQuery,
-    populate?: string[],
-    transaction?: Transaction,
-  ): Promise<any>;
 }

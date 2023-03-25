@@ -1,12 +1,11 @@
-import { SQLSchema } from './SQLSchema';
+import { SequelizeSchema } from '../SequelizeSchema';
 import { schemaConverter } from './SchemaConverter';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
 import { compileSchema, resolveRelatedSchemas } from '../utils';
 
-export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
+export class SQLAdapter extends SequelizeAdapter {
   constructor(connectionUri: string) {
     super(connectionUri);
   }
@@ -15,59 +14,11 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     return false;
   }
 
-  private async processExtractedSchemas(
-    schema: ConduitSchema,
-    extractedSchemas: Indexable,
-    associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
-  ) {
-    for (const extractedSchema in extractedSchemas) {
-      const modelOptions = {
-        ...schema.modelOptions,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-      };
-      let modeledSchema;
-      let isArray = false;
-      if (Array.isArray(extractedSchemas[extractedSchema])) {
-        isArray = true;
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema][0],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      } else {
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      }
-
-      modeledSchema.ownerModule = schema.ownerModule;
-      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
-      // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(
-        modeledSchema as ConduitDatabaseSchema,
-        false,
-        {
-          parentSchema: schema.name,
-        },
-      );
-      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
-    }
-  }
-
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
     options?: { parentSchema: string },
-  ): Promise<SQLSchema> {
+  ): Promise<SequelizeSchema> {
     const compiledSchema = compileSchema(
       schema,
       this.registeredSchemas,
@@ -87,7 +38,7 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     if (options && options.parentSchema) {
       schema.parentSchema = options.parentSchema;
     }
-    this.models[schema.name] = new SQLSchema(
+    this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
       schema,

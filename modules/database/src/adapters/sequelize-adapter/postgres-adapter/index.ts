@@ -1,14 +1,14 @@
-import { PostgresSchema } from './PostgresSchema';
 import { schemaConverter } from './SchemaConverter';
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { ConduitDatabaseSchema } from '../../../interfaces';
 import { SequelizeAdapter } from '../index';
 import { compileSchema, resolveRelatedSchemas } from '../utils';
+import { SequelizeSchema } from '../SequelizeSchema';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
-export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
+export class PostgresAdapter extends SequelizeAdapter {
   constructor(connectionUri: string) {
     super(connectionUri);
   }
@@ -38,7 +38,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
-  ): Promise<PostgresSchema> {
+  ): Promise<SequelizeSchema> {
     const compiledSchema = compileSchema(
       schema,
       this.registeredSchemas,
@@ -55,7 +55,7 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       extractedRelations,
       this.models,
     );
-    this.models[schema.name] = new PostgresSchema(
+    this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
       schema,
