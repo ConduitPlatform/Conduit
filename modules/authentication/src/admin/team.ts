@@ -58,6 +58,19 @@ export class TeamsAdmin {
     );
     routingManager.route(
       {
+        path: '/teams/:teamId',
+        action: ConduitRouteActions.GET,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        name: 'GetTeam',
+        description: 'Gets the specified team',
+      },
+      new ConduitRouteReturnDefinition('Team'),
+      this.getTeam.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/teams/:teamId/members',
         action: ConduitRouteActions.GET,
         urlParams: {
@@ -169,7 +182,7 @@ export class TeamsAdmin {
   }
 
   async getTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { search, sort, parentTeam } = call.request.params;
+    const { search, sort, parentTeam, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -194,10 +207,21 @@ export class TeamsAdmin {
       skip,
       limit,
       sort,
+      populate,
     );
     const count: number = await Team.getInstance().countDocuments(query);
 
     return { teams, count };
+  }
+
+  async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { teamId, populate } = call.request.params;
+    const team: Team | null = await Team.getInstance().findOne(
+      { _id: teamId },
+      undefined,
+      populate,
+    );
+    return team || 'Team not found';
   }
 
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
