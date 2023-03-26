@@ -144,7 +144,7 @@ export namespace AuthUtils {
   }
 
   export async function fetchMembers(params: FetchMembersParams) {
-    const { relations, search, sort } = params;
+    const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
     let query: any = {
@@ -173,12 +173,13 @@ export namespace AuthUtils {
       skip,
       limit,
       sort,
+      populate,
     );
     return { members, count };
   }
 
   export async function fetchUserTeams(params: FetchMembersParams) {
-    const { relations, search, sort } = params;
+    const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
     let query: any = {
@@ -201,7 +202,14 @@ export namespace AuthUtils {
     }
 
     const count = relations.relations.length;
-    const teams = await Team.getInstance().findMany(query, undefined, skip, limit, sort);
+    const teams = await Team.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      populate,
+    );
     return { teams, count };
   }
 

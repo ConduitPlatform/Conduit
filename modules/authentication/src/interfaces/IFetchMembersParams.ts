@@ -4,6 +4,7 @@ export interface FetchMembersParams {
   limit?: number;
   sort?: string;
   search?: string;
+  populate?: string;
 }
 
 interface FindRelationResponse {

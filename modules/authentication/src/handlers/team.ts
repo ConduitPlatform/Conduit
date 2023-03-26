@@ -286,7 +286,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, search, sort } = call.request.params;
+    const { teamId, search, sort, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -315,13 +315,36 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { members: members, count };
   }
 
+  async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId, populate } = call.request.params;
+    const allowed = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['read'],
+      resource: 'Team:' + teamId,
+    });
+    if (!allowed) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to view team',
+      );
+    }
+    const team: Team | null = await Team.getInstance().findOne(
+      { _id: teamId },
+      undefined,
+      populate,
+    );
+    return team || 'Team not found';
+  }
+
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { search, sort } = call.request.params;
+    const { search, sort, populate } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
@@ -340,13 +363,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { teams: teams, count };
   }
 
   async getSubTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, search, sort } = call.request.params;
+    const { teamId, search, sort, populate } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
@@ -378,6 +402,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { teams: teams, count };
   }
@@ -566,6 +591,19 @@ export class TeamsHandler implements IAuthenticationStrategy {
       },
       new ConduitRouteReturnDefinition('DeleteTeam', 'String'),
       this.deleteTeam.bind(this),
+    );
+    routingManager.route(
+      {
+        path: '/teams/:teamId',
+        description: `Gets a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('Team'),
+      this.getTeam.bind(this),
     );
     routingManager.route(
       {
