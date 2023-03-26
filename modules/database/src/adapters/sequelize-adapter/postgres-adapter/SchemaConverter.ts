@@ -11,9 +11,9 @@ import {
   convertModelOptionsIndexes,
   convertSchemaFieldIndexes,
   extractFieldProperties,
-  extractRelations,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
+import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -21,10 +21,9 @@ import { sqlDataTypeMap } from '../utils/sqlTypeMap';
  */
 export function schemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
+  { [key: string]: any },
   {
-    [key: string]:
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+    [key: string]: RelationType | RelationType[];
   },
 ] {
   let copy = cloneDeep(jsonSchema);
@@ -34,10 +33,11 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
+  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extractedRelations];
+  return [copy, extractedEmbedded, extractedRelations];
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {

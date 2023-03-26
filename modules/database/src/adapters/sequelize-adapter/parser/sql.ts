@@ -1,6 +1,5 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ModelStatic, Op } from 'sequelize';
-import { SQLSchema } from '../sql-adapter/SQLSchema';
 import { ParsedQuery } from '../../../interfaces';
 import { merge } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
@@ -62,9 +61,9 @@ export function arrayPatch(
     } else if (key.indexOf('.') !== -1) {
       const assocKey = key.split('.')[0];
       if (associations && associations[assocKey]) {
-        const assoc: SQLSchema = Array.isArray(associations[assocKey])
-          ? (associations[assocKey] as SQLSchema[])[0]
-          : (associations[assocKey] as SQLSchema);
+        const assoc: SequelizeSchema = Array.isArray(associations[assocKey])
+          ? (associations[assocKey] as SequelizeSchema[])[0]
+          : (associations[assocKey] as SequelizeSchema);
         const found = arrayFind(key, assoc.originalSchema.fields, assoc.associations);
         if (found) patch(newQuery, key);
       }
