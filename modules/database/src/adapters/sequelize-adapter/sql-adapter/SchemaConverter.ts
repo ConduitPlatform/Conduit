@@ -11,22 +11,20 @@ import {
   convertModelOptionsIndexes,
   convertSchemaFieldIndexes,
   extractFieldProperties,
-  extractRelations,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
+import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function schemaConverter(jsonSchema: ConduitSchema): [
+export function schemaConverter(
+  jsonSchema: ConduitSchema,
+): [
   ConduitSchema,
   { [key: string]: any },
-  {
-    [key: string]:
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
-  },
+  { [key: string]: RelationType | RelationType[] },
 ] {
   let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
@@ -40,32 +38,6 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extractedEmbedded, extractedRelations];
-}
-
-function extractEmbedded(ogSchema: any, schema: any) {
-  const extracted: Indexable = {};
-  for (const key of Object.keys(schema)) {
-    if (isArray(schema[key])) {
-      const arrayField = schema[key];
-      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (
-          !arrayField[0].hasOwnProperty('type') ||
-          typeof arrayField[0].type !== 'string'
-        ) {
-          extracted[key] = [arrayField[0]];
-          delete schema[key];
-          delete ogSchema[key];
-        }
-      }
-    } else if (isObject(schema[key])) {
-      if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
-        extracted[key] = schema[key];
-        delete schema[key];
-        delete ogSchema[key];
-      }
-    }
-  }
-  return extracted;
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
