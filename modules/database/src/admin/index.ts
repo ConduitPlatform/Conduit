@@ -159,6 +159,7 @@ export class AdminHandlers {
           name: ConduitString.Required,
           fields: ConduitJson.Required,
           conduitOptions: ConduitOptions,
+          timestamps: ConduitBoolean.Optional,
         },
       },
       new ConduitRouteReturnDefinition('CreateSchema', '_DeclaredSchema'),
