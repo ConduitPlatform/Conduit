@@ -58,7 +58,6 @@ export class CustomEndpointHandler {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
               const res = endpoint.inputs.filter(input => {
@@ -77,6 +76,7 @@ export class CustomEndpointHandler {
               r.action,
               JSON.stringify(params[r.assignmentField.value]),
             );
+            createString += ',';
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
               throw new GrpcError(
@@ -100,12 +100,14 @@ export class CustomEndpointHandler {
               r.action,
               JSON.stringify(context),
             );
+            createString += ',';
           } else {
             createString += constructAssignment(
               r.schemaField,
               r.action,
               JSON.stringify(r.assignmentField.value),
             );
+            createString += ',';
           }
         },
       );
