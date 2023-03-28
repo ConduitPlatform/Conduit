@@ -109,6 +109,9 @@ export class CustomEndpointHandler {
           }
         },
       );
+      while (createString.charAt(createString.length - 1) === ',') {
+        createString = createString.slice(0, -1);
+      }
     }
 
     let sort: { [field: string]: -1 | 1 } | undefined = undefined;
