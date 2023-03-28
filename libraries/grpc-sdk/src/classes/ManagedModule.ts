@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, {
   ConduitService,
   GrpcServer,
+  merge,
   SetConfigRequest,
   SetConfigResponse,
-  merge,
 } from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';

@@ -13,6 +13,36 @@ export default {
       default: 72000,
     },
   },
+  cors: {
+    enabled: {
+      format: 'Boolean',
+      default: true,
+    },
+    origin: {
+      format: 'String',
+      default: '*',
+    },
+    methods: {
+      format: 'String',
+      default: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    },
+    allowedHeaders: {
+      format: 'String',
+      default: 'Content-Type,Authorization',
+    },
+    exposedHeaders: {
+      format: 'String',
+      default: 'Content-Type,Authorization',
+    },
+    credentials: {
+      format: 'Boolean',
+      default: true,
+    },
+    maxAge: {
+      format: 'Number',
+      default: 86400,
+    },
+  },
   hostUrl: {
     // set initial value with __DEFAULT_HOST_URL, defaults to http://localhost:(ADMIN_HTTP_PORT ?? 3030)
     type: 'String',

@@ -15,7 +15,6 @@ import {
   SocketPush,
 } from './interfaces';
 import { SwaggerRouterMetadata } from './types';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { ConduitRoute, ProxyRoute } from './classes';
@@ -314,7 +313,6 @@ export class ConduitRoutingController {
   }
 
   private registerGlobalMiddleware() {
-    this.registerMiddleware(cors(), false);
     this.registerMiddleware(createRouteMiddleware(ConduitGrpcSdk.Logger.winston), false);
     this.registerMiddleware(express.json({ limit: '50mb' }), false);
     this.registerMiddleware(

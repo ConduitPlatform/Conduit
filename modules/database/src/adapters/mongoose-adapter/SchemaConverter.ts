@@ -5,8 +5,9 @@ import {
   MongoIndexType,
   SchemaFieldIndex,
 } from '@conduitplatform/grpc-sdk';
-import { isNil, isObject, cloneDeep, isArray } from 'lodash';
+import { cloneDeep, isArray, isNil, isObject } from 'lodash';
 import { checkIfMongoOptions } from './utils';
+
 const deepdash = require('deepdash/standalone');
 
 /**

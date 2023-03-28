@@ -12,7 +12,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { Token, TwoFactorSecret, User } from '../models';
+import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models';
 import { AuthUtils } from '../utils';
 import { TokenType } from '../constants/TokenType';
 import * as node2fa from '@conduitplatform/node-2fa';
@@ -21,7 +21,6 @@ import { TokenProvider } from './tokenProvider';
 import { Config } from '../config';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { randomInt } from 'crypto';
-import { TwoFactorBackUpCodes } from '../models';
 
 export class TwoFa implements IAuthenticationStrategy {
   private smsModule: SMS;

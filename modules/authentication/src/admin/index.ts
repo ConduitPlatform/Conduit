@@ -1,9 +1,9 @@
 import ConduitGrpcSdk, {
-  ConduitString,
   ConduitBoolean,
   ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  ConduitString,
   GrpcServer,
   RouteOptionType,
   RoutingManager,
@@ -13,7 +13,6 @@ import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
 import { TeamsAdmin } from './team';
 import { Service, User } from '../models';
-import { TeamsHandler } from '../handlers/team';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;

@@ -51,6 +51,7 @@ import helmet from 'helmet';
 import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
 import * as adminProxyRoutes from './routes/proxy';
+import cors from 'cors';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -163,6 +164,20 @@ export default class AdminModule extends IConduitAdmin {
       .getConfigManager()
       .get('admin');
     this.onConfig();
+    this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {
+      const config = ConfigController.getInstance().config;
+      if (config.cors.enabled === false) return next();
+      cors({
+        origin: config.cors.origin.includes(',')
+          ? config.cors.origin.split(',')
+          : config.cors.origin,
+        credentials: config.cors.credentials,
+        methods: config.cors.methods,
+        allowedHeaders: config.cors.allowedHeaders,
+        exposedHeaders: config.cors.exposedHeaders,
+        maxAge: config.cors.maxAge,
+      })(req, res, next);
+    }, true);
     // Register Middleware
     this._router.registerMiddleware(
       (req: ConduitRequest, res: Response, next: NextFunction) => {

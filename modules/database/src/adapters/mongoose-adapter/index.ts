@@ -189,7 +189,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   protected async _createSchemaFromAdapter(
-    schema: ConduitSchema,
+    schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));

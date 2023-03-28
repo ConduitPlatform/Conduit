@@ -2,18 +2,18 @@ import {
   isArray,
   isBoolean,
   isEmpty,
+  isEqual,
   isNil,
   isObject,
   isPlainObject,
   isString,
-  isEqual,
 } from 'lodash';
 import {
   ConduitModel,
+  ConduitModelOptionsPermModifyType as ValidModifyPermValues,
   ConduitSchemaOptions,
   Indexable,
   TYPE,
-  ConduitModelOptionsPermModifyType as ValidModifyPermValues,
 } from '@conduitplatform/grpc-sdk';
 
 const deepdash = require('deepdash/standalone');
@@ -155,12 +155,21 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
       if (!isObject(modelOptions.conduit))
         throw new Error("Option 'conduit' must be of type Object");
       Object.keys(modelOptions.conduit).forEach((conduitKey: string) => {
-        if (conduitKey !== 'cms' && conduitKey !== 'permissions')
+        if (
+          conduitKey !== 'cms' &&
+          conduitKey !== 'permissions' &&
+          conduitKey !== 'imported'
+        )
           throw new Error(
             "Only 'cms' and 'permissions' fields allowed inside 'conduit' field",
           );
-        if (!isObject(modelOptions.conduit![conduitKey]))
-          throw new Error(`Conduit field option ${conduitKey} must be of type Object`);
+        if (conduitKey === 'imported') {
+          if (!isBoolean(modelOptions.conduit!.imported))
+            throw new Error(`Conduit field option 'imported' must be of type Boolean`);
+        } else {
+          if (!isObject(modelOptions.conduit![conduitKey]))
+            throw new Error(`Conduit field option ${conduitKey} must be of type Object`);
+        }
       });
       if (modelOptions.conduit!.cms?.enabled) {
         if (!isBoolean(modelOptions.conduit.cms.enabled))

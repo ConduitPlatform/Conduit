@@ -54,7 +54,7 @@ export class TokenProvider {
       } else {
         return {
           result: {
-            accessToken: cookies.accessToken ?? undefined,
+            accessToken: cookies.accessToken ? undefined : accessToken.token,
             refreshToken: cookies.refreshToken ? undefined : refreshToken?.token,
           },
           setCookies: Object.values(cookies).map(obj => obj),
@@ -154,7 +154,10 @@ export class TokenProvider {
       cookies.accessToken = {
         name: 'accessToken',
         value: (tokens[0] as AccessToken).token,
-        options: cookieOptions,
+        options: {
+          ...cookieOptions,
+          maxAge: tokenOptions.config.accessTokens.expiryPeriod,
+        },
       };
     }
     if (!isNil(tokens[1]) && tokenOptions.config.refreshTokens.setCookie) {
@@ -163,7 +166,10 @@ export class TokenProvider {
         cookies.refreshToken = {
           name: 'refreshToken',
           value: (tokens[1] as RefreshToken).token,
-          options: cookieOptions,
+          options: {
+            ...cookieOptions,
+            maxAge: tokenOptions.config.refreshTokens.expiryPeriod,
+          },
         };
       }
     }

@@ -344,7 +344,7 @@ export class GraphQLController extends ConduitRouter {
     ) => {
       const { caching, cacheAge, scope } = extractCachingGql(
         route,
-        context.headers['Cache-Control'],
+        context.headers['Cache-Control'] ?? context.headers['cache-control'],
       );
       if (caching) {
         info.cacheControl.setCacheHint({ maxAge: cacheAge, scope });

@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { isDev } from '../utils/middleware';

@@ -1,6 +1,7 @@
 import { IStorageProvider, StorageConfig } from '../../interfaces';
 import { Storage } from '@google-cloud/storage';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_DATE } from '../../constants/expiry';
 
 /**
  * WARNING: DO NOT USE THIS, IT NEEDS A REWRITE
@@ -19,6 +20,7 @@ export class GoogleCloudStorage implements IStorageProvider {
   deleteContainer(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
+
   deleteFolder(name: string): Promise<boolean | Error> {
     throw new Error('Method not implemented.');
   }
@@ -39,28 +41,6 @@ export class GoogleCloudStorage implements IStorageProvider {
   async containerExists(name: string): Promise<boolean | Error> {
     const exists = await this._storage.bucket(name).exists();
     return exists[0];
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(filename);
-    await this._storage.bucket(this._activeBucket).file(filename).move(newBucketFile);
-    return true;
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    const newBucketFile = this._storage.bucket(newContainer).file(newFilename);
-    await this._storage
-      .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newBucketFile);
-    return true;
   }
 
   /**
@@ -129,7 +109,7 @@ export class GoogleCloudStorage implements IStorageProvider {
       .file(fileName)
       .getSignedUrl({
         action: 'read',
-        expires: Date.now() + 14400000,
+        expires: SIGNED_URL_EXPIRY_DATE(),
       })
       .then((r: any) => {
         if (r.data && r.data[0]) {
@@ -156,23 +136,19 @@ export class GoogleCloudStorage implements IStorageProvider {
     return true;
   }
 
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    await this._storage
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    return this._storage
       .bucket(this._activeBucket)
-      .file(currentFilename)
-      .move(newFilename);
-    return true;
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented!');
+      .file(fileName)
+      .getSignedUrl({
+        action: 'write',
+        expires: SIGNED_URL_EXPIRY_DATE(),
+      })
+      .then((r: any) => {
+        if (r.data && r.data[0]) {
+          return r.data[0];
+        }
+        return r;
+      });
   }
 }

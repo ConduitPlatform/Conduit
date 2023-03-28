@@ -1,8 +1,8 @@
 import {
+  ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
   ConduitString,
-  ConduitError,
 } from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';

@@ -2,8 +2,8 @@ import {
   Array,
   ConduitModel,
   ConduitModelField,
-  TYPE,
   ConduitRouteOption,
+  TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 
