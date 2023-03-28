@@ -663,6 +663,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           },
           role: { type: TYPE.String, required: true },
         },
+        middlewares: ['authMiddleware'],
         name: 'ModifyMembersRoles',
         description: 'Modifies the roles of members in a team',
       },

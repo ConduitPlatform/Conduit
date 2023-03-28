@@ -167,7 +167,7 @@ export namespace AuthUtils {
     }
 
     const count = relations.relations.length;
-    const members = await User.getInstance().findMany(
+    const members: (User & { role?: string })[] = await User.getInstance().findMany(
       query,
       undefined,
       skip,
@@ -175,6 +175,16 @@ export namespace AuthUtils {
       sort,
       populate,
     );
+    members.forEach(member => {
+      // add role from relation to each member
+      // find relation with member id
+      const relation = relations.relations.find(
+        r => r.subject.split(':')[1] === member._id,
+      );
+      if (relation) {
+        member.role = relation.relation;
+      }
+    });
     return { members, count };
   }
 
