@@ -111,9 +111,11 @@ function validateArray(
   }
   param.forEach((obj: any, index: number) => {
     if (isObject(type) && isObject(type.type)) {
-      validateObject(index as unknown as string, param, type.type);
+      validateObject(index as unknown as string, obj, type.type);
+      param[index] = obj;
     } else if (isObject(type) && !type.hasOwnProperty('type')) {
-      validateObject(index as unknown as string, param, type);
+      validateObject(index as unknown as string, obj, type);
+      param[index] = obj;
     } else if (isObject(type) && type.hasOwnProperty('type')) {
       param[index] = validateType(
         `${fieldName}[${index}]`,
