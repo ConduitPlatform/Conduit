@@ -11,7 +11,7 @@ import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash';
-import ObjectHash from 'object-hash';
+import ObjectHash, { sha1 } from 'object-hash';
 import * as systemModels from '../models';
 
 export abstract class DatabaseAdapter<T extends Schema> {
@@ -105,6 +105,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   private assignFields(schema: ConduitSchema) {
+    if (!schema.modelOptions.timestamps) {
+      schema.modelOptions.timestamps = true;
+    }
     const fields = {
       _id: { type: TYPE.ObjectId, required: true, unique: true },
     };
