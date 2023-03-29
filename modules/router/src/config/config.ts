@@ -19,11 +19,11 @@ export default {
     },
     allowedHeaders: {
       format: 'String',
-      default: 'Content-Type,Authorization',
+      default: 'Content-Type,Authorization,Cache-Control',
     },
     exposedHeaders: {
       format: 'String',
-      default: 'Content-Type,Authorization',
+      default: 'Content-Type,Authorization,Cache-Control',
     },
     credentials: {
       format: 'Boolean',
