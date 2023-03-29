@@ -105,7 +105,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   private assignFields(schema: ConduitSchema) {
-    if (!schema.modelOptions.timestamps) {
+    if (!Object(schema.modelOptions).hasOwnProperty('timestamps')) {
       schema.modelOptions.timestamps = true;
     }
     const fields = {
