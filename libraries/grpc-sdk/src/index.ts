@@ -378,11 +378,7 @@ export default class ConduitGrpcSdk {
         }
       }
       this._redisDetails = redisJson;
-    } else if (
-      process.env.REDIS_HOST &&
-      process.env.REDIS_PORT &&
-      !process.env.REDIS_CONFIG
-    ) {
+    } else if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
       this._redisDetails = {
         host: process.env.REDIS_HOST!,
         port: parseInt(process.env.REDIS_PORT!, 10),
