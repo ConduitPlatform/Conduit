@@ -352,13 +352,14 @@ export default class AdminModule extends IConduitAdmin {
     if (!moduleUrl) {
       moduleUrl = await this.grpcSdk.config.getModuleUrlByName('core').then(r => r.url);
     }
-    const route = this.getGrpcRoute(path, action)!;
+    const { url, routeIndex } = this.findGrpcRoute(path, action);
+    const route = this.getGrpcRoute(url, routeIndex)!;
     [injected, removed] = this._router.processMiddlewarePatch(
       route.options!.middlewares,
       middleware,
       moduleUrl!,
     )!;
-    this.setGrpcRouteMiddleware(path, action, middleware);
+    this.setGrpcRouteMiddleware(url, routeIndex, middleware);
     this._router.patchRouteMiddleware({
       path: path,
       action: action as ConduitRouteActions,
@@ -736,29 +737,15 @@ export default class AdminModule extends IConduitAdmin {
     return config;
   }
 
-  setGrpcRouteMiddleware(path: string, action: string, middleware: string[]) {
-    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
-      path,
-      action,
-    );
-    if (!position) {
-      throw Error('Route not found');
-    }
-    this._grpcRoutes[position.url][position.routeIndex].options!.middlewares = middleware;
+  setGrpcRouteMiddleware(url: string, routeIndex: number, middleware: string[]) {
+    this._grpcRoutes[url][routeIndex].options!.middlewares = middleware;
   }
 
   getGrpcRoute(
-    path: string,
-    action: string,
-  ): RegisterAdminRouteRequest_PathDefinition | null {
-    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
-      path,
-      action,
-    );
-    if (!position) {
-      return null;
-    }
-    return this._grpcRoutes[position.url][position.routeIndex];
+    url: string,
+    routeIndex: number,
+  ): RegisterAdminRouteRequest_PathDefinition {
+    return this._grpcRoutes[url][routeIndex];
   }
 
   findGrpcRoute(path: string, action: string) {
@@ -770,6 +757,6 @@ export default class AdminModule extends IConduitAdmin {
         }
       }
     }
-    return null;
+    throw new GrpcError(status.NOT_FOUND, `Grpc route ${action} ${path} not found`);
   }
 }

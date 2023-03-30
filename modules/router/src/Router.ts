@@ -490,13 +490,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     if (!moduleUrl) {
       moduleUrl = await this.grpcSdk.config.getModuleUrlByName('core').then(r => r.url);
     }
-    const route = this.getGrpcRoute(path, action)!;
+    const { url, routeIndex } = this.findGrpcRoute(path, action);
+    const route = this.getGrpcRoute(url, routeIndex);
     [injected, removed] = this._internalRouter.processMiddlewarePatch(
       route.options!.middlewares,
       middleware,
       moduleUrl!,
     )!;
-    this.setGrpcRouteMiddleware(path, action, middleware);
+    this.setGrpcRouteMiddleware(url, routeIndex, middleware);
     this._internalRouter.patchRouteMiddleware({
       path: path,
       action: action as ConduitRouteActions,
@@ -613,29 +614,15 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         }
       }
     }
-    return null;
+    throw new GrpcError(status.NOT_FOUND, `Grpc route ${action} ${path} not found`);
   }
 
-  getGrpcRoute(path: string, action: string): RouteT | ProxyRouteT | null {
-    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
-      path,
-      action,
-    );
-    if (!position) {
-      return null;
-    }
-    return this._grpcRoutes[position.url][position.routeIndex];
+  getGrpcRoute(url: string, routeIndex: number) {
+    return this._grpcRoutes[url][routeIndex];
   }
 
-  setGrpcRouteMiddleware(path: string, action: string, middleware: string[]) {
-    const position: { url: string; routeIndex: number } | null = this.findGrpcRoute(
-      path,
-      action,
-    );
-    if (!position) {
-      throw Error('Route not found');
-    }
-    this._grpcRoutes[position.url][position.routeIndex].options!.middlewares = middleware;
+  setGrpcRouteMiddleware(url: string, routeIndex: number, middleware: string[]) {
+    this._grpcRoutes[url][routeIndex].options!.middlewares = middleware;
   }
 
   registerRoute(route: ConduitRoute): void {
