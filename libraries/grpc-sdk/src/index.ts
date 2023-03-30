@@ -40,6 +40,8 @@ import path from 'path';
 import { ConduitMetrics } from './metrics';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
+type UrlRemap = { [url: string]: string };
+
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
   private readonly _watchModules: boolean;
@@ -70,6 +72,7 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
   private readonly instance: string;
+  private readonly urlRemap?: UrlRemap;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
@@ -90,7 +93,6 @@ export default class ConduitGrpcSdk {
     serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
     name?: string,
     watchModules = true,
-    private readonly urlRemap?: string,
   ) {
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
@@ -100,6 +102,14 @@ export default class ConduitGrpcSdk {
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
       : Crypto.randomBytes(16).toString('hex');
+
+    this.urlRemap = getJsonEnv<UrlRemap>(
+      'URL_REMAP',
+      process.env.URL_REMAP,
+      stringConf => ({
+        '*': stringConf,
+      }),
+    );
 
     if (process.env.METRICS_PORT) {
       ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
@@ -440,11 +450,16 @@ export default class ConduitGrpcSdk {
       (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
     )
       return;
+    moduleUrl =
+      this.urlRemap?.[moduleUrl] ??
+      (this.urlRemap?.['*']
+        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
+        : moduleUrl);
     if (this._availableModules[moduleName]) {
       // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
+        moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
@@ -452,7 +467,7 @@ export default class ConduitGrpcSdk {
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
+        moduleUrl,
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
