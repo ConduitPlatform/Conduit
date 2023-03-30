@@ -22,7 +22,7 @@ import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { sleep } from './utilities';
+import { getJsonEnv, sleep } from './utilities';
 import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
@@ -38,7 +38,6 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
-import fs from 'fs-extra';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export default class ConduitGrpcSdk {
@@ -362,22 +361,7 @@ export default class ConduitGrpcSdk {
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
     if (process.env.REDIS_CONFIG) {
-      const redisConfig = process.env.REDIS_CONFIG;
-      let redisJson;
-      if (redisConfig.startsWith('{')) {
-        try {
-          redisJson = JSON.parse(redisConfig);
-        } catch (e) {
-          throw new Error('Invalid JSON in REDIS_CONFIG');
-        }
-      } else {
-        try {
-          redisJson = JSON.parse(fs.readFileSync(redisConfig).toString());
-        } catch (e) {
-          throw new Error('Invalid JSON in REDIS_CONFIG');
-        }
-      }
-      this._redisDetails = redisJson;
+      this._redisDetails = getJsonEnv('REDIS_CONFIG');
     } else if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
       this._redisDetails = {
         host: process.env.REDIS_HOST!,
