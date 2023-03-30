@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.1...v0.16.0-alpha.2) (2023-03-30)
+
+
+### Features
+
+* **grpc-sdk:** url remap object config ([#577](https://github.com/ConduitPlatform/Conduit/issues/577)) ([289b74a](https://github.com/ConduitPlatform/Conduit/commit/289b74a9396d341e32561f8ca04907f41429feec))
+
+
+### Bug Fixes
+
+* **database:** add modelOptions timestamps ([#576](https://github.com/ConduitPlatform/Conduit/issues/576)) ([bcf144c](https://github.com/ConduitPlatform/Conduit/commit/bcf144c51d6e36aa47867e0fb9c6edaf86b4c240))
+* **database:** custom endpoint creation issue with residual commas ([#575](https://github.com/ConduitPlatform/Conduit/issues/575)) ([089f699](https://github.com/ConduitPlatform/Conduit/commit/089f6992ed4317681db285c7710e564739a35945))
+* **database:** customEndpoint create string comma issue ([b93dc20](https://github.com/ConduitPlatform/Conduit/commit/b93dc20f9cf48795a6189f175f8b4442141dd2bf))
+* **router,admin:** cache-control missing from default allowed headers ([6647c15](https://github.com/ConduitPlatform/Conduit/commit/6647c15f1aa4bb11e5fc0674b84af42afac0b1b0))
+* **router:** validateObject in array ([b491689](https://github.com/ConduitPlatform/Conduit/commit/b491689dfddc979636e7265c0ee0a028de923212))
+
 ## [0.16.0-alpha.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.0...v0.16.0-alpha.1) (2023-03-27)
 
 
