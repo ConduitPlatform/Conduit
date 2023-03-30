@@ -16,7 +16,7 @@ export function getJsonEnv<JsonFormat extends object>(
     }
   } else {
     try {
-      jsonConfig = JSON.parse(fs.readFileSync(envValue).toString());
+      jsonConfig = JSON.parse(fs.readFileSync(envValue).toString().trimEnd());
     } catch (e) {
       if (handleString) {
         jsonConfig = handleString(envValue);
