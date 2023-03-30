@@ -410,7 +410,7 @@ export default class ConduitGrpcSdk {
         if (this._redisDetails!.hasOwnProperty('nodes')) {
           this._redisManager = new RedisManager(this._redisDetails);
         } else {
-          const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
+          const redisHost = (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
             ...this._redisDetails,
             host: redisHost,
