@@ -149,7 +149,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         role: invite.role || 'member',
         email: invite.email,
       },
-      user: invite.inviter,
+      user: invite.inviter._id,
     });
   }
 
@@ -421,7 +421,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'Could not create invite, team does not exist',
       );
     }
-    const existingUser = await User.getInstance().findOne({ _id: user });
+    const existingUser = await User.getInstance().findOne({ _id: user._id });
     if (!existingUser) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -691,8 +691,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
           teamId: ConduitObjectId.Required,
         },
         bodyParams: {
-          role: ConduitString.Optional,
-          email: ConduitString.Optional,
+          role: ConduitString.Required,
+          email: ConduitString.Required,
         },
         action: ConduitRouteActions.POST,
         middlewares: ['authMiddleware'],
@@ -736,7 +736,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           });
         }
       }
-      if (config.teams.invites.enabled && !config.teams.invites.sendEmail) {
+      if (config.teams.invites.enabled && config.teams.invites.sendEmail) {
         if (!config.teams.invites.sendEmail || !this.grpcSdk.isAvailable('email')) {
           ConduitGrpcSdk.Logger.warn(
             'Team invites are enabled, but email sending is disabled. No invites will be sent.',
