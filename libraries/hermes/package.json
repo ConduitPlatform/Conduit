@@ -19,7 +19,6 @@
     "@socket.io/redis-adapter": "^7.2.0",
     "apollo-server-express": "^2.11.0",
     "cookie-parser": "~1.4.6",
-    "cors": "^2.8.5",
     "debug": "~4.3.4",
     "deep-object-diff": "^1.1.9",
     "deepdash": "^5.3.9",

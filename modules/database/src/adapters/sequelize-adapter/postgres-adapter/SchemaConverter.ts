@@ -132,7 +132,11 @@ function extractObjectType(objectField: Indexable) {
   } = { type: null };
 
   if (objectField.hasOwnProperty('type')) {
-    res.type = extractType(objectField.type, objectField.sqlType);
+    if (isArray(objectField.type)) {
+      res.type = extractArrayType(objectField.type).type;
+    } else {
+      res.type = extractType(objectField.type, objectField.sqlType);
+    }
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }

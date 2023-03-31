@@ -1,13 +1,13 @@
-import { Router, NextFunction } from 'express';
+import { NextFunction, Router } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  ConduitRouteObject,
   ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
   ManagedModule,
-  ConduitRouteObject,
   SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -20,11 +20,11 @@ import {
   ConduitSocket,
   grpcToConduitRoute,
   ProtoGenerator,
-  RouteT,
-  ProxyRouteT,
-  SocketPush,
   ProxyRoute,
+  ProxyRouteT,
   proxyToConduitRoute,
+  RouteT,
+  SocketPush,
 } from '@conduitplatform/hermes';
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';

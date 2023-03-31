@@ -1,7 +1,7 @@
 import {
+  ConduitModel,
   ConduitSchema,
   ConduitSchemaOptions,
-  ConduitModel,
 } from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
 

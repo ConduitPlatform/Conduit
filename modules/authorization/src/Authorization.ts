@@ -148,19 +148,26 @@ export default class Authorization extends ManagedModule<Config> {
     call: GrpcRequest<FindRelationRequest>,
     callback: GrpcResponse<Empty>,
   ) {
-    const { relation, resource, subject } = call.request;
+    const { relation, resource, subject, resourceType, subjectType, skip, limit } =
+      call.request;
     if (!subject && !relation && !resource) {
       return callback({
         code: status.INVALID_ARGUMENT,
         message: 'At least 2 of subject, relation, resource must be provided',
       });
     }
-    const relations = await this.relationsController.findRelations({
-      relation,
-      resource,
-      subject,
-    });
-    callback(null, { relations });
+    const [relations, count] = await this.relationsController.findRelations(
+      {
+        relation,
+        resource,
+        subject,
+        resourceType,
+        subjectType,
+      },
+      skip,
+      limit,
+    );
+    callback(null, { relations, count });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

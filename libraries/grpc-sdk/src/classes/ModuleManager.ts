@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { ManagedModule, ConfigController, Indexable } from '..';
+import ConduitGrpcSdk, { ConfigController, Indexable, ManagedModule } from '..';
 
 const convictConfigParser = (config: Indexable) => {
   if (typeof config === 'object') {
@@ -26,7 +26,6 @@ export class ModuleManager<T> {
     this.serviceAddress =
       // @compat (v0.15): SERVICE_IP -> SERVICE_URL
       process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
-    const urlRemap = process.env.URL_REMAP;
     try {
       this.grpcSdk = new ConduitGrpcSdk(
         process.env.CONDUIT_SERVER,
@@ -35,7 +34,6 @@ export class ModuleManager<T> {
         },
         module.name,
         true,
-        urlRemap,
       );
     } catch {
       throw new Error('Failed to initialize grpcSdk');

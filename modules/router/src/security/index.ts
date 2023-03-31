@@ -1,9 +1,10 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
 import helmet from 'helmet';
 import { RateLimiter } from './handlers/rate-limiter';
 import { ClientValidator } from './handlers/client-validation';
 import { NextFunction, Request, Response } from 'express';
 import ConduitDefaultRouter from '../Router';
+import cors from 'cors';
 
 export default class SecurityModule {
   constructor(
@@ -17,6 +18,24 @@ export default class SecurityModule {
     this.router.registerGlobalMiddleware(
       'rateLimiter',
       new RateLimiter(this.grpcSdk).limiter,
+      true,
+    );
+    this.router.registerGlobalMiddleware(
+      'corsMiddleware',
+      (req: Request, res: Response, next: NextFunction) => {
+        const config = ConfigController.getInstance().config;
+        if (config.cors.enabled === false) return next();
+        cors({
+          origin: config.cors.origin.includes(',')
+            ? config.cors.origin.split(',')
+            : config.cors.origin,
+          credentials: config.cors.credentials,
+          methods: config.cors.methods,
+          allowedHeaders: config.cors.allowedHeaders,
+          exposedHeaders: config.cors.exposedHeaders,
+          maxAge: config.cors.maxAge,
+        })(req, res, next);
+      },
       true,
     );
     this.router.registerGlobalMiddleware('helmetMiddleware', helmet());

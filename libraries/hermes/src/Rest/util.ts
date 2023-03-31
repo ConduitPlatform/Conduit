@@ -83,25 +83,51 @@ function validateArray(
   param: Params[],
   routeDefinedArray: Indexable[] | string[],
 ) {
-  const type = routeDefinedArray[0];
+  let type: { type: string; required: boolean } | string | Indexable;
+  if (isArray(routeDefinedArray)) {
+    type = routeDefinedArray[0];
+  } else {
+    type = {
+      type: (routeDefinedArray as { type: any[]; required: boolean }).type[0],
+      required: (routeDefinedArray as { type: any[]; required: boolean }).required,
+    };
+  }
+
   if (isObject(type)) {
     if (type.required && isNil(param)) {
       throw ConduitError.userInput(`${fieldName} is required`);
     }
-  } else {
-    if (!isArray(param)) {
-      if (param) {
-        param = [param];
-      }
-      // throw ConduitError.userInput(`${fieldName} must be an array`);
-    }
-    if (!param) {
-      return null;
-    }
-    param.forEach((obj: any, index: number) => {
-      param[index] = validateType(`${fieldName}[${index}]`, type, obj, false);
-    });
   }
+  if (!isArray(param)) {
+    if (param) {
+      param = [param];
+    }
+    // throw ConduitError.userInput(`${fieldName} must be an array`);
+  }
+  if (param === null) {
+    return null;
+  } else if (param === undefined) {
+    return;
+  }
+  param.forEach((obj: any, index: number) => {
+    if (isObject(type) && isObject(type.type)) {
+      validateObject(index as unknown as string, obj, type.type);
+      param[index] = obj;
+    } else if (isObject(type) && !type.hasOwnProperty('type')) {
+      validateObject(index as unknown as string, obj, type);
+      param[index] = obj;
+    } else if (isObject(type) && type.hasOwnProperty('type')) {
+      param[index] = validateType(
+        `${fieldName}[${index}]`,
+        type.type as string,
+        obj,
+        false,
+      );
+    } else {
+      param[index] = validateType(`${fieldName}[${index}]`, type as string, obj, false);
+    }
+  });
+
   return param;
 }
 

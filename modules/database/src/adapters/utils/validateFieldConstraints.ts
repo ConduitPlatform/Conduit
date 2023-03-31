@@ -1,16 +1,12 @@
-import {
-  ConduitSchema,
-  ConduitError,
-  ConduitModel,
-  ConduitModelField,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitModel, ConduitModelField } from '@conduitplatform/grpc-sdk';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 /*
  * Validates schema field constraints.
  * 'unique' requires 'required'
  */
-export function validateFieldConstraints(schema: ConduitSchema) {
-  fieldsValidator(schema.name, schema.fields);
+export function validateFieldConstraints(schema: ConduitDatabaseSchema) {
+  fieldsValidator(schema.name, schema.compiledFields);
 }
 
 export function fieldsValidator(schemaName: string, schemaFields: ConduitModel) {

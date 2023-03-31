@@ -79,56 +79,93 @@ export class FileHandlers {
     }
   }
 
-  async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, data, name, container, folder, mimeType } = call.request.params;
+  async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, folder, container, size = 0, mimeType, isPublic } = call.request.params;
+    let newFolder;
+    if (isNil(folder)) {
+      newFolder = '/';
+    } else {
+      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    }
+    const config = ConfigController.getInstance().config;
+    const usedContainer = isNil(container)
+      ? config.defaultContainer
+      : await this.findOrCreateContainer(container, isPublic);
+    if (!isNil(folder)) {
+      await this.findOrCreateFolder(newFolder, usedContainer, isPublic);
+    }
+
+    const exists = await File.getInstance().findOne({
+      name,
+      container: usedContainer,
+      folder: newFolder,
+    });
+    if (exists) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+
     try {
-      const found = await File.getInstance().findOne({ _id: id });
-      if (isNil(found)) {
-        throw new GrpcError(status.NOT_FOUND, 'File does not exist');
-      }
-      let fileData = await this.storageProvider
-        .container(found.container)
-        .get((found.folder ?? '') + found.name);
-
-      if (!isNil(data)) {
-        fileData = Buffer.from(data, 'base64');
-      }
-
-      const newName = name ?? found.name;
-      let newFolder = folder ?? found.folder;
-      if (!newFolder.endsWith('/')) {
-        // existing folder names are currently suffixed by "/" upon creation
-        newFolder += '/';
-      }
-      const newContainer = container ?? found.container;
-      found.mimeType = mimeType ?? found.mimeType;
-      const isDataUpdate =
-        newName === found.name &&
-        newContainer === found.container &&
-        newFolder === found.folder;
-
-      if (newContainer !== found.container) {
-        await this.findOrCreateContainer(newContainer);
-      }
-      if (newFolder !== found.folder) {
-        await this.findOrCreateFolder(newFolder, newContainer);
-      }
-
-      const exists = await File.getInstance().findOne({
-        name: newName,
-        container: newContainer,
-        folder: newFolder,
-      });
-      if (!isDataUpdate && exists) {
-        throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-      }
-      return this.storeUpdatedFile(
-        newContainer,
+      return await this._createFileUploadUrl(
+        usedContainer,
         newFolder,
-        newName,
+        isPublic,
+        name,
+        size,
+        mimeType,
+      );
+    } catch (e) {
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
+  }
+
+  async updateFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, mimeType, size } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    const { name, folder, container } = await this.validateFilenameAndContainer(
+      call,
+      found,
+    );
+    try {
+      return await this._updateFileUploadUrl(
+        name,
+        folder,
+        container,
+        mimeType ?? found.mimeType,
         found,
-        fileData,
-        isDataUpdate,
+        size,
+      );
+    } catch (e) {
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
+  }
+
+  async updateFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, data, mimeType } = call.request.params;
+    const found = await File.getInstance().findOne({ _id: id });
+    if (isNil(found)) {
+      throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+    const { name, folder, container } = await this.validateFilenameAndContainer(
+      call,
+      found,
+    );
+    try {
+      return await this._updateFile(
+        name,
+        folder,
+        container,
+        Buffer.from(data, 'base64'),
+        mimeType ?? found.mimeType,
+        found,
       );
     } catch (e) {
       throw new GrpcError(
@@ -149,7 +186,7 @@ export class FileHandlers {
       }
       const success = await this.storageProvider
         .container(found.container)
-        .delete((found.folder ?? '') + found.name);
+        .delete((found.folder === '/' ? '' : found.folder) + found.name);
       if (!success) {
         throw new GrpcError(status.INTERNAL, 'File could not be deleted');
       }
@@ -176,7 +213,7 @@ export class FileHandlers {
       }
       const url = await this.storageProvider
         .container(found.container)
-        .getSignedUrl((found.folder ?? '') + found.name);
+        .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name);
 
       if (!call.request.params.redirect) {
         return { result: url };
@@ -203,7 +240,9 @@ export class FileHandlers {
       let data: Buffer;
       const result = await this.storageProvider
         .container(file.container)
-        .get(file.folder ? file.folder + file.name : file.name);
+        .get(
+          file.folder ? (file.folder === '/' ? '' : file.folder) + file.name : file.name,
+        );
       if (result instanceof Error) {
         throw result;
       } else {
@@ -272,14 +311,13 @@ export class FileHandlers {
   ): Promise<File> {
     const buffer = Buffer.from(data, 'base64');
     const size = buffer.byteLength;
-
     await this.storageProvider
       .container(container)
-      .store((folder ?? '') + name, buffer, isPublic);
+      .store((folder === '/' ? '' : folder) + name, buffer, isPublic);
     const publicUrl = isPublic
       ? await this.storageProvider
           .container(container)
-          .getPublicUrl((folder ?? '') + name)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
       : null;
     ConduitGrpcSdk.Metrics?.increment('files_total');
     ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
@@ -294,37 +332,161 @@ export class FileHandlers {
     });
   }
 
-  private async storeUpdatedFile(
+  private async _createFileUploadUrl(
     container: string,
     folder: string,
+    isPublic: boolean,
     name: string,
-    found: File,
-    fileData: any,
-    isDataUpdate: boolean,
-  ): Promise<File> {
+    size: number,
+    mimeType: string,
+  ): Promise<{ file: File; url: string }> {
     await this.storageProvider
       .container(container)
-      .store((folder ?? '') + name, fileData);
-    // calling delete after store call succeeds
-    if (!isDataUpdate) {
-      await this.storageProvider
-        .container(found.container)
-        .delete((found.folder ?? '') + found.name);
-    }
+      .store(
+        (folder === '/' ? '' : folder) + name,
+        Buffer.from('PENDING UPLOAD'),
+        isPublic,
+      );
+    const publicUrl = isPublic
+      ? await this.storageProvider
+          .container(container)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
+      : null;
+    ConduitGrpcSdk.Metrics?.increment('files_total');
+    ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', size);
+    const file = await File.getInstance().create({
+      name,
+      mimeType,
+      size,
+      folder: folder,
+      container: container,
+      isPublic,
+      url: publicUrl,
+    });
+    const url = (await this.storageProvider
+      .container(container)
+      .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
+    return {
+      file,
+      url,
+    };
+  }
 
-    const fileSizeDiff = Math.abs(found.size - fileData.byteLength);
+  private async validateFilenameAndContainer(call: ParsedRouterRequest, file: File) {
+    const { name, folder, container } = call.request.params;
+    const newName = name ?? file.name;
+    const newContainer = container ?? file.container;
+    if (newContainer !== file.container) {
+      await this.findOrCreateContainer(newContainer);
+    }
+    // Existing folder names are currently suffixed by "/" upon creation
+    const newFolder = isNil(folder)
+      ? file.folder
+      : folder.trim().slice(-1) !== '/'
+      ? folder.trim() + '/'
+      : folder.trim();
+    if (newFolder !== file.folder) {
+      await this.findOrCreateFolder(newFolder, newContainer);
+    }
+    const exists = await File.getInstance().findOne({
+      name: newName,
+      container: newContainer,
+      folder: newFolder,
+    });
+    if (!isNil(exists)) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
+    }
+    return {
+      name: newName,
+      folder: newFolder,
+      container: newContainer,
+    };
+  }
+
+  private async _updateFileUploadUrl(
+    name: string,
+    folder: string,
+    container: string,
+    mimeType: string,
+    file: File,
+    size: number | undefined | null,
+  ): Promise<string> {
+    const onlyDataUpdate =
+      name === file.name && folder === file.folder && container === file.container;
+    if (onlyDataUpdate) {
+      await File.getInstance().findByIdAndUpdate(file._id, {
+        mimeType,
+        ...{ size: size ?? file.size },
+      });
+    } else {
+      await this.storageProvider
+        .container(container)
+        .store(
+          (folder === '/' ? '' : folder) + name,
+          Buffer.from('PENDING UPLOAD'),
+          file.isPublic,
+        );
+      await this.storageProvider
+        .container(file.container)
+        .delete((file.folder === '/' ? '' : file.folder) + file.name);
+      const url = file.isPublic
+        ? await this.storageProvider
+            .container(container)
+            .getPublicUrl((folder === '/' ? '' : folder) + name)
+        : null;
+      await File.getInstance().findByIdAndUpdate(file._id, {
+        name,
+        folder,
+        container,
+        url,
+        mimeType,
+        ...{ size: size ?? file.size },
+      });
+    }
+    if (!isNil(size)) this.updateFileMetrics(file.size, size!);
+    return (await this.storageProvider
+      .container(container)
+      .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
+  }
+
+  private async _updateFile(
+    name: string,
+    folder: string,
+    container: string,
+    data: Buffer,
+    mimeType: string,
+    file: File,
+  ): Promise<File> {
+    const onlyDataUpdate =
+      name === file.name && folder === file.folder && container === file.container;
+    await this.storageProvider
+      .container(container)
+      .store((folder === '/' ? '' : folder) + name, data, file.isPublic);
+    if (!onlyDataUpdate) {
+      await this.storageProvider
+        .container(file.container)
+        .delete((file.folder === '/' ? '' : file.folder) + file.name);
+    }
+    const url = file.isPublic
+      ? await this.storageProvider
+          .container(container)
+          .getPublicUrl((folder === '/' ? '' : folder) + name)
+      : null;
+    const updatedFile = (await File.getInstance().findByIdAndUpdate(file._id, {
+      name,
+      folder,
+      container,
+      url,
+      mimeType,
+    })) as File;
+    this.updateFileMetrics(file.size, data.byteLength);
+    return updatedFile;
+  }
+
+  private updateFileMetrics(currentSize: number, newSize: number) {
+    const fileSizeDiff = Math.abs(currentSize - newSize);
     fileSizeDiff < 0
       ? ConduitGrpcSdk.Metrics?.increment('storage_size_bytes_total', fileSizeDiff)
       : ConduitGrpcSdk.Metrics?.decrement('storage_size_bytes_total', fileSizeDiff);
-    if (found.isPublic) {
-      found.url = await this.storageProvider
-        .container(container)
-        .getPublicUrl((folder ?? '') + name);
-    }
-    found.name = name;
-    found.folder = folder;
-    found.container = container;
-    found.size = fileData.byteLength;
-    return (await File.getInstance().findByIdAndUpdate(found._id, found)) as File;
   }
 }

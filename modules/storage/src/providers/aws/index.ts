@@ -16,6 +16,7 @@ import { streamToBuffer } from '../../utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
 type GetResult = Buffer | Error;
@@ -209,42 +210,13 @@ export class AWSS3Storage implements IStorageProvider {
       Bucket: this._activeContainer,
       Key: fileName,
     });
-    return await awsGetSignedUrl(this._storage, command);
+    return awsGetSignedUrl(this._storage, command, {
+      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
+    });
   }
 
   async getPublicUrl(fileName: string) {
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
-  }
-
-  async rename(currentFilename: string, newFilename: string): Promise<boolean | Error> {
-    throw new Error('Not implemented');
-  }
-
-  async moveToFolder(filename: string, newFolder: string): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToFolderAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newFolder: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToContainer(
-    filename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
-  }
-
-  async moveToContainerAndRename(
-    currentFilename: string,
-    newFilename: string,
-    newContainer: string,
-  ): Promise<boolean | Error> {
-    throw new Error('Method not implemented.');
   }
 
   private async listFiles(name: string) {
@@ -256,5 +228,15 @@ export class AWSS3Storage implements IStorageProvider {
     );
     if (!files.Contents) return [];
     return files.Contents;
+  }
+
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    const command = new PutObjectCommand({
+      Bucket: this._activeContainer,
+      Key: fileName,
+    });
+    return awsGetSignedUrl(this._storage, command, {
+      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
+    });
   }
 }

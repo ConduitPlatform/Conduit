@@ -1,8 +1,8 @@
 import {
-  ParsedRouterRequest,
-  UnparsedRouterResponse,
   GrpcError,
   Indexable,
+  ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { constructAssignment, constructQuery } from './utils';
 import { constructSortObj } from '../utils';
@@ -58,7 +58,6 @@ export class CustomEndpointHandler {
           action: number;
           assignmentField: { type: string; value: any };
         }) => {
-          if (createString.length !== 0) createString += ',';
           if (r.assignmentField.type === 'Input') {
             if (isNil(params[r.assignmentField.value])) {
               const res = endpoint.inputs.filter(input => {
@@ -77,6 +76,7 @@ export class CustomEndpointHandler {
               r.action,
               JSON.stringify(params[r.assignmentField.value]),
             );
+            createString += ',';
           } else if (r.assignmentField.type === 'Context') {
             if (isNil(call.request.context)) {
               throw new GrpcError(
@@ -100,15 +100,20 @@ export class CustomEndpointHandler {
               r.action,
               JSON.stringify(context),
             );
+            createString += ',';
           } else {
             createString += constructAssignment(
               r.schemaField,
               r.action,
               JSON.stringify(r.assignmentField.value),
             );
+            createString += ',';
           }
         },
       );
+      while (createString.charAt(createString.length - 1) === ',') {
+        createString = createString.slice(0, -1);
+      }
     }
 
     let sort: { [field: string]: -1 | 1 } | undefined = undefined;
@@ -116,7 +121,7 @@ export class CustomEndpointHandler {
       sort = constructSortObj(params.sort);
     }
 
-    const createObj = this.parseCreateQuery(createString);
+    const createObj = JSON.parse(`{${createString}}`);
     let promise;
     if (endpoint.operation === OperationsEnum.GET) {
       if (endpoint.paginated) {
@@ -184,20 +189,5 @@ export class CustomEndpointHandler {
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
-  }
-
-  private parseCreateQuery(query: string) {
-    // add brackets to each field
-    const arr = query.split(',').map(val => `{${val}}`);
-    const res: Indexable = {};
-    for (const el of arr) {
-      const tmp = JSON.parse(el);
-      const key = Object.keys(tmp)[0];
-      if (!key) continue;
-      const innerKey = Object.keys(tmp[key])[0];
-      if (!res.hasOwnProperty(key)) res[key] = tmp[key];
-      else res[key][innerKey] = tmp[key][innerKey];
-    }
-    return res;
   }
 }

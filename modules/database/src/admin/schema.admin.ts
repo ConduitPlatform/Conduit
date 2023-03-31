@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ParsedRouterRequest,
-  TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -51,8 +50,11 @@ export class SchemaAdmin {
         .getSchemaModel('_DeclaredSchema')
         .model.findOne({ name: schema.name });
       const operation = isNil(existingSchema) ? 'create' : 'update';
+      const imported = schema.modelOptions.conduit.imported === true;
       const modelOptions = SchemaConverter.getModelOptions({
+        cmsSchema: true,
         existingModelOptions: schema.modelOptions,
+        importedSchema: imported,
       });
       try {
         validateSchemaInput(schema.name, schema.fields, modelOptions);
@@ -64,10 +66,10 @@ export class SchemaAdmin {
           schema.name,
           schema.fields,
           modelOptions,
-          schemas.collectionName,
+          schema.collectionName,
         ),
         operation,
-        schema.ownerModule,
+        imported,
       );
       if (schema.extensions.length > 0) {
         for (const extension of schema.extensions) {
@@ -170,25 +172,17 @@ export class SchemaAdmin {
     if (existingSchema) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Schema name is already in use!');
     }
-
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
+      timestamps: call.request.params.timestamps,
     });
-
     try {
       validateSchemaInput(name, fields, modelOptions);
     } catch (err: unknown) {
       throw new GrpcError(status.INTERNAL, (err as Error).message);
     }
-
-    Object.assign(fields, {
-      _id: { type: TYPE.ObjectId, required: true, unique: true },
-      createdAt: { type: TYPE.Date, required: true },
-      updatedAt: { type: TYPE.Date, required: true },
-    });
-
     await this.schemaController.createSchema(
       new ConduitSchema(name, fields, modelOptions),
     );

@@ -1,5 +1,5 @@
 import { DataTypes, ModelStatic, Sequelize, Transaction } from 'sequelize';
-import { ConduitSchema, Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { Indexable, sleep, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ConduitDatabaseSchema, ParsedQuery } from '../../../interfaces';
 import { isNil } from 'lodash';
@@ -9,7 +9,7 @@ const deepdash = require('deepdash/standalone');
 
 export const extractRelations = (
   name: string,
-  originalSchema: ConduitSchema,
+  originalSchema: ConduitDatabaseSchema,
   model: ModelStatic<any>,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) => {
@@ -57,14 +57,14 @@ export const extractRelations = (
         model.belongsTo(value.model, {
           foreignKey: {
             name: relation + 'Id',
-            allowNull: !(originalSchema.fields[relation] as any).required,
-            defaultValue: (originalSchema.fields[relation] as any).default,
+            allowNull: !(originalSchema.compiledFields[relation] as any).required,
+            defaultValue: (originalSchema.compiledFields[relation] as any).default,
           },
           as: relation,
-          onUpdate: (originalSchema.fields[relation] as any).required
+          onUpdate: (originalSchema.compiledFields[relation] as any).required
             ? 'CASCADE'
             : 'NO ACTION',
-          onDelete: (originalSchema.fields[relation] as any).required
+          onDelete: (originalSchema.compiledFields[relation] as any).required
             ? 'CASCADE'
             : 'SET NULL',
         });
@@ -188,7 +188,7 @@ export function processPushOperations(
 
 export function compileSchema(
   schema: ConduitDatabaseSchema,
-  registeredSchemas: Map<string, ConduitSchema>,
+  registeredSchemas: Map<string, ConduitDatabaseSchema>,
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));

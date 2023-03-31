@@ -5,6 +5,7 @@ import ConduitGrpcSdk, {
   ModelOptionsIndexes,
   RawMongoQuery,
   RawSQLQuery,
+  TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
@@ -17,7 +18,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
   private legacyDeployment = false; // unprefixed declared schema collection
-  registeredSchemas: Map<string, ConduitSchema>;
+  registeredSchemas: Map<string, ConduitDatabaseSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   private readonly _systemSchemas: Set<string> = new Set();
@@ -86,6 +87,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     instanceSync = false,
   ): Promise<Schema> {
     this.models = this.models || {};
+    this.assignFields(schema);
     await this.updateCollectionName(schema, imported);
     await this.checkModelOwnershipAndPermissions(schema);
     await this.addExtensionsFromSchemaModel(schema, gRPC);
@@ -102,6 +104,22 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return createdSchema;
   }
 
+  private assignFields(schema: ConduitSchema) {
+    if (!Object(schema.modelOptions).hasOwnProperty('timestamps')) {
+      schema.modelOptions.timestamps = true;
+    }
+    const fields = {
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
+    };
+    if (schema.modelOptions.timestamps) {
+      Object.assign(fields, {
+        createdAt: { type: TYPE.Date, required: false },
+        updatedAt: { type: TYPE.Date, required: false },
+      });
+    }
+    Object.assign(schema.fields, fields);
+  }
+
   private async updateCollectionName(schema: ConduitSchema, imported: boolean) {
     if (imported) {
       this.foreignSchemaCollections.delete(schema.collectionName);
@@ -116,9 +134,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
           name: schema.name,
         });
         if (!declaredSchema) {
-          collectionName = collectionName.startsWith('_')
-            ? `cnd${collectionName}`
-            : `cnd_${collectionName}`;
+          if (!collectionName.startsWith('cnd_')) {
+            collectionName = collectionName.startsWith('_')
+              ? `cnd${collectionName}`
+              : `cnd_${collectionName}`;
+          }
         } else {
           // recover collection name from DeclaredSchema
           collectionName = declaredSchema.collectionName;

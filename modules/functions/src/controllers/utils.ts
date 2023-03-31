@@ -1,7 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
-  Indexable,
   ParsedRouterRequest,
   RouteBuilder,
 } from '@conduitplatform/grpc-sdk';

@@ -31,6 +31,7 @@ export type RequestHandlers =
   | SocketRequestHandlerCallback;
 
 function generateLog(
+  routerType: string,
   routerRequest: boolean,
   requestReceive: number,
   call: Indexable,
@@ -39,17 +40,21 @@ function generateLog(
   let log = '';
   const latency = Date.now() - requestReceive;
   if (routerRequest) {
-    log += `Request: ${call.request.path}`;
+    log += `(${routerType}) Request: ${call.request.path}`;
   } else {
-    log += `Socket: ${call.request.event} socket: ${call.request.socket}`;
+    log += `(${routerType})  Socket: ${call.request.event} socket: ${call.request.socket}`;
   }
   log += ` ${status ?? '200'} ${latency}`;
 
   ConduitGrpcSdk.Logger.log(log);
   ConduitGrpcSdk.Metrics?.set('grpc_request_latency_seconds', latency / 1000);
+  ConduitGrpcSdk.Metrics?.set(
+    `${routerType}_grpc_request_latency_seconds`,
+    latency / 1000,
+  );
 
   const successStatus = !status || status.toString().charAt(0) === '2';
-  ConduitGrpcSdk.Metrics?.increment('grpc_response_statuses_total', 1, {
+  ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_response_statuses_total`, 1, {
     success: successStatus ? 'true' : 'false',
   });
 }
@@ -69,6 +74,7 @@ function parseResponseData(
   call: any,
   callback: any,
   responded: { did: boolean },
+  routerType: string,
 ) {
   if (responded.did) return;
   responded.did = true;
@@ -103,7 +109,7 @@ function parseResponseData(
     if (r.hasOwnProperty('data')) r.data = JSON.stringify(r.data);
     callback(null, r);
   }
-  generateLog(routerRequest, requestReceive, call, undefined);
+  generateLog(routerType, routerRequest, requestReceive, call, undefined);
 }
 
 export function wrapRouterGrpcFunction(
@@ -128,7 +134,7 @@ export function wrapRouterGrpcFunction(
       }
     } catch (e) {
       ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
-      generateLog(routerRequest, requestReceive, call, status.INTERNAL);
+      generateLog(routerType, routerRequest, requestReceive, call, status.INTERNAL);
       ConduitGrpcSdk.Logger.error((e as Error).message ?? 'Something went wrong');
       return callback({
         code: status.INTERNAL,
@@ -138,14 +144,36 @@ export function wrapRouterGrpcFunction(
 
     const responded = { did: false };
     fun(call, r => {
-      parseResponseData(r, routerRequest, requestReceive, call, callback, responded);
+      parseResponseData(
+        r,
+        routerRequest,
+        requestReceive,
+        call,
+        callback,
+        responded,
+        routerType,
+      );
     })
       .then(r =>
-        parseResponseData(r, routerRequest, requestReceive, call, callback, responded),
+        parseResponseData(
+          r,
+          routerRequest,
+          requestReceive,
+          call,
+          callback,
+          responded,
+          routerType,
+        ),
       )
       .catch(error => {
         ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
-        generateLog(routerRequest, requestReceive, call, error.code ?? status.INTERNAL);
+        generateLog(
+          routerType,
+          routerRequest,
+          requestReceive,
+          call,
+          error.code ?? status.INTERNAL,
+        );
         ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({
           code: error.code ?? status.INTERNAL,

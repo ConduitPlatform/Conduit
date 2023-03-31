@@ -4,9 +4,9 @@ import { hashPassword } from '../utils/auth';
 import {
   ConduitError,
   ConduitRouteActions,
-  ConfigController,
   ConduitRouteParameters,
   ConduitString,
+  ConfigController,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 

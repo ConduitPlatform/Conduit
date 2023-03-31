@@ -6,10 +6,10 @@ import {
   ClientError,
   ClientMiddleware,
   ClientMiddlewareCall,
-  Status,
   MethodDescriptor,
+  Status,
 } from 'nice-grpc-common';
-import { Registry, Counter, Histogram, exponentialBuckets } from 'prom-client';
+import { Counter, exponentialBuckets, Histogram, Registry } from 'prom-client';
 
 const registry = new Registry();
 

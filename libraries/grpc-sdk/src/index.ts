@@ -22,7 +22,7 @@ import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { ConduitModule } from './classes/ConduitModule';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { sleep } from './utilities';
+import { getJsonEnv, sleep } from './utilities';
 import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
@@ -38,8 +38,9 @@ import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
-import fs from 'fs-extra';
 import { ClusterOptions, RedisOptions } from 'ioredis';
+
+type UrlRemap = { [url: string]: string };
 
 export default class ConduitGrpcSdk {
   private readonly serverUrl: string;
@@ -71,28 +72,37 @@ export default class ConduitGrpcSdk {
   private lastSearch: number = Date.now();
   private readonly name: string;
   private readonly instance: string;
+  private readonly urlRemap?: UrlRemap;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
   static Metrics?: ConduitMetrics;
-  static readonly Logger: ConduitLogger = new ConduitLogger([
-    new winston.transports.File({
-      filename: path.join(__dirname, '.logs/combined.log'),
-      level: 'info',
-    }),
-    new winston.transports.File({
-      filename: path.join(__dirname, '.logs/errors.log'),
-      level: 'error',
-    }),
-  ]);
+  private static _Logger: ConduitLogger;
+
+  static get Logger() {
+    return ConduitGrpcSdk._Logger;
+  }
 
   constructor(
     serverUrl: string,
     serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
     name?: string,
     watchModules = true,
-    private readonly urlRemap?: string,
   ) {
+    try {
+      ConduitGrpcSdk._Logger = new ConduitLogger([
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/combined.log'),
+          level: 'info',
+        }),
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/errors.log'),
+          level: 'error',
+        }),
+      ]);
+    } catch (e) {
+      ConduitGrpcSdk._Logger = new ConduitLogger();
+    }
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -101,6 +111,14 @@ export default class ConduitGrpcSdk {
     this.instance = this.name.startsWith('module_')
       ? this.name.substring(8)
       : Crypto.randomBytes(16).toString('hex');
+
+    this.urlRemap = getJsonEnv<UrlRemap>(
+      'URL_REMAP',
+      process.env.URL_REMAP,
+      stringConf => ({
+        '*': stringConf,
+      }),
+    );
 
     if (process.env.METRICS_PORT) {
       ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
@@ -362,27 +380,8 @@ export default class ConduitGrpcSdk {
   initializeEventBus(): Promise<EventBus> {
     let promise = Promise.resolve();
     if (process.env.REDIS_CONFIG) {
-      const redisConfig = process.env.REDIS_CONFIG;
-      let redisJson;
-      if (redisConfig.startsWith('{')) {
-        try {
-          redisJson = JSON.parse(redisConfig);
-        } catch (e) {
-          throw new Error('Invalid JSON in REDIS_CONFIG');
-        }
-      } else {
-        try {
-          redisJson = JSON.parse(fs.readFileSync(redisConfig).toString());
-        } catch (e) {
-          throw new Error('Invalid JSON in REDIS_CONFIG');
-        }
-      }
-      this._redisDetails = redisJson;
-    } else if (
-      process.env.REDIS_HOST &&
-      process.env.REDIS_PORT &&
-      !process.env.REDIS_CONFIG
-    ) {
+      this._redisDetails = getJsonEnv('REDIS_CONFIG');
+    } else if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
       this._redisDetails = {
         host: process.env.REDIS_HOST!,
         port: parseInt(process.env.REDIS_PORT!, 10),
@@ -410,7 +409,7 @@ export default class ConduitGrpcSdk {
         if (this._redisDetails!.hasOwnProperty('nodes')) {
           this._redisManager = new RedisManager(this._redisDetails);
         } else {
-          const redisHost = this.urlRemap ?? (this._redisDetails as RedisOptions).host;
+          const redisHost = (this._redisDetails as RedisOptions).host;
           this._redisManager = new RedisManager({
             ...this._redisDetails,
             host: redisHost,
@@ -460,11 +459,16 @@ export default class ConduitGrpcSdk {
       (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
     )
       return;
+    moduleUrl =
+      this.urlRemap?.[moduleUrl] ??
+      (this.urlRemap?.['*']
+        ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
+        : moduleUrl);
     if (this._availableModules[moduleName]) {
       // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
+        moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
@@ -472,7 +476,7 @@ export default class ConduitGrpcSdk {
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
-        this.urlRemap ? `${this.urlRemap}:${moduleUrl.split(':')[1]}` : moduleUrl,
+        moduleUrl,
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
