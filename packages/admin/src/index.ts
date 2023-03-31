@@ -11,6 +11,7 @@ import ConduitGrpcSdk, {
   GrpcServer,
   Indexable,
   merge,
+  sleep,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {

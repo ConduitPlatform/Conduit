@@ -58,7 +58,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('GetAppRouteMiddleware', {
-        response: [TYPE.String],
+        middleware: [TYPE.String],
       }),
       this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
     );

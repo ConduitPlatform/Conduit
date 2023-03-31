@@ -21,18 +21,19 @@ export function getRouteMiddleware(admin: AdminModule) {
       },
     },
     new ConduitRouteReturnDefinition('GetAdminRouteMiddleware', {
-      response: [TYPE.String],
+      middleware: [TYPE.String],
     }),
     async (req: ConduitRouteParameters) => {
       const { path, action } = req.params!;
       if (!(action in ConduitRouteActions)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
       }
-      const route = admin.getGrpcRoute(path, action);
+      const { url, routeIndex } = admin.findGrpcRoute(path, action);
+      const route = admin.getGrpcRoute(url, routeIndex);
       if (!route) {
         throw new GrpcError(status.NOT_FOUND, 'Route not found');
       }
-      return route.options!.middlewares;
+      return { middleware: route.options!.middlewares };
     },
   );
 }

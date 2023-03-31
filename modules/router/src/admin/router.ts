@@ -45,11 +45,12 @@ export class RouterAdmin {
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
     }
-    const route = this.router.getGrpcRoute(path, action);
+    const { url, routeIndex } = this.router.findGrpcRoute(path, action);
+    const route = this.router.getGrpcRoute(url, routeIndex);
     if (!route) {
       throw new GrpcError(status.NOT_FOUND, 'Route not found');
     }
-    return route.options.middlewares;
+    return { middleware: route.options.middlewares };
   }
 
   async patchMiddleware(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
