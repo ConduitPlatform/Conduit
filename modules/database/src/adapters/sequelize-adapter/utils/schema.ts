@@ -143,8 +143,8 @@ export async function getTransactionAndParsedQuery(
     delete parsedQuery['$set'];
   }
   if (method === 'PUT') {
-    Object.keys(schema).forEach(field => {
-      if (!parsedQuery.hasOwnProperty(field)) {
+    Object.keys(schema.compiledFields).forEach(field => {
+      if (!parsedQuery.hasOwnProperty(field) && field !== '_id') {
         parsedQuery[field] = null;
       }
     });

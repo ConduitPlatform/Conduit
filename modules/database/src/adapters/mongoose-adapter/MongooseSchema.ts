@@ -10,7 +10,7 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitSchema } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -58,6 +58,17 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   ) {
     let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     parsedQuery['updatedAt'] = new Date();
+    if (!updateProvidedOnly) {
+      Object.keys(this.originalSchema.compiledFields).forEach(field => {
+        if (
+          !parsedQuery.hasOwnProperty(field) &&
+          field !== '_id' &&
+          field !== 'updatedAt'
+        ) {
+          parsedQuery[field] = null;
+        }
+      });
+    }
     if (updateProvidedOnly && !parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = { $set: parsedQuery };
     }
@@ -78,6 +89,13 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
     );
     let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
+    if (!updateProvidedOnly) {
+      Object.keys(this.originalSchema.compiledFields).forEach(field => {
+        if (!parsedQuery.hasOwnProperty(field) && field !== '_id') {
+          parsedQuery[field] = null;
+        }
+      });
+    }
     if (updateProvidedOnly && !parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = { $set: parsedQuery };
     }
