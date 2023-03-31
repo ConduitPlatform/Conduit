@@ -77,16 +77,11 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
   static Metrics?: ConduitMetrics;
-  static readonly Logger: ConduitLogger = new ConduitLogger([
-    new winston.transports.File({
-      filename: path.join(__dirname, '.logs/combined.log'),
-      level: 'info',
-    }),
-    new winston.transports.File({
-      filename: path.join(__dirname, '.logs/errors.log'),
-      level: 'error',
-    }),
-  ]);
+  private static _Logger: ConduitLogger;
+
+  static get Logger() {
+    return ConduitGrpcSdk._Logger;
+  }
 
   constructor(
     serverUrl: string,
@@ -94,6 +89,20 @@ export default class ConduitGrpcSdk {
     name?: string,
     watchModules = true,
   ) {
+    try {
+      ConduitGrpcSdk._Logger = new ConduitLogger([
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/combined.log'),
+          level: 'info',
+        }),
+        new winston.transports.File({
+          filename: path.join(__dirname, '.logs/errors.log'),
+          level: 'error',
+        }),
+      ]);
+    } catch (e) {
+      ConduitGrpcSdk._Logger = new ConduitLogger();
+    }
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
