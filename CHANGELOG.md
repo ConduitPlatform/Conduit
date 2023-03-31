@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.2...v0.16.0-alpha.3) (2023-03-31)
+
+
+### Bug Fixes
+
+* **grpc-sdk:** logger crashing on read-only directories ([27315f5](https://github.com/ConduitPlatform/Conduit/commit/27315f5f1a0b75406cf17f0f7053caf0bb09927a))
+
 ## [0.16.0-alpha.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.1...v0.16.0-alpha.2) (2023-03-30)
 
 
