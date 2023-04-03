@@ -26,7 +26,7 @@ export class SQLSchema extends SequelizeSchema {
     query: SingleDocQuery,
     populate?: string[],
     transaction?: Transaction,
-    updateProvidedOnly = true,
+    updateProvidedOnly: boolean = true,
   ): Promise<Indexable> {
     const method = updateProvidedOnly ? 'PATCH' : 'PUT';
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(

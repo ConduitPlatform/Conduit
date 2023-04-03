@@ -469,7 +469,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     filterQuery: Query,
     query: SingleDocQuery,
     populate?: string[],
-    updateProvidedOnly = true,
+    updateProvidedOnly: boolean = true,
   ) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
