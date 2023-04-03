@@ -110,19 +110,28 @@ function validateArray(
     return;
   }
   param.forEach((obj: any, index: number) => {
-    if (isObject(type) && isObject(type.type)) {
+    if (isObject(obj) && isObject(type) && isObject(type.type)) {
       validateObject(index as unknown as string, obj, type.type);
       param[index] = obj;
-    } else if (isObject(type) && !type.hasOwnProperty('type')) {
+    } else if (isObject(obj) && isObject(type) && !type.hasOwnProperty('type')) {
       validateObject(index as unknown as string, obj, type);
       param[index] = obj;
     } else if (isObject(type) && type.hasOwnProperty('type')) {
-      param[index] = validateType(
-        `${fieldName}[${index}]`,
-        type.type as string,
-        obj,
-        false,
-      );
+      if (type.type.hasOwnProperty('type')) {
+        param[index] = validateType(
+          `${fieldName}[${index}]`,
+          type.type.type as string,
+          obj,
+          type.type.required,
+        );
+      } else {
+        param[index] = validateType(
+          `${fieldName}[${index}]`,
+          type.type as string,
+          obj,
+          false,
+        );
+      }
     } else {
       param[index] = validateType(`${fieldName}[${index}]`, type as string, obj, false);
     }
@@ -205,6 +214,10 @@ function validateType(
       }
       break;
     case TYPE.ObjectId:
+      if (typeof value !== 'string')
+        throw ConduitError.userInput(`${fieldName} must be a string`);
+      break;
+    case TYPE.Relation:
       if (typeof value !== 'string')
         throw ConduitError.userInput(`${fieldName} must be a string`);
       break;
