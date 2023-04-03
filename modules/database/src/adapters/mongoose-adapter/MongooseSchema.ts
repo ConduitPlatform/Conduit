@@ -54,7 +54,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     id: string,
     query: SingleDocQuery,
     populate?: string[],
-    updateProvidedOnly = true,
+    updateProvidedOnly: boolean = true,
   ) {
     let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     parsedQuery['updatedAt'] = new Date();
@@ -62,8 +62,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       Object.keys(this.originalSchema.compiledFields).forEach(field => {
         if (
           !parsedQuery.hasOwnProperty(field) &&
-          field !== '_id' &&
-          field !== 'updatedAt'
+          !['_id', 'updatedAt', 'createdAt'].includes(field)
         ) {
           parsedQuery[field] = null;
         }
@@ -83,7 +82,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     filterQuery: Query,
     query: SingleDocQuery,
     populate?: string[],
-    updateProvidedOnly = true,
+    updateProvidedOnly: boolean = true,
   ) {
     const parsedFilter = parseQuery(
       typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
@@ -91,7 +90,10 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
     if (!updateProvidedOnly) {
       Object.keys(this.originalSchema.compiledFields).forEach(field => {
-        if (!parsedQuery.hasOwnProperty(field) && field !== '_id') {
+        if (
+          !parsedQuery.hasOwnProperty(field) &&
+          !['_id', 'createdAt', 'updatedAt'].includes(field)
+        ) {
           parsedQuery[field] = null;
         }
       });

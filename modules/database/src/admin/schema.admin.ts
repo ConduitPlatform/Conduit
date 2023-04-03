@@ -17,8 +17,6 @@ import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import { parseSortParam } from '../handlers/utils';
 import escapeStringRegexp = require('escape-string-regexp');
-import { PostgresSchema } from '../adapters/sequelize-adapter/postgres-adapter/PostgresSchema';
-import { SQLSchema } from '../adapters/sequelize-adapter/sql-adapter/SQLSchema';
 
 export class SchemaAdmin {
   constructor(
@@ -538,18 +536,6 @@ export class SchemaAdmin {
   }
 
   async getDatabaseType(): Promise<UnparsedRouterResponse> {
-    const test1 = await (
-      this.database.getSchemaModel('User').model as MongooseSchema
-    ).updateMany(
-      {},
-      {
-        active: false,
-        isVerified: false,
-      },
-      undefined,
-      false,
-    );
-    //const test2 = await this.database.getSchemaModel('User').model.findOne({ _id : 'bca91c50-43a3-4523-9abb-4e774f9dcd3d' }, undefined, );
     return this.database.getDatabaseType();
   }
 

@@ -144,7 +144,10 @@ export async function getTransactionAndParsedQuery(
   }
   if (method === 'PUT') {
     Object.keys(schema.compiledFields).forEach(field => {
-      if (!parsedQuery.hasOwnProperty(field) && field !== '_id') {
+      if (
+        !parsedQuery.hasOwnProperty(field) &&
+        !['_id', 'createdAt', 'updatedAt'].includes(field)
+      ) {
         parsedQuery[field] = null;
       }
     });
