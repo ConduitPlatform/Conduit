@@ -124,7 +124,10 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       email: payload.email,
       data: { ...payload.email_verified },
     };
-    const user = await this.createOrUpdateUser(userParams);
+    const user = await this.createOrUpdateUser(
+      userParams,
+      call.request.params.invitationToken,
+    );
     await Token.getInstance().deleteOne(stateToken);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
@@ -168,6 +171,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
+          invitationToken: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {

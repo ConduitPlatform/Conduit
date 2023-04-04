@@ -48,6 +48,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         bodyParams: {
           phone: ConduitString.Required,
           captchaToken: ConduitString.Optional,
+          invitationToken: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -109,9 +110,19 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    const { phone } = call.request.params;
+    const { phone, invitationToken } = call.request.params;
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    if (!user) {
+      const teams = ConfigController.getInstance().config.teams;
+      if (
+        teams.enabled &&
+        !teams.allowRegistrationWithoutInvite &&
+        isNil(invitationToken)
+      ) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+      }
+    }
     const existingToken = await Token.getInstance().findOne({
       type: {
         $in: [
