@@ -198,6 +198,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    if (
+      !ConfigController.getInstance().config.teams.allowRegistrationWithoutInvite &&
+      isNil(call.request.params.invitationToken)
+    ) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+    }
     const email = call.request.params.email.toLowerCase();
     const password = call.request.params.password;
 

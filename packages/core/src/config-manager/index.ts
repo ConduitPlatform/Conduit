@@ -23,7 +23,7 @@ import parseConfigSchema from '../utils';
 import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
 import fs from 'fs-extra';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -263,10 +263,10 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async addFieldsToModule(moduleName: string, moduleConfig: any) {
-    let existingConfig = await this._configStorage.getConfig(moduleName);
-    existingConfig = { ...moduleConfig, ...existingConfig };
-    await this._configStorage.setConfig(moduleName, JSON.stringify(existingConfig));
-    return existingConfig;
+    const existingConfig = await this._configStorage.getConfig(moduleName);
+    const mergedConfig = merge(moduleConfig, existingConfig);
+    await this._configStorage.setConfig(moduleName, JSON.stringify(mergedConfig));
+    return mergedConfig;
   }
 
   async isModuleUp(moduleName: string) {
