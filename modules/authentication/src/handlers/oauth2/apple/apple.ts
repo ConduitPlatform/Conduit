@@ -126,7 +126,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     };
     const user = await this.createOrUpdateUser(
       userParams,
-      call.request.params.invitationToken,
+      stateToken.data.invitationToken,
     );
     await Token.getInstance().deleteOne(stateToken);
     const config = ConfigController.getInstance().config;
@@ -171,7 +171,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
-          invitationToken: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {

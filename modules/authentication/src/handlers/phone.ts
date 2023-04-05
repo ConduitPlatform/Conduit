@@ -17,6 +17,7 @@ import { TokenType } from '../constants/TokenType';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
 import { v4 as uuid } from 'uuid';
+import { TeamsHandler } from './team';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -96,6 +97,19 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       user = await User.getInstance().create({
         phoneNumber: existingToken.data.phone,
       });
+      if (isNil(existingToken.data.invitationToken)) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      } else {
+        await TeamsHandler.getInstance()
+          .addUserToTeam(user, existingToken.data.invitationToken)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
     } else {
       user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -162,6 +176,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         clientId,
         phone,
         verification: verificationSid,
+        invitationToken,
       },
       token: uuid(),
     });

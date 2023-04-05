@@ -149,10 +149,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
 
     await Token.getInstance().deleteOne(stateToken);
-    const user = await this.createOrUpdateUser(
-      payload,
-      call.request.params.invitationToken,
-    );
+    const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -276,7 +273,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           queryParams: {
             code: ConduitString.Required,
             state: ConduitString.Required,
-            invitationToken: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -294,7 +290,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           bodyParams: {
             code: ConduitString.Required,
             state: ConduitString.Required,
-            invitationToken: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
