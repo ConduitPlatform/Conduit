@@ -28,7 +28,7 @@ export default {
     },
     allowedHeaders: {
       format: 'String',
-      default: 'Content-Type,Authorization,Cache-Control',
+      default: 'Content-Type,Authorization,Cache-Control,masterkey',
     },
     exposedHeaders: {
       format: 'String',
