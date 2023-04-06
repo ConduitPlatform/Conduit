@@ -17,6 +17,7 @@ import { TokenType } from '../constants/TokenType';
 import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
 import { TokenProvider } from './tokenProvider';
 import { v4 as uuid } from 'uuid';
+import { TeamsHandler } from './team';
 
 export class PhoneHandlers implements IAuthenticationStrategy {
   private sms: SMS;
@@ -48,6 +49,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         bodyParams: {
           phone: ConduitString.Required,
           captchaToken: ConduitString.Optional,
+          invitationToken: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.login
@@ -95,6 +97,19 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       user = await User.getInstance().create({
         phoneNumber: existingToken.data.phone,
       });
+      if (isNil(existingToken.data.invitationToken)) {
+        await TeamsHandler.getInstance()
+          .addUserToDefault(user)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      } else {
+        await TeamsHandler.getInstance()
+          .addUserToTeam(user, existingToken.data.invitationToken)
+          .catch(err => {
+            ConduitGrpcSdk.Logger.error(err);
+          });
+      }
     } else {
       user = await User.getInstance().findOne({ _id: existingToken.user as string });
       if (isNil(user)) throw new GrpcError(status.UNAUTHENTICATED, 'User not found');
@@ -109,9 +124,19 @@ export class PhoneHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    const { phone } = call.request.params;
+    const { phone, invitationToken } = call.request.params;
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    if (!user) {
+      const teams = ConfigController.getInstance().config.teams;
+      if (
+        teams.enabled &&
+        !teams.allowRegistrationWithoutInvite &&
+        isNil(invitationToken)
+      ) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+      }
+    }
     const existingToken = await Token.getInstance().findOne({
       type: {
         $in: [
@@ -151,6 +176,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
         clientId,
         phone,
         verification: verificationSid,
+        invitationToken,
       },
       token: uuid(),
     });
