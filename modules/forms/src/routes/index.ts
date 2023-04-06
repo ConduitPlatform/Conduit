@@ -1,5 +1,6 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  ConfigController,
   GrpcError,
   GrpcServer,
   ParsedRouterRequest,
@@ -20,6 +21,10 @@ export class FormsRoutes {
   }
 
   async submitForm(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const captchaRequired = ConfigController.getInstance().config.captcha;
+    if (captchaRequired && call.request.context.captcha !== 'success') {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Invalid or missing captcha');
+    }
     const formId = call.request.path.split('/')[2];
     const form = await Forms.getInstance()
       .findOne({ _id: formId })
@@ -31,16 +36,15 @@ export class FormsRoutes {
     }
 
     const data = call.request.params;
+    if (data.captchaToken) {
+      delete data.captchaToken;
+    }
     const fileData: any = {};
-    let honeyPot: boolean = false;
     let possibleSpam: boolean = false;
     Object.keys(data).forEach(r => {
       if (form.fields[r] === 'File') {
         fileData[r] = data[r];
         delete data[r];
-      }
-      if (isNil(form.fields[r])) {
-        honeyPot = true;
       }
     });
     if (form.emailField && data[form.emailField]) {
@@ -58,7 +62,7 @@ export class FormsRoutes {
         possibleSpam = true;
       }
     }
-    if (honeyPot && possibleSpam) {
+    if (possibleSpam) {
       await FormReplies.getInstance()
         .create({
           form: form._id,
