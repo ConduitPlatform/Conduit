@@ -50,8 +50,7 @@ export class CaptchaValidator {
     let success = false;
     if (provider === 'recaptcha') {
       success = await this.recaptchaVerify(secretKey, token);
-    }
-    if (provider === 'hcaptcha') {
+    } else if (provider === 'hcaptcha') {
       const response = await hcaptchaVerify(secretKey, token);
       success = response.success;
     } else {
