@@ -129,20 +129,6 @@ export namespace AuthUtils {
     }
   }
 
-  export async function recaptchaVerify(secret: string, token: string) {
-    const googleUrl = `https://www.google.com/siteverify?secret=${secret}&response=${token}`;
-    const response = await axios.post(
-      googleUrl,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        },
-      },
-    );
-    return response.data.success;
-  }
-
   export async function fetchMembers(params: FetchMembersParams) {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;

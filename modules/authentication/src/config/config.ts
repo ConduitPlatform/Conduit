@@ -42,11 +42,6 @@ export default {
       format: 'Boolean',
       default: false,
     },
-    provider: {
-      format: 'String',
-      default: 'recaptcha',
-      enum: ['recaptcha', 'hcaptcha'],
-    },
     routes: {
       login: {
         format: 'Boolean',
@@ -70,10 +65,6 @@ export default {
         format: 'Boolean',
         default: true,
       },
-    },
-    secretKey: {
-      format: 'String',
-      default: '',
     },
   },
 };

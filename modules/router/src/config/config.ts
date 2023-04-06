@@ -4,6 +4,21 @@ export default {
     format: 'String',
     default: '',
   },
+  captcha: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    provider: {
+      format: 'String',
+      default: 'recaptcha',
+      enum: ['recaptcha', 'hcaptcha', 'turnstile'],
+    },
+    secretKey: {
+      format: 'String',
+      default: '',
+    },
+  },
   cors: {
     enabled: {
       format: 'Boolean',

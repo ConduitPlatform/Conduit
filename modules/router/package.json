@@ -22,6 +22,7 @@
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "bcrypt": "^5.0.1",
+    "hcaptcha": "^0.1.1",
     "deep-object-diff": "^1.1.9",
     "deepdash": "^5.3.9",
     "cors": "^2.8.5",
@@ -30,6 +31,7 @@
     "helmet": "^5.1.0",
     "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
+    "axios": "^1.2.1",
     "moment": "^2.29.4",
     "rate-limiter-flexible": "^2.3.7",
     "swagger-ui-express": "4.4.0"
