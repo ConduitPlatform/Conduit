@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { FormReplies, Forms } from '../models';
-import { isNil } from 'lodash';
 import axios from 'axios';
 
 export class FormsRoutes {
