@@ -95,7 +95,10 @@ export class AdminRoutes {
         path: '/files/upload',
         description: `Creates a new file and provides a URL to upload it to.`,
       },
-      new ConduitRouteReturnDefinition('CreateFileByUrl', File.name),
+      new ConduitRouteReturnDefinition('CreateFileByUrl', {
+        file: File.getInstance().fields,
+        url: ConduitString.Required,
+      }),
       this.fileHandlers.createFileUploadUrl.bind(this.fileHandlers),
     );
     this.routingManager.route(
@@ -133,7 +136,10 @@ export class AdminRoutes {
         path: '/files/upload/:id',
         description: `Updates a file and provides a URL to upload its data to.`,
       },
-      new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+      new ConduitRouteReturnDefinition('PatchFileByUrl', {
+        file: File.getInstance().fields,
+        url: ConduitString.Required,
+      }),
       this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
     );
     this.routingManager.route(
