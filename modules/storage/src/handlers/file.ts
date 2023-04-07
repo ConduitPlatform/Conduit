@@ -388,14 +388,6 @@ export class FileHandlers {
     if (newFolder !== file.folder) {
       await this.findOrCreateFolder(newFolder, newContainer);
     }
-    const exists = await File.getInstance().findOne({
-      name: newName,
-      container: newContainer,
-      folder: newFolder,
-    });
-    if (!isNil(exists)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
-    }
     return {
       name: newName,
       folder: newFolder,
