@@ -53,7 +53,11 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   get active(): boolean {
-    return this.channel ? this.channel!.getConnectivityState(true) === 2 : false;
+    if (!this.channel) {
+      return false;
+    }
+    const connectivityState = this.channel.getConnectivityState(true);
+    return connectivityState === 2 || connectivityState === 1 || connectivityState === 0;
   }
 
   get client(): Client<T> | undefined {
