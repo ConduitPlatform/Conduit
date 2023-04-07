@@ -9,6 +9,7 @@ const schema = {
   },
   subject: {
     type: TYPE.String,
+    required: true,
   },
   body: {
     type: TYPE.String,
