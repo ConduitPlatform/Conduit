@@ -1,4 +1,4 @@
-import { ConduitModelField, TYPE } from '../interfaces';
+import { ConduitModelField, TYPE } from '@conduitplatform/grpc-sdk';
 
 class ConduitStringConstructor {
   // private to disallow creating other instances of this type

@@ -1,14 +1,12 @@
-import {
+import ConduitGrpcSdk, {
+  Indexable,
   ParsedRouterRequest,
   ParsedSocketRequest,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
-} from './interfaces';
-
+} from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
-import { Indexable } from '../interfaces';
-import ConduitGrpcSdk from '../index';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,

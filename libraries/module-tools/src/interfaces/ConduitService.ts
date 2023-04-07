@@ -1,4 +1,4 @@
-import { GrpcRequest, GrpcResponse } from '..';
+import { GrpcRequest, GrpcResponse } from '@conduitplatform/grpc-sdk';
 
 export interface ConduitService {
   readonly protoPath: string;

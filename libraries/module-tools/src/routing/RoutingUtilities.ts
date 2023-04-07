@@ -1,5 +1,5 @@
+import { Indexable } from '@conduitplatform/grpc-sdk';
 import { RequestHandlers, wrapRouterGrpcFunction } from './wrapRouterFunctions';
-import { Indexable } from '../interfaces';
 
 export function wrapFunctionsAsync(
   functions: { [name: string]: RequestHandlers },

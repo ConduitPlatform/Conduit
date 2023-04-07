@@ -1,4 +1,4 @@
-import { ConduitModel } from '.';
+import { ConduitModel } from './Model';
 
 export interface ConduitSchemaExtension {
   readonly schemaName: string;

@@ -1,5 +1,4 @@
 // Forked from nice-grpc-prometheus
-
 import { isAbortError } from 'abort-controller-x';
 import {
   CallOptions,

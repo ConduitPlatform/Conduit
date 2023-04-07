@@ -1,6 +1,5 @@
-import { ConduitRouteReturnDefinition } from '../ConduitRouteReturn';
-import { RequestHandlers } from '../wrapRouterFunctions';
-import { TYPE } from '../../interfaces';
+import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
+import { TYPE } from './Model';
 
 export type ConduitSocketParamTypes = (TYPE | ConduitSocketParamTypes)[];
 
@@ -14,7 +13,7 @@ export interface ConduitSocketOptions {
 export interface ConduitSocketEventHandler {
   params?: ConduitSocketParamTypes;
   returnType?: ConduitRouteReturnDefinition;
-  handler: RequestHandlers;
+  handler: any;
 }
 
 export interface EventsProtoDescription {

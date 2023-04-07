@@ -1,7 +1,10 @@
-import { ConduitModel, ConduitSchemaOptions } from '../interfaces';
-import { ConduitSchema } from './ConduitSchema';
-import { DatabaseProvider } from '../modules';
-import { Query } from '../types/db';
+import {
+  ConduitModel,
+  ConduitSchema,
+  ConduitSchemaOptions,
+  DatabaseProvider,
+  Query,
+} from '@conduitplatform/grpc-sdk';
 
 export class ConduitActiveSchema<T> extends ConduitSchema {
   private readonly dbInstance: DatabaseProvider;

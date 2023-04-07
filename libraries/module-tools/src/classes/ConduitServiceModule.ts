@@ -1,15 +1,18 @@
-import ConduitGrpcSdk, { GrpcServer, HealthCheckStatus } from '..';
 import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
-import { GrpcRequest } from '../types';
 import {
   HealthCheckRequest,
   HealthCheckResponse,
   HealthCheckResponse_ServingStatus,
 } from '../protoUtils/grpc_health_check';
-import { GrpcCallback } from '../interfaces';
 import { ServerWritableStream } from '@grpc/grpc-js';
+import { GrpcServer } from './GrpcServer';
+import ConduitGrpcSdk, {
+  GrpcCallback,
+  GrpcRequest,
+  HealthCheckStatus,
+} from '@conduitplatform/grpc-sdk';
 
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;

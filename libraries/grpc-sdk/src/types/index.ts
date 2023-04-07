@@ -6,6 +6,7 @@ import {
   SummaryConfiguration,
 } from 'prom-client';
 
+export * from './db';
 export type GrpcRequest<T> = { request: T; metadata?: Metadata };
 export type GrpcResponse<T> = (
   err: {

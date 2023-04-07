@@ -1,6 +1,6 @@
 import { createVerifier } from 'fast-jwt';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcCallback } from '../index';
+import ConduitGrpcSdk, { GrpcCallback } from '@conduitplatform/grpc-sdk';
 
 interface JWT {
   moduleName: string;

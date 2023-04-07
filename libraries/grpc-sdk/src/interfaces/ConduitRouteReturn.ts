@@ -1,4 +1,4 @@
-import { ConduitModel } from '../interfaces';
+import { ConduitModel } from './Model';
 
 /**
  * Supports:

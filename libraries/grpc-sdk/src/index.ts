@@ -19,7 +19,7 @@ import { EventBus } from './utilities/EventBus';
 import { RedisManager } from './utilities/RedisManager';
 import { StateManager } from './utilities/StateManager';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
-import { ConduitModule } from './classes/ConduitModule';
+import { checkModuleHealth, ConduitModule } from './classes';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import { getJsonEnv, sleep } from './utilities';
@@ -33,13 +33,12 @@ import {
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
-import { checkModuleHealth } from './classes/HealthCheck';
 import { ConduitLogger, setupLoki } from './utilities/Logger';
 import winston from 'winston';
 import path from 'path';
-import { ConduitMetrics } from './metrics';
 import { ClusterOptions, RedisOptions } from 'ioredis';
-
+import { ClientMiddleware } from 'nice-grpc-common';
+import { ConduitMetrics } from './metrics';
 type UrlRemap = { [url: string]: string };
 
 export default class ConduitGrpcSdk {
@@ -76,7 +75,7 @@ export default class ConduitGrpcSdk {
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
-  static Metrics?: ConduitMetrics;
+  public static Metrics?: ConduitMetrics;
   private static _Logger: ConduitLogger;
 
   static get Logger() {
@@ -554,8 +553,6 @@ export default class ConduitGrpcSdk {
 export * from './interfaces';
 export * from './classes';
 export * from './modules';
-export * from './helpers';
 export * from './constants';
-export * from './routing';
 export * from './types';
 export * from './utilities';

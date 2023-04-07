@@ -1,4 +1,4 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import {
   GenerateProtoRequest,
   RegisterConduitRouteRequest,
@@ -10,7 +10,7 @@ import {
   ConduitProxyObject,
   ConduitRouteObject,
   SocketProtoDescription,
-} from '../../routing';
+} from '../../interfaces';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {

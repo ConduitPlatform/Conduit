@@ -1,13 +1,13 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
-import { RoutingManager } from './RoutingManager';
-import { RequestHandlers } from './wrapRouterFunctions';
 import {
+  ConduitModel,
   ConduitRoute,
   ConduitRouteActions,
   ConduitRouteOption,
   ConduitRouteOptions,
-} from './interfaces';
-import { ConduitModel } from '../interfaces';
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/grpc-sdk';
+import { RoutingManager } from './RoutingManager';
+import { RequestHandlers } from './wrapRouterFunctions';
 
 export class RouteBuilder {
   private readonly _options!: ConduitRouteOptions;

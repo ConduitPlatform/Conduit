@@ -1,31 +1,28 @@
-import {
-  ConduitProxyObject,
-  GrpcServer,
-  ProxyMiddlewareOptions,
-  ProxyRouteBuilder,
-  ProxyRouteOptions,
-} from '../index';
-import { Admin, Router } from '../modules';
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import { wrapFunctionsAsync } from './RoutingUtilities';
-import { RegisterConduitRouteRequest_PathDefinition } from '../protoUtils/router';
+import fs from 'fs';
+import path from 'path';
 import {
+  Admin,
   ConduitMiddlewareOptions,
+  ConduitProxyObject,
   ConduitRouteActions,
   ConduitRouteObject,
   ConduitRouteOptions,
+  ConduitRouteReturnDefinition,
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
   ParsedRouterRequest,
+  ProxyMiddlewareOptions,
+  ProxyRouteOptions,
+  Router,
   SocketProtoDescription,
   UnparsedRouterResponse,
-} from './interfaces';
-import { RegisterAdminRouteRequest_PathDefinition } from '../protoUtils/core';
-import fs from 'fs';
-import path from 'path';
+} from '@conduitplatform/grpc-sdk';
+import { GrpcServer } from '../classes';
+import { ProxyRouteBuilder } from './ProxyRouteBuilder';
 
 export class RoutingManager {
   private _moduleRoutes: {
@@ -157,12 +154,7 @@ export class RoutingManager {
       modifiedFunctions,
     );
     const paths = Object.values(this._moduleRoutes);
-    return this._router.register(
-      this.isAdmin
-        ? (paths as RegisterAdminRouteRequest_PathDefinition[])
-        : (paths as RegisterConduitRouteRequest_PathDefinition[]),
-      protoDescriptions.protoFile,
-    );
+    return this._router.register(paths as unknown as any, protoDescriptions.protoFile);
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {

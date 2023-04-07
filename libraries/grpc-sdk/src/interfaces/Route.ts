@@ -1,4 +1,5 @@
-import { ConduitModel, Indexable } from '../../interfaces';
+import { ConduitModel } from './Model';
+import { Indexable } from './Indexable';
 
 export interface ConduitRouteParameters {
   params?: Indexable;

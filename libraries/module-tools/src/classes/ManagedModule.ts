@@ -1,15 +1,16 @@
-import ConduitGrpcSdk, {
-  ConduitService,
-  GrpcServer,
-  merge,
-  SetConfigRequest,
-  SetConfigResponse,
-} from '..';
 import { ConduitServiceModule } from './ConduitServiceModule';
 import { ConfigController } from './ConfigController';
 import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
+import { ConduitService } from '../interfaces';
+import ConduitGrpcSdk, {
+  Indexable,
+  merge,
+  SetConfigRequest,
+  SetConfigResponse,
+} from '@conduitplatform/grpc-sdk';
+import { GrpcServer } from './GrpcServer';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   protected abstract readonly configSchema?: object;
@@ -174,7 +175,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   /** Used to update the module's configuration on initial Redis/DB reconciliation. */
   async handleConfigSyncUpdate() {
     if (!this.config) return;
-    this.grpcSdk.bus!.subscribe(`${this.name}:config:update`, async message => {
+    this.grpcSdk.bus!.subscribe(`${this.name}:config:update`, async (message: string) => {
       ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
       await this.onConfig();
     });

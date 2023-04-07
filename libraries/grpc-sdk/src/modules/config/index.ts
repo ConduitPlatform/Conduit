@@ -12,12 +12,12 @@ import ConduitGrpcSdk from '../../index';
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
   private coreLive = false;
-  private readonly _serviceHealthStatusGetter: Function;
+  private readonly _serviceHealthStatusGetter?: Function;
 
   constructor(
     moduleName: string,
     readonly url: string,
-    serviceHealthStatusGetter: Function,
+    serviceHealthStatusGetter?: Function,
     grpcToken?: string,
   ) {
     super(moduleName, 'config', url, grpcToken);
@@ -102,7 +102,9 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     const request: ModuleHealthRequest = {
       moduleName: name.toString(),
       url,
-      status: this._serviceHealthStatusGetter(),
+      status: this._serviceHealthStatusGetter
+        ? this._serviceHealthStatusGetter()
+        : HealthCheckStatus.SERVICE_UNKNOWN,
     };
     const self = this;
     this.client!.moduleHealthProbe(request)

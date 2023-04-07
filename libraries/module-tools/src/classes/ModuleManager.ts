@@ -1,4 +1,6 @@
-import ConduitGrpcSdk, { ConfigController, Indexable, ManagedModule } from '..';
+import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
+import { ManagedModule } from './ManagedModule';
+import { ConfigController } from './ConfigController';
 
 const convictConfigParser = (config: Indexable) => {
   if (typeof config === 'object') {
