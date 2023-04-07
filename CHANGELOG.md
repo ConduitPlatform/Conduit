@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.3...v0.16.0-alpha.4) (2023-04-07)
+
+
+### Features
+
+* **authentication, router,forms:** global captcha support from router ([#580](https://github.com/ConduitPlatform/Conduit/issues/580)) ([24b4b81](https://github.com/ConduitPlatform/Conduit/commit/24b4b8177c60c6a033291b0e49a94128b116413e))
+* **authentication,core:** add register invitation config option & fix addFieldsToModule ([#579](https://github.com/ConduitPlatform/Conduit/issues/579)) ([0132c61](https://github.com/ConduitPlatform/Conduit/commit/0132c61de777481a387dfeb6c7567ece37b557b8))
+
+
+### Bug Fixes
+
+* **authentication:** team invite not requiring role and email ([2261590](https://github.com/ConduitPlatform/Conduit/commit/226159037dc82235a9513eb6d799728507180760))
+* **grpc-sdk,email:** result parsing & template model subject requirement ([#581](https://github.com/ConduitPlatform/Conduit/issues/581)) ([8b6d2fa](https://github.com/ConduitPlatform/Conduit/commit/8b6d2fadd04d31e4cae1bdcfb5cea32023d96c0c))
+* **router:** relation handling ([ef84def](https://github.com/ConduitPlatform/Conduit/commit/ef84def11b5e55c4feea31cbfcc49372e6476494))
+* **storage,grpc-sdk:** fix storage rpc functions ([#583](https://github.com/ConduitPlatform/Conduit/issues/583)) ([c799c5d](https://github.com/ConduitPlatform/Conduit/commit/c799c5d890f2874fb38c74e983d52afe189d40f0))
+
 ## [0.16.0-alpha.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.2...v0.16.0-alpha.3) (2023-03-31)
 
 
