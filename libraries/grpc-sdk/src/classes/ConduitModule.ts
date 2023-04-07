@@ -28,6 +28,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
+    if (this.channel) {
+      this.channel.close();
+    }
     // ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
@@ -50,6 +53,14 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       },
     });
     this._healthClient = clientFactory.create(HealthDefinition, this.channel);
+    const monitorChannel = () => {
+      if (!this.channel) return;
+      try {
+        const state = this.channel!.getConnectivityState(true);
+        this.channel!.watchConnectivityState(state, Infinity, monitorChannel);
+      } catch (e) {}
+    };
+    monitorChannel();
   }
 
   get active(): boolean {
