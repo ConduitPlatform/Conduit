@@ -99,7 +99,11 @@ function parseResponseData(
         callback(null, {
           ...respObject,
           redirect: r.redirect ?? undefined,
-          result: r.result ? JSON.stringify(r.result) : undefined,
+          result: r.result
+            ? typeof r.result === 'string'
+              ? r.result
+              : JSON.stringify(r.result)
+            : undefined,
         });
       } else {
         callback(null, { ...respObject, result: JSON.stringify(r) });
