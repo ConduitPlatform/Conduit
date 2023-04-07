@@ -2,9 +2,10 @@ import ConduitGrpcSdk, {
   ConfigController,
   DatabaseProvider,
   GrpcCallback,
+  GrpcRequest,
+  GrpcResponse,
   HealthCheckStatus,
   ManagedModule,
-  ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
@@ -15,11 +16,22 @@ import path from 'path';
 import { status } from '@grpc/grpc-js';
 import { isEmpty, isNil } from 'lodash';
 import { runMigrations } from './migrations';
-import { FileResponse, GetFileDataResponse } from './protoTypes/storage';
+import {
+  CreateFileByUrlRequest,
+  CreateFileRequest,
+  DeleteFileResponse,
+  FileByUrlResponse,
+  FileResponse,
+  GetFileDataResponse,
+  GetFileRequest,
+  UpdateFileByUrlRequest,
+  UpdateFileRequest,
+} from './protoTypes/storage';
 import MetricsSchema from './metrics';
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
+import { StorageParamAdapter } from './adapter/StorageParamAdapter';
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -30,9 +42,12 @@ export default class Storage extends ManagedModule<Config> {
     functions: {
       setConfig: this.setConfig.bind(this),
       getFile: this.getFile.bind(this),
+      getFileData: this.getFileData.bind(this),
       createFile: this.createFile.bind(this),
       updateFile: this.updateFile.bind(this),
-      getFileData: this.getFileData.bind(this),
+      deleteFile: this.deleteFile.bind(this),
+      createFileByUrl: this.createFileByUrl.bind(this),
+      updateFileByUrl: this.updateFileByUrl.bind(this),
     },
   };
   private adminRouter: AdminRoutes;
@@ -41,6 +56,7 @@ export default class Storage extends ManagedModule<Config> {
   private storageProvider: IStorageProvider;
   private _fileHandlers: FileHandlers;
   private enableAuthRoutes: boolean = false;
+  private storageParamAdapter: StorageParamAdapter;
 
   constructor() {
     super('storage');
@@ -54,6 +70,7 @@ export default class Storage extends ManagedModule<Config> {
     await runMigrations(this.grpcSdk);
     this.storageProvider = createStorageProvider('local', {} as Config);
     this._fileHandlers = new FileHandlers(this.grpcSdk, this.storageProvider);
+    this.storageParamAdapter = new StorageParamAdapter();
   }
 
   async preConfig(config: Config) {
@@ -149,17 +166,20 @@ export default class Storage extends ManagedModule<Config> {
   }
 
   // gRPC Service
-  async getFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
+  async getFile(call: GrpcRequest<GetFileRequest>, callback: GrpcCallback<FileResponse>) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.getFile(call);
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.getFile(request);
+    const response = this.storageParamAdapter.getFileResponse(result);
+    callback(null, response);
   }
 
   async getFileData(
-    call: ParsedRouterRequest,
+    call: GrpcRequest<GetFileRequest>,
     callback: GrpcCallback<GetFileDataResponse>,
   ) {
     if (!this._fileHandlers)
@@ -167,24 +187,82 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.getFileData(call);
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.getFileData(request);
+    callback(null, result as GetFileDataResponse);
   }
 
-  async createFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
+  async createFile(
+    call: GrpcRequest<CreateFileRequest>,
+    callback: GrpcCallback<FileResponse>,
+  ) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.createFile(call);
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.createFile(request);
+    const response = this.storageParamAdapter.getFileResponse(result);
+    callback(null, response);
   }
 
-  async updateFile(call: ParsedRouterRequest, callback: GrpcCallback<FileResponse>) {
+  async updateFile(
+    call: GrpcRequest<UpdateFileRequest>,
+    callback: GrpcCallback<FileResponse>,
+  ) {
     if (!this._fileHandlers)
       return callback({
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    await this._fileHandlers.updateFile(call);
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.updateFile(request);
+    const response = this.storageParamAdapter.getFileResponse(result);
+    callback(null, response);
+  }
+
+  async deleteFile(
+    call: GrpcRequest<GetFileRequest>,
+    callback: GrpcResponse<DeleteFileResponse>,
+  ) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.deleteFile(request);
+    callback(null, result as DeleteFileResponse);
+  }
+
+  async createFileByUrl(
+    call: GrpcRequest<CreateFileByUrlRequest>,
+    callback: GrpcResponse<FileByUrlResponse>,
+  ) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.createFileUploadUrl(request);
+    const response = this.storageParamAdapter.getFileByUrlResponse(result);
+    callback(null, response);
+  }
+
+  async updateFileByUrl(
+    call: GrpcRequest<UpdateFileByUrlRequest>,
+    callback: GrpcResponse<FileByUrlResponse>,
+  ) {
+    if (!this._fileHandlers)
+      return callback({
+        code: status.INTERNAL,
+        message: 'File handlers not initiated',
+      });
+    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const result = await this._fileHandlers.updateFileUploadUrl(request);
+    const response = this.storageParamAdapter.getFileByUrlResponse(result);
+    callback(null, response);
   }
 }
