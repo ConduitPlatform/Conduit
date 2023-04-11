@@ -74,10 +74,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
     }
-
+    const config = ConfigController.getInstance().config;
+    const redirectUri = call.request.params.redirectUri;
     const queryOptions: RedirectOptions = {
       client_id: this.settings.clientId,
-      redirect_uri: conduitUrl + this.settings.callbackUrl,
+      redirect_uri:
+        config.customRedirectUris && !isNil(redirectUri)
+          ? redirectUri
+          : conduitUrl + this.settings.callbackUrl,
       response_type: this.settings.responseType,
       response_mode: this.settings.responseMode,
       scope: this.constructScopes(scopes),
@@ -118,11 +122,15 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+    const config = ConfigController.getInstance().config;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
       code: params.code,
-      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+      redirect_uri:
+        config.customRedirectUris && !isNil(params.redirectUri)
+          ? params.redirectUri
+          : `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
     };
 
     if (this.settings.hasOwnProperty('grantType')) {
@@ -150,7 +158,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     await Token.getInstance().deleteOne(stateToken);
     const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
-    const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
     return TokenProvider.getInstance().provideUserTokens(
@@ -251,6 +258,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           scopes: [ConduitString.Optional],
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          redirectUri: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.oAuth2
@@ -273,6 +281,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           queryParams: {
             code: ConduitString.Required,
             state: ConduitString.Required,
+            redirectUri: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {
@@ -290,6 +299,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           bodyParams: {
             code: ConduitString.Required,
             state: ConduitString.Required,
+            redirectUri: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition(`${this.capitalizeProvider()}Response`, {

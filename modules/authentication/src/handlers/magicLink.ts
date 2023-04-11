@@ -65,6 +65,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         description: `A webhook used to verify a user who has received a magic link.`,
         urlParams: {
           verificationToken: ConduitString.Required,
+          redirectUri: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
@@ -113,7 +114,9 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
-    const redirectUri = config.magic_link.redirect_uri;
+    const uri = call.request.params.redirectUri;
+    const redirectUri =
+      config.customRedirectUris && !isNil(uri) ? uri : config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
       type: TokenType.MAGIC_LINK,
       token: verificationToken,
