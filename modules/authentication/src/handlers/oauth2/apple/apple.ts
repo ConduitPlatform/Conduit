@@ -25,6 +25,7 @@ import qs from 'querystring';
 import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
 import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
 import { validateStateToken } from '../utils';
+import { isNil } from 'lodash';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
@@ -93,6 +94,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
 
     const clientId = this.settings.clientId;
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+    const config = ConfigController.getInstance().config;
     const postData = qs.stringify({
       client_id: clientId,
       client_secret: apple_client_secret,
@@ -129,16 +131,16 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       stateToken.data.invitationToken,
     );
     await Token.getInstance().deleteOne(stateToken);
-    const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
+    const uri = stateToken.data.customRedirectUri;
     return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId,
         config,
       },
-      this.settings.finalRedirect,
+      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
     );
   }
 
