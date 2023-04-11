@@ -60,13 +60,15 @@ export class GraphQLController extends ConduitRouter {
       resolvers: this.resolvers,
       plugins: [cookiePlugin],
     });
-    this._apollo = expressMiddleware(server, {
-      context: async ({ req, res }) => {
-        const context = (req as any).conduit || {};
-        const headers = req.headers;
-        const cookies = req.cookies || {};
-        return { context, headers, cookies, setCookie: [], removeCookie: [], res };
-      },
+    server.start().then(() => {
+      this._apollo = expressMiddleware(server, {
+        context: async ({ req, res }) => {
+          const context = (req as any).conduit || {};
+          const headers = req.headers;
+          const cookies = req.cookies || {};
+          return { context, headers, cookies, setCookie: [], removeCookie: [], res };
+        },
+      });
     });
   }
 
