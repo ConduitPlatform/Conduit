@@ -559,3 +559,4 @@ export * from './constants';
 export * from './routing';
 export * from './types';
 export * from './utilities';
+export * from '@grpc/grpc-js';
