@@ -57,16 +57,18 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
       this.sendMagicLink.bind(this),
     );
-
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/hook/magic-link/:verificationToken',
         action: ConduitRouteActions.GET,
         description: `A webhook used to verify a user who has received a magic link.`,
-        urlParams: {
-          verificationToken: ConduitString.Required,
-          redirectUri: ConduitString.Optional,
-        },
+        urlParams: config.customRedirectUris
+          ? {
+              verificationToken: ConduitString.Required,
+              redirectUri: ConduitString.Optional,
+            }
+          : { verificationToken: ConduitString.Required },
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
         accessToken: ConduitString.Optional,

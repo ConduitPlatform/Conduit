@@ -100,10 +100,7 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
       client_secret: apple_client_secret,
       code: params.code,
       grant_type: this.settings.grantType,
-      redirect_uri:
-        config.customRedirectUris && !isNil(params.redirectUri)
-          ? params.redirectUri
-          : `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
+      redirect_uri: `${conduitUrl}/hook/authentication/${this.settings.providerName}`,
     });
     const req = {
       method: this.settings.accessTokenMethod,
@@ -136,13 +133,14 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
+    const uri = stateToken.data.customRedirectUri;
     return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
         clientId,
         config,
       },
-      this.settings.finalRedirect,
+      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
     );
   }
 
@@ -156,7 +154,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
         queryParams: {
           invitationToken: ConduitString.Optional,
           captchaConfig: ConduitString.Optional,
-          redirectUri: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.oAuth2
@@ -176,7 +173,6 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
           code: ConduitString.Required,
           id_token: ConduitString.Required,
           state: ConduitString.Required,
-          redirectUri: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition(`AppleResponse`, {
