@@ -16,7 +16,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import { parseSortParam } from '../handlers/utils';
-import escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class SchemaAdmin {
   constructor(

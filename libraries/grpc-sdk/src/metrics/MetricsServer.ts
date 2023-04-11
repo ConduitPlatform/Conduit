@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '../index';
-import express from 'express';
+import express, { Express } from 'express';
 import { Registry } from 'prom-client';
 import { isNaN } from 'lodash';
 
@@ -14,7 +14,7 @@ export class MetricsServer {
     this.Registry = registry;
   }
 
-  initialize() {
+  initialize(): Express {
     const server = express();
     const port = this.getHttpPort();
     const url = '0.0.0.0:' + port.toString();

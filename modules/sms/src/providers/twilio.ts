@@ -1,14 +1,13 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import twilio from 'twilio';
-import Twilio from 'twilio/dist/lib/rest/Twilio';
 
 export class TwilioProvider implements ISmsProvider {
   private readonly phoneNumber: string;
   private readonly accountSID: string;
   private readonly authToken: string;
   private readonly serviceSid: string | undefined;
-  private client: Twilio;
+  private client: twilio.Twilio;
 
   constructor(settings: {
     phoneNumber: string;

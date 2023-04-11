@@ -1,7 +1,6 @@
-import { CacheScope } from 'apollo-cache-control';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from './classes';
-
+import { CacheScope } from '@apollo/cache-control-types';
 const crypto = require('crypto');
 
 export function createHashKey(path: string, context: Indexable, params: Indexable) {
@@ -34,6 +33,6 @@ export function extractCachingGql(
   cacheHeader?: string,
 ): { caching: boolean; cacheAge?: number; scope?: CacheScope } {
   let { caching, cacheAge, scope } = extractCaching(route, cacheHeader);
-  scope = scope === 'public' ? CacheScope.Public : CacheScope.Private;
+  scope = scope === 'public' ? 'PUBLIC' : 'PRIVATE';
   return { caching, cacheAge, scope: scope as CacheScope };
 }

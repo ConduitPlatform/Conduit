@@ -19,9 +19,6 @@
     "admin/*",
     "modules/*"
   ],
-  "resolutions": {
-    "nx": "15.3.3"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response, Router } from 'express';
+import express, { Express, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
@@ -27,7 +27,7 @@ export class ConduitRoutingController {
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
-  readonly expressApp = express();
+  readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
 
   constructor(
