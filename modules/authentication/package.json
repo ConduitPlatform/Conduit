@@ -34,7 +34,7 @@
     "bcrypt": "^5.1.0",
     "convict": "^6.2.4",
     "crypto": "^1.0.1",
-    "escape-string-regexp": "^5.0.0",
+    "escape-string-regexp": "^4.0.0",
     "jsonwebtoken": "^9.0.0",
     "jwks-rsa": "^3.0.1",
     "lodash": "^4.17.21",

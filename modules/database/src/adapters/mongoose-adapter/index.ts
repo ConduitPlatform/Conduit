@@ -21,7 +21,7 @@ import {
 } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
-let deepPopulate = require('mongoose-deep-populate');
+let deepPopulate = require('./deep-populate.js');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
