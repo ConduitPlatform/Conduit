@@ -52,7 +52,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     if (
       inviteToken.data.email &&
-      (!user.email || user.email !== inviteToken.data.email)
+      (!user.email || user.email !== inviteToken.data.email) &&
+      !ConfigController.getInstance().config.teams.allowEmailMismatchForInvites
     ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
