@@ -8,14 +8,13 @@ import {
   HistogramConfiguration,
   LabelValues,
   MetricConfiguration,
-  MetricType,
   Registry,
   Summary,
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
 import defaultMetrics from './config/defaults';
-import { IConduitMetrics } from '@conduitplatform/grpc-sdk';
+import { IConduitMetrics, MetricType } from '@conduitplatform/grpc-sdk';
 
 export class ConduitMetrics implements IConduitMetrics {
   private readonly moduleName: string;
@@ -38,7 +37,7 @@ export class ConduitMetrics implements IConduitMetrics {
 
   initializeDefaultMetrics() {
     for (const metric of Object.values(defaultMetrics)) {
-      this.registerMetric(metric.type, metric.config);
+      this.registerMetric(metric.type as unknown as MetricType, metric.config);
     }
   }
 

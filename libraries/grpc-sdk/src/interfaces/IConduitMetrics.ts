@@ -8,10 +8,10 @@ import {
   LabelValues,
   Metric,
   MetricConfiguration,
-  MetricType,
   Summary,
   SummaryConfiguration,
 } from 'prom-client';
+import { MetricType } from '../types';
 
 export interface IConduitMetrics {
   initializeDefaultMetrics(): void;
