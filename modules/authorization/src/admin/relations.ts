@@ -1,14 +1,16 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   ParsedRouterRequest,
   Query,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { RelationsController } from '../controllers/relations.controller';
+import {
+  ConduitNumber,
+  ConduitString,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
+import { RelationsController } from '../controllers';
 import { isNil } from 'lodash';
 import { Relationship } from '../models';
 
@@ -106,10 +108,12 @@ export class RelationHandler {
     const { subject, relation, resource, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const query: Query = {};
-    if (subject) query['subject'] = subject;
-    if (relation) query['relation'] = relation;
-    if (resource) query['resource'] = resource;
+    const query: Query<Relationship> = {
+      ...(subject ?? {}),
+      ...(relation ?? {}),
+      ...(resource ?? {}),
+    };
+
     const found = await Relationship.getInstance().findMany(
       query,
       undefined,

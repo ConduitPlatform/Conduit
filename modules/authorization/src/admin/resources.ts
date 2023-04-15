@@ -1,18 +1,20 @@
 import ConduitGrpcSdk, {
-  ConduitJson,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   ParsedRouterRequest,
   Query,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitJson,
+  ConduitNumber,
+  ConduitString,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { ResourceDefinition } from '../models';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
-import { ResourceController } from '../controllers/resource.controller';
+import { ResourceController } from '../controllers';
 
 export class ResourceHandler {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -124,13 +126,13 @@ export class ResourceHandler {
     const { search, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {};
+    let query: Query<ResourceDefinition> = {};
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
         query = { _id: search };
       } else {
         const nameSearch = escapeStringRegexp(search);
-        query['name'] = { $regex: `.*${nameSearch}.*`, $options: 'i' };
+        query = { name: { $regex: `.*${nameSearch}.*`, $options: 'i' } };
       }
     }
     const found = await ResourceDefinition.getInstance().findMany(
