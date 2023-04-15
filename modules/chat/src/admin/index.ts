@@ -1,16 +1,18 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   Query,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils';
@@ -130,14 +132,14 @@ export class AdminHandlers {
     const { sort, search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const query: Query = {};
+    let query: Query<ChatRoom> = {};
     let identifier, populates;
     if (!isNil(populate)) {
       populates = populateArray(populate);
     }
     if (!isNil(search)) {
       identifier = escapeStringRegexp(search);
-      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+      query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
     }
 
     const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(
@@ -209,20 +211,21 @@ export class AdminHandlers {
     const { senderUser, roomId, populate, sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const query: Query = {};
+    const query: Query<ChatMessage> = {
+      ...(senderUser ? { senderUser } : {}),
+      ...(roomId ? { room: roomId } : {}),
+    };
     let populates;
     if (!isNil(populate)) {
       populates = populateArray(populate);
     }
     if (!isNil(senderUser)) {
-      query['senderUser'] = senderUser;
       const user = await User.getInstance().findOne({ _id: senderUser });
       if (isNil(user)) {
         throw new GrpcError(status.NOT_FOUND, `User ${senderUser} does not exist`);
       }
     }
     if (!isNil(roomId)) {
-      query['room'] = roomId;
       const room = await ChatRoom.getInstance().findOne({ _id: roomId });
       if (isNil(room)) {
         throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);

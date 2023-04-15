@@ -1,12 +1,9 @@
 import ConduitGrpcSdk, {
-  ConduitActiveSchema,
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -25,6 +22,11 @@ import {
   SendMessageRequest,
 } from './protoTypes/chat';
 import metricsSchema from './metrics';
+import {
+  ConduitActiveSchema,
+  ConfigController,
+  ManagedModule,
+} from '@conduitplatform/module-tools';
 
 export default class Chat extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
