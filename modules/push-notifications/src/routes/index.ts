@@ -1,15 +1,18 @@
 import { NotificationTokensHandler } from '../handlers/notification-tokens';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import {
   ConduitBoolean,
   ConduitDate,
   ConduitNumber,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
   ConduitString,
   GrpcServer,
   RoutingManager,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
+
 import { Notification, NotificationToken } from '../models';
 
 export class PushNotificationsRoutes {
