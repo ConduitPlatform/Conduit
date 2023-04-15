@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/module-tools": "^1.0.0",
     "@conduitplatform/hermes": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7"
   },

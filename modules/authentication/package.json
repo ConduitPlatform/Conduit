@@ -26,7 +26,8 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "^1.0.0",
+    "@conduitplatform/module-tools": "^1.0.0",
     "@conduitplatform/node-2fa": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",

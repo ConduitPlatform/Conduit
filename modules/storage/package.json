@@ -36,6 +36,7 @@
     "@aws-sdk/s3-request-presigner": "^3.276.0",
     "@azure/storage-blob": "^12.10.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/module-tools": "^1.0.0",
     "@google-cloud/storage": "^6.2.2",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
