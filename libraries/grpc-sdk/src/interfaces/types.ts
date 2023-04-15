@@ -7,7 +7,7 @@ export type ParsedRouterRequest = GrpcRequest<{
   queryParams: Params;
   bodyParams: Params;
   path: string;
-  headers: Headers;
+  headers: Headers & { authorization?: string };
   context: Context;
   cookies: Cookies;
 }>;
