@@ -21,12 +21,6 @@ export class GrpcServer {
     this._url = `0.0.0.0:${port ?? '5000'}`;
   }
 
-  private postponeRestart() {
-    if (!this.scheduledRestart || this._postponeRequests > 5) return;
-    this._postponeRequests++;
-    this.scheduleRefresh();
-  }
-
   private _url: string;
 
   get url(): string {
@@ -134,5 +128,11 @@ export class GrpcServer {
     this.started = true;
     this.startedOnce = true;
     this.grpcServer?.start();
+  }
+
+  private postponeRestart() {
+    if (!this.scheduledRestart || this._postponeRequests > 5) return;
+    this._postponeRequests++;
+    this.scheduleRefresh();
   }
 }

@@ -72,6 +72,10 @@ export class ConduitLogger implements IConduitLogger {
     });
   }
 
+  get winston() {
+    return this._winston;
+  }
+
   addTransport(transport: winston.transport) {
     this._winston.add(transport);
   }
@@ -110,10 +114,6 @@ export class ConduitLogger implements IConduitLogger {
 
   verbose(message: string, cb?: LogCallback): Logger {
     return this._winston.verbose(message, cb);
-  }
-
-  get winston() {
-    return this._winston;
   }
 }
 

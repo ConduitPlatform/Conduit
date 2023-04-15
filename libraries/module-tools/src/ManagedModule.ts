@@ -17,13 +17,13 @@ import { clientMiddleware } from './metrics/clientMiddleware';
 import { convictConfigParser } from './utilities/convictConfigParser';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
-  private readonly serviceAddress: string;
-  private readonly servicePort: string;
-  protected abstract readonly configSchema?: object;
-  protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
   configOverride: boolean = false;
   service?: ConduitService;
+  protected abstract readonly configSchema?: object;
+  protected abstract readonly metricsSchema?: object;
+  private readonly serviceAddress: string;
+  private readonly servicePort: string;
 
   protected constructor(moduleName: string) {
     super(moduleName);
@@ -72,6 +72,14 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
     }
   }
 
+  get name() {
+    return this._moduleName;
+  }
+
+  get address() {
+    return this._address;
+  }
+
   async start() {
     await this.grpcSdk.initialize();
     this.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
@@ -88,47 +96,6 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       ConduitGrpcSdk.Logger.error(err);
       process.exit(-1);
     });
-  }
-
-  private async preRegisterLifecycle(): Promise<void> {
-    await this.createGrpcServer();
-    await this.preServerStart();
-    await this.grpcSdk.initializeEventBus();
-    await this.handleConfigSyncUpdate();
-    await this.registerMetrics();
-    await this.startGrpcServer();
-    await this.onServerStart();
-    await this.initializeMetrics();
-    await this.preRegister();
-  }
-
-  private async postRegisterLifecycle(): Promise<void> {
-    await this.onRegister();
-    if (this.config) {
-      const configSchema = this.config.getSchema();
-
-      let config: any = this.config.getProperties();
-      config = await this.preConfig(config);
-
-      config = await this.grpcSdk.config.configure(
-        config,
-        convictConfigParser(configSchema),
-        this.configOverride,
-      );
-
-      ConfigController.getInstance();
-      if (config) ConfigController.getInstance().config = config;
-      if (!config || config.active || !config.hasOwnProperty('active'))
-        await this.onConfig();
-    }
-  }
-
-  get name() {
-    return this._moduleName;
-  }
-
-  get address() {
-    return this._address;
   }
 
   /**
@@ -279,5 +246,38 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       ConfigController.getInstance().config = await this.preConfig(JSON.parse(message));
       await this.onConfig();
     });
+  }
+
+  private async preRegisterLifecycle(): Promise<void> {
+    await this.createGrpcServer();
+    await this.preServerStart();
+    await this.grpcSdk.initializeEventBus();
+    await this.handleConfigSyncUpdate();
+    await this.registerMetrics();
+    await this.startGrpcServer();
+    await this.onServerStart();
+    await this.initializeMetrics();
+    await this.preRegister();
+  }
+
+  private async postRegisterLifecycle(): Promise<void> {
+    await this.onRegister();
+    if (this.config) {
+      const configSchema = this.config.getSchema();
+
+      let config: any = this.config.getProperties();
+      config = await this.preConfig(config);
+
+      config = await this.grpcSdk.config.configure(
+        config,
+        convictConfigParser(configSchema),
+        this.configOverride,
+      );
+
+      ConfigController.getInstance();
+      if (config) ConfigController.getInstance().config = config;
+      if (!config || config.active || !config.hasOwnProperty('active'))
+        await this.onConfig();
+    }
   }
 }

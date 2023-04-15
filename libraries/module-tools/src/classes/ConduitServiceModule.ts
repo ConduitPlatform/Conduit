@@ -18,18 +18,25 @@ export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
   protected _serviceName?: string;
   protected _address!: string; // external address:port of service (LoadBalancer)
-  protected _port!: string; // port to bring up gRPC service
   protected grpcServer!: GrpcServer;
-  private _grpcSdk: ConduitGrpcSdk | undefined;
-  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.SERVING; // default for health-agnostic modules
   protected readonly events: EventEmitter = new EventEmitter();
+  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.SERVING; // default for health-agnostic modules
 
   protected constructor(moduleName: string) {
     this._moduleName = camelCase(moduleName);
   }
 
-  get healthState() {
-    return this._serviceHealthState;
+  protected _port!: string; // port to bring up gRPC service
+
+  get port(): string {
+    return this._port;
+  }
+
+  private _grpcSdk: ConduitGrpcSdk | undefined;
+
+  public get grpcSdk(): ConduitGrpcSdk {
+    if (!this._grpcSdk) throw new Error('grpcSdk not defined yet');
+    return this._grpcSdk;
   }
 
   public set grpcSdk(grpcSdk: ConduitGrpcSdk) {
@@ -37,24 +44,8 @@ export abstract class ConduitServiceModule {
     this._grpcSdk = grpcSdk;
   }
 
-  public get grpcSdk(): ConduitGrpcSdk {
-    if (!this._grpcSdk) throw new Error('grpcSdk not defined yet');
-    return this._grpcSdk;
-  }
-
-  get port(): string {
-    return this._port;
-  }
-
-  protected async addHealthCheckService() {
-    await this.grpcServer.addService(
-      path.resolve(__dirname, '../grpc_health_check.proto'),
-      'grpc.health.v1.Health',
-      {
-        Check: this.healthCheck.bind(this),
-        Watch: this.healthWatch.bind(this),
-      },
-    );
+  get healthState() {
+    return this._serviceHealthState;
   }
 
   updateHealth(state: HealthCheckStatus, init = false) {
@@ -113,5 +104,16 @@ export abstract class ConduitServiceModule {
         },
       );
     }
+  }
+
+  protected async addHealthCheckService() {
+    await this.grpcServer.addService(
+      path.resolve(__dirname, '../grpc_health_check.proto'),
+      'grpc.health.v1.Health',
+      {
+        Check: this.healthCheck.bind(this),
+        Watch: this.healthWatch.bind(this),
+      },
+    );
   }
 }
