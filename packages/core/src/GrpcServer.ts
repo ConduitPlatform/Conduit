@@ -20,21 +20,6 @@ const CORE_SERVICES = ['Config', 'Admin'];
 export class GrpcServer {
   private readonly server: ConduitGrpcServer;
   private readonly events: EventEmitter;
-  private _grpcSdk: ConduitGrpcSdk;
-  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
-  private _initialized = false;
-
-  get initialized() {
-    return this._initialized;
-  }
-
-  get internalGrpc() {
-    return this.server;
-  }
-
-  get grpcSdk() {
-    return this._grpcSdk;
-  }
 
   constructor(private readonly commons: ConduitCommons, private readonly port: number) {
     this.events = new EventEmitter();
@@ -67,6 +52,44 @@ export class GrpcServer {
         ConduitGrpcSdk.Logger.error(err);
         process.exit(-1);
       });
+  }
+
+  private _grpcSdk: ConduitGrpcSdk;
+
+  get grpcSdk() {
+    return this._grpcSdk;
+  }
+
+  private _initialized = false;
+
+  get initialized() {
+    return this._initialized;
+  }
+
+  get internalGrpc() {
+    return this.server;
+  }
+
+  get sdk() {
+    return this._grpcSdk;
+  }
+
+  private _serviceHealthState: HealthCheckStatus = HealthCheckStatus.UNKNOWN;
+
+  private set serviceHealthState(
+    state: Exclude<
+      HealthCheckStatus,
+      HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN
+    >,
+  ) {
+    if (this._serviceHealthState !== state) {
+      this.events.emit('grpc-health-change:Core', state);
+    }
+    this._serviceHealthState = state;
+    ConduitGrpcSdk.Metrics?.set(
+      'module_health_state',
+      state === HealthCheckStatus.SERVING ? 1 : 0,
+    );
   }
 
   private async bootstrapSdkComponents() {
@@ -107,22 +130,6 @@ export class GrpcServer {
     return this._serviceHealthState;
   }
 
-  private set serviceHealthState(
-    state: Exclude<
-      HealthCheckStatus,
-      HealthCheckStatus.SERVICE_UNKNOWN | HealthCheckStatus.UNKNOWN
-    >,
-  ) {
-    if (this._serviceHealthState !== state) {
-      this.events.emit('grpc-health-change:Core', state);
-    }
-    this._serviceHealthState = state;
-    ConduitGrpcSdk.Metrics?.set(
-      'module_health_state',
-      state === HealthCheckStatus.SERVING ? 1 : 0,
-    );
-  }
-
   private addHealthService() {
     return this.server.addService(
       path.resolve(__dirname, './grpc_health_check.proto'),
@@ -152,9 +159,5 @@ export class GrpcServer {
         call.write({ status });
       });
     }
-  }
-
-  get sdk() {
-    return this._grpcSdk;
   }
 }
