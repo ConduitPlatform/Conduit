@@ -403,24 +403,6 @@ export class ChatRoutes {
     };
   }
 
-  private async fetchAndValidateRoomById(
-    roomId: string,
-    userId: string & User,
-  ): Promise<ChatRoom> {
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (isNil(room) || !room.participants.includes(userId)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
-    }
-    return room;
-  }
-
   async registerRoutes() {
     this._routingManager.clear();
 
@@ -607,5 +589,23 @@ export class ChatRoutes {
       },
     );
     return this._routingManager.registerRoutes();
+  }
+
+  private async fetchAndValidateRoomById(
+    roomId: string,
+    userId: string & User,
+  ): Promise<ChatRoom> {
+    const room = await ChatRoom.getInstance()
+      .findOne({ _id: roomId })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (isNil(room) || !room.participants.includes(userId)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Room does not exist or you don't have access",
+      );
+    }
+    return room;
   }
 }

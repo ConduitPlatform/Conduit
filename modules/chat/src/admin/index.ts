@@ -31,103 +31,6 @@ export class AdminHandlers {
     this.registerAdminRoutes();
   }
 
-  private registerAdminRoutes() {
-    this.routingManager.clear();
-    this.routingManager.route(
-      {
-        path: '/rooms',
-        action: ConduitRouteActions.GET,
-        description: `Returns queried chat rooms.`,
-        queryParams: {
-          skip: ConduitNumber.Optional,
-          limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
-          search: ConduitString.Optional,
-        },
-      },
-      new ConduitRouteReturnDefinition('GetRooms', {
-        chatRoomDocuments: [ChatRoom.name],
-        count: ConduitNumber.Required,
-      }),
-      this.getRooms.bind(this),
-    );
-    this.routingManager.route(
-      {
-        path: '/rooms',
-        action: ConduitRouteActions.POST,
-        description: `Creates a new chat room.`,
-        bodyParams: {
-          name: ConduitString.Required,
-          participants: { type: [TYPE.String], required: true }, // handler array check is still required
-        },
-      },
-      new ConduitRouteReturnDefinition(ChatRoom.name),
-      this.createRoom.bind(this),
-    );
-    this.routingManager.route(
-      {
-        path: '/rooms',
-        action: ConduitRouteActions.DELETE,
-        description: `Deletes queried chat rooms.`,
-        queryParams: {
-          ids: { type: [TYPE.String], required: true },
-        },
-      },
-      new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
-      this.deleteRooms.bind(this),
-    );
-    this.routingManager.route(
-      {
-        path: '/messages',
-        action: ConduitRouteActions.GET,
-        description: `Returns queried messages.`,
-        queryParams: {
-          skip: ConduitNumber.Optional,
-          limit: ConduitNumber.Optional,
-          sort: ConduitString.Optional,
-          senderUser: ConduitString.Optional,
-          roomId: ConduitString.Optional,
-          search: ConduitString.Optional,
-        },
-      },
-      new ConduitRouteReturnDefinition('GetMessages', {
-        messages: [ChatMessage.name],
-        count: ConduitNumber.Required,
-      }),
-      this.getMessages.bind(this),
-    );
-    this.routingManager.route(
-      {
-        path: '/messages',
-        action: ConduitRouteActions.DELETE,
-        description: `Deletes queried messages.`,
-        queryParams: {
-          ids: { type: [TYPE.String], required: true }, // handler array check is still required
-        },
-      },
-      new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
-      this.deleteMessages.bind(this),
-    );
-    this.routingManager.registerRoutes();
-  }
-
-  private async validateUsersInput(users: User[]) {
-    const uniqueUsers = Array.from(new Set(users));
-    const usersToBeAdded: void | User[] = await User.getInstance().findMany({
-      _id: { $in: uniqueUsers },
-    });
-    if (isNil(usersToBeAdded)) {
-      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
-    }
-    if (usersToBeAdded.length !== uniqueUsers.length) {
-      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
-      const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
-      if (wrongIds.length !== 0) {
-        throw new GrpcError(status.INVALID_ARGUMENT, `users [${wrongIds}] do not exist`);
-      }
-    }
-  }
-
   async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { sort, search, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
@@ -265,5 +168,102 @@ export class AdminHandlers {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     return 'Done';
+  }
+
+  private registerAdminRoutes() {
+    this.routingManager.clear();
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried chat rooms.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          search: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetRooms', {
+        chatRoomDocuments: [ChatRoom.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getRooms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.POST,
+        description: `Creates a new chat room.`,
+        bodyParams: {
+          name: ConduitString.Required,
+          participants: { type: [TYPE.String], required: true }, // handler array check is still required
+        },
+      },
+      new ConduitRouteReturnDefinition(ChatRoom.name),
+      this.createRoom.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/rooms',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried chat rooms.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteRooms', 'String'),
+      this.deleteRooms.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/messages',
+        action: ConduitRouteActions.GET,
+        description: `Returns queried messages.`,
+        queryParams: {
+          skip: ConduitNumber.Optional,
+          limit: ConduitNumber.Optional,
+          sort: ConduitString.Optional,
+          senderUser: ConduitString.Optional,
+          roomId: ConduitString.Optional,
+          search: ConduitString.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetMessages', {
+        messages: [ChatMessage.name],
+        count: ConduitNumber.Required,
+      }),
+      this.getMessages.bind(this),
+    );
+    this.routingManager.route(
+      {
+        path: '/messages',
+        action: ConduitRouteActions.DELETE,
+        description: `Deletes queried messages.`,
+        queryParams: {
+          ids: { type: [TYPE.String], required: true }, // handler array check is still required
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteMessages', 'String'),
+      this.deleteMessages.bind(this),
+    );
+    this.routingManager.registerRoutes();
+  }
+
+  private async validateUsersInput(users: User[]) {
+    const uniqueUsers = Array.from(new Set(users));
+    const usersToBeAdded: void | User[] = await User.getInstance().findMany({
+      _id: { $in: uniqueUsers },
+    });
+    if (isNil(usersToBeAdded)) {
+      throw new GrpcError(status.NOT_FOUND, 'Users do not exist');
+    }
+    if (usersToBeAdded.length !== uniqueUsers.length) {
+      const dbUserIds = usersToBeAdded.map((user: any) => user._id);
+      const wrongIds = uniqueUsers.filter(id => !dbUserIds.includes(id));
+      if (wrongIds.length !== 0) {
+        throw new GrpcError(status.INVALID_ARGUMENT, `users [${wrongIds}] do not exist`);
+      }
+    }
   }
 }
