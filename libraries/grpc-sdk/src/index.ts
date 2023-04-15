@@ -564,3 +564,4 @@ export * from './modules';
 export * from './constants';
 export * from './types';
 export * from './utilities';
+export * from '@grpc/grpc-js';

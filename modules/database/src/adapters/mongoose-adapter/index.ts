@@ -266,6 +266,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         rawQuery[queryOperation as keyof RawMongoQuery],
         rawQuery.options,
       );
+      if (queryOperation === 'aggregate') {
+        result = await result.toArray();
+      }
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }

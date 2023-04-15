@@ -34,7 +34,7 @@
     "@aws-sdk/client-s3": "^3.276.0",
     "@aws-sdk/client-sts": "^3.276.0",
     "@aws-sdk/s3-request-presigner": "^3.276.0",
-    "@azure/storage-blob": "^12.10.0",
+    "@azure/storage-blob": "^12.13.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
     "@conduitplatform/module-tools": "^1.0.0",
     "@google-cloud/storage": "^6.2.2",

@@ -492,7 +492,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       );
       if (redisToken) {
         if (config.local.verification.redirect_uri)
-          return { redirect: config.verification.redirect_uri };
+          return { redirect: config.local.verification.redirect_uri };
 
         return 'Email verified';
       } else {

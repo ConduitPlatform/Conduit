@@ -76,6 +76,12 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   async preConfig(config: Config) {
+    if (config.captcha?.hasOwnProperty('provider')) {
+      delete (config as Config & { captcha: { provider?: string } }).captcha.provider;
+    }
+    if (config.captcha?.hasOwnProperty('secretKey')) {
+      delete (config as Config & { captcha: { secretKey?: string } }).captcha.secretKey;
+    }
     if (
       (
         config.accessTokens

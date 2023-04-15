@@ -113,7 +113,10 @@ export class StorageRoutes {
           description: `Updates a file and provides a URL to upload its data to.`,
           middlewares: ['authMiddleware'],
         },
-        new ConduitRouteReturnDefinition('PatchFileByUrl', 'String'),
+        new ConduitRouteReturnDefinition('PatchFileByUrl', {
+          file: File.getInstance().fields,
+          url: ConduitString.Required,
+        }),
         this.fileHandlers.updateFileUploadUrl.bind(this.fileHandlers),
       );
       this._routingManager.route(

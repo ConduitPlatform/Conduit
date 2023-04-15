@@ -55,7 +55,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     if (
       inviteToken.data.email &&
-      (!user.email || user.email !== inviteToken.data.email)
+      (!user.email || user.email !== inviteToken.data.email) &&
+      !ConfigController.getInstance().config.teams.allowEmailMismatchForInvites
     ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -101,7 +102,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['invite'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed || !config.teams.allowAddWithoutInvite) {
+    if (!allowed.allow || !config.teams.allowAddWithoutInvite) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Could not add user to team, user does not have permission ' +
@@ -173,7 +174,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         actions: ['edit'],
         resource: 'Team:' + parentTeam,
       });
-      if (!allowed) {
+      if (!allowed.allow) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User does not have permission to create a subteam',
@@ -272,7 +273,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['edit'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to remove team members',
@@ -298,7 +299,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team members',
@@ -331,7 +332,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team',
@@ -382,7 +383,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view subteams',
@@ -484,7 +485,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['edit'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to modify team members',
