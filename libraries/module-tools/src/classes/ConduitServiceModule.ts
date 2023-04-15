@@ -13,7 +13,6 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import { ManagedModule } from '../ManagedModule';
 
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
@@ -68,7 +67,7 @@ export abstract class ConduitServiceModule {
       );
     }
     if (!init) {
-      ManagedModule.Metrics?.set(
+      ConduitGrpcSdk.Metrics?.set(
         'module_health_state',
         state === HealthCheckStatus.SERVING ? 1 : 0,
       );

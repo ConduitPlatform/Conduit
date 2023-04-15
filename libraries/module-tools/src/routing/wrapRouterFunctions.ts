@@ -7,7 +7,6 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { Status } from '@grpc/grpc-js/build/src/constants';
-import { ManagedModule } from '../index';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,
@@ -46,14 +45,14 @@ function generateLog(
   log += ` ${status ?? '200'} ${latency}`;
 
   ConduitGrpcSdk.Logger.log(log);
-  ManagedModule.Metrics?.set('grpc_request_latency_seconds', latency / 1000);
-  ManagedModule.Metrics?.set(
+  ConduitGrpcSdk.Metrics?.set('grpc_request_latency_seconds', latency / 1000);
+  ConduitGrpcSdk.Metrics?.set(
     `${routerType}_grpc_request_latency_seconds`,
     latency / 1000,
   );
 
   const successStatus = !status || status.toString().charAt(0) === '2';
-  ManagedModule.Metrics?.increment(`${routerType}_grpc_response_statuses_total`, 1, {
+  ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_response_statuses_total`, 1, {
     success: successStatus ? 'true' : 'false',
   });
 }
@@ -122,7 +121,7 @@ export function wrapRouterGrpcFunction(
   return (call: any, callback: any) => {
     const requestReceive = Date.now();
     let routerRequest = true;
-    ManagedModule.Metrics?.increment(`${routerType}_grpc_requests_total`);
+    ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_requests_total`);
     try {
       call.request.context = parseRequestData(call.request.context);
       call.request.params = parseRequestData(call.request.params);
@@ -136,7 +135,7 @@ export function wrapRouterGrpcFunction(
         call.request.headers = parseRequestData(call.request.headers);
       }
     } catch (e) {
-      ManagedModule.Metrics?.increment(`${routerType}_grpc_errors_total`);
+      ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
       generateLog(routerType, routerRequest, requestReceive, call, status.INTERNAL);
       ConduitGrpcSdk.Logger.error((e as Error).message ?? 'Something went wrong');
       return callback({
@@ -169,7 +168,7 @@ export function wrapRouterGrpcFunction(
         ),
       )
       .catch(error => {
-        ManagedModule.Metrics?.increment(`${routerType}_grpc_errors_total`);
+        ConduitGrpcSdk.Metrics?.increment(`${routerType}_grpc_errors_total`);
         generateLog(
           routerType,
           routerRequest,

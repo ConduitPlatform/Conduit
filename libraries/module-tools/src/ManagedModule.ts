@@ -24,7 +24,6 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
   configOverride: boolean = false;
   service?: ConduitService;
-  public static Metrics?: ConduitMetrics;
 
   protected constructor(moduleName: string) {
     super(moduleName);
@@ -62,7 +61,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       );
       setupLoki(this.grpcSdk.name, this.grpcSdk.instance).then();
       if (process.env.METRICS_PORT) {
-        ManagedModule.Metrics = new ConduitMetrics(
+        ConduitGrpcSdk.Metrics = new ConduitMetrics(
           this.grpcSdk.name,
           this.grpcSdk.instance,
         );
@@ -199,11 +198,11 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * Registers common and module-specific metric types.
    */
   async registerMetrics() {
-    if (ManagedModule.Metrics) {
-      ManagedModule.Metrics.initializeDefaultMetrics();
+    if (ConduitGrpcSdk.Metrics) {
+      ConduitGrpcSdk.Metrics.initializeDefaultMetrics();
       if (this.metricsSchema) {
         Object.values(this.metricsSchema).forEach(metric => {
-          ManagedModule.Metrics!.registerMetric(metric.type, metric.config);
+          ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
         });
       }
     }

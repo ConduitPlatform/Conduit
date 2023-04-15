@@ -12,3 +12,4 @@ export * from './UntypedArray';
 export * from './Params';
 export * from './ConduitRouteReturn';
 export * from './IConduitLogger';
+export * from './IConduitMetrics';

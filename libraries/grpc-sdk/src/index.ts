@@ -35,6 +35,8 @@ import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
 import { IConduitLogger } from './interfaces';
+import { IConduitMetrics } from './interfaces/IConduitMetrics';
+
 type UrlRemap = { [url: string]: string };
 
 export default class ConduitGrpcSdk {
@@ -72,10 +74,19 @@ export default class ConduitGrpcSdk {
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
   private static _Logger: IConduitLogger | Console;
+  private static _Metrics: IConduitMetrics | undefined = undefined;
   private static middleware: any[] = [];
 
   static get Logger() {
     return ConduitGrpcSdk._Logger;
+  }
+
+  static get Metrics() {
+    return ConduitGrpcSdk._Metrics;
+  }
+
+  static set Metrics(metrics: IConduitMetrics | undefined) {
+    ConduitGrpcSdk._Metrics = metrics;
   }
 
   static get interceptors() {

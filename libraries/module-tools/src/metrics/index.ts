@@ -15,8 +15,9 @@ import {
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
 import defaultMetrics from './config/defaults';
+import { IConduitMetrics } from '@conduitplatform/grpc-sdk';
 
-export class ConduitMetrics {
+export class ConduitMetrics implements IConduitMetrics {
   private readonly moduleName: string;
   private readonly instance: string;
   private readonly _registry: Registry;

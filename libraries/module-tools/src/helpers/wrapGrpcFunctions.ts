@@ -1,7 +1,6 @@
 import { createVerifier } from 'fast-jwt';
 import { status } from '@grpc/grpc-js';
-import { GrpcCallback } from '@conduitplatform/grpc-sdk';
-import { ManagedModule } from '../index';
+import ConduitGrpcSdk, { GrpcCallback } from '@conduitplatform/grpc-sdk';
 
 interface JWT {
   moduleName: string;
@@ -16,7 +15,7 @@ export function wrapGrpcFunctions(
   const wrappedFunctions: { [name: string]: Function } = {};
   Object.keys(functions).forEach(name => {
     wrappedFunctions[name] = (call: any, callback: any) => {
-      ManagedModule.Metrics?.increment('internal_grpc_requests_total');
+      ConduitGrpcSdk.Metrics?.increment('internal_grpc_requests_total');
       postponeRestart();
       if (grpcKey) {
         const verify = createVerifier({ key: grpcKey });
