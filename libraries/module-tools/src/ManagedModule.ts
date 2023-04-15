@@ -5,7 +5,6 @@ import convict from 'convict';
 import { ConduitService } from './interfaces';
 import ConduitGrpcSdk, {
   IConduitLogger,
-  Indexable,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -15,19 +14,7 @@ import winston from 'winston';
 import path from 'path';
 import { ConduitMetrics } from './metrics';
 import { clientMiddleware } from './metrics/clientMiddleware';
-
-const convictConfigParser = (config: Indexable) => {
-  if (typeof config === 'object') {
-    Object.keys(config).forEach(key => {
-      if (key === '_cvtProperties') {
-        config = convictConfigParser(config._cvtProperties);
-      } else {
-        config[key] = convictConfigParser(config[key]);
-      }
-    });
-  }
-  return config;
-};
+import { convictConfigParser } from './utilities/convictConfigParser';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   private readonly serviceAddress: string;
