@@ -5,7 +5,12 @@ export interface IConduitLogger {
   get winston(): winston.Logger;
   log(message: string, level?: string, cb?: LogCallback): Logger;
 
-  logObject(object: Indexable, message: string, level: string, cb?: LogCallback): Logger;
+  logObject(
+    object: Indexable,
+    message?: string,
+    level?: string,
+    cb?: LogCallback,
+  ): Logger;
 
   info(message: string, cb?: LogCallback): Logger;
 

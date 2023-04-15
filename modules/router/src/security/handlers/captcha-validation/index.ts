@@ -1,8 +1,6 @@
 import { NextFunction, Response } from 'express';
-import ConduitGrpcSdk, {
-  ConfigController,
-  DatabaseProvider,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { verify as hcaptchaVerify } from 'hcaptcha';
 import axios from 'axios';
