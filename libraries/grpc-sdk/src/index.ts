@@ -40,15 +40,14 @@ import { IConduitMetrics } from './interfaces/IConduitMetrics';
 type UrlRemap = { [url: string]: string };
 
 export default class ConduitGrpcSdk {
+  private static middleware: any[] = [];
+  public readonly name: string;
+  public readonly instance: string;
   private readonly serverUrl: string;
   private readonly _watchModules: boolean;
   private readonly _core?: Core;
   private readonly _config?: Config;
   private readonly _admin?: Admin;
-  private _redisManager: RedisManager | null = null;
-  private _redisDetails?:
-    | RedisOptions
-    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
   private readonly _modules: { [key: string]: ConduitModule<any> } = {};
   private readonly _availableModules: any = {
     router: Router,
@@ -67,31 +66,10 @@ export default class ConduitGrpcSdk {
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
-  public readonly name: string;
-  public readonly instance: string;
   private readonly urlRemap?: UrlRemap;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
-  private static _Logger: IConduitLogger | Console;
-  private static _Metrics: IConduitMetrics | undefined = undefined;
-  private static middleware: any[] = [];
-
-  static get Logger() {
-    return ConduitGrpcSdk._Logger;
-  }
-
-  static get Metrics() {
-    return ConduitGrpcSdk._Metrics;
-  }
-
-  static set Metrics(metrics: IConduitMetrics | undefined) {
-    ConduitGrpcSdk._Metrics = metrics;
-  }
-
-  static get interceptors() {
-    return ConduitGrpcSdk.middleware;
-  }
 
   constructor(
     serverUrl: string,
@@ -134,51 +112,48 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  public addMiddleware(middleware: any) {
-    ConduitGrpcSdk.middleware.push(middleware);
+  private static _Logger: IConduitLogger | Console;
+
+  static get Logger() {
+    return ConduitGrpcSdk._Logger;
   }
 
-  async initialize() {
-    if (this.name === 'core') {
-      return this._initialize();
-    }
-    (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
-    ConduitGrpcSdk.Logger.log('Waiting for Core...');
-    while (true) {
-      try {
-        const state = await this.core.check();
-        if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
-          ConduitGrpcSdk.Logger.log('Core connection established');
-          this._initialize();
-          break;
-        }
-      } catch (err) {
-        if ((err as GrpcError).code === status.PERMISSION_DENIED) {
-          ConduitGrpcSdk.Logger.error(err as Error);
-          process.exit(-1);
-        }
-        await sleep(1000);
-      }
+  private static _Metrics: IConduitMetrics | undefined = undefined;
+
+  static get Metrics() {
+    return ConduitGrpcSdk._Metrics;
+  }
+
+  static set Metrics(metrics: IConduitMetrics | undefined) {
+    ConduitGrpcSdk._Metrics = metrics;
+  }
+
+  static get interceptors() {
+    return ConduitGrpcSdk.middleware;
+  }
+
+  private _redisManager: RedisManager | null = null;
+
+  get redisManager(): RedisManager {
+    if (this._redisManager) {
+      return this._redisManager;
+    } else {
+      throw new Error('Redis not available');
     }
   }
 
-  private _initialize() {
-    if (this._initialized)
-      throw new Error("Module's grpc-sdk has already been initialized");
-    (this._config as unknown) = new Config(
-      this.name,
-      this.serverUrl,
-      this._serviceHealthStatusGetter,
-      this._grpcToken,
-    );
-    (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
-    if (this.name !== 'core') {
-      this.initializeModules().then();
+  private _redisDetails?:
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions };
+
+  get redisDetails():
+    | RedisOptions
+    | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
+    if (this._redisDetails) {
+      return this._redisDetails;
+    } else {
+      throw new Error('Redis not available');
     }
-    if (this._watchModules) {
-      this.watchModules();
-    }
-    this._initialized = true;
   }
 
   get bus(): EventBus | null {
@@ -314,13 +289,35 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get redisDetails():
-    | RedisOptions
-    | { nodes: { host: string; port: number }[]; options: ClusterOptions } {
-    if (this._redisDetails) {
-      return this._redisDetails;
-    } else {
-      throw new Error('Redis not available');
+  get grpcToken() {
+    return this._grpcToken;
+  }
+
+  public addMiddleware(middleware: any) {
+    ConduitGrpcSdk.middleware.push(middleware);
+  }
+
+  async initialize() {
+    if (this.name === 'core') {
+      return this._initialize();
+    }
+    (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
+    ConduitGrpcSdk.Logger.log('Waiting for Core...');
+    while (true) {
+      try {
+        const state = await this.core.check();
+        if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
+          ConduitGrpcSdk.Logger.log('Core connection established');
+          this._initialize();
+          break;
+        }
+      } catch (err) {
+        if ((err as GrpcError).code === status.PERMISSION_DENIED) {
+          ConduitGrpcSdk.Logger.error(err as Error);
+          process.exit(-1);
+        }
+        await sleep(1000);
+      }
     }
   }
 
@@ -426,14 +423,6 @@ export default class ConduitGrpcSdk {
         ConduitGrpcSdk.Logger.error('Failed to initialize event bus');
         throw err;
       });
-  }
-
-  get redisManager(): RedisManager {
-    if (this._redisManager) {
-      return this._redisManager;
-    } else {
-      throw new Error('Redis not available');
-    }
   }
 
   /**
@@ -549,8 +538,23 @@ export default class ConduitGrpcSdk {
     return 'ok';
   }
 
-  get grpcToken() {
-    return this._grpcToken;
+  private _initialize() {
+    if (this._initialized)
+      throw new Error("Module's grpc-sdk has already been initialized");
+    (this._config as unknown) = new Config(
+      this.name,
+      this.serverUrl,
+      this._serviceHealthStatusGetter,
+      this._grpcToken,
+    );
+    (this._admin as unknown) = new Admin(this.name, this.serverUrl, this._grpcToken);
+    if (this.name !== 'core') {
+      this.initializeModules().then();
+    }
+    if (this._watchModules) {
+      this.watchModules();
+    }
+    this._initialized = true;
   }
 }
 

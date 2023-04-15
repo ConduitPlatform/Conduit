@@ -122,19 +122,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
-  private constructSortObj(sort: string[]) {
-    const sortObj: { [field: string]: -1 | 1 } = {};
-    sort.forEach((sortVal: string) => {
-      sortVal = sortVal.trim();
-      if (sortVal.indexOf('-') !== -1) {
-        sortObj[sortVal.substring(1)] = -1;
-      } else {
-        sortObj[sortVal] = 1;
-      }
-    });
-    return sortObj;
-  }
-
   findMany<T>(
     schemaName: string,
     query: Query<T>,
@@ -265,5 +252,18 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   migrate(schemaName: string) {
     return this.client!.migrate({ schemaName });
+  }
+
+  private constructSortObj(sort: string[]) {
+    const sortObj: { [field: string]: -1 | 1 } = {};
+    sort.forEach((sortVal: string) => {
+      sortVal = sortVal.trim();
+      if (sortVal.indexOf('-') !== -1) {
+        sortObj[sortVal.substring(1)] = -1;
+      } else {
+        sortObj[sortVal] = 1;
+      }
+    });
+    return sortObj;
   }
 }

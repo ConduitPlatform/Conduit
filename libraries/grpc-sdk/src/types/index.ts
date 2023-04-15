@@ -1,10 +1,4 @@
 import { Metadata, status } from '@grpc/grpc-js';
-import {
-  CounterConfiguration,
-  GaugeConfiguration,
-  HistogramConfiguration,
-  SummaryConfiguration,
-} from 'prom-client';
 
 export * from './db';
 export type GrpcRequest<T> = { request: T; metadata?: Metadata };
@@ -36,6 +30,7 @@ export enum HealthCheckStatus {
   NOT_SERVING,
   SERVICE_UNKNOWN,
 }
+
 export enum MetricType {
   Counter,
   Gauge,

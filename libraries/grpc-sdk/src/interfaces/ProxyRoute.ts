@@ -13,6 +13,7 @@ export interface ProxyRouteOptions {
   description?: string;
   middlewares?: string[];
 }
+
 export interface ProxyMiddlewareOptions {
   target: string;
   changeOrigin?: boolean;

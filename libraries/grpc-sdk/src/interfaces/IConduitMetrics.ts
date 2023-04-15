@@ -23,6 +23,7 @@ export interface IConduitMetrics {
   createCounter(config: CounterConfiguration<any>): Counter<any>;
 
   createSummary(config: SummaryConfiguration<any>): Summary<any>;
+
   createHistogram(config: HistogramConfiguration<any>): Histogram<any>;
 
   createGauge(config: GaugeConfiguration<any>): Gauge<any>;
@@ -34,5 +35,6 @@ export interface IConduitMetrics {
   decrement(metric: string, decrement?: number, labels?: LabelValues<any>): void;
 
   set(metric: string, value: number, labels?: LabelValues<any>): void;
+
   observe(metric: string, value: number, labels?: LabelValues<any>): void;
 }
