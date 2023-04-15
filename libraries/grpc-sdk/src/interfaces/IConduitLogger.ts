@@ -2,6 +2,7 @@ import winston, { LogCallback, Logger } from 'winston';
 import { Indexable } from './Indexable';
 
 export interface IConduitLogger {
+  get winston(): winston.Logger;
   log(message: string, level?: string, cb?: LogCallback): Logger;
 
   logObject(object: Indexable, message: string, level: string, cb?: LogCallback): Logger;
