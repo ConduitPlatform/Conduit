@@ -1,19 +1,21 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitJson,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   Query,
   RouteOptionType,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitBoolean,
+  ConduitJson,
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import to from 'await-to-js';
 import { isNil } from 'lodash';
@@ -197,14 +199,14 @@ export class AdminHandlers {
     const { sort } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    let query: Query = {};
+    let query: Query<EmailTemplate> = {};
     let identifier;
     if (!isNil(call.request.params.search)) {
       if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
         query = { _id: call.request.params.search };
       } else {
         identifier = escapeStringRegexp(call.request.params.search);
-        query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
+        query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
 

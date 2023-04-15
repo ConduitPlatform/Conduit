@@ -1,10 +1,8 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config';
@@ -22,6 +20,7 @@ import {
   SendEmailResponse,
 } from './protoTypes/email';
 import metricsSchema from './metrics';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
