@@ -4,7 +4,7 @@ import {
   ConduitRouteParameters,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import { ConduitString } from '@conduitplatform/module-tools';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
 import { AdminProxyRoute } from '../../models';

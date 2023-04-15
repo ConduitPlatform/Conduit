@@ -7,7 +7,7 @@ import {
   ConduitRouteParameters,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
-import { ConfigController, ConduitString } from '@conduitplatform/module-tools';
+import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 

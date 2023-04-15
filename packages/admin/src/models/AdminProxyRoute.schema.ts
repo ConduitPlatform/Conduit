@@ -58,6 +58,7 @@ export class AdminProxyRoute extends ConduitActiveSchema<AdminProxyRoute> {
 
   createdAt!: Date;
   updatedAt!: Date;
+
   private constructor(database: DatabaseProvider) {
     super(database, AdminProxyRoute.name, schema, modelOptions, collectionName);
   }

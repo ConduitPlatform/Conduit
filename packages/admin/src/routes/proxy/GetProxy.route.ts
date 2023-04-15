@@ -4,7 +4,7 @@ import {
   ConduitRouteParameters,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
+import { ConduitString } from '@conduitplatform/module-tools';
 import { AdminProxyRoute } from '../../models';
 
 export function getProxyRoute() {
