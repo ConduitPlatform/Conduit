@@ -5,7 +5,6 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import { AdminHandlers } from './admin';
 import { DatabaseRoutes } from './routes';
@@ -44,10 +43,10 @@ import metricsSchema from './metrics';
 import { isNil } from 'lodash';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
+import { ManagedModule } from '@conduitplatform/module-tools';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'database.proto'),
     protoDescription: 'database.DatabaseProvider',
@@ -71,6 +70,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       migrate: this.migrate.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private adminRouter?: AdminHandlers;
   private userRouter?: DatabaseRoutes;
   private readonly _activeAdapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>;
@@ -121,63 +121,6 @@ export default class DatabaseModule extends ManagedModule<void> {
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
     await this.grpcSdk.core.watch('');
-  }
-
-  private registerInstanceSyncEvents() {
-    this.grpcSdk.bus?.subscribe('database:request:schemas', () => {
-      this._activeAdapter.registeredSchemas.forEach(schema => {
-        this._activeAdapter.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
-      });
-    });
-    try {
-      this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
-        const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
-        delete (syncSchema as any).fieldHash;
-        await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
-      });
-      this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
-        await this._activeAdapter.deleteSchema(schemaName, false, '', true);
-      });
-    } catch {
-      ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
-    }
-  }
-
-  private onCoreHealthChange(state: HealthCheckStatus) {
-    const boundFunctionRef = this.onCoreHealthChange.bind(this);
-    if (state === HealthCheckStatus.SERVING) {
-      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
-      const customEndpointController = new CustomEndpointController(
-        this.grpcSdk,
-        this._activeAdapter,
-      );
-      this.adminRouter = new AdminHandlers(
-        this.grpcServer,
-        this.grpcSdk,
-        this._activeAdapter,
-        schemaController,
-        customEndpointController,
-      );
-      this.grpcSdk
-        .waitForExistence('router')
-        .then(() => {
-          this.userRouter = new DatabaseRoutes(
-            this.grpcServer,
-            this._activeAdapter,
-            this.grpcSdk,
-          );
-          schemaController.setRouter(this.userRouter);
-          customEndpointController.setRouter(this.userRouter);
-        })
-        .catch(e => {
-          ConduitGrpcSdk.Logger.error(e.message);
-        });
-    } else {
-      this.grpcSdk.core.healthCheckWatcher.once(
-        'grpc-health-change:Core',
-        boundFunctionRef,
-      );
-    }
   }
 
   async initializeMetrics() {
@@ -627,5 +570,62 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter.syncSchema(call.request.schemaName);
     }
     callback(null, null);
+  }
+
+  private registerInstanceSyncEvents() {
+    this.grpcSdk.bus?.subscribe('database:request:schemas', () => {
+      this._activeAdapter.registeredSchemas.forEach(schema => {
+        this._activeAdapter.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
+      });
+    });
+    try {
+      this.grpcSdk.bus?.subscribe('database:create:schema', async schemaStr => {
+        const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
+        delete (syncSchema as any).fieldHash;
+        await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
+      });
+      this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
+        await this._activeAdapter.deleteSchema(schemaName, false, '', true);
+      });
+    } catch {
+      ConduitGrpcSdk.Logger.error('Failed to synchronize schema');
+    }
+  }
+
+  private onCoreHealthChange(state: HealthCheckStatus) {
+    const boundFunctionRef = this.onCoreHealthChange.bind(this);
+    if (state === HealthCheckStatus.SERVING) {
+      const schemaController = new SchemaController(this.grpcSdk, this._activeAdapter);
+      const customEndpointController = new CustomEndpointController(
+        this.grpcSdk,
+        this._activeAdapter,
+      );
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        this._activeAdapter,
+        schemaController,
+        customEndpointController,
+      );
+      this.grpcSdk
+        .waitForExistence('router')
+        .then(() => {
+          this.userRouter = new DatabaseRoutes(
+            this.grpcServer,
+            this._activeAdapter,
+            this.grpcSdk,
+          );
+          schemaController.setRouter(this.userRouter);
+          customEndpointController.setRouter(this.userRouter);
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e.message);
+        });
+    } else {
+      this.grpcSdk.core.healthCheckWatcher.once(
+        'grpc-health-change:Core',
+        boundFunctionRef,
+      );
+    }
   }
 }

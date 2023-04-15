@@ -30,7 +30,6 @@ export const extractRelations = (
             onDelete: 'SET NULL',
             through: model.name + '_' + item.originalSchema.name,
           });
-          continue;
         } else if (
           item.model.associations[relation] &&
           item.model.associations[relation].foreignKey !== name

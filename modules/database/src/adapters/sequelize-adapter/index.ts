@@ -33,36 +33,6 @@ export abstract class SequelizeAdapter<
     this.connectionUri = connectionUri;
   }
 
-  protected connect() {
-    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
-  }
-
-  protected async ensureConnected() {
-    let error;
-    ConduitGrpcSdk.Logger.log('Connecting to database...');
-    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
-      try {
-        await this.sequelize.authenticate();
-        if (!this.SUPPORTED_DIALECTS.includes(this.sequelize.getDialect())) {
-          console.error(`Unsupported dialect: ${this.sequelize.getDialect()}`);
-          process.exit(1);
-        }
-        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
-        return;
-      } catch (err: any) {
-        error = err;
-        if (error.original.code !== 'ECONNREFUSED') break;
-        await sleep(200);
-      }
-    }
-    if (error) {
-      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
-      throw new Error();
-    }
-  }
-
-  protected abstract hasLegacyCollections(): Promise<boolean>;
-
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
@@ -160,12 +130,6 @@ export abstract class SequelizeAdapter<
       ? schema.collectionName
       : schema.name;
   }
-
-  protected abstract _createSchemaFromAdapter(
-    schema: ConduitSchema,
-    saveToDb: boolean,
-    options?: { parentSchema: string },
-  ): Promise<T>;
 
   async deleteSchema(
     schemaName: string,
@@ -297,6 +261,42 @@ export abstract class SequelizeAdapter<
   async syncSchema(name: string) {
     await this.models[name].model.sync({ alter: true });
   }
+
+  protected connect() {
+    this.sequelize = new Sequelize(this.connectionUri, { logging: false });
+  }
+
+  protected async ensureConnected() {
+    let error;
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    for (let i = 0; i < this.maxConnTimeoutMs / 200; i++) {
+      try {
+        await this.sequelize.authenticate();
+        if (!this.SUPPORTED_DIALECTS.includes(this.sequelize.getDialect())) {
+          console.error(`Unsupported dialect: ${this.sequelize.getDialect()}`);
+          process.exit(1);
+        }
+        ConduitGrpcSdk.Logger.log('Sequelize connection established successfully');
+        return;
+      } catch (err: any) {
+        error = err;
+        if (error.original.code !== 'ECONNREFUSED') break;
+        await sleep(200);
+      }
+    }
+    if (error) {
+      ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', error);
+      throw new Error();
+    }
+  }
+
+  protected abstract hasLegacyCollections(): Promise<boolean>;
+
+  protected abstract _createSchemaFromAdapter(
+    schema: ConduitSchema,
+    saveToDb: boolean,
+    options?: { parentSchema: string },
+  ): Promise<T>;
 
   private checkAndConvertIndexes(
     schemaName: string,

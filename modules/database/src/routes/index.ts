@@ -2,10 +2,13 @@ import { CmsHandlers } from '../handlers/cms/crud.handler';
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
+  IConduitLogger,
+} from '@conduitplatform/grpc-sdk';
+import {
   GrpcServer,
   RequestHandlers,
   RoutingManager,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
@@ -72,8 +75,10 @@ export class DatabaseRoutes {
   }
 
   private _refreshRoutes() {
-    ConduitGrpcSdk.Logger.verbose(`${this.crudRoutes.length} CRUD routes to register`);
-    ConduitGrpcSdk.Logger.verbose(
+    (ConduitGrpcSdk.Logger as IConduitLogger).verbose(
+      `${this.crudRoutes.length} CRUD routes to register`,
+    );
+    (ConduitGrpcSdk.Logger as IConduitLogger).verbose(
       `${this.customRoutes.length} custom routes to register`,
     );
     this._routingManager.clear();

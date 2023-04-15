@@ -1,10 +1,9 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   Indexable,
-  RequestHandlers,
-  RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { RequestHandlers, RouteBuilder } from '@conduitplatform/module-tools';
 import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
 import { LocationEnum } from '../../enums';

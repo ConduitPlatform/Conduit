@@ -1,15 +1,17 @@
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  RouteOptionType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import {
   ConduitBoolean,
   ConduitJson,
   ConduitNumber,
-  ConduitRouteActions,
-  ConduitRouteReturnDefinition,
   ConduitString,
   GrpcServer,
-  RouteOptionType,
   RoutingManager,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';

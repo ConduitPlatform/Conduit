@@ -1,4 +1,4 @@
-import { ConduitBoolean, ConduitString } from '@conduitplatform/grpc-sdk';
+import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
 
 export const ConduitOptions = {
   cms: {
