@@ -1,20 +1,23 @@
 import { isNil } from 'lodash';
-import { TokenType } from '../constants/TokenType';
+import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { IAuthenticationStrategy } from '../interfaces';
 import { TokenProvider } from './tokenProvider';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates';
 

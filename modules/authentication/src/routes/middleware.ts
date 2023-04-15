@@ -1,5 +1,4 @@
 import {
-  ConfigController,
   Cookies,
   GrpcError,
   Headers,
@@ -7,6 +6,7 @@ import {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../utils';
 import { AccessToken, Client } from '../models';
 import { isNil } from 'lodash';

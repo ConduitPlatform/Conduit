@@ -1,25 +1,27 @@
 import { isNil } from 'lodash';
 import { AuthUtils } from '../utils';
-import { TokenType } from '../constants/TokenType';
+import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 import { Config } from '../config';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import * as templates from '../templates';
 import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { IAuthenticationStrategy } from '../interfaces';
 import { TokenProvider } from './tokenProvider';
 import { TeamsHandler } from './team';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;

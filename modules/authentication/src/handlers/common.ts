@@ -3,18 +3,20 @@ import moment from 'moment';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { RefreshToken, User } from '../models';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { IAuthenticationStrategy } from '../interfaces';
 import { Config } from '../config';
 import { TokenProvider } from './tokenProvider';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -64,7 +66,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     await TokenProvider.getInstance().logOutClientOperations(
       this.grpcSdk,
       clientConfig,
-      authToken,
+      authToken!,
       clientId,
       user._id,
     );

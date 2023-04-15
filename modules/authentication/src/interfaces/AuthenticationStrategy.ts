@@ -1,4 +1,4 @@
-import { RoutingManager } from '@conduitplatform/grpc-sdk';
+import { RoutingManager } from '@conduitplatform/module-tools';
 
 export interface IAuthenticationStrategy {
   validate(): Promise<boolean>;

@@ -190,7 +190,7 @@ export class TokenProvider {
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
         user: userId,
-        clientId: isAnonymous || !clientConfig.multipleClientLogins ? null : clientId,
+        ...(isAnonymous || !clientConfig.multipleClientLogins ? {} : { clientId }),
       });
     } else if (!clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
@@ -211,7 +211,7 @@ export class TokenProvider {
     const token = authToken.split(' ')[1];
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
-        clientId: !isAnonymous && clientConfig.multipleClientLogins ? clientId : null,
+        ...(!isAnonymous && clientConfig.multipleClientLogins ? { clientId } : {}),
         user: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
@@ -221,7 +221,7 @@ export class TokenProvider {
     }
   }
 
-  deleteUserTokens(query: Query) {
+  deleteUserTokens(query: Query<AccessToken | RefreshToken>) {
     const promise1 = AccessToken.getInstance().deleteMany(query);
     const promise2 = RefreshToken.getInstance().deleteMany(query);
 

@@ -1,16 +1,19 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
-  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+
+import {
+  ConduitNumber,
+  ConduitObjectId,
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { Team, Token, User } from '../models';
 import { Config } from '../config';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
