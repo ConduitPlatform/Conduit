@@ -31,6 +31,7 @@ export class SmtpProvider extends EmailProviderClass {
   updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
     throw new Error('Method not implemented.');
   }
+
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
     throw new Error('Method not implemented.');
   }
