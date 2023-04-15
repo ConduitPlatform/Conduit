@@ -1,11 +1,13 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import {
   ConduitString,
   ConfigController,
   RoutingManager,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
 import { Forms } from '../models';
 import { FormsRoutes } from '../routes';
 
