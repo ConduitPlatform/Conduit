@@ -1,4 +1,4 @@
-import { MetricType } from '../../types';
+import { MetricType } from 'prom-client';
 
 export default {
   internalGrpcRequests: {

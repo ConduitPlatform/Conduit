@@ -36,13 +36,6 @@ export enum HealthCheckStatus {
   NOT_SERVING,
   SERVICE_UNKNOWN,
 }
-
-export type MetricConfiguration =
-  | CounterConfiguration<any>
-  | SummaryConfiguration<any>
-  | HistogramConfiguration<any>
-  | GaugeConfiguration<any>;
-
 export enum MetricType {
   Counter,
   Gauge,

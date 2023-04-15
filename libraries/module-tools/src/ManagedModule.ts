@@ -1,26 +1,140 @@
-import { ConduitServiceModule } from './ConduitServiceModule';
-import { ConfigController } from './ConfigController';
+import { ConduitServiceModule, ConfigController, GrpcServer } from './classes';
 import { kebabCase } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import convict from 'convict';
-import { ConduitService } from '../interfaces';
+import { ConduitService } from './interfaces';
 import ConduitGrpcSdk, {
+  IConduitLogger,
   Indexable,
-  merge,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer } from './GrpcServer';
+import { merge } from './utilities';
+import { ConduitLogger, setupLoki } from './logging';
+import winston from 'winston';
+import path from 'path';
+import { ConduitMetrics } from './metrics';
+import { clientMiddleware } from './metrics/clientMiddleware';
+
+const convictConfigParser = (config: Indexable) => {
+  if (typeof config === 'object') {
+    Object.keys(config).forEach(key => {
+      if (key === '_cvtProperties') {
+        config = convictConfigParser(config._cvtProperties);
+      } else {
+        config[key] = convictConfigParser(config[key]);
+      }
+    });
+  }
+  return config;
+};
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
+  private readonly serviceAddress: string;
+  private readonly servicePort: string;
   protected abstract readonly configSchema?: object;
   protected abstract readonly metricsSchema?: object;
   readonly config?: convict.Config<T>;
   configOverride: boolean = false;
   service?: ConduitService;
+  public static Metrics?: ConduitMetrics;
 
   protected constructor(moduleName: string) {
     super(moduleName);
+    if (!process.env.CONDUIT_SERVER) {
+      throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
+    }
+    this.servicePort = process.env.GRPC_PORT ?? '5000';
+    this.serviceAddress =
+      // @compat (v0.15): SERVICE_IP -> SERVICE_URL
+      process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
+    try {
+      let logger: IConduitLogger;
+      try {
+        logger = new ConduitLogger([
+          new winston.transports.File({
+            filename: path.join(__dirname, '.logs/combined.log'),
+            level: 'info',
+          }),
+          new winston.transports.File({
+            filename: path.join(__dirname, '.logs/errors.log'),
+            level: 'error',
+          }),
+        ]);
+      } catch (e) {
+        logger = new ConduitLogger();
+      }
+      this.grpcSdk = new ConduitGrpcSdk(
+        process.env.CONDUIT_SERVER,
+        moduleName,
+        true,
+        logger,
+        () => {
+          return this.healthState;
+        },
+      );
+      setupLoki(this.grpcSdk.name, this.grpcSdk.instance).then();
+      if (process.env.METRICS_PORT) {
+        ManagedModule.Metrics = new ConduitMetrics(
+          this.grpcSdk.name,
+          this.grpcSdk.instance,
+        );
+        this.grpcSdk.addMiddleware(clientMiddleware());
+      }
+    } catch {
+      throw new Error('Failed to initialize grpcSdk');
+    }
+  }
+
+  async start() {
+    await this.grpcSdk.initialize();
+    this.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
+    try {
+      await this.preRegisterLifecycle();
+      await this.grpcSdk.config.registerModule(this.name, this.address, this.healthState);
+    } catch (err) {
+      ConduitGrpcSdk.Logger.error('Failed to initialize server');
+      ConduitGrpcSdk.Logger.error(err as Error);
+      process.exit(-1);
+    }
+    await this.postRegisterLifecycle().catch((err: Error) => {
+      ConduitGrpcSdk.Logger.error('Failed to activate module');
+      ConduitGrpcSdk.Logger.error(err);
+      process.exit(-1);
+    });
+  }
+
+  private async preRegisterLifecycle(): Promise<void> {
+    await this.createGrpcServer();
+    await this.preServerStart();
+    await this.grpcSdk.initializeEventBus();
+    await this.handleConfigSyncUpdate();
+    await this.registerMetrics();
+    await this.startGrpcServer();
+    await this.onServerStart();
+    await this.initializeMetrics();
+    await this.preRegister();
+  }
+
+  private async postRegisterLifecycle(): Promise<void> {
+    await this.onRegister();
+    if (this.config) {
+      const configSchema = this.config.getSchema();
+
+      let config: any = this.config.getProperties();
+      config = await this.preConfig(config);
+
+      config = await this.grpcSdk.config.configure(
+        config,
+        convictConfigParser(configSchema),
+        this.configOverride,
+      );
+
+      ConfigController.getInstance();
+      if (config) ConfigController.getInstance().config = config;
+      if (!config || config.active || !config.hasOwnProperty('active'))
+        await this.onConfig();
+    }
   }
 
   get name() {
@@ -98,11 +212,11 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
    * Registers common and module-specific metric types.
    */
   async registerMetrics() {
-    if (ConduitGrpcSdk.Metrics) {
-      ConduitGrpcSdk.Metrics.initializeDefaultMetrics();
+    if (ManagedModule.Metrics) {
+      ManagedModule.Metrics.initializeDefaultMetrics();
       if (this.metricsSchema) {
         Object.values(this.metricsSchema).forEach(metric => {
-          ConduitGrpcSdk.Metrics!.registerMetric(metric.type, metric.config);
+          ManagedModule.Metrics!.registerMetric(metric.type, metric.config);
         });
       }
     }

@@ -33,12 +33,8 @@ import {
 } from './protoUtils/core';
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
-import { ConduitLogger, setupLoki } from './utilities/Logger';
-import winston from 'winston';
-import path from 'path';
 import { ClusterOptions, RedisOptions } from 'ioredis';
-import { ClientMiddleware } from 'nice-grpc-common';
-import { ConduitMetrics } from './metrics';
+import { IConduitLogger } from './interfaces';
 type UrlRemap = { [url: string]: string };
 
 export default class ConduitGrpcSdk {
@@ -69,39 +65,36 @@ export default class ConduitGrpcSdk {
   private _eventBus?: EventBus;
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
-  private readonly name: string;
-  private readonly instance: string;
+  public readonly name: string;
+  public readonly instance: string;
   private readonly urlRemap?: UrlRemap;
   private readonly _serviceHealthStatusGetter: Function;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
-  public static Metrics?: ConduitMetrics;
-  private static _Logger: ConduitLogger;
+  private static _Logger: IConduitLogger | Console;
+  private static middleware: any[] = [];
 
   static get Logger() {
     return ConduitGrpcSdk._Logger;
   }
 
+  static get interceptors() {
+    return ConduitGrpcSdk.middleware;
+  }
+
   constructor(
     serverUrl: string,
-    serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
     name?: string,
     watchModules = true,
+    logger?: IConduitLogger,
+    serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
   ) {
-    try {
-      ConduitGrpcSdk._Logger = new ConduitLogger([
-        new winston.transports.File({
-          filename: path.join(__dirname, '.logs/combined.log'),
-          level: 'info',
-        }),
-        new winston.transports.File({
-          filename: path.join(__dirname, '.logs/errors.log'),
-          level: 'error',
-        }),
-      ]);
-    } catch (e) {
-      ConduitGrpcSdk._Logger = new ConduitLogger();
+    if (logger) {
+      ConduitGrpcSdk._Logger = logger;
+    } else {
+      ConduitGrpcSdk._Logger = console;
     }
+
     if (!name) {
       this.name = 'module_' + Crypto.randomBytes(16).toString('hex');
     } else {
@@ -119,10 +112,6 @@ export default class ConduitGrpcSdk {
       }),
     );
 
-    if (process.env.METRICS_PORT) {
-      ConduitGrpcSdk.Metrics = new ConduitMetrics(this.name, this.instance);
-    }
-    setupLoki(this.name, this.instance).then();
     this.serverUrl = serverUrl;
     this._watchModules = watchModules;
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
@@ -132,6 +121,10 @@ export default class ConduitGrpcSdk {
         moduleName: this.name,
       });
     }
+  }
+
+  public addMiddleware(middleware: any) {
+    ConduitGrpcSdk.middleware.push(middleware);
   }
 
   async initialize() {

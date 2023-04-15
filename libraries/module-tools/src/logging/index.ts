@@ -1,10 +1,13 @@
-import ConduitGrpcSdk, { UntypedArray } from '../index';
-import { Indexable } from '../interfaces';
-import { linearBackoffTimeoutAsync } from '../utilities';
+import ConduitGrpcSdk, {
+  IConduitLogger,
+  Indexable,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import winston, { format, LogCallback, Logger } from 'winston';
 import { isEmpty } from 'lodash';
 import { get } from 'http';
 import LokiTransport from 'winston-loki';
+import { linearBackoffTimeoutAsync } from '../utilities';
 
 const processMeta = (meta: Indexable) => {
   if (Array.isArray(meta)) {
@@ -52,8 +55,8 @@ const defaultTransport = new winston.transports.Console({
   ),
 });
 
-export class ConduitLogger {
-  private readonly _winston: winston.Logger;
+export class ConduitLogger implements IConduitLogger {
+  private readonly _winston: Logger;
 
   constructor(transports?: winston.transport[]) {
     this._winston = winston.createLogger({
@@ -136,7 +139,7 @@ export async function setupLoki(module: string, instance: string) {
     const onTry = async () => {
       return await lokiReadyCheck(lokiUrl!)
         .then(() => {
-          ConduitGrpcSdk.Logger.addTransport(
+          (ConduitGrpcSdk.Logger as IConduitLogger).addTransport(
             new LokiTransport({
               level: 'debug',
               host: lokiUrl!,

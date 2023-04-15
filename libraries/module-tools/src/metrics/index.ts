@@ -7,13 +7,14 @@ import {
   Histogram,
   HistogramConfiguration,
   LabelValues,
+  MetricConfiguration,
+  MetricType,
   Registry,
   Summary,
   SummaryConfiguration,
 } from 'prom-client';
 import { MetricsServer } from './MetricsServer';
 import defaultMetrics from './config/defaults';
-import { MetricConfiguration, MetricType } from '../types';
 
 export class ConduitMetrics {
   private readonly moduleName: string;
@@ -40,7 +41,7 @@ export class ConduitMetrics {
     }
   }
 
-  registerMetric(type: MetricType, config: MetricConfiguration) {
+  registerMetric(type: MetricType, config: MetricConfiguration<string>) {
     if (this.getMetric(config.name)) return;
     const metricConfig = JSON.parse(JSON.stringify(config));
     metricConfig.name = this.addPrefix(config.name);
