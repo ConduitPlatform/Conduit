@@ -1,11 +1,14 @@
 import ConduitGrpcSdk, {
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
+import {
   GrpcServer,
   RequestHandlers,
   RoutingManager,
-  UntypedArray,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
+
 import { Functions } from '../models';
 import { createFunctionRoute } from './utils';
 
