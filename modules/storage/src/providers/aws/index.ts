@@ -15,7 +15,8 @@ import { Readable } from 'stream';
 import { streamToBuffer } from '../../utils';
 import fs from 'fs';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
-import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { SIGNED_URL_EXPIRY_SECONDS } from '../../constants/expiry';
 
 type AwsError = { $metadata: { httpStatusCode: number } };
@@ -40,11 +41,6 @@ export class AWSS3Storage implements IStorageProvider {
     }
 
     this._storage = new S3Client(config);
-  }
-
-  private getFormattedContainerName(bucketName: string): string {
-    const accountId = ConfigController.getInstance().config.aws.accountId;
-    return `conduit-${accountId}-${bucketName}`;
   }
 
   container(name: string): IStorageProvider {
@@ -219,6 +215,21 @@ export class AWSS3Storage implements IStorageProvider {
     return `https://${this._activeContainer}.s3.amazonaws.com/${fileName}`;
   }
 
+  getUploadUrl(fileName: string): Promise<string | Error> {
+    const command = new PutObjectCommand({
+      Bucket: this._activeContainer,
+      Key: fileName,
+    });
+    return awsGetSignedUrl(this._storage, command, {
+      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
+    });
+  }
+
+  private getFormattedContainerName(bucketName: string): string {
+    const accountId = ConfigController.getInstance().config.aws.accountId;
+    return `conduit-${accountId}-${bucketName}`;
+  }
+
   private async listFiles(name: string) {
     const files = await this._storage.send(
       new ListObjectsCommand({
@@ -228,15 +239,5 @@ export class AWSS3Storage implements IStorageProvider {
     );
     if (!files.Contents) return [];
     return files.Contents;
-  }
-
-  getUploadUrl(fileName: string): Promise<string | Error> {
-    const command = new PutObjectCommand({
-      Bucket: this._activeContainer,
-      Key: fileName,
-    });
-    return awsGetSignedUrl(this._storage, command, {
-      expiresIn: SIGNED_URL_EXPIRY_SECONDS,
-    });
   }
 }

@@ -1,18 +1,20 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   Query,
   RouteOptionType,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitBoolean,
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
@@ -28,6 +30,155 @@ export class AdminRoutes {
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
+  }
+
+  async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort, folder, search } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const query: Query<File> = {
+      container: call.request.params.container,
+    };
+
+    if (!isNil(folder)) {
+      query.folder =
+        folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
+    }
+    if (!isNil(search)) {
+      query.name = { $regex: `.*${search}.*`, $options: 'i' };
+    }
+
+    const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
+    const filesCount = await File.getInstance().countDocuments(query);
+
+    return { files, filesCount };
+  }
+
+  async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort, parent, search } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const query: Query<_StorageFolder> = {
+      container: call.request.params.container,
+    };
+    if (!isNil(search)) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+    if (!isNil(parent)) {
+      const regexSuffix = !isNil(search) ? search : '([^/]+)/?$';
+      query.name = {
+        $regex: `${parent}\/${regexSuffix}`,
+        $options: 'i',
+      };
+    }
+    const folders = await _StorageFolder
+      .getInstance()
+      .findMany(query, undefined, skip, limit, sort);
+    const folderCount = await _StorageFolder.getInstance().countDocuments(query);
+    return { folders, folderCount };
+  }
+
+  async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, container, isPublic } = call.request.params;
+    const containerDocument = await _StorageContainer
+      .getInstance()
+      .findOne({ name: container });
+    if (isNil(containerDocument)) {
+      await this._createContainer(container, isPublic).catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    }
+    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
+    let folder = await _StorageFolder.getInstance().findOne({
+      name: newName,
+      container,
+    });
+    if (isNil(folder)) {
+      folder = await _StorageFolder.getInstance().create({
+        name: newName,
+        container,
+        isPublic,
+      });
+      const exists = await this.fileHandlers.storage
+        .container(container)
+        .folderExists(newName);
+      if (!exists) {
+        await this.fileHandlers.storage.container(container).createFolder(newName);
+      }
+    } else {
+      throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+    }
+    return folder;
+  }
+
+  async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+
+    const folder = await _StorageFolder.getInstance().findOne({
+      _id: id,
+    });
+    if (isNil(folder)) {
+      throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
+    } else {
+      await this.fileHandlers.storage
+        .container(folder.container)
+        .deleteFolder(folder.name);
+      await _StorageFolder.getInstance().deleteOne({
+        name: folder.name,
+        container: folder.container,
+      });
+      await File.getInstance().deleteMany({
+        folder: folder.name,
+        container: folder.container,
+      });
+    }
+    return 'OK';
+  }
+
+  async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const containers = await _StorageContainer
+      .getInstance()
+      .findMany({}, undefined, skip, limit, sort);
+    const containersCount = await _StorageContainer.getInstance().countDocuments({});
+
+    return { containers, containersCount };
+  }
+
+  async createContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, isPublic } = call.request.params;
+    return await this._createContainer(name, isPublic);
+  }
+
+  async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    try {
+      const container = await _StorageContainer.getInstance().findOne({
+        _id: id,
+      });
+      if (isNil(container)) {
+        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
+      } else {
+        await this.fileHandlers.storage.deleteContainer(container.name);
+        await _StorageContainer.getInstance().deleteOne({
+          _id: id,
+        });
+        await File.getInstance().deleteMany({
+          container: container.name,
+        });
+        await _StorageFolder.getInstance().deleteMany({
+          container: container.name,
+        });
+      }
+      return container;
+    } catch (e) {
+      throw new GrpcError(
+        status.INTERNAL,
+        (e as Error).message ?? 'Something went wrong',
+      );
+    }
   }
 
   private registerAdminRoutes() {
@@ -271,156 +422,6 @@ export class AdminRoutes {
       this.deleteContainer.bind(this),
     );
     this.routingManager.registerRoutes();
-  }
-
-  async getFiles(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort, folder, search } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query: Query = {
-      container: call.request.params.container,
-    };
-
-    if (!isNil(folder)) {
-      query.folder =
-        folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
-    }
-    if (!isNil(search)) {
-      query.name = { $regex: `.*${search}.*`, $options: 'i' };
-    }
-
-    const files = await File.getInstance().findMany(query, undefined, skip, limit, sort);
-    const filesCount = await File.getInstance().countDocuments(query);
-
-    return { files, filesCount };
-  }
-
-  async getFolders(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort, parent, search } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query: Query = {
-      container: call.request.params.container,
-    };
-    if (!isNil(search)) {
-      query.name = { $regex: search, $options: 'i' };
-    }
-    if (!isNil(parent)) {
-      const existingRegex = query.name?.$regex !== '' && !isNil(query.name?.$regex);
-      const regexSuffix = existingRegex ? query.name.$regex : '([^/]+)/?$';
-      query.name = {
-        $regex: `${parent}\/${regexSuffix}`,
-        $options: 'i',
-      };
-    }
-    const folders = await _StorageFolder
-      .getInstance()
-      .findMany(query, undefined, skip, limit, sort);
-    const folderCount = await _StorageFolder.getInstance().countDocuments(query);
-    return { folders, folderCount };
-  }
-
-  async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, container, isPublic } = call.request.params;
-    const containerDocument = await _StorageContainer
-      .getInstance()
-      .findOne({ name: container });
-    if (isNil(containerDocument)) {
-      await this._createContainer(container, isPublic).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    }
-    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
-    let folder = await _StorageFolder.getInstance().findOne({
-      name: newName,
-      container,
-    });
-    if (isNil(folder)) {
-      folder = await _StorageFolder.getInstance().create({
-        name: newName,
-        container,
-        isPublic,
-      });
-      const exists = await this.fileHandlers.storage
-        .container(container)
-        .folderExists(newName);
-      if (!exists) {
-        await this.fileHandlers.storage.container(container).createFolder(newName);
-      }
-    } else {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
-    }
-    return folder;
-  }
-
-  async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-
-    const folder = await _StorageFolder.getInstance().findOne({
-      _id: id,
-    });
-    if (isNil(folder)) {
-      throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
-    } else {
-      await this.fileHandlers.storage
-        .container(folder.container)
-        .deleteFolder(folder.name);
-      await _StorageFolder.getInstance().deleteOne({
-        name: folder.name,
-        container: folder.container,
-      });
-      await File.getInstance().deleteMany({
-        folder: folder.name,
-        container: folder.container,
-      });
-    }
-    return 'OK';
-  }
-
-  async getContainers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const containers = await _StorageContainer
-      .getInstance()
-      .findMany({}, undefined, skip, limit, sort);
-    const containersCount = await _StorageContainer.getInstance().countDocuments({});
-
-    return { containers, containersCount };
-  }
-
-  async createContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, isPublic } = call.request.params;
-    return await this._createContainer(name, isPublic);
-  }
-
-  async deleteContainer(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-    try {
-      const container = await _StorageContainer.getInstance().findOne({
-        _id: id,
-      });
-      if (isNil(container)) {
-        throw new GrpcError(status.NOT_FOUND, 'Container does not exist');
-      } else {
-        await this.fileHandlers.storage.deleteContainer(container.name);
-        await _StorageContainer.getInstance().deleteOne({
-          _id: id,
-        });
-        await File.getInstance().deleteMany({
-          container: container.name,
-        });
-        await _StorageFolder.getInstance().deleteMany({
-          container: container.name,
-        });
-      }
-      return container;
-    } catch (e) {
-      throw new GrpcError(
-        status.INTERNAL,
-        (e as Error).message ?? 'Something went wrong',
-      );
-    }
   }
 
   private async _createContainer(name: string, isPublic: boolean | undefined) {

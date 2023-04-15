@@ -1,9 +1,7 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   HealthCheckStatus,
-  ManagedModule,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
@@ -20,10 +18,10 @@ import MetricsSchema from './metrics';
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = MetricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',
@@ -35,6 +33,7 @@ export default class Storage extends ManagedModule<Config> {
       getFileData: this.getFileData.bind(this),
     },
   };
+  protected metricsSchema = MetricsSchema;
   private adminRouter: AdminRoutes;
   private userRouter: StorageRoutes;
   private database: DatabaseProvider;
@@ -98,36 +97,6 @@ export default class Storage extends ManagedModule<Config> {
     }
   }
 
-  private async refreshAppRoutes() {
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.userRouter = new StorageRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this._fileHandlers,
-          this.enableAuthRoutes,
-        );
-        return this.userRouter.registerRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) {
-        // borrowed foreign model
-        return this.database
-          .createSchemaFromAdapter(modelInstance)
-          .then(() => this.database.migrate(modelInstance.name));
-      }
-    });
-    return Promise.all(promises);
-  }
-
   async initializeMetrics() {
     const containersTotal = await models._StorageContainer
       .getInstance()
@@ -186,5 +155,35 @@ export default class Storage extends ManagedModule<Config> {
         message: 'File handlers not initiated',
       });
     await this._fileHandlers.updateFile(call);
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
+      }
+    });
+    return Promise.all(promises);
+  }
+
+  private async refreshAppRoutes() {
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.userRouter = new StorageRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this._fileHandlers,
+          this.enableAuthRoutes,
+        );
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 }
