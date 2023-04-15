@@ -1,9 +1,7 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -21,10 +19,10 @@ import {
   VerifyResponse,
 } from './protoTypes/sms';
 import metricsSchema from './metrics';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Sms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'sms.proto'),
     protoDescription: 'sms.Sms',
@@ -35,6 +33,7 @@ export default class Sms extends ManagedModule<Config> {
       verify: this.verify.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private _provider: ISmsProvider | undefined;
@@ -65,30 +64,6 @@ export default class Sms extends ManagedModule<Config> {
     } else {
       await this.initProvider();
     }
-  }
-
-  private async initProvider() {
-    const smsConfig = ConfigController.getInstance().config;
-    const name = smsConfig.providerName;
-    const settings = smsConfig[name];
-
-    if (name === 'twilio') {
-      try {
-        this._provider = new TwilioProvider(settings);
-      } catch (e) {
-        this._provider = undefined;
-        ConduitGrpcSdk.Logger.error(e as Error);
-        return;
-      }
-    } else {
-      ConduitGrpcSdk.Logger.error('SMS provider not supported');
-      return;
-    }
-    this.adminRouter.updateProvider(this._provider!);
-    this.isRunning = true;
-    this.updateHealth(
-      this._provider ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
-    );
   }
 
   async initializeMetrics() {}
@@ -166,5 +141,29 @@ export default class Sms extends ManagedModule<Config> {
       });
 
     return callback(null, { verified });
+  }
+
+  private async initProvider() {
+    const smsConfig = ConfigController.getInstance().config;
+    const name = smsConfig.providerName;
+    const settings = smsConfig[name];
+
+    if (name === 'twilio') {
+      try {
+        this._provider = new TwilioProvider(settings);
+      } catch (e) {
+        this._provider = undefined;
+        ConduitGrpcSdk.Logger.error(e as Error);
+        return;
+      }
+    } else {
+      ConduitGrpcSdk.Logger.error('SMS provider not supported');
+      return;
+    }
+    this.adminRouter.updateProvider(this._provider!);
+    this.isRunning = true;
+    this.updateHealth(
+      this._provider ? HealthCheckStatus.SERVING : HealthCheckStatus.NOT_SERVING,
+    );
   }
 }
