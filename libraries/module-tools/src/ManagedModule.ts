@@ -4,17 +4,12 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 import { ConduitService } from './interfaces';
 import ConduitGrpcSdk, {
-  IConduitLogger,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
 import { merge } from './utilities';
-import { ConduitLogger, setupLoki } from './logging';
-import winston from 'winston';
-import path from 'path';
-import { ConduitMetrics } from './metrics';
-import { clientMiddleware } from './metrics/clientMiddleware';
 import { convictConfigParser } from './utilities/convictConfigParser';
+import { initializeSdk } from './utilities/initializeSdk';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
@@ -35,39 +30,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
       // @compat (v0.15): SERVICE_IP -> SERVICE_URL
       process.env.SERVICE_URL || process.env.SERVICE_IP || '0.0.0.0:' + this.servicePort;
     try {
-      let logger: IConduitLogger;
-      try {
-        logger = new ConduitLogger([
-          new winston.transports.File({
-            filename: path.join(__dirname, '.logs/combined.log'),
-            level: 'info',
-          }),
-          new winston.transports.File({
-            filename: path.join(__dirname, '.logs/errors.log'),
-            level: 'error',
-          }),
-        ]);
-      } catch (e) {
-        logger = new ConduitLogger();
-      }
-      this.grpcSdk = new ConduitGrpcSdk(
-        process.env.CONDUIT_SERVER,
-        moduleName,
-        true,
-        logger,
-        () => {
-          return this.healthState;
-        },
-      );
-      setupLoki(this.grpcSdk.name, this.grpcSdk.instance).then();
-      if (process.env.METRICS_PORT) {
-        ConduitGrpcSdk.Metrics = new ConduitMetrics(
-          this.grpcSdk.name,
-          this.grpcSdk.instance,
-        );
-        this.grpcSdk.addMiddleware(clientMiddleware());
-      }
-    } catch {
+      this.grpcSdk = initializeSdk(process.env.CONDUIT_SERVER, this.name, true, () => {
+        return this.healthState;
+      });
+    } catch (e) {
       throw new Error('Failed to initialize grpcSdk');
     }
   }
