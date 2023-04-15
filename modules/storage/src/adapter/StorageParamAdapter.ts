@@ -21,14 +21,14 @@ export class StorageParamAdapter {
     context?: Context,
     cookies?: Cookies,
   ): ParsedRouterRequest {
-    return {
+    return <ParsedRouterRequest>{
       request: {
         params,
         urlParams: urlParams ?? {},
         queryParams: queryParams ?? {},
         bodyParams: bodyParams ?? {},
         path: path ?? '',
-        headers: headers ?? {},
+        headers: headers,
         context: context ?? {},
         cookies: cookies ?? {},
       },
