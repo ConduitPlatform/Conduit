@@ -93,6 +93,54 @@ export class TokenProvider {
     };
   }
 
+  async signInClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
+    userId: string,
+    clientId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
+    if (!clientConfig.multipleUserSessions) {
+      await this.deleteUserTokens({
+        user: userId,
+        ...(isAnonymous || !clientConfig.multipleClientLogins ? {} : { clientId }),
+      });
+    } else if (!clientConfig.multipleClientLogins) {
+      await this.deleteUserTokens({
+        user: userId,
+        clientId: { $ne: clientId },
+      });
+    }
+  }
+
+  async logOutClientOperations(
+    grpcSdk: ConduitGrpcSdk,
+    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
+    authToken: string,
+    clientId: string,
+    userId: string,
+  ) {
+    const isAnonymous = 'anonymous-client' === clientId;
+    const token = authToken.split(' ')[1];
+    if (!clientConfig.multipleUserSessions) {
+      await this.deleteUserTokens({
+        ...(!isAnonymous && clientConfig.multipleClientLogins ? { clientId } : {}),
+        user: userId,
+      });
+    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
+      await this.deleteUserTokens({
+        token: token,
+      });
+    }
+  }
+
+  deleteUserTokens(query: Query<AccessToken | RefreshToken>) {
+    const promise1 = AccessToken.getInstance().deleteMany(query);
+    const promise2 = RefreshToken.getInstance().deleteMany(query);
+
+    return Promise.all([promise1, promise2]);
+  }
+
   private createUserTokens(
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
@@ -178,53 +226,5 @@ export class TokenProvider {
 
   private signToken(data: Indexable, secret: string, options: SignOptions) {
     return jwt.sign(data, secret, options);
-  }
-
-  async signInClientOperations(
-    grpcSdk: ConduitGrpcSdk,
-    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
-    userId: string,
-    clientId: string,
-  ) {
-    const isAnonymous = 'anonymous-client' === clientId;
-    if (!clientConfig.multipleUserSessions) {
-      await this.deleteUserTokens({
-        user: userId,
-        ...(isAnonymous || !clientConfig.multipleClientLogins ? {} : { clientId }),
-      });
-    } else if (!clientConfig.multipleClientLogins) {
-      await this.deleteUserTokens({
-        user: userId,
-        clientId: { $ne: clientId },
-      });
-    }
-  }
-
-  async logOutClientOperations(
-    grpcSdk: ConduitGrpcSdk,
-    clientConfig: { multipleUserSessions: boolean; multipleClientLogins: boolean },
-    authToken: string,
-    clientId: string,
-    userId: string,
-  ) {
-    const isAnonymous = 'anonymous-client' === clientId;
-    const token = authToken.split(' ')[1];
-    if (!clientConfig.multipleUserSessions) {
-      await this.deleteUserTokens({
-        ...(!isAnonymous && clientConfig.multipleClientLogins ? { clientId } : {}),
-        user: userId,
-      });
-    } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
-      await this.deleteUserTokens({
-        token: token,
-      });
-    }
-  }
-
-  deleteUserTokens(query: Query<AccessToken | RefreshToken>) {
-    const promise1 = AccessToken.getInstance().deleteMany(query);
-    const promise2 = RefreshToken.getInstance().deleteMany(query);
-
-    return Promise.all([promise1, promise2]);
   }
 }

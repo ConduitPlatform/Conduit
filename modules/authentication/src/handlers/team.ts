@@ -25,20 +25,20 @@ import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {
-  private initialized = false;
   private static _instance?: TeamsHandler;
+  private initialized = false;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  public get isActive() {
+    return this.initialized;
+  }
 
   public static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (TeamsHandler._instance) return TeamsHandler._instance;
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
     TeamsHandler._instance = new TeamsHandler(grpcSdk);
     return TeamsHandler._instance;
-  }
-
-  public get isActive() {
-    return this.initialized;
   }
 
   async addUserToTeam(user: User, invitationToken: string) {

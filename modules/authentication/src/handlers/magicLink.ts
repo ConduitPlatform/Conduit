@@ -97,22 +97,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     return 'token sent';
   }
 
-  private async sendMagicLinkMail(user: User, token: Token) {
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
-
-    const result = { token, hostUrl: url };
-    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
-    await this.emailModule.sendEmail('MagicLink', {
-      email: user.email,
-      sender: 'no-reply',
-      variables: {
-        link,
-      },
-    });
-    return 'Email sent';
-  }
-
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
@@ -143,6 +127,22 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       },
       redirectUri,
     );
+  }
+
+  private async sendMagicLinkMail(user: User, token: Token) {
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
+
+    const result = { token, hostUrl: url };
+    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
+    await this.emailModule.sendEmail('MagicLink', {
+      email: user.email,
+      sender: 'no-reply',
+      variables: {
+        link,
+      },
+    });
+    return 'Email sent';
   }
 
   private registerTemplate() {
