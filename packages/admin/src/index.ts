@@ -4,12 +4,10 @@ import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteObject,
-  ConfigController,
   GrpcCallback,
   GrpcRequest,
-  GrpcServer,
+  IConduitLogger,
   Indexable,
-  merge,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -49,6 +47,7 @@ import { generateConfigDefaults } from './utils/config';
 import metricsSchema from './metrics';
 import * as adminProxyRoutes from './routes/proxy';
 import cors from 'cors';
+import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -357,7 +356,7 @@ export default class AdminModule extends IConduitAdmin {
             ...route.proxyMiddlewareOptions,
           },
         });
-        ConduitGrpcSdk.Logger.http(
+        (ConduitGrpcSdk.Logger as IConduitLogger).http(
           `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
         );
       });
@@ -507,13 +506,13 @@ export default class AdminModule extends IConduitAdmin {
 
     processedRoutes.forEach(r => {
       if (r instanceof ConduitRoute) {
-        ConduitGrpcSdk.Logger.http(
+        (ConduitGrpcSdk.Logger as IConduitLogger).http(
           `New admin route registered: ${r.input.action} ${r.input.path} handler url: ${url}`,
         );
         this._router.registerConduitRoute(r);
       }
       if (r instanceof ProxyRoute) {
-        ConduitGrpcSdk.Logger.http(
+        (ConduitGrpcSdk.Logger as IConduitLogger).http(
           `New admin proxy route registered:  ${r.input.options.action} ${r.input.options.path} target: ${r.input.proxy.target}`,
         );
         this._router.registerProxyRoute(r);

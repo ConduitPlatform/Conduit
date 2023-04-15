@@ -1,11 +1,7 @@
-import {
-  ConduitNumber,
-  ConduitRouteActions,
-  ConduitRouteParameters,
-  ConduitString,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitNumber, ConduitString } from '@conduitplatform/module-tools';
 
 export function getAdminsRoute() {
   return new ConduitRoute(

@@ -4,9 +4,9 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  linearBackoffTimeout,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
+import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';

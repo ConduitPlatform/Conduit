@@ -1,6 +1,7 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { IProxyMiddlewareOptions } from '../interfaces ';
 import { ProxyRouteActions } from '@conduitplatform/hermes';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema = {
   _id: TYPE.ObjectId,

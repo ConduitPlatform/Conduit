@@ -2,9 +2,9 @@ import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
-  GrpcServer as ConduitGrpcServer,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
+import { GrpcServer as ConduitGrpcServer } from '@conduitplatform/module-tools';
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';
 import path from 'path';
@@ -13,6 +13,7 @@ import CoreConfigSchema from './config/config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
 import convict from 'convict';
+import { initializeSdk } from '@conduitplatform/module-tools/dist/utilities/initializeSdk';
 
 const CORE_SERVICES = ['Config', 'Admin'];
 
@@ -43,14 +44,9 @@ export class GrpcServer {
       .createNewServer(true)
       .then(port => {
         const _url = '0.0.0.0:' + port.toString();
-        this._grpcSdk = new ConduitGrpcSdk(
-          _url,
-          () => {
-            return this._serviceHealthState;
-          },
-          'core',
-          false,
-        );
+        this._grpcSdk = initializeSdk(_url, 'core', false, () => {
+          return this._serviceHealthState;
+        });
         this._grpcSdk.initialize().then(async () => {
           await this._grpcSdk.initializeEventBus();
           this.commons.registerConfigManager(
