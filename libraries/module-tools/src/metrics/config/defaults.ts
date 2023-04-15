@@ -1,4 +1,4 @@
-import { MetricType } from 'prom-client';
+import { MetricType } from '@conduitplatform/grpc-sdk';
 
 export default {
   internalGrpcRequests: {

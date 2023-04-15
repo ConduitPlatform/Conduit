@@ -48,7 +48,7 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   async start() {
     await this.grpcSdk.initialize();
-    this.initialize(this.grpcSdk, this.serviceAddress, this.servicePort);
+    this.initialize(this.serviceAddress, this.servicePort);
     try {
       await this.preRegisterLifecycle();
       await this.grpcSdk.config.registerModule(this.name, this.address, this.healthState);
@@ -66,12 +66,10 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   /**
    * This is the first function triggered on module spin up.
-   * @param grpcSdk {ConduitGrpcSdk}
    * @param address {string} external address:port of service (LoadBalancer)
    * @param port {string} port to bring up gRPC service
    */
-  initialize(grpcSdk: ConduitGrpcSdk, address: string, port: string) {
-    this.grpcSdk = grpcSdk;
+  initialize(address: string, port: string) {
     this._address = address;
     this._port = port;
     if (this.configSchema) {

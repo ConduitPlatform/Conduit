@@ -63,6 +63,10 @@ export abstract class ConduitServiceModule {
         state === HealthCheckStatus.SERVING ? 1 : 0,
       );
     }
+    if (init) {
+      this._serviceHealthState = state;
+      return;
+    }
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
       this.events.emit(`grpc-health-change:${this._serviceName}`, state);
