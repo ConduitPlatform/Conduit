@@ -49,7 +49,7 @@ export class Functions extends ConduitActiveSchema<Functions> {
 
   inputs!: IWebInputsInterface;
 
-  returns?: Indexable;
+  returns?: Indexable | string;
 
   timeout!: number;
 
