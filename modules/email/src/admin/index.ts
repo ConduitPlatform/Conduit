@@ -49,12 +49,11 @@ export class AdminHandlers {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let query: Query<EmailTemplate> = {};
-    let identifier;
     if (!isNil(call.request.params.search)) {
       if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
         query = { _id: call.request.params.search };
       } else {
-        identifier = escapeStringRegexp(call.request.params.search);
+        let identifier = escapeStringRegexp(call.request.params.search);
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }
