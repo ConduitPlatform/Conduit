@@ -451,6 +451,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
     incrementDbQueries();
     const parsingResult = parseQuery(
+      this.originalSchema,
       parsedQuery,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
@@ -480,6 +481,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
     }
 
     const parsingResult = parseQuery(
+      this.originalSchema,
       parsedFilter!,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
@@ -542,6 +544,7 @@ export abstract class SequelizeSchema implements SchemaAdapter<ModelStatic<any>>
       ? { ...options, exclude: [...this.excludedFields] }
       : {};
     const parsingResult = parseQuery(
+      this.originalSchema,
       parsedQuery,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
