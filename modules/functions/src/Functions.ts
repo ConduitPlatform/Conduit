@@ -15,9 +15,7 @@ export default class Functions extends ManagedModule<Config> {
   service = {
     protoPath: path.resolve(__dirname, 'functions.proto'),
     protoDescription: 'functions.Functions',
-    functions: {
-      setConfig: this.setConfig.bind(this),
-    },
+    functions: {},
   };
   protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;

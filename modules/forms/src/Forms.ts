@@ -18,9 +18,7 @@ export default class Forms extends ManagedModule<Config> {
   service = {
     protoPath: path.resolve(__dirname, 'forms.proto'),
     protoDescription: 'forms.Forms',
-    functions: {
-      setConfig: this.setConfig.bind(this),
-    },
+    functions: {},
   };
   protected metricsSchema = metricsSchema;
   private isRunning = false;

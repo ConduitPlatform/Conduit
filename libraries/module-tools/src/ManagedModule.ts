@@ -4,6 +4,8 @@ import { status } from '@grpc/grpc-js';
 import convict from 'convict';
 import { ConduitService } from './interfaces';
 import ConduitGrpcSdk, {
+  GrpcRequest,
+  GrpcResponse,
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -161,12 +163,16 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.functions,
       );
       await this.addHealthCheckService();
+      await this.addModuleService();
       await this.grpcServer.start();
       ConduitGrpcSdk.Logger.log('gRPC server listening on ' + this._port);
     }
   }
 
-  async setConfig(call: SetConfigRequest, callback: SetConfigResponse) {
+  async setConfig(
+    call: GrpcRequest<SetConfigRequest>,
+    callback: GrpcResponse<SetConfigResponse>,
+  ) {
     try {
       if (!this.config) {
         return callback({

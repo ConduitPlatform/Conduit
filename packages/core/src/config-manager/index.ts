@@ -9,8 +9,8 @@ import {
   GetConfigResponse,
   GetRedisDetailsResponse,
   IConfigManager,
-  UpdateRequest,
-  UpdateResponse,
+  UpdateConfigRequest,
+  UpdateConfigResponse,
 } from '@conduitplatform/commons';
 import { runMigrations } from './migrations';
 import * as adminRoutes from './admin/routes';
@@ -231,8 +231,8 @@ export default class ConfigManager implements IConfigManager {
   }
 
   async configureModule(
-    call: GrpcRequest<UpdateRequest>,
-    callback: GrpcCallback<UpdateResponse>,
+    call: GrpcRequest<UpdateConfigRequest>,
+    callback: GrpcCallback<UpdateConfigResponse>,
   ) {
     const moduleName = call.metadata!.get('module-name')![0] as string;
     let config = JSON.parse(call.request.config);

@@ -15,27 +15,22 @@ import {
   Storage,
 } from './modules';
 import Crypto from 'crypto';
-import { EventBus } from './utilities/EventBus';
-import { RedisManager } from './utilities/RedisManager';
-import { StateManager } from './utilities/StateManager';
+import { EventBus, getJsonEnv, RedisManager, sleep, StateManager } from './utilities';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { getJsonEnv, sleep } from './utilities';
 import {
+  ConduitModuleDefinition,
+  GetRedisDetailsResponse,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
-} from './protoUtils/grpc_health_check';
-import {
-  GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
-} from './protoUtils/core';
+} from './protoUtils';
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
-import { IConduitLogger } from './interfaces';
-import { IConduitMetrics } from './interfaces/IConduitMetrics';
+import { IConduitLogger, IConduitMetrics } from './interfaces';
 
 type UrlRemap = { [url: string]: string };
 
@@ -495,6 +490,10 @@ export default class ConduitGrpcSdk {
     return this._modules[name]?.client;
   }
 
+  getModuleClient(name: string): Client<ConduitModuleDefinition> | undefined {
+    return this._modules[name]?.moduleClient;
+  }
+
   getHealthClient<T extends CompatServiceDefinition>(
     name: string,
   ): Client<typeof HealthDefinition> | undefined {
@@ -564,4 +563,5 @@ export * from './modules';
 export * from './constants';
 export * from './types';
 export * from './utilities';
+export * from './protoUtils';
 export * from '@grpc/grpc-js';

@@ -1,16 +1,16 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import {
   AuthorizationDefinition,
   Decision,
   DeleteAllRelationsRequest,
-  Empty,
   FindRelationRequest,
   FindRelationResponse,
   PermissionCheck,
   PermissionRequest,
   Relation,
   Resource,
-} from '../../protoUtils/authorization';
+} from '../../protoUtils';
+import { Empty } from '../../protoUtils/google/protobuf/empty';
 
 export class Authorization extends ConduitModule<typeof AuthorizationDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {

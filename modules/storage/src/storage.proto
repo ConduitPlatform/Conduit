@@ -1,13 +1,6 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package storage;
-
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
 
 message GetFileRequest {
   string id = 1;
@@ -40,10 +33,6 @@ message FileResponse {
 message GetFileDataResponse {
   string data = 1;
 }
-
-message Empty {
-}
-
 message DeleteFileResponse {
   bool success = 1;
 }
@@ -74,7 +63,6 @@ message UpdateFileByUrlRequest {
 }
 
 service Storage {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
