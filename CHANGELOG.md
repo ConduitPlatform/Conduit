@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.16](https://github.com/ConduitPlatform/Conduit/compare/v0.15.15...v0.15.16) (2023-04-18)
+
+
+### Bug Fixes
+
+* **authentication:** module not removing deprecated config ([#560](https://github.com/ConduitPlatform/Conduit/issues/560)) ([e97c300](https://github.com/ConduitPlatform/Conduit/commit/e97c300dd4d0972303dce60f06b19a6cf6834f7a))
+* **authentication:** user is able to pass auth middleware when blocked ([#593](https://github.com/ConduitPlatform/Conduit/issues/593)) ([7607768](https://github.com/ConduitPlatform/Conduit/commit/7607768d6ef85cd92e108e28a31f1ff694f3a178))
+* **hermes:** GraphQL not respecting cache header ([#558](https://github.com/ConduitPlatform/Conduit/issues/558)) ([b57b8b5](https://github.com/ConduitPlatform/Conduit/commit/b57b8b599d6b2e1bf91a5f3af130905d90b4de7a))
+
 ### [0.15.15](https://github.com/ConduitPlatform/Conduit/compare/v0.15.14...v0.15.15) (2023-02-16)
 
 
