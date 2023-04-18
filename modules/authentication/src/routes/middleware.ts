@@ -8,7 +8,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
 import { AuthUtils } from '../utils';
-import { AccessToken, Client } from '../models';
+import { AccessToken, Client, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
@@ -78,6 +78,9 @@ async function handleAuthentication(
       status.UNAUTHENTICATED,
       'Token is expired or otherwise not valid',
     );
+  }
+  if (!(accessToken.user as User).active) {
+    throw new GrpcError(status.PERMISSION_DENIED, 'User is blocked');
   }
   return { user: accessToken.user, jwtPayload: payload };
 }
