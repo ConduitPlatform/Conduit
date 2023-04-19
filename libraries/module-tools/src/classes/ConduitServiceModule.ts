@@ -110,6 +110,7 @@ export abstract class ConduitServiceModule {
       );
     }
   }
+
   abstract setConfig(
     call: GrpcRequest<SetConfigRequest>,
     callback: GrpcResponse<SetConfigResponse>,

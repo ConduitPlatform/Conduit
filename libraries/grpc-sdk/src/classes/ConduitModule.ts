@@ -30,6 +30,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   get healthClient(): Client<typeof HealthDefinition> | undefined {
     return this._healthClient;
   }
+
   private _moduleClient?: Client<typeof ConduitModuleDefinition>;
 
   get moduleClient(): Client<typeof ConduitModuleDefinition> | undefined {
