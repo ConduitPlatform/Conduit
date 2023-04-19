@@ -2,9 +2,9 @@ import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/her
 import {
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString } from '@conduitplatform/module-tools';
 import { AdminProxyRoute } from '../../models';
 
 export function getProxyRoute() {

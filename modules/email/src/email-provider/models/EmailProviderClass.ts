@@ -11,11 +11,17 @@ export abstract class EmailProviderClass {
   constructor(transport: Mail) {
     this._transport = transport;
   }
+
   abstract listTemplates(): Promise<Template[]>;
+
   abstract getTemplateInfo(templateName: string): Promise<Template>;
+
   abstract createTemplate(data: CreateEmailTemplate): Promise<Template>;
+
   abstract getBuilder(): EmailBuilderClass<Mail.Options>;
+
   abstract updateTemplate(data: UpdateEmailTemplate): Promise<Template>;
+
   abstract deleteTemplate(id: string): Promise<DeleteEmailTemplate>;
 
   sendEmail(mailOptions: Mail.Options) {

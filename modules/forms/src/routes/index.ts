@@ -1,13 +1,15 @@
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
-  ConfigController,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConfigController,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { FormReplies, Forms } from '../models';
 import axios from 'axios';
 

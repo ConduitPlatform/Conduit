@@ -2,7 +2,11 @@ import express, { NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
-import ConduitGrpcSdk, { ConduitError, UntypedArray } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitError,
+  IConduitLogger,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import http from 'http';
 import {
   ConduitMiddleware,
@@ -285,7 +289,10 @@ export class ConduitRoutingController {
   }
 
   private registerGlobalMiddleware() {
-    this.registerMiddleware(createRouteMiddleware(ConduitGrpcSdk.Logger.winston), false);
+    this.registerMiddleware(
+      createRouteMiddleware((ConduitGrpcSdk.Logger as IConduitLogger).winston),
+      false,
+    );
     this.registerMiddleware(express.json({ limit: '50mb' }), false);
     this.registerMiddleware(
       express.urlencoded({ limit: '50mb', extended: false }),

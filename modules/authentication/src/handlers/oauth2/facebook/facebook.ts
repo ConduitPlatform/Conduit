@@ -2,10 +2,9 @@ import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import * as facebookParameters from './facebook.json';
 import axios, { AxiosRequestConfig } from 'axios';

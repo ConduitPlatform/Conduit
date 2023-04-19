@@ -119,13 +119,18 @@ export class CustomEndpointsAdmin {
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
     let identifier,
-      query: Query = {};
+      query: Query<Indexable> = {};
     if (!isNil(call.request.params.search)) {
       identifier = escapeStringRegexp(call.request.params.search);
-      query['name'] = { $ilike: `%${identifier}%` };
+      query = { name: { $ilike: `%${identifier}%` } };
     }
     if (!isNil(call.request.params.operation)) {
-      query['operation'] = call.request.params.operation;
+      query = {
+        ...query,
+        ...{
+          operation: call.request.params.operation,
+        },
+      };
     }
     if (schemaName && schemaName.length !== 0) {
       query = {

@@ -1,17 +1,19 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitJson,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   RouteOptionType,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitBoolean,
+  ConduitJson,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { BaseNotificationProvider } from '../providers/base.provider';
@@ -34,6 +36,73 @@ export class AdminHandlers {
 
   updateProvider(provider: BaseNotificationProvider) {
     this.provider = provider;
+  }
+
+  async sendNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const params = {
+      sendTo: call.request.params.userId,
+      title: call.request.params.title,
+      body: call.request.params.body,
+      data: call.request.params.data,
+      platform: call.request.params.platform,
+      doNotStore: call.request.params.doNotStore,
+    };
+    await this.provider.sendToDevice(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
+    return 'Ok';
+  }
+
+  async sendNotificationToManyDevices(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    if (call.request.params.userIds.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be an non-empty array',
+      );
+    }
+    const params = {
+      sendTo: call.request.params.userIds,
+      title: call.request.params.title,
+      body: call.request.params.body,
+      data: call.request.params.data,
+      doNotStore: call.request.params.doNotStore,
+    };
+    await this.provider.sendToManyDevices(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    ConduitGrpcSdk.Metrics?.increment(
+      'push_notifications_sent_total',
+      call.request.params.userIds.length,
+    );
+    return 'Ok';
+  }
+
+  async sendManyNotifications(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const params: ISendNotification[] = call.request.params.notifications;
+    await this.provider.sendMany(params).catch(e => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+    ConduitGrpcSdk.Metrics?.increment(
+      'push_notifications_sent_total',
+      call.request.params.userIds.length,
+    );
+    return 'Ok';
+  }
+
+  async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const tokenDocuments = await NotificationToken.getInstance().findMany({
+      userId: call.request.params.userId,
+    });
+    if (isNil(tokenDocuments)) {
+      throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
+    }
+    return { tokenDocuments };
   }
 
   private registerAdminRoutes() {
@@ -112,72 +181,5 @@ export class AdminHandlers {
       this.getNotificationToken.bind(this),
     );
     this.routingManager.registerRoutes();
-  }
-
-  async sendNotification(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const params = {
-      sendTo: call.request.params.userId,
-      title: call.request.params.title,
-      body: call.request.params.body,
-      data: call.request.params.data,
-      platform: call.request.params.platform,
-      doNotStore: call.request.params.doNotStore,
-    };
-    await this.provider.sendToDevice(params).catch(e => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-    ConduitGrpcSdk.Metrics?.increment('push_notifications_sent_total', 1);
-    return 'Ok';
-  }
-
-  async sendNotificationToManyDevices(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
-    if (call.request.params.userIds.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be an non-empty array',
-      );
-    }
-    const params = {
-      sendTo: call.request.params.userIds,
-      title: call.request.params.title,
-      body: call.request.params.body,
-      data: call.request.params.data,
-      doNotStore: call.request.params.doNotStore,
-    };
-    await this.provider.sendToManyDevices(params).catch(e => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-    ConduitGrpcSdk.Metrics?.increment(
-      'push_notifications_sent_total',
-      call.request.params.userIds.length,
-    );
-    return 'Ok';
-  }
-
-  async sendManyNotifications(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
-    const params: ISendNotification[] = call.request.params.notifications;
-    await this.provider.sendMany(params).catch(e => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-    ConduitGrpcSdk.Metrics?.increment(
-      'push_notifications_sent_total',
-      call.request.params.userIds.length,
-    );
-    return 'Ok';
-  }
-
-  async getNotificationToken(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const tokenDocuments = await NotificationToken.getInstance().findMany({
-      userId: call.request.params.userId,
-    });
-    if (isNil(tokenDocuments)) {
-      throw new GrpcError(status.NOT_FOUND, 'Could not find a token for user');
-    }
-    return { tokenDocuments };
   }
 }

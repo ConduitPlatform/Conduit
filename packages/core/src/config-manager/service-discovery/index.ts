@@ -4,9 +4,9 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  linearBackoffTimeout,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
+import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
 import { EventEmitter } from 'events';
@@ -63,50 +63,6 @@ export class ServiceDiscovery {
     }
   }
 
-  private publishModuleData(type: string, name: string, instance: string, url?: string) {
-    this.grpcSdk.bus!.publish(
-      'config',
-      JSON.stringify({
-        type,
-        name,
-        url,
-        instance,
-      }),
-    );
-  }
-
-  /*
-   * Health checks target module service, updating its health state.
-   * Any services that do not provide a gRPC health check service are assumed to be healthy.
-   * Used by healthCheckRegisteredModules(), reviveService()
-   */
-  private async healthCheckService(module: string, address: string) {
-    const healthClient = this.grpcSdk.getHealthClient(module);
-    let status = HealthCheckStatus.SERVING;
-    if (healthClient) {
-      status = await healthClient
-        .check({})
-        .then(res => res.status as unknown as HealthCheckStatus)
-        .catch(() => {
-          return HealthCheckStatus.SERVICE_UNKNOWN;
-        });
-    }
-    const isRegistered = Object.keys(this.moduleHealth).includes(module);
-    if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;
-    this.updateModuleHealth(module, address, status);
-  }
-
-  private async monitorModules() {
-    for (const module of Object.keys(this.moduleHealth)) {
-      const registeredModule = this.registeredModules.get(module)!;
-      await this.healthCheckService(module, registeredModule.address);
-    }
-    if (this.servingStatusUpdate) {
-      this.moduleRegister.emit('serving-modules-update');
-      this.servingStatusUpdate = false;
-    }
-  }
-
   /*
    * Used by modules to notify Core regarding changes in their health state.
    * Called on module health change via grpc-sdk.
@@ -129,66 +85,6 @@ export class ServiceDiscovery {
     );
     this.publishModuleData('module-health', call.request.moduleName, call.getPeer());
     callback(null, null);
-  }
-
-  /*
-   * Attempt to reconnect to a recently removed module service.
-   * Retries using linear backoff.
-   */
-  private reviveService(name: string, address: string) {
-    const onTry = (timeout: NodeJS.Timeout) => {
-      if (Object.keys(this.moduleHealth).includes(name)) {
-        clearTimeout(timeout);
-      } else {
-        this.healthCheckService(name, address).then();
-      }
-    };
-    const onFailure = () => {
-      this.grpcSdk.getModule(name)?.closeConnection();
-    };
-    linearBackoffTimeout(
-      onTry,
-      this.serviceReconnInitMs,
-      this.serviceReconnRetries,
-      onFailure,
-    );
-  }
-
-  private updateModuleHealth(
-    moduleName: string,
-    moduleUrl: string,
-    moduleStatus: HealthCheckStatus,
-    broadcast = true,
-  ) {
-    if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
-      // Deregister Unresponsive Module
-      delete this.moduleHealth[moduleName];
-      this.registeredModules.delete(moduleName);
-      this.servingStatusUpdate = true;
-      this.reviveService(moduleName, moduleUrl);
-      return;
-    }
-    let module = this.registeredModules.get(moduleName);
-    if (!module) {
-      module = {
-        address: moduleUrl,
-        serving: moduleStatus === HealthCheckStatus.SERVING,
-      };
-      this.registeredModules.set(moduleName, module);
-      this.servingStatusUpdate = true;
-    } else {
-      const prevStatus = module.serving;
-      module.serving = moduleStatus === HealthCheckStatus.SERVING;
-      if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
-        this.servingStatusUpdate = true;
-      }
-    }
-    this.registeredModules.set(moduleName, module);
-    this.moduleHealth[moduleName] = {
-      address: moduleUrl,
-      timestamp: Date.now(),
-      status: moduleStatus,
-    };
   }
 
   moduleList(call: GrpcRequest<null>, callback: GrpcCallback<ModuleListResponse>) {
@@ -318,6 +214,110 @@ export class ServiceDiscovery {
         message: 'Module is missing',
       });
     }
+  }
+
+  private publishModuleData(type: string, name: string, instance: string, url?: string) {
+    this.grpcSdk.bus!.publish(
+      'config',
+      JSON.stringify({
+        type,
+        name,
+        url,
+        instance,
+      }),
+    );
+  }
+
+  /*
+   * Health checks target module service, updating its health state.
+   * Any services that do not provide a gRPC health check service are assumed to be healthy.
+   * Used by healthCheckRegisteredModules(), reviveService()
+   */
+  private async healthCheckService(module: string, address: string) {
+    const healthClient = this.grpcSdk.getHealthClient(module);
+    let status = HealthCheckStatus.SERVING;
+    if (healthClient) {
+      status = await healthClient
+        .check({})
+        .then(res => res.status as unknown as HealthCheckStatus)
+        .catch(() => {
+          return HealthCheckStatus.SERVICE_UNKNOWN;
+        });
+    }
+    const isRegistered = Object.keys(this.moduleHealth).includes(module);
+    if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;
+    this.updateModuleHealth(module, address, status);
+  }
+
+  private async monitorModules() {
+    for (const module of Object.keys(this.moduleHealth)) {
+      const registeredModule = this.registeredModules.get(module)!;
+      await this.healthCheckService(module, registeredModule.address);
+    }
+    if (this.servingStatusUpdate) {
+      this.moduleRegister.emit('serving-modules-update');
+      this.servingStatusUpdate = false;
+    }
+  }
+
+  /*
+   * Attempt to reconnect to a recently removed module service.
+   * Retries using linear backoff.
+   */
+  private reviveService(name: string, address: string) {
+    const onTry = (timeout: NodeJS.Timeout) => {
+      if (Object.keys(this.moduleHealth).includes(name)) {
+        clearTimeout(timeout);
+      } else {
+        this.healthCheckService(name, address).then();
+      }
+    };
+    const onFailure = () => {
+      this.grpcSdk.getModule(name)?.closeConnection();
+    };
+    linearBackoffTimeout(
+      onTry,
+      this.serviceReconnInitMs,
+      this.serviceReconnRetries,
+      onFailure,
+    );
+  }
+
+  private updateModuleHealth(
+    moduleName: string,
+    moduleUrl: string,
+    moduleStatus: HealthCheckStatus,
+    broadcast = true,
+  ) {
+    if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
+      // Deregister Unresponsive Module
+      delete this.moduleHealth[moduleName];
+      this.registeredModules.delete(moduleName);
+      this.servingStatusUpdate = true;
+      this.reviveService(moduleName, moduleUrl);
+      return;
+    }
+    let module = this.registeredModules.get(moduleName);
+    if (!module) {
+      module = {
+        address: moduleUrl,
+        serving: moduleStatus === HealthCheckStatus.SERVING,
+      };
+      this.registeredModules.set(moduleName, module);
+      this.servingStatusUpdate = true;
+    } else {
+      const prevStatus = module.serving;
+      module.serving = moduleStatus === HealthCheckStatus.SERVING;
+      if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
+        this.servingStatusUpdate = true;
+      }
+    }
+    this.registeredModules.set(moduleName, module);
+    this.moduleHealth[moduleName] = {
+      address: moduleUrl,
+      timestamp: Date.now(),
+      status: moduleStatus,
+    };
   }
 
   private updateState(name: string, url: string, instance: string) {

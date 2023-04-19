@@ -133,13 +133,6 @@ export class AzureStorage implements IStorageProvider {
     return this.blobClient(fileName).generateSasUrl(sasOptions);
   }
 
-  private blobClient(fileName: string) {
-    return new BlobClient(
-      this._storage.url + this._activeContainer + '/' + fileName,
-      this._storage.credential,
-    );
-  }
-
   async getPublicUrl(fileName: string): Promise<any | Error> {
     const containerClient = this._storage.getContainerClient(this._activeContainer);
     const sasOptions: BlobSASSignatureValues = {
@@ -185,5 +178,12 @@ export class AzureStorage implements IStorageProvider {
       permissions: BlobSASPermissions.from({ read: true, create: true, write: true }),
     };
     return this.blobClient(fileName).generateSasUrl(sasOptions);
+  }
+
+  private blobClient(fileName: string) {
+    return new BlobClient(
+      this._storage.url + this._activeContainer + '/' + fileName,
+      this._storage.credential,
+    );
   }
 }

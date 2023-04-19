@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
-  GrpcServer,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -24,6 +23,7 @@ import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
 import fs from 'fs-extra';
 import { isNil, merge } from 'lodash';
+import { GrpcServer } from '@conduitplatform/module-tools';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;

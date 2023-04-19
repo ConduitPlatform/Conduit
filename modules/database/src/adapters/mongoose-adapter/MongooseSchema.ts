@@ -108,29 +108,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return this.model.deleteMany(parsedQuery).exec();
   }
 
-  private calculatePopulates(queryObj: any, population: string[]) {
-    population.forEach((r: string | string[], index: number) => {
-      const final = r.toString().trim();
-      if (r.indexOf('.') !== -1) {
-        r = final.split('.');
-        let controlBool = true;
-        while (controlBool) {
-          if (this.originalSchema.fields[r[0]]) {
-            controlBool = false;
-          } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
-            throw new Error("Failed populating '" + final + "'");
-          } else {
-            r.splice(0, 1);
-          }
-        }
-        population[index] = r.join('.');
-      }
-    });
-    queryObj = queryObj.deepPopulate(population);
-
-    return queryObj;
-  }
-
   findMany(
     query: Query,
     skip?: number,
@@ -185,6 +162,29 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .collection(this.originalSchema.collectionName)
       .findOne({ $and: array });
     return result !== null;
+  }
+
+  private calculatePopulates(queryObj: any, population: string[]) {
+    population.forEach((r: string | string[], index: number) => {
+      const final = r.toString().trim();
+      if (r.indexOf('.') !== -1) {
+        r = final.split('.');
+        let controlBool = true;
+        while (controlBool) {
+          if (this.originalSchema.fields[r[0]]) {
+            controlBool = false;
+          } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
+            throw new Error("Failed populating '" + final + "'");
+          } else {
+            r.splice(0, 1);
+          }
+        }
+        population[index] = r.join('.');
+      }
+    });
+    queryObj = queryObj.deepPopulate(population);
+
+    return queryObj;
   }
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {

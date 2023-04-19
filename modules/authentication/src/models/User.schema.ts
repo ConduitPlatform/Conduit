@@ -1,9 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  Indexable,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 interface AuthProviderBase {
   id: string;

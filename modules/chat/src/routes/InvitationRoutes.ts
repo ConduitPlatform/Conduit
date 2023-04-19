@@ -1,13 +1,15 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitNumber,
+  ConduitString,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { ChatRoom, InvitationToken } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

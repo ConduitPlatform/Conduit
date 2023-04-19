@@ -4,9 +4,14 @@ import { RelationsController } from './relations.controller';
 
 export class IndexController {
   private static _instance: IndexController;
-  private _relationsController: RelationsController;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  private _relationsController: RelationsController;
+
+  set relationsController(relationsController: RelationsController) {
+    this._relationsController = relationsController;
+  }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
@@ -14,10 +19,6 @@ export class IndexController {
       return (IndexController._instance = new IndexController(grpcSdk));
     }
     throw new Error('No grpcSdk instance provided!');
-  }
-
-  set relationsController(relationsController: RelationsController) {
-    this._relationsController = relationsController;
   }
 
   async createOrUpdateObject(subject: string, entity: string) {

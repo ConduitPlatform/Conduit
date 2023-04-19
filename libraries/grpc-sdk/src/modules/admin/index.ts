@@ -1,4 +1,4 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import {
   AdminDefinition,
   GenerateProtoRequest,
@@ -9,7 +9,7 @@ import {
   ConduitProxyObject,
   ConduitRouteObject,
   SocketProtoDescription,
-} from '../../routing';
+} from '../../interfaces';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {

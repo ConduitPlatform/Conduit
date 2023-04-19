@@ -2,8 +2,8 @@ import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
   ParsedRouterRequest,
-  RouteBuilder,
 } from '@conduitplatform/grpc-sdk';
+import { RouteBuilder } from '@conduitplatform/module-tools';
 import { FunctionExecutions, Functions } from '../models';
 import { isNil } from 'lodash';
 import { NodeVM, VMScript } from 'vm2';

@@ -11,56 +11,44 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     super(connectionUri);
   }
 
-  protected async hasLegacyCollections() {
-    return false;
+  async deleteSchema(
+    schemaName: string,
+    deleteData: boolean,
+    callerModule: string = 'database',
+    instanceSync = false,
+  ): Promise<string> {
+    if (instanceSync) {
+      for (const association in this.models[schemaName].associations) {
+        const associationSchema = this.models[schemaName].associations[association];
+        if (Array.isArray(associationSchema)) {
+          delete this.models[associationSchema[0].schema.name];
+        } else {
+          delete this.models[associationSchema.schema.name];
+        }
+      }
+      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
+    } else if (deleteData) {
+      for (const association in this.models[schemaName].associations) {
+        const associationSchema = this.models[schemaName].associations[association];
+        if (Array.isArray(associationSchema)) {
+          delete this.models[associationSchema[0].schema.name];
+          await associationSchema[0].model.drop();
+        } else {
+          delete this.models[associationSchema.schema.name];
+          await associationSchema.model.drop();
+        }
+      }
+      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
+    }
+    return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
   }
 
-  private async processExtractedSchemas(
-    schema: ConduitSchema,
-    extractedSchemas: Indexable,
-    associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
-  ) {
-    for (const extractedSchema in extractedSchemas) {
-      const modelOptions = {
-        ...schema.modelOptions,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
-        },
-      };
-      let modeledSchema;
-      let isArray = false;
-      if (Array.isArray(extractedSchemas[extractedSchema])) {
-        isArray = true;
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema][0],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      } else {
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      }
+  getDatabaseType(): string {
+    return 'PostgreSQL';
+  }
 
-      modeledSchema.ownerModule = schema.ownerModule;
-      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
-      // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(
-        modeledSchema as ConduitDatabaseSchema,
-        false,
-        {
-          parentSchema: schema.name,
-        },
-      );
-      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
-    }
+  protected async hasLegacyCollections() {
+    return false;
   }
 
   protected async _createSchemaFromAdapter(
@@ -122,39 +110,51 @@ export class SQLAdapter extends SequelizeAdapter<SQLSchema> {
     return this.models[schema.name];
   }
 
-  async deleteSchema(
-    schemaName: string,
-    deleteData: boolean,
-    callerModule: string = 'database',
-    instanceSync = false,
-  ): Promise<string> {
-    if (instanceSync) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-        } else {
-          delete this.models[associationSchema.schema.name];
-        }
+  private async processExtractedSchemas(
+    schema: ConduitSchema,
+    extractedSchemas: Indexable,
+    associatedSchemas: { [key: string]: SQLSchema | SQLSchema[] },
+  ) {
+    for (const extractedSchema in extractedSchemas) {
+      const modelOptions = {
+        ...schema.modelOptions,
+        permissions: {
+          extendable: false,
+          canCreate: false,
+          canModify: 'Nothing',
+          canDelete: false,
+        },
+      };
+      let modeledSchema;
+      let isArray = false;
+      if (Array.isArray(extractedSchemas[extractedSchema])) {
+        isArray = true;
+        modeledSchema = new ConduitSchema(
+          `${schema.name}_${extractedSchema}`,
+          extractedSchemas[extractedSchema][0],
+          modelOptions,
+          `${schema.collectionName}_${extractedSchema}`,
+        );
+      } else {
+        modeledSchema = new ConduitSchema(
+          `${schema.name}_${extractedSchema}`,
+          extractedSchemas[extractedSchema],
+          modelOptions,
+          `${schema.collectionName}_${extractedSchema}`,
+        );
       }
-      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
-    } else if (deleteData) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations[association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-          await associationSchema[0].model.drop();
-        } else {
-          delete this.models[associationSchema.schema.name];
-          await associationSchema.model.drop();
-        }
-      }
-      return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
-    }
-    return await super.deleteSchema(schemaName, deleteData, callerModule, instanceSync);
-  }
 
-  getDatabaseType(): string {
-    return 'PostgreSQL';
+      modeledSchema.ownerModule = schema.ownerModule;
+      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
+      // check index compatibility
+      const sequelizeSchema = await this._createSchemaFromAdapter(
+        modeledSchema as ConduitDatabaseSchema,
+        false,
+        {
+          parentSchema: schema.name,
+        },
+      );
+      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
+    }
   }
 }

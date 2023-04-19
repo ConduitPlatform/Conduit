@@ -1,17 +1,19 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   RouteOptionType,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitBoolean,
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models';
@@ -28,6 +30,107 @@ export class AdminHandlers {
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
+  }
+
+  async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { name, functionCode, inputs, returns } = call.request.params;
+    const func = await Functions.getInstance().findOne({ name: name });
+    if (!isNil(func)) {
+      throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
+    }
+    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
+    try {
+      new VMScript(script).compile();
+    } catch (e) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
+    }
+    const timeoutValue = inputs.timeout ?? 180000;
+    const query = {
+      name,
+      functionCode,
+      inputs,
+      returns,
+      timeout: timeoutValue,
+    };
+    const functionEndpoint = await Functions.getInstance().create(query);
+    this.functionsController.refreshEndpoints();
+    return functionEndpoint;
+  }
+
+  async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const func = await Functions.getInstance().findOne({ _id: id });
+    if (isNil(func)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+    }
+    await Functions.getInstance().deleteOne({ _id: id });
+    this.functionsController.refreshEndpoints();
+    return { deleted: true };
+  }
+
+  async listFunctions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const functions = await Functions.getInstance().findMany({}, skip, limit, sort);
+    return { functions };
+  }
+
+  async getFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id } = call.request.params;
+    const func = await Functions.getInstance().findOne({ _id: id });
+    if (isNil(func)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+    }
+    return func;
+  }
+
+  async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, name, functionCode, inputs, returns, timeout } = call.request.params;
+    const func = await Functions.getInstance().findOne({ _id: id });
+    if (isNil(func)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
+    }
+    const query = {
+      name: name ?? func.name,
+      functionCode: functionCode ?? func.functionCode,
+      inputs: inputs ?? func.inputs,
+      returns: returns ?? func.returns,
+      timeout: timeout ?? func.timeout,
+    };
+    await Functions.getInstance().findByIdAndUpdate(func._id, query);
+    this.functionsController.refreshEndpoints();
+    return { updated: true };
+  }
+
+  async getFunctionsExecutions(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+
+    const functionsExecutions = await FunctionExecutions.getInstance().findMany(
+      {},
+      skip,
+      limit,
+      sort,
+    );
+    return functionsExecutions;
+  }
+
+  async getFunctionExecutions(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { functionName, success } = call.request.params;
+    const functionExecutions = await FunctionExecutions.getInstance().findMany({
+      functionName: functionName,
+      success: success,
+    });
+    if (isNil(functionExecutions) || isEmpty(functionExecutions)) {
+      throw new GrpcError(status.NOT_FOUND, 'Function Executions not exist');
+    }
+    return functionExecutions;
   }
 
   private registerAdminRoutes() {
@@ -135,106 +238,5 @@ export class AdminHandlers {
       this.updateFunction.bind(this),
     );
     this.routingManager.registerRoutes();
-  }
-
-  async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, functionCode, inputs, returns } = call.request.params;
-    const func = await Functions.getInstance().findOne({ name: name });
-    if (!isNil(func)) {
-      throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
-    }
-    const script = `module.exports = function(grpcSdk,req,res) { ${functionCode} }`;
-    try {
-      new VMScript(script).compile();
-    } catch (e) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid function code');
-    }
-    const timeoutValue = inputs.timeout ?? 180000;
-    const query = {
-      name,
-      functionCode,
-      inputs,
-      returns,
-      timeout: timeoutValue,
-    };
-    const functionEndpoint = await Functions.getInstance().create(query);
-    this.functionsController.refreshEndpoints();
-    return functionEndpoint;
-  }
-
-  async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-    const func = await Functions.getInstance().findOne({ _id: id });
-    if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
-    }
-    await Functions.getInstance().deleteOne({ _id: id });
-    this.functionsController.refreshEndpoints();
-    return { deleted: true };
-  }
-
-  async listFunctions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const functions = await Functions.getInstance().findMany({}, skip, limit, sort);
-    return { functions };
-  }
-
-  async getFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id } = call.request.params;
-    const func = await Functions.getInstance().findOne({ _id: id });
-    if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
-    }
-    return func;
-  }
-
-  async updateFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, name, functionCode, inputs, returns, timeout } = call.request.params;
-    const func = await Functions.getInstance().findOne({ _id: id });
-    if (isNil(func)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
-    }
-    const query = {
-      name: name ?? func.name,
-      functionCode: functionCode ?? func.functionCode,
-      inputs: inputs ?? func.inputs,
-      returns: returns ?? func.returns,
-      timeout: timeout ?? func.timeout,
-    };
-    await Functions.getInstance().findByIdAndUpdate(func._id, query);
-    this.functionsController.refreshEndpoints();
-    return { updated: true };
-  }
-
-  async getFunctionsExecutions(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-
-    const functionsExecutions = await FunctionExecutions.getInstance().findMany(
-      {},
-      skip,
-      limit,
-      sort,
-    );
-    return functionsExecutions;
-  }
-
-  async getFunctionExecutions(
-    call: ParsedRouterRequest,
-  ): Promise<UnparsedRouterResponse> {
-    const { functionName, success } = call.request.params;
-    const functionExecutions = await FunctionExecutions.getInstance().findMany({
-      functionName: functionName,
-      success: success,
-    });
-    if (isNil(functionExecutions) || isEmpty(functionExecutions)) {
-      throw new GrpcError(status.NOT_FOUND, 'Function Executions not exist');
-    }
-    return functionExecutions;
   }
 }
