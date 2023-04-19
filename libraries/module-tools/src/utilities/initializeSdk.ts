@@ -14,7 +14,6 @@ export const initializeSdk = (
   watchModules: boolean = true,
   serviceHealthStatusGetter: () => HealthCheckStatus = () => HealthCheckStatus.SERVING,
 ) => {
-  let grpcSdk: ConduitGrpcSdk;
   let logger: IConduitLogger;
   try {
     logger = new ConduitLogger([
@@ -30,7 +29,7 @@ export const initializeSdk = (
   } catch (e) {
     logger = new ConduitLogger();
   }
-  grpcSdk = new ConduitGrpcSdk(
+  const grpcSdk = new ConduitGrpcSdk(
     coreUrl,
     moduleName,
     watchModules,
