@@ -14,7 +14,7 @@ RUN curl -OL https://github.com/google/protobuf/releases/download/v3.17.3/protoc
 RUN npm install -g node-gyp ts-proto
 
 RUN yarn && \
-    npx lerna run build --scope=@conduitplatform/grpc-sdk
+    npx lerna run build --scope=@conduitplatform/grpc-sdk --scope=@conduitplatform/module-tools
 
 RUN if [  -z "$BUILDING_SERVICE" ] ; then npx lerna run build ;  \
     elif [ "$BUILDING_SERVICE" = "conduit" ] ; then npx lerna run build --scope=@conduitplatform/admin \

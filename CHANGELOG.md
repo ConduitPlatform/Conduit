@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.4...v0.16.0-alpha.6) (2023-04-19)
+
+
+### Features
+
+* **authentication:** custom redirect uri config option ([#589](https://github.com/ConduitPlatform/Conduit/issues/589)) ([62965b2](https://github.com/ConduitPlatform/Conduit/commit/62965b2b4610d704fe28ddd396942db951944aed))
+
+
+### Bug Fixes
+
+* **authentication:** crash on setConfig due to old properties ([#588](https://github.com/ConduitPlatform/Conduit/issues/588)) ([b23ffc4](https://github.com/ConduitPlatform/Conduit/commit/b23ffc4384ba1b869d4f2c5b7a3518def9ad1e8a))
+* **authentication:** team permissions allowance check ([6cac5ba](https://github.com/ConduitPlatform/Conduit/commit/6cac5badeea28e255821479f73444dcb47b841b7))
+* **authentication:** user is able to pass auth middleware when blocked ([#594](https://github.com/ConduitPlatform/Conduit/issues/594)) ([b544180](https://github.com/ConduitPlatform/Conduit/commit/b54418046875e1e6298b3674ae4d56e9e6f10d6f))
+* **database:** mongo aggregation not returning documents properly ([6c759d6](https://github.com/ConduitPlatform/Conduit/commit/6c759d6c411fa66cc455f52ef25e40b5f203d0af))
+* **database:** sql like/ilike customEndpoint queries regexp escaping ([#596](https://github.com/ConduitPlatform/Conduit/issues/596)) ([9625f2b](https://github.com/ConduitPlatform/Conduit/commit/9625f2b1af09a115a454a6a152665b1721b70010))
+* **grpc-sdk:** readme ([06658e0](https://github.com/ConduitPlatform/Conduit/commit/06658e0c02f220977f716dc88fc144648c671194))
+* **storage:** correction of check in validation  ([#584](https://github.com/ConduitPlatform/Conduit/issues/584)) ([35b706b](https://github.com/ConduitPlatform/Conduit/commit/35b706ba91491dbb9aff3615665bf23a0838c819))
+
 ## [0.16.0-alpha.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.3...v0.16.0-alpha.4) (2023-04-07)
 
 
