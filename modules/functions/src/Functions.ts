@@ -12,11 +12,6 @@ import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  service = {
-    protoPath: path.resolve(__dirname, 'functions.proto'),
-    protoDescription: 'functions.Functions',
-    functions: {},
-  };
   protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;

@@ -162,11 +162,11 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.protoDescription,
         this.service.functions,
       );
-      await this.addHealthCheckService();
-      await this.addModuleService();
-      await this.grpcServer.start();
-      ConduitGrpcSdk.Logger.log('gRPC server listening on ' + this._port);
     }
+    await this.addHealthCheckService();
+    await this.addModuleService();
+    await this.grpcServer.start();
+    ConduitGrpcSdk.Logger.log('gRPC server listening on ' + this._port);
   }
 
   async setConfig(

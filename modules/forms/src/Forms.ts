@@ -8,18 +8,12 @@ import { AdminHandlers } from './admin';
 import { FormsRoutes } from './routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
-import path from 'path';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  service = {
-    protoPath: path.resolve(__dirname, 'forms.proto'),
-    protoDescription: 'forms.Forms',
-    functions: {},
-  };
   protected metricsSchema = metricsSchema;
   private isRunning = false;
   private adminRouter: AdminHandlers;

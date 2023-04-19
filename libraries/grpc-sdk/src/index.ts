@@ -7,8 +7,6 @@ import {
   Core,
   DatabaseProvider,
   Email,
-  Forms,
-  Functions,
   PushNotifications,
   Router,
   SMS,
@@ -54,8 +52,6 @@ export default class ConduitGrpcSdk {
     authorization: Authorization,
     sms: SMS,
     chat: Chat,
-    forms: Forms,
-    functions: Functions,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
@@ -212,15 +208,6 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get forms(): Forms | null {
-    if (this._modules['forms']) {
-      return this._modules['forms'] as Forms;
-    } else {
-      ConduitGrpcSdk.Logger.warn('Forms module not up yet!');
-      return null;
-    }
-  }
-
   get emailProvider(): Email | null {
     if (this._modules['email']) {
       return this._modules['email'] as Email;
@@ -271,15 +258,6 @@ export default class ConduitGrpcSdk {
       return this._modules['chat'] as Chat;
     } else {
       ConduitGrpcSdk.Logger.warn('Chat module not up yet!');
-      return null;
-    }
-  }
-
-  get functions(): Functions | null {
-    if (this._modules['functions']) {
-      return this._modules['functions'] as Functions;
-    } else {
-      ConduitGrpcSdk.Logger.warn('Functions module not up yet!');
       return null;
     }
   }
@@ -441,11 +419,7 @@ export default class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (
-      this._modules[moduleName] ||
-      (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
-    )
-      return;
+    if (this._modules[moduleName]) return;
     moduleUrl =
       this.urlRemap?.[moduleUrl] ??
       (this.urlRemap?.['*']
@@ -467,6 +441,16 @@ export default class ConduitGrpcSdk {
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
+    } else {
+      // when the module is not "preloaded" by the sdk, and is not a dynamic module,
+      // we create a generic module using the ConduitModuleDefinitions
+      this._modules[moduleName] = new ConduitModule(
+        this.name,
+        moduleName,
+        moduleUrl,
+        this._grpcToken,
+      );
+      this._modules[moduleName].initializeClient(ConduitModuleDefinition);
     }
   }
 

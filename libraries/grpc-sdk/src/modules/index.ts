@@ -8,7 +8,5 @@ export * from './admin';
 export * from './pushNotifications';
 export * from './sms';
 export * from './chat';
-export * from './forms';
 export * from './authorization';
 export * from './authentication';
-export * from './functions';
