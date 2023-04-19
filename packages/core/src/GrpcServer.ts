@@ -4,7 +4,10 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer as ConduitGrpcServer } from '@conduitplatform/module-tools';
+import {
+  GrpcServer as ConduitGrpcServer,
+  initializeSdk,
+} from '@conduitplatform/module-tools';
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';
 import path from 'path';
@@ -13,7 +16,6 @@ import CoreConfigSchema from './config/config';
 import { ServerWritableStream } from '@grpc/grpc-js';
 import ConfigManager from './config-manager';
 import convict from 'convict';
-import { initializeSdk } from '@conduitplatform/module-tools/dist/utilities/initializeSdk';
 
 const CORE_SERVICES = ['Config', 'Admin'];
 
