@@ -1,7 +1,7 @@
 import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
 import { Server } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
-import ConduitGrpcSdk, { GrpcRequest, GrpcCallback } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class GrpcServer {
   private grpcServer?: Server;
@@ -14,9 +14,7 @@ export class GrpcServer {
   private _services: {
     protoPath: string;
     protoDescription: string;
-    functions: {
-      [name: string]: (call: GrpcRequest<any>, callback: GrpcCallback<any>) => void;
-    };
+    functions: { [name: string]: Function };
   }[] = [];
 
   constructor(port?: string) {
@@ -42,9 +40,7 @@ export class GrpcServer {
   async addService(
     protoPath: string,
     protoDescription: string,
-    functions: {
-      [name: string]: (call: GrpcRequest<any>, callback: GrpcCallback<any>) => void;
-    },
+    functions: { [name: string]: Function },
   ): Promise<GrpcServer> {
     functions = wrapGrpcFunctions(functions, this.postponeRestart.bind(this));
     if (this._serviceNames.indexOf(protoDescription) !== -1) {
@@ -74,7 +70,7 @@ export class GrpcServer {
   }
 
   async wait(time: number) {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         clearTimeout(timeout);
         resolve();

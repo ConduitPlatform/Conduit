@@ -4,7 +4,6 @@ import {
   ServerCredentials,
   UntypedServiceImplementation,
 } from '@grpc/grpc-js';
-import { GrpcCallback, GrpcRequest } from '@conduitplatform/grpc-sdk';
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -31,9 +30,7 @@ export function addServiceToServer(
   server: Server,
   protoPath: string,
   descriptorObject: string,
-  functions: {
-    [name: string]: (call: GrpcRequest<any>, callback: GrpcCallback<any>) => void;
-  },
+  functions: { [name: string]: Function },
 ) {
   const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
