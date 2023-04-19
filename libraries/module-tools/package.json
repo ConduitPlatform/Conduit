@@ -9,7 +9,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/**/*.json ./dist/"
+    "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
   },
   "license": "MIT",
   "dependencies": {
