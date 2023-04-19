@@ -25,12 +25,19 @@ function arrayHandler(
 }
 
 function constructOrArray(value: any) {
-  // TODO: For $nin use And and Op.notLike
   const orArray = [];
   for (const v of value) {
     orArray.push({ [Op.like]: `%${v}%` }); // TODO: Investigate more the regex
   }
   return orArray;
+}
+
+function constructAndArray(value: any) {
+  const andArray = [];
+  for (const v of value) {
+    andArray.push({ [Op.notLike]: `%${v}%` }); // TODO: Investigate more the regex
+  }
+  return andArray;
 }
 
 function matchOperation(
@@ -88,9 +95,17 @@ function matchOperation(
     case '$and':
       return arrayHandler(schema, value, dialect, relations, associations);
     case '$nin':
-      return {
-        [Op.notIn]: arrayHandler(schema, value, dialect, relations, associations),
-      };
+      if (isArrayField) {
+        if (dialect === 'postgres') {
+          return { [Op.not]: { [Op.overlap]: value } };
+        } else {
+          return { [Op.and]: constructAndArray(value) };
+        }
+      } else {
+        return {
+          [Op.notIn]: arrayHandler(schema, value, dialect, relations, associations),
+        };
+      }
     case '$like':
       return { [Op.like]: value };
     case '$ilike':
