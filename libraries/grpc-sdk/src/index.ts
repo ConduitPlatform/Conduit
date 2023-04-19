@@ -15,14 +15,11 @@ import {
   Storage,
 } from './modules';
 import Crypto from 'crypto';
-import { EventBus } from './utilities/EventBus';
-import { RedisManager } from './utilities/RedisManager';
-import { StateManager } from './utilities/StateManager';
+import { EventBus, RedisManager, StateManager, getJsonEnv, sleep } from './utilities';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
-import { getJsonEnv, sleep } from './utilities';
 import {
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
@@ -34,8 +31,7 @@ import {
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
-import { IConduitLogger } from './interfaces';
-import { IConduitMetrics } from './interfaces/IConduitMetrics';
+import { IConduitLogger, IConduitMetrics } from './interfaces';
 
 type UrlRemap = { [url: string]: string };
 

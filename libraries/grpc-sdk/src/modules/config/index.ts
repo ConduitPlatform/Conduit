@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import { HealthCheckStatus } from '../../types';
 import {
   ConfigDefinition,
