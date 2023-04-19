@@ -31,7 +31,7 @@ export class CaptchaValidator {
           },
         },
       )
-      .catch(err => {
+      .catch(() => {
         return {
           data: {
             success: false,
@@ -47,7 +47,7 @@ export class CaptchaValidator {
         secret,
         response: token,
       })
-      .catch(err => {
+      .catch(() => {
         return {
           data: {
             success: false,
