@@ -128,7 +128,7 @@ export abstract class ConduitServiceModule {
   protected async addModuleService() {
     await this.grpcServer.addService(
       path.resolve(__dirname, '../module.proto'),
-      'conduit.module.v1',
+      'conduit.module.v1.ConduitModule',
       {
         SetConfig: this.setConfig.bind(this),
       },
