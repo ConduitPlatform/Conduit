@@ -67,7 +67,7 @@ export default class ConduitGrpcSdk {
   private _stateManager?: StateManager;
   private lastSearch: number = Date.now();
   private readonly urlRemap?: UrlRemap;
-  private readonly _serviceHealthStatusGetter: Function;
+  private readonly _serviceHealthStatusGetter: () => HealthCheckStatus;
   private readonly _grpcToken?: string;
   private _initialized: boolean = false;
 
