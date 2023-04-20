@@ -26,8 +26,6 @@ export const extractRelations = (
           model.belongsToMany(item.model, {
             foreignKey: name,
             as: relation,
-            onUpdate: 'CASCADE',
-            onDelete: 'SET NULL',
             through: model.name + '_' + item.originalSchema.name,
           });
         } else if (
@@ -41,8 +39,6 @@ export const extractRelations = (
           model.belongsToMany(item.model, {
             foreignKey: name,
             as: relation,
-            onUpdate: 'CASCADE',
-            onDelete: 'SET NULL',
             through: model.name + '_' + item.originalSchema.name,
           });
           item.model.belongsToMany(model, {
