@@ -3,7 +3,7 @@ IMAGE_TAG = ${shell git describe --tags `git rev-list --tags --max-count=1` 2> /
 
 IMAGE_DIRS = $(wildcard libraries/* modules/*)
 
-all: conduit ${IMAGE_DIRS}
+all: conduit
 
 conduit:
 ifeq ($(DEV),TRUE)
@@ -14,14 +14,15 @@ else
 	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:${IMAGE_TAG}
 	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
 	docker push conduitplatform/conduit:${IMAGE_TAG}
-	ifneq (,$(findstring $(IMAGE_TAG),alpha beta rc))
-		@echo "Skipping latest tag due to alpha, beta or rc in IMAGE_TAG"
-	else
-		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ghcr.io/conduitplatform/conduit:latest
-		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:latest
-		docker push ghcr.io/conduitplatform/conduit:latest
-		docker push conduitplatform/conduit:latest
-	endif
+	$(eval SKIP_LATEST=$(if $(findstring $(IMAGE_TAG),alpha beta rc),true,false))
+	@if [ "$(SKIP_LATEST)" = "false" ]; then \
+		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ghcr.io/conduitplatform/conduit:latest ; \
+		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:latest ; \
+		docker push conduitplatform/conduit:latest ; \
+		docker ghcr.io/conduitplatform/conduit:latest ; \
+	else \
+		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG" ; \
+	fi
 endif
 
 conduit-builder:
@@ -43,14 +44,15 @@ else
 	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
 	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
 	docker push conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
-	ifneq (,$(findstring $(IMAGE_TAG),alpha beta rc))
-		@echo "Skipping latest tag due to alpha, beta or rc in IMAGE_TAG"
-	else
-		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} ghcr.io/conduitplatform/${IMAGE_NAME}:latest
-		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:latest
-		docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest
-		docker push conduitplatform/${IMAGE_NAME}:latest
-	endif
+	$(eval SKIP_LATEST=$(if $(findstring $(IMAGE_TAG),alpha beta rc),true,false))
+	@if [ "$(SKIP_LATEST)" = "false" ]; then \
+		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} ghcr.io/conduitplatform/${IMAGE_NAME}:latest ; \
+		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:latest ; \
+		docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest ; \
+		docker push conduitplatform/${IMAGE_NAME}:latest ; \
+	else \
+		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG" ; \
+	fi
 endif
 
 modules/authentication: conduit-builder

@@ -21,13 +21,13 @@ INDEX_CONTENT=""
 # Loop through all .ts files in the folder, excluding index.ts and generateIndexFile.sh
 for FILE in ./*.ts; do
   FILENAME=$(basename -- "$FILE")
-  if [[ "$FILENAME" != "index.ts" ]]; then
+  if [ "$FILENAME" != "index.ts" ]; then
     # Remove the file extension and create an export statement
     BASENAME="${FILENAME%.ts}"
     EXPORT_STATEMENT="export * from './$BASENAME';"
 
     # Append the export statement to the index.ts content
-    INDEX_CONTENT+="$EXPORT_STATEMENT"$'\n'
+    INDEX_CONTENT="$INDEX_CONTENT$EXPORT_STATEMENT\n"
   fi
 done
 # Write the content to the index.ts file
