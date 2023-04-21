@@ -1,69 +1,41 @@
 GIT_SHA1 = $(shell git rev-parse --verify HEAD)
-IMAGE_TAG = ${shell git describe --tags `git rev-list --tags --max-count=1` 2> /dev/null || echo 'latest' }
+IMAGE_TAG = $(shell git describe --tags `git rev-list --tags --max-count=1` 2> /dev/null || echo 'latest' )
 
-IMAGE_DIRS = $(wildcard libraries/* modules/*)
-
-all: conduit
-
-conduit:
 ifeq ($(DEV),TRUE)
-	docker build --no-cache -t ghcr.io/conduitplatform/conduit:dev ./packages
-	docker push ghcr.io/conduitplatform/conduit:dev
+	TAG_SUFFIX = :dev
 else
-	docker build --no-cache -t ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ./packages
-	docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:${IMAGE_TAG}
-	docker push ghcr.io/conduitplatform/conduit:${IMAGE_TAG}
-	docker push conduitplatform/conduit:${IMAGE_TAG}
-	$(eval SKIP_LATEST=$(if $(findstring $(IMAGE_TAG),alpha beta rc),true,false))
-	@if [ "$(SKIP_LATEST)" = "false" ]; then \
-		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} ghcr.io/conduitplatform/conduit:latest ; \
-		docker tag ghcr.io/conduitplatform/conduit:${IMAGE_TAG} conduitplatform/conduit:latest ; \
-		docker push conduitplatform/conduit:latest ; \
-		docker ghcr.io/conduitplatform/conduit:latest ; \
-	else \
-		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG" ; \
-	fi
+	TAG_SUFFIX = :$(IMAGE_TAG)
 endif
 
-conduit-builder:
-ifeq ($(MAKECMDGOALS), all)
+IMAGE_DIRS = $(wildcard modules/*)
+
+all: conduit $(IMAGE_DIRS)
+
+define build_docker_image
+	docker build --no-cache -t ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) $(3)
+	docker push ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX)
+	$(eval SKIP_LATEST=$(if $(findstring $(2),alpha beta rc),true,false))
+	@if [ "$(SKIP_LATEST)" = "false" ] && [ "$(TAG_SUFFIX)" != ":dev" ]; then \
+		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) conduitplatform/$(1):$(2) ; \
+		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) ghcr.io/conduitplatform/$(1):latest ; \
+		docker tag ghcr.io/conduitplatform/$(1)$(TAG_SUFFIX) conduitplatform/$(1):latest ; \
+		docker push conduitplatform/$(1):$(2) ; \
+		docker push ghcr.io/conduitplatform/$(1):latest ; \
+		docker push conduitplatform/$(1):latest ; \
+	else \
+		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG or DEV=TRUE" ; \
+	fi
+endef
+
+conduit-builder: Dockerfile scripts/Dockerfile.builder
 	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
-else
-	docker build --no-cache -t conduit-base:latest --build-arg BUILDING_SERVICE=$(MAKECMDGOALS) -f ./Dockerfile ./
-	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
-endif
 
-${IMAGE_DIRS}:
-	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
-ifeq ($(DEV),TRUE)
-	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:dev $@
-	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:dev
-else
-	docker build --no-cache -t ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} $@
-	docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
-	docker push ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
-	docker push conduitplatform/${IMAGE_NAME}:${IMAGE_TAG}
-	$(eval SKIP_LATEST=$(if $(findstring $(IMAGE_TAG),alpha beta rc),true,false))
-	@if [ "$(SKIP_LATEST)" = "false" ]; then \
-		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} ghcr.io/conduitplatform/${IMAGE_NAME}:latest ; \
-		docker tag ghcr.io/conduitplatform/${IMAGE_NAME}:${IMAGE_TAG} conduitplatform/${IMAGE_NAME}:latest ; \
-		docker push ghcr.io/conduitplatform/${IMAGE_NAME}:latest ; \
-		docker push conduitplatform/${IMAGE_NAME}:latest ; \
-	else \
-		echo "Skipping latest tag due to alpha, beta, or rc in IMAGE_TAG" ; \
-	fi
-endif
-
-modules/authentication: conduit-builder
-modules/authorization: conduit-builder
-modules/chat: conduit-builder
-modules/database: conduit-builder
-modules/email: conduit-builder
-modules/forms: conduit-builder
-modules/functions: conduit-builder
-modules/push-notifications: conduit-builder
-modules/router: conduit-builder
-modules/sms: conduit-builder
-modules/storage: conduit-builder
 conduit: conduit-builder
+	$(call build_docker_image,conduit,$(IMAGE_TAG),./packages)
+
+$(IMAGE_DIRS): conduit-builder
+	$(eval IMAGE_NAME := $(word 2,$(subst /, ,$@)))
+	$(call build_docker_image,$(IMAGE_NAME),$(IMAGE_TAG),$@)
+
+.PHONY: all conduit-builder conduit $(IMAGE_DIRS)
