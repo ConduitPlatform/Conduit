@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.6...v0.16.0-alpha.7) (2023-04-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **database:** wrong foreign key names (#599)
+
+### Bug Fixes
+
+* **authentication:** provider email/id matching not working properly ([#601](https://github.com/ConduitPlatform/Conduit/issues/601)) ([4f34ea9](https://github.com/ConduitPlatform/Conduit/commit/4f34ea9b239086f79dbb1e0362a0891992d83233))
+* **database:** exportCustomEndpoints() returning schema ids ([#598](https://github.com/ConduitPlatform/Conduit/issues/598)) ([484e2f1](https://github.com/ConduitPlatform/Conduit/commit/484e2f14e5f669184369b258a29b8426fb43687d))
+* **database:** wrong foreign key names ([#599](https://github.com/ConduitPlatform/Conduit/issues/599)) ([1b8c422](https://github.com/ConduitPlatform/Conduit/commit/1b8c42289ceff8190cde2616e72669ea0ed4fcd1))
+* github actions ([918020c](https://github.com/ConduitPlatform/Conduit/commit/918020c31fac9a7f289a1ccd472322cf35c3f363))
+
 ## [0.16.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.4...v0.16.0-alpha.6) (2023-04-19)
 
 
