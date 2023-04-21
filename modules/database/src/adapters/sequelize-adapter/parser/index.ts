@@ -27,7 +27,12 @@ function arrayHandler(
 function constructOrArray(value: any) {
   const orArray = [];
   for (const v of value) {
-    orArray.push({ [Op.like]: `%${v}%` }); // TODO: Investigate more the regex
+    orArray.push(
+      { [Op.like]: `${v}` },
+      { [Op.like]: `${v};%` },
+      { [Op.like]: `%;${v}` },
+      { [Op.like]: `%;${v};%` },
+    );
   }
   return orArray;
 }
@@ -35,17 +40,22 @@ function constructOrArray(value: any) {
 function constructAndArray(value: any) {
   const andArray = [];
   for (const v of value) {
-    andArray.push({ [Op.notLike]: `%${v}%` }); // TODO: Investigate more the regex
+    andArray.push(
+      { [Op.notLike]: `${v}` },
+      { [Op.notLike]: `${v};%` },
+      { [Op.notLike]: `%;${v}` },
+      { [Op.notLike]: `%;${v};%` },
+    );
   }
   return andArray;
 }
 
 function matchOperation(
   schema: Indexable,
+  previousKey: any,
   operator: string,
   value: any,
   dialect: string,
-  isArrayField: boolean,
   relations: {
     relations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     relationsDirectory: string[];
@@ -81,30 +91,38 @@ function matchOperation(
     case '$lte':
       return { [Op.lte]: value };
     case '$in':
-      if (isArrayField) {
-        if (dialect === 'postgres') {
-          return { [Op.overlap]: value };
-        } else {
-          return { [Op.or]: constructOrArray(value) };
-        }
-      } else {
+      if (
+        !isArrayField(schema, previousKey) ||
+        schema.compiledFields[previousKey][0].type === 'Relation'
+      ) {
         return { [Op.in]: arrayHandler(schema, value, dialect, relations, associations) };
+      } else if (dialect === 'postgres') {
+        return {
+          [Op.overlap]: arrayHandler(schema, value, dialect, relations, associations),
+        };
+      } else {
+        return { [Op.or]: constructOrArray(value) };
       }
     case '$or':
       return arrayHandler(schema, value, dialect, relations, associations);
     case '$and':
       return arrayHandler(schema, value, dialect, relations, associations);
     case '$nin':
-      if (isArrayField) {
-        if (dialect === 'postgres') {
-          return { [Op.not]: { [Op.overlap]: value } };
-        } else {
-          return { [Op.and]: constructAndArray(value) };
-        }
-      } else {
+      if (
+        !isArrayField(schema, previousKey) ||
+        schema.compiledFields[previousKey][0].type === 'Relation'
+      ) {
         return {
           [Op.notIn]: arrayHandler(schema, value, dialect, relations, associations),
         };
+      } else if (dialect === 'postgres') {
+        return {
+          [Op.not]: {
+            [Op.overlap]: arrayHandler(schema, value, dialect, relations, associations),
+          },
+        };
+      } else {
+        return { [Op.and]: constructAndArray(value) };
       }
     case '$like':
       return { [Op.like]: value };
@@ -136,7 +154,7 @@ function _parseQuery(
     associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     associationsDirectory: { [key: string]: string[] };
   },
-  previousKey?: any, // We need to retain previous key to know if it's an array schema field for $in and $nin operators
+  previousKey?: any, // Retain previous key for $in and $nin operators
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
   if (
@@ -176,10 +194,10 @@ function _parseQuery(
       if (subQuery === undefined) continue;
       const matched = matchOperation(
         schema,
+        previousKey,
         key,
         subQuery,
         dialect,
-        isArrayField(schema, previousKey),
         relations,
         associations,
       );
