@@ -5,13 +5,12 @@ import ConduitGrpcSdk, {
   IConduitLogger,
   ParsedRouterRequest,
   UnparsedRouterResponse,
-  UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import ConduitDefaultRouter from '../Router';
 import { RouterProxyRoute } from '../models';
-import { ProxyRouteT } from '@conduitplatform/hermes';
+import { ProxyRouteT, RouteT } from '@conduitplatform/hermes';
 
 export class RouterAdmin {
   constructor(
@@ -70,24 +69,54 @@ export class RouterAdmin {
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sortByName } = call.request.params;
-    let response: UntypedArray = [];
+    let response: { [key: string]: any } = {};
     const module = this.router.getGrpcRoutes();
     (ConduitGrpcSdk.Logger as IConduitLogger).logObject(module);
 
     Object.keys(module).forEach((url: string) => {
-      module[url].forEach((item: any) => {
-        response.push({
-          name: item.grpcFunction,
-          action: item.options.action,
-          path: item.options.path,
-        });
+      //get module name by taking the first string before the second slash
+      const moduleName = module[url][0].options.path.split('/')[1];
+      response[moduleName] = {
+        moduleUrl: url,
+        routes: {},
+        socketRoutes: {},
+        proxyRoutes: {},
+        middlewares: {},
+      };
+      module[url].forEach(item => {
+        if ((<RouteT>item).grpcFunction && (<RouteT>item).returns) {
+          response[moduleName].routes[(<RouteT>item).grpcFunction] = {
+            action: item.options.action,
+            path: item.options.path,
+            description: item.options.description,
+            middlewares: item.options.middlewares,
+          };
+        } else if ((<RouteT>item).grpcFunction && !(<RouteT>item).returns) {
+          response[moduleName].middlewares[(<RouteT>item).grpcFunction] = {
+            action: item.options.action,
+            path: item.options.path,
+            description: item.options.description,
+          };
+        } else if ((<ProxyRouteT>item).proxy) {
+          response[moduleName].proxyRoutes[(<ProxyRouteT>item).proxy.target] = {
+            action: item.options.action,
+            path: item.options.path,
+            description: item.options.description,
+            middlewares: item.options.middlewares,
+          };
+        } else if ((item as any).events) {
+          let eventObject = JSON.parse((item as any).events);
+          response[moduleName].socketRoutes[item.options.path] = {};
+          Object.keys(eventObject).forEach((event: string) => {
+            response[moduleName].socketRoutes[item.options.path][event] = {
+              action: item.options.action,
+              description: item.options.description,
+              middlewares: item.options.middlewares,
+            };
+          });
+        }
       });
     });
-    if (!isNil(sortByName)) {
-      if (sortByName) response = response.sort((a, b) => a.localeCompare(b));
-      else response = response.sort((a, b) => b.localeCompare(a));
-    }
     return response;
   }
 
