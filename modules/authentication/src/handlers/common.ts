@@ -48,7 +48,12 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
     // delete the old refresh token
     await RefreshToken.getInstance().deleteOne({ _id: oldRefreshToken._id });
-
+    // delete all expired tokens
+    RefreshToken.getInstance()
+      .deleteMany({
+        expiresOn: { $lte: new Date() },
+      })
+      .catch();
     return TokenProvider.getInstance().provideUserTokens({
       user: oldRefreshToken.user as User,
       clientId,
