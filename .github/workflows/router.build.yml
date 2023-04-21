@@ -6,6 +6,7 @@ on:
       - "modules/router/**"
       - "libraries/grpc-sdk/**"
       - "libraries/hermes/**"
+      - "libraries/module-tools/**"
 
 env:
   REGISTRY: ghcr.io

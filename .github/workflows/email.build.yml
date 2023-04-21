@@ -5,6 +5,7 @@ on:
     paths:
       - "modules/email/**"
       - "libraries/grpc-sdk/**"
+      - "libraries/module-tools/**"
 
 env:
   REGISTRY: ghcr.io

@@ -5,6 +5,7 @@ on:
     paths:
       - "modules/database/**"
       - "libraries/grpc-sdk/**"
+      - "libraries/module-tools/**"
 
 env:
   REGISTRY: ghcr.io

@@ -5,6 +5,7 @@ on:
     paths:
       - "modules/chat/**"
       - "libraries/grpc-sdk/**"
+      - "libraries/module-tools/**"
 
 env:
   REGISTRY: ghcr.io
