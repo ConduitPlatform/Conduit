@@ -578,6 +578,21 @@ export class SchemaAdmin {
     return this.database.deleteIndexes(requestedSchema.name, indexNames);
   }
 
+  async checkRequestedSchema(id: string) {
+    const requestedSchema = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findOne({
+        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
+      });
+    if (isNil(requestedSchema)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Schema does not exist or isn't a CMS schema",
+      );
+    }
+    return requestedSchema;
+  }
+
   private async retrieveSchemasByIds(ids: string[]) {
     if (ids.length === 0) {
       // array check is required
@@ -596,20 +611,5 @@ export class SchemaAdmin {
       throw new GrpcError(status.NOT_FOUND, 'ids array contains invalid ids');
     }
     return requestedSchemas;
-  }
-
-  async checkRequestedSchema(id: string) {
-    const requestedSchema = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findOne({
-        $and: [{ 'modelOptions.conduit.cms': { $exists: true } }, { _id: id }],
-      });
-    if (isNil(requestedSchema)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Schema does not exist or isn't a CMS schema",
-      );
-    }
-    return requestedSchema;
   }
 }

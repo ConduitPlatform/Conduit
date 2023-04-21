@@ -28,6 +28,7 @@ export class TwitterHandlers extends OAuth2<TwitterUser, OAuth2Settings> {
       data: { ...twitterProfile.data.data },
     };
   }
+
   constructScopes(scopes: string[]): string {
     return scopes.join('%20');
   }

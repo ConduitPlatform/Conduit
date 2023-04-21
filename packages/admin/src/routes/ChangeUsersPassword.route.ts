@@ -2,9 +2,8 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { hash } from 'bcrypt';
 import { isNil } from 'lodash';
 import { Admin } from '../models';

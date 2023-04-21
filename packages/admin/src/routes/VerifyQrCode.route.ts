@@ -1,7 +1,6 @@
 import {
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
   GrpcError,
 } from '@conduitplatform/grpc-sdk';
 import { isEmpty, isNil } from 'lodash';
@@ -9,6 +8,7 @@ import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/her
 import { status } from '@grpc/grpc-js';
 import { Admin, AdminTwoFactorSecret } from '../models';
 import { verifyTwoFactorToken } from '../utils/auth';
+import { ConduitString } from '@conduitplatform/module-tools';
 
 export function verifyQrCodeRoute() {
   return new ConduitRoute(

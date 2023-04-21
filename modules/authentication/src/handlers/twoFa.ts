@@ -1,15 +1,17 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
-  RoutingManager,
   SMS,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { Token, TwoFactorBackUpCodes, TwoFactorSecret, User } from '../models';

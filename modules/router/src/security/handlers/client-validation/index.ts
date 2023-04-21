@@ -2,9 +2,9 @@ import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk, {
   ConduitError,
-  ConfigController,
   DatabaseProvider,
 } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { Client } from '../../../models';
 import { validateClient } from '../../utils';
 import { ValidationInterface } from '../../interfaces/ValidationInterface';

@@ -1,14 +1,16 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  GrpcServer,
   RouteOptionType,
-  RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitBoolean,
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { RouterAdmin } from './router';
 import { SecurityAdmin } from './security';
 import ConduitDefaultRouter from '../Router';

@@ -1,12 +1,13 @@
 import { NextFunction, Response } from 'express';
 import { isNil } from 'lodash';
 import { gql } from 'apollo-server-core';
-import ConduitGrpcSdk, { ConfigController } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
 import { Admin } from '../models';
 import { verifyToken } from '../utils/auth';
 import { isDev } from '../utils/middleware';
 import { ConduitRequest } from '@conduitplatform/hermes';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 const excludedRestRoutes = ['/ready', '/login', '/config/modules'];
 const excludedGqlOperations = [

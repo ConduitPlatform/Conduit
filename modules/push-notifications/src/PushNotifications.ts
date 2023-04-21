@@ -1,9 +1,4 @@
-import {
-  ConfigController,
-  DatabaseProvider,
-  HealthCheckStatus,
-  ManagedModule,
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { PushNotificationsRoutes } from './routes';
@@ -32,10 +27,10 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { OneSignalProvider } from './providers/OneSignal.provider';
 import { IOneSignalSettings } from './interfaces/IOneSignalSettings';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'push-notifications.proto'),
     protoDescription: 'pushnotifications.PushNotifications',
@@ -48,6 +43,7 @@ export default class PushNotifications extends ManagedModule<Config> {
       sendManyNotifications: this.sendMany.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private isRunning = false;
   private authServing = false;
   private adminRouter!: AdminHandlers;
@@ -80,83 +76,6 @@ export default class PushNotifications extends ManagedModule<Config> {
       } catch (e) {
         this.updateHealthState(HealthCheckStatus.NOT_SERVING);
       }
-    }
-  }
-
-  private updateHealthState(stateUpdate?: HealthCheckStatus, authServing?: boolean) {
-    if (authServing) {
-      this.authServing = authServing;
-    }
-    const moduleActive = ConfigController.getInstance().config.active;
-    const depState =
-      moduleActive && this.authServing
-        ? HealthCheckStatus.SERVING
-        : HealthCheckStatus.NOT_SERVING;
-    const requestedState = stateUpdate ?? this.healthState;
-    const nextState =
-      depState === requestedState && requestedState === HealthCheckStatus.SERVING
-        ? HealthCheckStatus.SERVING
-        : HealthCheckStatus.NOT_SERVING;
-    this.updateHealth(nextState);
-  }
-
-  private async enableModule() {
-    if (!this.isRunning) {
-      await this.initProvider();
-      if (!this._provider || !this._provider?.isInitialized) {
-        throw new Error('Provider failed to initialize');
-      }
-      if (this.grpcSdk.isAvailable('router')) {
-        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-      } else {
-        this.grpcSdk.monitorModule('router', serving => {
-          if (serving) {
-            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
-            this.grpcSdk.unmonitorModule('router');
-          }
-        });
-      }
-
-      this.adminRouter = new AdminHandlers(
-        this.grpcServer,
-        this.grpcSdk,
-        this._provider!,
-      );
-      this.isRunning = true;
-    } else {
-      await this.initProvider();
-      if (!this._provider || !this._provider?.isInitialized) {
-        throw new Error('Provider failed to initialize');
-      }
-      this.adminRouter.updateProvider(this._provider!);
-    }
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) {
-        // borrowed foreign model
-        return this.database
-          .createSchemaFromAdapter(modelInstance)
-          .then(() => this.database.migrate(modelInstance.name));
-      }
-    });
-    return Promise.all(promises);
-  }
-
-  private async initProvider() {
-    const notificationsConfig = await this.grpcSdk.config.get('pushNotifications');
-    const name = notificationsConfig.providerName;
-    const settings = notificationsConfig[name];
-    if (name === 'firebase') {
-      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
-    } else if (name === 'onesignal') {
-      this._provider = new OneSignalProvider(settings as IOneSignalSettings);
-    } else if (name === 'basic') {
-      this._provider = new BaseNotificationProvider();
-    } else {
-      throw new Error('Provider not supported');
     }
   }
 
@@ -297,6 +216,83 @@ export default class PushNotifications extends ManagedModule<Config> {
       };
     } catch (e) {
       throw new Error((e as Error).message);
+    }
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
+      }
+    });
+    return Promise.all(promises);
+  }
+
+  private updateHealthState(stateUpdate?: HealthCheckStatus, authServing?: boolean) {
+    if (authServing) {
+      this.authServing = authServing;
+    }
+    const moduleActive = ConfigController.getInstance().config.active;
+    const depState =
+      moduleActive && this.authServing
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
+    const requestedState = stateUpdate ?? this.healthState;
+    const nextState =
+      depState === requestedState && requestedState === HealthCheckStatus.SERVING
+        ? HealthCheckStatus.SERVING
+        : HealthCheckStatus.NOT_SERVING;
+    this.updateHealth(nextState);
+  }
+
+  private async enableModule() {
+    if (!this.isRunning) {
+      await this.initProvider();
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
+      if (this.grpcSdk.isAvailable('router')) {
+        this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+      } else {
+        this.grpcSdk.monitorModule('router', serving => {
+          if (serving) {
+            this.userRouter = new PushNotificationsRoutes(this.grpcServer, this.grpcSdk);
+            this.grpcSdk.unmonitorModule('router');
+          }
+        });
+      }
+
+      this.adminRouter = new AdminHandlers(
+        this.grpcServer,
+        this.grpcSdk,
+        this._provider!,
+      );
+      this.isRunning = true;
+    } else {
+      await this.initProvider();
+      if (!this._provider || !this._provider?.isInitialized) {
+        throw new Error('Provider failed to initialize');
+      }
+      this.adminRouter.updateProvider(this._provider!);
+    }
+  }
+
+  private async initProvider() {
+    const notificationsConfig = await this.grpcSdk.config.get('pushNotifications');
+    const name = notificationsConfig.providerName;
+    const settings = notificationsConfig[name];
+    if (name === 'firebase') {
+      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+    } else if (name === 'onesignal') {
+      this._provider = new OneSignalProvider(settings as IOneSignalSettings);
+    } else if (name === 'basic') {
+      this._provider = new BaseNotificationProvider();
+    } else {
+      throw new Error('Provider not supported');
     }
   }
 }

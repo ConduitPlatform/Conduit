@@ -15,7 +15,8 @@ This library can be used with anything really.
 
 * **VersionName** is required when you create a new Template
 
-###### Mailgun 
+###### Mailgun
 
-* PlainContent and HtmlContent are same. Mailgun provides only one way to fill the content property , so you can write html code or text. So **_assign  this content to  ***plainContent*** member_**.
+* PlainContent and HtmlContent are same. Mailgun provides only one way to fill the content property , so you can write
+  html code or text. So **_assign this content to  ***plainContent*** member_**.
 * Mailgun **does not provide _subject_** option when you create a template. You have to set it when you send the email.

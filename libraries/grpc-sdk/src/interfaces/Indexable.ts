@@ -5,4 +5,3 @@ export type Route = Indexable;
 export type Headers = Indexable;
 export type Context = Indexable;
 export type Cookies = Indexable;
-export type Query = Indexable;

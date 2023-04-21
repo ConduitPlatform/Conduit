@@ -1,16 +1,16 @@
 import { isEmpty, isNil } from 'lodash';
 import { AuthUtils } from '../utils';
 import ConduitGrpcSdk, {
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { Service, User } from '../models';
 import { status } from '@grpc/grpc-js';
 import { TokenProvider } from './tokenProvider';
 import { IAuthenticationStrategy } from '../interfaces';
+
+import { ConfigController, RoutingManager } from '@conduitplatform/module-tools';
 
 export class ServiceHandler implements IAuthenticationStrategy {
   private initialized: boolean = false;

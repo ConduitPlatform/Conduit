@@ -28,6 +28,7 @@
   "dependencies": {
     "@conduitplatform/commons": "^1.0.0",
     "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/module-tools": "^1.0.0",
     "@conduitplatform/hermes": "^1.0.1",
     "@conduitplatform/node-2fa": "^1.0.0",
     "@grpc/grpc-js": "^1.6.7",

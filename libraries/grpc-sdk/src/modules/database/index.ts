@@ -1,12 +1,13 @@
-import { ConduitModule } from '../../classes/ConduitModule';
-import { ConduitSchema } from '../../classes';
+import { ConduitModule } from '../../classes';
 import {
   DatabaseProviderDefinition,
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { ConduitSchemaExtension, RawQuery, UntypedArray } from '../../interfaces';
+import { RawQuery, UntypedArray } from '../../interfaces';
 import { Query } from '../../types/db';
+import { ConduitSchema } from '../../classes/ConduitSchema';
+import { ConduitSchemaExtension } from '../../interfaces/ConduitSchemaExtension';
 
 export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -119,19 +120,6 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     }).then(res => {
       return JSON.parse(res.result);
     });
-  }
-
-  private constructSortObj(sort: string[]) {
-    const sortObj: { [field: string]: -1 | 1 } = {};
-    sort.forEach((sortVal: string) => {
-      sortVal = sortVal.trim();
-      if (sortVal.indexOf('-') !== -1) {
-        sortObj[sortVal.substring(1)] = -1;
-      } else {
-        sortObj[sortVal] = 1;
-      }
-    });
-    return sortObj;
   }
 
   findMany<T>(
@@ -264,5 +252,18 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
 
   migrate(schemaName: string) {
     return this.client!.migrate({ schemaName });
+  }
+
+  private constructSortObj(sort: string[]) {
+    const sortObj: { [field: string]: -1 | 1 } = {};
+    sort.forEach((sortVal: string) => {
+      sortVal = sortVal.trim();
+      if (sortVal.indexOf('-') !== -1) {
+        sortObj[sortVal.substring(1)] = -1;
+      } else {
+        sortObj[sortVal] = 1;
+      }
+    });
+    return sortObj;
   }
 }

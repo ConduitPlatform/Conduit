@@ -13,6 +13,16 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
     super(connectionUri);
   }
 
+  getCollectionName(schema: ConduitSchema) {
+    return schema.collectionName && schema.collectionName !== ''
+      ? schema.collectionName
+      : schema.name;
+  }
+
+  getDatabaseType(): string {
+    return 'PostgreSQL';
+  }
+
   protected async hasLegacyCollections() {
     const res = await this.sequelize
       .query(
@@ -27,12 +37,6 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       )
       .then(r => (r[0][0] as { exists: boolean }).exists);
     return res;
-  }
-
-  getCollectionName(schema: ConduitSchema) {
-    return schema.collectionName && schema.collectionName !== ''
-      ? schema.collectionName
-      : schema.name;
   }
 
   protected async _createSchemaFromAdapter(
@@ -72,9 +76,5 @@ export class PostgresAdapter extends SequelizeAdapter<PostgresSchema> {
       await this.saveSchemaToDatabase(schema);
     }
     return this.models[schema.name];
-  }
-
-  getDatabaseType(): string {
-    return 'PostgreSQL';
   }
 }
