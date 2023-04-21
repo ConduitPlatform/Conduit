@@ -12,8 +12,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
-  GenerateProtoRequest,
-  GenerateProtoResponse,
+  GenerateAdminProtoRequest,
+  GenerateAdminProtoResponse,
   IConduitAdmin,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
@@ -103,7 +103,7 @@ export default class AdminModule extends IConduitAdmin {
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
       {
-        generateProto: this.generateProto.bind(this),
+        generateAdminProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
       },
     );
@@ -172,8 +172,8 @@ export default class AdminModule extends IConduitAdmin {
 
   // grpc
   async generateProto(
-    call: GrpcRequest<GenerateProtoRequest>,
-    callback: GrpcCallback<GenerateProtoResponse>,
+    call: GrpcRequest<GenerateAdminProtoRequest>,
+    callback: GrpcCallback<GenerateAdminProtoResponse>,
   ) {
     const moduleName = call.request.moduleName;
     const routes: (ConduitRouteObject | SocketProtoDescription)[] =

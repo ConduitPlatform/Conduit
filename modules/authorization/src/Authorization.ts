@@ -12,7 +12,6 @@ import metricsSchema from './metrics';
 import {
   Decision,
   DeleteResourceRequest,
-  Empty,
   FindRelationRequest,
   PermissionCheck,
   PermissionRequest,
@@ -28,6 +27,7 @@ import { ResourceController } from './controllers/resource.controller';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { Empty } from './protoTypes/google/protobuf/empty';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -35,7 +35,6 @@ export default class Authorization extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'authorization.proto'),
     protoDescription: 'authorization.Authorization',
     functions: {
-      setConfig: this.setConfig.bind(this),
       defineResource: this.defineResource.bind(this),
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
