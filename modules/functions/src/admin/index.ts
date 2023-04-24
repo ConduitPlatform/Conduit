@@ -36,7 +36,7 @@ export class AdminHandlers {
   }
 
   async uploadFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, functionCode, inputs, returns } = call.request.params;
+    const { name, functionType, functionCode, inputs, returns } = call.request.params;
     const func = await Functions.getInstance().findOne({ name: name });
     if (!isNil(func)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'function name already exists');
@@ -50,6 +50,7 @@ export class AdminHandlers {
     const timeoutValue = inputs.timeout ?? 180000;
     const query = {
       name,
+      functionType,
       functionCode,
       inputs,
       returns,
@@ -179,6 +180,7 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           functionCode: ConduitString.Required,
+          functionType: ConduitString.Required,
           inputs: { type: TYPE.JSON, required: false },
           returns: { type: TYPE.JSON, required: false },
           timeout: ConduitNumber.Optional,
