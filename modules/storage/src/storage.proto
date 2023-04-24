@@ -42,7 +42,7 @@ message CreateFileByUrlRequest {
   optional string folder = 3;
   optional string container = 4;
   optional string mimeType = 5;
-  optional int64 size = 6;
+  optional int32 size = 6; // todo: support int64
 }
 
 message FileByUrlResponse {
@@ -58,7 +58,7 @@ message UpdateFileByUrlRequest {
   optional string folder = 3;
   optional string container = 4;
   optional string mimeType = 5;
-  optional int64 size = 6;
+  optional int32 size = 6; // todo: support int64
 }
 
 service Storage {
