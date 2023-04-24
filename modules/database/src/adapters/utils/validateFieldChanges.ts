@@ -31,8 +31,12 @@ function validateSchemaFields(oldSchemaFields: Indexable, newSchemaFields: Index
       if (!newType) return;
       if (oldType === DataTypes.JSONB && newType === 'JSON') return;
       if (isArray(oldType) && isArray(newType)) {
-        if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
+        if (typeof oldType[0] === 'object') {
+          validateObject(oldType[0], newType[0]);
+        } else if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
           throw ConduitError.forbidden('Invalid schema types');
+      } else if (typeof oldType === 'object') {
+        validateObject(oldType, newType);
       } else if (!isEqual(oldType, newType)) {
         // TODO: Support schema field type migration
         throw ConduitError.forbidden('Invalid schema types');
@@ -40,4 +44,12 @@ function validateSchemaFields(oldSchemaFields: Indexable, newSchemaFields: Index
     }
   });
   return newSchemaFields;
+}
+
+function validateObject(oldType: any, newType: any) {
+  if (!oldType.hasOwnProperty('type') && !newType.hasOwnProperty('type')) {
+    validateSchemaFields(oldType, newType);
+  }
+  if (JSON.stringify(oldType[0]) !== JSON.stringify(newType[0]))
+    throw ConduitError.forbidden('Invalid schema types');
 }
