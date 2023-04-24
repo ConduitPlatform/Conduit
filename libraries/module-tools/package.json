@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "^1.0.0",
+    "@conduitplatform/grpc-sdk": "*",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "abort-controller-x": "^0.4.0",
