@@ -90,12 +90,14 @@ export class RouterAdmin {
             path: item.options.path,
             description: item.options.description,
             middlewares: item.options.middlewares,
+            handler: (<RouteT>item).grpcFunction,
           };
         } else if ((<RouteT>item).grpcFunction && !(<RouteT>item).returns) {
           response[moduleName].middlewares[(<RouteT>item).grpcFunction] = {
             action: item.options.action,
             path: item.options.path,
             description: item.options.description,
+            handler: (<RouteT>item).grpcFunction,
           };
         } else if ((<ProxyRouteT>item).proxy) {
           response[moduleName].proxyRoutes[(<ProxyRouteT>item).proxy.target] = {
@@ -103,6 +105,7 @@ export class RouterAdmin {
             path: item.options.path,
             description: item.options.description,
             middlewares: item.options.middlewares,
+            handler: (<ProxyRouteT>item).proxy.target,
           };
         } else if ((item as any).events) {
           let eventObject = JSON.parse((item as any).events);
@@ -112,6 +115,7 @@ export class RouterAdmin {
               action: item.options.action,
               description: item.options.description,
               middlewares: item.options.middlewares,
+              handler: eventObject[event].handler,
             };
           });
         }
