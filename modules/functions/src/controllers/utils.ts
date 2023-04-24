@@ -1,7 +1,9 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
+  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { RouteBuilder } from '@conduitplatform/module-tools';
 import { FunctionExecutions, Functions } from '../models';
@@ -27,13 +29,13 @@ function getOperation(op: string) {
 }
 
 async function executeFunction(
+  func: Functions,
   call: ParsedRouterRequest,
-  callback: any,
   functionCodeCompiled: VMScript,
   timeout: number,
   name: string,
   grpcSdk: ConduitGrpcSdk,
-) {
+): Promise<UnparsedRouterResponse> {
   const logs: string[] | undefined = [];
   const vm = new NodeVM({
     console: 'redirect',
@@ -49,19 +51,31 @@ async function executeFunction(
   });
 
   let duration;
-  let start;
+  const start = process.hrtime();
   try {
-    start = process.hrtime();
     const functionInSandbox = vm.run(functionCodeCompiled);
-    const end = process.hrtime(start);
-    const functionData = functionInSandbox(grpcSdk, call.request, callback);
-    duration = end[0] * 1e3 + end[1] / 1e6;
-    await addFunctionExecutions(name, duration, true, undefined, logs);
-    ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
-    ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
-      function_name: name,
+    return new Promise((resolve, reject) => {
+      functionInSandbox(grpcSdk, call.request, (data: any) => {
+        const end = process.hrtime(start);
+        duration = end[0] * 1e3 + end[1] / 1e6;
+        addFunctionExecutions(name, duration, true, undefined, logs).then();
+        ConduitGrpcSdk.Metrics?.increment('executed_functions_total');
+        ConduitGrpcSdk.Metrics?.observe('function_execution_time', duration, {
+          function_name: name,
+        });
+        if (func.returns === 'String') {
+          resolve({ result: data });
+        } else {
+          // returns is a Proxy object, so we need to parse it to JSON
+          // the values inside proxy are defined by the func.returns object
+          const actualReturns: Indexable = {};
+          for (const key in func.returns as Indexable) {
+            actualReturns[key] = data[key];
+          }
+          resolve(actualReturns);
+        }
+      });
     });
-    return { data: functionData };
   } catch (e) {
     const end = process.hrtime(start);
     duration = end[0] * 1e3 + end[1] / 1e6;
@@ -79,18 +93,16 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   const route = new RouteBuilder()
     .path(`/${func.name}`)
     .method(getOperation(func.inputs?.method))
-    .handler((call: ParsedRouterRequest, callback: any) =>
-      executeFunction(
+    .handler((call: ParsedRouterRequest) => {
+      return executeFunction(
+        func,
         call,
-        (returns: any) => {
-          callback(null, JSON.parse(returns));
-        },
         compiledFunctionCode,
         func.timeout,
         func.name,
         grpcSdk,
-      ),
-    );
+      );
+    });
   if (func.inputs?.auth) {
     route.middleware('authMiddleware');
   }

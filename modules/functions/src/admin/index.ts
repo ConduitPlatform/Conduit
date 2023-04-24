@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
+  Query,
   RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
@@ -19,6 +20,8 @@ import { status } from '@grpc/grpc-js';
 import { FunctionExecutions, Functions } from '../models';
 import { FunctionController } from '../controllers/function.controller';
 import { VMScript } from 'vm2';
+
+const escapeStringRegexp = require('escape-string-regexp');
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;
@@ -59,21 +62,54 @@ export class AdminHandlers {
 
   async deleteFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { id } = call.request.params;
+    if (isEmpty(id) || isNil(id)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid id');
+    }
     const func = await Functions.getInstance().findOne({ _id: id });
     if (isNil(func)) {
       throw new GrpcError(status.NOT_FOUND, 'Function does not exist');
     }
     await Functions.getInstance().deleteOne({ _id: id });
     this.functionsController.refreshEndpoints();
-    return { deleted: true };
+    return 'Deleted';
+  }
+
+  async deleteFunctions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (isEmpty(ids) || isNil(ids)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid ids');
+    }
+    const func = await Functions.getInstance().findMany({ _id: { $in: ids } });
+    if (isNil(func) || isEmpty(func) || func.length !== ids.length) {
+      throw new GrpcError(status.NOT_FOUND, 'One or more functions do not exist');
+    }
+    await Functions.getInstance().deleteMany({ _id: { $in: ids } });
+    this.functionsController.refreshEndpoints();
+    return 'Deleted';
   }
 
   async listFunctions(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort } = call.request.params;
+    const { sort, search } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
-    const functions = await Functions.getInstance().findMany({}, skip, limit, sort);
-    return { functions };
+    let query: Query<Functions> = {};
+    if (!isNil(search)) {
+      if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
+        query = { _id: call.request.params.search };
+      } else {
+        const identifier = escapeStringRegexp(call.request.params.search);
+        query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
+      }
+    }
+    const functions = await Functions.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+    );
+    const count = await Functions.getInstance().countDocuments(query);
+    return { functions, count };
   }
 
   async getFunction(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -153,6 +189,18 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
+        path: '/',
+        action: ConduitRouteActions.DELETE,
+        description: 'Deletes multiple functions',
+        queryParams: {
+          ids: { type: [RouteOptionType.String], required: true },
+        },
+      },
+      new ConduitRouteReturnDefinition('DeleteFunctions', 'String'),
+      this.deleteFunctions.bind(this),
+    );
+    this.routingManager.route(
+      {
         path: '/:id',
         action: ConduitRouteActions.DELETE,
         description: 'Delete a function',
@@ -163,18 +211,23 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('DeleteFunction', 'String'),
       this.deleteFunction.bind(this),
     );
+
     this.routingManager.route(
       {
         path: '/',
         action: ConduitRouteActions.GET,
         description: 'List all functions',
         queryParams: {
+          search: ConduitString.Optional,
           skip: ConduitNumber.Optional,
           limit: ConduitNumber.Optional,
           sort: ConduitString.Optional,
         },
       },
-      new ConduitRouteReturnDefinition('ListFunctions', 'String'),
+      new ConduitRouteReturnDefinition('ListFunctions', {
+        functions: [Functions.getInstance().fields],
+        count: ConduitNumber.Required,
+      }),
       this.listFunctions.bind(this),
     );
     this.routingManager.route(
