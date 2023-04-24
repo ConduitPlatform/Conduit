@@ -214,7 +214,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = this.storageParamAdapter.createParsedRouterRequest({
+      ...call.request,
+      size: call.request.size?.toNumber(),
+    });
     const result = await this._fileHandlers.createFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
@@ -229,7 +232,10 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = this.storageParamAdapter.createParsedRouterRequest({
+      ...call.request,
+      size: call.request.size?.toNumber(),
+    });
     const result = await this._fileHandlers.updateFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);

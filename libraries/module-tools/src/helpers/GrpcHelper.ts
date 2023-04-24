@@ -4,6 +4,8 @@ import {
   ServerCredentials,
   UntypedServiceImplementation,
 } from '@grpc/grpc-js';
+import { util as protoUtil } from 'protobufjs';
+import Long = protoUtil.Long;
 
 const protoLoader = require('@grpc/proto-loader');
 
@@ -34,7 +36,7 @@ export function addServiceToServer(
 ) {
   const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
-    longs: String,
+    longs: Long,
     enums: String,
     defaults: true,
     oneofs: true,
