@@ -4,6 +4,7 @@ import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
 import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
+import { ConduitModuleDefinition } from '../protoUtils';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;
@@ -28,6 +29,12 @@ export class ConduitModule<T extends CompatServiceDefinition> {
 
   get healthClient(): Client<typeof HealthDefinition> | undefined {
     return this._healthClient;
+  }
+
+  private _moduleClient?: Client<typeof ConduitModuleDefinition>;
+
+  get moduleClient(): Client<typeof ConduitModuleDefinition> | undefined {
+    return this._moduleClient;
   }
 
   get active(): boolean {
@@ -73,6 +80,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       },
     });
     this._healthClient = clientFactory.create(HealthDefinition, this.channel);
+    this._moduleClient = clientFactory.create(ConduitModuleDefinition, this.channel);
     const monitorChannel = () => {
       if (!this.channel) return;
       try {

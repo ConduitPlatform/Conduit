@@ -18,6 +18,7 @@
     "@grpc/grpc-js": "^1.6.7",
     "fast-jwt": "^1.6.0",
     "fs-extra": "^10.1.0",
+    "glob": "^10.2.1",
     "ioredis": "^5.1.0",
     "lodash": "^4.17.21",
     "nice-grpc": "^1.2.0",

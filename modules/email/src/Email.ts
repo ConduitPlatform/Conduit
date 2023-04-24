@@ -28,7 +28,6 @@ export default class Email extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'email.proto'),
     protoDescription: 'email.Email',
     functions: {
-      setConfig: this.setConfig.bind(this),
       registerTemplate: this.registerTemplate.bind(this),
       sendEmail: this.sendEmail.bind(this),
     },

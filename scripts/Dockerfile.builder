@@ -3,6 +3,7 @@ FROM node:gallium-alpine
 WORKDIR /app
 
 COPY --from=conduit-base:latest /app/libraries/grpc-sdk /app/libraries/grpc-sdk
+COPY --from=conduit-base:latest /app/libraries/module-tools /app/libraries/module-tools
 COPY --from=conduit-base:latest /app/package.json .
 COPY --from=conduit-base:latest /app/yarn.lock .
 

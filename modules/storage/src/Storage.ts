@@ -39,7 +39,6 @@ export default class Storage extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',
     functions: {
-      setConfig: this.setConfig.bind(this),
       getFile: this.getFile.bind(this),
       getFileData: this.getFileData.bind(this),
       createFile: this.createFile.bind(this),

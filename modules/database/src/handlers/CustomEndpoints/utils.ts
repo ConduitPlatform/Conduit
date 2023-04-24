@@ -3,8 +3,6 @@ import { isNil } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointsQuery } from '../../interfaces';
 
-const escapeStringRegexp = require('escape-string-regexp');
-
 interface Inputs {
   name: string;
   type: string;
@@ -141,7 +139,6 @@ function _translateQuery(
   if (isDate) {
     comparisonField = { $date: comparisonField };
   } else if (like) {
-    comparisonField = escapeStringRegexp(comparisonField);
     if (caseSensitiveLike) {
       comparisonField = { $like: `%${comparisonField}%` };
     } else {

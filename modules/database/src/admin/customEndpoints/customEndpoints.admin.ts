@@ -38,13 +38,14 @@ export class CustomEndpointsAdmin {
       .then(r =>
         r.map(obj => {
           delete obj._id;
+          delete obj.selectedSchema;
           delete obj.createdAt;
           delete obj.updatedAt;
           delete obj.__v;
           return obj;
         }),
       );
-    return { endpoints: endpoints };
+    return { endpoints };
   }
 
   async importCustomEndpoints(

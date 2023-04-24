@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import { HealthCheckStatus } from '../../types';
 import {
   ConfigDefinition,
@@ -12,12 +12,12 @@ import ConduitGrpcSdk from '../../index';
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
   private coreLive = false;
-  private readonly _serviceHealthStatusGetter?: Function;
+  private readonly _serviceHealthStatusGetter?: () => HealthCheckStatus;
 
   constructor(
     moduleName: string,
     readonly url: string,
-    serviceHealthStatusGetter?: Function,
+    serviceHealthStatusGetter?: () => HealthCheckStatus,
     grpcToken?: string,
   ) {
     super(moduleName, 'config', url, grpcToken);
