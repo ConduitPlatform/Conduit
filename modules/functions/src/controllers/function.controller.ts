@@ -43,12 +43,22 @@ export class FunctionController {
         const routes: UntypedArray = [];
 
         r.forEach(func => {
-          routes.push(createFunctionRoute(func, this.grpcSdk));
+          const route = createFunctionRoute(func, this.grpcSdk);
+          if (route) {
+            routes.push(route);
+          }
         });
         this.functionRoutes = routes;
         this._routingManager.clear();
         this.functionRoutes.forEach(route => {
-          this._routingManager.route(route.input, route.returnType, route.handler);
+          if (!route.returnType) {
+            this._routingManager.middleware(
+              route.input as ConduitRouteOptions & { name: string },
+              route.handler,
+            );
+          } else {
+            this._routingManager.route(route.input, route.returnType, route.handler);
+          }
         });
         this._routingManager
           .registerRoutes()

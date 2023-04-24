@@ -74,10 +74,7 @@ export class RoutingManager {
     this._moduleProxyRoutes = {};
   }
 
-  middleware(
-    input: ConduitMiddlewareOptions,
-    handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
-  ) {
+  middleware(input: ConduitMiddlewareOptions, handler: RequestHandlers) {
     const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
       grpcFunction: input.name,

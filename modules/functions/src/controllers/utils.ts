@@ -129,6 +129,23 @@ export function createRequestOrWebhookFunction(func: Functions, grpcSdk: Conduit
   return route.build();
 }
 
+export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  return {
+    input: { path: '/', name: func.name },
+    handler: (call: ParsedRouterRequest) => {
+      return executeFunction(
+        func,
+        call,
+        compiledFunctionCode,
+        func.timeout,
+        func.name,
+        grpcSdk,
+      );
+    },
+  };
+}
+
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   switch (func.functionType) {
     case 'request':
@@ -142,7 +159,7 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
     case 'socket':
     //todo
     case 'middleware':
-    //todo
+      return createMiddlewareFunction(func, grpcSdk);
   }
 }
 
