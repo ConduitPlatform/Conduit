@@ -81,7 +81,7 @@ export class AdminHandlers {
     }
     const func = await Functions.getInstance().findMany({ _id: { $in: ids } });
     if (isNil(func) || isEmpty(func) || func.length !== ids.length) {
-      throw new GrpcError(status.NOT_FOUND, 'One ore more functions do not exist');
+      throw new GrpcError(status.NOT_FOUND, 'One or more functions do not exist');
     }
     await Functions.getInstance().deleteMany({ _id: { $in: ids } });
     this.functionsController.refreshEndpoints();
@@ -97,7 +97,7 @@ export class AdminHandlers {
       if (call.request.params.search.match(/^[a-fA-F\d]{24}$/)) {
         query = { _id: call.request.params.search };
       } else {
-        let identifier = escapeStringRegexp(call.request.params.search);
+        const identifier = escapeStringRegexp(call.request.params.search);
         query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
       }
     }

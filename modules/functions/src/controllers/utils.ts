@@ -51,7 +51,7 @@ async function executeFunction(
   });
 
   let duration;
-  let start = process.hrtime();
+  const start = process.hrtime();
   try {
     const functionInSandbox = vm.run(functionCodeCompiled);
     return new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ async function executeFunction(
         } else {
           // returns is a Proxy object, so we need to parse it to JSON
           // the values inside proxy are defined by the func.returns object
-          let actualReturns: Indexable = {};
+          const actualReturns: Indexable = {};
           for (const key in func.returns as Indexable) {
             actualReturns[key] = data[key];
           }
