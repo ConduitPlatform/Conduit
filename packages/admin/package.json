@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "private": true,
   "engines": {
     "node": ">=14"
   },
@@ -26,11 +27,11 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "@conduitplatform/commons": "^1.0.0",
-    "@conduitplatform/grpc-sdk": "^1.0.1",
-    "@conduitplatform/module-tools": "^1.0.0",
-    "@conduitplatform/hermes": "^1.0.1",
-    "@conduitplatform/node-2fa": "^1.0.0",
+    "@conduitplatform/commons": "*",
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
+    "@conduitplatform/hermes": "*",
+    "@conduitplatform/node-2fa": "*",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "bcrypt": "^5.0.1",
