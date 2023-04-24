@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.8](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.7...v0.16.0-alpha.8) (2023-04-24)
+
+
+### Features
+
+* **authentication:** add cleanup code to delete expired refresh/access tokens ([#602](https://github.com/ConduitPlatform/Conduit/issues/602)) ([dae18ea](https://github.com/ConduitPlatform/Conduit/commit/dae18ea1adc0e9671ca89b1a6037c708125768f8))
+* module-tools publishing ([#606](https://github.com/ConduitPlatform/Conduit/issues/606)) ([ebc9d89](https://github.com/ConduitPlatform/Conduit/commit/ebc9d89f794f9f3da6f78bd243e5b01d67a1faeb))
+
+
+### Bug Fixes
+
+* **database:** adding/removing object(group) fields not working ([#603](https://github.com/ConduitPlatform/Conduit/issues/603)) ([1134f4b](https://github.com/ConduitPlatform/Conduit/commit/1134f4bbe5aa032f3eb92c98066952c38574e3bb))
+
 ## [0.16.0-alpha.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.6...v0.16.0-alpha.7) (2023-04-21)
 
 
