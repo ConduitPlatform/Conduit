@@ -428,12 +428,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
 
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
-  protected abstract _createSchemaFromAdapter(
-    schema: ConduitSchema,
-    saveToDb: boolean,
-    options?: { parentSchema: string },
-  ): Promise<T>;
-
   private checkAndConvertIndexes(
     schemaName: string,
     indexes: ModelOptionsIndexes[],
