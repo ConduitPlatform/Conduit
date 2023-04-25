@@ -1,7 +1,7 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { isArray, isBoolean, isNumber, isString } from 'lodash';
+import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
@@ -107,23 +107,6 @@ function matchOperation(
       return arrayHandler(schema, value, dialect, relations, associations);
     case '$and':
       return arrayHandler(schema, value, dialect, relations, associations);
-    case '$nin':
-      if (
-        !isArrayField(schema, previousKey) ||
-        schema.compiledFields[previousKey][0].type === 'Relation'
-      ) {
-        return {
-          [Op.notIn]: arrayHandler(schema, value, dialect, relations, associations),
-        };
-      } else if (dialect === 'postgres') {
-        return {
-          [Op.not]: {
-            [Op.overlap]: arrayHandler(schema, value, dialect, relations, associations),
-          },
-        };
-      } else {
-        return { [Op.and]: constructAndArray(value) };
-      }
     case '$like':
       return { [Op.like]: value };
     case '$ilike':
@@ -183,6 +166,50 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
+      const nextKey = !isNil(query[key]) ? Object.keys(query[key])[0] : null;
+      if (nextKey === '$nin') {
+        let matched;
+        if (
+          !isArrayField(schema, key) ||
+          schema.compiledFields[key][0].type === 'Relation'
+        ) {
+          matched = {
+            [Op.in]: arrayHandler(
+              schema,
+              query[key][nextKey],
+              dialect,
+              relations,
+              associations,
+            ),
+          };
+          Object.assign(parsed, {
+            [Op.not]: {
+              [key]: matched,
+            },
+          });
+        } else if (dialect === 'postgres') {
+          matched = {
+            [Op.overlap]: arrayHandler(
+              schema,
+              query[key][nextKey],
+              dialect,
+              relations,
+              associations,
+            ),
+          };
+          Object.assign(parsed, {
+            [Op.not]: {
+              [key]: matched,
+            },
+          });
+        } else {
+          matched = { [Op.and]: constructAndArray(query[key][nextKey]) };
+          Object.assign(parsed, {
+            [key]: matched,
+          });
+        }
+        return parsed;
+      }
       const subQuery = _parseQuery(
         schema,
         query[key],
