@@ -79,7 +79,7 @@ function matchOperation(
       return { [Op.lte]: value };
     case '$in':
       if (
-        !isArrayField(schema, previousKey) ||
+        !isArray(schema.compiledFields[previousKey]) ||
         schema.compiledFields[previousKey][0].type === 'Relation'
       ) {
         return { [Op.in]: arrayHandler(schema, value, dialect, relations, associations) };
@@ -106,10 +106,6 @@ function matchOperation(
     default:
       return value;
   }
-}
-
-function isArrayField(schema: Indexable, key: string): boolean {
-  return !!isArray(schema.compiledFields[key]);
 }
 
 function _parseQuery(
