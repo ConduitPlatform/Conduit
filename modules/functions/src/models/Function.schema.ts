@@ -1,9 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  Indexable,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { IWebInputsInterface } from '../interfaces/IWebInputs.interface';
 
 const schema = {
@@ -53,7 +49,7 @@ export class Functions extends ConduitActiveSchema<Functions> {
 
   inputs!: IWebInputsInterface;
 
-  returns?: Indexable;
+  returns?: Indexable | string;
 
   timeout!: number;
 

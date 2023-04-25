@@ -589,14 +589,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return relationObjects;
   }
 
-  protected parseSort(sort: { [field: string]: -1 | 1 }) {
-    const order: Order = [];
-    Object.keys(sort).forEach(field => {
-      order.push([field, sort[field] === 1 ? 'ASC' : 'DESC'] as OrderItem);
-    });
-    return order;
-  }
-
   async findMany(
     query: Query,
     skip?: number,
@@ -776,5 +768,20 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
 
     return { filter, parsingResult };
+  }
+
+  abstract findByIdAndUpdate(
+    id: any,
+    document: SingleDocQuery,
+    populate?: string[],
+    transaction?: Transaction,
+  ): Promise<any>;
+
+  protected parseSort(sort: { [field: string]: -1 | 1 }) {
+    const order: Order = [];
+    Object.keys(sort).forEach(field => {
+      order.push([field, sort[field] === 1 ? 'ASC' : 'DESC'] as OrderItem);
+    });
+    return order;
   }
 }

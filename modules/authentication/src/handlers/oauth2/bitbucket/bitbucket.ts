@@ -51,6 +51,7 @@ export class BitbucketHandlers extends OAuth2<BitbucketUser, OAuth2Settings> {
       data: { ...bitbucketProfile.data },
     };
   }
+
   makeRequest(data: AuthParams) {
     return makeRequest(data, this.settings);
   }

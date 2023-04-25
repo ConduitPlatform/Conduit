@@ -1,4 +1,5 @@
-import ConduitGrpcSdk, { GrpcServer, RoutingManager } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
 import { ResourceHandler } from './resources';
 import { RelationHandler } from './relations';
 
@@ -17,14 +18,14 @@ export class AdminHandlers {
     this.registerAdminRoutes();
   }
 
+  reconstructIndices() {
+    // used to trigger an index re-construction
+  }
+
   private registerAdminRoutes() {
     this.routingManager.clear();
     this.relationHandler.registerRoutes(this.routingManager);
     this.resourceHandler.registerRoutes(this.routingManager);
     this.routingManager.registerRoutes().then();
-  }
-
-  reconstructIndices() {
-    // used to trigger an index re-construction
   }
 }

@@ -1,10 +1,6 @@
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import {
-  ConduitError,
-  ConduitRouteActions,
-  ConduitString,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitError, ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitString } from '@conduitplatform/module-tools';
 import { AdminProxyRoute } from '../../models';
 import AdminModule from '../../index';
 import { getProxies } from '../../utils';

@@ -12,7 +12,6 @@ import { AuthenticationDefinition } from '../protoUtils/authentication';
 import { AuthorizationDefinition } from '../protoUtils/authorization';
 import { SmsDefinition } from '../protoUtils/sms';
 import { ChatDefinition } from '../protoUtils/chat';
-import { FormsDefinition } from '../protoUtils/forms';
 
 export default class MockModule<T extends CompatServiceDefinition> {
   private _client: Client<T>;
@@ -30,7 +29,6 @@ export default class MockModule<T extends CompatServiceDefinition> {
     authorization: AuthorizationDefinition,
     sms: SmsDefinition,
     chat: ChatDefinition,
-    forms: FormsDefinition,
   };
 
   constructor(

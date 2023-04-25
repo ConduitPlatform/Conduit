@@ -1,13 +1,11 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString, GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { ISmsProvider } from '../interfaces/ISmsProvider';
@@ -30,6 +28,22 @@ export class AdminHandlers {
     this.provider = provider;
   }
 
+  async sendSms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { to, message } = call.request.params;
+    let errorMessage: string | null = null;
+
+    if (isNil(this.provider)) {
+      throw new GrpcError(status.INTERNAL, 'No SMS provider');
+    }
+
+    await this.provider.sendSms(to, message).catch(e => (errorMessage = e.message));
+    if (!isNil(errorMessage)) {
+      throw new GrpcError(status.INTERNAL, errorMessage);
+    }
+    ConduitGrpcSdk.Metrics?.increment('sms_sent_total');
+    return 'SMS sent';
+  }
+
   private registerAdminRoutes() {
     this.routingManager.clear();
     this.routingManager.route(
@@ -46,21 +60,5 @@ export class AdminHandlers {
       this.sendSms.bind(this),
     );
     this.routingManager.registerRoutes();
-  }
-
-  async sendSms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { to, message } = call.request.params;
-    let errorMessage: string | null = null;
-
-    if (isNil(this.provider)) {
-      throw new GrpcError(status.INTERNAL, 'No SMS provider');
-    }
-
-    await this.provider.sendSms(to, message).catch(e => (errorMessage = e.message));
-    if (!isNil(errorMessage)) {
-      throw new GrpcError(status.INTERNAL, errorMessage);
-    }
-    ConduitGrpcSdk.Metrics?.increment('sms_sent_total');
-    return 'SMS sent';
   }
 }

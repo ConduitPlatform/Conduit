@@ -31,6 +31,7 @@ interface Permissions {
   canModify?: 'Everything' | 'Nothing' | 'ExtensionOnly';
   canDelete?: boolean;
 }
+
 export function wrongFields(schemaFields: string[], updateFields: string[]): boolean {
   const blackList = ['updatedAt', 'createdAt', '_id', '__v'];
   for (const element of blackList) {

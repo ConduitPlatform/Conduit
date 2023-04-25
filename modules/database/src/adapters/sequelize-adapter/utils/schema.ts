@@ -24,13 +24,10 @@ export const extractRelations = (
           item.model.associations[relation].foreignKey === name
         ) {
           model.belongsToMany(item.model, {
-            foreignKey: item.originalSchema.name,
+            foreignKey: name,
             as: relation,
-            onUpdate: 'CASCADE',
-            onDelete: 'SET NULL',
             through: model.name + '_' + item.originalSchema.name,
           });
-          continue;
         } else if (
           item.model.associations[relation] &&
           item.model.associations[relation].foreignKey !== name
@@ -40,14 +37,12 @@ export const extractRelations = (
           );
         } else {
           model.belongsToMany(item.model, {
-            foreignKey: item.originalSchema.name,
+            foreignKey: name,
             as: relation,
-            onUpdate: 'CASCADE',
-            onDelete: 'SET NULL',
             through: model.name + '_' + item.originalSchema.name,
           });
           item.model.belongsToMany(model, {
-            foreignKey: name,
+            foreignKey: item.originalSchema.name,
             as: relation,
             through: model.name + '_' + item.originalSchema.name,
           });

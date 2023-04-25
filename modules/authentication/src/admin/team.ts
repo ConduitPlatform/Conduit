@@ -1,13 +1,8 @@
 import ConduitGrpcSdk, {
-  ConduitBoolean,
-  ConduitNumber,
-  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -16,6 +11,13 @@ import { Team, User } from '../models';
 import { isNil } from 'lodash';
 import escapeStringRegexp from 'escape-string-regexp';
 import { AuthUtils } from '../utils';
+import {
+  ConduitBoolean,
+  ConduitNumber,
+  ConduitObjectId,
+  ConduitString,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 
 export class TeamsAdmin {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}

@@ -15,12 +15,12 @@ import ObjectHash from 'object-hash';
 import * as systemModels from '../models';
 
 export abstract class DatabaseAdapter<T extends Schema> {
-  protected readonly maxConnTimeoutMs: number;
-  protected grpcSdk: ConduitGrpcSdk;
-  private legacyDeployment = false; // unprefixed declared schema collection
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
   models: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
+  protected readonly maxConnTimeoutMs: number;
+  protected grpcSdk: ConduitGrpcSdk;
+  private legacyDeployment = false; // unprefixed declared schema collection
   private readonly _systemSchemas: Set<string> = new Set();
 
   protected constructor() {
@@ -30,6 +30,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       isNaN(this.maxConnTimeoutMs) || this.maxConnTimeoutMs < 0
         ? 5000
         : this.maxConnTimeoutMs;
+  }
+
+  get systemSchemas() {
+    return Array.from(this._systemSchemas);
   }
 
   async init(grpcSdk: ConduitGrpcSdk) {
@@ -45,28 +49,15 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this._systemSchemas.add(schema.name);
   }
 
-  get systemSchemas() {
-    return Array.from(this._systemSchemas);
-  }
-
   schemaInSystemSchemas(schemaName: string) {
     const systemSchemas = this.systemSchemas.map(s => s.toLowerCase());
     return systemSchemas.includes(schemaName.toLowerCase());
   }
 
-  protected abstract connect(): void;
-
-  protected abstract ensureConnected(): Promise<void>;
-
   /**
    * Introspects all schemas of current db connection, registers them to Conduit
    */
   abstract introspectDatabase(): Promise<ConduitSchema[]>;
-
-  /**
-   * Checks whether DeclaredSchema collection name is unprefixed
-   */
-  protected abstract hasLegacyCollections(): Promise<boolean>;
 
   /**
    * Retrieves all schemas not related to Conduit and stores them in adapter
@@ -103,74 +94,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
   }
-
-  private assignFields(schema: ConduitSchema) {
-    if (!Object(schema.modelOptions).hasOwnProperty('timestamps')) {
-      schema.modelOptions.timestamps = true;
-    }
-    const fields = {
-      _id: { type: TYPE.ObjectId, required: true, unique: true },
-    };
-    if (schema.modelOptions.timestamps) {
-      Object.assign(fields, {
-        createdAt: { type: TYPE.Date, required: false },
-        updatedAt: { type: TYPE.Date, required: false },
-      });
-    }
-    Object.assign(schema.fields, fields);
-  }
-
-  private async updateCollectionName(schema: ConduitSchema, imported: boolean) {
-    if (imported) {
-      this.foreignSchemaCollections.delete(schema.collectionName);
-    } else {
-      let collectionName = this.getCollectionName(schema);
-      if (!this.legacyDeployment && !this.models['_DeclaredSchema']) {
-        collectionName = collectionName.startsWith('_')
-          ? `cnd${collectionName}`
-          : `cnd_${collectionName}`;
-      } else if (schema.name !== '_DeclaredSchema') {
-        const declaredSchema = await this.models['_DeclaredSchema'].findOne({
-          name: schema.name,
-        });
-        if (!declaredSchema) {
-          if (!collectionName.startsWith('cnd_')) {
-            collectionName = collectionName.startsWith('_')
-              ? `cnd${collectionName}`
-              : `cnd_${collectionName}`;
-          }
-        } else {
-          // recover collection name from DeclaredSchema
-          collectionName = declaredSchema.collectionName;
-        }
-      }
-      (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
-    }
-  }
-
-  private async checkModelOwnershipAndPermissions(schema: ConduitSchema) {
-    const owned = await this.checkModelOwnership(schema);
-    if (!owned) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
-    }
-    this.addSchemaPermissions(schema);
-  }
-
-  private async addExtensionsFromSchemaModel(schema: ConduitSchema, gRPC: boolean) {
-    if (schema.name !== '_DeclaredSchema' && gRPC) {
-      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
-        name: schema.name,
-      });
-      if (schemaModel?.extensions?.length > 0) {
-        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
-      }
-    }
-  }
-
-  protected abstract _createSchemaFromAdapter(
-    schema: ConduitSchema,
-    saveToDb: boolean,
-  ): Promise<Schema>;
 
   abstract getCollectionName(schema: ConduitSchema): string;
 
@@ -276,34 +199,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     });
   }
 
-  protected async saveSchemaToDatabase(schema: ConduitSchema) {
-    if (schema.name === '_DeclaredSchema') return;
-    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
-    if (model) {
-      await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
-        name: schema.name,
-        fields: schema.fields,
-        parentSchema: schema.parentSchema,
-        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-        modelOptions: schema.modelOptions,
-        ownerModule: schema.ownerModule,
-        collectionName: schema.collectionName,
-      });
-    } else {
-      await this.models['_DeclaredSchema'].create({
-        name: schema.name,
-        fields: schema.fields,
-        parentSchema: schema.parentSchema,
-        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
-        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
-        modelOptions: schema.modelOptions,
-        ownerModule: schema.ownerModule,
-        collectionName: schema.collectionName,
-      });
-    }
-  }
-
   async recoverSchemasFromDatabase() {
     let models = await this.models!['_DeclaredSchema'].findMany({
       $or: [
@@ -397,6 +292,63 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return this.createSchemaFromAdapter(schema);
   }
 
+  /**
+   * Publishes schema types for Database (multi-instance) and Hermes synchronization
+   * @param {ConduitDatabaseSchema} schema
+   */
+  publishSchema(schema: ConduitDatabaseSchema) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish(
+      'database:create:schema',
+      JSON.stringify({
+        ...schema,
+        fieldHash: this.models[schema.name].fieldHash,
+      }),
+    );
+  }
+
+  protected abstract connect(): void;
+
+  protected abstract ensureConnected(): Promise<void>;
+
+  /**
+   * Checks whether DeclaredSchema collection name is unprefixed
+   */
+  protected abstract hasLegacyCollections(): Promise<boolean>;
+
+  protected abstract _createSchemaFromAdapter(
+    schema: ConduitSchema,
+    saveToDb: boolean,
+  ): Promise<Schema>;
+
+  protected async saveSchemaToDatabase(schema: ConduitSchema) {
+    if (schema.name === '_DeclaredSchema') return;
+    const model = await this.models['_DeclaredSchema'].findOne({ name: schema.name });
+    if (model) {
+      await this.models['_DeclaredSchema'].findByIdAndUpdate(model._id, {
+        name: schema.name,
+        fields: schema.fields,
+        parentSchema: schema.parentSchema,
+        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        modelOptions: schema.modelOptions,
+        ownerModule: schema.ownerModule,
+        collectionName: schema.collectionName,
+      });
+    } else {
+      await this.models['_DeclaredSchema'].create({
+        name: schema.name,
+        fields: schema.fields,
+        parentSchema: schema.parentSchema,
+        extensions: (schema as ConduitDatabaseSchema).extensions, // @dirty-type-cast
+        compiledFields: (schema as ConduitDatabaseSchema).compiledFields, // @dirty-type-cast
+        modelOptions: schema.modelOptions,
+        ownerModule: schema.ownerModule,
+        collectionName: schema.collectionName,
+      });
+    }
+  }
+
   protected addSchemaPermissions(schema: ConduitSchema) {
     const defaultPermissions = {
       extendable: true,
@@ -419,19 +371,67 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return schema;
   }
 
-  /**
-   * Publishes schema types for Database (multi-instance) and Hermes synchronization
-   * @param {ConduitDatabaseSchema} schema
-   */
-  publishSchema(schema: ConduitDatabaseSchema) {
-    // @dirty-type-cast
-    this.grpcSdk.bus!.publish(
-      'database:create:schema',
-      JSON.stringify({
-        ...schema,
-        fieldHash: this.models[schema.name].fieldHash,
-      }),
-    );
+  private assignFields(schema: ConduitSchema) {
+    if (!Object(schema.modelOptions).hasOwnProperty('timestamps')) {
+      schema.modelOptions.timestamps = true;
+    }
+    const fields = {
+      _id: { type: TYPE.ObjectId, required: true, unique: true },
+    };
+    if (schema.modelOptions.timestamps) {
+      Object.assign(fields, {
+        createdAt: { type: TYPE.Date, required: false },
+        updatedAt: { type: TYPE.Date, required: false },
+      });
+    }
+    Object.assign(schema.fields, fields);
+  }
+
+  private async updateCollectionName(schema: ConduitSchema, imported: boolean) {
+    if (imported) {
+      this.foreignSchemaCollections.delete(schema.collectionName);
+    } else {
+      let collectionName = this.getCollectionName(schema);
+      if (!this.legacyDeployment && !this.models['_DeclaredSchema']) {
+        collectionName = collectionName.startsWith('_')
+          ? `cnd${collectionName}`
+          : `cnd_${collectionName}`;
+      } else if (schema.name !== '_DeclaredSchema') {
+        const declaredSchema = await this.models['_DeclaredSchema'].findOne({
+          name: schema.name,
+        });
+        if (!declaredSchema) {
+          if (!collectionName.startsWith('cnd_')) {
+            collectionName = collectionName.startsWith('_')
+              ? `cnd${collectionName}`
+              : `cnd_${collectionName}`;
+          }
+        } else {
+          // recover collection name from DeclaredSchema
+          collectionName = declaredSchema.collectionName;
+        }
+      }
+      (schema as _ConduitSchema).collectionName = collectionName; // @dirty-type-cast
+    }
+  }
+
+  private async checkModelOwnershipAndPermissions(schema: ConduitSchema) {
+    const owned = await this.checkModelOwnership(schema);
+    if (!owned) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Not authorized to modify model');
+    }
+    this.addSchemaPermissions(schema);
+  }
+
+  private async addExtensionsFromSchemaModel(schema: ConduitSchema, gRPC: boolean) {
+    if (schema.name !== '_DeclaredSchema' && gRPC) {
+      const schemaModel = await this.getSchemaModel('_DeclaredSchema').model.findOne({
+        name: schema.name,
+      });
+      if (schemaModel?.extensions?.length > 0) {
+        (schema as _ConduitSchema).extensions = schemaModel.extensions; // @dirty-type-cast
+      }
+    }
   }
 
   private hashSchemaFields(schema: ConduitDatabaseSchema) {

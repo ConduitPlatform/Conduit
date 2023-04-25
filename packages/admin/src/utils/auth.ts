@@ -1,6 +1,7 @@
 import * as jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
-import { ConfigController, GrpcError } from '@conduitplatform/grpc-sdk';
+import { GrpcError } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { Admin, AdminTwoFactorSecret } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';

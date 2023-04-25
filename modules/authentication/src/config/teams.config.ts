@@ -16,6 +16,10 @@ export default {
       format: 'Boolean',
       default: true,
     },
+    allowEmailMismatchForInvites: {
+      format: 'Boolean',
+      default: false,
+    },
     invites: {
       enabled: {
         format: 'Boolean',

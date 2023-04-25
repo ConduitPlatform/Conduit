@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "private": true,
   "engines": {
     "node": ">=14"
   },
@@ -25,10 +26,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
-    "axios": "^1.2.2",
+    "axios": "^1.3.5",
+    "escape-string-regexp": "^4.0.0",
     "convict": "^6.2.3",
     "lodash": "^4.17.21",
     "vm2": "^3.9.13"

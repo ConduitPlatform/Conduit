@@ -32,6 +32,7 @@ export interface RelationType {
   required?: boolean;
   select?: boolean;
 }
+
 export function extractRelations(ogSchema: ConduitModel, schema: any) {
   const extracted: { [key: string]: RelationType | RelationType[] } = {};
   for (const key of Object.keys(schema)) {

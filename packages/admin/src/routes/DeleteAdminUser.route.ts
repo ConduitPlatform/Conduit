@@ -2,8 +2,9 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString } from '@conduitplatform/module-tools';
+
 import { isNil } from 'lodash';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';

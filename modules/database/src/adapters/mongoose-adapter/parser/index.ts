@@ -2,6 +2,8 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ParsedQuery } from '../../../interfaces';
 import { Types } from 'mongoose';
 
+const escapeStringRegexp = require('escape-string-regexp');
+
 export function parseQuery(query: ParsedQuery): ParsedQuery {
   if (Array.isArray(query)) {
     return query.map(item => parseQuery(item));
@@ -14,9 +16,9 @@ export function parseQuery(query: ParsedQuery): ParsedQuery {
     if (Object.keys(query).length === 0) return query;
     Object.keys(query).forEach(key => {
       if (key === '$like') {
-        parsedQuery.$regex = query.$like.replace(/%/g, '.*');
+        parsedQuery.$regex = escapeStringRegexp(query.$like).replace(/%/g, '.*');
       } else if (key === '$ilike') {
-        parsedQuery.$regex = query.$ilike.replace(/%/g, '.*');
+        parsedQuery.$regex = escapeStringRegexp(query.$ilike).replace(/%/g, '.*');
         parsedQuery.$options = 'i';
       } else {
         parsedQuery[key] = parseQuery(query[key]);

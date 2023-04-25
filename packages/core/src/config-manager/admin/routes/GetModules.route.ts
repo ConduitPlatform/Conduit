@@ -1,14 +1,13 @@
 import { RegisteredModule } from '@conduitplatform/commons';
 import {
-  ConduitBoolean,
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
+import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
 
 export function getModulesRoute(registeredModules: Map<string, RegisteredModule>) {
   return new ConduitRoute(

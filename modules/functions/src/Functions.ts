@@ -1,8 +1,6 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import metricsSchema from './metrics';
 import path from 'path';
@@ -10,11 +8,10 @@ import { AdminHandlers } from './admin';
 import * as models from './models';
 import AppConfigSchema, { Config } from './config';
 import { FunctionController } from './controllers/function.controller';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Functions extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
-
   service = {
     protoPath: path.resolve(__dirname, 'functions.proto'),
     protoDescription: 'functions.Functions',
@@ -22,6 +19,7 @@ export default class Functions extends ManagedModule<Config> {
       setConfig: this.setConfig.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
 

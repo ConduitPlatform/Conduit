@@ -2,6 +2,7 @@
   "name": "@conduitplatform/chat",
   "version": "1.0.0",
   "description": "",
+  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
@@ -25,7 +26,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.6.7",
     "@grpc/proto-loader": "^0.6.13",
     "convict": "^6.2.3",

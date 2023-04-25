@@ -1,32 +1,26 @@
 syntax = "proto3";
 package storage;
 
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message GetFileRequest {
   string id = 1;
 }
 
 message CreateFileRequest {
   string name = 1;
-  string mimeType = 2;
-  string data = 3;
-  string folder = 4;
-  bool isPublic = 5;
+  string data = 2;
+  bool isPublic = 3;
+  optional string folder = 4;
+  optional string container = 5;
+  optional string mimeType = 6;
 }
 
 message UpdateFileRequest {
-  string name = 1;
-  string mimeType = 2;
-  string data = 3;
-  string folder = 4;
-  string id = 5;
+  string id = 1;
+  string data = 2;
+  optional string name = 3;
+  optional string folder = 4;
+  optional string container = 5;
+  optional string mimeType = 6;
 }
 
 message FileResponse {
@@ -38,15 +32,41 @@ message FileResponse {
 message GetFileDataResponse {
   string data = 1;
 }
+message DeleteFileResponse {
+  bool success = 1;
+}
 
+message CreateFileByUrlRequest {
+  string name = 1;
+  bool isPublic = 2;
+  optional string folder = 3;
+  optional string container = 4;
+  optional string mimeType = 5;
+  optional int32 size = 6; // todo: support int64
+}
 
-message Empty {
+message FileByUrlResponse {
+  string id = 1;
+  string fileUrl = 2;
+  string name = 3;
+  string uploadUrl = 4;
+}
+
+message UpdateFileByUrlRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string folder = 3;
+  optional string container = 4;
+  optional string mimeType = 5;
+  optional int32 size = 6; // todo: support int64
 }
 
 service Storage {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GetFile(GetFileRequest) returns (FileResponse);
   rpc GetFileData(GetFileRequest) returns (GetFileDataResponse);
   rpc UpdateFile(UpdateFileRequest) returns (FileResponse);
   rpc CreateFile(CreateFileRequest) returns (FileResponse);
+  rpc DeleteFile(GetFileRequest) returns (DeleteFileResponse);
+  rpc CreateFileByUrl(CreateFileByUrlRequest) returns (FileByUrlResponse);
+  rpc UpdateFileByUrl(UpdateFileByUrlRequest) returns (FileByUrlResponse);
 }

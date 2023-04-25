@@ -40,62 +40,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     this.mongoose = new Mongoose();
   }
 
-  protected connect() {
-    this.mongoose = new Mongoose();
-    ConduitGrpcSdk.Logger.log('Connecting to database...');
-    this.mongoose
-      .connect(this.connectionString, this.options)
-      .then(() => {
-        deepPopulate = deepPopulate(this.mongoose);
-      })
-      .catch(err => {
-        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
-        throw new Error();
-      })
-      .then(() => {
-        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
-      });
-    this.mongoose.set('debug', () => {
-      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
-    });
-  }
-
-  protected async ensureConnected(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const db = this.mongoose.connection;
-      db.on('connected', () => {
-        ConduitGrpcSdk.Logger.log('MongoDB: Database is connected');
-        resolve();
-      });
-
-      db.on('error', err => {
-        ConduitGrpcSdk.Logger.error('MongoDB: Connection error:', err.message);
-        reject();
-      });
-
-      db.once('open', function callback() {
-        ConduitGrpcSdk.Logger.info('MongoDB: Connection open!');
-        resolve();
-      });
-
-      db.on('reconnected', function () {
-        ConduitGrpcSdk.Logger.log('MongoDB: Database reconnected!');
-        resolve();
-      });
-
-      db.on('disconnected', function () {
-        ConduitGrpcSdk.Logger.warn('MongoDB: Database Disconnected');
-        reject();
-      });
-    });
-  }
-
-  protected async hasLegacyCollections() {
-    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
-      c => c.name === '_declaredschemas',
-    );
-  }
-
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
@@ -186,48 +130,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return schema.collectionName && schema.collectionName !== ''
       ? schema.collectionName
       : pluralize(schema.name);
-  }
-
-  protected async _createSchemaFromAdapter(
-    schema: ConduitDatabaseSchema,
-    saveToDb: boolean = true,
-  ): Promise<MongooseSchema> {
-    let compiledSchema = JSON.parse(JSON.stringify(schema));
-    validateFieldConstraints(compiledSchema);
-    compiledSchema.fields = (schema as ConduitDatabaseSchema).compiledFields;
-    if (this.registeredSchemas.has(compiledSchema.name)) {
-      if (compiledSchema.name !== 'Config') {
-        compiledSchema = validateFieldChanges(
-          this.registeredSchemas.get(compiledSchema.name)!,
-          compiledSchema,
-        );
-      }
-      this.mongoose.connection.deleteModel(compiledSchema.name);
-    }
-
-    const newSchema = schemaConverter(compiledSchema);
-    const indexes = newSchema.modelOptions.indexes;
-    delete newSchema.modelOptions.indexes;
-    this.registeredSchemas.set(
-      schema.name,
-      Object.freeze(JSON.parse(JSON.stringify(schema))),
-    );
-    this.models[schema.name] = new MongooseSchema(
-      this.mongoose,
-      newSchema,
-      schema,
-      deepPopulate,
-      this,
-    );
-    if (saveToDb) {
-      await this.compareAndStoreMigratedSchema(schema);
-      await this.saveSchemaToDatabase(schema);
-    }
-
-    if (indexes) {
-      await this.createIndexes(schema.name, indexes, schema.ownerModule);
-    }
-    return this.models[schema.name];
   }
 
   getSchemaModel(schemaName: string): { model: MongooseSchema } {
@@ -364,6 +266,9 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         rawQuery[queryOperation as keyof RawMongoQuery],
         rawQuery.options,
       );
+      if (queryOperation === 'aggregate') {
+        result = await result.toArray();
+      }
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
@@ -372,6 +277,104 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
 
   async syncSchema(name: string) {
     return;
+  }
+
+  protected connect() {
+    this.mongoose = new Mongoose();
+    ConduitGrpcSdk.Logger.log('Connecting to database...');
+    this.mongoose
+      .connect(this.connectionString, this.options)
+      .then(() => {
+        deepPopulate = deepPopulate(this.mongoose);
+      })
+      .catch(err => {
+        ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
+        throw new Error();
+      })
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Mongoose connection established successfully');
+      });
+    this.mongoose.set('debug', () => {
+      ConduitGrpcSdk.Metrics?.increment('database_queries_total');
+    });
+  }
+
+  protected async ensureConnected(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const db = this.mongoose.connection;
+      db.on('connected', () => {
+        ConduitGrpcSdk.Logger.log('MongoDB: Database is connected');
+        resolve();
+      });
+
+      db.on('error', err => {
+        ConduitGrpcSdk.Logger.error('MongoDB: Connection error:', err.message);
+        reject();
+      });
+
+      db.once('open', function callback() {
+        ConduitGrpcSdk.Logger.info('MongoDB: Connection open!');
+        resolve();
+      });
+
+      db.on('reconnected', function () {
+        ConduitGrpcSdk.Logger.log('MongoDB: Database reconnected!');
+        resolve();
+      });
+
+      db.on('disconnected', function () {
+        ConduitGrpcSdk.Logger.warn('MongoDB: Database Disconnected');
+        reject();
+      });
+    });
+  }
+
+  protected async hasLegacyCollections() {
+    return !!(await this.mongoose.connection.db.listCollections().toArray()).find(
+      c => c.name === '_declaredschemas',
+    );
+  }
+
+  protected async _createSchemaFromAdapter(
+    schema: ConduitDatabaseSchema,
+    saveToDb: boolean = true,
+  ): Promise<MongooseSchema> {
+    let compiledSchema = JSON.parse(JSON.stringify(schema));
+    validateFieldConstraints(compiledSchema);
+    compiledSchema.fields = (schema as ConduitDatabaseSchema).compiledFields;
+    if (this.registeredSchemas.has(compiledSchema.name)) {
+      if (compiledSchema.name !== 'Config') {
+        compiledSchema = validateFieldChanges(
+          this.registeredSchemas.get(compiledSchema.name)!,
+          compiledSchema,
+        );
+      }
+      this.mongoose.connection.deleteModel(compiledSchema.name);
+    }
+
+    const newSchema = schemaConverter(compiledSchema);
+    const indexes = newSchema.modelOptions.indexes;
+    delete newSchema.modelOptions.indexes;
+    this.registeredSchemas.set(
+      schema.name,
+      Object.freeze(JSON.parse(JSON.stringify(schema))),
+    );
+    this.models[schema.name] = new MongooseSchema(
+      this.mongoose,
+      newSchema,
+      schema,
+      deepPopulate,
+      this,
+    );
+    if (saveToDb) {
+      await this.compareAndStoreMigratedSchema(schema);
+      await this.saveSchemaToDatabase(schema);
+    }
+
+    if (indexes) {
+      await this.createIndexes(schema.name, indexes, schema.ownerModule);
+    }
+    return this.models[schema.name];
   }
 
   private checkIndexes(

@@ -1,16 +1,19 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
-  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+
+import {
+  ConduitNumber,
+  ConduitObjectId,
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { Team, Token, User } from '../models';
 import { Config } from '../config';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
@@ -22,20 +25,20 @@ import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {
-  private initialized = false;
   private static _instance?: TeamsHandler;
+  private initialized = false;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  public get isActive() {
+    return this.initialized;
+  }
 
   public static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (TeamsHandler._instance) return TeamsHandler._instance;
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
     TeamsHandler._instance = new TeamsHandler(grpcSdk);
     return TeamsHandler._instance;
-  }
-
-  public get isActive() {
-    return this.initialized;
   }
 
   async addUserToTeam(user: User, invitationToken: string) {
@@ -52,7 +55,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
     }
     if (
       inviteToken.data.email &&
-      (!user.email || user.email !== inviteToken.data.email)
+      (!user.email || user.email !== inviteToken.data.email) &&
+      !ConfigController.getInstance().config.teams.allowEmailMismatchForInvites
     ) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -98,7 +102,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['invite'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed || !config.teams.allowAddWithoutInvite) {
+    if (!allowed.allow || !config.teams.allowAddWithoutInvite) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Could not add user to team, user does not have permission ' +
@@ -170,7 +174,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         actions: ['edit'],
         resource: 'Team:' + parentTeam,
       });
-      if (!allowed) {
+      if (!allowed.allow) {
         throw new GrpcError(
           status.PERMISSION_DENIED,
           'User does not have permission to create a subteam',
@@ -269,7 +273,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['edit'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to remove team members',
@@ -295,7 +299,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team members',
@@ -328,7 +332,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team',
@@ -379,7 +383,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['read'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view subteams',
@@ -481,7 +485,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['edit'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed) {
+    if (!allowed.allow) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to modify team members',

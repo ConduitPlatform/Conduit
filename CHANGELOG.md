@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.8](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.7...v0.16.0-alpha.8) (2023-04-24)
+
+
+### Features
+
+* **authentication:** add cleanup code to delete expired refresh/access tokens ([#602](https://github.com/ConduitPlatform/Conduit/issues/602)) ([dae18ea](https://github.com/ConduitPlatform/Conduit/commit/dae18ea1adc0e9671ca89b1a6037c708125768f8))
+* module-tools publishing ([#606](https://github.com/ConduitPlatform/Conduit/issues/606)) ([ebc9d89](https://github.com/ConduitPlatform/Conduit/commit/ebc9d89f794f9f3da6f78bd243e5b01d67a1faeb))
+
+
+### Bug Fixes
+
+* **database:** adding/removing object(group) fields not working ([#603](https://github.com/ConduitPlatform/Conduit/issues/603)) ([1134f4b](https://github.com/ConduitPlatform/Conduit/commit/1134f4bbe5aa032f3eb92c98066952c38574e3bb))
+
+## [0.16.0-alpha.7](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.6...v0.16.0-alpha.7) (2023-04-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **database:** wrong foreign key names (#599)
+
+### Bug Fixes
+
+* **authentication:** provider email/id matching not working properly ([#601](https://github.com/ConduitPlatform/Conduit/issues/601)) ([4f34ea9](https://github.com/ConduitPlatform/Conduit/commit/4f34ea9b239086f79dbb1e0362a0891992d83233))
+* **database:** exportCustomEndpoints() returning schema ids ([#598](https://github.com/ConduitPlatform/Conduit/issues/598)) ([484e2f1](https://github.com/ConduitPlatform/Conduit/commit/484e2f14e5f669184369b258a29b8426fb43687d))
+* **database:** wrong foreign key names ([#599](https://github.com/ConduitPlatform/Conduit/issues/599)) ([1b8c422](https://github.com/ConduitPlatform/Conduit/commit/1b8c42289ceff8190cde2616e72669ea0ed4fcd1))
+* github actions ([918020c](https://github.com/ConduitPlatform/Conduit/commit/918020c31fac9a7f289a1ccd472322cf35c3f363))
+
+## [0.16.0-alpha.6](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.4...v0.16.0-alpha.6) (2023-04-19)
+
+
+### Features
+
+* **authentication:** custom redirect uri config option ([#589](https://github.com/ConduitPlatform/Conduit/issues/589)) ([62965b2](https://github.com/ConduitPlatform/Conduit/commit/62965b2b4610d704fe28ddd396942db951944aed))
+
+
+### Bug Fixes
+
+* **authentication:** crash on setConfig due to old properties ([#588](https://github.com/ConduitPlatform/Conduit/issues/588)) ([b23ffc4](https://github.com/ConduitPlatform/Conduit/commit/b23ffc4384ba1b869d4f2c5b7a3518def9ad1e8a))
+* **authentication:** team permissions allowance check ([6cac5ba](https://github.com/ConduitPlatform/Conduit/commit/6cac5badeea28e255821479f73444dcb47b841b7))
+* **authentication:** user is able to pass auth middleware when blocked ([#594](https://github.com/ConduitPlatform/Conduit/issues/594)) ([b544180](https://github.com/ConduitPlatform/Conduit/commit/b54418046875e1e6298b3674ae4d56e9e6f10d6f))
+* **database:** mongo aggregation not returning documents properly ([6c759d6](https://github.com/ConduitPlatform/Conduit/commit/6c759d6c411fa66cc455f52ef25e40b5f203d0af))
+* **database:** sql like/ilike customEndpoint queries regexp escaping ([#596](https://github.com/ConduitPlatform/Conduit/issues/596)) ([9625f2b](https://github.com/ConduitPlatform/Conduit/commit/9625f2b1af09a115a454a6a152665b1721b70010))
+* **grpc-sdk:** readme ([06658e0](https://github.com/ConduitPlatform/Conduit/commit/06658e0c02f220977f716dc88fc144648c671194))
+* **storage:** correction of check in validation  ([#584](https://github.com/ConduitPlatform/Conduit/issues/584)) ([35b706b](https://github.com/ConduitPlatform/Conduit/commit/35b706ba91491dbb9aff3615665bf23a0838c819))
+
+## [0.16.0-alpha.4](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.3...v0.16.0-alpha.4) (2023-04-07)
+
+
+### Features
+
+* **authentication, router,forms:** global captcha support from router ([#580](https://github.com/ConduitPlatform/Conduit/issues/580)) ([24b4b81](https://github.com/ConduitPlatform/Conduit/commit/24b4b8177c60c6a033291b0e49a94128b116413e))
+* **authentication,core:** add register invitation config option & fix addFieldsToModule ([#579](https://github.com/ConduitPlatform/Conduit/issues/579)) ([0132c61](https://github.com/ConduitPlatform/Conduit/commit/0132c61de777481a387dfeb6c7567ece37b557b8))
+
+
+### Bug Fixes
+
+* **authentication:** team invite not requiring role and email ([2261590](https://github.com/ConduitPlatform/Conduit/commit/226159037dc82235a9513eb6d799728507180760))
+* **grpc-sdk,email:** result parsing & template model subject requirement ([#581](https://github.com/ConduitPlatform/Conduit/issues/581)) ([8b6d2fa](https://github.com/ConduitPlatform/Conduit/commit/8b6d2fadd04d31e4cae1bdcfb5cea32023d96c0c))
+* **router:** relation handling ([ef84def](https://github.com/ConduitPlatform/Conduit/commit/ef84def11b5e55c4feea31cbfcc49372e6476494))
+* **storage,grpc-sdk:** fix storage rpc functions ([#583](https://github.com/ConduitPlatform/Conduit/issues/583)) ([c799c5d](https://github.com/ConduitPlatform/Conduit/commit/c799c5d890f2874fb38c74e983d52afe189d40f0))
+
 ## [0.16.0-alpha.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.2...v0.16.0-alpha.3) (2023-03-31)
 
 

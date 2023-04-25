@@ -1,11 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
@@ -26,6 +23,11 @@ import { TeamsHandler } from '../team';
 import { validateStateToken } from './utils';
 import { IAuthenticationStrategy } from '../../interfaces';
 import { TokenType } from '../../constants';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -74,7 +76,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         .replace(/\+/g, '-')
         .replace(/\//g, '_');
     }
-
     const queryOptions: RedirectOptions = {
       client_id: this.settings.clientId,
       redirect_uri: conduitUrl + this.settings.callbackUrl,
@@ -87,7 +88,6 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       }),
     };
     const baseUrl = this.settings.authorizeUrl;
-
     const stateToken = await Token.getInstance()
       .create({
         type: TokenType.STATE_TOKEN,
@@ -98,6 +98,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
           scope: queryOptions.scope,
           codeChallenge: codeChallenge,
           expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          customRedirectUri: call.request.params.redirectUri,
         },
       })
       .catch(err => {
@@ -118,6 +119,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const params = call.request.params;
     const stateToken = await validateStateToken(params.state);
     const conduitUrl = (await this.grpcSdk.config.get('router')).hostUrl;
+    const config = ConfigController.getInstance().config;
     const myParams: AuthParams = {
       client_id: this.settings.clientId,
       client_secret: this.settings.clientSecret,
@@ -150,16 +152,16 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     await Token.getInstance().deleteOne(stateToken);
     const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
-    const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
+    const uri = stateToken.data.customRedirectUri;
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId,
         config,
       },
-      this.settings.finalRedirect,
+      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
     );
   }
 
@@ -186,14 +188,22 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async createOrUpdateUser(payload: Payload<T>, invitationToken?: string): Promise<User> {
     let user: User | null = null;
-    if (payload.hasOwnProperty('email')) {
+    if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
       user = await User.getInstance().findOne({
         email: payload.email,
       });
-    } else if (payload.hasOwnProperty('id') && !payload.hasOwnProperty('email')) {
+    } else if (
+      payload.hasOwnProperty('id') &&
+      (!payload.hasOwnProperty('email') || isNil(payload.email))
+    ) {
       user = await User.getInstance().findOne({
         [this.providerName]: { id: payload.id },
       });
+    } else {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'No email or id received from provider',
+      );
     }
     if (!isNil(user)) {
       if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');
@@ -241,19 +251,26 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
   }
 
   declareRoutes(routingManager: RoutingManager) {
-    const captchaConfig = ConfigController.getInstance().config.captcha;
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: `/init/${this.providerName}`,
         description: `Begins ${this.capitalizeProvider()} authentication.`,
         action: ConduitRouteActions.GET,
-        queryParams: {
-          scopes: [ConduitString.Optional],
-          invitationToken: ConduitString.Optional,
-          captchaToken: ConduitString.Optional,
-        },
+        queryParams: config.customRedirectUri
+          ? {
+              scopes: [ConduitString.Optional],
+              invitationToken: ConduitString.Optional,
+              captchaToken: ConduitString.Optional,
+              redirectUri: ConduitString.Optional,
+            }
+          : {
+              scopes: [ConduitString.Optional],
+              invitationToken: ConduitString.Optional,
+              captchaToken: ConduitString.Optional,
+            },
         middlewares:
-          captchaConfig.enabled && captchaConfig.routes.oAuth2
+          config.captcha.enabled && config.captcha.routes.oAuth2
             ? ['captchaMiddleware']
             : undefined,
       },

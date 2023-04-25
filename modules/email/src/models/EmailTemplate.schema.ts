@@ -1,4 +1,5 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -9,6 +10,7 @@ const schema = {
   },
   subject: {
     type: TYPE.String,
+    required: true,
   },
   body: {
     type: TYPE.String,

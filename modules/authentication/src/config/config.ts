@@ -67,4 +67,8 @@ export default {
       },
     },
   },
+  customRedirectUris: {
+    format: 'Boolean',
+    default: false,
+  },
 };

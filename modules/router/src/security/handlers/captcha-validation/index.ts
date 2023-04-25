@@ -1,8 +1,6 @@
 import { NextFunction, Response } from 'express';
-import ConduitGrpcSdk, {
-  ConfigController,
-  DatabaseProvider,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRequest } from '@conduitplatform/hermes';
 import { verify as hcaptchaVerify } from 'hcaptcha';
 import axios from 'axios';
@@ -23,26 +21,39 @@ export class CaptchaValidator {
 
   async recaptchaVerify(secret: string, token: string) {
     const googleUrl = `https://www.google.com/siteverify?secret=${secret}&response=${token}`;
-    const response = await axios.post(
-      googleUrl,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+    const response = await axios
+      .post(
+        googleUrl,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+          },
         },
-      },
-    );
+      )
+      .catch(() => {
+        return {
+          data: {
+            success: false,
+          },
+        };
+      });
     return response.data.success;
   }
 
   async turnstileVerify(secret: string, token: string) {
-    const response = await axios.post(
-      `https://challenges.cloudflare.com/turnstile/v0/siteverify`,
-      {
+    const response = await axios
+      .post(`https://challenges.cloudflare.com/turnstile/v0/siteverify`, {
         secret,
         response: token,
-      },
-    );
+      })
+      .catch(() => {
+        return {
+          data: {
+            success: false,
+          },
+        };
+      });
     return response.data.success;
   }
 

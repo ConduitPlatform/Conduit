@@ -7,9 +7,9 @@ import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
 import { MultiDocQuery, ParsedQuery, Schema, SchemaAdapter } from './SchemaAdapter';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
-  private readonly model: SchemaAdapter<Schema>;
   extensions: DeclaredSchemaExtension[];
   compiledFields: ConduitModel;
+  private readonly model: SchemaAdapter<Schema>;
 
   constructor(
     model: SchemaAdapter<Schema>,

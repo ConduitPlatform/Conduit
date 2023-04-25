@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitError,
+  IConduitLogger,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   UntypedArray,
@@ -41,7 +42,7 @@ export class RouterAdmin {
     const { sortByName } = call.request.params;
     let response: UntypedArray = [];
     const module = this.router.getGrpcRoutes();
-    ConduitGrpcSdk.Logger.logObject(module);
+    (ConduitGrpcSdk.Logger as IConduitLogger).logObject(module);
 
     Object.keys(module).forEach((url: string) => {
       module[url].forEach((item: any) => {

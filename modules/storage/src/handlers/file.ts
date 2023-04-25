@@ -1,10 +1,10 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcError,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { _StorageContainer, _StorageFolder, File } from '../models';
@@ -388,12 +388,16 @@ export class FileHandlers {
     if (newFolder !== file.folder) {
       await this.findOrCreateFolder(newFolder, newContainer);
     }
+    const isDataUpdate =
+      newName === file.name &&
+      newFolder === file.folder &&
+      newContainer === file.container;
     const exists = await File.getInstance().findOne({
       name: newName,
       container: newContainer,
       folder: newFolder,
     });
-    if (!isNil(exists)) {
+    if (!isDataUpdate && !isNil(exists)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
     }
     return {
@@ -410,11 +414,12 @@ export class FileHandlers {
     mimeType: string,
     file: File,
     size: number | undefined | null,
-  ): Promise<string> {
+  ): Promise<{ file: File; url: string }> {
+    let updatedFile;
     const onlyDataUpdate =
       name === file.name && folder === file.folder && container === file.container;
     if (onlyDataUpdate) {
-      await File.getInstance().findByIdAndUpdate(file._id, {
+      updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
         mimeType,
         ...{ size: size ?? file.size },
       });
@@ -434,7 +439,7 @@ export class FileHandlers {
             .container(container)
             .getPublicUrl((folder === '/' ? '' : folder) + name)
         : null;
-      await File.getInstance().findByIdAndUpdate(file._id, {
+      updatedFile = await File.getInstance().findByIdAndUpdate(file._id, {
         name,
         folder,
         container,
@@ -444,9 +449,10 @@ export class FileHandlers {
       });
     }
     if (!isNil(size)) this.updateFileMetrics(file.size, size!);
-    return (await this.storageProvider
+    const uploadUrl = (await this.storageProvider
       .container(container)
       .getUploadUrl((folder === '/' ? '' : folder) + name)) as string;
+    return { file: updatedFile!, url: uploadUrl };
   }
 
   private async _updateFile(

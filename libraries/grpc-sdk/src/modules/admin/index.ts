@@ -1,15 +1,15 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import {
   AdminDefinition,
-  GenerateProtoRequest,
+  GenerateAdminProtoRequest,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
-} from '../../protoUtils/core';
+} from '../../protoUtils';
 import {
   ConduitProxyObject,
   ConduitRouteObject,
   SocketProtoDescription,
-} from '../../routing';
+} from '../../interfaces';
 
 export class Admin extends ConduitModule<typeof AdminDefinition> {
   constructor(readonly moduleName: string, url: string, grpcToken?: string) {
@@ -21,11 +21,11 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     moduleName: string,
     routes: (ConduitRouteObject | SocketProtoDescription | ConduitProxyObject)[],
   ) {
-    const request: GenerateProtoRequest = {
+    const request: GenerateAdminProtoRequest = {
       moduleName,
       routes: routes.map(r => JSON.stringify(r)),
     };
-    return this.client!.generateProto(request);
+    return this.client!.generateAdminProto(request);
   }
 
   register(

@@ -1,20 +1,23 @@
 import { isNil } from 'lodash';
-import { TokenType } from '../constants/TokenType';
+import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   Email,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { Token, User } from '../models';
 import { status } from '@grpc/grpc-js';
-import { IAuthenticationStrategy } from '../interfaces/AuthenticationStrategy';
+import { IAuthenticationStrategy } from '../interfaces';
 import { TokenProvider } from './tokenProvider';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates';
 
@@ -57,15 +60,18 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
       this.sendMagicLink.bind(this),
     );
-
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/hook/magic-link/:verificationToken',
         action: ConduitRouteActions.GET,
         description: `A webhook used to verify a user who has received a magic link.`,
-        urlParams: {
-          verificationToken: ConduitString.Required,
-        },
+        urlParams: config.customRedirectUris
+          ? {
+              verificationToken: ConduitString.Required,
+              redirectUri: ConduitString.Optional,
+            }
+          : { verificationToken: ConduitString.Required },
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
         accessToken: ConduitString.Optional,
@@ -94,26 +100,12 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     return 'token sent';
   }
 
-  private async sendMagicLinkMail(user: User, token: Token) {
-    const serverConfig = await this.grpcSdk.config.get('router');
-    const url = serverConfig.hostUrl;
-
-    const result = { token, hostUrl: url };
-    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
-    await this.emailModule.sendEmail('MagicLink', {
-      email: user.email,
-      sender: 'no-reply',
-      variables: {
-        link,
-      },
-    });
-    return 'Email sent';
-  }
-
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
-    const redirectUri = config.magic_link.redirect_uri;
+    const uri = call.request.params.redirectUri;
+    const redirectUri =
+      config.customRedirectUris && !isNil(uri) ? uri : config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
       type: TokenType.MAGIC_LINK,
       token: verificationToken,
@@ -140,6 +132,22 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       },
       redirectUri,
     );
+  }
+
+  private async sendMagicLinkMail(user: User, token: Token) {
+    const serverConfig = await this.grpcSdk.config.get('router');
+    const url = serverConfig.hostUrl;
+
+    const result = { token, hostUrl: url };
+    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
+    await this.emailModule.sendEmail('MagicLink', {
+      email: user.email,
+      sender: 'no-reply',
+      variables: {
+        link,
+      },
+    });
+    return 'Email sent';
   }
 
   private registerTemplate() {

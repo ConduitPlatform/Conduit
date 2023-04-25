@@ -51,7 +51,7 @@ export function setModuleConfigRoute(
             });
           break;
         default:
-          const moduleClient = grpcSdk.getServiceClient<any>(
+          const moduleClient = grpcSdk.getModuleClient(
             moduleName,
           ) as unknown as GetModuleResponse;
           updatedConfig = await moduleClient

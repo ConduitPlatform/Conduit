@@ -2,6 +2,7 @@ import { MongoIndexOptions, PostgresIndexOptions } from '@conduitplatform/grpc-s
 
 export * from './schema';
 export * from './collectionUtils';
+
 export function checkIfPostgresOptions(
   options: MongoIndexOptions | PostgresIndexOptions,
 ) {

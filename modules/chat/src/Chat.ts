@@ -1,12 +1,9 @@
 import ConduitGrpcSdk, {
-  ConduitActiveSchema,
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 
 import AppConfigSchema, { Config } from './config';
@@ -25,39 +22,45 @@ import {
   SendMessageRequest,
 } from './protoTypes/chat';
 import metricsSchema from './metrics';
+import {
+  ConduitActiveSchema,
+  ConfigController,
+  ManagedModule,
+} from '@conduitplatform/module-tools';
 
 export default class Chat extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'chat.proto'),
     protoDescription: 'chat.Chat',
     functions: {
-      setConfig: this.setConfig.bind(this),
       createRoom: this.createRoom.bind(this),
       deleteRoom: this.deleteRoom.bind(this),
       sendMessage: this.sendMessage.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private adminRouter: AdminHandlers;
   private userRouter: ChatRoutes;
   private database: DatabaseProvider;
-  private _sendEmail: boolean;
-  private _sendPushNotification: boolean;
   private _emailServing: boolean;
   private _pushNotificationsServing: boolean;
+
+  constructor() {
+    super('chat');
+    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
+  }
+
+  private _sendEmail: boolean;
 
   private get sendEmail() {
     return this._sendEmail && this._emailServing;
   }
 
+  private _sendPushNotification: boolean;
+
   private get sendPushNotification() {
     return this._sendPushNotification && this._pushNotificationsServing;
-  }
-
-  constructor() {
-    super('chat');
-    this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
   async onServerStart() {
@@ -105,44 +108,6 @@ export default class Chat extends ManagedModule<Config> {
       }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
-  }
-
-  private async refreshAppRoutes() {
-    if (this.userRouter) {
-      await this.userRouter.registerRoutes();
-      return;
-    }
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.userRouter = new ChatRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this.sendEmail,
-          this.sendPushNotification,
-        );
-        return this.userRouter.registerRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      //TODO: add support for multiple schemas types
-      if (
-        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
-          .length !== 0
-      ) {
-        // borrowed foreign model
-        return this.database
-          .createSchemaFromAdapter(modelInstance)
-          .then(() => this.database.migrate(modelInstance.name));
-      }
-    });
-    return Promise.all(promises);
   }
 
   async initializeMetrics() {
@@ -276,5 +241,43 @@ export default class Chat extends ManagedModule<Config> {
       name: room.name,
       participants: room.participants as string[],
     });
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      //TODO: add support for multiple schemas types
+      if (
+        Object.keys((modelInstance as ConduitActiveSchema<typeof modelInstance>).fields)
+          .length !== 0
+      ) {
+        // borrowed foreign model
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
+      }
+    });
+    return Promise.all(promises);
+  }
+
+  private async refreshAppRoutes() {
+    if (this.userRouter) {
+      await this.userRouter.registerRoutes();
+      return;
+    }
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.userRouter = new ChatRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this.sendEmail,
+          this.sendPushNotification,
+        );
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 }

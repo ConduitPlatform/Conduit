@@ -24,27 +24,6 @@ export class OneSignalProvider extends BaseNotificationProvider {
     return this._initialized;
   }
 
-  private updateProvider(settings: IOneSignalSettings) {
-    const app_key_provider: { getToken(): string } = {
-      getToken(): string {
-        return settings.apiKey;
-      },
-    };
-    const configuration = OneSignal.createConfiguration({
-      authMethods: {
-        app_key: {
-          tokenProvider: app_key_provider,
-        },
-      },
-    });
-    try {
-      this.client = new OneSignal.DefaultApi(configuration);
-      this._initialized = true;
-    } catch (e) {
-      this._initialized = false;
-      ConduitGrpcSdk.Logger.error('Failed to initialize OneSignal');
-    }
-  }
   async sendToDevice(params: ISendNotification) {
     const userId = params.sendTo;
     const platform = params.platform;
@@ -111,5 +90,27 @@ export class OneSignalProvider extends BaseNotificationProvider {
       });
     });
     return Promise.all(promises);
+  }
+
+  private updateProvider(settings: IOneSignalSettings) {
+    const app_key_provider: { getToken(): string } = {
+      getToken(): string {
+        return settings.apiKey;
+      },
+    };
+    const configuration = OneSignal.createConfiguration({
+      authMethods: {
+        app_key: {
+          tokenProvider: app_key_provider,
+        },
+      },
+    });
+    try {
+      this.client = new OneSignal.DefaultApi(configuration);
+      this._initialized = true;
+    } catch (e) {
+      this._initialized = false;
+      ConduitGrpcSdk.Logger.error('Failed to initialize OneSignal');
+    }
   }
 }
