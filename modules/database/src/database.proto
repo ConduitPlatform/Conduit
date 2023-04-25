@@ -1,4 +1,5 @@
 syntax = 'proto3';
+import "google/protobuf/empty.proto";
 package database;
 
 message CreateSchemaRequest {
@@ -123,15 +124,13 @@ message ColumnExistenceResponse {
   bool result = 1;
 }
 
-message Empty {}
-
 service DatabaseProvider {
   rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
   rpc GetSchema(GetSchemaRequest) returns (Schema);
   rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
   rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
   rpc SetSchemaExtension(SchemaExtension) returns (Schema);
-  rpc Migrate(MigrateRequest) returns (Empty);
+  rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);

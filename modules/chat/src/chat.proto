@@ -1,13 +1,6 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package chat;
-
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
 
 message CreateRoomRequest {
   string name = 1;
@@ -33,12 +26,9 @@ message Room {
 message GetRoomResponse {
   repeated Room rooms = 1;
 }
-message Empty {
-}
 
 service Chat {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc CreateRoom(CreateRoomRequest) returns (Room);
   rpc DeleteRoom(DeleteRoomRequest) returns (Room);
-  rpc SendMessage(SendMessageRequest) returns (Empty);
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
 }

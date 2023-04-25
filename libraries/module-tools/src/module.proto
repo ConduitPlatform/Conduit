@@ -1,6 +1,5 @@
 syntax = "proto3";
-package functions;
-
+package conduit.module.v1;
 
 message SetConfigRequest {
   string newConfig = 1;
@@ -10,6 +9,6 @@ message SetConfigResponse {
   string updatedConfig = 1;
 }
 
-service Functions {
+service ConduitModule {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
 }

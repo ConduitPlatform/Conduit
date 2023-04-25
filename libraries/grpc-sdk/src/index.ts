@@ -7,27 +7,24 @@ import {
   Core,
   DatabaseProvider,
   Email,
-  Forms,
-  Functions,
   PushNotifications,
   Router,
   SMS,
   Storage,
 } from './modules';
 import Crypto from 'crypto';
-import { EventBus, RedisManager, StateManager, getJsonEnv, sleep } from './utilities';
+import { EventBus, getJsonEnv, RedisManager, sleep, StateManager } from './utilities';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { checkModuleHealth, ConduitModule } from './classes';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import {
+  ConduitModuleDefinition,
+  GetRedisDetailsResponse,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
-} from './protoUtils/grpc_health_check';
-import {
-  GetRedisDetailsResponse,
   ModuleListResponse_ModuleResponse,
-} from './protoUtils/core';
+} from './protoUtils';
 import { GrpcError, HealthCheckStatus } from './types';
 import { createSigner } from 'fast-jwt';
 import { ClusterOptions, RedisOptions } from 'ioredis';
@@ -55,8 +52,6 @@ export default class ConduitGrpcSdk {
     authorization: Authorization,
     sms: SMS,
     chat: Chat,
-    forms: Forms,
-    functions: Functions,
   };
   private _dynamicModules: { [key: string]: CompatServiceDefinition } = {};
   private _eventBus?: EventBus;
@@ -213,15 +208,6 @@ export default class ConduitGrpcSdk {
     }
   }
 
-  get forms(): Forms | null {
-    if (this._modules['forms']) {
-      return this._modules['forms'] as Forms;
-    } else {
-      ConduitGrpcSdk.Logger.warn('Forms module not up yet!');
-      return null;
-    }
-  }
-
   get emailProvider(): Email | null {
     if (this._modules['email']) {
       return this._modules['email'] as Email;
@@ -272,15 +258,6 @@ export default class ConduitGrpcSdk {
       return this._modules['chat'] as Chat;
     } else {
       ConduitGrpcSdk.Logger.warn('Chat module not up yet!');
-      return null;
-    }
-  }
-
-  get functions(): Functions | null {
-    if (this._modules['functions']) {
-      return this._modules['functions'] as Functions;
-    } else {
-      ConduitGrpcSdk.Logger.warn('Functions module not up yet!');
       return null;
     }
   }
@@ -442,11 +419,7 @@ export default class ConduitGrpcSdk {
   }
 
   createModuleClient(moduleName: string, moduleUrl: string) {
-    if (
-      this._modules[moduleName] ||
-      (!this._availableModules[moduleName] && !this._dynamicModules[moduleName])
-    )
-      return;
+    if (this._modules[moduleName]) return;
     moduleUrl =
       this.urlRemap?.[moduleUrl] ??
       (this.urlRemap?.['*']
@@ -468,6 +441,16 @@ export default class ConduitGrpcSdk {
         this._grpcToken,
       );
       this._modules[moduleName].initializeClient(this._dynamicModules[moduleName]);
+    } else {
+      // when the module is not "preloaded" by the sdk, and is not a dynamic module,
+      // we create a generic module using the ConduitModuleDefinitions
+      this._modules[moduleName] = new ConduitModule(
+        this.name,
+        moduleName,
+        moduleUrl,
+        this._grpcToken,
+      );
+      this._modules[moduleName].initializeClient(ConduitModuleDefinition);
     }
   }
 
@@ -489,6 +472,10 @@ export default class ConduitGrpcSdk {
     name: string,
   ): Client<T> | undefined {
     return this._modules[name]?.client;
+  }
+
+  getModuleClient(name: string): Client<ConduitModuleDefinition> | undefined {
+    return this._modules[name]?.moduleClient;
   }
 
   getHealthClient<T extends CompatServiceDefinition>(
@@ -560,4 +547,5 @@ export * from './modules';
 export * from './constants';
 export * from './types';
 export * from './utilities';
+export * from './protoUtils';
 export * from '@grpc/grpc-js';

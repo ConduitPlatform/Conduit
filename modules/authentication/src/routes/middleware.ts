@@ -52,6 +52,12 @@ async function handleAuthentication(
     throw new GrpcError(status.UNAUTHENTICATED, 'Invalid token');
   }
   if (moment().isAfter(moment().milliseconds(payload.exp!))) {
+    // delete all expired tokens
+    AccessToken.getInstance()
+      .deleteMany({
+        expiresOn: { $lte: new Date() },
+      })
+      .catch();
     throw new GrpcError(
       status.UNAUTHENTICATED,
       'Token is expired or otherwise not valid',

@@ -1,10 +1,6 @@
 syntax = "proto3";
 package authentication;
 
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
 message UserLoginRequest {
   string userId = 1;
   string clientId = 2;
@@ -23,11 +19,6 @@ message UserChangePass {
 message UserDeleteRequest {
   string userId = 1;
 }
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message UserLoginResponse {
   string accessToken = 1;
   optional string refreshToken = 2;
@@ -40,7 +31,6 @@ message UserCreateResponse {
 }
 
 service Authentication {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
