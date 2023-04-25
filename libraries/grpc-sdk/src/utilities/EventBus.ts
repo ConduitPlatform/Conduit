@@ -7,10 +7,12 @@ export class EventBus {
   private _clientSubscriber: Redis | Cluster;
   private _clientPublisher: Redis | Cluster;
   private _subscribedChannels: { [listener: string]: ((message: string) => void)[] };
+  private _subscribers: { [listener: string]: [string, number] };
   private _signature: string;
 
   constructor(redisManager: RedisManager) {
     this._subscribedChannels = {};
+    this._subscribers = {};
     this._clientSubscriber = redisManager.getClient({ keyPrefix: 'bus_' });
     this._clientPublisher = redisManager.getClient({ keyPrefix: 'bus_' });
     this._signature = crypto.randomBytes(20).toString('hex');
@@ -19,9 +21,35 @@ export class EventBus {
     });
   }
 
-  subscribe(channelName: string, callback: (message: string) => void): void {
+  unsubscribe(subscriberId: string): void {
+    if (this._subscribers[subscriberId]) {
+      const [channelName, index] = this._subscribers[subscriberId];
+      this._subscribedChannels[channelName].splice(index, 1);
+      delete this._subscribers[subscriberId];
+      if (this._subscribedChannels[channelName].length === 0) {
+        delete this._subscribedChannels[channelName];
+        this._clientSubscriber.unsubscribe(channelName, () => {});
+      }
+    }
+  }
+
+  subscribe(
+    channelName: string,
+    callback: (message: string) => void,
+    subscriberId?: string,
+  ): void {
+    if (subscriberId) {
+      // if subscriberId is provided, and it is already subscribed, unsubscribe it first
+      this.unsubscribe(subscriberId);
+    }
     if (this._subscribedChannels[channelName]) {
       this._subscribedChannels[channelName].push(callback);
+      if (subscriberId) {
+        this._subscribers[subscriberId] = [
+          channelName,
+          this._subscribedChannels[channelName].length - 1,
+        ];
+      }
       return;
     }
     this._subscribedChannels[channelName] = [callback];

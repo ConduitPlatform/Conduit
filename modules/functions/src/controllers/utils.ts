@@ -129,6 +129,29 @@ export function createRequestOrWebhookFunction(func: Functions, grpcSdk: Conduit
   return route.build();
 }
 
+export function createSocketFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  return {
+    input: {
+      path: `/${func.name}`,
+      name: func.name,
+      middlewares: func.inputs.auth ? ['authMiddleware'] : undefined,
+    },
+    events: {
+      [func.inputs.event!]: (call: ParsedRouterRequest) => {
+        return executeFunction(
+          func,
+          call,
+          compiledFunctionCode,
+          func.timeout,
+          func.name,
+          grpcSdk,
+        );
+      },
+    },
+  };
+}
+
 export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   return {
@@ -146,6 +169,41 @@ export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSd
   };
 }
 
+export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  grpcSdk.bus?.subscribe(
+    func.inputs.event!,
+    (data: any) => {
+      ConduitGrpcSdk.Logger.log(`Received event ${func.inputs.event} for ${func.name}`);
+      let parsedData = data;
+      if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+        parsedData = JSON.parse(data);
+      }
+
+      executeFunction(
+        func,
+        { request: parsedData },
+        compiledFunctionCode,
+        func.timeout,
+        func.name,
+        grpcSdk,
+      )
+        .then(() => {
+          ConduitGrpcSdk.Logger.log(
+            `Executed ${func.name} for event ${func.inputs.event}`,
+          );
+        })
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(
+            `Execution failed for ${func.name} for event ${func.inputs.event} with: `,
+          );
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    },
+    func._id,
+  );
+}
+
 export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   switch (func.functionType) {
     case 'request':
@@ -155,9 +213,10 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
     case 'cron':
     //todo
     case 'event':
-    //todo
+      createEventFunction(func, grpcSdk);
+      return null;
     case 'socket':
-    //todo
+      return createSocketFunction(func, grpcSdk);
     case 'middleware':
       return createMiddlewareFunction(func, grpcSdk);
   }

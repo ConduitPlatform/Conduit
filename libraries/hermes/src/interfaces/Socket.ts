@@ -56,6 +56,10 @@ export class ConduitSocket {
     this._events = events;
   }
 
+  get events(): Map<string, ConduitSocketEvent> {
+    return this._events;
+  }
+
   get input(): ConduitSocketOptions {
     return this._input;
   }
