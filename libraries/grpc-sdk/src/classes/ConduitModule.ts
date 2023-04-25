@@ -6,7 +6,6 @@ import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health
 import { EventEmitter } from 'events';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
-  active: boolean = false;
   private _client?: Client<T>;
   private _healthClient?: Client<typeof HealthDefinition>;
   protected channel?: Channel;
@@ -29,6 +28,9 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
+    if (this.channel) {
+      this.channel.close();
+    }
     // ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
@@ -51,7 +53,22 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       },
     });
     this._healthClient = clientFactory.create(HealthDefinition, this.channel);
-    this.active = true;
+    const monitorChannel = () => {
+      if (!this.channel) return;
+      try {
+        const state = this.channel!.getConnectivityState(true);
+        this.channel!.watchConnectivityState(state, Infinity, monitorChannel);
+      } catch (e) {}
+    };
+    monitorChannel();
+  }
+
+  get active(): boolean {
+    if (!this.channel) {
+      return false;
+    }
+    const connectivityState = this.channel.getConnectivityState(true);
+    return connectivityState === 2 || connectivityState === 1 || connectivityState === 0;
   }
 
   get client(): Client<T> | undefined {
@@ -71,7 +88,6 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     // ConduitGrpcSdk.Logger.warn(`Closing connection for ${this._serviceName}`);
     this.channel.close();
     this.channel = undefined;
-    this.active = false;
   }
 
   check(service: string = '') {

@@ -5,6 +5,7 @@ import { ClientValidator } from './handlers/client-validation';
 import { NextFunction, Request, Response } from 'express';
 import ConduitDefaultRouter from '../Router';
 import cors from 'cors';
+import { CaptchaValidator } from './handlers/captcha-validation';
 
 export default class SecurityModule {
   constructor(
@@ -14,6 +15,7 @@ export default class SecurityModule {
 
   setupMiddlewares() {
     const clientValidator: ClientValidator = new ClientValidator(this.grpcSdk);
+    const captchaValidator: CaptchaValidator = new CaptchaValidator(this.grpcSdk);
 
     this.router.registerGlobalMiddleware(
       'rateLimiter',
@@ -56,6 +58,11 @@ export default class SecurityModule {
       'clientMiddleware',
       clientValidator.middleware.bind(clientValidator),
       true,
+    );
+    this.router.registerGlobalMiddleware(
+      'captchaMiddleware',
+      captchaValidator.middleware.bind(captchaValidator),
+      false,
     );
   }
 }

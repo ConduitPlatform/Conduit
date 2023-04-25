@@ -149,7 +149,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     });
 
     await Token.getInstance().deleteOne(stateToken);
-    const user = await this.createOrUpdateUser(payload);
+    const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -170,7 +170,10 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       clientId: call.request.params['clientId'],
       scope: call.request.params?.scope,
     });
-    const user = await this.createOrUpdateUser(payload);
+    const user = await this.createOrUpdateUser(
+      payload,
+      call.request.params.invitationToken,
+    );
     const config = ConfigController.getInstance().config;
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
@@ -207,6 +210,14 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       if (!user.isVerified) user.isVerified = true;
       user = await User.getInstance().findByIdAndUpdate(user._id, user);
     } else {
+      const teams = ConfigController.getInstance().config.teams;
+      if (
+        teams.enabled &&
+        !teams.allowRegistrationWithoutInvite &&
+        isNil(invitationToken)
+      ) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+      }
       user = await User.getInstance().create({
         email: payload.email,
         [this.providerName]: payload,

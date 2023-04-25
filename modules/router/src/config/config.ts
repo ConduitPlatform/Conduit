@@ -4,6 +4,21 @@ export default {
     format: 'String',
     default: '',
   },
+  captcha: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+    provider: {
+      format: 'String',
+      default: 'recaptcha',
+      enum: ['recaptcha', 'hcaptcha', 'turnstile'],
+    },
+    secretKey: {
+      format: 'String',
+      default: '',
+    },
+  },
   cors: {
     enabled: {
       format: 'Boolean',
@@ -19,11 +34,11 @@ export default {
     },
     allowedHeaders: {
       format: 'String',
-      default: 'Content-Type,Authorization',
+      default: 'Content-Type,Authorization,Cache-Control',
     },
     exposedHeaders: {
       format: 'String',
-      default: 'Content-Type,Authorization',
+      default: 'Content-Type,Authorization,Cache-Control',
     },
     credentials: {
       format: 'Boolean',

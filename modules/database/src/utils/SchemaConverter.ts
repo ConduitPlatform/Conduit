@@ -41,12 +41,13 @@ export namespace SchemaConverter {
       canModify?: 'Everything' | 'Nothing' | 'ExtensionOnly';
       canDelete?: boolean;
     };
+    timestamps?: boolean;
     existingModelOptions?: ConduitSchemaOptions;
     importedSchema?: boolean;
   }) {
     const modelOptions = opts.existingModelOptions ?? {};
     if (!modelOptions.conduit) modelOptions.conduit = {};
-    const defaults = getDefaultModelOptions(!!opts.importedSchema).conduit!;
+    const defaults = getDefaultModelOptions(!!opts.importedSchema);
     const existing = opts.existingModelOptions?.conduit;
     const explicit = { cms: opts.cms, permissions: opts.permissions };
     // Grab first source available: explicit -> existing -> default
@@ -57,7 +58,7 @@ export namespace SchemaConverter {
             ? explicit.cms.enabled
             : existing?.cms?.enabled !== undefined
             ? existing.cms.enabled
-            : defaults.cms.enabled,
+            : defaults.conduit!.cms.enabled,
         crudOperations: {
           create: {
             enabled:
@@ -65,13 +66,13 @@ export namespace SchemaConverter {
                 ? explicit.cms.crudOperations?.create.enabled
                 : existing?.cms?.crudOperations?.create?.enabled !== undefined
                 ? existing.cms.crudOperations.create.enabled
-                : defaults.cms.crudOperations.create.enabled,
+                : defaults.conduit!.cms.crudOperations.create.enabled,
             authenticated:
               explicit.cms?.crudOperations?.create?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.create.authenticated
                 : existing?.cms?.crudOperations?.create?.authenticated !== undefined
                 ? existing.cms.crudOperations.create.authenticated
-                : defaults.cms.crudOperations.create.authenticated,
+                : defaults.conduit!.cms.crudOperations.create.authenticated,
           },
           read: {
             enabled:
@@ -79,13 +80,13 @@ export namespace SchemaConverter {
                 ? explicit.cms.crudOperations?.read.enabled
                 : existing?.cms?.crudOperations?.read?.enabled !== undefined
                 ? existing.cms.crudOperations.read.enabled
-                : defaults.cms.crudOperations.read.enabled,
+                : defaults.conduit!.cms.crudOperations.read.enabled,
             authenticated:
               explicit.cms?.crudOperations?.read?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.read.authenticated
                 : existing?.cms?.crudOperations?.read?.authenticated !== undefined
                 ? existing.cms.crudOperations.read.authenticated
-                : defaults.cms.crudOperations.read.authenticated,
+                : defaults.conduit!.cms.crudOperations.read.authenticated,
           },
           update: {
             enabled:
@@ -93,13 +94,13 @@ export namespace SchemaConverter {
                 ? explicit.cms.crudOperations?.update.enabled
                 : existing?.cms?.crudOperations?.update?.enabled !== undefined
                 ? existing.cms.crudOperations.update.enabled
-                : defaults.cms.crudOperations.update.enabled,
+                : defaults.conduit!.cms.crudOperations.update.enabled,
             authenticated:
               explicit.cms?.crudOperations?.update?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.update.authenticated
                 : existing?.cms?.crudOperations?.update?.authenticated !== undefined
                 ? existing.cms.crudOperations.update.authenticated
-                : defaults.cms.crudOperations.update.authenticated,
+                : defaults.conduit!.cms.crudOperations.update.authenticated,
           },
           delete: {
             enabled:
@@ -107,13 +108,13 @@ export namespace SchemaConverter {
                 ? explicit.cms.crudOperations?.delete.enabled
                 : existing?.cms?.crudOperations?.delete?.enabled !== undefined
                 ? existing.cms.crudOperations.delete.enabled
-                : defaults.cms.crudOperations.delete.enabled,
+                : defaults.conduit!.cms.crudOperations.delete.enabled,
             authenticated:
               explicit.cms?.crudOperations?.delete?.authenticated !== undefined
                 ? explicit.cms.crudOperations?.delete.authenticated
                 : existing?.cms?.crudOperations?.delete?.authenticated !== undefined
                 ? existing.cms.crudOperations.delete.authenticated
-                : defaults.cms.crudOperations.delete.authenticated,
+                : defaults.conduit!.cms.crudOperations.delete.authenticated,
           },
         },
       };
@@ -124,26 +125,28 @@ export namespace SchemaConverter {
           ? explicit.permissions.extendable
           : existing?.permissions?.extendable !== undefined
           ? existing.permissions.extendable
-          : defaults.permissions!.extendable,
+          : defaults.conduit!.permissions!.extendable,
       canCreate:
         explicit.permissions?.canCreate !== undefined
           ? explicit.permissions.canCreate
           : existing?.permissions?.canCreate !== undefined
           ? existing.permissions.canCreate
-          : defaults.permissions!.canCreate,
+          : defaults.conduit!.permissions!.canCreate,
       canModify:
         explicit.permissions?.canModify !== undefined
           ? explicit.permissions.canModify
           : existing?.permissions?.canModify !== undefined
           ? existing.permissions.canModify
-          : defaults.permissions!.canModify,
+          : defaults.conduit!.permissions!.canModify,
       canDelete:
         explicit.permissions?.canDelete !== undefined
           ? explicit.permissions.canDelete
           : existing?.permissions?.canDelete !== undefined
           ? existing.permissions.canDelete
-          : defaults.permissions!.canDelete,
+          : defaults.conduit!.permissions!.canDelete,
     };
+    modelOptions.timestamps =
+      opts.timestamps ?? opts.existingModelOptions?.timestamps ?? defaults.timestamps;
     return modelOptions;
   }
 
@@ -178,6 +181,7 @@ export namespace SchemaConverter {
           canDelete: !importedSchema,
         },
       },
+      timestamps: true,
     };
   }
 }

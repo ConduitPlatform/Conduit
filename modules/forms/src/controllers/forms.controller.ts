@@ -1,6 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  ConduitString,
+  ConfigController,
   RoutingManager,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
@@ -59,7 +61,12 @@ export class FormsController {
           path: `/${r._id}`,
           action: ConduitRouteActions.POST,
           description: `Submits form with id ${r._id}.`,
-          bodyParams: r.fields,
+          bodyParams: {
+            ...r.fields,
+            ...(ConfigController.getInstance().config.captcha
+              ? { captchaToken: ConduitString.Required }
+              : {}),
+          },
         },
         new ConduitRouteReturnDefinition(`SubmitForm${r.name}`, 'String'),
         this.router.submitForm.bind(this.router),

@@ -149,7 +149,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         role: invite.role || 'member',
         email: invite.email,
       },
-      user: invite.inviter,
+      user: invite.inviter._id,
     });
   }
 
@@ -286,7 +286,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async getTeamMembers(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, search, sort } = call.request.params;
+    const { teamId, search, sort, populate } = call.request.params;
     const { skip } = call.request.params ?? 0;
     const { limit } = call.request.params ?? 25;
 
@@ -315,13 +315,36 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { members: members, count };
   }
 
+  async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { user } = call.request.context;
+    const { teamId, populate } = call.request.params;
+    const allowed = await this.grpcSdk.authorization!.can({
+      subject: 'User:' + user._id,
+      actions: ['read'],
+      resource: 'Team:' + teamId,
+    });
+    if (!allowed) {
+      throw new GrpcError(
+        status.PERMISSION_DENIED,
+        'User does not have permission to view team',
+      );
+    }
+    const team: Team | null = await Team.getInstance().findOne(
+      { _id: teamId },
+      undefined,
+      populate,
+    );
+    return team || 'Team not found';
+  }
+
   async getUserTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { search, sort } = call.request.params;
+    const { search, sort, populate } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
@@ -340,13 +363,14 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { teams: teams, count };
   }
 
   async getSubTeams(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { teamId, search, sort } = call.request.params;
+    const { teamId, search, sort, populate } = call.request.params;
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
@@ -378,6 +402,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       skip,
       limit,
       sort,
+      populate,
     });
     return { teams: teams, count };
   }
@@ -396,7 +421,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         'Could not create invite, team does not exist',
       );
     }
-    const existingUser = await User.getInstance().findOne({ _id: user });
+    const existingUser = await User.getInstance().findOne({ _id: user._id });
     if (!existingUser) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
@@ -569,6 +594,19 @@ export class TeamsHandler implements IAuthenticationStrategy {
     );
     routingManager.route(
       {
+        path: '/teams/:teamId',
+        description: `Gets a team.`,
+        urlParams: {
+          teamId: ConduitObjectId.Required,
+        },
+        action: ConduitRouteActions.GET,
+        middlewares: ['authMiddleware'],
+      },
+      new ConduitRouteReturnDefinition('Team'),
+      this.getTeam.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/teams/:teamId/members',
         description: `Retrieves members of a team`,
         urlParams: {
@@ -625,6 +663,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           },
           role: { type: TYPE.String, required: true },
         },
+        middlewares: ['authMiddleware'],
         name: 'ModifyMembersRoles',
         description: 'Modifies the roles of members in a team',
       },
@@ -652,8 +691,8 @@ export class TeamsHandler implements IAuthenticationStrategy {
           teamId: ConduitObjectId.Required,
         },
         bodyParams: {
-          role: ConduitString.Optional,
-          email: ConduitString.Optional,
+          role: ConduitString.Required,
+          email: ConduitString.Required,
         },
         action: ConduitRouteActions.POST,
         middlewares: ['authMiddleware'],
@@ -697,7 +736,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
           });
         }
       }
-      if (config.teams.invites.enabled && !config.teams.invites.sendEmail) {
+      if (config.teams.invites.enabled && config.teams.invites.sendEmail) {
         if (!config.teams.invites.sendEmail || !this.grpcSdk.isAvailable('email')) {
           ConduitGrpcSdk.Logger.warn(
             'Team invites are enabled, but email sending is disabled. No invites will be sent.',

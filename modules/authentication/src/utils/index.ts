@@ -6,7 +6,6 @@ import { Team, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
-import axios from 'axios';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces';
 
@@ -129,22 +128,8 @@ export namespace AuthUtils {
     }
   }
 
-  export async function recaptchaVerify(secret: string, token: string) {
-    const googleUrl = `https://www.google.com/siteverify?secret=${secret}&response=${token}`;
-    const response = await axios.post(
-      googleUrl,
-      {},
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        },
-      },
-    );
-    return response.data.success;
-  }
-
   export async function fetchMembers(params: FetchMembersParams) {
-    const { relations, search, sort } = params;
+    const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
     let query: any = {
@@ -167,18 +152,29 @@ export namespace AuthUtils {
     }
 
     const count = relations.relations.length;
-    const members = await User.getInstance().findMany(
+    const members: (User & { role?: string })[] = await User.getInstance().findMany(
       query,
       undefined,
       skip,
       limit,
       sort,
+      populate,
     );
+    members.forEach(member => {
+      // add role from relation to each member
+      // find relation with member id
+      const relation = relations.relations.find(
+        r => r.subject.split(':')[1] === member._id,
+      );
+      if (relation) {
+        member.role = relation.relation;
+      }
+    });
     return { members, count };
   }
 
   export async function fetchUserTeams(params: FetchMembersParams) {
-    const { relations, search, sort } = params;
+    const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
     let query: any = {
@@ -201,7 +197,14 @@ export namespace AuthUtils {
     }
 
     const count = relations.relations.length;
-    const teams = await Team.getInstance().findMany(query, undefined, skip, limit, sort);
+    const teams = await Team.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      populate,
+    );
     return { teams, count };
   }
 

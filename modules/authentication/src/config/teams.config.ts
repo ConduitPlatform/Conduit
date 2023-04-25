@@ -12,6 +12,10 @@ export default {
       format: 'Boolean',
       default: false,
     },
+    allowRegistrationWithoutInvite: {
+      format: 'Boolean',
+      default: true,
+    },
     invites: {
       enabled: {
         format: 'Boolean',
