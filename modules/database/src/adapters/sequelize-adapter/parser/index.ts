@@ -37,19 +37,6 @@ function constructOrArray(value: any) {
   return orArray;
 }
 
-function constructAndArray(value: any) {
-  const andArray = [];
-  for (const v of value) {
-    andArray.push(
-      { [Op.notLike]: `${v}` },
-      { [Op.notLike]: `${v};%` },
-      { [Op.notLike]: `%;${v}` },
-      { [Op.notLike]: `%;${v};%` },
-    );
-  }
-  return andArray;
-}
-
 function matchOperation(
   schema: Indexable,
   previousKey: any,
@@ -166,48 +153,20 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
+      // Reconstruct query when next operator is $nin
       const nextKey = !isNil(query[key]) ? Object.keys(query[key])[0] : null;
       if (nextKey === '$nin') {
-        let matched;
-        if (
-          !isArrayField(schema, key) ||
-          schema.compiledFields[key][0].type === 'Relation'
-        ) {
-          matched = {
-            [Op.in]: arrayHandler(
-              schema,
-              query[key][nextKey],
-              dialect,
-              relations,
-              associations,
-            ),
-          };
-          Object.assign(parsed, {
-            [Op.not]: {
-              [key]: matched,
-            },
-          });
-        } else if (dialect === 'postgres') {
-          matched = {
-            [Op.overlap]: arrayHandler(
-              schema,
-              query[key][nextKey],
-              dialect,
-              relations,
-              associations,
-            ),
-          };
-          Object.assign(parsed, {
-            [Op.not]: {
-              [key]: matched,
-            },
-          });
-        } else {
-          matched = { [Op.and]: constructAndArray(query[key][nextKey]) };
-          Object.assign(parsed, {
-            [key]: matched,
-          });
-        }
+        const reconstructedSubQuery = { [key]: { $in: query[key][nextKey] } };
+        Object.assign(parsed, {
+          [Op.not]: _parseQuery(
+            schema,
+            reconstructedSubQuery,
+            dialect,
+            relations,
+            associations,
+            '$nin',
+          ),
+        });
         return parsed;
       }
       const subQuery = _parseQuery(
