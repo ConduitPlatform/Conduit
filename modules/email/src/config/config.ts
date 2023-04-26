@@ -41,6 +41,14 @@ export default {
         format: 'Number',
         default: -1,
       },
+      secure: {
+        format: 'Boolean',
+        default: false,
+      },
+      ignoreTls: {
+        format: 'Boolean',
+        default: false,
+      },
       host: {
         doc: 'The SMTP server address',
         format: 'String',
@@ -57,7 +65,7 @@ export default {
         },
         method: {
           format: 'String',
-          default: '',
+          default: 'PLAIN',
         },
       },
     },
