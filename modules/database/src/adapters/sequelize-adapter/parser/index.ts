@@ -1,10 +1,11 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { isArray, isBoolean, isNumber, isString } from 'lodash';
+import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 
 function arrayHandler(
+  schema: Indexable,
   value: any,
   dialect: string,
   relations: {
@@ -18,12 +19,27 @@ function arrayHandler(
 ) {
   const newArray = [];
   for (const val of value) {
-    newArray.push(_parseQuery(val, dialect, relations, associations));
+    newArray.push(_parseQuery(schema, val, dialect, relations, associations));
   }
   return newArray;
 }
 
+function constructOrArray(value: any) {
+  const orArray = [];
+  for (const v of value) {
+    orArray.push(
+      { [Op.like]: `${v}` },
+      { [Op.like]: `${v};%` },
+      { [Op.like]: `%;${v}` },
+      { [Op.like]: `%;${v};%` },
+    );
+  }
+  return orArray;
+}
+
 function matchOperation(
+  schema: Indexable,
+  previousKey: any,
   operator: string,
   value: any,
   dialect: string,
@@ -62,17 +78,22 @@ function matchOperation(
     case '$lte':
       return { [Op.lte]: value };
     case '$in':
-      return {
-        [Op.in]: arrayHandler(value, dialect, relations, associations),
-      };
+      if (
+        !isArray(schema.compiledFields[previousKey]) ||
+        schema.compiledFields[previousKey][0].type === 'Relation'
+      ) {
+        return { [Op.in]: arrayHandler(schema, value, dialect, relations, associations) };
+      } else if (dialect === 'postgres') {
+        return {
+          [Op.overlap]: arrayHandler(schema, value, dialect, relations, associations),
+        };
+      } else {
+        return { [Op.or]: constructOrArray(value) };
+      }
     case '$or':
-      return arrayHandler(value, dialect, relations, associations);
+      return arrayHandler(schema, value, dialect, relations, associations);
     case '$and':
-      return arrayHandler(value, dialect, relations, associations);
-    case '$nin':
-      return {
-        [Op.notIn]: arrayHandler(value, dialect, relations, associations),
-      };
+      return arrayHandler(schema, value, dialect, relations, associations);
     case '$like':
       return { [Op.like]: value };
     case '$ilike':
@@ -88,6 +109,7 @@ function matchOperation(
 }
 
 function _parseQuery(
+  schema: Indexable,
   query: ParsedQuery,
   dialect: string,
   relations: {
@@ -98,6 +120,7 @@ function _parseQuery(
     associations: { [key: string]: SequelizeSchema | SequelizeSchema[] };
     associationsDirectory: { [key: string]: string[] };
   },
+  previousKey?: any, // Retain previous key for $in and $nin operators
 ) {
   const parsed: Indexable = isArray(query) ? [] : {};
   if (
@@ -112,13 +135,13 @@ function _parseQuery(
     if (key === '$or') {
       Object.assign(parsed, {
         [Op.or]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, dialect, relations, associations),
+          _parseQuery(schema, operation, dialect, relations, associations),
         ),
       });
     } else if (key === '$and') {
       Object.assign(parsed, {
         [Op.and]: query[key].map((operation: ParsedQuery) =>
-          _parseQuery(operation, dialect, relations, associations),
+          _parseQuery(schema, operation, dialect, relations, associations),
         ),
       });
     } else if (key === '$regex') {
@@ -126,9 +149,40 @@ function _parseQuery(
     } else if (key === '$options') {
       continue;
     } else {
-      const subQuery = _parseQuery(query[key], dialect, relations, associations);
+      // Reconstruct query when next operator is $nin
+      const nextKey = !isNil(query[key]) ? Object.keys(query[key])[0] : null;
+      if (nextKey === '$nin') {
+        const reconstructedSubQuery = { [key]: { $in: query[key][nextKey] } };
+        Object.assign(parsed, {
+          [Op.not]: _parseQuery(
+            schema,
+            reconstructedSubQuery,
+            dialect,
+            relations,
+            associations,
+            '$nin',
+          ),
+        });
+        return parsed;
+      }
+      const subQuery = _parseQuery(
+        schema,
+        query[key],
+        dialect,
+        relations,
+        associations,
+        key,
+      );
       if (subQuery === undefined) continue;
-      const matched = matchOperation(key, subQuery, dialect, relations, associations);
+      const matched = matchOperation(
+        schema,
+        previousKey,
+        key,
+        subQuery,
+        dialect,
+        relations,
+        associations,
+      );
       if (key.indexOf('$') !== -1) {
         Object.assign(parsed, matched);
         continue;
@@ -220,6 +274,7 @@ function handleEmbeddedJson(key: string, value: any, dialect: string) {
 }
 
 export function parseQuery(
+  schema: Indexable,
   query: ParsedQuery,
   dialect: string,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
@@ -238,6 +293,7 @@ export function parseQuery(
   };
   parsingResult.query = {
     ..._parseQuery(
+      schema,
       query,
       dialect,
       { relations, relationsDirectory: parsingResult.requiredRelations },
