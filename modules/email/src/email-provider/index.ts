@@ -36,6 +36,12 @@ export class EmailProvider {
       const { smtp } = transportSettings;
       smtp.auth.user = smtp.auth.username;
       smtp.auth.pass = smtp.auth.password;
+      if (smtp.ignoreTls) {
+        smtp.tls = {
+          rejectUnauthorized: false,
+        };
+        delete smtp.ignoreTls;
+      }
       delete smtp.auth.method;
       delete smtp.auth.username;
       delete smtp.auth.password;
