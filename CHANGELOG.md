@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.17](https://github.com/ConduitPlatform/Conduit/compare/v0.15.16...v0.15.17) (2023-04-26)
+
+
+### Bug Fixes
+
+* **email:** smtp settings ([c9f04d5](https://github.com/ConduitPlatform/Conduit/commit/c9f04d5cde4b1915cbbfd41939cc4a7f3b00107e))
+* **email:** smtp settings ([2a239f0](https://github.com/ConduitPlatform/Conduit/commit/2a239f0fa9e8caa824f4a127357a7f59985149f6))
+
 ### [0.15.16](https://github.com/ConduitPlatform/Conduit/compare/v0.15.15...v0.15.16) (2023-04-18)
 
 
