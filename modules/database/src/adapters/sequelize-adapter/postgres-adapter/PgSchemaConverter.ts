@@ -19,7 +19,7 @@ import { extractEmbedded, extractRelations, RelationType } from '../utils/extrac
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function schemaConverter(jsonSchema: ConduitSchema): [
+export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
   { [key: string]: any },
   {
