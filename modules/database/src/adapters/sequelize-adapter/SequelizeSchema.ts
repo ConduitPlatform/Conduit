@@ -515,10 +515,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         };
         path.shift();
         path = [path.join('.')];
-        relationObject.include = relationSchema.constructRelationInclusion(
-          path,
-          required,
-        );
+        relationObject.include = relationSchema
+          .constructAssociationInclusion({})
+          .concat(...relationSchema.constructRelationInclusion(path, required));
         inclusionArray.push(relationObject);
       } else {
         const relationTarget = this.extractedRelations[population];
@@ -538,6 +537,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           required: required || false,
           attributes: { exclude: relationSchema.excludedFields },
         };
+        relationObject.include = relationSchema.constructAssociationInclusion({});
         inclusionArray.push(relationObject);
       }
     }
