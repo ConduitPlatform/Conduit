@@ -194,13 +194,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
-      const assocs = extractAssociationsFromObject(parsedQuery, this.associations);
       const associationObjects: Indexable = {};
-      for (const assoc in assocs) {
-        if (Array.isArray(assocs[assoc]) && !Array.isArray(parsedQuery[assoc])) {
+      for (const assoc in extractAssociationsFromObject(parsedQuery, this.associations)) {
+        if (
+          Array.isArray(this.associations![assoc]) &&
+          !Array.isArray(parsedQuery[assoc])
+        ) {
           throw new Error(`Cannot update association ${assoc} with non-array value`);
         }
-        if (!Array.isArray(assocs[assoc]) && Array.isArray(parsedQuery[assoc])) {
+        if (
+          !Array.isArray(this.associations![assoc]) &&
+          Array.isArray(parsedQuery[assoc])
+        ) {
           throw new Error(`Cannot update association ${assoc} with array value`);
         }
         associationObjects[assoc] = parsedQuery[assoc];
@@ -228,7 +233,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
                     (this.associations![assoc] as SequelizeSchema[])[0].findByIdAndUpdate(
-                      obj._id,
+                      doc[assoc]._id,
                       obj,
                       undefined,
                       t,
@@ -247,10 +252,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                 }
               }
             } else {
-              if (assoc.hasOwnProperty('_id')) {
+              if (doc[assoc]) {
                 promises.push(
                   (this.associations![assoc] as SequelizeSchema).findByIdAndUpdate(
-                    associationObjects[assoc]._id,
+                    doc[assoc]._id,
                     associationObjects[assoc],
                     undefined,
                     t,
@@ -279,7 +284,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         .then(() => {
           return this.model.findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion(assocs).concat(
+            include: this.constructAssociationInclusion({}).concat(
               this.constructRelationInclusion(populate),
             ),
           });
