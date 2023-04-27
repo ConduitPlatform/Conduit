@@ -51,10 +51,11 @@ export const extractRelations = (
       } else {
         model.belongsTo(value.model, {
           foreignKey: {
-            name: relation,
+            name: relation + 'Id',
             allowNull: !(originalSchema.compiledFields[relation] as any).required,
             defaultValue: (originalSchema.compiledFields[relation] as any).default,
           },
+          as: relation,
           constraints: false,
         });
       }
@@ -151,7 +152,8 @@ export function processPushOperations(
         }
         parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
       } else {
-        parentDoc[`add${modelName}`](push[key], parentDoc._id);
+        const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+        parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
       }
       continue;
     }

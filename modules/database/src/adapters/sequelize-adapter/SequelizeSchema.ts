@@ -309,7 +309,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       if (requiredOnly && !requiredAssociations.hasOwnProperty(association)) continue;
       const associationObject: {
         model: ModelStatic<any>;
-        as?: string;
+        as: string;
         required: boolean;
         include?: any;
         attributes?: { exclude: string[] };
@@ -498,18 +498,16 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
-          as?: string;
+          as: string;
           required: boolean;
           include?: any;
           attributes?: { exclude: string[] };
         } = {
           model: relationSchema.model,
           required: required || false,
+          as: relationName,
           attributes: { exclude: relationSchema.excludedFields },
         };
-        if (Array.isArray(relationTarget)) {
-          relationObject.as = relationName;
-        }
         path.shift();
         path = [path.join('.')];
         relationObject.include = relationSchema.constructRelationInclusion(
@@ -525,18 +523,16 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           : relationTarget;
         const relationObject: {
           model: ModelStatic<any>;
-          as?: string;
+          as: string;
           required: boolean;
           include?: any;
           attributes?: { exclude: string[] };
         } = {
           model: relationSchema.model,
           required: required || false,
+          as: population,
           attributes: { exclude: relationSchema.excludedFields },
         };
-        if (Array.isArray(relationTarget)) {
-          relationObject.as = population;
-        }
         inclusionArray.push(relationObject);
       }
     }
@@ -561,6 +557,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         }
         // @ts-ignore
         doc[`set${modelName}`](relationObjects[relation], doc._id);
+      } else {
+        const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
+        // @ts-ignore
+        doc[`set${actualRel}`](relationObjects[relation], doc._id);
       }
     }
     return hasOne ? doc.save({ transaction }) : doc;
@@ -582,6 +582,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         if (Array.isArray(parsedQuery[target])) {
           // @ts-ignore
           relationObjects[target] = parsedQuery[target];
+          delete parsedQuery[target];
+        } else {
+          parsedQuery[target + 'Id'] = parsedQuery[target];
           delete parsedQuery[target];
         }
       }
