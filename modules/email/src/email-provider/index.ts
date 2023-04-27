@@ -34,14 +34,20 @@ export class EmailProvider {
       this._transportName = 'smtp';
 
       const { smtp } = transportSettings;
+      smtp.auth.user = smtp.auth.username;
+      smtp.auth.pass = smtp.auth.password;
+      if (smtp.ignoreTls) {
+        smtp.tls = {
+          rejectUnauthorized: false,
+        };
+        delete smtp.ignoreTls;
+      }
+      delete smtp.auth.method;
+      delete smtp.auth.username;
+      delete smtp.auth.password;
 
       this._transport = new SmtpProvider({
-        ...transportSettings,
-        secure: false,
         ...smtp,
-        tls: {
-          rejectUnauthorized: false,
-        },
       });
     } else if (transport === 'mandrill') {
       this._transportName = 'mandrill';
