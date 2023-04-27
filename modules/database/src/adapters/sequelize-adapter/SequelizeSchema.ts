@@ -481,7 +481,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   constructRelationInclusion(populate?: string[], required?: boolean) {
     const inclusionArray: {
       model: ModelStatic<any>;
-      as?: string;
+      as: string;
       required: boolean;
       include?: any;
       attributes?: { exclude: string[] };
@@ -504,8 +504,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           attributes?: { exclude: string[] };
         } = {
           model: relationSchema.model,
-          required: required || false,
           as: relationName,
+          required: required || false,
           attributes: { exclude: relationSchema.excludedFields },
         };
         path.shift();
@@ -529,8 +529,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           attributes?: { exclude: string[] };
         } = {
           model: relationSchema.model,
-          required: required || false,
           as: population,
+          required: required || false,
           attributes: { exclude: relationSchema.excludedFields },
         };
         inclusionArray.push(relationObject);
