@@ -125,6 +125,16 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         }
         delete parsedQuery['$inc'];
       }
+      if (Object.keys(parsedQuery).length === 0) {
+        return this.model
+          .findByPk(id, {
+            nest: true,
+            include: this.constructAssociationInclusion({}).concat(
+              this.constructRelationInclusion(populate),
+            ),
+          })
+          .then(doc => (doc ? doc.toJSON() : doc));
+      }
 
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
@@ -190,6 +200,17 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         }
         await parentDoc.save();
         delete parsedQuery['$push'];
+      }
+
+      if (Object.keys(parsedQuery).length === 0) {
+        return this.model
+          .findByPk(id, {
+            nest: true,
+            include: this.constructAssociationInclusion({}).concat(
+              this.constructRelationInclusion(populate),
+            ),
+          })
+          .then(doc => (doc ? doc.toJSON() : doc));
       }
 
       parsedQuery.updatedAt = new Date();
@@ -411,6 +432,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     return this.model
       .bulkCreate(parsedQuery, {
+        validate: true,
         include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
       })

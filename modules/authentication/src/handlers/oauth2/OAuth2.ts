@@ -197,7 +197,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       (!payload.hasOwnProperty('email') || isNil(payload.email))
     ) {
       user = await User.getInstance().findOne({
-        [this.providerName]: { id: payload.id },
+        [this.providerName + '.id']: payload.id,
       });
     } else {
       throw new GrpcError(
