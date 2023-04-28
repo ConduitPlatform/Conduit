@@ -11,21 +11,19 @@ import {
   convertModelOptionsIndexes,
   convertSchemaFieldIndexes,
   extractFieldProperties,
-  extractRelations,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
+import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function schemaConverter(jsonSchema: ConduitSchema): [
+export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
   { [key: string]: any },
   {
-    [key: string]:
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }
-      | { type: 'Relation'; model: string; required?: boolean; select?: boolean }[];
+    [key: string]: RelationType | RelationType[];
   },
 ] {
   let copy = cloneDeep(jsonSchema);
@@ -40,32 +38,6 @@ export function schemaConverter(jsonSchema: ConduitSchema): [
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
   return [copy, extractedEmbedded, extractedRelations];
-}
-
-function extractEmbedded(ogSchema: any, schema: any) {
-  const extracted: Indexable = {};
-  for (const key of Object.keys(schema)) {
-    if (isArray(schema[key])) {
-      const arrayField = schema[key];
-      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (
-          !arrayField[0].hasOwnProperty('type') ||
-          typeof arrayField[0].type !== 'string'
-        ) {
-          extracted[key] = [arrayField[0]];
-          delete schema[key];
-          delete ogSchema[key];
-        }
-      }
-    } else if (isObject(schema[key])) {
-      if (!schema[key].hasOwnProperty('type') || typeof schema[key].type !== 'string') {
-        extracted[key] = schema[key];
-        delete schema[key];
-        delete ogSchema[key];
-      }
-    }
-  }
-  return extracted;
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
@@ -89,10 +61,10 @@ function extractType(type: string, sqlType?: SQLDataType) {
         return DataTypes.STRING;
       }
     case 'Number':
-      if (sqlType === SQLDataType.BIGINT) {
-        return DataTypes.BIGINT;
-      } else if (sqlType === SQLDataType.INT) {
+      if (sqlType === SQLDataType.INT) {
         return DataTypes.INTEGER;
+      } else if (sqlType === SQLDataType.BIGINT) {
+        return DataTypes.BIGINT;
       } else if (sqlType === SQLDataType.FLOAT) {
         return DataTypes.FLOAT;
       } else if (sqlType === SQLDataType.DOUBLE) {
@@ -113,21 +85,20 @@ function extractType(type: string, sqlType?: SQLDataType) {
         return DataTypes.DATE;
       }
     case 'JSON':
-      return DataTypes.JSON;
+      return DataTypes.JSONB;
     case 'Relation':
     case 'ObjectId':
       return DataTypes.UUID;
   }
-
-  throw new Error('Failed to extract embedded object type');
+  return DataTypes.JSONB;
 }
 
 function iterDeep(schema: any, resSchema: any) {
   for (const key of Object.keys(schema)) {
     if (isArray(schema[key])) {
-      resSchema[key] = extractArrayType(schema[key], key);
+      resSchema[key] = extractArrayType(schema[key]);
     } else if (isObject(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key], key);
+      resSchema[key] = extractObjectType(schema[key]);
       if (!schema[key].hasOwnProperty('type')) {
         iterDeep(schema[key], resSchema[key]);
       }
@@ -137,35 +108,21 @@ function iterDeep(schema: any, resSchema: any) {
   }
 }
 
-function extractArrayType(arrayField: UntypedArray, field: string) {
+function extractArrayType(arrayField: UntypedArray) {
   let arrayElementType;
   if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
     if (arrayField[0].hasOwnProperty('type')) {
       arrayElementType = extractType(arrayField[0].type);
     } else {
-      throw new Error('Failed to extract embedded object type');
+      arrayElementType = DataTypes.JSONB;
     }
   } else {
     arrayElementType = extractType(arrayField[0]);
   }
-  if (arrayElementType === DataTypes.JSON) {
-    return { type: DataTypes.JSON };
-  } else {
-    return {
-      type: DataTypes.STRING,
-      get(): any {
-        // @ts-ignore
-        return this.getDataValue(field).split(';');
-      },
-      set(val: any): any {
-        // @ts-ignore
-        this.setDataValue(field, val.join(';'));
-      },
-    };
-  }
+  return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: Indexable, field: string) {
+function extractObjectType(objectField: Indexable) {
   const res: {
     type: any;
     defaultValue?: any;
@@ -176,16 +133,15 @@ function extractObjectType(objectField: Indexable, field: string) {
 
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
-      res.type = extractArrayType(objectField.type, field).type;
+      res.type = extractArrayType(objectField.type).type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
     }
-    res.type = extractType(objectField.type, objectField.sqlType);
     if (objectField.hasOwnProperty('default')) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    throw new Error('Failed to extract embedded object type');
+    res.type = DataTypes.JSONB;
   }
 
   return extractFieldProperties(objectField, res);

@@ -418,5 +418,4 @@ export function renameRelations(
     exclude,
   };
 }
-
 export * from './sql';

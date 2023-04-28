@@ -56,12 +56,7 @@ export const extractRelations = (
             defaultValue: (originalSchema.compiledFields[relation] as any).default,
           },
           as: relation,
-          onUpdate: (originalSchema.compiledFields[relation] as any).required
-            ? 'CASCADE'
-            : 'NO ACTION',
-          onDelete: (originalSchema.compiledFields[relation] as any).required
-            ? 'CASCADE'
-            : 'SET NULL',
+          constraints: false,
         });
       }
     }

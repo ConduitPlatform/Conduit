@@ -35,28 +35,26 @@ const schema = {
     select: false,
   },
   github: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   google: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   microsoft: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   figma: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   slack: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   facebook: {
-    type: authProviderSchema,
+    ...authProviderSchema,
   },
   twitch: {
-    type: {
-      ...authProviderSchema,
-      profile_image_url: TYPE.String,
-    },
+    ...authProviderSchema,
+    profile_image_url: TYPE.String,
   },
   active: {
     type: TYPE.Boolean,
