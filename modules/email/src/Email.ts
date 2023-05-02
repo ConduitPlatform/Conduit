@@ -1,10 +1,8 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config';
@@ -22,19 +20,19 @@ import {
   SendEmailResponse,
 } from './protoTypes/email';
 import metricsSchema from './metrics';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'email.proto'),
     protoDescription: 'email.Email',
     functions: {
-      setConfig: this.setConfig.bind(this),
       registerTemplate: this.registerTemplate.bind(this),
       sendEmail: this.sendEmail.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private isRunning: boolean = false;
   private adminRouter: AdminHandlers;
   private database: DatabaseProvider;
@@ -51,16 +49,6 @@ export default class Email extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      return this.database
-        .createSchemaFromAdapter(modelInstance)
-        .then(() => this.database.migrate(modelInstance.name));
-    });
-    return Promise.all(promises);
   }
 
   async preConfig(config: Config) {
@@ -90,16 +78,6 @@ export default class Email extends ManagedModule<Config> {
       }
       this.updateHealth(HealthCheckStatus.SERVING);
     }
-  }
-
-  private async initEmailProvider(newConfig?: Config) {
-    const emailConfig = !isNil(newConfig)
-      ? newConfig
-      : await this.grpcSdk.config.get('email');
-
-    const { transport, transportSettings } = emailConfig;
-
-    this.emailProvider = new EmailProvider(transport, transportSettings);
   }
 
   async initializeMetrics() {
@@ -151,5 +129,25 @@ export default class Email extends ManagedModule<Config> {
     if (!isNil(errorMessage))
       return callback({ code: status.INTERNAL, message: errorMessage });
     return callback(null, { sentMessageInfo });
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      return this.database
+        .createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
+    });
+    return Promise.all(promises);
+  }
+
+  private async initEmailProvider(newConfig?: Config) {
+    const emailConfig = !isNil(newConfig)
+      ? newConfig
+      : await this.grpcSdk.config.get('email');
+
+    const { transport, transportSettings } = emailConfig;
+
+    this.emailProvider = new EmailProvider(transport, transportSettings);
   }
 }

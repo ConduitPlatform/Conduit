@@ -7,6 +7,7 @@ export class ConduitSchema {
   readonly modelOptions: ConduitSchemaOptions;
   ownerModule: string = 'unknown';
   parentSchema?: string;
+
   constructor(
     name: string,
     fields: ConduitModel,

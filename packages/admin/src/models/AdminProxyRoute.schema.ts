@@ -1,6 +1,7 @@
-import { ConduitActiveSchema, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { IProxyMiddlewareOptions } from '../interfaces ';
 import { ProxyRouteActions } from '@conduitplatform/hermes';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema = {
   _id: TYPE.ObjectId,
@@ -57,6 +58,7 @@ export class AdminProxyRoute extends ConduitActiveSchema<AdminProxyRoute> {
 
   createdAt!: Date;
   updatedAt!: Date;
+
   private constructor(database: DatabaseProvider) {
     super(database, AdminProxyRoute.name, schema, modelOptions, collectionName);
   }

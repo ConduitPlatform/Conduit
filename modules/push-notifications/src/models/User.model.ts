@@ -1,8 +1,5 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  Indexable,
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 interface AuthProvider {
   id: string;
@@ -10,6 +7,7 @@ interface AuthProvider {
   tokenExpires?: Date;
   data: Indexable;
 }
+
 export class User extends ConduitActiveSchema<User> {
   private static _instance: User;
   _id!: string;

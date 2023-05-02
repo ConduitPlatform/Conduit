@@ -1,8 +1,6 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { FormSubmissionTemplate } from './templates';
@@ -10,20 +8,13 @@ import { AdminHandlers } from './admin';
 import { FormsRoutes } from './routes';
 import { FormsController } from './controllers/forms.controller';
 import * as models from './models';
-import path from 'path';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
   protected metricsSchema = metricsSchema;
-  service = {
-    protoPath: path.resolve(__dirname, 'forms.proto'),
-    protoDescription: 'forms.Forms',
-    functions: {
-      setConfig: this.setConfig.bind(this),
-    },
-  };
   private isRunning = false;
   private adminRouter: AdminHandlers;
   private userRouter: FormsRoutes;
@@ -81,6 +72,11 @@ export default class Forms extends ManagedModule<Config> {
     }
   }
 
+  async initializeMetrics() {
+    const formsTotal = await models.Forms.getInstance().countDocuments({});
+    ConduitGrpcSdk.Metrics?.set('forms_total', formsTotal);
+  }
+
   protected registerSchemas() {
     const promises = Object.values(models).map(model => {
       const modelInstance = model.getInstance(this.database);
@@ -89,10 +85,5 @@ export default class Forms extends ManagedModule<Config> {
         .then(() => this.database.migrate(modelInstance.name));
     });
     return Promise.all(promises);
-  }
-
-  async initializeMetrics() {
-    const formsTotal = await models.Forms.getInstance().countDocuments({});
-    ConduitGrpcSdk.Metrics?.set('forms_total', formsTotal);
   }
 }

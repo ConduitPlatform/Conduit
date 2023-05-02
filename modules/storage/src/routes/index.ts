@@ -1,13 +1,15 @@
 import { FileHandlers } from '../handlers/file';
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
+import {
+  ConduitNumber,
   ConduitString,
   GrpcServer,
   RoutingManager,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
 import { File } from '../models';
 
 export class StorageRoutes {

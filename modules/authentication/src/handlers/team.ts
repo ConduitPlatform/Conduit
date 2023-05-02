@@ -1,16 +1,19 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
-  ConduitObjectId,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+
+import {
+  ConduitNumber,
+  ConduitObjectId,
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { Team, Token, User } from '../models';
 import { Config } from '../config';
 import { Team as TeamAuthz, User as UserAuthz } from '../authz';
@@ -22,20 +25,20 @@ import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 
 export class TeamsHandler implements IAuthenticationStrategy {
-  private initialized = false;
   private static _instance?: TeamsHandler;
+  private initialized = false;
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+
+  public get isActive() {
+    return this.initialized;
+  }
 
   public static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (TeamsHandler._instance) return TeamsHandler._instance;
     if (!grpcSdk) throw new Error('GrpcSdk not provided');
     TeamsHandler._instance = new TeamsHandler(grpcSdk);
     return TeamsHandler._instance;
-  }
-
-  public get isActive() {
-    return this.initialized;
   }
 
   async addUserToTeam(user: User, invitationToken: string) {

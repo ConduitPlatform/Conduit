@@ -2,12 +2,10 @@ import { NextFunction, Router } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteObject,
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
   SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -42,20 +40,20 @@ import {
 } from './protoTypes/router';
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
     functions: {
-      setConfig: this.setConfig.bind(this),
       generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private _internalRouter: ConduitRoutingController;
   private _security: SecurityModule;
   private adminRouter: AdminHandlers;
@@ -104,16 +102,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this._security = new SecurityModule(this.grpcSdk, this);
   }
 
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.grpcSdk.database!);
-      return this.grpcSdk
-        .database!.createSchemaFromAdapter(modelInstance)
-        .then(() => this.database.migrate(modelInstance.name));
-    });
-    return Promise.all(promises);
-  }
-
   async preConfig(config: Config) {
     if (config.hostUrl === '') {
       config.hostUrl =
@@ -159,67 +147,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     await this.highAvailability();
     this.updateHealth(HealthCheckStatus.SERVING);
-  }
-
-  private getHttpPort() {
-    const value = process.env['CLIENT_HTTP_PORT'] ?? '3000';
-    const port = parseInt(value, 10);
-    if (isNaN(port)) {
-      ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
-      process.exit(-1);
-    }
-    if (port >= 0) {
-      return port;
-    }
-  }
-
-  private getSocketPort() {
-    const value = process.env['CLIENT_SOCKET_PORT'] ?? '3001';
-    const port = parseInt(value, 10);
-    if (isNaN(port)) {
-      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
-      process.exit(-1);
-    }
-    if (port >= 0) {
-      return port;
-    }
-  }
-
-  private async recoverFromState() {
-    const r = await this.grpcSdk.state!.getKey('router');
-    const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
-    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
-    if (r) {
-      const state = JSON.parse(r);
-      if (state.routes) {
-        state.routes.forEach((r: any) => {
-          try {
-            this.internalRegisterRoute(r.protofile, r.routes, r.url);
-          } catch (err) {
-            ConduitGrpcSdk.Logger.error(err as Error);
-          }
-        });
-      }
-    }
-    const proxies: ProxyRouteT[] = [];
-    if (proxyRoutes) {
-      proxyRoutes.forEach(route => {
-        proxies.push({
-          options: {
-            path: route.path,
-            action: route.action,
-            description: route.description,
-            middlewares: route.middlewares,
-          },
-          proxy: {
-            target: route.target,
-            ...route.proxyMiddlewareOptions,
-          },
-        });
-      });
-      this.internalRegisterRoute(undefined, proxies, 'router', 'router');
-    }
-    ConduitGrpcSdk.Logger.log('Recovered routes');
   }
 
   async highAvailability() {
@@ -462,5 +389,76 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   registerRoute(route: ConduitRoute): void {
     this._sdkRoutes.push({ action: route.input.action, path: route.input.path });
     this._internalRouter.registerConduitRoute(route);
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.grpcSdk.database!);
+      return this.grpcSdk
+        .database!.createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
+    });
+    return Promise.all(promises);
+  }
+
+  private getHttpPort() {
+    const value = process.env['CLIENT_HTTP_PORT'] ?? '3000';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid HTTP port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private getSocketPort() {
+    const value = process.env['CLIENT_SOCKET_PORT'] ?? '3001';
+    const port = parseInt(value, 10);
+    if (isNaN(port)) {
+      ConduitGrpcSdk.Logger.error(`Invalid Socket port value: ${port}`);
+      process.exit(-1);
+    }
+    if (port >= 0) {
+      return port;
+    }
+  }
+
+  private async recoverFromState() {
+    const r = await this.grpcSdk.state!.getKey('router');
+    const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
+    if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
+    if (r) {
+      const state = JSON.parse(r);
+      if (state.routes) {
+        state.routes.forEach((r: any) => {
+          try {
+            this.internalRegisterRoute(r.protofile, r.routes, r.url);
+          } catch (err) {
+            ConduitGrpcSdk.Logger.error(err as Error);
+          }
+        });
+      }
+    }
+    const proxies: ProxyRouteT[] = [];
+    if (proxyRoutes) {
+      proxyRoutes.forEach(route => {
+        proxies.push({
+          options: {
+            path: route.path,
+            action: route.action,
+            description: route.description,
+            middlewares: route.middlewares,
+          },
+          proxy: {
+            target: route.target,
+            ...route.proxyMiddlewareOptions,
+          },
+        });
+      });
+      this.internalRegisterRoute(undefined, proxies, 'router', 'router');
+    }
+    ConduitGrpcSdk.Logger.log('Recovered routes');
   }
 }

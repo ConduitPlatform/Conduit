@@ -1,8 +1,5 @@
-import {
-  ConduitRouteActions,
-  ConduitRouteParameters,
-  ConduitString,
-} from '@conduitplatform/grpc-sdk';
+import { ConduitRouteActions, ConduitRouteParameters } from '@conduitplatform/grpc-sdk';
+import { ConduitString } from '@conduitplatform/module-tools';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 import { verify2Fa } from '../utils/auth';
 

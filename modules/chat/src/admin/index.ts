@@ -1,16 +1,18 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   Query,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { populateArray } from '../utils';
@@ -27,6 +29,145 @@ export class AdminHandlers {
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
+  }
+
+  async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { sort, search, populate } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    let query: Query<ChatRoom> = {};
+    let identifier, populates;
+    if (!isNil(populate)) {
+      populates = populateArray(populate);
+    }
+    if (!isNil(search)) {
+      identifier = escapeStringRegexp(search);
+      query = { name: { $regex: `.*${identifier}.*`, $options: 'i' } };
+    }
+
+    const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      populates,
+    );
+    const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
+
+    const [chatRoomDocuments, count] = await Promise.all([
+      chatRoomDocumentsPromise,
+      totalCountPromise,
+    ]).catch((e: Error) => {
+      throw new GrpcError(status.INTERNAL, e.message);
+    });
+
+    return { chatRoomDocuments, count };
+  }
+
+  async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { participants } = call.request.params;
+    if (participants.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'participants is required and must be a non-empty array',
+      );
+    }
+    await this.validateUsersInput(participants);
+    const chatRoom = await ChatRoom.getInstance()
+      .create({
+        name: call.request.params.name,
+        participants: Array.from(new Set([...participants])),
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    ConduitGrpcSdk.Metrics?.increment('chat_rooms_total');
+    return chatRoom;
+  }
+
+  async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be a non-empty array',
+      );
+    }
+    await ChatRoom.getInstance()
+      .deleteMany({ _id: { $in: ids } })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    await ChatMessage.getInstance()
+      .deleteMany({ room: { $in: ids } })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
+    return 'Done';
+  }
+
+  async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { senderUser, roomId, populate, sort } = call.request.params;
+    const { skip } = call.request.params ?? 0;
+    const { limit } = call.request.params ?? 25;
+    const query: Query<ChatMessage> = {
+      ...(senderUser ? { senderUser } : {}),
+      ...(roomId ? { room: roomId } : {}),
+    };
+    let populates;
+    if (!isNil(populate)) {
+      populates = populateArray(populate);
+    }
+    if (!isNil(senderUser)) {
+      const user = await User.getInstance().findOne({ _id: senderUser });
+      if (isNil(user)) {
+        throw new GrpcError(status.NOT_FOUND, `User ${senderUser} does not exist`);
+      }
+    }
+    if (!isNil(roomId)) {
+      const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+      if (isNil(room)) {
+        throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);
+      }
+    }
+
+    const messagesPromise = ChatMessage.getInstance().findMany(
+      query,
+      undefined,
+      skip,
+      limit,
+      sort,
+      populates,
+    );
+    const countPromise = ChatMessage.getInstance().countDocuments(query);
+    const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
+      (e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      },
+    );
+
+    return { messages, count };
+  }
+
+  async deleteMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { ids } = call.request.params;
+    if (ids.length === 0) {
+      // array check is required
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'ids is required and must be a non-empty array',
+      );
+    }
+    await ChatMessage.getInstance()
+      .deleteMany({ _id: { $in: ids } })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return 'Done';
   }
 
   private registerAdminRoutes() {
@@ -124,143 +265,5 @@ export class AdminHandlers {
         throw new GrpcError(status.INVALID_ARGUMENT, `users [${wrongIds}] do not exist`);
       }
     }
-  }
-
-  async getRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { sort, search, populate } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query: Query = {};
-    let identifier, populates;
-    if (!isNil(populate)) {
-      populates = populateArray(populate);
-    }
-    if (!isNil(search)) {
-      identifier = escapeStringRegexp(search);
-      query['name'] = { $regex: `.*${identifier}.*`, $options: 'i' };
-    }
-
-    const chatRoomDocumentsPromise = ChatRoom.getInstance().findMany(
-      query,
-      undefined,
-      skip,
-      limit,
-      sort,
-      populates,
-    );
-    const totalCountPromise = ChatRoom.getInstance().countDocuments(query);
-
-    const [chatRoomDocuments, count] = await Promise.all([
-      chatRoomDocumentsPromise,
-      totalCountPromise,
-    ]).catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-
-    return { chatRoomDocuments, count };
-  }
-
-  async createRoom(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { participants } = call.request.params;
-    if (participants.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'participants is required and must be a non-empty array',
-      );
-    }
-    await this.validateUsersInput(participants);
-    const chatRoom = await ChatRoom.getInstance()
-      .create({
-        name: call.request.params.name,
-        participants: Array.from(new Set([...participants])),
-      })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    ConduitGrpcSdk.Metrics?.increment('chat_rooms_total');
-    return chatRoom;
-  }
-
-  async deleteRooms(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { ids } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be a non-empty array',
-      );
-    }
-    await ChatRoom.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    await ChatMessage.getInstance()
-      .deleteMany({ room: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    ConduitGrpcSdk.Metrics?.decrement('chat_rooms_total');
-    return 'Done';
-  }
-
-  async getMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { senderUser, roomId, populate, sort } = call.request.params;
-    const { skip } = call.request.params ?? 0;
-    const { limit } = call.request.params ?? 25;
-    const query: Query = {};
-    let populates;
-    if (!isNil(populate)) {
-      populates = populateArray(populate);
-    }
-    if (!isNil(senderUser)) {
-      query['senderUser'] = senderUser;
-      const user = await User.getInstance().findOne({ _id: senderUser });
-      if (isNil(user)) {
-        throw new GrpcError(status.NOT_FOUND, `User ${senderUser} does not exist`);
-      }
-    }
-    if (!isNil(roomId)) {
-      query['room'] = roomId;
-      const room = await ChatRoom.getInstance().findOne({ _id: roomId });
-      if (isNil(room)) {
-        throw new GrpcError(status.NOT_FOUND, `Room ${roomId} does not exists`);
-      }
-    }
-
-    const messagesPromise = ChatMessage.getInstance().findMany(
-      query,
-      undefined,
-      skip,
-      limit,
-      sort,
-      populates,
-    );
-    const countPromise = ChatMessage.getInstance().countDocuments(query);
-    const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
-      (e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      },
-    );
-
-    return { messages, count };
-  }
-
-  async deleteMessages(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { ids } = call.request.params;
-    if (ids.length === 0) {
-      // array check is required
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'ids is required and must be a non-empty array',
-      );
-    }
-    await ChatMessage.getInstance()
-      .deleteMany({ _id: { $in: ids } })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    return 'Done';
   }
 }

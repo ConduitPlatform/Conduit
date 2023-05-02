@@ -1,10 +1,9 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import { OAuth2 } from '../OAuth2';
 import * as googleParameters from './google.json';

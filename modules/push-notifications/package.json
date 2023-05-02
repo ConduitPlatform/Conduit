@@ -4,6 +4,7 @@
   "description": "Handles sending push notifications to users",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "private": true,
   "engines": {
     "node": ">=14"
   },
@@ -27,7 +28,8 @@
     "src"
   ],
   "dependencies": {
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",
     "@onesignal/node-onesignal": "^1.0.0-beta9",

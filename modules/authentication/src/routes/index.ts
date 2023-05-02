@@ -2,11 +2,13 @@ import { LocalHandlers } from '../handlers/local';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+} from '@conduitplatform/grpc-sdk';
+import {
   ConduitString,
   ConfigController,
   GrpcServer,
   RoutingManager,
-} from '@conduitplatform/grpc-sdk';
+} from '@conduitplatform/module-tools';
 import { CommonHandlers } from '../handlers/common';
 import { ServiceHandler } from '../handlers/service';
 import * as oauth2 from '../handlers/oauth2';

@@ -1,14 +1,6 @@
 syntax = 'proto3';
 package email;
 
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
-}
-
 message RegisterTemplateRequest {
   string name = 1;
   string subject = 2;
@@ -38,7 +30,6 @@ message SendEmailResponse {
 }
 
 service Email {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc RegisterTemplate(RegisterTemplateRequest) returns (RegisterTemplateResponse);
   rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
 }

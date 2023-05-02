@@ -14,6 +14,7 @@ export class RedisManager {
       ...redisDetails,
     };
   }
+
   getClient(
     options?:
       | RedisOptions

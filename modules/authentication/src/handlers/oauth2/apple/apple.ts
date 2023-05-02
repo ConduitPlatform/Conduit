@@ -2,12 +2,9 @@ import { OAuth2 } from '../OAuth2';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   Indexable,
   ParsedRouterRequest,
-  RoutingManager,
 } from '@conduitplatform/grpc-sdk';
 import * as appleParameters from '../apple/apple.json';
 import { ConnectionParams } from '../interfaces/ConnectionParams';
@@ -25,6 +22,11 @@ import qs from 'querystring';
 import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
 import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
 import { validateStateToken } from '../utils';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { isNil } from 'lodash';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {

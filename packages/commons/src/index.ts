@@ -19,6 +19,13 @@ export class ConduitCommons {
     }
   }
 
+  static getInstance(name: string) {
+    if (!this._instance) {
+      this._instance = new ConduitCommons(name);
+    }
+    return this._instance;
+  }
+
   registerCore(core: IConduitCore) {
     if (this._core) throw new Error('Cannot register a second core!');
     this._core = core;
@@ -47,13 +54,6 @@ export class ConduitCommons {
   getConfigManager(): IConfigManager {
     if (this._configManager) return this._configManager;
     throw new Error('Config manager not assigned yet');
-  }
-
-  static getInstance(name: string) {
-    if (!this._instance) {
-      this._instance = new ConduitCommons(name);
-    }
-    return this._instance;
   }
 }
 

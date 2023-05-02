@@ -4,10 +4,9 @@ import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
 import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health_check';
 import { EventEmitter } from 'events';
+import { ConduitModuleDefinition } from '../protoUtils';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
-  private _client?: Client<T>;
-  private _healthClient?: Client<typeof HealthDefinition>;
   protected channel?: Channel;
   protected protoPath?: string;
   protected type?: T;
@@ -19,6 +18,36 @@ export class ConduitModule<T extends CompatServiceDefinition> {
     private readonly _serviceUrl: string,
     private readonly _grpcToken?: string,
   ) {}
+
+  private _client?: Client<T>;
+
+  get client(): Client<T> | undefined {
+    return this._client;
+  }
+
+  private _healthClient?: Client<typeof HealthDefinition>;
+
+  get healthClient(): Client<typeof HealthDefinition> | undefined {
+    return this._healthClient;
+  }
+
+  private _moduleClient?: Client<typeof ConduitModuleDefinition>;
+
+  get moduleClient(): Client<typeof ConduitModuleDefinition> | undefined {
+    return this._moduleClient;
+  }
+
+  get active(): boolean {
+    if (!this.channel) {
+      return false;
+    }
+    const connectivityState = this.channel.getConnectivityState(true);
+    return connectivityState === 2 || connectivityState === 1 || connectivityState === 0;
+  }
+
+  get healthCheckWatcher() {
+    return this.healthCheckEmitter;
+  }
 
   initializeClient(type: T): Client<T> {
     if (this._client) return this._client;
@@ -51,6 +80,7 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       },
     });
     this._healthClient = clientFactory.create(HealthDefinition, this.channel);
+    this._moduleClient = clientFactory.create(ConduitModuleDefinition, this.channel);
     const monitorChannel = () => {
       if (!this.channel) return;
       try {
@@ -59,26 +89,6 @@ export class ConduitModule<T extends CompatServiceDefinition> {
       } catch (e) {}
     };
     monitorChannel();
-  }
-
-  get active(): boolean {
-    if (!this.channel) {
-      return false;
-    }
-    const connectivityState = this.channel.getConnectivityState(true);
-    return connectivityState === 2 || connectivityState === 1 || connectivityState === 0;
-  }
-
-  get client(): Client<T> | undefined {
-    return this._client;
-  }
-
-  get healthClient(): Client<typeof HealthDefinition> | undefined {
-    return this._healthClient;
-  }
-
-  get healthCheckWatcher() {
-    return this.healthCheckEmitter;
   }
 
   closeConnection() {

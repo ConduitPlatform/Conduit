@@ -10,6 +10,9 @@ import { NodemailerBuilder } from '../nodemailer/nodemailerBuilder';
 export class SmtpProvider extends EmailProviderClass {
   constructor(transportSettings: any) {
     super(createTransport(transportSettings));
+    this._transport!.verify((error, success) => {
+      console.log(!success ? error : 'SMTP connection established');
+    });
   }
 
   listTemplates(): Promise<Template[]> {
@@ -31,6 +34,7 @@ export class SmtpProvider extends EmailProviderClass {
   updateTemplate(data: UpdateEmailTemplate): Promise<Template> {
     throw new Error('Method not implemented.');
   }
+
   async deleteTemplate(id: string): Promise<DeleteEmailTemplate> {
     throw new Error('Method not implemented.');
   }

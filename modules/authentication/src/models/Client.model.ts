@@ -1,4 +1,5 @@
-import { ConduitActiveSchema, DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 export class Client extends ConduitActiveSchema<Client> {
   private static _instance: Client;

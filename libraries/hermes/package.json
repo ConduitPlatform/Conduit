@@ -3,6 +3,7 @@
   "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "private": true,
   "engines": {
     "node": ">=14"
   },
@@ -14,7 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@apollo/server": "^4.6.0",
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "*",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",
     "@socket.io/redis-adapter": "^8.1.0",

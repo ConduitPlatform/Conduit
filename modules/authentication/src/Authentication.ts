@@ -1,11 +1,8 @@
 import ConduitGrpcSdk, {
-  ConduitActiveSchema,
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -15,7 +12,7 @@ import { AdminHandlers } from './admin';
 import { AuthenticationRoutes } from './routes';
 import * as models from './models';
 import { AuthUtils } from './utils';
-import { TokenType } from './constants/TokenType';
+import { TokenType } from './constants';
 import { v4 as uuid } from 'uuid';
 import {
   UserChangePass,
@@ -30,6 +27,11 @@ import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
 import { configMigration } from './migrations/configMigration';
+import {
+  ConduitActiveSchema,
+  ConfigController,
+  ManagedModule,
+} from '@conduitplatform/module-tools';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -37,7 +39,6 @@ export default class Authentication extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'authentication.proto'),
     protoDescription: 'authentication.Authentication',
     functions: {
-      setConfig: this.setConfig.bind(this),
       userLogin: this.userLogin.bind(this),
       userCreate: this.userCreate.bind(this),
       changePass: this.changePass.bind(this),
@@ -83,14 +84,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -98,14 +99,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.refreshTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.refreshTokens
-          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.refreshTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];

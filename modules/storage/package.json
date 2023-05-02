@@ -4,6 +4,7 @@
   "description": "This will provide a consistent storage mechanism",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "private": true,
   "engines": {
     "node": ">=14"
   },
@@ -35,7 +36,8 @@
     "@aws-sdk/client-sts": "^3.310.0",
     "@aws-sdk/s3-request-presigner": "^3.310.0",
     "@azure/storage-blob": "^12.13.0",
-    "@conduitplatform/grpc-sdk": "^1.0.1",
+    "@conduitplatform/grpc-sdk": "*",
+    "@conduitplatform/module-tools": "*",
     "@google-cloud/storage": "^6.9.5",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",

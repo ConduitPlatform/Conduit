@@ -4,11 +4,11 @@ import {
   ConduitRouteActions,
   ConduitSchema,
   Indexable,
-  RouteBuilder,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { CmsHandlers } from '../../handlers/cms/crud.handler';
 import { ConduitBuiltRoute } from '../../interfaces';
+import { RouteBuilder } from '@conduitplatform/module-tools';
 
 export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): number {
   const hasA = [];

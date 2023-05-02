@@ -7,8 +7,14 @@ import convict from 'convict';
 
 export class Core extends IConduitCore {
   private static _instance: Core;
-  private readonly _grpcServer: GrpcServer;
   readonly config: convict.Config<ConfigSchema> = convict(AppConfigSchema);
+  private readonly _grpcServer: GrpcServer;
+
+  private constructor(grpcPort: number) {
+    super(ConduitCommons.getInstance('core'));
+    this.commons.registerCore(this);
+    this._grpcServer = new GrpcServer(this.commons, grpcPort);
+  }
 
   get grpcServer() {
     return this._grpcServer;
@@ -16,12 +22,6 @@ export class Core extends IConduitCore {
 
   get initialized() {
     return this._grpcServer.initialized;
-  }
-
-  private constructor(grpcPort: number) {
-    super(ConduitCommons.getInstance('core'));
-    this.commons.registerCore(this);
-    this._grpcServer = new GrpcServer(this.commons, grpcPort);
   }
 
   static getInstance(grpcPort?: number): Core {

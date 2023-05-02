@@ -1,32 +1,33 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package conduit.core;
 
 service Core {}
 
 service Config {
   rpc Get (GetConfigRequest) returns (GetConfigResponse);
-  rpc Configure (UpdateRequest) returns (UpdateResponse);
+  rpc Configure (UpdateConfigRequest) returns (UpdateConfigResponse);
   rpc ModuleExists (ModuleExistsRequest) returns (ModuleExistsResponse);
-  rpc ModuleList (Empty) returns (ModuleListResponse);
-  rpc WatchModules (Empty) returns (stream ModuleListResponse);
+  rpc ModuleList (google.protobuf.Empty) returns (ModuleListResponse);
+  rpc WatchModules (google.protobuf.Empty) returns (stream ModuleListResponse);
   rpc RegisterModule (RegisterModuleRequest) returns (RegisterModuleResponse);
-  rpc ModuleHealthProbe(ModuleHealthRequest) returns (Empty);
-  rpc GetServerConfig (Empty) returns (GetConfigResponse);
-  rpc GetRedisDetails (Empty) returns (GetRedisDetailsResponse);
+  rpc ModuleHealthProbe(ModuleHealthRequest) returns (google.protobuf.Empty);
+  rpc GetServerConfig (google.protobuf.Empty) returns (GetConfigResponse);
+  rpc GetRedisDetails (google.protobuf.Empty) returns (GetRedisDetailsResponse);
   rpc GetModuleUrlByName (ModuleByNameRequest) returns (ModuleByNameResponse);
 }
 
 service Admin {
-  rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
-  rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (Empty);
+  rpc GenerateAdminProto(GenerateAdminProtoRequest) returns (GenerateAdminProtoResponse);
+  rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (google.protobuf.Empty);
 }
 
-message GenerateProtoRequest {
+message GenerateAdminProtoRequest {
   string moduleName = 1;
   repeated string routes = 2;
 }
 
-message GenerateProtoResponse {
+message GenerateAdminProtoResponse {
   string protoFile = 1;
   string formattedModuleName = 2;
 }
@@ -57,30 +58,27 @@ message RegisterAdminRouteRequest {
     optional string cacheControl = 9;
   }
 
-    message ProxyRouteOptions {
-      optional string target = 1;
-      optional bool changeOrigin = 2;
-      optional bool secure = 3;
-      optional string context = 4;
-      optional string pathRewrite = 5;
-      optional string headers = 6;
-      optional int32 proxyTimeout = 7;
-      optional string cookieDomainRewrite = 8;
-      optional bool autoRewrite = 9;
-      optional bool followRedirects = 10;
-      optional bool xfwd = 11;
-      optional bool ws = 12;
-      optional string router = 13;
-      optional bool preserveHeaderKeyCase = 14;
-    }
+  message ProxyRouteOptions {
+    optional string target = 1;
+    optional bool changeOrigin = 2;
+    optional bool secure = 3;
+    optional string context = 4;
+    optional string pathRewrite = 5;
+    optional string headers = 6;
+    optional int32 proxyTimeout = 7;
+    optional string cookieDomainRewrite = 8;
+    optional bool autoRewrite = 9;
+    optional bool followRedirects = 10;
+    optional bool xfwd = 11;
+    optional bool ws = 12;
+    optional string router = 13;
+    optional bool preserveHeaderKeyCase = 14;
+  }
 
   message ConduitRouteReturnDefinition {
     string name = 1;
     string fields = 2;
   }
-}
-
-message Empty {
 }
 
 message ModuleHealthRequest {
@@ -130,24 +128,24 @@ message GetConfigRequest {
 
 
 message GetRedisDetailsResponse {
-    optional string redisHost = 1;
-    optional int32 redisPort = 2;
-    optional string redisUsername = 3;
-    optional string redisPassword = 4;
-    optional string redisConfig = 5;
+  optional string redisHost = 1;
+  optional int32 redisPort = 2;
+  optional string redisUsername = 3;
+  optional string redisPassword = 4;
+  optional string redisConfig = 5;
 }
 
 message GetConfigResponse {
   string data = 1;
 }
 
-message UpdateRequest {
+message UpdateConfigRequest {
   string config = 1;
   string schema = 2;
   bool override = 3;
 }
 
-message UpdateResponse {
+message UpdateConfigResponse {
   string result = 1;
 }
 

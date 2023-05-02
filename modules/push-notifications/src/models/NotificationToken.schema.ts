@@ -1,9 +1,6 @@
-import {
-  ConduitActiveSchema,
-  DatabaseProvider,
-  PlatformTypesEnum,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { DatabaseProvider, PlatformTypesEnum, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitActiveSchema } from '@conduitplatform/module-tools';
+
 import { User } from './User.model';
 
 const schema = {

@@ -1,11 +1,8 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
-  ConfigController,
   GrpcError,
   ParsedRouterRequest,
-  RoutingManager,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
@@ -26,6 +23,11 @@ import { TeamsHandler } from '../team';
 import { validateStateToken } from './utils';
 import { IAuthenticationStrategy } from '../../interfaces';
 import { TokenType } from '../../constants';
+import {
+  ConduitString,
+  ConfigController,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -186,14 +188,22 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async createOrUpdateUser(payload: Payload<T>, invitationToken?: string): Promise<User> {
     let user: User | null = null;
-    if (payload.hasOwnProperty('email')) {
+    if (payload.hasOwnProperty('email') && !isNil(payload.email)) {
       user = await User.getInstance().findOne({
         email: payload.email,
       });
-    } else if (payload.hasOwnProperty('id') && !payload.hasOwnProperty('email')) {
+    } else if (
+      payload.hasOwnProperty('id') &&
+      (!payload.hasOwnProperty('email') || isNil(payload.email))
+    ) {
       user = await User.getInstance().findOne({
-        [this.providerName]: { id: payload.id },
+        [this.providerName + '.id']: payload.id,
       });
+    } else {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'No email or id received from provider',
+      );
     }
     if (!isNil(user)) {
       if (!user!.active) throw new GrpcError(status.PERMISSION_DENIED, 'Inactive user');

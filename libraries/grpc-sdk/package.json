@@ -60,7 +60,6 @@
     "typescript": "~5.0.4"
   },
   "peerDependencies": {
-    "@grpc/grpc-js": "^1.5.2",
-    "@grpc/proto-loader": "^0.7.6"
+    "@grpc/grpc-js": "^1.5.2"
   }
 }

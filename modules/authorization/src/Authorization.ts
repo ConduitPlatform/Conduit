@@ -1,10 +1,8 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  ManagedModule,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import AppConfigSchema, { Config } from './config';
@@ -14,7 +12,6 @@ import metricsSchema from './metrics';
 import {
   Decision,
   DeleteResourceRequest,
-  Empty,
   FindRelationRequest,
   PermissionCheck,
   PermissionRequest,
@@ -29,15 +26,15 @@ import { RelationsController } from './controllers/relations.controller';
 import { ResourceController } from './controllers/resource.controller';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { Empty } from './protoTypes/google/protobuf/empty';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = metricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'authorization.proto'),
     protoDescription: 'authorization.Authorization',
     functions: {
-      setConfig: this.setConfig.bind(this),
       defineResource: this.defineResource.bind(this),
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
@@ -50,6 +47,7 @@ export default class Authorization extends ManagedModule<Config> {
       can: this.can.bind(this),
     },
   };
+  protected metricsSchema = metricsSchema;
   private adminRouter: AdminHandlers;
   private indexController: IndexController;
   private permissionsController: PermissionsController;
@@ -66,16 +64,6 @@ export default class Authorization extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      return this.database
-        .createSchemaFromAdapter(modelInstance)
-        .then(() => this.database.migrate(modelInstance.name));
-    });
-    return Promise.all(promises);
   }
 
   async onConfig() {
@@ -204,6 +192,7 @@ export default class Authorization extends ManagedModule<Config> {
     //   this.grpcSdk.registerMetric(metric.type, metric.config);
     // }
   }
+
   createResourceObject(
     name: string,
     relations: Resource_Relation[],
@@ -225,5 +214,15 @@ export default class Authorization extends ManagedModule<Config> {
       resource.permissions![permission.name] = permission.roles;
     });
     return resource;
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      return this.database
+        .createSchemaFromAdapter(modelInstance)
+        .then(() => this.database.migrate(modelInstance.name));
+    });
+    return Promise.all(promises);
   }
 }

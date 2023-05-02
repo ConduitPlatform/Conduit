@@ -1,147 +1,146 @@
 syntax = 'proto3';
+import "google/protobuf/empty.proto";
 package database;
 
 message CreateSchemaRequest {
-    string name = 1;
-    string fields = 2;
-    string modelOptions = 3;
-    string collectionName = 4;
+  string name = 1;
+  string fields = 2;
+  string modelOptions = 3;
+  string collectionName = 4;
 }
 
 message GetSchemaRequest {
-    string schemaName = 1;
+  string schemaName = 1;
 }
 
 message GetSchemasRequest {
 }
 
 message GetSchemasResponse {
-    repeated Schema schemas = 1;
+  repeated Schema schemas = 1;
 }
 
 message DropCollectionResponse {
-    string result = 1;
+  string result = 1;
 }
 
 message Schema {
-    string name = 1;
-    string fields = 2;
-    string modelOptions = 3;
-    string collectionName = 4;
-    string fieldHash = 5;
+  string name = 1;
+  string fields = 2;
+  string modelOptions = 3;
+  string collectionName = 4;
+  string fieldHash = 5;
 }
 
 message SchemaExtension {
-    string schemaName = 1;
-    string fields = 2;
+  string schemaName = 1;
+  string fields = 2;
 }
 
 message FindOneRequest {
-    string schemaName = 1;
-    string query = 2;
-    optional string select = 3;
-    repeated string populate = 4;
+  string schemaName = 1;
+  string query = 2;
+  optional string select = 3;
+  repeated string populate = 4;
 }
 
 message FindRequest {
-    string schemaName = 1;
-    string query = 2;
-    optional string select = 3;
-    optional int32 skip = 4;
-    optional int32 limit = 5;
-    map<string, int32> sort = 6; // -1 | 1
-    repeated string populate = 7;
+  string schemaName = 1;
+  string query = 2;
+  optional string select = 3;
+  optional int32 skip = 4;
+  optional int32 limit = 5;
+  map<string, int32> sort = 6; // -1 | 1
+  repeated string populate = 7;
 }
 
 message QueryResponse {
-    string result = 1;
+  string result = 1;
 }
 
 message QueryRequest {
-    string schemaName = 1;
-    string query = 2;
+  string schemaName = 1;
+  string query = 2;
 }
 
 message RawQueryRequest {
-    message RawQuery {
-        message MongoQuery {
-            oneof operation {
-                string aggregate = 1;
-                string count = 2;
-                string deleteOne = 3;
-                string deleteMany = 4;
-                string drop = 5;
-                string explain = 6;
-                string find = 7;
-                string insertOne = 8;
-                string insertMany = 9;
-                string updateOne = 10;
-                string updateMany = 11;
-            }
-            optional string options = 12;
-        }
-        message SQLQuery {
-            string query = 1;
-            optional string options = 2;
-        };
-        optional MongoQuery mongoQuery = 1;
-        optional SQLQuery sqlQuery = 2;
+  message RawQuery {
+    message MongoQuery {
+      oneof operation {
+        string aggregate = 1;
+        string count = 2;
+        string deleteOne = 3;
+        string deleteMany = 4;
+        string drop = 5;
+        string explain = 6;
+        string find = 7;
+        string insertOne = 8;
+        string insertMany = 9;
+        string updateOne = 10;
+        string updateMany = 11;
+      }
+      optional string options = 12;
+    }
+    message SQLQuery {
+      string query = 1;
+      optional string options = 2;
     };
-    string schemaName = 1;
-    RawQuery query = 2;
+    optional MongoQuery mongoQuery = 1;
+    optional SQLQuery sqlQuery = 2;
+  };
+  string schemaName = 1;
+  RawQuery query = 2;
 }
 
 message UpdateRequest {
-    string schemaName = 1;
-    string id = 2;
-    string query = 3;
-    repeated string populate = 4;
+  string schemaName = 1;
+  string id = 2;
+  string query = 3;
+  repeated string populate = 4;
 }
 
 message UpdateManyRequest {
-    string schemaName = 1;
-    string filterQuery = 2;
-    string query = 3;
-    repeated string populate = 4;
+  string schemaName = 1;
+  string filterQuery = 2;
+  string query = 3;
+  repeated string populate = 4;
 }
 
 message DropCollectionRequest {
-    string schemaName = 1;
-    bool deleteData = 2;
+  string schemaName = 1;
+  bool deleteData = 2;
 }
 
 message MigrateRequest {
-    string schemaName = 1;
+  string schemaName = 1;
 }
 
 message ColumnExistenceRequest {
-    string schemaName = 1;
-    repeated string columns = 2;
+  string schemaName = 1;
+  repeated string columns = 2;
 }
 
 message ColumnExistenceResponse {
-    bool result = 1;
+  bool result = 1;
 }
 
-message Empty {}
-
 service DatabaseProvider {
-    rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
-    rpc GetSchema(GetSchemaRequest) returns (Schema);
-    rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
-    rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
-    rpc SetSchemaExtension(SchemaExtension) returns (Schema);
-    rpc Migrate(MigrateRequest) returns (Empty);
-    // Database queries
-    rpc findOne(FindOneRequest) returns (QueryResponse);
-    rpc findMany(FindRequest) returns (QueryResponse);
-    rpc create(QueryRequest) returns (QueryResponse);
-    rpc createMany(QueryRequest) returns (QueryResponse);
-    rpc deleteOne(QueryRequest) returns (QueryResponse);
-    rpc deleteMany(QueryRequest) returns (QueryResponse);
-    rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
-    rpc updateMany(UpdateManyRequest) returns (QueryResponse);
-    rpc countDocuments(QueryRequest) returns (QueryResponse);
-    rpc rawQuery(RawQueryRequest) returns (QueryResponse);
-    rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
+  rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
+  rpc GetSchema(GetSchemaRequest) returns (Schema);
+  rpc GetSchemas(GetSchemasRequest) returns (GetSchemasResponse);
+  rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
+  rpc SetSchemaExtension(SchemaExtension) returns (Schema);
+  rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
+  // Database queries
+  rpc findOne(FindOneRequest) returns (QueryResponse);
+  rpc findMany(FindRequest) returns (QueryResponse);
+  rpc create(QueryRequest) returns (QueryResponse);
+  rpc createMany(QueryRequest) returns (QueryResponse);
+  rpc deleteOne(QueryRequest) returns (QueryResponse);
+  rpc deleteMany(QueryRequest) returns (QueryResponse);
+  rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
+  rpc updateMany(UpdateManyRequest) returns (QueryResponse);
+  rpc countDocuments(QueryRequest) returns (QueryResponse);
+  rpc rawQuery(RawQueryRequest) returns (QueryResponse);
+  rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
 }

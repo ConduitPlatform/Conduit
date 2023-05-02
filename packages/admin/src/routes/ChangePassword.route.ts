@@ -2,9 +2,8 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
-  ConduitString,
-  ConfigController,
 } from '@conduitplatform/grpc-sdk';
+import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { compare, hash } from 'bcrypt';
 import { Admin } from '../models';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';

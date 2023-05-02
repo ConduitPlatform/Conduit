@@ -1,11 +1,11 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package router;
 
 service Router {
-  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
-  rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (Empty);
-  rpc SocketPush (SocketData) returns (Empty);
+  rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (google.protobuf.Empty);
+  rpc SocketPush (SocketData) returns (google.protobuf.Empty);
 }
 
 message GenerateProtoRequest {
@@ -16,14 +16,6 @@ message GenerateProtoRequest {
 message GenerateProtoResponse {
   string protoFile = 1;
   string formattedModuleName = 2;
-}
-
-message SetConfigRequest {
-  string newConfig = 1;
-}
-
-message SetConfigResponse {
-  string updatedConfig = 1;
 }
 
 message SocketData {
@@ -81,7 +73,4 @@ message RegisterConduitRouteRequest {
     string name = 1;
     string fields = 2;
   }
-}
-
-message Empty {
 }

@@ -1,7 +1,6 @@
-import ConduitGrpcSdk, {
-  ConduitJson,
-  ConduitRouteActions,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import { ConduitJson } from '@conduitplatform/module-tools';
+
 import { RegisteredModule } from '@conduitplatform/commons';
 import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
 

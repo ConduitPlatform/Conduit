@@ -1,11 +1,10 @@
 import ConduitGrpcSdk, {
-  ConfigController,
   DatabaseProvider,
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
-  ManagedModule,
+  ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminRoutes } from './admin';
@@ -31,16 +30,15 @@ import MetricsSchema from './metrics';
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter';
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
-  protected metricsSchema = MetricsSchema;
   service = {
     protoPath: path.resolve(__dirname, 'storage.proto'),
     protoDescription: 'storage.Storage',
     functions: {
-      setConfig: this.setConfig.bind(this),
       getFile: this.getFile.bind(this),
       getFileData: this.getFileData.bind(this),
       createFile: this.createFile.bind(this),
@@ -50,6 +48,7 @@ export default class Storage extends ManagedModule<Config> {
       updateFileByUrl: this.updateFileByUrl.bind(this),
     },
   };
+  protected metricsSchema = MetricsSchema;
   private adminRouter: AdminRoutes;
   private userRouter: StorageRoutes;
   private database: DatabaseProvider;
@@ -113,36 +112,6 @@ export default class Storage extends ManagedModule<Config> {
       await this.refreshAppRoutes();
       this.updateHealth(HealthCheckStatus.SERVING);
     }
-  }
-
-  private async refreshAppRoutes() {
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.userRouter = new StorageRoutes(
-          this.grpcServer,
-          this.grpcSdk,
-          this._fileHandlers,
-          this.enableAuthRoutes,
-        );
-        return this.userRouter.registerRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
-  }
-
-  protected registerSchemas() {
-    const promises = Object.values(models).map(model => {
-      const modelInstance = model.getInstance(this.database);
-      if (Object.keys(modelInstance.fields).length !== 0) {
-        // borrowed foreign model
-        return this.database
-          .createSchemaFromAdapter(modelInstance)
-          .then(() => this.database.migrate(modelInstance.name));
-      }
-    });
-    return Promise.all(promises);
   }
 
   async initializeMetrics() {
@@ -264,5 +233,35 @@ export default class Storage extends ManagedModule<Config> {
     const result = await this._fileHandlers.updateFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
+  }
+
+  protected registerSchemas() {
+    const promises = Object.values(models).map(model => {
+      const modelInstance = model.getInstance(this.database);
+      if (Object.keys(modelInstance.fields).length !== 0) {
+        // borrowed foreign model
+        return this.database
+          .createSchemaFromAdapter(modelInstance)
+          .then(() => this.database.migrate(modelInstance.name));
+      }
+    });
+    return Promise.all(promises);
+  }
+
+  private async refreshAppRoutes() {
+    this.grpcSdk
+      .waitForExistence('router')
+      .then(() => {
+        this.userRouter = new StorageRoutes(
+          this.grpcServer,
+          this.grpcSdk,
+          this._fileHandlers,
+          this.enableAuthRoutes,
+        );
+        return this.userRouter.registerRoutes();
+      })
+      .catch(e => {
+        ConduitGrpcSdk.Logger.error(e.message);
+      });
   }
 }

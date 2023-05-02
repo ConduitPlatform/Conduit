@@ -1,18 +1,20 @@
 import ConduitGrpcSdk, {
-  ConduitNumber,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  ConduitString,
   GrpcError,
-  GrpcServer,
   ParsedRouterRequest,
   ParsedSocketRequest,
   Query,
-  RoutingManager,
   TYPE,
   UnparsedRouterResponse,
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitNumber,
+  ConduitString,
+  GrpcServer,
+  RoutingManager,
+} from '@conduitplatform/module-tools';
 import { ChatMessage, ChatRoom, User } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -75,7 +77,7 @@ export class ChatRoutes {
       throw new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
     }
     let room;
-    const query: Query = { name: roomName, participants: [user._id] };
+    const query: Query<ChatRoom> = { name: roomName, participants: [user._id] };
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()
@@ -401,24 +403,6 @@ export class ChatRoutes {
     };
   }
 
-  private async fetchAndValidateRoomById(
-    roomId: string,
-    userId: string & User,
-  ): Promise<ChatRoom> {
-    const room = await ChatRoom.getInstance()
-      .findOne({ _id: roomId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (isNil(room) || !room.participants.includes(userId)) {
-      throw new GrpcError(
-        status.NOT_FOUND,
-        "Room does not exist or you don't have access",
-      );
-    }
-    return room;
-  }
-
   async registerRoutes() {
     this._routingManager.clear();
 
@@ -605,5 +589,23 @@ export class ChatRoutes {
       },
     );
     return this._routingManager.registerRoutes();
+  }
+
+  private async fetchAndValidateRoomById(
+    roomId: string,
+    userId: string & User,
+  ): Promise<ChatRoom> {
+    const room = await ChatRoom.getInstance()
+      .findOne({ _id: roomId })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    if (isNil(room) || !room.participants.includes(userId)) {
+      throw new GrpcError(
+        status.NOT_FOUND,
+        "Room does not exist or you don't have access",
+      );
+    }
+    return room;
   }
 }

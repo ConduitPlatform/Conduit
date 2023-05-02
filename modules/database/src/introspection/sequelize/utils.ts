@@ -5,7 +5,7 @@ import { Sequelize } from 'sequelize';
 /**
  * This function should take as an input a sequelize-auto object and convert it to a conduit schema
  */
-export function sqlSchemaConverter(sqlSchema: Indexable) {
+export function sqlIntroSchemaConverter(sqlSchema: Indexable) {
   for (const fieldName of Object.keys(sqlSchema)) {
     const field = sqlSchema[fieldName];
     field.type = extractType(field.type);
