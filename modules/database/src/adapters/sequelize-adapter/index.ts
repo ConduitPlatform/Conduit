@@ -28,7 +28,7 @@ import {
 } from '../../interfaces';
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -146,15 +146,34 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {
-      const modelOptions = {
-        ...schema.modelOptions,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
+      const modelOptions = merge(schema.modelOptions, {
+        conduit: {
+          cms: {
+            enabled: false,
+            crudOperations: {
+              read: {
+                enabled: false,
+              },
+              create: {
+                enabled: false,
+              },
+              delete: {
+                enabled: false,
+              },
+              update: {
+                enabled: false,
+              },
+            },
+          },
+
+          permissions: {
+            extendable: false,
+            canCreate: false,
+            canModify: 'Nothing',
+            canDelete: false,
+          },
         },
-      };
+      });
       let modeledSchema;
       let isArray = false;
       if (Array.isArray(extractedSchemas[extractedSchema])) {

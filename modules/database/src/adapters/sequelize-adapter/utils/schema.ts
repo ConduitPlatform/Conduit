@@ -20,8 +20,8 @@ export const extractRelations = (
       if (Array.isArray(value)) {
         const item = value[0];
         if (
-          item.model.associations[relation] &&
-          item.model.associations[relation].foreignKey === name
+          item.model.associations[model.name + '_' + relation] &&
+          item.model.associations[model.name + '_' + relation].foreignKey === name
         ) {
           model.belongsToMany(item.model, {
             foreignKey: name,
@@ -29,8 +29,8 @@ export const extractRelations = (
             through: model.name + '_' + item.originalSchema.name,
           });
         } else if (
-          item.model.associations[relation] &&
-          item.model.associations[relation].foreignKey !== name
+          item.model.associations[model.name + '_' + relation] &&
+          item.model.associations[model.name + '_' + relation].foreignKey !== name
         ) {
           throw new Error(
             `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
@@ -43,7 +43,7 @@ export const extractRelations = (
           });
           item.model.belongsToMany(model, {
             foreignKey: item.originalSchema.name,
-            as: relation,
+            as: model.name + '_' + relation,
             through: model.name + '_' + item.originalSchema.name,
           });
           item.sync();
@@ -209,7 +209,10 @@ export async function resolveRelatedSchemas(
       const rel = Array.isArray(extractedRelations[relation])
         ? (extractedRelations[relation] as UntypedArray)[0]
         : extractedRelations[relation];
-      if (!models[rel.model] || !models[rel.model].synced) {
+      if (
+        (!models[rel.model] || !models[rel.model].synced) &&
+        schema.name !== rel.model
+      ) {
         if (!pendingModels.includes(rel.model)) {
           pendingModels.push(rel.model);
         }

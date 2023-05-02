@@ -59,6 +59,21 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       ...schema.modelOptions,
       freezeTableName: true,
     });
+    // if a relation is to self, then it will be undefined inside the extractedRelations
+    // so we set it manually to self
+    for (const relation in extractedRelations) {
+      if (
+        Array.isArray(extractedRelations[relation]) &&
+        (extractedRelations[relation] as SequelizeSchema[])[0] === undefined
+      ) {
+        extractedRelations[relation] = [this];
+      } else if (
+        !Array.isArray(extractedRelations[relation]) &&
+        extractedRelations[relation] === undefined
+      ) {
+        extractedRelations[relation] = this;
+      }
+    }
     extractRelations(
       this.originalSchema.name,
       originalSchema,
