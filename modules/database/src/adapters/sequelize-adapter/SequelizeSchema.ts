@@ -269,7 +269,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
                     (this.associations![assoc] as SequelizeSchema[])[0].findByIdAndUpdate(
-                      doc[assoc]._id,
+                      obj._id,
                       obj,
                       undefined,
                       t,
@@ -280,9 +280,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                     (this.associations![assoc] as SequelizeSchema[])[0]
                       .create(obj, t)
                       .then(r => {
-                        doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](
-                          r._id,
-                        );
+                        let realAssoc = assoc;
+                        if (assoc.endsWith('s')) {
+                          realAssoc = realAssoc.substring(0, realAssoc.length - 1);
+                        }
+                        realAssoc =
+                          realAssoc.charAt(0).toUpperCase() + realAssoc.slice(1);
+                        doc[`add${realAssoc}`](r._id);
                       }),
                   );
                 }
