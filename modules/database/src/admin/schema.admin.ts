@@ -110,12 +110,16 @@ export class SchemaAdmin {
       queryArray.push({ name: { $ilike: `%${identifier}%` } });
     }
     if (!isNil(enabled)) {
-      queryArray.push({
-        $or: [
-          { 'modelOptions.conduit.cms.enabled': enabled },
-          { 'modelOptions.conduit.permissions.extendable': enabled },
-        ],
-      });
+      if (enabled) {
+        queryArray.push({
+          $or: [
+            { 'modelOptions.conduit.cms.enabled': enabled },
+            { 'modelOptions.conduit.permissions.extendable': enabled },
+          ],
+        });
+      } else if (!enabled && (!owner || owner?.length === 0)) {
+        queryArray.push({ 'modelOptions.conduit.cms.enabled': enabled });
+      }
     }
     const query: ParsedQuery = { $and: queryArray };
     let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;
