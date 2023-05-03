@@ -100,7 +100,9 @@ export class SchemaAdmin {
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
-    const queryArray: Indexable[] = [{ name: { $nin: this.database.systemSchemas } }];
+    const queryArray: Indexable[] = [
+      { name: { $nin: this.database.systemSchemas }, parentSchema: { $exists: false } },
+    ];
     if (owner && owner?.length !== 0) {
       queryArray.push({ ownerModule: { $in: owner } });
     }
