@@ -286,7 +286,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                         }
                         realAssoc =
                           realAssoc.charAt(0).toUpperCase() + realAssoc.slice(1);
-                        doc[`add${realAssoc}`](r._id);
+                        if (!doc[assoc] || doc[assoc].length === 0) {
+                          doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`]([
+                            r._id,
+                          ]);
+                        } else {
+                          doc[`add${realAssoc}`](r._id);
+                        }
                       }),
                   );
                 }
