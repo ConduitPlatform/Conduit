@@ -99,9 +99,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
-        include: this.constructAssociationInclusion({}).concat(
-          this.constructRelationInclusion(populate),
-        ),
+        include: this.constructAssociationInclusion({}),
         transaction: t,
       });
       if (parsedQuery.hasOwnProperty('$inc')) {
@@ -221,9 +219,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         return this.model
           .findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}).concat(
-              this.constructRelationInclusion(populate),
-            ),
+            include: this.constructAssociationInclusion({}),
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
@@ -254,9 +250,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       const data = await this.model
         .findByPk(id, {
           nest: true,
-          include: this.constructAssociationInclusion({}).concat(
-            this.constructRelationInclusion(populate),
-          ),
+          include: this.constructAssociationInclusion({}),
           transaction: t,
         })
         .then(doc => {
@@ -330,7 +324,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         .then(() => {
           return this.model.findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}).concat(
+            include: this.constructAssociationInclusion({}, false, populate).concat(
               this.constructRelationInclusion(populate),
             ),
           });
@@ -348,6 +342,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   constructAssociationInclusion(
     requiredAssociations?: { [key: string]: string[] },
     requiredOnly = false,
+    populate?: string[],
   ) {
     if (isNil(requiredAssociations)) return [];
     const inclusionArray = [];
@@ -385,14 +380,25 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
             }
           }
         });
+        // check if association is referenced in population request
+        const populateArray: string[] = [];
+        const removedPopulations: string[] = [];
+        populate?.forEach(population => {
+          if (population.indexOf('.') > -1 && association === population.split('.')[0]) {
+            populateArray.push(population.split('.')[1]);
+            removedPopulations.push(population);
+          }
+        });
+        removedPopulations.forEach(v => {
+          populate!.splice(populate!.indexOf(v), 1);
+        });
         if (
           associationSchema.associations &&
           Object.keys(associationSchema.associations).length > 0
         ) {
-          associationObject.include = associationSchema.constructAssociationInclusion(
-            newAssociations,
-            requiredOnly,
-          );
+          associationObject.include = associationSchema
+            .constructAssociationInclusion(newAssociations, requiredOnly)
+            .concat(associationSchema.constructRelationInclusion(populateArray));
         }
       }
       inclusionArray.push(associationObject);
@@ -487,6 +493,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       attributes: parsingResult.attributes! as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
+        false,
+        populate,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
 
@@ -659,6 +667,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       attributes: parsingResult.attributes as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
+        false,
+        populate,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
     if (!isNil(skip)) {
