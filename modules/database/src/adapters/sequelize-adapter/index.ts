@@ -146,7 +146,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {
-      const modelOptions = merge(schema.modelOptions, {
+      const modelOptions = merge({}, schema.modelOptions, {
         conduit: {
           cms: {
             enabled: false,

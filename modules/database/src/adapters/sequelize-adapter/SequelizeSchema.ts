@@ -99,9 +99,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
-        include: this.constructAssociationInclusion({}).concat(
-          this.constructRelationInclusion(populate),
-        ),
+        include: this.constructAssociationInclusion({}),
         transaction: t,
       });
       if (parsedQuery.hasOwnProperty('$inc')) {
@@ -221,9 +219,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         return this.model
           .findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}).concat(
-              this.constructRelationInclusion(populate),
-            ),
+            include: this.constructAssociationInclusion({}),
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
@@ -254,9 +250,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       const data = await this.model
         .findByPk(id, {
           nest: true,
-          include: this.constructAssociationInclusion({}).concat(
-            this.constructRelationInclusion(populate),
-          ),
+          include: this.constructAssociationInclusion({}),
           transaction: t,
         })
         .then(doc => {
@@ -269,7 +263,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                 if (obj.hasOwnProperty('_id')) {
                   promises.push(
                     (this.associations![assoc] as SequelizeSchema[])[0].findByIdAndUpdate(
-                      doc[assoc]._id,
+                      obj._id,
                       obj,
                       undefined,
                       t,
@@ -280,9 +274,19 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
                     (this.associations![assoc] as SequelizeSchema[])[0]
                       .create(obj, t)
                       .then(r => {
-                        doc[`add${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](
-                          r._id,
-                        );
+                        let realAssoc = assoc;
+                        if (assoc.endsWith('s')) {
+                          realAssoc = realAssoc.substring(0, realAssoc.length - 1);
+                        }
+                        realAssoc =
+                          realAssoc.charAt(0).toUpperCase() + realAssoc.slice(1);
+                        if (!doc[assoc] || doc[assoc].length === 0) {
+                          doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`]([
+                            r._id,
+                          ]);
+                        } else {
+                          doc[`add${realAssoc}`](r._id);
+                        }
                       }),
                   );
                 }
@@ -320,7 +324,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         .then(() => {
           return this.model.findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}).concat(
+            include: this.constructAssociationInclusion({}, false, populate).concat(
               this.constructRelationInclusion(populate),
             ),
           });
@@ -338,6 +342,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   constructAssociationInclusion(
     requiredAssociations?: { [key: string]: string[] },
     requiredOnly = false,
+    populate?: string[],
   ) {
     if (isNil(requiredAssociations)) return [];
     const inclusionArray = [];
@@ -375,14 +380,25 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
             }
           }
         });
+        // check if association is referenced in population request
+        const populateArray: string[] = [];
+        const removedPopulations: string[] = [];
+        populate?.forEach(population => {
+          if (population.indexOf('.') > -1 && association === population.split('.')[0]) {
+            populateArray.push(population.split('.')[1]);
+            removedPopulations.push(population);
+          }
+        });
+        removedPopulations.forEach(v => {
+          populate!.splice(populate!.indexOf(v), 1);
+        });
         if (
           associationSchema.associations &&
           Object.keys(associationSchema.associations).length > 0
         ) {
-          associationObject.include = associationSchema.constructAssociationInclusion(
-            newAssociations,
-            requiredOnly,
-          );
+          associationObject.include = associationSchema
+            .constructAssociationInclusion(newAssociations, requiredOnly)
+            .concat(associationSchema.constructRelationInclusion(populateArray));
         }
       }
       inclusionArray.push(associationObject);
@@ -400,9 +416,24 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    let assocs;
+    const associationObjects: Indexable = {};
     if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+      for (const assoc in extractAssociationsFromObject(parsedQuery, this.associations)) {
+        if (
+          Array.isArray(this.associations![assoc]) &&
+          !Array.isArray(parsedQuery[assoc])
+        ) {
+          throw new Error(`Cannot update association ${assoc} with non-array value`);
+        }
+        if (
+          !Array.isArray(this.associations![assoc]) &&
+          Array.isArray(parsedQuery[assoc])
+        ) {
+          throw new Error(`Cannot update association ${assoc} with array value`);
+        }
+        associationObjects[assoc] = parsedQuery[assoc];
+        delete parsedQuery[assoc];
+      }
     }
     const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
@@ -412,10 +443,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     return this.model
       .create(parsedQuery, {
-        include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
       })
-      .then(doc => this.createWithPopulation(doc, relationObjects, t))
+      .then(doc => {
+        return this.createWithPopulation(doc, relationObjects, t);
+      })
+      .then(doc => {
+        if (Object.keys(associationObjects).length > 0) {
+          return this.findByIdAndUpdate(
+            (doc as any)._id,
+            associationObjects,
+            undefined,
+            t,
+          );
+        }
+        return doc;
+      })
       .then(doc => {
         if (!transactionProvided) {
           t!.commit();
@@ -438,35 +481,15 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    incrementDbQueries();
-    let assocs;
-    if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-    }
-    const relationObjectsArray = this.extractManyRelationsModification(parsedQuery);
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    return this.model
-      .bulkCreate(parsedQuery, {
-        validate: true,
-        include: this.constructAssociationInclusion(assocs, true),
-        transaction: t,
-      })
-      .then(docs => {
-        return Promise.all(
-          docs.map((doc, index) =>
-            this.createWithPopulation(doc, relationObjectsArray[index], t),
-          ),
-        );
-      })
-      .then(docs => {
-        t.commit();
-        return docs;
-      })
-      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs))
-      .catch(err => {
-        t.rollback();
-        throw err;
-      });
+    return Promise.all(
+      parsedQuery.map(q => {
+        return this.create(q, t);
+      }),
+    ).catch(err => {
+      t.rollback();
+      throw err;
+    });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -477,6 +500,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       attributes: parsingResult.attributes! as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
+        false,
+        populate,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
 
@@ -649,6 +674,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       attributes: parsingResult.attributes as FindAttributeOptions,
       include: this.constructAssociationInclusion(
         parsingResult.requiredAssociations,
+        false,
+        populate,
       ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
     };
     if (!isNil(skip)) {
