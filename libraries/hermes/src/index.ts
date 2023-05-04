@@ -250,7 +250,7 @@ export class ConduitRoutingController {
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
-        this.registerRouteMiddleware(r, url!); // TODO: check this
+        this.registerRouteMiddleware(r, url!);
       } else if (r instanceof ConduitSocket) {
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,
