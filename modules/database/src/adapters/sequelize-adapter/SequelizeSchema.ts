@@ -416,9 +416,24 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    let assocs;
+    const associationObjects: Indexable = {};
     if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
+      for (const assoc in extractAssociationsFromObject(parsedQuery, this.associations)) {
+        if (
+          Array.isArray(this.associations![assoc]) &&
+          !Array.isArray(parsedQuery[assoc])
+        ) {
+          throw new Error(`Cannot update association ${assoc} with non-array value`);
+        }
+        if (
+          !Array.isArray(this.associations![assoc]) &&
+          Array.isArray(parsedQuery[assoc])
+        ) {
+          throw new Error(`Cannot update association ${assoc} with array value`);
+        }
+        associationObjects[assoc] = parsedQuery[assoc];
+        delete parsedQuery[assoc];
+      }
     }
     const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
@@ -428,10 +443,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     return this.model
       .create(parsedQuery, {
-        include: this.constructAssociationInclusion(assocs, true),
         transaction: t,
       })
-      .then(doc => this.createWithPopulation(doc, relationObjects, t))
+      .then(doc => {
+        return this.createWithPopulation(doc, relationObjects, t);
+      })
+      .then(doc => {
+        if (Object.keys(associationObjects).length > 0) {
+          return this.findByIdAndUpdate(
+            (doc as any)._id,
+            associationObjects,
+            undefined,
+            t,
+          );
+        }
+        return doc;
+      })
       .then(doc => {
         if (!transactionProvided) {
           t!.commit();
@@ -454,35 +481,15 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     } else {
       parsedQuery = query;
     }
-    incrementDbQueries();
-    let assocs;
-    if (this.associations) {
-      assocs = extractAssociationsFromObject(parsedQuery, this.associations);
-    }
-    const relationObjectsArray = this.extractManyRelationsModification(parsedQuery);
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    return this.model
-      .bulkCreate(parsedQuery, {
-        validate: true,
-        include: this.constructAssociationInclusion(assocs, true),
-        transaction: t,
-      })
-      .then(docs => {
-        return Promise.all(
-          docs.map((doc, index) =>
-            this.createWithPopulation(doc, relationObjectsArray[index], t),
-          ),
-        );
-      })
-      .then(docs => {
-        t.commit();
-        return docs;
-      })
-      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs))
-      .catch(err => {
-        t.rollback();
-        throw err;
-      });
+    return Promise.all(
+      parsedQuery.map(q => {
+        return this.create(q, t);
+      }),
+    ).catch(err => {
+      t.rollback();
+      throw err;
+    });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
