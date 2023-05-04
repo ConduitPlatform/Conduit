@@ -7,6 +7,7 @@ import {
 } from '../../protoUtils';
 import {
   ConduitProxyObject,
+  ConduitRouteActions,
   ConduitRouteObject,
   SocketProtoDescription,
 } from '../../interfaces';
@@ -40,5 +41,13 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     };
 
     return this.client!.registerAdminRoute(request);
+  }
+
+  patchMiddleware(path: string, action: ConduitRouteActions, middleware: string[]) {
+    return this.client!.patchMiddleware({
+      path: path,
+      action: action,
+      middleware: middleware,
+    });
   }
 }

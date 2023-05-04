@@ -1,9 +1,11 @@
-import { NextFunction, Router } from 'express';
+import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
   ConduitRouteObject,
   DatabaseProvider,
   GrpcCallback,
+  GrpcError,
   GrpcRequest,
   HealthCheckStatus,
   SocketProtoDescription,
@@ -34,6 +36,7 @@ import { AdminHandlers } from './admin';
 import {
   GenerateProtoRequest,
   GenerateProtoResponse,
+  PatchAppMiddlewareRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
@@ -41,6 +44,7 @@ import {
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { AppMiddleware } from './models';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -51,6 +55,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
+      patchMiddleware: this.patchMiddleware.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -64,6 +69,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   } = {};
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
+  private hasAppliedMiddleware: string[] = [];
 
   constructor() {
     super('router');
@@ -147,6 +153,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     await this.highAvailability();
     this.updateHealth(HealthCheckStatus.SERVING);
+    this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
   }
 
   async highAvailability() {
@@ -163,6 +170,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
+    await this.applyStoredMiddleware();
   }
 
   updateState(
@@ -281,6 +289,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         call.request.routes,
         call.request.routerUrl,
       );
+      await this.applyStoredMiddleware();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
@@ -460,5 +469,162 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       this.internalRegisterRoute(undefined, proxies, 'router', 'router');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
+  }
+
+  async patchMiddleware(
+    call: GrpcRequest<PatchAppMiddlewareRequest>,
+    callback: GrpcCallback<null>,
+  ) {
+    const { path, action, middleware } = call.request;
+    const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
+      call.metadata!.get('module-name')![0] as string,
+    );
+    if (!moduleUrl) {
+      return callback({
+        code: status.INTERNAL,
+        message: 'Something went wrong',
+      });
+    }
+    await this.internalPatchMiddleware(path, action, middleware, moduleUrl.url).catch(
+      e => {
+        return callback({
+          code: status.INTERNAL,
+          message: (e as Error).message,
+        });
+      },
+    );
+  }
+
+  async internalPatchMiddleware(
+    path: string,
+    action: string,
+    middleware: string[],
+    moduleUrl?: string,
+  ) {
+    let injected: string[] = [];
+    let removed: string[] = [];
+    if (!moduleUrl) {
+      moduleUrl = await this.grpcSdk.config.getModuleUrlByName('router').then(r => r.url);
+    }
+    const { url, routeIndex } = this.findGrpcRoute(path, action);
+    const route = this.getGrpcRoute(url, routeIndex);
+    [injected, removed] = this._internalRouter.processMiddlewarePatch(
+      route.options!.middlewares,
+      middleware,
+      moduleUrl!,
+    )!;
+    this.setGrpcRouteMiddleware(url, routeIndex, middleware);
+    this._internalRouter.patchRouteMiddleware({
+      path: path,
+      action: action as ConduitRouteActions,
+      middleware: middleware,
+    });
+    await this.updateStateForMiddlewarePatch(middleware, path, action);
+    const storedMiddleware = await AppMiddleware.getInstance().findMany({ path, action });
+    for (const m of storedMiddleware) {
+      if (removed.includes(m.middleware)) {
+        await AppMiddleware.getInstance().deleteOne({ _id: m._id });
+      } else {
+        await AppMiddleware.getInstance().findByIdAndUpdate(m._id, {
+          position: middleware.indexOf(m.middleware),
+        });
+      }
+    }
+    for (const m of injected) {
+      await AppMiddleware.getInstance().create({
+        path: path,
+        action: action,
+        middleware: m,
+        position: middleware.indexOf(m),
+        owner: moduleUrl,
+      });
+    }
+  }
+
+  private async applyStoredMiddleware() {
+    for (const key of Object.keys(this._grpcRoutes)) {
+      if (this.hasAppliedMiddleware.includes(key)) {
+        continue;
+      }
+      for (const r of this._grpcRoutes[key]) {
+        const { path, action, middlewares } = r.options!;
+        const storedMiddleware = await AppMiddleware.getInstance().findMany({
+          path,
+          action,
+        });
+        if (storedMiddleware.length === 0) {
+          continue;
+        }
+        for (const m of storedMiddleware) {
+          if (m.position !== middlewares.indexOf(m.middleware)) {
+            middlewares.splice(m.position, 0, m.middleware);
+          }
+        }
+        await this.internalPatchMiddleware(
+          r.options!.path,
+          r.options!.action as ConduitRouteActions,
+          middlewares,
+        ).catch(() => {});
+        this.hasAppliedMiddleware.push(key);
+      }
+    }
+  }
+
+  private async updateStateForMiddlewarePatch(
+    middleware: string[],
+    path: string,
+    action: string,
+  ) {
+    await this.grpcSdk
+      .state!.getKey('router')
+      .then(result => {
+        const stateRoutes = JSON.parse(result!).routes as {
+          protofile: string;
+          routes: RegisterConduitRouteRequest_PathDefinition[];
+          url: string;
+        }[];
+        let index = 0;
+        outer: for (const obj of stateRoutes) {
+          for (const r of obj.routes) {
+            if (r.options?.path !== path || r.options.action !== action) {
+              continue;
+            }
+            r.options.middlewares = middleware;
+            stateRoutes[index] = obj;
+            break outer;
+          }
+          index++;
+        }
+        return this.grpcSdk.state!.setKey(
+          'router',
+          JSON.stringify({ routes: stateRoutes }),
+        );
+      })
+      .catch(() => {
+        throw new GrpcError(
+          status.INTERNAL,
+          'Failed to update state for patched middleware',
+        );
+      });
+  }
+
+  findGrpcRoute(path: string, action: string) {
+    for (const key of Object.keys(this._grpcRoutes)) {
+      const routeArray = this._grpcRoutes[key];
+      for (const r of routeArray) {
+        if (r.options.path === path && r.options.action === action) {
+          return { url: key, routeIndex: routeArray.indexOf(r as RouteT & ProxyRouteT) };
+        }
+      }
+    }
+    throw new GrpcError(status.NOT_FOUND, `Grpc route ${action} ${path} not found`);
+  }
+
+  getGrpcRoute(url: string, routeIndex: number) {
+    return this._grpcRoutes[url][routeIndex];
+  }
+
+  setGrpcRouteMiddleware(url: string, routeIndex: number, middleware: string[]) {
+    this._grpcRoutes[url][routeIndex].options!.middlewares = middleware;
   }
 }
