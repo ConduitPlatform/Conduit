@@ -34,7 +34,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "object-hash": "^3.0.0",
-    "socket.io": "^4.5.1",
+    "socket.io": "^4.6.0",
     "swagger-ui-express": "4.4.0",
     "winston": "^3.8.1"
   },
