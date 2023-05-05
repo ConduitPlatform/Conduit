@@ -400,29 +400,34 @@ export class GraphQLController extends ConduitRouter {
           }
         })
         .then(r => {
-          let result;
-          if (r.fromCache) {
-            return r.data;
-          } else {
-            result = r.result ?? r;
-          }
-          try {
-            // Handle gRPC route responses
-            result = JSON.parse(result);
-          } catch {
-            if (typeof result === 'string') {
-              // Nest plain string responses
-              result = {
-                result: this.extractResult(route.returnTypeFields as string, result),
-              };
-            }
-          }
-          if (caching) {
-            this.storeInCache(hashKey, result, cacheAge!);
-          }
-          return result;
-        })
-        .catch(errorHandler);
+          // Post-request middlewares
+          self
+            .checkPostRequestMiddlewares(r, route.input.postRequestMiddlewares)
+            .then((r: any) => {
+              let result;
+              if (r.fromCache) {
+                return r.data;
+              } else {
+                result = r.result ?? r;
+              }
+              try {
+                // Handle gRPC route responses
+                result = JSON.parse(result);
+              } catch {
+                if (typeof result === 'string') {
+                  // Nest plain string responses
+                  result = {
+                    result: this.extractResult(route.returnTypeFields as string, result),
+                  };
+                }
+              }
+              if (caching) {
+                this.storeInCache(hashKey, result, cacheAge!);
+              }
+              return result;
+            })
+            .catch(errorHandler);
+        });
     };
   }
 
@@ -457,29 +462,33 @@ export class GraphQLController extends ConduitRouter {
           });
         })
         .then(r => {
-          let result = r.result ? r.result : r;
-          if (r.setCookies) {
-            context.setCookie = r.setCookies;
-          }
-          if (r.removeCookies) {
-            context.removeCookie = r.removeCookies;
-          }
+          // Post-request middlewares
+          self
+            .checkPostRequestMiddlewares(r, route.input.postRequestMiddlewares)
+            .then((r: any) => {
+              let result = r.result ? r.result : r;
+              if (r.setCookies) {
+                context.setCookie = r.setCookies;
+              }
+              if (r.removeCookies) {
+                context.removeCookie = r.removeCookies;
+              }
 
-          try {
-            // Handle gRPC route responses
-            result = JSON.parse(result);
-          } catch {
-            if (typeof result === 'string') {
-              // Nest plain string responses
-              result = {
-                result: this.extractResult(route.returnTypeFields as string, result),
-              };
-            }
-          }
-
-          return result;
-        })
-        .catch(errorHandler);
+              try {
+                // Handle gRPC route responses
+                result = JSON.parse(result);
+              } catch {
+                if (typeof result === 'string') {
+                  // Nest plain string responses
+                  result = {
+                    result: this.extractResult(route.returnTypeFields as string, result),
+                  };
+                }
+              }
+              return result;
+            })
+            .catch(errorHandler);
+        });
     };
   }
 

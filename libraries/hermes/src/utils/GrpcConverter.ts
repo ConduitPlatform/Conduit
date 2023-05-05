@@ -12,6 +12,7 @@ import {
   ConduitRouteOptions,
   ConduitRouteParameters,
   Indexable,
+  PostRequestMiddlewaresParameters,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitMiddleware,
@@ -124,7 +125,7 @@ function createHandlerForRoute(
   metadata: Metadata,
   moduleName?: string,
 ) {
-  const handler = (req: ConduitRouteParameters) => {
+  const handler = (req: ConduitRouteParameters | PostRequestMiddlewaresParameters) => {
     const request = {
       params: req.params ? JSON.stringify(req.params) : null,
       urlParams: req.urlParams ? JSON.stringify(req.urlParams) : null,

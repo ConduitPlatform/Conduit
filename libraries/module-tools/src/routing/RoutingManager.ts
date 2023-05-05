@@ -183,9 +183,12 @@ export class RoutingManager {
     if (!routeObject.options.middlewares) {
       routeObject.options.middlewares = [];
     }
+    if (!routeObject.options.postRequestMiddlewares) {
+      routeObject.options.postRequestMiddlewares = [];
+    }
     for (const option in routeObject.options) {
       if (!routeObject.options.hasOwnProperty(option)) continue;
-      if (option === 'middlewares') continue;
+      if (option === 'middlewares' || option === 'postRequestMiddlewares') continue;
       if (
         typeof routeObject.options[option] === 'string' ||
         routeObject.options[option] instanceof String

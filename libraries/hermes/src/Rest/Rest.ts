@@ -193,59 +193,68 @@ export class RestController extends ConduitRouter {
           }
         })
         .then(r => {
-          if (r.setCookies && r.setCookies.length) {
-            r.setCookies.forEach((cookie: Cookie) => {
-              if (cookie.options.path === '') delete cookie.options.path;
-              if (!cookie.options.domain || cookie.options.domain === '') {
-                delete cookie.options.domain;
+          // Post-request middlewares
+          self
+            .checkPostRequestMiddlewares(r, route.input.postRequestMiddlewares)
+            .then((r: any) => {
+              if (r.setCookies && r.setCookies.length) {
+                r.setCookies.forEach((cookie: Cookie) => {
+                  if (cookie.options.path === '') delete cookie.options.path;
+                  if (!cookie.options.domain || cookie.options.domain === '') {
+                    delete cookie.options.domain;
+                  }
+                  res.cookie(cookie.name, cookie.value, cookie.options);
+                });
               }
-              res.cookie(cookie.name, cookie.value, cookie.options);
-            });
-          }
-          if (r.removeCookies && r.removeCookies.length) {
-            r.removeCookies.forEach((cookie: Cookie) => {
-              if (cookie.options.path === '') delete cookie.options.path;
-              if (!cookie.options.domain || cookie.options.domain === '') {
-                delete cookie.options.domain;
+              if (r.removeCookies && r.removeCookies.length) {
+                r.removeCookies.forEach((cookie: Cookie) => {
+                  if (cookie.options.path === '') delete cookie.options.path;
+                  if (!cookie.options.domain || cookie.options.domain === '') {
+                    delete cookie.options.domain;
+                  }
+                  res.clearCookie(cookie.name, cookie.options);
+                });
               }
-              res.clearCookie(cookie.name, cookie.options);
-            });
-          }
-          if (r.redirect) {
-            res.removeHeader('Authorization');
-            this._privateHeaders.forEach(h => res.removeHeader(h));
-            return res.redirect(r.redirect);
-          } else {
-            let result;
-            if (r.fromCache) {
-              return res.status(200).json(r.data);
-            } else {
-              result = r.result ?? r;
-            }
-            try {
-              // Handle gRPC route responses
-              result = JSON.parse(result);
-            } catch {
-              if (typeof result === 'string') {
-                // Nest plain string responses
-                result = {
-                  result: this.extractResult(route.returnTypeFields as string, result),
-                };
+              if (r.redirect) {
+                res.removeHeader('Authorization');
+                this._privateHeaders.forEach(h => res.removeHeader(h));
+                return res.redirect(r.redirect);
+              } else {
+                let result;
+                if (r.fromCache) {
+                  return res.status(200).json(r.data);
+                } else {
+                  result = r.result ?? r;
+                }
+                try {
+                  // Handle gRPC route responses
+                  result = JSON.parse(result);
+                } catch {
+                  if (typeof result === 'string') {
+                    // Nest plain string responses
+                    result = {
+                      result: this.extractResult(
+                        route.returnTypeFields as string,
+                        result,
+                      ),
+                    };
+                  }
+                }
+                delete result.setCookies;
+                delete result.removeCookies;
+                if (route.input.action === ConduitRouteActions.GET && caching) {
+                  this.storeInCache(hashKey, result, cacheAge!);
+                  res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
+                } else {
+                  res.setHeader('Cache-Control', 'no-store');
+                }
+                res.status(200).json(result);
+                res.end();
+                return res;
               }
-            }
-            delete result.setCookies;
-            delete result.removeCookies;
-            if (route.input.action === ConduitRouteActions.GET && caching) {
-              this.storeInCache(hashKey, result, cacheAge!);
-              res.setHeader('Cache-Control', `${scope}, max-age=${cacheAge}`);
-            } else {
-              res.setHeader('Cache-Control', 'no-store');
-            }
-            res.status(200).json(result);
-            res.end();
-          }
-        })
-        .catch(this.handleError(res));
+            })
+            .catch(this.handleError(res));
+        });
     };
   }
 

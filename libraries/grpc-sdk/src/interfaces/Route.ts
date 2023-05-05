@@ -52,6 +52,7 @@ export interface ConduitRouteOptions {
   name?: string;
   description?: string;
   middlewares?: string[];
+  postRequestMiddlewares?: string[];
   cacheControl?: string;
 }
 
@@ -63,3 +64,5 @@ export interface ConduitRouteObject {
   };
   grpcFunction: string;
 }
+
+export type PostRequestMiddlewaresParameters = Indexable;

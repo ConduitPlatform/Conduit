@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   ConduitRouteParameters,
   GrpcError,
   Indexable,
+  PostRequestMiddlewaresParameters,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { ConduitMiddleware, MiddlewarePatch } from './interfaces';
@@ -91,6 +92,32 @@ export abstract class ConduitRouter {
         primaryPromise = primaryPromise.then(r => {
           return this._middlewares![m].executeRequest.bind(this._middlewares![m])(
             params,
+          ).then((p: any) => {
+            if (p.result) {
+              Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
+            }
+            return r;
+          });
+        });
+      }
+    });
+    return primaryPromise;
+  }
+
+  checkPostRequestMiddlewares(
+    data: PostRequestMiddlewaresParameters,
+    middlewares?: string[],
+  ) {
+    let primaryPromise = new Promise(resolve => {
+      resolve(data);
+    });
+    middlewares?.forEach(m => {
+      if (!this._middlewares?.hasOwnProperty(m)) {
+        primaryPromise = Promise.reject('Middleware does not exist');
+      } else {
+        primaryPromise = primaryPromise.then(r => {
+          return this._middlewares![m].executeRequest.bind(this._middlewares![m])(
+            data,
           ).then((p: any) => {
             if (p.result) {
               Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
