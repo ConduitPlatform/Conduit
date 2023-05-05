@@ -87,6 +87,21 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
+    for (const key in parsedQuery) {
+      // check if the key is an object with fields, and not an object like Date
+      if (
+        typeof parsedQuery[key] === 'object' &&
+        parsedQuery[key].hasOwnProperty('hasOwnProperty')
+      ) {
+        // unwrap the object and add the fields to the query
+        const processing: any = {};
+        for (const field in parsedQuery[key]) {
+          processing[key + '.' + field] = parsedQuery[key][field];
+        }
+        delete parsedQuery[key];
+        Object.assign(parsedQuery, processing);
+      }
+    }
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -203,6 +218,21 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
+    for (const key in parsedQuery) {
+      // check if the key is an object with fields, and not an object like Date
+      if (
+        typeof parsedQuery[key] === 'object' &&
+        parsedQuery[key].hasOwnProperty('hasOwnProperty')
+      ) {
+        // unwrap the object and add the fields to the query
+        const processing: any = {};
+        for (const field in parsedQuery[key]) {
+          processing[key + '.' + field] = parsedQuery[key][field];
+        }
+        delete parsedQuery[key];
+        Object.assign(parsedQuery, processing);
+      }
+    }
     return this.model
       .create(parsedQuery, {
         transaction: t,
@@ -233,14 +263,32 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    return Promise.all(
-      parsedQuery.map(q => {
-        return this.create(q, t);
-      }),
-    ).catch(err => {
-      t.rollback();
-      throw err;
-    });
+    for (let i = 0; i < parsedQuery.length; i++) {
+      for (const key in parsedQuery[i]) {
+        // check if the key is an object with fields, and not an object like Date
+        if (
+          typeof parsedQuery[i][key] === 'object' &&
+          parsedQuery[i][key].hasOwnProperty('hasOwnProperty')
+        ) {
+          // unwrap the object and add the fields to the query
+          const processing: any = {};
+          for (const field in parsedQuery[i][key]) {
+            processing[key + '.' + field] = parsedQuery[i][key][field];
+          }
+          delete parsedQuery[i][key];
+          Object.assign(parsedQuery[i], processing);
+        }
+      }
+    }
+    return this.model
+      .bulkCreate(parsedQuery, { transaction: t })
+      .then(() => {
+        t.commit();
+      })
+      .catch(err => {
+        t.rollback();
+        throw err;
+      });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
