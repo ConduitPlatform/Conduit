@@ -8,7 +8,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
-  sleep,
   SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -154,7 +153,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
     await this.highAvailability();
     this.updateHealth(HealthCheckStatus.SERVING);
-    this.grpcSdk.createModuleClient('router', process.env.SERVICE_IP!);
   }
 
   async highAvailability() {
