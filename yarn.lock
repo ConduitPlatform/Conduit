@@ -3780,6 +3780,11 @@
   dependencies:
     "@types/ms" "*"
 
+"@types/dottie@^2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@types/dottie/-/dottie-2.0.4.tgz#3d1ae16db8a7d2d760395bf9f1961a781a293194"
+  integrity sha512-tsrbuFtAEQ1RuaBh+HLd/Q9V4wn4CSRQEk6kRlWNQgOB6cCdHWGrfyQxjXCRsk6z4bxf/qlmFv30FhjQstT/gQ==
+
 "@types/express-serve-static-core@^4.17.18", "@types/express-serve-static-core@^4.17.21":
   version "4.17.29"
   resolved "https://registry.yarnpkg.com/@types/express-serve-static-core/-/express-serve-static-core-4.17.29.tgz#2a1795ea8e9e9c91b4a4bbe475034b20c1ec711c"
@@ -6379,6 +6384,11 @@ dottie@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/dottie/-/dottie-2.0.2.tgz#cc91c0726ce3a054ebf11c55fbc92a7f266dd154"
   integrity sha512-fmrwR04lsniq/uSr8yikThDTrM7epXHBAAjH9TbeH3rEA8tdCO7mRzB9hdmdGyJCxF8KERo9CITcm3kGuoyMhg==
+
+dottie@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/dottie/-/dottie-2.0.3.tgz#797a4f4c92a9a65499806be4051b9d9dcd5a5d77"
+  integrity sha512-4liA0PuRkZWQFQjwBypdxPfZaRWiv5tkhMXY2hzsa2pNf5s7U3m9cwUchfNKe8wZQxdGPQQzO6Rm2uGe0rvohQ==
 
 dprint-node@^1.0.7:
   version "1.0.7"

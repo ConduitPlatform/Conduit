@@ -8,6 +8,7 @@ import {
   Sequelize,
   Transaction,
 } from 'sequelize';
+import * as dottie from 'dottie';
 import {
   ConduitDatabaseSchema,
   MultiDocQuery,
@@ -301,7 +302,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     };
 
     incrementDbQueries();
-    return this.model.findOne(options).then(doc => (doc ? doc.toJSON() : doc));
+    return this.model.findOne(options).then(doc => {
+      if (!doc) return doc;
+      return dottie.transform(doc.toJSON());
+    });
   }
 
   sync() {
@@ -469,9 +473,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       options.order = this.parseSort(sort);
     }
 
-    return this.model
-      .findAll(options)
-      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
+    return this.model.findAll(options).then(docs => {
+      if (!docs) return docs;
+      return docs.map(doc => {
+        return dottie.transform(doc.toJSON());
+      });
+    });
   }
 
   deleteMany(query: Query) {
