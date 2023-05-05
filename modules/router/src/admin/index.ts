@@ -60,7 +60,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('GetAppRouteMiddleware', {
-        middleware: [TYPE.String],
+        middlewares: [TYPE.String],
       }),
       this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
     );
@@ -74,11 +74,11 @@ export class AdminHandlers {
           action: ConduitString.Required,
         },
         bodyParams: {
-          middleware: [ConduitString.Required],
+          middlewares: [ConduitString.Required],
         },
       },
       new ConduitRouteReturnDefinition('PatchAppMiddleware', 'String'),
-      this.routerAdmin.patchMiddleware.bind(this.routerAdmin),
+      this.routerAdmin.patchRouteMiddlewares.bind(this.routerAdmin),
     );
     this.routingManager.route(
       {

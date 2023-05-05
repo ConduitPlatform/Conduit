@@ -43,11 +43,15 @@ export class Admin extends ConduitModule<typeof AdminDefinition> {
     return this.client!.registerAdminRoute(request);
   }
 
-  patchMiddleware(path: string, action: ConduitRouteActions, middleware: string[]) {
-    return this.client!.patchMiddleware({
+  patchRouteMiddlewares(
+    path: string,
+    action: ConduitRouteActions,
+    middlewares: string[],
+  ) {
+    return this.client!.patchRouteMiddlewares({
       path: path,
       action: action,
-      middleware: middleware,
+      middlewares: middlewares,
     });
   }
 }

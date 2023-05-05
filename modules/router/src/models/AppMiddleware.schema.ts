@@ -14,7 +14,6 @@ const schema = {
   middleware: {
     type: TYPE.String,
     required: true,
-    unique: true,
   },
   position: {
     type: TYPE.Number,

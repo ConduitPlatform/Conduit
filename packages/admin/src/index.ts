@@ -16,7 +16,7 @@ import {
   GenerateAdminProtoRequest,
   GenerateAdminProtoResponse,
   IConduitAdmin,
-  PatchMiddlewareRequest,
+  PatchRouteMiddlewaresRequest,
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
@@ -68,8 +68,8 @@ export default class AdminModule extends IConduitAdmin {
     adminRoutes.verifyQrCodeRoute(),
     adminRoutes.verifyTwoFaRoute(),
     adminRoutes.changeUsersPasswordRoute(),
-    adminRoutes.patchMiddleware(this),
-    adminRoutes.getRouteMiddleware(this),
+    adminRoutes.patchRouteMiddlewares(this),
+    adminRoutes.getRouteMiddlewares(this),
     adminProxyRoutes.createProxyRoute(this),
     adminProxyRoutes.deleteProxyRoute(this),
     adminProxyRoutes.updateProxyRoute(this),
@@ -112,7 +112,7 @@ export default class AdminModule extends IConduitAdmin {
       {
         generateAdminProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
-        patchMiddleware: this.patchMiddleware.bind(this),
+        patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
     );
     this.grpcSdk
@@ -591,11 +591,11 @@ export default class AdminModule extends IConduitAdmin {
     return Promise.all(promises);
   }
 
-  async patchMiddleware(
-    call: GrpcRequest<PatchMiddlewareRequest>,
+  async patchRouteMiddlewares(
+    call: GrpcRequest<PatchRouteMiddlewaresRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, middleware } = call.request;
+    const { path, action, middlewares } = call.request;
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -605,7 +605,7 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Something went wrong',
       });
     }
-    await this.internalPatchMiddleware(path, action, middleware, moduleUrl.url).catch(
+    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
       e => {
         return callback({
           code: status.INTERNAL,
@@ -616,41 +616,43 @@ export default class AdminModule extends IConduitAdmin {
     callback(null, null);
   }
 
-  async internalPatchMiddleware(
+  async _patchRouteMiddlewares(
     path: string,
     action: string,
-    middleware: string[],
+    middlewares: string[],
     moduleUrl?: string,
   ) {
     let injected: string[] = [];
     let removed: string[] = [];
+    /* When moduleUrl is missing, the function is triggered by the admin patchRouteMiddlewares endpoint handler
+    moduleUrl is used for permission checks when removing a middleware that belongs to another module from a route */
     if (!moduleUrl) {
       moduleUrl = await this.grpcSdk.config.getModuleUrlByName('core').then(r => r.url);
     }
     const { url, routeIndex } = this.findGrpcRoute(path, action);
     const route = this.getGrpcRoute(url, routeIndex)!;
-    [injected, removed] = this._router.processMiddlewarePatch(
+    [injected, removed] = this._router.filterMiddlewaresPatch(
       route.options!.middlewares,
-      middleware,
+      middlewares,
       moduleUrl!,
     )!;
-    this.setGrpcRouteMiddleware(url, routeIndex, middleware);
-    this._router.patchRouteMiddleware({
+    this.setGrpcRouteMiddleware(url, routeIndex, middlewares);
+    this._router.patchRouteMiddlewares({
       path: path,
       action: action as ConduitRouteActions,
-      middleware: middleware,
+      middlewares: middlewares,
     });
-    await this.updateStateForMiddlewarePatch(middleware, path, action);
-    const storedMiddleware = await AdminMiddleware.getInstance().findMany({
+    await this.updateStateForMiddlewarePatch(middlewares, path, action);
+    const storedMiddlewares = await AdminMiddleware.getInstance().findMany({
       path,
       action,
     });
-    for (const m of storedMiddleware) {
+    for (const m of storedMiddlewares) {
       if (removed.includes(m.middleware)) {
         await AdminMiddleware.getInstance().deleteOne({ _id: m._id });
       } else {
         await AdminMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middleware.indexOf(m.middleware),
+          position: middlewares.indexOf(m.middleware),
         });
       }
     }
@@ -659,7 +661,7 @@ export default class AdminModule extends IConduitAdmin {
         path: path,
         action: action,
         middleware: m,
-        position: middleware.indexOf(m),
+        position: middlewares.indexOf(m),
         owner: moduleUrl,
       });
     }
@@ -687,7 +689,7 @@ export default class AdminModule extends IConduitAdmin {
             middlewares.splice(m.position, 0, m.middleware);
           }
         }
-        await this.internalPatchMiddleware(
+        await this._patchRouteMiddlewares(
           r.options!.path,
           r.options!.action as ConduitRouteActions,
           middlewares,

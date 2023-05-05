@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
+  sleep,
   SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -36,7 +37,7 @@ import { AdminHandlers } from './admin';
 import {
   GenerateProtoRequest,
   GenerateProtoResponse,
-  PatchAppMiddlewareRequest,
+  PatchAppRouteMiddlewaresRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   SocketData,
@@ -55,7 +56,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
-      patchMiddleware: this.patchMiddleware.bind(this),
+      patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -471,11 +472,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     ConduitGrpcSdk.Logger.log('Recovered routes');
   }
 
-  async patchMiddleware(
-    call: GrpcRequest<PatchAppMiddlewareRequest>,
+  async patchRouteMiddlewares(
+    call: GrpcRequest<PatchAppRouteMiddlewaresRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, middleware } = call.request;
+    const { path, action, middlewares } = call.request;
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -485,7 +486,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         message: 'Something went wrong',
       });
     }
-    await this.internalPatchMiddleware(path, action, middleware, moduleUrl.url).catch(
+    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
       e => {
         return callback({
           code: status.INTERNAL,
@@ -495,38 +496,43 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     );
   }
 
-  async internalPatchMiddleware(
+  async _patchRouteMiddlewares(
     path: string,
     action: string,
-    middleware: string[],
+    middlewares: string[],
     moduleUrl?: string,
   ) {
     let injected: string[] = [];
     let removed: string[] = [];
+    /* When moduleUrl is missing, the function is triggered by the router's patchRouteMiddlewares endpoint handler
+     moduleUrl is used for permission checks when removing a middleware that belongs to another module from a route */
     if (!moduleUrl) {
       moduleUrl = await this.grpcSdk.config.getModuleUrlByName('router').then(r => r.url);
     }
     const { url, routeIndex } = this.findGrpcRoute(path, action);
     const route = this.getGrpcRoute(url, routeIndex);
-    [injected, removed] = this._internalRouter.processMiddlewarePatch(
+    [injected, removed] = this._internalRouter.filterMiddlewaresPatch(
       route.options!.middlewares,
-      middleware,
+      middlewares,
       moduleUrl!,
     )!;
-    this.setGrpcRouteMiddleware(url, routeIndex, middleware);
-    this._internalRouter.patchRouteMiddleware({
+    this.setGrpcRouteMiddleware(url, routeIndex, middlewares);
+    this._internalRouter.patchRouteMiddlewares({
       path: path,
       action: action as ConduitRouteActions,
-      middleware: middleware,
+      middlewares: middlewares,
     });
-    await this.updateStateForMiddlewarePatch(middleware, path, action);
-    const storedMiddleware = await AppMiddleware.getInstance().findMany({ path, action });
-    for (const m of storedMiddleware) {
+    await this.updateStateForMiddlewarePatch(middlewares, path, action);
+    const storedMiddlewares = await AppMiddleware.getInstance().findMany({
+      path,
+      action,
+    });
+    for (const m of storedMiddlewares) {
       if (removed.includes(m.middleware)) {
         await AppMiddleware.getInstance().deleteOne({ _id: m._id });
       } else {
         await AppMiddleware.getInstance().findByIdAndUpdate(m._id, {
-          position: middleware.indexOf(m.middleware),
+          position: middlewares.indexOf(m.middleware),
         });
       }
     }
@@ -535,7 +541,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         path: path,
         action: action,
         middleware: m,
-        position: middleware.indexOf(m),
+        position: middlewares.indexOf(m),
         owner: moduleUrl,
       });
     }
@@ -560,7 +566,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
             middlewares.splice(m.position, 0, m.middleware);
           }
         }
-        await this.internalPatchMiddleware(
+        await this._patchRouteMiddlewares(
           r.options!.path,
           r.options!.action as ConduitRouteActions,
           middlewares,

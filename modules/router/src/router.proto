@@ -6,7 +6,7 @@ service Router {
   rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (google.protobuf.Empty);
   rpc SocketPush (SocketData) returns (google.protobuf.Empty);
-  rpc PatchMiddleware(PatchAppMiddlewareRequest) returns (google.protobuf.Empty);
+  rpc PatchRouteMiddlewares(PatchAppRouteMiddlewaresRequest) returns (google.protobuf.Empty);
 }
 
 message GenerateProtoRequest {
@@ -26,10 +26,10 @@ message SocketData {
   repeated string rooms = 4;
 }
 
-message PatchAppMiddlewareRequest {
+message PatchAppRouteMiddlewaresRequest {
   string path = 1;
   string action = 2;
-  repeated string middleware = 3;
+  repeated string middlewares = 3;
 }
 
 message RegisterConduitRouteRequest {

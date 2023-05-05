@@ -165,23 +165,23 @@ export class ConduitRoutingController {
     this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
-  patchRouteMiddleware(patch: MiddlewarePatch) {
-    this._restRouter?.patchRouteMiddleware(patch);
-    this._graphQLRouter?.patchRouteMiddleware(patch);
+  patchRouteMiddlewares(patch: MiddlewarePatch) {
+    this._restRouter?.patchRouteMiddlewares(patch);
+    this._graphQLRouter?.patchRouteMiddlewares(patch);
   }
 
-  processMiddlewarePatch(
+  filterMiddlewaresPatch(
     routeMiddleware: string[],
     patchMiddleware: string[],
     moduleName: string,
   ) {
     return (
-      this._restRouter?.processMiddlewarePatch(
+      this._restRouter?.filterMiddlewaresPatch(
         routeMiddleware,
         patchMiddleware,
         moduleName,
       ) ??
-      this._graphQLRouter?.processMiddlewarePatch(
+      this._graphQLRouter?.filterMiddlewaresPatch(
         routeMiddleware,
         patchMiddleware,
         moduleName,

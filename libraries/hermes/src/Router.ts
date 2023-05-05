@@ -129,10 +129,10 @@ export abstract class ConduitRouter {
     }
   }
 
-  patchRouteMiddleware(patch: MiddlewarePatch) {
-    const { path, action, middleware } = patch;
+  patchRouteMiddlewares(patch: MiddlewarePatch) {
+    const { path, action, middlewares } = patch;
     const [key, route] = this.findRoute(path, action);
-    route.input.middlewares = middleware;
+    route.input.middlewares = middlewares;
     this._registeredRoutes.set(key, route);
     const routes: { action: string; path: string }[] = [];
     for (const conduitRoute of this._registeredRoutes.values()) {
@@ -141,7 +141,7 @@ export abstract class ConduitRouter {
     this.cleanupRoutes(routes);
   }
 
-  processMiddlewarePatch(
+  filterMiddlewaresPatch(
     routeMiddleware: string[],
     patchMiddleware: string[],
     moduleUrl: string,

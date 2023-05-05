@@ -47,11 +47,15 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
     return this.client!.socketPush(data);
   }
 
-  patchMiddleware(path: string, action: ConduitRouteActions, middleware: string[]) {
-    return this.client!.patchMiddleware({
+  patchRouteMiddlewares(
+    path: string,
+    action: ConduitRouteActions,
+    middlewares: string[],
+  ) {
+    return this.client!.patchRouteMiddlewares({
       path: path,
       action: action,
-      middleware: middleware,
+      middlewares: middlewares,
     });
   }
 }
