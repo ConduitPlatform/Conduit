@@ -21,7 +21,8 @@ export const extractRelations = (
         const item = value[0];
         if (
           item.model.associations[model.name + '_' + relation] &&
-          item.model.associations[model.name + '_' + relation].foreignKey === name
+          item.model.associations[model.name + '_' + relation].foreignKey ===
+            item.originalSchema.name
         ) {
           model.belongsToMany(item.model, {
             foreignKey: name,
@@ -30,7 +31,8 @@ export const extractRelations = (
           });
         } else if (
           item.model.associations[model.name + '_' + relation] &&
-          item.model.associations[model.name + '_' + relation].foreignKey !== name
+          item.model.associations[model.name + '_' + relation].foreignKey !==
+            item.originalSchema.name
         ) {
           throw new Error(
             `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
