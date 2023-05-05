@@ -97,7 +97,7 @@ function iterDeep(schema: any, resSchema: any) {
       resSchema[key] = extractArrayType(schema[key]);
     } else if (isObject(schema[key])) {
       const extraction = extractObjectType(schema[key]);
-      if (!schema[key].hasOwnProperty('type')) {
+      if (!extraction.hasOwnProperty('type')) {
         const taf: any = {};
         const newFields: any = {};
         iterDeep(extraction, taf);
@@ -131,7 +131,15 @@ function extractArrayType(arrayField: UntypedArray) {
   return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: Indexable) {
+function extractObjectType(objectField: Indexable):
+  | {
+      type: any;
+      defaultValue?: any;
+      primaryKey?: boolean;
+      unique?: boolean;
+      allowNull?: boolean;
+    }
+  | Indexable {
   const res: {
     type: any;
     defaultValue?: any;
@@ -143,6 +151,8 @@ function extractObjectType(objectField: Indexable) {
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
       res.type = extractArrayType(objectField.type).type;
+    } else if (isObject(objectField.type)) {
+      return objectField.type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
     }
