@@ -13,7 +13,7 @@ import {
   extractFieldProperties,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
-import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
+import { extractRelations, RelationType } from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -21,11 +21,7 @@ import { extractEmbedded, extractRelations, RelationType } from '../utils/extrac
  */
 export function sqlSchemaConverter(
   jsonSchema: ConduitSchema,
-): [
-  ConduitSchema,
-  { [key: string]: any },
-  { [key: string]: RelationType | RelationType[] },
-] {
+): [ConduitSchema, { [key: string]: RelationType | RelationType[] }] {
   let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
@@ -33,11 +29,10 @@ export function sqlSchemaConverter(
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
   const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
   iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extractedEmbedded, extractedRelations];
+  return [copy, extractedRelations];
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
@@ -99,9 +94,20 @@ function iterDeep(schema: any, resSchema: any) {
     if (isArray(schema[key])) {
       resSchema[key] = extractArrayType(schema[key], key);
     } else if (isObject(schema[key])) {
-      resSchema[key] = extractObjectType(schema[key], key);
+      const extraction = extractObjectType(schema[key], key);
       if (!schema[key].hasOwnProperty('type')) {
-        iterDeep(schema[key], resSchema[key]);
+        const taf: any = {};
+        const newFields: any = {};
+        iterDeep(extraction, taf);
+        // unwrap the taf object to a new object that is not nested
+        for (const tafKey of Object.keys(taf)) {
+          newFields[`${key}.${tafKey}`] = taf[tafKey];
+        }
+        delete resSchema[key];
+        // resSchema is passed by reference, so we can just add the new fields to it
+        Object.assign(resSchema, newFields);
+      } else {
+        resSchema[key] = extraction;
       }
     } else {
       resSchema[key] = extractType(schema[key]);
@@ -157,7 +163,7 @@ function extractObjectType(objectField: Indexable, field: string) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    throw new Error('Failed to extract embedded object type');
+    return objectField;
   }
 
   return extractFieldProperties(objectField, res);

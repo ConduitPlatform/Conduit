@@ -279,7 +279,6 @@ export function parseQuery(
   dialect: string,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
-  associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
 ) {
   const parsingResult: {
     query?: WhereOptions;
@@ -292,16 +291,10 @@ export function parseQuery(
     requiredAssociations: {},
   };
   parsingResult.query = {
-    ..._parseQuery(
-      schema,
-      query,
-      dialect,
-      { relations, relationsDirectory: parsingResult.requiredRelations },
-      associations && {
-        associations,
-        associationsDirectory: parsingResult.requiredAssociations,
-      },
-    ),
+    ..._parseQuery(schema, query, dialect, {
+      relations,
+      relationsDirectory: parsingResult.requiredRelations,
+    }),
   };
   if (queryOptions.select) {
     if (queryOptions.select === '') {
@@ -418,4 +411,3 @@ export function renameRelations(
     exclude,
   };
 }
-export * from './sql';
