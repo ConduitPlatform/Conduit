@@ -1,4 +1,4 @@
-import { ConduitModel } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 import { isArray, isObject } from 'lodash';
 
 export interface RelationType {
@@ -38,4 +38,60 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
     }
   }
   return extracted;
+}
+
+export function convertObjectToDotNotation(schema: any, resSchema: any) {
+  for (const key of Object.keys(schema)) {
+    if (!isArray(schema[key]) && isObject(schema[key])) {
+      const extraction = extractObjectType(schema[key]);
+      if (!extraction.hasOwnProperty('type')) {
+        const taf: any = {};
+        const newFields: any = {};
+        convertObjectToDotNotation(extraction, taf);
+        // unwrap the taf object to a new object that is not nested
+        for (const tafKey of Object.keys(taf)) {
+          newFields[`${key}.${tafKey}`] = taf[tafKey];
+        }
+        delete resSchema[key];
+        // resSchema is passed by reference, so we can just add the new fields to it
+        Object.assign(resSchema, newFields);
+      } else {
+        resSchema[key] = extraction;
+      }
+    } else {
+      resSchema[key] = schema[key];
+    }
+  }
+}
+
+function extractObjectType(objectField: Indexable):
+  | {
+      type: any;
+      defaultValue?: any;
+      primaryKey?: boolean;
+      unique?: boolean;
+      allowNull?: boolean;
+    }
+  | Indexable {
+  const res: {
+    type: any;
+    defaultValue?: any;
+    primaryKey?: boolean;
+    unique?: boolean;
+    allowNull?: boolean;
+  } = { type: null };
+
+  if (objectField.hasOwnProperty('type')) {
+    if (isArray(objectField.type)) {
+      return objectField;
+    } else if (isObject(objectField.type)) {
+      return objectField.type;
+    } else {
+      return objectField;
+    }
+  } else {
+    return objectField;
+  }
+
+  return res;
 }
