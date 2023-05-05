@@ -95,7 +95,7 @@ function iterDeep(schema: any, resSchema: any) {
       resSchema[key] = extractArrayType(schema[key], key);
     } else if (isObject(schema[key])) {
       const extraction = extractObjectType(schema[key], key);
-      if (!schema[key].hasOwnProperty('type')) {
+      if (!extraction.hasOwnProperty('type')) {
         const taf: any = {};
         const newFields: any = {};
         iterDeep(extraction, taf);
@@ -155,6 +155,8 @@ function extractObjectType(objectField: Indexable, field: string) {
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
       res.type = extractArrayType(objectField.type, field).type;
+    } else if (isObject(objectField.type)) {
+      return objectField.type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
     }
