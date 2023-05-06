@@ -54,7 +54,6 @@ const schema = {
   },
   twitch: {
     ...authProviderSchema,
-    profile_image_url: TYPE.String,
   },
   active: {
     type: TYPE.Boolean,
@@ -95,9 +94,7 @@ export class User extends ConduitActiveSchema<User> {
   hashedPassword?: string;
   google?: AuthProviderBase;
   facebook?: AuthProviderBase;
-  twitch?: AuthProviderBase & {
-    profile_image_url?: string;
-  };
+  twitch?: AuthProviderBase;
   slack?: AuthProviderBase;
   figma?: AuthProviderBase;
   microsoft?: AuthProviderBase;
