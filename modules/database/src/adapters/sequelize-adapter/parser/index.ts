@@ -3,6 +3,8 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
+import dottie from 'dottie';
+import { preprocessQuery } from '../utils/pathUtils';
 
 function arrayHandler(
   schema: Indexable,
@@ -184,6 +186,7 @@ function _parseQuery(
     return;
   return parsed;
 }
+
 function handleRelation(
   key: string,
   value: any,
@@ -226,6 +229,7 @@ export function parseQuery(
   dialect: string,
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
+  objectDotPaths: string[],
 ) {
   const parsingResult: {
     query?: WhereOptions;
@@ -235,6 +239,7 @@ export function parseQuery(
     query: {},
     requiredRelations: [],
   };
+  preprocessQuery(query, objectDotPaths);
   parsingResult.query = {
     ..._parseQuery(schema, query, dialect, {
       relations,

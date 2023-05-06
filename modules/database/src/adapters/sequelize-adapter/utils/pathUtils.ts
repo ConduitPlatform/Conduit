@@ -1,6 +1,8 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import dottie from 'dottie';
 import { SequelizeSchema } from '../SequelizeSchema';
+import { ParsedQuery } from '../../../interfaces';
+import { cloneDeep } from 'lodash';
 
 const { isArray, isObject } = require('lodash');
 
@@ -105,6 +107,26 @@ export function unwrap(
     if (object.hasOwnProperty(path)) {
       dottie.set(object, path.replace(/_/g, '.'), object[path]);
       delete object[path];
+    }
+  }
+}
+
+export function preprocessQuery(query: ParsedQuery, objectDotPaths: string[]) {
+  for (const key in query) {
+    if (isObjectICare(query[key])) {
+      preprocessQuery(query[key], objectDotPaths);
+    }
+    if (isArray(query[key])) {
+      for (const element of query[key]) {
+        preprocessQuery(element, objectDotPaths);
+      }
+    }
+    for (const path of objectDotPaths) {
+      if (key.indexOf(path) !== -1) {
+        let split = key.split(path);
+        query[split[0].replace(/\./g, '_') + split[1]] = cloneDeep(query[key]);
+        delete query[key];
+      }
     }
   }
 }

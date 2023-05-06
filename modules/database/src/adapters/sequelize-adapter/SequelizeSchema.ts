@@ -485,6 +485,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
+      this.objectDotPaths,
     );
     return this.model.count({
       where: parsingResult.query,
@@ -512,6 +513,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
+      this.objectDotPaths,
     );
     parsedFilter = parsingResult.query;
     incrementDbQueries();
@@ -566,6 +568,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       queryOptions,
+      this.objectDotPaths,
     );
 
     let filter = parsingResult.query ?? {};

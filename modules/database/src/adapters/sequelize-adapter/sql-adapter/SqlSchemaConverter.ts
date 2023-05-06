@@ -94,7 +94,7 @@ function extractType(type: string, sqlType?: SQLDataType) {
       return DataTypes.UUID;
   }
 
-  throw new Error('Failed to extract embedded object type');
+  return DataTypes.JSON;
 }
 
 function iterDeep(schema: any, resSchema: any) {
@@ -118,7 +118,7 @@ function extractArrayType(arrayField: UntypedArray, field: string) {
     if (arrayField[0].hasOwnProperty('type')) {
       arrayElementType = extractType(arrayField[0].type);
     } else {
-      throw new Error('Failed to extract embedded object type');
+      arrayElementType = DataTypes.JSON;
     }
   } else {
     arrayElementType = extractType(arrayField[0]);
