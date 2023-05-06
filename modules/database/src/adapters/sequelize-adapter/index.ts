@@ -218,7 +218,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.sequelize.models,
     );
     const dialect = this.sequelize.getDialect();
-    const [newSchema, extractedRelations] =
+    const [newSchema, objectPaths, extractedRelations] =
       dialect === 'postgres'
         ? pgSchemaConverter(compiledSchema)
         : sqlSchemaConverter(compiledSchema);
@@ -237,6 +237,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       schema,
       this,
       relatedSchemas,
+      objectPaths,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;

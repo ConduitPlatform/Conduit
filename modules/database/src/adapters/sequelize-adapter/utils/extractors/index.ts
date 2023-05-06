@@ -40,7 +40,11 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
   return extracted;
 }
 
-export function convertObjectToDotNotation(schema: any, resSchema: any) {
+export function convertObjectToDotNotation(
+  schema: any,
+  resSchema: any,
+  objectPaths: string[] = [],
+) {
   for (const key of Object.keys(schema)) {
     if (!isArray(schema[key]) && isObject(schema[key])) {
       const extraction = extractObjectType(schema[key]);
@@ -50,7 +54,8 @@ export function convertObjectToDotNotation(schema: any, resSchema: any) {
         convertObjectToDotNotation(extraction, taf);
         // unwrap the taf object to a new object that is not nested
         for (const tafKey of Object.keys(taf)) {
-          newFields[`${key}.${tafKey}`] = taf[tafKey];
+          newFields[`${key}_${tafKey}`] = taf[tafKey];
+          objectPaths.push(`${key}_${tafKey}`);
         }
         delete resSchema[key];
         // resSchema is passed by reference, so we can just add the new fields to it
