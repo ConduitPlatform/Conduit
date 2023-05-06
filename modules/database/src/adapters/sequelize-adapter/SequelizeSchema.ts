@@ -8,7 +8,6 @@ import {
   Sequelize,
   Transaction,
 } from 'sequelize';
-import * as dottie from 'dottie';
 import {
   ConduitDatabaseSchema,
   MultiDocQuery,
@@ -22,6 +21,7 @@ import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery } from './parser';
 import { isNil } from 'lodash';
+import { processCreateQuery, unwrap } from './utils/pathUtils';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -32,15 +32,17 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   excludedFields: string[];
   synced: boolean;
   readonly idField;
+  readonly objectDotPaths: string[];
 
   constructor(
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitDatabaseSchema,
     protected readonly adapter: SequelizeAdapter,
-    protected readonly extractedRelations: {
+    readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
+    readonly objectPaths: string[],
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
@@ -69,6 +71,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         extractedRelations[relation] = this;
       }
     }
+    this.objectDotPaths = [];
+    for (const path of objectPaths) {
+      this.objectDotPaths.push(path.replace(/_/g, '.'));
+    }
     extractRelations(
       this.originalSchema.name,
       originalSchema,
@@ -88,21 +94,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-    for (const key in parsedQuery) {
-      // check if the key is an object with fields, and not an object like Date
-      if (
-        typeof parsedQuery[key] === 'object' &&
-        parsedQuery[key].hasOwnProperty('hasOwnProperty')
-      ) {
-        // unwrap the object and add the fields to the query
-        const processing: any = {};
-        for (const field in parsedQuery[key]) {
-          processing[key + '.' + field] = parsedQuery[key][field];
-        }
-        delete parsedQuery[key];
-        Object.assign(parsedQuery, processing);
-      }
-    }
+
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -213,26 +205,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
+    processCreateQuery(parsedQuery, this.objectPaths);
     const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
     const transactionProvided = transaction !== undefined;
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    }
-    for (const key in parsedQuery) {
-      // check if the key is an object with fields, and not an object like Date
-      if (
-        typeof parsedQuery[key] === 'object' &&
-        parsedQuery[key].hasOwnProperty('hasOwnProperty')
-      ) {
-        // unwrap the object and add the fields to the query
-        const processing: any = {};
-        for (const field in parsedQuery[key]) {
-          processing[key + '.' + field] = parsedQuery[key][field];
-        }
-        delete parsedQuery[key];
-        Object.assign(parsedQuery, processing);
-      }
     }
     return this.model
       .create(parsedQuery, {
@@ -265,21 +243,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
-      for (const key in parsedQuery[i]) {
-        // check if the key is an object with fields, and not an object like Date
-        if (
-          typeof parsedQuery[i][key] === 'object' &&
-          parsedQuery[i][key].hasOwnProperty('hasOwnProperty')
-        ) {
-          // unwrap the object and add the fields to the query
-          const processing: any = {};
-          for (const field in parsedQuery[i][key]) {
-            processing[key + '.' + field] = parsedQuery[i][key][field];
-          }
-          delete parsedQuery[i][key];
-          Object.assign(parsedQuery[i], processing);
-        }
-      }
+      processCreateQuery(parsedQuery[i], this.objectPaths);
     }
     return this.model
       .bulkCreate(parsedQuery, { transaction: t })
@@ -304,7 +268,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     incrementDbQueries();
     return this.model.findOne(options).then(doc => {
       if (!doc) return doc;
-      return dottie.transform(doc.toJSON());
+      const document = doc.toJSON();
+      unwrap(document, this.objectPaths, this.extractedRelations);
+      return document;
     });
   }
 
@@ -412,11 +378,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           modelName = modelName + 's';
         }
         // @ts-ignore
-        doc[`set${modelName}`](relationObjects[relation], doc._id);
+        doc[`set${modelName}`](relationObjects[relation]);
       } else {
         const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
         // @ts-ignore
-        doc[`set${actualRel}`](relationObjects[relation], doc._id);
+        doc[`set${actualRel}`](relationObjects[relation]);
       }
     }
     return hasOne ? doc.save({ transaction }) : doc;
@@ -468,7 +434,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return this.model.findAll(options).then(docs => {
       if (!docs) return docs;
       return docs.map(doc => {
-        return dottie.transform(doc.toJSON());
+        const document = doc.toJSON();
+        unwrap(document, this.objectPaths, this.extractedRelations);
+        return document;
       });
     });
   }
@@ -600,7 +568,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       queryOptions,
     );
 
-    let filter = parsingResult.query;
+    let filter = parsingResult.query ?? {};
     return { filter, parsingResult };
   }
 
