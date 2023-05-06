@@ -1,7 +1,12 @@
-import { DatabaseProvider, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   functionName: {
     type: TYPE.String,

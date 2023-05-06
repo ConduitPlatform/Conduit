@@ -1,6 +1,7 @@
 import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import {
   ConduitModel,
+  ConduitRouteOption,
   ConduitRouteOptions,
   ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
@@ -28,7 +29,7 @@ export class ConduitRoute {
     return this._input;
   }
 
-  get returnTypeFields(): ConduitModel | string {
+  get returnTypeFields(): ConduitRouteOption | ConduitModel | string {
     return this._returnType.fields;
   }
 

@@ -80,7 +80,7 @@ export class RouteBuilder {
     return this;
   }
 
-  return(name: string, fields: ConduitModel | string): RouteBuilder {
+  return(name: string, fields: ConduitRouteOption | ConduitModel | string): RouteBuilder {
     this._returns = new ConduitRouteReturnDefinition(name, fields);
     return this;
   }

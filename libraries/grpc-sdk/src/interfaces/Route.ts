@@ -1,4 +1,4 @@
-import { ConduitModel } from './Model';
+import { ConduitModel, ConduitModelField } from './Model';
 import { Indexable } from './Indexable';
 
 export interface ConduitRouteParameters {
@@ -32,6 +32,10 @@ export interface ConduitRouteOption {
     | string[]
     | ConduitRouteOptionExtended
     | RouteOptionType
+    | ConduitModelField
+    | ConduitModelField[]
+    | ConduitModel
+    | ConduitModel[]
     | RouteOptionType[];
 }
 

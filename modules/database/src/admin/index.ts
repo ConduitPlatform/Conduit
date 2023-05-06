@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  ArrayConduitModel,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
   RouteOptionType,
@@ -337,7 +338,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Converts a previously imported pending schema to a CMS schema.`,
         bodyParams: {
-          schemas: { type: [PendingSchemas.fields], required: true },
+          schemas: { type: [PendingSchemas.fields as ArrayConduitModel], required: true },
         },
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),

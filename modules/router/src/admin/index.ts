@@ -6,6 +6,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitString,
   GrpcServer,
@@ -102,10 +103,7 @@ export class AdminHandlers {
           action: ConduitString.Required,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          proxyMiddlewareOptions: {
-            type: TYPE.JSON,
-            required: false,
-          },
+          proxyMiddlewareOptions: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('CreateProxyRoute', {
@@ -184,10 +182,7 @@ export class AdminHandlers {
           action: ConduitString.Optional,
           description: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          proxyMiddlewareOptions: {
-            type: TYPE.JSON,
-            required: false,
-          },
+          proxyMiddlewareOptions: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('UpdateProxyRoute', RouterProxyRoute.name),

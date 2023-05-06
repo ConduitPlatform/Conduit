@@ -1,10 +1,15 @@
-import { ConduitModelField, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModelField,
+  ConduitModelFieldJSON,
+  ConduitModelFieldRelation,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 
 class ConduitStringConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.String {
     return TYPE.String;
   }
 
@@ -19,7 +24,7 @@ class ConduitNumberConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Number {
     return TYPE.Number;
   }
 
@@ -34,7 +39,7 @@ class ConduitBooleanConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Boolean {
     return TYPE.Boolean;
   }
 
@@ -49,7 +54,7 @@ class ConduitDateConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Date {
     return TYPE.Date;
   }
 
@@ -64,7 +69,7 @@ class ConduitObjectIdConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.ObjectId {
     return TYPE.ObjectId;
   }
 
@@ -79,11 +84,11 @@ class ConduitJSONConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.JSON {
     return TYPE.JSON;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): ConduitModelFieldJSON {
     return { type: TYPE.JSON, required: true };
   }
 }
@@ -94,11 +99,11 @@ class ConduitRelationConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static Optional(model: string): ConduitModelField {
+  static Optional(model: string): ConduitModelFieldRelation {
     return { type: TYPE.Relation, model, required: false };
   }
 
-  static Required(model: string): ConduitModelField {
+  static Required(model: string): ConduitModelFieldRelation {
     return { type: TYPE.Relation, model, required: true };
   }
 }

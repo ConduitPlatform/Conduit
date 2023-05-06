@@ -106,7 +106,7 @@ export class RouterAdmin {
       target,
       action,
       middlewares,
-      description,
+      routeDescription: description,
       proxyMiddlewareOptions,
     });
     await this.registerProxyRoutes(this.router);
@@ -141,7 +141,7 @@ export class RouterAdmin {
         target,
         action,
         middlewares,
-        description,
+        routeDescription: description,
         proxyMiddlewareOptions,
       },
     );
@@ -186,7 +186,7 @@ export class RouterAdmin {
         options: {
           path: route.path,
           action: route.action,
-          description: route.description,
+          description: route.routeDescription,
           middlewares: route.middlewares,
         },
         proxy: {

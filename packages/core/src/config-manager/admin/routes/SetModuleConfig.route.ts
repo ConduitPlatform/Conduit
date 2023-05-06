@@ -1,5 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitError,
+  ConduitModel,
   ConduitRouteActions,
   ConduitRouteParameters,
 } from '@conduitplatform/grpc-sdk';
@@ -22,7 +23,7 @@ export function setModuleConfigRoute(
       action: ConduitRouteActions.PATCH,
       description: `Updates ${moduleName} module configuration.`,
       bodyParams: {
-        config: { type: configSchema, required: true },
+        config: { type: configSchema as unknown as ConduitModel, required: true },
       },
     },
     new ConduitRouteReturnDefinition(

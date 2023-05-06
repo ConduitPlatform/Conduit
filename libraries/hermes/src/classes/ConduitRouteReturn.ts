@@ -38,13 +38,13 @@
  * }
  *
  */
-import { ConduitModel } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
 
 export class ConduitRouteReturnDefinition {
   private _name: string;
-  private _fields: ConduitModel | string;
+  private _fields: ConduitRouteOption | ConduitModel | string;
 
-  constructor(name: string, fields: ConduitModel | string) {
+  constructor(name: string, fields: ConduitRouteOption | ConduitModel | string) {
     this._name = name;
     this._fields = fields;
   }
@@ -53,7 +53,7 @@ export class ConduitRouteReturnDefinition {
     return this._name;
   }
 
-  get fields(): ConduitModel | string {
+  get fields(): ConduitRouteOption | ConduitModel | string {
     return this._fields;
   }
 }

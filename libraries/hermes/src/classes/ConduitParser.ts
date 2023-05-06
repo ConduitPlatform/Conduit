@@ -2,6 +2,7 @@ import {
   Array,
   ConduitModel,
   ConduitModelField,
+  ConduitModelFieldRelation,
   ConduitRouteOption,
   TYPE,
   UntypedArray,
@@ -121,13 +122,13 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           if ((fields[field] as any).type) {
             // if type is simply a type
             if (typeof (fields[field] as ConduitModelField).type === 'string') {
-              if ((fields[field] as ConduitModelField).type === 'Relation') {
+              if ((fields[field] as ConduitModelFieldRelation).type === 'Relation') {
                 this.getResultFromRelation(
                   processingObject,
                   name,
                   field,
-                  (fields[field] as ConduitModelField).model,
-                  (fields[field] as ConduitModelField).required!,
+                  (fields[field] as ConduitModelFieldRelation).model,
+                  (fields[field] as ConduitModelFieldRelation).required!,
                   false,
                 );
               } else {

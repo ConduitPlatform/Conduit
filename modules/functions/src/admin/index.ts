@@ -10,6 +10,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitString,
   GrpcServer,
@@ -179,8 +180,8 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Required,
           functionCode: ConduitString.Required,
-          inputs: { type: TYPE.JSON, required: false },
-          returns: { type: TYPE.JSON, required: false },
+          inputs: ConduitJson.Optional,
+          returns: ConduitJson.Optional,
           timeout: ConduitNumber.Optional,
         },
       },
@@ -193,7 +194,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: 'Deletes multiple functions',
         queryParams: {
-          ids: { type: [RouteOptionType.String], required: true },
+          ids: { type: [TYPE.String], required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFunctions', 'String'),
@@ -282,8 +283,8 @@ export class AdminHandlers {
         bodyParams: {
           name: ConduitString.Optional,
           functionCode: ConduitString.Optional,
-          inputs: { type: TYPE.JSON, required: false },
-          returns: { type: TYPE.JSON, required: false },
+          inputs: ConduitJson.Optional,
+          returns: ConduitJson.Optional,
           timeout: ConduitNumber.Optional,
         },
       },

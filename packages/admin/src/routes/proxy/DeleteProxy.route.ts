@@ -41,7 +41,7 @@ export function deleteProxyRoute(adminModule: AdminModule) {
             options: {
               path: route.path,
               action: route.action,
-              description: route.description,
+              description: route.routeDescription,
               middlewares: route.middlewares,
             },
             proxy: {

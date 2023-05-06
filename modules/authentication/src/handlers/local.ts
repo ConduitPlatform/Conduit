@@ -235,7 +235,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       this.grpcSdk.isAvailable('email')
     ) {
       const verificationToken: Token = await Token.getInstance().create({
-        type: TokenType.VERIFICATION_TOKEN,
+        tokenType: TokenType.VERIFICATION_TOKEN,
         user: user._id,
         token: uuid(),
       });
@@ -313,7 +313,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       return 'Ok';
 
     const oldToken: Token | null = await Token.getInstance().findOne({
-      type: TokenType.PASSWORD_RESET_TOKEN,
+      tokenType: TokenType.PASSWORD_RESET_TOKEN,
       user: user._id,
     });
     if (!isNil(oldToken) && AuthUtils.checkResendThreshold(oldToken)) {
@@ -321,7 +321,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
 
     const passwordResetTokenDoc = await Token.getInstance().create({
-      type: TokenType.PASSWORD_RESET_TOKEN,
+      tokenType: TokenType.PASSWORD_RESET_TOKEN,
       user: user._id,
       token: uuid(),
     });
@@ -345,7 +345,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       call.request.params;
 
     const passwordResetTokenDoc: Token | null = await Token.getInstance().findOne({
-      type: TokenType.PASSWORD_RESET_TOKEN,
+      tokenType: TokenType.PASSWORD_RESET_TOKEN,
       token: passwordResetTokenParam,
     });
     if (isNil(passwordResetTokenDoc))
@@ -480,7 +480,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
       {
-        type: TokenType.VERIFICATION_TOKEN,
+        tokenType: TokenType.VERIFICATION_TOKEN,
         token: verificationTokenParam,
       },
       undefined,
@@ -530,7 +530,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const token: Token | null = await Token.getInstance().findOne(
       {
-        type: TokenType.CHANGE_EMAIL_TOKEN,
+        tokenType: TokenType.CHANGE_EMAIL_TOKEN,
         token: verificationToken,
       },
       undefined,
@@ -542,7 +542,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User = token.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     await Token.getInstance()
-      .deleteMany({ user: user._id, type: TokenType.CHANGE_EMAIL_TOKEN })
+      .deleteMany({ user: user._id, tokenType: TokenType.CHANGE_EMAIL_TOKEN })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
@@ -572,19 +572,19 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
 
     let verificationToken: Token | null = await Token.getInstance().findOne({
-      type: TokenType.VERIFICATION_TOKEN,
+      tokenType: TokenType.VERIFICATION_TOKEN,
       user: user._id,
     });
     if (!isNil(verificationToken) && AuthUtils.checkResendThreshold(verificationToken)) {
       await Token.getInstance().deleteMany({
         user: user._id,
-        type: TokenType.VERIFICATION_TOKEN,
+        tokenType: TokenType.VERIFICATION_TOKEN,
       });
     }
 
     verificationToken = await Token.getInstance().create({
       user: user._id,
-      type: TokenType.VERIFICATION_TOKEN,
+      tokenType: TokenType.VERIFICATION_TOKEN,
       token: uuid(),
       data: {
         email: email,

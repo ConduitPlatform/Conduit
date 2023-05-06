@@ -154,7 +154,6 @@ export class AdminHandlers {
                 sendTo: ConduitString.Required,
                 title: ConduitString.Required,
                 body: ConduitString.Optional,
-                data: ConduitJson.Optional,
                 platform: ConduitString.Optional,
                 doNotStore: ConduitBoolean.Optional,
               },
