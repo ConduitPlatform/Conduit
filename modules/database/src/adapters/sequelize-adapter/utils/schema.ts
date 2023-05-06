@@ -70,10 +70,10 @@ const findOriginalSchemaField = (
   originalSchema: ConduitDatabaseSchema,
   field: string,
 ) => {
-  if (field.indexOf('.') === -1) {
+  if (field.indexOf('_') === -1) {
     return originalSchema.compiledFields[field];
   } else {
-    let fieldParts = field.split('.');
+    let fieldParts = field.split('_');
     let currentField: any = originalSchema.compiledFields[fieldParts[0]];
     for (let i = 1; i < fieldParts.length; i++) {
       if (currentField.type) {
@@ -194,7 +194,7 @@ export function compileSchema(
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));
-  validateFieldConstraints(compiledSchema);
+  validateFieldConstraints(compiledSchema, 'sql');
   (compiledSchema as any).fields = JSON.parse(JSON.stringify(schema.compiledFields));
   if (registeredSchemas.has(compiledSchema.name)) {
     if (compiledSchema.name !== 'Config') {
