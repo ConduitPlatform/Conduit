@@ -1,9 +1,9 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import {
   ConduitModel,
   ConduitRouteOption,
   ConduitRouteOptions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 
 export class ConduitRoute {
