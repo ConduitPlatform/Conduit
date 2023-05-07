@@ -51,7 +51,7 @@ export const extractRelations = (
           item.sync();
         }
       } else {
-        let relationsField = findOriginalSchemaField(originalSchema, relation);
+        const relationsField = findOriginalSchemaField(originalSchema, relation);
         model.belongsTo(value.model, {
           foreignKey: {
             name: relation + 'Id',
@@ -73,7 +73,7 @@ const findOriginalSchemaField = (
   if (field.indexOf('_') === -1) {
     return originalSchema.compiledFields[field];
   } else {
-    let fieldParts = field.split('_');
+    const fieldParts = field.split('_');
     let currentField: any = originalSchema.compiledFields[fieldParts[0]];
     for (let i = 1; i < fieldParts.length; i++) {
       if (currentField.type) {

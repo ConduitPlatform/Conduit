@@ -571,7 +571,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.objectDotPaths,
     );
 
-    let filter = parsingResult.query ?? {};
+    const filter = parsingResult.query ?? {};
     return { filter, parsingResult };
   }
 

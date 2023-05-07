@@ -123,7 +123,7 @@ export function preprocessQuery(query: ParsedQuery, objectDotPaths: string[]) {
     }
     for (const path of objectDotPaths) {
       if (key.indexOf(path) !== -1) {
-        let split = key.split(path);
+        const split = key.split(path);
         query[split[0].replace(/\./g, '_') + split[1]] = cloneDeep(query[key]);
         delete query[key];
       }
