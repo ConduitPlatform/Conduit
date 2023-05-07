@@ -136,41 +136,6 @@ export type ConduitModel = {
 } & {
   [field in string]: allowedTypes | allowedTypes[] | ConduitModel;
 };
-let test: ConduitModel = {
-  myField: TYPE.String,
-  myField2: [TYPE.Number],
-  myField3: { type: TYPE.JSON },
-  myField4: { type: TYPE.Relation, model: 'test' },
-  myField5: { type: TYPE.Relation, model: 'test', required: true },
-  myField6: {
-    test: { type: TYPE.Relation, model: 'test', required: true },
-    test2: { type: TYPE.Relation, model: 'test', required: true },
-  },
-  myField7: {
-    type: {
-      test: { type: TYPE.Relation, model: 'test', required: true },
-      test2: { type: TYPE.Relation, model: 'test', required: true },
-    },
-  },
-  myField11: {
-    type: [
-      {
-        test: { type: TYPE.String, required: true },
-        test2: { type: TYPE.JSON, required: true },
-      },
-    ],
-    required: true,
-  },
-  myField12: {
-    type: [
-      {
-        test: TYPE.String,
-        test2: { type: TYPE.JSON, required: true },
-      },
-    ],
-    required: true,
-  },
-};
 
 export const ConduitModelOptionsPermModifyType = [
   'Everything',
