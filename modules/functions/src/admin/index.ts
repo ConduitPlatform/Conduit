@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -206,7 +205,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: 'Delete a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFunction', 'String'),
@@ -237,7 +236,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: 'Get a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetFunction', 'String'),
@@ -263,7 +262,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: 'Get function executions for specific function',
         urlParams: {
-          functionName: { type: RouteOptionType.String, required: true },
+          functionName: { type: TYPE.String, required: true },
         },
         queryParams: {
           success: ConduitBoolean.Optional,
@@ -278,7 +277,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: 'Update a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Optional,

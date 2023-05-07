@@ -1,5 +1,8 @@
-import { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function getReadyRoute() {
   return new ConduitRoute(

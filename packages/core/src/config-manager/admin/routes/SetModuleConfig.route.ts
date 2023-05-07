@@ -3,9 +3,10 @@ import ConduitGrpcSdk, {
   ConduitModel,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import convict from 'convict';
 
 type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;

@@ -1,7 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -101,7 +100,7 @@ export class AdminHandlers {
           path: ConduitString.Required,
           target: ConduitString.Required,
           action: ConduitString.Required,
-          description: ConduitString.Optional,
+          routeDescription: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
           proxyMiddlewareOptions: ConduitJson.Optional,
         },
@@ -132,7 +131,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a security client.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteSecurityClient', {
@@ -180,7 +179,7 @@ export class AdminHandlers {
           path: ConduitString.Optional,
           target: ConduitString.Optional,
           action: ConduitString.Optional,
-          description: ConduitString.Optional,
+          routeDescription: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
           proxyMiddlewareOptions: ConduitJson.Optional,
         },

@@ -1,9 +1,4 @@
-import {
-  ConduitModelField,
-  ConduitModelFieldJSON,
-  ConduitModelFieldRelation,
-  TYPE,
-} from '@conduitplatform/grpc-sdk';
+import { TYPE } from '@conduitplatform/grpc-sdk';
 
 class ConduitStringConstructor {
   // private to disallow creating other instances of this type
@@ -13,7 +8,7 @@ class ConduitStringConstructor {
     return TYPE.String;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.String; required: true } {
     return { type: TYPE.String, required: true };
   }
 }
@@ -28,7 +23,7 @@ class ConduitNumberConstructor {
     return TYPE.Number;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Number; required: true } {
     return { type: TYPE.Number, required: true };
   }
 }
@@ -43,7 +38,7 @@ class ConduitBooleanConstructor {
     return TYPE.Boolean;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Boolean; required: true } {
     return { type: TYPE.Boolean, required: true };
   }
 }
@@ -58,7 +53,7 @@ class ConduitDateConstructor {
     return TYPE.Date;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Date; required: true } {
     return { type: TYPE.Date, required: true };
   }
 }
@@ -73,7 +68,7 @@ class ConduitObjectIdConstructor {
     return TYPE.ObjectId;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.ObjectId; required: true } {
     return { type: TYPE.ObjectId, required: true };
   }
 }
@@ -88,7 +83,7 @@ class ConduitJSONConstructor {
     return TYPE.JSON;
   }
 
-  static get Required(): ConduitModelFieldJSON {
+  static get Required(): { type: TYPE.JSON; required: true } {
     return { type: TYPE.JSON, required: true };
   }
 }
@@ -99,11 +94,15 @@ class ConduitRelationConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static Optional(model: string): ConduitModelFieldRelation {
+  static Optional(model: string): {
+    type: TYPE.Relation;
+    model: string;
+    required: false;
+  } {
     return { type: TYPE.Relation, model, required: false };
   }
 
-  static Required(model: string): ConduitModelFieldRelation {
+  static Required(model: string): { type: TYPE.Relation; model: string; required: true } {
     return { type: TYPE.Relation, model, required: true };
   }
 }

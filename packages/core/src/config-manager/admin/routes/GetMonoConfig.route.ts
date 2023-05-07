@@ -1,8 +1,11 @@
-import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 
 import { RegisteredModule } from '@conduitplatform/commons';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function getMonoConfigRoute(
   grpcSdk: ConduitGrpcSdk,

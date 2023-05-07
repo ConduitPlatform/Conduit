@@ -1,5 +1,9 @@
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
-import { ConduitRouteActions, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from '@conduitplatform/hermes';
+import {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { AdminProxyRoute } from '../../models';
 
 export function getProxyRoutesRoute() {

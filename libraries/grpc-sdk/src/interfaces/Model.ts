@@ -64,7 +64,7 @@ type NotUniqueField = {
   index?: SchemaFieldIndex;
 };
 
-type BasicConduitModelField = BaseConduitModelField &
+export type BasicConduitModelField = BaseConduitModelField &
   (UniqueAndRequiredField | NotUniqueField);
 
 export type ConduitModelFieldRelation = BasicConduitModelField & {
@@ -89,7 +89,7 @@ export type ConduitModelField = BasicConduitModelField & {
     | ArrayConduitModel[];
 };
 
-type allowedTypes =
+export type allowedTypes =
   | ExcludeRelation<TYPE>
   | ConduitModelField
   | ConduitModelFieldEnum

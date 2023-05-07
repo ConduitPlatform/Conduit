@@ -81,8 +81,14 @@ export class RouterAdmin {
   }
 
   async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -106,7 +112,7 @@ export class RouterAdmin {
       target,
       action,
       middlewares,
-      routeDescription: description,
+      routeDescription,
       proxyMiddlewareOptions,
     });
     await this.registerProxyRoutes(this.router);
@@ -115,8 +121,15 @@ export class RouterAdmin {
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, id, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      id,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -141,7 +154,7 @@ export class RouterAdmin {
         target,
         action,
         middlewares,
-        routeDescription: description,
+        routeDescription,
         proxyMiddlewareOptions,
       },
     );

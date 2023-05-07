@@ -1,4 +1,4 @@
-import { ConduitModel, TYPE } from './Model';
+import { allowedTypes, ConduitModel, TYPE } from './Model';
 import { Indexable } from './Indexable';
 
 export interface ConduitRouteParameters {
@@ -31,12 +31,13 @@ export type ConduitQueryParams = {
 export type ConduitReturnField =
   | keyof typeof TYPE
   | TYPE
+  | ConduitModel
   | {
-      [key: string]: TYPE | TYPE[] | ConduitModel | { [key: string]: ConduitModel[] };
+      [key: string]: TYPE | TYPE[] | ConduitModel | ConduitModel[];
     };
 
 export type ConduitReturnModel = {
-  [field: string]: ConduitReturnField;
+  [field: string]: ConduitReturnField | allowedTypes | allowedTypes[] | string | string[];
 };
 
 export type ConduitReturn = ConduitReturnField | ConduitReturnModel | string;

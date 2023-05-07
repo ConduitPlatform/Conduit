@@ -2,14 +2,11 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash';
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  ProxyRouteT,
-} from '@conduitplatform/hermes';
+import { ConduitRoute, ProxyRouteT } from '@conduitplatform/hermes';
 import { AdminProxyRoute } from '../../models';
 import AdminModule from '../../index';
 

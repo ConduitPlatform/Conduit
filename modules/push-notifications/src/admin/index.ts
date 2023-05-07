@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
   GrpcError,
   ParsedRouterRequest,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -171,7 +170,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns a user's notification token.`,
         urlParams: {
-          userId: { type: RouteOptionType.String, required: true },
+          userId: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetNotificationToken', {
