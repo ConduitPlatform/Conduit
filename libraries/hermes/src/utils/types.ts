@@ -1,6 +1,5 @@
 import ConduitGrpcSdk, {
   ConduitModel,
-  ConduitModelField,
   ConduitModelFieldRelation,
 } from '@conduitplatform/grpc-sdk';
 import { TypeRegistry } from '../classes';

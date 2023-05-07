@@ -1,5 +1,4 @@
 import {
-  ConduitModel,
   ConduitReturn,
   ConduitRouteOptions,
   ConduitRouteParameters,
