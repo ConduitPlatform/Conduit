@@ -12,8 +12,8 @@ import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 import ConduitGrpcSdk, {
   ConduitModel,
+  ConduitReturn,
   ConduitRouteActions,
-  ConduitRouteOption,
   ConduitRouteOptions,
   Indexable,
   TYPE,
@@ -71,7 +71,7 @@ export class GraphQLController extends ConduitRouter {
 
   generateType(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     dbTypeRefresh = false,
   ) {
     const typeExists = this.typeDefs.includes('type ' + name + ' ');

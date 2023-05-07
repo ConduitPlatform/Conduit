@@ -1,6 +1,6 @@
 import {
   ConduitModel,
-  ConduitRouteOption,
+  ConduitReturn,
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -31,7 +31,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
 
   extractTypes(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     isInput: boolean,
   ): ParseResult {
     if (!isInput) this.knownTypes.add(name);
@@ -113,7 +113,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     processingObject: ProcessingObject,
     name: string,
     fieldName: string,
-    value: string | ConduitModel | ConduitRouteOption,
+    value: ConduitModel | ConduitReturn,
     isRequired: boolean = false,
     isArray: boolean,
     description?: string,

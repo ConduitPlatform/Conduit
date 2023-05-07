@@ -3,7 +3,7 @@ import {
   ConduitModel,
   ConduitModelField,
   ConduitModelFieldRelation,
-  ConduitRouteOption,
+  ConduitReturn,
   TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -18,7 +18,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   abstract extractTypes(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     isInput: boolean,
   ): ParseResult;
 
@@ -81,7 +81,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   protected extractTypesInternal(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, false);
     if (typeof fields === 'string') {

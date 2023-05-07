@@ -1,4 +1,4 @@
-import { ConduitRouteOptionExtended, Indexable } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 
 const GQL_PRIMITIVES = ['Number', 'Boolean', 'Date', 'String'];
 
@@ -41,13 +41,13 @@ export function processParams(paramObj: Indexable, sourceParams: string) {
       if (typeof elementZero === 'string') {
         params += extractArrayParam(elementZero, false, paramObj[k]);
       } else {
-        const typeZero = (elementZero as ConduitRouteOptionExtended).type;
-        const typeZeroRequired = (elementZero as ConduitRouteOptionExtended).required;
-        params += extractArrayParam(typeZero, typeZeroRequired);
+        const typeZero = (elementZero as ConduitModel).type;
+        const typeZeroRequired = (elementZero as ConduitModel).required;
+        params += extractArrayParam(typeZero!, typeZeroRequired);
       }
     } else {
-      const typeZero = (paramObj[k] as ConduitRouteOptionExtended).type;
-      const typeZeroRequired = (paramObj[k] as ConduitRouteOptionExtended).required;
+      const typeZero = (paramObj[k] as ConduitModel).type;
+      const typeZeroRequired = (paramObj[k] as ConduitModel).required;
       if (typeof typeZero === 'string') {
         params += extractParam(typeZero, typeZeroRequired);
       } else if (Array.isArray(typeZero)) {
@@ -55,10 +55,9 @@ export function processParams(paramObj: Indexable, sourceParams: string) {
         if (typeof elementZero === 'string') {
           params += extractArrayParam(elementZero, typeZeroRequired, typeZero);
         } else {
-          const typeZeroTwo = (elementZero as ConduitRouteOptionExtended).type;
-          const typeZeroTwoRequired = (elementZero as ConduitRouteOptionExtended)
-            .required;
-          params += extractArrayParam(typeZeroTwo, typeZeroTwoRequired);
+          const typeZeroTwo = (elementZero as ConduitModel).type;
+          const typeZeroTwoRequired = (elementZero as ConduitModel).required;
+          params += extractArrayParam(typeZeroTwo!, typeZeroTwoRequired);
         }
       }
     }

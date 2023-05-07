@@ -1,6 +1,6 @@
 import {
   ConduitModel,
-  ConduitRouteOption,
+  ConduitReturn,
   ConduitRouteOptions,
   ConduitRouteParameters,
   ConduitRouteReturnDefinition,
@@ -29,7 +29,7 @@ export class ConduitRoute {
     return this._input;
   }
 
-  get returnTypeFields(): ConduitRouteOption | ConduitModel | string {
+  get returnTypeFields(): ConduitReturn {
     return this._returnType.fields;
   }
 

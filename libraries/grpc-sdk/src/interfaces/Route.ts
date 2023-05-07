@@ -1,4 +1,4 @@
-import { ConduitModel, ConduitModelField } from './Model';
+import { ConduitModel, TYPE } from './Model';
 import { Indexable } from './Indexable';
 
 export interface ConduitRouteParameters {
@@ -12,32 +12,34 @@ export interface ConduitRouteParameters {
   queryParams?: Indexable;
 }
 
-export enum RouteOptionType {
-  String = 'String',
-  Number = 'Number',
-  Boolean = 'Boolean',
-  Date = 'Date',
-  ObjectId = 'ObjectId',
-  JSON = 'JSON',
-}
+type AllowedTypes = TYPE.String | TYPE.Number | TYPE.Boolean | TYPE.Date | TYPE.ObjectId;
 
-export interface ConduitRouteOptionExtended {
-  type: RouteOptionType;
-  required: boolean;
-}
+export type ConduitUrlParam = AllowedTypes | { type: AllowedTypes; required?: boolean };
+export type ConduitQueryParam =
+  | ConduitUrlParam
+  | AllowedTypes[]
+  | { type: AllowedTypes[]; required?: boolean };
 
-export interface ConduitRouteOption {
-  [field: string]:
-    | string
-    | string[]
-    | ConduitRouteOptionExtended
-    | RouteOptionType
-    | ConduitModelField
-    | ConduitModelField[]
-    | ConduitModel
-    | ConduitModel[]
-    | RouteOptionType[];
-}
+export type ConduitUrlParams = {
+  [field in string]: ConduitUrlParam;
+};
+
+export type ConduitQueryParams = {
+  [field in string]: ConduitQueryParam;
+};
+
+export type ConduitReturnField =
+  | keyof typeof TYPE
+  | TYPE
+  | {
+      [key: string]: TYPE | TYPE[] | ConduitModel | { [key: string]: ConduitModel[] };
+    };
+
+export type ConduitReturnModel = {
+  [field: string]: ConduitReturnField;
+};
+
+export type ConduitReturn = ConduitReturnField | ConduitReturnModel | string;
 
 export enum ConduitRouteActions {
   GET = 'GET',
@@ -48,9 +50,9 @@ export enum ConduitRouteActions {
 }
 
 export interface ConduitRouteOptions {
-  queryParams?: ConduitRouteOption | ConduitModel;
-  bodyParams?: ConduitRouteOption | ConduitModel;
-  urlParams?: ConduitRouteOption | ConduitModel;
+  queryParams?: ConduitQueryParams;
+  bodyParams?: ConduitModel;
+  urlParams?: ConduitUrlParams;
   action: ConduitRouteActions;
   path: string;
   name?: string;
@@ -63,7 +65,7 @@ export interface ConduitRouteObject {
   options: ConduitRouteOptions;
   returns: {
     name: string;
-    fields: string;
+    fields: ConduitReturn;
   };
   grpcFunction: string;
 }
