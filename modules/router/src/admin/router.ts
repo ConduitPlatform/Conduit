@@ -1,11 +1,14 @@
 import ConduitGrpcSdk, {
   ConduitError,
+  ConduitRouteActions,
+  GrpcError,
   IConduitLogger,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
 import ConduitDefaultRouter from '../Router';
 import { RouterProxyRoute } from '../models';
 import { ProxyRouteT } from '@conduitplatform/hermes';
@@ -36,6 +39,34 @@ export class RouterAdmin {
       else response = response.sort((a, b) => b.localeCompare(a));
     }
     return Array.from(new Set(response));
+  }
+
+  async getRouteMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, action } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    const { url, routeIndex } = this.router.findGrpcRoute(path, action);
+    const route = this.router.getGrpcRoute(url, routeIndex);
+    if (!route) {
+      throw new GrpcError(status.NOT_FOUND, 'Route not found');
+    }
+    return { middlewares: route.options.middlewares };
+  }
+
+  async patchRouteMiddlewares(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { path, action, middlewares } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    await this.router
+      ._patchRouteMiddlewares(path, action, middlewares)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return 'Middleware patched successfully';
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

@@ -19,6 +19,7 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, TypeRegistry } from '../classes';
+import { merge } from 'lodash';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const { ApolloServer } = require('apollo-server-express');
@@ -217,6 +218,13 @@ export class GraphQLController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
+    if (registered) {
+      const retrievedRoute = this._registeredRoutes.get(key);
+      route.input.middlewares = merge(
+        retrievedRoute!.input.middlewares,
+        route.input.middlewares!,
+      );
+    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);

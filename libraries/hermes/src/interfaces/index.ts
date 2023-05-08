@@ -7,3 +7,4 @@ export * from './Socket';
 export * from './ConduitRequest';
 export * from './IProxyRouteOptions';
 export * from './IProxyRoute';
+export * from './MiddlewarePatch';

@@ -20,6 +20,7 @@ service Config {
 service Admin {
   rpc GenerateAdminProto(GenerateAdminProtoRequest) returns (GenerateAdminProtoResponse);
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (google.protobuf.Empty);
+  rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (google.protobuf.Empty);
 }
 
 message GenerateAdminProtoRequest {
@@ -79,6 +80,12 @@ message RegisterAdminRouteRequest {
     string name = 1;
     string fields = 2;
   }
+}
+
+message PatchRouteMiddlewaresRequest {
+  string path = 1;
+  string action = 2;
+  repeated string middlewares = 3;
 }
 
 message ModuleHealthRequest {
