@@ -142,12 +142,12 @@ export abstract class ConduitRouter {
   }
 
   filterMiddlewaresPatch(
-    routeMiddleware: string[],
-    patchMiddleware: string[],
+    routeMiddlewares: string[],
+    patchMiddlewares: string[],
     moduleUrl: string,
   ) {
-    const injected = patchMiddleware.filter(m => !routeMiddleware.includes(m));
-    const removed = routeMiddleware.filter(m => !patchMiddleware.includes(m));
+    const injected = patchMiddlewares.filter(m => !routeMiddlewares.includes(m));
+    const removed = routeMiddlewares.filter(m => !patchMiddlewares.includes(m));
     injected.forEach(m => {
       if (!this._middlewares || !this._middlewares[m]) {
         throw new GrpcError(status.NOT_FOUND, 'Middleware not registered');

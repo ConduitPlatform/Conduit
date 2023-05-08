@@ -171,20 +171,20 @@ export class ConduitRoutingController {
   }
 
   filterMiddlewaresPatch(
-    routeMiddleware: string[],
-    patchMiddleware: string[],
-    moduleName: string,
+    routeMiddlewares: string[],
+    patchMiddlewares: string[],
+    moduleUrl: string,
   ) {
     return (
       this._restRouter?.filterMiddlewaresPatch(
-        routeMiddleware,
-        patchMiddleware,
-        moduleName,
+        routeMiddlewares,
+        patchMiddlewares,
+        moduleUrl,
       ) ??
       this._graphQLRouter?.filterMiddlewaresPatch(
-        routeMiddleware,
-        patchMiddleware,
-        moduleName,
+        routeMiddlewares,
+        patchMiddlewares,
+        moduleUrl,
       )
     );
   }
