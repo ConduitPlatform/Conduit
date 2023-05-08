@@ -1,5 +1,5 @@
 import { ConduitModel, GrpcError, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil, isPlainObject } from 'lodash';
+import { isNil, isPlainObject, get } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { LocationEnum, OperationsEnum } from '../../enums';
 import { ICustomEndpoint } from '../../interfaces';
@@ -94,7 +94,7 @@ function _queryValidation(
     return 'comparisonField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(fields).includes(schemaField)) {
+  if (!get(fields, schemaField)) {
     return 'schemaField is not present/accessible in selected schema!';
   }
 
@@ -226,7 +226,7 @@ export function assignmentValidation(
     return 'assignmentField cannot be empty and should contain type and value';
   }
 
-  if (!Object.keys(fields).includes(schemaField)) {
+  if (!get(fields, schemaField)) {
     return 'schemaField is not present/accessible in selected schema!';
   }
 
