@@ -42,7 +42,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
-    readonly objectPaths: string[],
+    readonly objectPaths: any,
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
@@ -72,8 +72,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       }
     }
     this.objectDotPaths = [];
-    for (const path of objectPaths) {
-      this.objectDotPaths.push(path.replace(/_/g, '.'));
+    for (const concatenatedKey of Object.keys(objectPaths)) {
+      const { parentKey, childKey } = objectPaths[concatenatedKey];
+      this.objectDotPaths.push(`${parentKey}.${childKey}`);
     }
     extractRelations(
       this.originalSchema.name,

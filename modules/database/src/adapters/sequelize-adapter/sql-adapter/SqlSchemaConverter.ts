@@ -25,7 +25,7 @@ import {
  */
 export function sqlSchemaConverter(
   jsonSchema: ConduitSchema,
-): [ConduitSchema, string[], { [key: string]: RelationType | RelationType[] }] {
+): [ConduitSchema, any, { [key: string]: RelationType | RelationType[] }] {
   let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
@@ -33,8 +33,7 @@ export function sqlSchemaConverter(
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const objectPaths: string[] = [];
-
+  const objectPaths: any = {};
   convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
   const secondaryCopy = cloneDeep(copy.fields);
   const extractedRelations = extractRelations(secondaryCopy, copy.fields);

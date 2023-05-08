@@ -39,11 +39,12 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
   }
   return extracted;
 }
-
 export function convertObjectToDotNotation(
   schema: any,
   resSchema: any,
-  objectPaths: string[] = [],
+  keyMapping: any = {},
+  parentKey: string | null = null,
+  directChild: boolean = true,
 ) {
   for (const key of Object.keys(schema)) {
     if (!isArray(schema[key]) && isObject(schema[key])) {
@@ -51,17 +52,33 @@ export function convertObjectToDotNotation(
       if (!extraction.hasOwnProperty('type')) {
         const taf: any = {};
         const newFields: any = {};
-        convertObjectToDotNotation(extraction, taf);
+        convertObjectToDotNotation(extraction, taf, keyMapping, key, false);
         // unwrap the taf object to a new object that is not nested
         for (const tafKey of Object.keys(taf)) {
           newFields[`${key}_${tafKey}`] = taf[tafKey];
-          objectPaths.push(`${key}_${tafKey}`);
+          if (parentKey && directChild) {
+            keyMapping[`${parentKey}_${key}_${tafKey}`] = {
+              parentKey: parentKey,
+              childKey: `${key}.${tafKey}`,
+            };
+          } else if (!parentKey && directChild) {
+            keyMapping[`${key}_${tafKey}`] = {
+              parentKey: key,
+              childKey: tafKey,
+            };
+          }
         }
         delete resSchema[key];
         // resSchema is passed by reference, so we can just add the new fields to it
         Object.assign(resSchema, newFields);
       } else {
         resSchema[key] = extraction;
+        if (parentKey && directChild) {
+          keyMapping[`${parentKey}_${key}`] = {
+            parentKey: parentKey,
+            childKey: key,
+          };
+        }
       }
     } else {
       resSchema[key] = schema[key];
@@ -69,23 +86,7 @@ export function convertObjectToDotNotation(
   }
 }
 
-function extractObjectType(objectField: Indexable):
-  | {
-      type: any;
-      defaultValue?: any;
-      primaryKey?: boolean;
-      unique?: boolean;
-      allowNull?: boolean;
-    }
-  | Indexable {
-  const res: {
-    type: any;
-    defaultValue?: any;
-    primaryKey?: boolean;
-    unique?: boolean;
-    allowNull?: boolean;
-  } = { type: null };
-
+function extractObjectType(objectField: Indexable): Indexable {
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
       return objectField;
@@ -97,6 +98,4 @@ function extractObjectType(objectField: Indexable):
   } else {
     return objectField;
   }
-
-  return res;
 }

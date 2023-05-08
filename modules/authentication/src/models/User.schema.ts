@@ -54,6 +54,18 @@ const schema = {
   },
   twitch: {
     ...authProviderSchema,
+    profile_image_url: TYPE.String,
+    my_object: {
+      test: TYPE.String,
+    },
+    my_second_object: {
+      test_me_sir: TYPE.String,
+    },
+    my_third_object: {
+      my_object: {
+        test: TYPE.String,
+      },
+    },
   },
   active: {
     type: TYPE.Boolean,

@@ -22,31 +22,32 @@ function pathICare(myPath: string, objectDotPaths: string[]) {
   }
 }
 
-export function processCreateQuery(query: Indexable, objectDotPaths: string[]) {
+export function processCreateQuery(query: Indexable, keyMapping: any) {
   for (const key in query) {
     /*
-     * We need to check every key in the query to see if it contains paths that match the objectDotPaths
-     * and if yes unwrap the object in the key to match the objectPaths
+     * We need to check every key in the query to see if it is present in the keyMapping
+     * and if yes unwrap the object in the key to match the original structure
      */
     if (!query.hasOwnProperty(key)) continue;
     if (isObjectICare(query[key])) {
       let matchedPath = false;
-      for (const path of objectDotPaths) {
-        if (path.startsWith(key)) {
+      for (const concatenatedKey of Object.keys(keyMapping)) {
+        if (concatenatedKey.startsWith(key)) {
           matchedPath = true;
           let hasOne = false;
           // unwrap the object and add the fields to the query
           const processing: any = {};
           for (const field in query[key]) {
+            const possibleConcatenatedKey = key + '_' + field;
             if (
               isObjectICare(query[key][field]) &&
-              pathICare(key + '_' + field, objectDotPaths)
+              keyMapping.hasOwnProperty(possibleConcatenatedKey)
             ) {
-              processing[key + '_' + field] = query[key][field];
+              processing[possibleConcatenatedKey] = query[key][field];
               hasOne = true;
             } else {
-              if (objectDotPaths.includes(key + '_' + field)) {
-                processing[key + '_' + field] = query[key][field];
+              if (keyMapping.hasOwnProperty(possibleConcatenatedKey)) {
+                processing[possibleConcatenatedKey] = query[key][field];
                 hasOne = true;
               } else {
                 if (!isObjectICare(processing[key])) {
@@ -57,7 +58,7 @@ export function processCreateQuery(query: Indexable, objectDotPaths: string[]) {
             }
           }
           if (hasOne) {
-            processCreateQuery(processing, objectDotPaths);
+            processCreateQuery(processing, keyMapping);
             delete query[key];
             Object.assign(query, processing);
           }
@@ -70,7 +71,7 @@ export function processCreateQuery(query: Indexable, objectDotPaths: string[]) {
 
 export function unwrap(
   object: any,
-  objectPaths: string[],
+  keyMapping: any,
   relations: {
     [key: string]: SequelizeSchema | SequelizeSchema[];
   },
@@ -84,7 +85,7 @@ export function unwrap(
           (relations[key] as SequelizeSchema).extractedRelations,
         );
       } else {
-        unwrap(object[key], objectPaths, relations);
+        unwrap(object[key], keyMapping, relations);
       }
     }
     if (isArray(object[key])) {
@@ -98,33 +99,36 @@ export function unwrap(
         }
       } else {
         for (const element of object[key]) {
-          unwrap(element, objectPaths, relations);
+          unwrap(element, keyMapping, relations);
         }
       }
     }
   }
-  for (const path of objectPaths) {
-    if (object.hasOwnProperty(path)) {
-      dottie.set(object, path.replace(/_/g, '.'), object[path]);
-      delete object[path];
+  for (const concatenatedKey of Object.keys(keyMapping)) {
+    if (object.hasOwnProperty(concatenatedKey)) {
+      const { parentKey, childKey } = keyMapping[concatenatedKey];
+      dottie.set(object, `${parentKey}.${childKey}`, object[concatenatedKey]);
+      delete object[concatenatedKey];
     }
   }
 }
 
-export function preprocessQuery(query: ParsedQuery, objectDotPaths: string[]) {
+export function preprocessQuery(query: ParsedQuery, keyMapping: any) {
   for (const key in query) {
     if (isObjectICare(query[key])) {
-      preprocessQuery(query[key], objectDotPaths);
+      preprocessQuery(query[key], keyMapping);
     }
     if (isArray(query[key])) {
       for (const element of query[key]) {
-        preprocessQuery(element, objectDotPaths);
+        preprocessQuery(element, keyMapping);
       }
     }
-    for (const path of objectDotPaths) {
-      if (key.indexOf(path) !== -1) {
-        const split = key.split(path);
-        query[split[0].replace(/\./g, '_') + split[1]] = cloneDeep(query[key]);
+    for (const concatenatedKey of Object.keys(keyMapping)) {
+      const { parentKey, childKey } = keyMapping[concatenatedKey];
+      const dotPath = `${parentKey}.${childKey}`;
+      if (key.indexOf(dotPath) !== -1) {
+        const split = key.split(dotPath);
+        query[concatenatedKey] = cloneDeep(query[key]);
         delete query[key];
       }
     }
