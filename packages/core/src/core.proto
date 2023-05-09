@@ -57,6 +57,7 @@ message RegisterAdminRouteRequest {
     optional string description = 7;
     repeated string middlewares = 8;
     optional string cacheControl = 9;
+    repeated string postRequestMiddlewares = 10;
   }
 
   message ProxyRouteOptions {
@@ -85,7 +86,8 @@ message RegisterAdminRouteRequest {
 message PatchRouteMiddlewaresRequest {
   string path = 1;
   string action = 2;
-  repeated string middlewares = 3;
+  repeated string preRequestMiddlewares = 3;
+  repeated string postRequestMiddlewares = 4;
 }
 
 message ModuleHealthRequest {

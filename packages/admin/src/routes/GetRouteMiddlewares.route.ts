@@ -14,14 +14,15 @@ export function getRouteMiddlewares(admin: AdminModule) {
     {
       path: '/route-middlewares',
       action: ConduitRouteActions.GET,
-      description: `Returns the middleware of an admin route.`,
+      description: `Returns the pre-request middleware & post-request middleware of an admin route.`,
       queryParams: {
         path: ConduitString.Required,
         action: ConduitString.Required,
       },
     },
     new ConduitRouteReturnDefinition('GetAdminRouteMiddleware', {
-      middlewares: [TYPE.String],
+      preRequestMiddlewares: [TYPE.String],
+      postRequestMiddlewares: [TYPE.String],
     }),
     async (req: ConduitRouteParameters) => {
       const { path, action } = req.params!;
@@ -33,7 +34,10 @@ export function getRouteMiddlewares(admin: AdminModule) {
       if (!route) {
         throw new GrpcError(status.NOT_FOUND, 'Route not found');
       }
-      return { middlewares: route.options!.middlewares };
+      return {
+        preRequestMiddlewares: route.options!.middlewares,
+        postRequestMiddlewares: route.options!.postRequestMiddlewares,
+      };
     },
   );
 }

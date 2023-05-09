@@ -26,7 +26,7 @@ import {
   RouteT,
   SocketPush,
 } from '@conduitplatform/hermes';
-import { isNaN } from 'lodash';
+import { isNaN, isNil } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
 import { protoTemplate, swaggerMetadata } from './hermes';
@@ -474,7 +474,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     call: GrpcRequest<PatchAppRouteMiddlewaresRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, middlewares } = call.request;
+    const { path, action, preRequestMiddlewares, postRequestMiddlewares } = call.request;
+    if (isNil(preRequestMiddlewares) && isNil(postRequestMiddlewares)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'At least one middleware array must be provided',
+      });
+    }
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -484,14 +490,18 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         message: 'Something went wrong',
       });
     }
-    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
-      e => {
-        return callback({
-          code: status.INTERNAL,
-          message: (e as Error).message,
-        });
-      },
-    );
+    await this._patchRouteMiddlewares(
+      path,
+      action,
+      preRequestMiddlewares,
+      postRequestMiddlewares,
+      moduleUrl.url,
+    ).catch(e => {
+      return callback({
+        code: status.INTERNAL,
+        message: (e as Error).message,
+      });
+    });
   }
 
   async _patchRouteMiddlewares(

@@ -19,18 +19,26 @@ export function patchRouteMiddlewares(admin: AdminModule) {
         action: ConduitString.Required,
       },
       bodyParams: {
-        middlewares: [ConduitString.Required],
+        preRequestMiddlewares: [ConduitString.Optional],
+        postRequestMiddlewares: [ConduitString.Optional],
       },
     },
     new ConduitRouteReturnDefinition('InjectAdminMiddleware', 'String'),
     async (req: ConduitRouteParameters) => {
-      const { path, action, middlewares } = req.params!;
+      const { path, action, preRequestMiddlewares, postRequestMiddlewares } = req.params!;
       if (!(action in ConduitRouteActions)) {
         throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
       }
-      await admin._patchRouteMiddlewares(path, action, middlewares).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      await admin
+        ._patchRouteMiddlewares(
+          path,
+          action,
+          preRequestMiddlewares,
+          postRequestMiddlewares,
+        )
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
       return 'Middleware patched successfully';
     },
   );

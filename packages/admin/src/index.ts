@@ -595,7 +595,13 @@ export default class AdminModule extends IConduitAdmin {
     call: GrpcRequest<PatchRouteMiddlewaresRequest>,
     callback: GrpcCallback<null>,
   ) {
-    const { path, action, middlewares } = call.request;
+    const { path, action, preRequestMiddlewares, postRequestMiddlewares } = call.request;
+    if (isNil(preRequestMiddlewares) && isNil(postRequestMiddlewares)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'At least one middleware array must be provided',
+      });
+    }
     const moduleUrl = await this.grpcSdk.config.getModuleUrlByName(
       call.metadata!.get('module-name')![0] as string,
     );
@@ -605,14 +611,28 @@ export default class AdminModule extends IConduitAdmin {
         message: 'Something went wrong',
       });
     }
-    await this._patchRouteMiddlewares(path, action, middlewares, moduleUrl.url).catch(
-      e => {
-        return callback({
-          code: status.INTERNAL,
-          message: (e as Error).message,
-        });
-      },
-    );
+    try {
+      if (!isNil(preRequestMiddlewares))
+        await this._patchRouteMiddlewares(
+          path,
+          action,
+          preRequestMiddlewares,
+          moduleUrl.url,
+        );
+      if (!isNil(postRequestMiddlewares))
+        await this._patchRouteMiddlewares(
+          path,
+          action,
+          postRequestMiddlewares,
+          moduleUrl.url,
+          true,
+        );
+    } catch (e) {
+      return callback({
+        code: status.INTERNAL,
+        message: (e as Error).message,
+      });
+    }
     callback(null, null);
   }
 
@@ -621,6 +641,7 @@ export default class AdminModule extends IConduitAdmin {
     action: string,
     middlewares: string[],
     moduleUrl?: string,
+    isPostRequestMiddleware: boolean = false,
   ) {
     let injected: string[] = [];
     let removed: string[] = [];
@@ -632,7 +653,9 @@ export default class AdminModule extends IConduitAdmin {
     const { url, routeIndex } = this.findGrpcRoute(path, action);
     const route = this.getGrpcRoute(url, routeIndex)!;
     [injected, removed] = this._router.filterMiddlewaresPatch(
-      route.options!.middlewares,
+      isPostRequestMiddleware
+        ? route.options!.postRequestMiddlewares
+        : route.options!.middlewares,
       middlewares,
       moduleUrl!,
     )!;
@@ -641,12 +664,19 @@ export default class AdminModule extends IConduitAdmin {
       path: path,
       action: action as ConduitRouteActions,
       middlewares: middlewares,
+      isPostRequestMiddleware,
     });
-    await this.updateStateForMiddlewarePatch(middlewares, path, action);
+    await this.updateStateForMiddlewarePatch(
+      middlewares,
+      path,
+      action,
+      isPostRequestMiddleware,
+    );
     const storedMiddlewares = await AdminMiddleware.getInstance().findMany({
       path,
       action,
     });
+    // TODO: add field isPostRequestMiddleware to models + update this logic for applyStoredMiddleware + do the same for router
     for (const m of storedMiddlewares) {
       if (removed.includes(m.middleware)) {
         await AdminMiddleware.getInstance().deleteOne({ _id: m._id });
@@ -703,6 +733,7 @@ export default class AdminModule extends IConduitAdmin {
     middleware: string[],
     path: string,
     action: string,
+    isPostRequestMiddleware: boolean,
   ) {
     await this.grpcSdk
       .state!.getKey('admin')
@@ -719,7 +750,11 @@ export default class AdminModule extends IConduitAdmin {
             if (r.options?.path !== path || r.options.action !== action) {
               continue;
             }
-            r.options.middlewares = middleware;
+            if (isPostRequestMiddleware) {
+              r.options.postRequestMiddlewares = middleware;
+            } else {
+              r.options.middlewares = middleware;
+            }
             stateRoutes[index] = obj;
             break outer;
           }

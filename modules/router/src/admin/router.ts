@@ -51,18 +51,22 @@ export class RouterAdmin {
     if (!route) {
       throw new GrpcError(status.NOT_FOUND, 'Route not found');
     }
-    return { middlewares: route.options.middlewares };
+    return {
+      preRequestMiddlewares: route.options.middlewares,
+      postRequestMiddlewares: route.options.postRequestMiddlewares,
+    };
   }
 
   async patchRouteMiddlewares(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    const { path, action, middlewares } = call.request.params;
+    const { path, action, preRequestMiddlewares, postRequestMiddlewares } =
+      call.request.params;
     if (!(action in ConduitRouteActions)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
     }
     await this.router
-      ._patchRouteMiddlewares(path, action, middlewares)
+      ._patchRouteMiddlewares(path, action, preRequestMiddlewares, postRequestMiddlewares)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });

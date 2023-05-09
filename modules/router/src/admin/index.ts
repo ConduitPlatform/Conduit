@@ -53,14 +53,15 @@ export class AdminHandlers {
       {
         path: '/router/route-middlewares',
         action: ConduitRouteActions.GET,
-        description: `Returns the middleware of an app route.`,
+        description: `Returns the pre-request middleware & post-request middleware of an app route.`,
         queryParams: {
           path: ConduitString.Required,
           action: ConduitString.Required,
         },
       },
       new ConduitRouteReturnDefinition('GetAppRouteMiddleware', {
-        middlewares: [TYPE.String],
+        preRequestMiddlewares: [TYPE.String],
+        postRequestMiddlewares: [TYPE.String],
       }),
       this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
     );
@@ -74,7 +75,8 @@ export class AdminHandlers {
           action: ConduitString.Required,
         },
         bodyParams: {
-          middlewares: [ConduitString.Required],
+          preRequestMiddlewares: [ConduitString.Optional],
+          postRequestMiddlewares: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('PatchAppMiddleware', 'String'),

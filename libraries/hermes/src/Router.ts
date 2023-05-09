@@ -156,10 +156,14 @@ export abstract class ConduitRouter {
     }
   }
 
-  patchRouteMiddlewares(patch: MiddlewarePatch) {
+  patchRouteMiddlewares(patch: MiddlewarePatch, isPostRequestMiddleware: boolean) {
     const { path, action, middlewares } = patch;
     const [key, route] = this.findRoute(path, action);
-    route.input.middlewares = middlewares;
+    if (isPostRequestMiddleware) {
+      route.input.postRequestMiddlewares = middlewares;
+    } else {
+      route.input.middlewares = middlewares;
+    }
     this._registeredRoutes.set(key, route);
     const routes: { action: string; path: string }[] = [];
     for (const conduitRoute of this._registeredRoutes.values()) {

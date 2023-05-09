@@ -165,9 +165,12 @@ export class ConduitRoutingController {
     this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
   }
 
-  patchRouteMiddlewares(patch: MiddlewarePatch) {
-    this._restRouter?.patchRouteMiddlewares(patch);
-    this._graphQLRouter?.patchRouteMiddlewares(patch);
+  patchRouteMiddlewares(
+    patch: MiddlewarePatch,
+    isPostRequestMiddleware: boolean = false,
+  ) {
+    this._restRouter?.patchRouteMiddlewares(patch, isPostRequestMiddleware);
+    this._graphQLRouter?.patchRouteMiddlewares(patch, isPostRequestMiddleware);
   }
 
   filterMiddlewaresPatch(

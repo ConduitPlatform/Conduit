@@ -50,12 +50,14 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
   patchRouteMiddlewares(
     path: string,
     action: ConduitRouteActions,
-    middlewares: string[],
+    preRequestMiddlewares?: string[],
+    postRequestMiddlewares?: string[],
   ) {
     return this.client!.patchRouteMiddlewares({
-      path: path,
-      action: action,
-      middlewares: middlewares,
+      path,
+      action,
+      preRequestMiddlewares,
+      postRequestMiddlewares,
     });
   }
 }
