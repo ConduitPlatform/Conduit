@@ -3,7 +3,6 @@ import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
 import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
-import dottie from 'dottie';
 import { preprocessQuery } from '../utils/pathUtils';
 
 function arrayHandler(
@@ -230,6 +229,7 @@ export function parseQuery(
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   queryOptions: { populate?: string[]; select?: string; exclude?: string[] },
   objectDotPaths: string[],
+  objectDotPathMapping: { [key: string]: string },
 ) {
   const parsingResult: {
     query?: WhereOptions;
@@ -262,7 +262,11 @@ export function parseQuery(
       );
     }
   } else {
-    parsingResult.attributes = renameRelations(queryOptions.populate || [], relations);
+    parsingResult.attributes = renameRelations(
+      queryOptions.populate || [],
+      relations,
+      objectDotPathMapping,
+    );
   }
   if (
     Object.keys(parsingResult.query).length === 0 &&
@@ -343,13 +347,23 @@ function parseSelect(
 export function renameRelations(
   population: string[],
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  objectDotPathMapping: { [key: string]: string },
 ): { include: string[]; exclude: string[] } {
   const include: string[] = [];
   const exclude: string[] = [];
 
   for (const relation in relations) {
-    if (population.indexOf(relation) !== -1) continue;
-    if (!Array.isArray(relations[relation])) {
+    if (
+      population.indexOf(objectDotPathMapping[relation]) !== -1 &&
+      !Array.isArray(relations[relation])
+    ) {
+      exclude.push(relation + 'Id');
+    } else if (
+      population.indexOf(relation) !== -1 &&
+      !Array.isArray(relations[relation])
+    ) {
+      exclude.push(relation + 'Id');
+    } else if (!Array.isArray(relations[relation])) {
       // @ts-ignore
       include.push([relation + 'Id', relation]);
       exclude.push(relation + 'Id');
