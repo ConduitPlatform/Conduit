@@ -5,7 +5,7 @@ import { cloneDeep, get } from 'lodash';
 
 const { isArray, isObject } = require('lodash');
 
-function isObjectICare(field: any) {
+function potentialNesting(field: any) {
   return (
     !isArray(field) &&
     isObject(field) &&
@@ -69,7 +69,7 @@ export function unwrap(
   },
 ) {
   for (const key in object) {
-    if (isObjectICare(object[key])) {
+    if (potentialNesting(object[key])) {
       if (relations.hasOwnProperty(key)) {
         unwrap(
           object[key],
@@ -106,7 +106,7 @@ export function unwrap(
  */
 export function preprocessQuery(query: ParsedQuery, keyMapping: any) {
   for (const key in query) {
-    if (isObjectICare(query[key])) {
+    if (potentialNesting(query[key])) {
       preprocessQuery(query[key], keyMapping);
     }
     if (isArray(query[key])) {
