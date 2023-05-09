@@ -1,7 +1,7 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ParsedQuery } from '../../../interfaces';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, get } from 'lodash';
 
 const { isArray, isObject } = require('lodash');
 
@@ -13,85 +13,23 @@ function isObjectICare(field: any) {
   );
 }
 
-/**
- * parses objects in query and unwraps them to the _ notation according to the keyMapping
- */
 export function processCreateQuery(query: Indexable, keyMapping: any) {
-  processCreateQueryHelper(null, null, query, keyMapping);
-}
-
-function processCreateQueryHelper(
-  parent: Indexable | null,
-  parentKey: string | null,
-  query: Indexable,
-  keyMapping: any,
-  currentPath: string = '',
-) {
-  const keys = Object.keys(query);
-
-  for (const key of keys) {
-    let keyPartOfMap = false;
-    const matchingKeys = Object.keys(keyMapping).filter(
-      concatenatedKey =>
-        concatenatedKey.startsWith(
-          currentPath + (parentKey ? parentKey + '_' : '') + key + '_',
-        ) || concatenatedKey.startsWith(currentPath + '_' + key + '_'),
+  const foundKeys = [];
+  for (const key in keyMapping) {
+    const val = get(
+      query,
+      keyMapping[key].parentKey + '.' + keyMapping[key].childKey,
+      undefined,
     );
-    // If the value is an object, recursively process it
-    if (isObjectICare(query[key]) && matchingKeys.length !== 0) {
-      if (!parentKey) {
-        processCreateQueryHelper(query, key, query[key], keyMapping, key);
-      } else if (
-        parentKey === currentPath ||
-        (currentPath.indexOf(parentKey) !== -1 &&
-          currentPath.indexOf(parentKey) + parentKey.length === currentPath.length)
-      ) {
-        processCreateQueryHelper(
-          query,
-          key,
-          query[key],
-          keyMapping,
-          currentPath + '_' + key,
-        );
-      } else {
-        processCreateQueryHelper(
-          query,
-          key,
-          query[key],
-          keyMapping,
-          currentPath + '_' + parentKey + '_' + key,
-        );
-      }
+    if (val !== undefined) {
+      query[key] = get(query, keyMapping[key].parentKey + '.' + keyMapping[key].childKey);
+      foundKeys.push(keyMapping[key].parentKey);
     }
   }
-
-  for (const key of keys) {
-    const matchingKeys = Object.keys(keyMapping).filter(
-      concatenatedKey =>
-        concatenatedKey.startsWith(
-          currentPath + (parentKey ? parentKey + '_' : '') + key + '_',
-        ) || concatenatedKey.startsWith(currentPath + '_' + key),
-    );
-
-    if (matchingKeys.length > 0) {
-      for (const matchingKey of matchingKeys) {
-        const keyPath = keyMapping[matchingKey];
-        const childKey = keyPath.childKey;
-        const unwrappedKey = (parentKey ? parentKey + '_' : '') + key + '_' + childKey;
-
-        if (query[key] && query[key].hasOwnProperty(childKey)) {
-          if (parent) {
-            parent[unwrappedKey] = query[key][childKey];
-          } else {
-            query[unwrappedKey] = query[key][childKey];
-          }
-          delete query[key][childKey];
-        }
-
-        // Clean up empty objects
-        if (query[key] && Object.keys(query[key]).length === 0) {
-          delete query[key];
-        }
+  if (foundKeys.length > 0) {
+    for (const key of foundKeys) {
+      if (query.hasOwnProperty(key)) {
+        delete query[key];
       }
     }
   }
