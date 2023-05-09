@@ -14,61 +14,64 @@ function isObjectICare(field: any) {
   );
 }
 
-function pathICare(myPath: string, objectDotPaths: string[]) {
-  for (const path of objectDotPaths) {
-    if (path.startsWith(myPath)) {
-      return true;
-    }
-  }
-}
+/**
+ * parses objects in query and unwraps them to the _ notation according to the keyMapping
+ */
+function processCreateQuery(query: Indexable, keyMapping: any) {
+  function processObject(obj: Indexable, currentPath: string) {
+    let processedObj: Indexable = {};
 
-export function processCreateQuery(query: Indexable, keyMapping: any) {
-  for (const key in query) {
-    /*
-     * We need to check every key in the query to see if it is present in the keyMapping
-     * and if yes unwrap the object in the key to match the original structure
-     */
-    if (!query.hasOwnProperty(key)) continue;
-    if (isObjectICare(query[key])) {
-      let matchedPath = false;
-      for (const concatenatedKey of Object.keys(keyMapping)) {
-        if (concatenatedKey.startsWith(key)) {
-          matchedPath = true;
-          let hasOne = false;
-          // unwrap the object and add the fields to the query
-          const processing: any = {};
-          for (const field in query[key]) {
-            const possibleConcatenatedKey = key + '_' + field;
-            if (
-              isObjectICare(query[key][field]) &&
-              keyMapping.hasOwnProperty(possibleConcatenatedKey)
-            ) {
-              processing[possibleConcatenatedKey] = query[key][field];
-              hasOne = true;
-            } else {
-              if (keyMapping.hasOwnProperty(possibleConcatenatedKey)) {
-                processing[possibleConcatenatedKey] = query[key][field];
-                hasOne = true;
-              } else {
-                if (!isObjectICare(processing[key])) {
-                  processing[key] = {};
-                }
-                processing[key][field] = query[key][field];
-              }
-            }
-          }
-          if (hasOne) {
-            processCreateQuery(processing, keyMapping);
-            delete query[key];
-            Object.assign(query, processing);
-          }
+    for (const key in obj) {
+      if (!obj.hasOwnProperty(key)) continue;
+
+      const newPath = currentPath ? `${currentPath}.${key}` : key;
+      const value = obj[key];
+
+      if (keyMapping.hasOwnProperty(newPath)) {
+        const newKey = keyMapping[newPath];
+        processedObj[newKey] = value;
+      } else {
+        if (typeof value === 'object' && value !== null) {
+          const processedValue = processObject(value, newPath);
+          processedObj[key] = processedValue;
+        } else {
+          processedObj[key] = value;
         }
       }
-      if (!matchedPath) console.log('No match found for key: ', key);
+    }
+
+    return processedObj;
+  }
+
+  return processObject(query, '');
+}
+
+function unwrapNestedKeys(object: any, keyMapping: any) {
+  for (const concatenatedKey of Object.keys(keyMapping)) {
+    if (object.hasOwnProperty(concatenatedKey)) {
+      const { parentKey, childKey } = keyMapping[concatenatedKey];
+      const nestedKeys = parentKey.split('.');
+      let currentObject = object;
+
+      for (const nestedKey of nestedKeys) {
+        if (!currentObject.hasOwnProperty(nestedKey)) {
+          currentObject[nestedKey] = {};
+        }
+        currentObject = currentObject[nestedKey];
+      }
+
+      currentObject[childKey] = object[concatenatedKey];
+      delete object[concatenatedKey];
     }
   }
 }
 
+/**
+ * unwraps the object according to the keyMapping
+ * @param object
+ * @param keyMapping
+ * @param relations
+ */
 export function unwrap(
   object: any,
   keyMapping: any,
@@ -87,6 +90,7 @@ export function unwrap(
       } else {
         unwrap(object[key], keyMapping, relations);
       }
+      unwrapNestedKeys(object[key], keyMapping);
     }
     if (isArray(object[key])) {
       if (relations.hasOwnProperty(key)) {
@@ -104,15 +108,13 @@ export function unwrap(
       }
     }
   }
-  for (const concatenatedKey of Object.keys(keyMapping)) {
-    if (object.hasOwnProperty(concatenatedKey)) {
-      const { parentKey, childKey } = keyMapping[concatenatedKey];
-      dottie.set(object, `${parentKey}.${childKey}`, object[concatenatedKey]);
-      delete object[concatenatedKey];
-    }
-  }
+  unwrapNestedKeys(object, keyMapping);
 }
 
+/**
+ * pre-processes queries to convert potential dot notation to _ notation
+ * according to the keyMapping
+ */
 export function preprocessQuery(query: ParsedQuery, keyMapping: any) {
   for (const key in query) {
     if (isObjectICare(query[key])) {

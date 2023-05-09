@@ -95,7 +95,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-
+    processCreateQuery(parsedQuery, this.objectPaths);
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,

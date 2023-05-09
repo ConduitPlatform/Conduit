@@ -39,49 +39,53 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
   }
   return extracted;
 }
+
 export function convertObjectToDotNotation(
   schema: any,
   resSchema: any,
   keyMapping: any = {},
   parentKey: string | null = null,
-  directChild: boolean = true,
+  prefix: string = '',
 ) {
   for (const key of Object.keys(schema)) {
     if (!isArray(schema[key]) && isObject(schema[key])) {
       const extraction = extractObjectType(schema[key]);
       if (!extraction.hasOwnProperty('type')) {
-        const taf: any = {};
-        const newFields: any = {};
-        convertObjectToDotNotation(extraction, taf, keyMapping, key, false);
-        // unwrap the taf object to a new object that is not nested
-        for (const tafKey of Object.keys(taf)) {
-          newFields[`${key}_${tafKey}`] = taf[tafKey];
-          if (parentKey && directChild) {
-            keyMapping[`${parentKey}_${key}_${tafKey}`] = {
-              parentKey: parentKey,
-              childKey: `${key}.${tafKey}`,
-            };
-          } else if (!parentKey && directChild) {
-            keyMapping[`${key}_${tafKey}`] = {
-              parentKey: key,
-              childKey: tafKey,
-            };
-          }
+        const newParentKey = parentKey ? `${parentKey}.${key}` : key;
+        const newPrefix = prefix ? `${prefix}_${key}` : key;
+        convertObjectToDotNotation(
+          extraction,
+          resSchema,
+          keyMapping,
+          newParentKey,
+          newPrefix,
+        );
+
+        // Remove the original key from resSchema
+        if (prefix) {
+          delete resSchema[`${prefix}_${key}`];
+        } else {
+          delete resSchema[key];
         }
-        delete resSchema[key];
-        // resSchema is passed by reference, so we can just add the new fields to it
-        Object.assign(resSchema, newFields);
       } else {
-        resSchema[key] = extraction;
-        if (parentKey && directChild) {
-          keyMapping[`${parentKey}_${key}`] = {
-            parentKey: parentKey,
+        const newKey = prefix ? `${prefix}_${key}` : key;
+        resSchema[newKey] = extraction;
+        if (parentKey || prefix) {
+          keyMapping[newKey] = {
+            parentKey: parentKey || prefix,
             childKey: key,
           };
         }
       }
     } else {
-      resSchema[key] = schema[key];
+      const newKey = prefix ? `${prefix}_${key}` : key;
+      resSchema[newKey] = schema[key];
+      if (parentKey || prefix) {
+        keyMapping[newKey] = {
+          parentKey: parentKey || prefix,
+          childKey: key,
+        };
+      }
     }
   }
 }
