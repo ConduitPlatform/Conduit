@@ -95,7 +95,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-    processCreateQuery(parsedQuery, this.objectPaths);
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -161,7 +160,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
-
+      // process the update query after special conditions have been handled.
+      processCreateQuery(parsedQuery, this.objectPaths);
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const relationObjects = this.extractRelationsModification(parsedQuery);
