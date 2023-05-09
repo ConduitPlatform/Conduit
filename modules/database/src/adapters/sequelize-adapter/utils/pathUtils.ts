@@ -114,12 +114,15 @@ export function preprocessQuery(query: ParsedQuery, keyMapping: any) {
         preprocessQuery(element, keyMapping);
       }
     }
-    for (const concatenatedKey of Object.keys(keyMapping)) {
-      const { parentKey, childKey } = keyMapping[concatenatedKey];
-      const dotPath = `${parentKey}.${childKey}`;
-      if (key.indexOf(dotPath) !== -1) {
-        const split = key.split(dotPath);
-        query[concatenatedKey] = cloneDeep(query[key]);
+    for (const concatenatedKey of keyMapping) {
+      if (key.indexOf(concatenatedKey) !== -1) {
+        const split = key.split(concatenatedKey);
+        const newKey = concatenatedKey.replace(/\./g, '_');
+        if (split[1] !== '') {
+          query[newKey + split[1]] = cloneDeep(query[key]);
+        } else {
+          query[newKey] = cloneDeep(query[key]);
+        }
         delete query[key];
       }
     }
