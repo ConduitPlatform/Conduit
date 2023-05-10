@@ -1,4 +1,9 @@
-import { DatabaseProvider, Indexable, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  Indexable,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 interface AuthProviderBase {
@@ -8,7 +13,7 @@ interface AuthProviderBase {
   data: Indexable;
 }
 
-const authProviderSchema = {
+const authProviderSchema: ConduitModel = {
   id: {
     type: TYPE.String,
   },
@@ -23,7 +28,7 @@ const authProviderSchema = {
   },
 };
 
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   // do not add unique again, since this will fail due to emails being null
   email: {

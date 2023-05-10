@@ -1,7 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -74,7 +73,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: `Updates user's fields.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           email: ConduitString.Optional,
@@ -105,7 +104,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a user.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteUser', 'String'),
@@ -117,7 +116,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Blocks/inactivates a user.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('BlockUser', 'String'),
@@ -129,7 +128,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Unblocks/activates a user.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('UnblockUser', 'String'),

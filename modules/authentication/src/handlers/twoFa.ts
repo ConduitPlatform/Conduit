@@ -265,14 +265,14 @@ export class TwoFa implements IAuthenticationStrategy {
       await Token.getInstance()
         .deleteMany({
           user: user._id,
-          type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+          tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
       await Token.getInstance().create({
         user: user._id,
-        type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+        tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         token: verificationSid,
       });
       return {
@@ -287,14 +287,14 @@ export class TwoFa implements IAuthenticationStrategy {
       await Token.getInstance()
         .deleteMany({
           user: user._id,
-          type: TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
+          tokenType: TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
         })
         .catch(e => {
           ConduitGrpcSdk.Logger.error(e);
         });
       const qrVerificationToken = await Token.getInstance().create({
         user: user._id,
-        type: TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
+        tokenType: TokenType.AUTHENTICATOR_VERIFICATION_TOKEN,
         token: uuid(),
       });
       return {
@@ -313,7 +313,7 @@ export class TwoFa implements IAuthenticationStrategy {
   ): Promise<{ userId?: string; accessToken?: string; refreshToken?: string }> {
     if (user.twoFaMethod === 'phone') {
       const token = await Token.getInstance().findOne({
-        type: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
+        tokenType: TokenType.PHONE_TWO_FA_VERIFICATION_TOKEN,
         user: user._id,
       });
       if (!token) {
@@ -367,7 +367,7 @@ export class TwoFa implements IAuthenticationStrategy {
     }
     const verificationRecord: Token | null = await Token.getInstance().findOne({
       user: user._id,
-      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
     });
     if (isNil(verificationRecord))
       throw new GrpcError(
@@ -381,7 +381,7 @@ export class TwoFa implements IAuthenticationStrategy {
     await Token.getInstance()
       .deleteMany({
         user: user._id,
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
@@ -461,13 +461,13 @@ export class TwoFa implements IAuthenticationStrategy {
     phoneNumber: string,
   ): Promise<string> {
     const existingToken = await Token.getInstance().findOne({
-      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       user: user._id,
     });
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({
-        type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+        tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
         user: user._id,
       });
     }
@@ -480,7 +480,7 @@ export class TwoFa implements IAuthenticationStrategy {
     }
 
     await Token.getInstance().create({
-      type: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
+      tokenType: TokenType.VERIFY_PHONE_NUMBER_TOKEN,
       user: user._id,
       data: {
         clientId: context.clientId,

@@ -1,5 +1,8 @@
-import ConduitGrpcSdk, { ConduitRouteActions } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import ConduitGrpcSdk, {
+  ConduitRouteActions,
+  ConduitRouteReturnDefinition,
+} from '@conduitplatform/grpc-sdk';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import convict from 'convict';
 
 export function getModuleConfigRoute(

@@ -9,7 +9,7 @@ export async function getProxies(): Promise<ProxyRouteT[]> {
       options: {
         path: route.path,
         action: route.action,
-        description: route.description,
+        description: route.routeDescription,
         middlewares: route.middlewares,
       },
       proxy: {

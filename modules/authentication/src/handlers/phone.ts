@@ -96,7 +96,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     if (!verified) {
       throw new GrpcError(status.UNAUTHENTICATED, 'Code verification unsuccessful');
     }
-    if (existingToken.type === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
+    if (existingToken.tokenType === TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN) {
       user = await User.getInstance().create({
         phoneNumber: existingToken.data.phone,
       });
@@ -141,7 +141,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       }
     }
     const existingToken = await Token.getInstance().findOne({
-      type: {
+      tokenType: {
         $in: [
           TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
           TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
@@ -154,7 +154,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({
-        type: {
+        tokenType: {
           $in: [
             TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
             TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN,
@@ -171,7 +171,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INTERNAL, 'Could not send verification code');
     }
     const token = await Token.getInstance().create({
-      type: isNil(user)
+      tokenType: isNil(user)
         ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
         : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
       user: user,

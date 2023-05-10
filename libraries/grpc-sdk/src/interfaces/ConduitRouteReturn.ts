@@ -1,4 +1,4 @@
-import { ConduitModel } from './Model';
+import { ConduitReturn } from './Route';
 
 /**
  * Supports:
@@ -42,14 +42,14 @@ import { ConduitModel } from './Model';
  */
 export class ConduitRouteReturnDefinition {
   private readonly _name: string;
-  private readonly _fields: ConduitModel | string; // object definition or well-known* type as a string
+  private readonly _fields: ConduitReturn; // object definition or well-known* type as a string
 
   // Well-known types include:
   // - TYPE enum values
   // - explicitly registered route return type names
   // - registered database schema types
 
-  constructor(name: string, fields?: ConduitModel | string) {
+  constructor(name: string, fields?: ConduitReturn) {
     this._name = name;
     // TODO:
     // Defaulting to named schema types should throw on "reserved" base types (throw on Hermes-side also).
@@ -62,7 +62,7 @@ export class ConduitRouteReturnDefinition {
     return this._name;
   }
 
-  get fields(): ConduitModel | string {
+  get fields(): ConduitReturn {
     return this._fields;
   }
 }

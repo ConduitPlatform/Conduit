@@ -10,7 +10,7 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitSchema } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
@@ -31,7 +31,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     } else {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.fields, schema.modelOptions);
+    const mongooseSchema = new Schema(schema.fields as Indexable, schema.modelOptions);
     mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }

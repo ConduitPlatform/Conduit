@@ -5,10 +5,11 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function getCreateAdminRoute() {
   return new ConduitRoute(

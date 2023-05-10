@@ -1,14 +1,14 @@
-import { ConduitModelField, TYPE } from '@conduitplatform/grpc-sdk';
+import { TYPE } from '@conduitplatform/grpc-sdk';
 
 class ConduitStringConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.String {
     return TYPE.String;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.String; required: true } {
     return { type: TYPE.String, required: true };
   }
 }
@@ -19,11 +19,11 @@ class ConduitNumberConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Number {
     return TYPE.Number;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Number; required: true } {
     return { type: TYPE.Number, required: true };
   }
 }
@@ -34,11 +34,11 @@ class ConduitBooleanConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Boolean {
     return TYPE.Boolean;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Boolean; required: true } {
     return { type: TYPE.Boolean, required: true };
   }
 }
@@ -49,11 +49,11 @@ class ConduitDateConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.Date {
     return TYPE.Date;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.Date; required: true } {
     return { type: TYPE.Date, required: true };
   }
 }
@@ -64,11 +64,11 @@ class ConduitObjectIdConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.ObjectId {
     return TYPE.ObjectId;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.ObjectId; required: true } {
     return { type: TYPE.ObjectId, required: true };
   }
 }
@@ -79,11 +79,11 @@ class ConduitJSONConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static get Optional() {
+  static get Optional(): TYPE.JSON {
     return TYPE.JSON;
   }
 
-  static get Required(): ConduitModelField {
+  static get Required(): { type: TYPE.JSON; required: true } {
     return { type: TYPE.JSON, required: true };
   }
 }
@@ -94,11 +94,15 @@ class ConduitRelationConstructor {
   // private to disallow creating other instances of this type
   private constructor() {}
 
-  static Optional(model: string): ConduitModelField {
+  static Optional(model: string): {
+    type: TYPE.Relation;
+    model: string;
+    required: false;
+  } {
     return { type: TYPE.Relation, model, required: false };
   }
 
-  static Required(model: string): ConduitModelField {
+  static Required(model: string): { type: TYPE.Relation; model: string; required: true } {
     return { type: TYPE.Relation, model, required: true };
   }
 }

@@ -1,6 +1,6 @@
 import {
   ConduitModel,
-  ConduitRouteOption,
+  ConduitReturn,
   Indexable,
   TYPE,
   UntypedArray,
@@ -44,7 +44,7 @@ export interface ProcessingObject {
 export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> {
   extractTypes(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     isInput: boolean,
   ): ParseResult {
     if (!isInput) {

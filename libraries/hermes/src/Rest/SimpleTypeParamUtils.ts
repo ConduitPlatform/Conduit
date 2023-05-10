@@ -1,4 +1,4 @@
-import { ConduitRouteOptionExtended, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, TYPE } from '@conduitplatform/grpc-sdk';
 
 function extractParam(param: string, required: boolean = false) {
   const res: { type: string; format?: string; required?: boolean } = { type: 'string' };
@@ -52,17 +52,17 @@ export function processSwaggerParams(paramObj: any) {
         minItems: 0,
       };
     } else {
-      const typeZero = (elementZero as ConduitRouteOptionExtended).type;
-      const typeZeroRequired = (elementZero as ConduitRouteOptionExtended).required;
+      const typeZero = (elementZero as ConduitModel).type;
+      const typeZeroRequired = (elementZero as ConduitModel).required;
       params = {
         type: 'array',
-        items: { ...extractParam(typeZero, typeZeroRequired) },
+        items: { ...extractParam(typeZero!, typeZeroRequired) },
         minItems: typeZeroRequired ? 1 : 0,
       };
     }
   } else {
-    const typeZero = (paramObj as ConduitRouteOptionExtended).type;
-    const typeZeroRequired = (paramObj as ConduitRouteOptionExtended).required;
+    const typeZero = (paramObj as ConduitModel).type;
+    const typeZeroRequired = (paramObj as ConduitModel).required;
     if (typeof typeZero === 'string') {
       params = extractParam(typeZero, typeZeroRequired);
     } else if (Array.isArray(typeZero)) {
@@ -70,9 +70,9 @@ export function processSwaggerParams(paramObj: any) {
       if (typeof elementZero === 'string') {
         params = extractArrayParam(elementZero, typeZeroRequired);
       } else {
-        const typeZeroTwo = (elementZero as ConduitRouteOptionExtended).type;
-        const typeZeroTwoRequired = (elementZero as ConduitRouteOptionExtended).required;
-        params = extractArrayParam(typeZeroTwo, typeZeroTwoRequired);
+        const typeZeroTwo = (elementZero as ConduitModel).type;
+        const typeZeroTwoRequired = (elementZero as ConduitModel).required;
+        params = extractArrayParam(typeZeroTwo!, typeZeroTwoRequired);
       }
     }
   }

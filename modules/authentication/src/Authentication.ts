@@ -246,7 +246,7 @@ export default class Authentication extends ManagedModule<Config> {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
-          type: TokenType.VERIFICATION_TOKEN,
+          tokenType: TokenType.VERIFICATION_TOKEN,
           user: user._id,
           token: uuid(),
         });

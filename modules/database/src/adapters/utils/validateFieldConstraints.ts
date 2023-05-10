@@ -56,7 +56,7 @@ export function fieldsValidator(
           } else {
             fieldsValidator(
               schemaName,
-              target.type[0] as ConduitModel,
+              target.type[0] as unknown as ConduitModel,
               db,
               blockRelations,
             );
