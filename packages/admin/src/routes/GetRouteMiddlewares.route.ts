@@ -1,10 +1,11 @@
 import {
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   GrpcError,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import { ConduitString } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
 import AdminModule from '../index';
