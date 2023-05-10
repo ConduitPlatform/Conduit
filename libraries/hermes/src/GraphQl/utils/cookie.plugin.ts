@@ -4,8 +4,8 @@ module.exports = {
   requestDidStart() {
     return {
       willSendResponse(requestContext: any) {
-        const { setCookie, removeCookie } = requestContext.context;
-        const { res } = requestContext.context;
+        const { setCookie, removeCookie } = requestContext.contextValue;
+        const { res } = requestContext.contextValue;
 
         setCookie.forEach((cookie: Cookie) => {
           if (cookie.options!.path === '') {
