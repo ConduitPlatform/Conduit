@@ -1,7 +1,7 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { ParsedQuery } from '../../../interfaces';
-import { cloneDeep, get } from 'lodash';
+import { cloneDeep, get, unset } from 'lodash';
 
 const { isArray, isObject } = require('lodash');
 
@@ -13,29 +13,36 @@ function potentialNesting(field: any) {
   );
 }
 
-export function processCreateQuery(query: Indexable, keyMapping: any) {
+export function processCreateQuery(
+  query: Indexable,
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
+) {
   const foundKeys = [];
   for (const key in keyMapping) {
-    const val = get(
-      query,
-      keyMapping[key].parentKey + '.' + keyMapping[key].childKey,
-      undefined,
-    );
+    const path = keyMapping[key].parentKey + '.' + keyMapping[key].childKey;
+    const val = get(query, path, undefined);
     if (val !== undefined) {
-      query[key] = get(query, keyMapping[key].parentKey + '.' + keyMapping[key].childKey);
-      foundKeys.push(keyMapping[key].parentKey);
+      query[key] = val;
+      foundKeys.push(path);
     }
   }
   if (foundKeys.length > 0) {
     for (const key of foundKeys) {
-      if (query.hasOwnProperty(key)) {
-        delete query[key];
+      if (get(query, key, undefined) !== undefined) {
+        unset(query, key);
       }
     }
   }
 }
 
-function unwrapNestedKeys(object: any, keyMapping: any) {
+function unwrapNestedKeys(
+  object: any,
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
+) {
   for (const concatenatedKey of Object.keys(keyMapping)) {
     if (object.hasOwnProperty(concatenatedKey)) {
       const { parentKey, childKey } = keyMapping[concatenatedKey];
@@ -63,7 +70,9 @@ function unwrapNestedKeys(object: any, keyMapping: any) {
  */
 export function unwrap(
   object: any,
-  keyMapping: any,
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   relations: {
     [key: string]: SequelizeSchema | SequelizeSchema[];
   },
@@ -104,17 +113,17 @@ export function unwrap(
  * pre-processes queries to convert potential dot notation to _ notation
  * according to the keyMapping
  */
-export function preprocessQuery(query: ParsedQuery, keyMapping: any) {
+export function preprocessQuery(query: ParsedQuery, keyDotMapping: string[]) {
   for (const key in query) {
     if (potentialNesting(query[key])) {
-      preprocessQuery(query[key], keyMapping);
+      preprocessQuery(query[key], keyDotMapping);
     }
     if (isArray(query[key])) {
       for (const element of query[key]) {
-        preprocessQuery(element, keyMapping);
+        preprocessQuery(element, keyDotMapping);
       }
     }
-    for (const concatenatedKey of keyMapping) {
+    for (const concatenatedKey of keyDotMapping) {
       if (key.indexOf(concatenatedKey) !== -1) {
         const split = key.split(concatenatedKey);
         const newKey = concatenatedKey.replace(/\./g, '_');
