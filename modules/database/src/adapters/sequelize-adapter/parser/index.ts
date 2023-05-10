@@ -289,14 +289,26 @@ function parseSelect(
   const includedRelations = [];
   let returnIncludes = false;
   const attributeCopy = cloneDeep(attributes);
+  const extraAttributes = [];
+  const removedIndices: string[] = [];
   for (let i = 0; i < attributeCopy.length; i++) {
     const procesingString = attributeCopy[i].replace('+', '').replace('-', '');
     for (const path in objectDotPathMapping) {
       if (objectDotPathMapping[path].indexOf(procesingString) === 0) {
-        attributes[i] = path;
+        if (removedIndices.indexOf(attributeCopy[i]) === -1) {
+          removedIndices.push(attributeCopy[i]);
+        }
+        extraAttributes.push(path);
       }
     }
   }
+  for (const index of removedIndices) {
+    const ind = attributes.indexOf(index);
+    if (ind > -1) {
+      attributes.splice(ind, 1);
+    }
+  }
+  attributes.push(...extraAttributes);
 
   for (const attribute of attributes) {
     if (attribute[0] === '+') {
