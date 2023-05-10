@@ -17,13 +17,6 @@ export function fieldsValidator(
   blockRelations = false,
 ) {
   Object.keys(schemaFields).forEach(f => {
-    // if (/(?<=[a-zA-Z0-9])_(?=[a-zA-Z0-9])|(?<=[a-zA-Z0-9])_$/g.test(f)) {
-    //   throw new ConduitError(
-    //     'INVALID_ARGUMENTS',
-    //     400,
-    //     `Schema '${schemaName}' violates field '${f}' constraint (field names cannot contain '_' in-between characters).`,
-    //   );
-    // }
     if (f.includes('.')) {
       throw new ConduitError(
         'INVALID_ARGUMENTS',
