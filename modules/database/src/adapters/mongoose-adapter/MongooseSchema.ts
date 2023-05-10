@@ -170,7 +170,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
   }
 
   public calculatePopulates(population: string[]) {
-    let populates: (string | PopulateOptions)[] = [];
+    const populates: (string | PopulateOptions)[] = [];
     population.forEach((r: string | string[], index: number) => {
       const final = r.toString().trim();
       if (final.indexOf('.') !== -1) {
@@ -186,7 +186,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
           ) {
             throw new Error("Failed populating '" + final + "'");
           } else {
-            let split = processing.split('.');
+            const split = processing.split('.');
             split.splice(split.length - 1, 1);
             processing = split.join('.');
           }
@@ -200,7 +200,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
             }`,
           );
         } else {
-          let childPopulates = this.adapter.models[
+          const childPopulates = this.adapter.models[
             this.model.schema.paths[processing].options.ref
           ].calculatePopulates([final.replace(processing + '.', '')]);
           if (populates.indexOf(processing) !== -1) {
