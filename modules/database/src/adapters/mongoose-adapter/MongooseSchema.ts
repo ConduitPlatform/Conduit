@@ -1,4 +1,11 @@
-import { Model, Mongoose, Schema, SortOrder } from 'mongoose';
+import {
+  Model,
+  Mongoose,
+  PopulateOptions,
+  Query as MongooseQuery,
+  Schema,
+  SortOrder,
+} from 'mongoose';
 import {
   _ConduitSchema,
   _ConduitSchemaOptions,
@@ -10,8 +17,8 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import { parseQuery } from './parser';
-import { ConduitModel, ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import { cloneDeep, isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 
@@ -23,7 +30,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     mongoose: Mongoose,
     schema: ConduitSchema,
     readonly originalSchema: any,
-    deepPopulate: any,
     private readonly adapter: MongooseAdapter,
   ) {
     if (!isNil(schema.collectionName)) {
@@ -32,7 +38,6 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
     const mongooseSchema = new Schema(schema.fields as Indexable, schema.modelOptions);
-    mongooseSchema.plugin(deepPopulate, {});
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
@@ -60,7 +65,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     }
     let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true });
     if (populate !== undefined && populate !== null) {
-      finalQuery = this.calculatePopulates(finalQuery, populate);
+      finalQuery = this.populate(finalQuery, populate);
     }
     return finalQuery.lean().exec();
   }
@@ -88,7 +93,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .then(() => {
         let finalQuery = this.model.find({ _id: { $in: affectedIds } });
         if (populate !== undefined && populate !== null) {
-          finalQuery = this.calculatePopulates(finalQuery, populate);
+          finalQuery = this.populate(finalQuery, populate);
         }
         return finalQuery.lean().exec();
       });
@@ -127,7 +132,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       finalQuery = finalQuery.limit(limit!);
     }
     if (!isNil(populate)) {
-      finalQuery = this.calculatePopulates(finalQuery, populate);
+      finalQuery = this.populate(finalQuery, populate);
     }
     if (!isNil(sort)) {
       finalQuery = finalQuery.sort(this.parseSort(sort));
@@ -141,7 +146,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     );
     let finalQuery = this.model.findOne(parsedQuery, select);
     if (populate !== undefined && populate !== null) {
-      finalQuery = this.calculatePopulates(finalQuery, populate);
+      finalQuery = this.populate(finalQuery, populate);
     }
     return finalQuery.lean().exec();
   }
@@ -164,26 +169,80 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     return result !== null;
   }
 
-  private calculatePopulates(queryObj: any, population: string[]) {
+  public calculatePopulates(population: string[]) {
+    let populates: (string | PopulateOptions)[] = [];
     population.forEach((r: string | string[], index: number) => {
       const final = r.toString().trim();
-      if (r.indexOf('.') !== -1) {
-        r = final.split('.');
+      if (final.indexOf('.') !== -1) {
         let controlBool = true;
+        let processing = cloneDeep(final);
         while (controlBool) {
-          if (this.originalSchema.fields[r[0]]) {
+          if (this.model.schema.paths[processing]) {
             controlBool = false;
-          } else if (r[0] === undefined || r[0].length === 0 || r[0] === '') {
+          } else if (
+            processing === undefined ||
+            processing.length === 0 ||
+            processing === ''
+          ) {
             throw new Error("Failed populating '" + final + "'");
           } else {
-            r.splice(0, 1);
+            let split = processing.split('.');
+            split.splice(split.length - 1, 1);
+            processing = split.join('.');
           }
         }
-        population[index] = r.join('.');
+        if (processing === final) {
+          populates.push(processing);
+        } else if (this.model.schema.paths[processing].options.ref === undefined) {
+          throw new Error(
+            `Failed populating '${final}', path exists for ${processing} but missing ${
+              final.split(processing)[1]
+            }`,
+          );
+        } else {
+          let childPopulates = this.adapter.models[
+            this.model.schema.paths[processing].options.ref
+          ].calculatePopulates([final.replace(processing + '.', '')]);
+          if (populates.indexOf(processing) !== -1) {
+            populates.splice(populates.indexOf(processing), 1);
+            populates.push({ path: processing, populate: childPopulates });
+          } else {
+            const found = populates.filter(r => {
+              if (
+                typeof r === 'object' &&
+                r.hasOwnProperty('path') &&
+                r['path'] === processing
+              ) {
+                if (!r.hasOwnProperty('populate')) {
+                  r['populate'] = childPopulates;
+                } else {
+                  r['populate'] = (r['populate']! as UntypedArray).concat(childPopulates);
+                }
+                return true;
+              }
+              return false;
+            });
+            if (found.length === 0) {
+              populates.push({ path: processing, populate: childPopulates });
+            }
+          }
+        }
+      } else {
+        populates.push(final);
       }
     });
-    queryObj = queryObj.deepPopulate(population);
+    return populates;
+  }
 
+  public populate(queryObj: MongooseQuery<any, any>, population: string[]) {
+    const populates = this.calculatePopulates(population);
+    for (const populate of populates) {
+      if (typeof populate === 'object') {
+        queryObj = queryObj.populate(populate as PopulateOptions);
+      } else {
+        queryObj = queryObj.populate(populate as string);
+      }
+    }
     return queryObj;
   }
 

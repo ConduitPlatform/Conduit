@@ -21,7 +21,6 @@ import {
 } from '../../interfaces';
 
 const parseSchema = require('mongodb-schema');
-let deepPopulate = require('./deep-populate.js');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -284,9 +283,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     ConduitGrpcSdk.Logger.log('Connecting to database...');
     this.mongoose
       .connect(this.connectionString, this.options)
-      .then(() => {
-        deepPopulate = deepPopulate(this.mongoose);
-      })
       .catch(err => {
         ConduitGrpcSdk.Logger.error('Unable to connect to the database: ', err);
         throw new Error();
@@ -359,13 +355,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
-    this.models[schema.name] = new MongooseSchema(
-      this.mongoose,
-      newSchema,
-      schema,
-      deepPopulate,
-      this,
-    );
+    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, schema, this);
     if (saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
