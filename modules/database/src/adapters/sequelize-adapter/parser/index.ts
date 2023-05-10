@@ -1,7 +1,7 @@
 import { ParsedQuery } from '../../../interfaces';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
+import { cloneDeep, isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import { SequelizeSchema } from '../SequelizeSchema';
 import { preprocessQuery } from '../utils/pathUtils';
 
@@ -259,6 +259,7 @@ export function parseQuery(
         queryOptions.select,
         queryOptions.exclude || [],
         relations,
+        objectDotPathMapping,
       );
     }
   } else {
@@ -280,12 +281,22 @@ function parseSelect(
   select: string,
   excludedFields: string[],
   relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+  objectDotPathMapping: { [key: string]: string },
 ): { exclude?: string[]; include?: string[] } | string[] {
   const include: string[] = [];
   const exclude = [...excludedFields];
   const attributes = select.split(' ');
   const includedRelations = [];
   let returnIncludes = false;
+  const attributeCopy = cloneDeep(attributes);
+  for (let i = 0; i < attributeCopy.length; i++) {
+    const procesingString = attributeCopy[i].replace('+', '').replace('-', '');
+    for (const path in objectDotPathMapping) {
+      if (objectDotPathMapping[path].indexOf(procesingString) === 0) {
+        attributes[i] = path;
+      }
+    }
+  }
 
   for (const attribute of attributes) {
     if (attribute[0] === '+') {
