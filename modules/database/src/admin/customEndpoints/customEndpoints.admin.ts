@@ -389,7 +389,7 @@ export class CustomEndpointsAdmin {
     if (!schema) {
       throw new GrpcError(
         status.NOT_FOUND,
-        `Schema does not exist or can't be used by CMS`,
+        `Schema '${schemaName ?? schemaId}' does not exist or can't be used by CMS`,
       );
     }
     schemaId = schema._id.toString();

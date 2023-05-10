@@ -2,7 +2,8 @@ import {
   Array,
   ConduitModel,
   ConduitModelField,
-  ConduitRouteOption,
+  ConduitModelFieldRelation,
+  ConduitReturn,
   TYPE,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -17,7 +18,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   abstract extractTypes(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     isInput: boolean,
   ): ParseResult;
 
@@ -80,7 +81,7 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
 
   protected extractTypesInternal(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
   ): ProcessingObject {
     let processingObject: ProcessingObject = this.getProcessingObject(name, false);
     if (typeof fields === 'string') {
@@ -121,13 +122,13 @@ export abstract class ConduitParser<ParseResult, ProcessingObject> {
           if ((fields[field] as any).type) {
             // if type is simply a type
             if (typeof (fields[field] as ConduitModelField).type === 'string') {
-              if ((fields[field] as ConduitModelField).type === 'Relation') {
+              if ((fields[field] as ConduitModelFieldRelation).type === 'Relation') {
                 this.getResultFromRelation(
                   processingObject,
                   name,
                   field,
-                  (fields[field] as ConduitModelField).model,
-                  (fields[field] as ConduitModelField).required!,
+                  (fields[field] as ConduitModelFieldRelation).model,
+                  (fields[field] as ConduitModelFieldRelation).required!,
                   false,
                 );
               } else {

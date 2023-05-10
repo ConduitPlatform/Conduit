@@ -1,11 +1,14 @@
 import ConduitGrpcSdk, {
   ConduitError,
+  ConduitRouteActions,
+  GrpcError,
   IConduitLogger,
   ParsedRouterRequest,
   UnparsedRouterResponse,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
 import ConduitDefaultRouter from '../Router';
 import { RouterProxyRoute } from '../models';
 import { ProxyRouteT } from '@conduitplatform/hermes';
@@ -36,6 +39,34 @@ export class RouterAdmin {
       else response = response.sort((a, b) => b.localeCompare(a));
     }
     return Array.from(new Set(response));
+  }
+
+  async getRouteMiddlewares(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { path, action } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    const { url, routeIndex } = this.router.findGrpcRoute(path, action);
+    const route = this.router.getGrpcRoute(url, routeIndex);
+    if (!route) {
+      throw new GrpcError(status.NOT_FOUND, 'Route not found');
+    }
+    return { middlewares: route.options.middlewares };
+  }
+
+  async patchRouteMiddlewares(
+    call: ParsedRouterRequest,
+  ): Promise<UnparsedRouterResponse> {
+    const { path, action, middlewares } = call.request.params;
+    if (!(action in ConduitRouteActions)) {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid action');
+    }
+    await this.router
+      ._patchRouteMiddlewares(path, action, middlewares)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return 'Middleware patched successfully';
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -81,8 +112,14 @@ export class RouterAdmin {
   }
 
   async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -106,7 +143,7 @@ export class RouterAdmin {
       target,
       action,
       middlewares,
-      description,
+      routeDescription,
       proxyMiddlewareOptions,
     });
     await this.registerProxyRoutes(this.router);
@@ -115,8 +152,15 @@ export class RouterAdmin {
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, id, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      id,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -141,7 +185,7 @@ export class RouterAdmin {
         target,
         action,
         middlewares,
-        description,
+        routeDescription,
         proxyMiddlewareOptions,
       },
     );
@@ -186,7 +230,7 @@ export class RouterAdmin {
         options: {
           path: route.path,
           action: route.action,
-          description: route.description,
+          description: route.routeDescription,
           middlewares: route.middlewares,
         },
         proxy: {

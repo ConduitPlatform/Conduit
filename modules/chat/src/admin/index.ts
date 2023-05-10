@@ -253,7 +253,7 @@ export class AdminHandlers {
   private async validateUsersInput(users: User[]) {
     const uniqueUsers = Array.from(new Set(users));
     const usersToBeAdded: void | User[] = await User.getInstance().findMany({
-      _id: { $in: uniqueUsers },
+      _id: { $in: uniqueUsers.map(user => user._id) },
     });
     if (isNil(usersToBeAdded)) {
       throw new GrpcError(status.NOT_FOUND, 'Users do not exist');

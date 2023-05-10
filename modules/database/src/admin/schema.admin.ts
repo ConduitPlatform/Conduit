@@ -100,7 +100,16 @@ export class SchemaAdmin {
     const skip = call.request.params.skip ?? 0;
     const limit = call.request.params.limit ?? 25;
 
-    const queryArray: Indexable[] = [{ name: { $nin: this.database.systemSchemas } }];
+    const queryArray: Indexable[] = [
+      {
+        name: { $nin: this.database.systemSchemas },
+        $or: [
+          { parentSchema: { $exists: false } },
+          { parentSchema: { $eq: null } },
+          { parentSchema: { $eq: '' } },
+        ],
+      },
+    ];
     if (owner && owner?.length !== 0) {
       queryArray.push({ ownerModule: { $in: owner } });
     }
@@ -110,12 +119,16 @@ export class SchemaAdmin {
       queryArray.push({ name: { $ilike: `%${identifier}%` } });
     }
     if (!isNil(enabled)) {
-      queryArray.push({
-        $or: [
-          { 'modelOptions.conduit.cms.enabled': enabled },
-          { 'modelOptions.conduit.permissions.extendable': enabled },
-        ],
-      });
+      if (enabled) {
+        queryArray.push({
+          $or: [
+            { 'modelOptions.conduit.cms.enabled': enabled },
+            { 'modelOptions.conduit.permissions.extendable': enabled },
+          ],
+        });
+      } else if (!enabled && (!owner || owner?.length === 0)) {
+        queryArray.push({ 'modelOptions.conduit.cms.enabled': enabled });
+      }
     }
     const query: ParsedQuery = { $and: queryArray };
     let parsedSort: { [key: string]: -1 | 1 } | undefined = undefined;

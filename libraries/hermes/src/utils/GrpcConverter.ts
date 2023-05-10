@@ -11,6 +11,7 @@ import {
 import {
   ConduitRouteOptions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -26,12 +27,7 @@ import {
   RouteT,
   SocketProtoDescription,
 } from '../interfaces';
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  instanceOfConduitProxy,
-  ProxyRoute,
-} from '../classes';
+import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes';
 
 const protoLoader = require('@grpc/proto-loader');
 

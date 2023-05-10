@@ -2,11 +2,12 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   GrpcError,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash';
 import { Admin, AdminTwoFactorSecret } from '../models';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 import { generateSecret } from '../utils/auth';
 

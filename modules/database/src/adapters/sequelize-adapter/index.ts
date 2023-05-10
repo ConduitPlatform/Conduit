@@ -28,7 +28,7 @@ import {
 } from '../../interfaces';
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil } from 'lodash';
+import { isNil, merge } from 'lodash';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -146,15 +146,34 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
   ) {
     for (const extractedSchema in extractedSchemas) {
-      const modelOptions = {
-        ...schema.modelOptions,
-        permissions: {
-          extendable: false,
-          canCreate: false,
-          canModify: 'Nothing',
-          canDelete: false,
+      const modelOptions = merge({}, schema.modelOptions, {
+        conduit: {
+          cms: {
+            enabled: false,
+            crudOperations: {
+              read: {
+                enabled: false,
+              },
+              create: {
+                enabled: false,
+              },
+              delete: {
+                enabled: false,
+              },
+              update: {
+                enabled: false,
+              },
+            },
+          },
+
+          permissions: {
+            extendable: false,
+            canCreate: false,
+            canModify: 'Nothing',
+            canDelete: false,
+          },
         },
-      };
+      });
       let modeledSchema;
       let isArray = false;
       if (Array.isArray(extractedSchemas[extractedSchema])) {
@@ -199,7 +218,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.sequelize.models,
     );
     const dialect = this.sequelize.getDialect();
-    const [newSchema, extractedSchemas, extractedRelations] =
+    const [newSchema, objectPaths, extractedRelations] =
       dialect === 'postgres'
         ? pgSchemaConverter(compiledSchema)
         : sqlSchemaConverter(compiledSchema);
@@ -212,18 +231,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       extractedRelations,
       this.models,
     );
-    const associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] } = {};
-    await this.processExtractedSchemas(schema, extractedSchemas, associatedSchemas);
-    if (options && options.parentSchema) {
-      schema.parentSchema = options.parentSchema;
-    }
     this.models[schema.name] = new SequelizeSchema(
       this.sequelize,
       newSchema,
       schema,
       this,
       relatedSchemas,
-      associatedSchemas,
+      objectPaths,
     );
 
     const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
@@ -235,16 +249,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     if (!options && saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
-      if (associatedSchemas && Object.keys(associatedSchemas).length > 0) {
-        for (const associatedSchema in associatedSchemas) {
-          const schema = associatedSchemas[associatedSchema];
-          if (Array.isArray(schema)) {
-            await this.saveSchemaToDatabase(schema[0].originalSchema);
-          } else {
-            await this.saveSchemaToDatabase(schema.originalSchema);
-          }
-        }
-      }
     }
     return this.models[schema.name];
   }
@@ -255,18 +259,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     callerModule: string = 'database',
     instanceSync = false,
   ): Promise<string> {
-    if ((instanceSync || deleteData) && this.models[schemaName].associations) {
-      for (const association in this.models[schemaName].associations) {
-        const associationSchema = this.models[schemaName].associations![association];
-        if (Array.isArray(associationSchema)) {
-          delete this.models[associationSchema[0].schema.name];
-          if (deleteData) await associationSchema[0].model.drop();
-        } else {
-          delete this.models[associationSchema.schema.name];
-          if (deleteData) await associationSchema.model.drop();
-        }
-      }
-    }
     return await this._deleteSchema(schemaName, deleteData, callerModule, instanceSync);
   }
 

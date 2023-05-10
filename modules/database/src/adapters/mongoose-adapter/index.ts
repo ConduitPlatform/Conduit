@@ -340,7 +340,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     saveToDb: boolean = true,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
-    validateFieldConstraints(compiledSchema);
+    validateFieldConstraints(compiledSchema, 'mongodb');
     compiledSchema.fields = (schema as ConduitDatabaseSchema).compiledFields;
     if (this.registeredSchemas.has(compiledSchema.name)) {
       if (compiledSchema.name !== 'Config') {

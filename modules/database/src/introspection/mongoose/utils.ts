@@ -18,7 +18,7 @@ export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
 }
 
 function extractType(field: Indexable) {
-  const conduitField: ConduitModelField = {};
+  const conduitField: Indexable = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
       (t: string) => t !== 'Undefined' && t !== 'Null',

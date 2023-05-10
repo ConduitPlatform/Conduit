@@ -88,7 +88,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     const token: Token = await Token.getInstance().create({
-      type: TokenType.MAGIC_LINK,
+      tokenType: TokenType.MAGIC_LINK,
       user: user._id,
       data: {
         clientId,
@@ -107,7 +107,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const redirectUri =
       config.customRedirectUris && !isNil(uri) ? uri : config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
-      type: TokenType.MAGIC_LINK,
+      tokenType: TokenType.MAGIC_LINK,
       token: verificationToken,
     });
     if (isNil(token)) {
@@ -119,7 +119,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     await Token.getInstance()
-      .deleteMany({ user: token.user, type: TokenType.MAGIC_LINK })
+      .deleteMany({ user: token.user, tokenType: TokenType.MAGIC_LINK })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });

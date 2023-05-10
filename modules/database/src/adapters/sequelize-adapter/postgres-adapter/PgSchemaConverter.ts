@@ -13,7 +13,11 @@ import {
   extractFieldProperties,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
-import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
+import {
+  convertObjectToDotNotation,
+  extractRelations,
+  RelationType,
+} from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
@@ -21,7 +25,9 @@ import { extractEmbedded, extractRelations, RelationType } from '../utils/extrac
  */
 export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
-  { [key: string]: any },
+  {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   {
     [key: string]: RelationType | RelationType[];
   },
@@ -33,11 +39,13 @@ export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
-  const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
+  const objectPaths: any = {};
+  convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
+  const secondaryCopy = cloneDeep(copy.fields);
+  const extractedRelations = extractRelations(secondaryCopy, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
-  iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extractedEmbedded, extractedRelations];
+  iterDeep(secondaryCopy, copy.fields);
+  return [copy, objectPaths, extractedRelations];
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
@@ -122,7 +130,15 @@ function extractArrayType(arrayField: UntypedArray) {
   return { type: DataTypes.ARRAY(arrayElementType) };
 }
 
-function extractObjectType(objectField: Indexable) {
+function extractObjectType(objectField: Indexable):
+  | {
+      type: any;
+      defaultValue?: any;
+      primaryKey?: boolean;
+      unique?: boolean;
+      allowNull?: boolean;
+    }
+  | Indexable {
   const res: {
     type: any;
     defaultValue?: any;

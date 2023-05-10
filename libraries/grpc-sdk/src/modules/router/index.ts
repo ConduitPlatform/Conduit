@@ -8,6 +8,7 @@ import {
 } from '../../protoUtils/router';
 import {
   ConduitProxyObject,
+  ConduitRouteActions,
   ConduitRouteObject,
   SocketProtoDescription,
 } from '../../interfaces';
@@ -44,5 +45,17 @@ export class Router extends ConduitModule<typeof RouterDefinition> {
 
   socketPush(data: SocketData) {
     return this.client!.socketPush(data);
+  }
+
+  patchRouteMiddlewares(
+    path: string,
+    action: ConduitRouteActions,
+    middlewares: string[],
+  ) {
+    return this.client!.patchRouteMiddlewares({
+      path: path,
+      action: action,
+      middlewares: middlewares,
+    });
   }
 }

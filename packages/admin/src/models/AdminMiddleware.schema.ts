@@ -3,19 +3,26 @@ import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
-  name: {
+  path: {
     type: TYPE.String,
     required: true,
   },
-  container: {
+  action: {
     type: TYPE.String,
     required: true,
   },
-  isPublic: {
-    type: TYPE.Boolean,
-    default: false,
+  middleware: {
+    type: TYPE.String,
+    required: true,
   },
-  url: TYPE.String,
+  position: {
+    type: TYPE.Number,
+    required: true,
+  },
+  owner: {
+    type: TYPE.String,
+    required: true,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -32,26 +39,27 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class _StorageFolder extends ConduitActiveSchema<_StorageFolder> {
-  private static _instance: _StorageFolder;
+export class AdminMiddleware extends ConduitActiveSchema<AdminMiddleware> {
+  private static _instance: AdminMiddleware;
   _id!: string;
-  name!: string;
-  container!: string;
-  isPublic?: boolean;
-  url!: string;
+  path!: string;
+  action!: string;
+  middleware!: string;
+  position!: number;
+  owner!: string;
   createdAt!: Date;
   updatedAt!: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, _StorageFolder.name, schema, modelOptions, collectionName);
+    super(database, AdminMiddleware.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (_StorageFolder._instance) return _StorageFolder._instance;
+    if (AdminMiddleware._instance) return AdminMiddleware._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    _StorageFolder._instance = new _StorageFolder(database);
-    return _StorageFolder._instance;
+    AdminMiddleware._instance = new AdminMiddleware(database);
+    return AdminMiddleware._instance;
   }
 }

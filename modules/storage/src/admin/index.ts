@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -189,7 +188,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition(File.name),
@@ -258,7 +257,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.PATCH,
         description: `Updates a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Optional,
@@ -299,7 +298,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFile', {
@@ -313,7 +312,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns the file's url and optionally redirects to it.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         queryParams: {
           redirect: ConduitBoolean.Optional,
@@ -331,7 +330,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns the data of a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetFileData', {
@@ -379,7 +378,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a folder.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
@@ -421,7 +420,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a container.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.name),

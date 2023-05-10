@@ -20,8 +20,9 @@ export const extractRelations = (
       if (Array.isArray(value)) {
         const item = value[0];
         if (
-          item.model.associations[relation] &&
-          item.model.associations[relation].foreignKey === name
+          item.model.associations[model.name + '_' + relation] &&
+          item.model.associations[model.name + '_' + relation].foreignKey ===
+            item.originalSchema.name
         ) {
           model.belongsToMany(item.model, {
             foreignKey: name,
@@ -29,8 +30,9 @@ export const extractRelations = (
             through: model.name + '_' + item.originalSchema.name,
           });
         } else if (
-          item.model.associations[relation] &&
-          item.model.associations[relation].foreignKey !== name
+          item.model.associations[model.name + '_' + relation] &&
+          item.model.associations[model.name + '_' + relation].foreignKey !==
+            item.originalSchema.name
         ) {
           throw new Error(
             `Relation ${relation} already exists on ${item.model.name} with a different foreign key`,
@@ -43,23 +45,44 @@ export const extractRelations = (
           });
           item.model.belongsToMany(model, {
             foreignKey: item.originalSchema.name,
-            as: relation,
+            as: model.name + '_' + relation,
             through: model.name + '_' + item.originalSchema.name,
           });
           item.sync();
         }
       } else {
+        const relationsField = findOriginalSchemaField(originalSchema, relation);
         model.belongsTo(value.model, {
           foreignKey: {
             name: relation + 'Id',
-            allowNull: !(originalSchema.compiledFields[relation] as any).required,
-            defaultValue: (originalSchema.compiledFields[relation] as any).default,
+            allowNull: !(relationsField as any).required,
+            defaultValue: (relationsField as any).default,
           },
           as: relation,
           constraints: false,
         });
       }
     }
+  }
+};
+
+const findOriginalSchemaField = (
+  originalSchema: ConduitDatabaseSchema,
+  field: string,
+) => {
+  if (field.indexOf('_') === -1) {
+    return originalSchema.compiledFields[field];
+  } else {
+    const fieldParts = field.split('_');
+    let currentField: any = originalSchema.compiledFields[fieldParts[0]];
+    for (let i = 1; i < fieldParts.length; i++) {
+      if (currentField.type) {
+        currentField = currentField.type[fieldParts[i]];
+      } else {
+        currentField = currentField[fieldParts[i]];
+      }
+    }
+    return currentField;
   }
 };
 
@@ -171,7 +194,7 @@ export function compileSchema(
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));
-  validateFieldConstraints(compiledSchema);
+  validateFieldConstraints(compiledSchema, 'sql');
   (compiledSchema as any).fields = JSON.parse(JSON.stringify(schema.compiledFields));
   if (registeredSchemas.has(compiledSchema.name)) {
     if (compiledSchema.name !== 'Config') {
@@ -209,7 +232,10 @@ export async function resolveRelatedSchemas(
       const rel = Array.isArray(extractedRelations[relation])
         ? (extractedRelations[relation] as UntypedArray)[0]
         : extractedRelations[relation];
-      if (!models[rel.model] || !models[rel.model].synced) {
+      if (
+        (!models[rel.model] || !models[rel.model].synced) &&
+        schema.name !== rel.model
+      ) {
         if (!pendingModels.includes(rel.model)) {
           pendingModels.push(rel.model);
         }

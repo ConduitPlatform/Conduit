@@ -1,11 +1,11 @@
-import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
  * This is used to model a relation tuple like:
  * user:2131cdad reader token:123aDSA
  */
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   // organization:123123
   resource: {

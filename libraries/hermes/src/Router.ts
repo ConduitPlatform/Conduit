@@ -1,9 +1,12 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import ConduitGrpcSdk, {
+  ConduitRouteActions,
   ConduitRouteParameters,
+  GrpcError,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitMiddleware } from './interfaces';
+import { status } from '@grpc/grpc-js';
+import { ConduitMiddleware, MiddlewarePatch } from './interfaces';
 import { ConduitRoute } from './classes';
 import ObjectHash from 'object-hash';
 
@@ -11,10 +14,12 @@ export abstract class ConduitRouter {
   protected _expressRouter?: Router;
   protected _middlewares?: { [field: string]: ConduitMiddleware };
   protected _registeredRoutes: Map<string, ConduitRoute>;
+  private _middlewareOwners: Map<string, string>;
   private _refreshTimeout: NodeJS.Timeout | null = null;
 
   protected constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this._registeredRoutes = new Map();
+    this._middlewareOwners = new Map();
   }
 
   createRouter() {
@@ -67,11 +72,12 @@ export abstract class ConduitRouter {
     this.grpcSdk.state!.setKey('hash-' + hashKey, JSON.stringify(data), age * 1000);
   }
 
-  registerMiddleware(middleware: ConduitMiddleware) {
+  registerMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
     if (!this._middlewares) {
       this._middlewares = {};
     }
     this._middlewares[middleware.name] = middleware;
+    this._middlewareOwners.set(middleware.name, moduleUrl);
   }
 
   checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
@@ -121,5 +127,46 @@ export abstract class ConduitRouter {
     } else {
       return true;
     }
+  }
+
+  patchRouteMiddlewares(patch: MiddlewarePatch) {
+    const { path, action, middlewares } = patch;
+    const [key, route] = this.findRoute(path, action);
+    route.input.middlewares = middlewares;
+    this._registeredRoutes.set(key, route);
+    const routes: { action: string; path: string }[] = [];
+    for (const conduitRoute of this._registeredRoutes.values()) {
+      routes.push({ action: conduitRoute.input.action, path: conduitRoute.input.path });
+    }
+    this.cleanupRoutes(routes);
+  }
+
+  filterMiddlewaresPatch(
+    routeMiddlewares: string[],
+    patchMiddlewares: string[],
+    moduleUrl: string,
+  ) {
+    const injected = patchMiddlewares.filter(m => !routeMiddlewares.includes(m));
+    const removed = routeMiddlewares.filter(m => !patchMiddlewares.includes(m));
+    injected.forEach(m => {
+      if (!this._middlewares || !this._middlewares[m]) {
+        throw new GrpcError(status.NOT_FOUND, 'Middleware not registered');
+      }
+    });
+    removed.forEach(m => {
+      if (this._middlewareOwners.get(m) !== moduleUrl) {
+        throw new GrpcError(status.PERMISSION_DENIED, `Removal of ${m} not allowed`);
+      }
+    });
+    return [injected, removed];
+  }
+
+  protected findRoute(path: string, action: ConduitRouteActions): [string, ConduitRoute] {
+    const key = `${action}-${path}`;
+    const exists = this._registeredRoutes.has(key);
+    if (!exists) {
+      throw new GrpcError(status.NOT_FOUND, 'Route not found');
+    }
+    return [key, this._registeredRoutes.get(key)!];
   }
 }

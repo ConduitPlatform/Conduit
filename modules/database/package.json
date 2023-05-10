@@ -25,6 +25,7 @@
     "bson": "^5.2.0",
     "deepdash": "^5.3.9",
     "deepdash-es": "^5.3.9",
+    "dottie": "^2.0.3",
     "escape-string-regexp": "^4.0.0",
     "lodash": "^4.17.21",
     "mariadb": "^3.1.1",
@@ -51,6 +52,7 @@
   "devDependencies": {
     "@types/lodash": "^4.14.192",
     "@types/node": "18.15.11",
+    "@types/dottie": "^2.0.4",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.0",
     "ts-proto": "^1.146.0",

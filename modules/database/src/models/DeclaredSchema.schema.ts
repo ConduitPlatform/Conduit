@@ -1,4 +1,4 @@
-import { ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, ConduitSchema, TYPE } from '@conduitplatform/grpc-sdk';
 
 export const DeclaredSchema = new ConduitSchema(
   '_DeclaredSchema',
@@ -47,7 +47,7 @@ export const DeclaredSchema = new ConduitSchema(
     },
     createdAt: TYPE.Date,
     updatedAt: TYPE.Date,
-  },
+  } as ConduitModel,
   {
     timestamps: true,
     conduit: {

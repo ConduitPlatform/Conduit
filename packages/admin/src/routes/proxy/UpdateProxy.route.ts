@@ -3,9 +3,10 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   TYPE,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
 import { AdminProxyRoute } from '../../models';
 import AdminModule from '../../index';
@@ -24,7 +25,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         path: ConduitString.Optional,
         target: ConduitString.Optional,
         action: ConduitString.Optional,
-        description: ConduitString.Optional,
+        routeDescription: ConduitString.Optional,
         middlewares: [ConduitString.Optional],
         proxyMiddlewareOptions: {
           type: TYPE.JSON,
@@ -41,7 +42,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         path,
         target,
         action,
-        description,
+        routeDescription,
         middlewares,
         proxyMiddlewareOptions,
       } = req.params!;
@@ -53,7 +54,7 @@ export function updateProxyRoute(adminModule: AdminModule) {
         path,
         target,
         action,
-        description,
+        routeDescription: routeDescription,
         middlewares,
         proxyMiddlewareOptions,
       });

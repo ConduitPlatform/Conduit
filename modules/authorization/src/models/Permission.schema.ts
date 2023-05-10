@@ -1,4 +1,4 @@
-import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -6,7 +6,7 @@ import { ConduitActiveSchema } from '@conduitplatform/module-tools';
  * user:2131cdad reader token:123aDSA
  * this affects only granted permissions and not inherited ones
  */
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   // organization:123123
   resource: {

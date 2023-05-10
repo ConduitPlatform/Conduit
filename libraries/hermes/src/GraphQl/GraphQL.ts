@@ -11,8 +11,8 @@ import { ConduitRouter } from '../Router';
 import { errorHandler } from './utils/Request.utils';
 import ConduitGrpcSdk, {
   ConduitModel,
+  ConduitReturn,
   ConduitRouteActions,
-  ConduitRouteOption,
   ConduitRouteOptions,
   Indexable,
   TYPE,
@@ -20,6 +20,7 @@ import ConduitGrpcSdk, {
 import { ConduitRoute, TypeRegistry } from '../classes';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
+import { merge } from 'lodash';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const cookiePlugin = require('./utils/cookie.plugin');
@@ -74,7 +75,7 @@ export class GraphQLController extends ConduitRouter {
 
   generateType(
     name: string,
-    fields: ConduitModel | ConduitRouteOption | string,
+    fields: ConduitModel | ConduitReturn,
     dbTypeRefresh = false,
   ) {
     const typeExists = this.typeDefs.includes('type ' + name + ' ');
@@ -220,6 +221,13 @@ export class GraphQLController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
+    if (registered) {
+      const retrievedRoute = this._registeredRoutes.get(key);
+      route.input.middlewares = merge(
+        retrievedRoute!.input.middlewares,
+        route.input.middlewares!,
+      );
+    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
