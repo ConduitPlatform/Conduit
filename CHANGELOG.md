@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.9](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.8...v0.16.0-alpha.9) (2023-05-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **database:** re-work sql schema objects & relations (#573)
+
+### Features
+
+* **admin,router,hermes,grpc-sdk,core:** middleware patch support ([#614](https://github.com/ConduitPlatform/Conduit/issues/614)) ([8d19469](https://github.com/ConduitPlatform/Conduit/commit/8d194693a0250a3e093f3d8976009bc1f5793df4))
+
+
+### Bug Fixes
+
+* **authentication:** tokens set with wrong expiry on  JWT and Cookies ([#616](https://github.com/ConduitPlatform/Conduit/issues/616)) ([db60991](https://github.com/ConduitPlatform/Conduit/commit/db6099191f2767524715e317db4a424db1ff0958))
+* **authentication:** user id matching on oauth2 ([55ad75e](https://github.com/ConduitPlatform/Conduit/commit/55ad75ee2f463456bfba0ca76f377b3f196438af))
+* **database:** association update using wrong name ([e9d8c2b](https://github.com/ConduitPlatform/Conduit/commit/e9d8c2b3a09b6441091b564d2dcbbdfb77e6170c))
+* **database:** checking wrong foreignKey name for m:m relations ([bf5a664](https://github.com/ConduitPlatform/Conduit/commit/bf5a66496da864fe913577ba6234ba60ce5b26eb))
+* **database:** cms schema query ([5df94d7](https://github.com/ConduitPlatform/Conduit/commit/5df94d749df285e4fd13dc69231eebf6535685b7))
+* **database:** embedded schema/relation extractors parsing issues ([5db438b](https://github.com/ConduitPlatform/Conduit/commit/5db438bdb48786e33401f4ee680d0ece819a02cb))
+* **database:** fix custom endpoints check ([#618](https://github.com/ConduitPlatform/Conduit/issues/618)) ([a05fae1](https://github.com/ConduitPlatform/Conduit/commit/a05fae13dcca10fd74ee97b361d9b87afec90901))
+* **database:** getSchemas not discriminating against extracted schemas ([c91e79b](https://github.com/ConduitPlatform/Conduit/commit/c91e79bbb7e081144e2b69c1c32f65ddb63c3695))
+* **database:** issues when creating associations that contain relations ([6254da2](https://github.com/ConduitPlatform/Conduit/commit/6254da284814d3887e9226af366cb17d69177083))
+* **database:** parentSchema check in db not detailed enough ([d544262](https://github.com/ConduitPlatform/Conduit/commit/d544262d7dbbd5cd2d85dc42a23e2b5e0d1ff5e2))
+* **database:** populating parentDoc in findByIdAndUpdate without it being needed ([#613](https://github.com/ConduitPlatform/Conduit/issues/613)) ([eea6f25](https://github.com/ConduitPlatform/Conduit/commit/eea6f250fe1d2ef5f9145f7136711dd65d67614a))
+* **database:** setting associations ([58ae1f6](https://github.com/ConduitPlatform/Conduit/commit/58ae1f66baaebcb5e8b2ec224c35d33d1bb6f96d))
+* **database:** support $in & $nin operators for all sql dialects ([#608](https://github.com/ConduitPlatform/Conduit/issues/608)) ([2b77446](https://github.com/ConduitPlatform/Conduit/commit/2b774461653255e02322a6596841de48e4250294))
+* **email:** smtp settings ([8ce071d](https://github.com/ConduitPlatform/Conduit/commit/8ce071da47ec44721c0e6dfaa5d20bd280881031))
+* **email:** smtp settings ([460785a](https://github.com/ConduitPlatform/Conduit/commit/460785ad1162cf5c56e32636df6533895f1ccbb4))
+* gh action release version injection ([a29b750](https://github.com/ConduitPlatform/Conduit/commit/a29b75068b549426228c72e6b1eae393a903345e))
+* **hermes:** dependency issues with socket.io update ([88888e2](https://github.com/ConduitPlatform/Conduit/commit/88888e28f73602ec86b484ac673992b5bcbdb4c9))
+* **storage:** createFileByUrl/updateFileByUrl gRPC size types ([#607](https://github.com/ConduitPlatform/Conduit/issues/607)) ([abfd638](https://github.com/ConduitPlatform/Conduit/commit/abfd6389f8623629c4bde890a08402e6145bbfb9))
+
+
+* **database:** re-work sql schema objects & relations ([#573](https://github.com/ConduitPlatform/Conduit/issues/573)) ([de5851d](https://github.com/ConduitPlatform/Conduit/commit/de5851dd8f1d28fc54167fbaccc7fe3fe775e088))
+
 ## [0.16.0-alpha.8](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.7...v0.16.0-alpha.8) (2023-04-24)
 
 
