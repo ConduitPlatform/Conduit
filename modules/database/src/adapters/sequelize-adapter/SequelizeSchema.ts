@@ -43,7 +43,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
-    readonly objectPaths: any,
+    readonly objectPaths: {
+      [key: string]: { parentKey: string; childKey: string };
+    },
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(

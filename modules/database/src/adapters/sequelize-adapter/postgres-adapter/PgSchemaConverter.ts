@@ -25,7 +25,9 @@ import {
  */
 export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
-  any,
+  {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   {
     [key: string]: RelationType | RelationType[];
   },

@@ -23,9 +23,13 @@ import {
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function sqlSchemaConverter(
-  jsonSchema: ConduitSchema,
-): [ConduitSchema, any, { [key: string]: RelationType | RelationType[] }] {
+export function sqlSchemaConverter(jsonSchema: ConduitSchema): [
+  ConduitSchema,
+  {
+    [key: string]: { parentKey: string; childKey: string };
+  },
+  { [key: string]: RelationType | RelationType[] },
+] {
   let copy = cloneDeep(jsonSchema);
   if (copy.fields.hasOwnProperty('_id')) {
     delete copy.fields['_id'];
