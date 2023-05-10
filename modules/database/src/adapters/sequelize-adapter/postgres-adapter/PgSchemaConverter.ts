@@ -25,7 +25,9 @@ import {
  */
 export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
-  string[],
+  {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   {
     [key: string]: RelationType | RelationType[];
   },
@@ -37,7 +39,7 @@ export function pgSchemaConverter(jsonSchema: ConduitSchema): [
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const objectPaths: string[] = [];
+  const objectPaths: any = {};
   convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
   const secondaryCopy = cloneDeep(copy.fields);
   const extractedRelations = extractRelations(secondaryCopy, copy.fields);

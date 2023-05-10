@@ -17,13 +17,6 @@ export function fieldsValidator(
   blockRelations = false,
 ) {
   Object.keys(schemaFields).forEach(f => {
-    if (/(?<=[a-zA-Z0-9])_(?=[a-zA-Z0-9])|(?<=[a-zA-Z0-9])_$/g.test(f)) {
-      throw new ConduitError(
-        'INVALID_ARGUMENTS',
-        400,
-        `Schema '${schemaName}' violates field '${f}' constraint (field names cannot contain '_' in-between characters).`,
-      );
-    }
     if (f.includes('.')) {
       throw new ConduitError(
         'INVALID_ARGUMENTS',
@@ -35,14 +28,13 @@ export function fieldsValidator(
       const target: ConduitModelField = schemaFields[f] as ConduitModelField;
       const isUnique = !!target.unique;
       const isRequired = !!target.required;
-      // temporary disable
-      // if (isUnique && !isRequired) {
-      //   throw new ConduitError(
-      //     'INVALID_ARGUMENTS',
-      //     400,
-      //     `Schema '${schemaName}' violates unique field '${f}' constraint (field should be 'required').`,
-      //   );
-      // }
+      if (isUnique && !isRequired) {
+        throw new ConduitError(
+          'INVALID_ARGUMENTS',
+          400,
+          `Schema '${schemaName}' violates unique field '${f}' constraint (field should be 'required').`,
+        );
+      }
 
       if (target.hasOwnProperty('type') && typeof target.type === 'object') {
         if (Array.isArray(target.type)) {
@@ -64,7 +56,7 @@ export function fieldsValidator(
           } else {
             fieldsValidator(
               schemaName,
-              target.type[0] as unknown as ConduitModel,
+              target.type[0] as ConduitModel,
               db,
               blockRelations,
             );

@@ -43,49 +43,54 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
 export function convertObjectToDotNotation(
   schema: any,
   resSchema: any,
-  objectPaths: string[] = [],
+  keyMapping: any = {},
+  parentKey: string | null = null,
+  prefix: string = '',
 ) {
   for (const key of Object.keys(schema)) {
     if (!isArray(schema[key]) && isObject(schema[key])) {
       const extraction = extractObjectType(schema[key]);
       if (!extraction.hasOwnProperty('type')) {
-        const taf: any = {};
-        const newFields: any = {};
-        convertObjectToDotNotation(extraction, taf);
-        // unwrap the taf object to a new object that is not nested
-        for (const tafKey of Object.keys(taf)) {
-          newFields[`${key}_${tafKey}`] = taf[tafKey];
-          objectPaths.push(`${key}_${tafKey}`);
+        const newParentKey = parentKey ? `${parentKey}.${key}` : key;
+        const newPrefix = prefix ? `${prefix}_${key}` : key;
+        convertObjectToDotNotation(
+          extraction,
+          resSchema,
+          keyMapping,
+          newParentKey,
+          newPrefix,
+        );
+
+        // Remove the original key from resSchema
+        if (prefix) {
+          delete resSchema[`${prefix}_${key}`];
+        } else {
+          delete resSchema[key];
         }
-        delete resSchema[key];
-        // resSchema is passed by reference, so we can just add the new fields to it
-        Object.assign(resSchema, newFields);
       } else {
-        resSchema[key] = extraction;
+        const newKey = prefix ? `${prefix}_${key}` : key;
+        resSchema[newKey] = extraction;
+        if (parentKey || prefix) {
+          keyMapping[newKey] = {
+            parentKey: parentKey || prefix,
+            childKey: key,
+          };
+        }
       }
     } else {
-      resSchema[key] = schema[key];
+      const newKey = prefix ? `${prefix}_${key}` : key;
+      resSchema[newKey] = schema[key];
+      if (parentKey || prefix) {
+        keyMapping[newKey] = {
+          parentKey: parentKey || prefix,
+          childKey: key,
+        };
+      }
     }
   }
 }
 
-function extractObjectType(objectField: Indexable):
-  | {
-      type: any;
-      defaultValue?: any;
-      primaryKey?: boolean;
-      unique?: boolean;
-      allowNull?: boolean;
-    }
-  | Indexable {
-  const res: {
-    type: any;
-    defaultValue?: any;
-    primaryKey?: boolean;
-    unique?: boolean;
-    allowNull?: boolean;
-  } = { type: null };
-
+function extractObjectType(objectField: Indexable): Indexable {
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
       return objectField;
@@ -97,6 +102,4 @@ function extractObjectType(objectField: Indexable):
   } else {
     return objectField;
   }
-
-  return res;
 }

@@ -18,6 +18,7 @@ import ConduitGrpcSdk, {
 import { Cookie } from '../interfaces';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute, TypeRegistry } from '../classes';
+import { merge } from 'lodash';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -80,6 +81,13 @@ export class RestController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
+    if (registered) {
+      const retrievedRoute = this._registeredRoutes.get(key);
+      route.input.middlewares = merge(
+        retrievedRoute!.input.middlewares,
+        route.input.middlewares,
+      );
+    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);

@@ -33,6 +33,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   synced: boolean;
   readonly idField;
   readonly objectDotPaths: string[];
+  readonly objectDotPathMapping: { [key: string]: string } = {};
 
   constructor(
     readonly sequelize: Sequelize,
@@ -42,7 +43,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
-    readonly objectPaths: string[],
+    readonly objectPaths: {
+      [key: string]: { parentKey: string; childKey: string };
+    },
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
@@ -72,8 +75,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       }
     }
     this.objectDotPaths = [];
-    for (const path of objectPaths) {
-      this.objectDotPaths.push(path.replace(/_/g, '.'));
+    for (const concatenatedKey of Object.keys(objectPaths)) {
+      const { parentKey, childKey } = objectPaths[concatenatedKey];
+      this.objectDotPaths.push(`${parentKey}.${childKey}`);
+      this.objectDotPathMapping[concatenatedKey] = `${parentKey}.${childKey}`;
     }
     extractRelations(
       this.originalSchema.name,
@@ -94,7 +99,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
-
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
@@ -160,7 +164,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
-
+      // process the update query after special conditions have been handled.
+      processCreateQuery(parsedQuery, this.objectPaths);
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const relationObjects = this.extractRelationsModification(parsedQuery);
@@ -312,12 +317,28 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
         let path = population.split('.');
-        const relationName = path[0];
+        let relationName = path[0];
+        for (const objectPath of this.objectDotPaths) {
+          if (population.startsWith(objectPath)) {
+            relationName = objectPath.replace(/\./g, '_');
+            if (population === objectPath) {
+              path = [relationName];
+            } else {
+              path = [relationName].concat(
+                population
+                  .replace(objectPath + (population === objectPath ? '' : '.'), '')
+                  .split('.'),
+              );
+            }
+            break;
+          }
+        }
         const relationTarget = this.extractedRelations[relationName];
         if (!relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? relationTarget[0]
           : relationTarget;
+
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -328,14 +349,23 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           model: relationSchema.model,
           as: relationName,
           required: required || false,
-          attributes: { exclude: relationSchema.excludedFields },
+          attributes: {
+            exclude: relationSchema.excludedFields.concat(
+              path.length === 1 ||
+                Array.isArray(relationSchema.extractedRelations[path[1]])
+                ? []
+                : [`${path[1]}Id`],
+            ),
+          },
         };
         path.shift();
-        path = [path.join('.')];
-        relationObject.include = relationSchema.constructRelationInclusion(
-          path,
-          required,
-        );
+        if (path.length > 0) {
+          path = [path.join('.')];
+          relationObject.include = relationSchema.constructRelationInclusion(
+            path,
+            required,
+          );
+        }
         inclusionArray.push(relationObject);
       } else {
         const relationTarget = this.extractedRelations[population];
@@ -485,6 +515,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
     return this.model.count({
       where: parsingResult.query,
@@ -512,6 +544,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
     parsedFilter = parsingResult.query;
     incrementDbQueries();
@@ -566,6 +600,8 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       queryOptions,
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
 
     const filter = parsingResult.query ?? {};

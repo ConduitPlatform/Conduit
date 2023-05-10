@@ -1,10 +1,11 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import dottie from 'dottie';
 import { SequelizeSchema } from '../SequelizeSchema';
+import { ParsedQuery } from '../../../interfaces';
+import { cloneDeep, get, unset } from 'lodash';
 
 const { isArray, isObject } = require('lodash');
 
-function isObjectICare(field: any) {
+function potentialNesting(field: any) {
   return (
     !isArray(field) &&
     isObject(field) &&
@@ -12,69 +13,72 @@ function isObjectICare(field: any) {
   );
 }
 
-function pathICare(myPath: string, objectDotPaths: string[]) {
-  for (const path of objectDotPaths) {
-    if (path.startsWith(myPath)) {
-      return true;
+export function processCreateQuery(
+  query: Indexable,
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
+) {
+  const foundKeys = [];
+  for (const key in keyMapping) {
+    const path = keyMapping[key].parentKey + '.' + keyMapping[key].childKey;
+    const val = get(query, path, undefined);
+    if (val !== undefined) {
+      query[key] = val;
+      foundKeys.push(path);
     }
   }
-}
-
-export function processCreateQuery(query: Indexable, objectDotPaths: string[]) {
-  for (const key in query) {
-    /*
-     * We need to check every key in the query to see if it contains paths that match the objectDotPaths
-     * and if yes unwrap the object in the key to match the objectPaths
-     */
-    if (!query.hasOwnProperty(key)) continue;
-    if (isObjectICare(query[key])) {
-      let matchedPath = false;
-      for (const path of objectDotPaths) {
-        if (path.startsWith(key)) {
-          matchedPath = true;
-          let hasOne = false;
-          // unwrap the object and add the fields to the query
-          const processing: any = {};
-          for (const field in query[key]) {
-            if (
-              isObjectICare(query[key][field]) &&
-              pathICare(key + '_' + field, objectDotPaths)
-            ) {
-              processing[key + '_' + field] = query[key][field];
-              hasOne = true;
-            } else {
-              if (objectDotPaths.includes(key + '_' + field)) {
-                processing[key + '_' + field] = query[key][field];
-                hasOne = true;
-              } else {
-                if (!isObjectICare(processing[key])) {
-                  processing[key] = {};
-                }
-                processing[key][field] = query[key][field];
-              }
-            }
-          }
-          if (hasOne) {
-            processCreateQuery(processing, objectDotPaths);
-            delete query[key];
-            Object.assign(query, processing);
-          }
-        }
+  if (foundKeys.length > 0) {
+    for (const key of foundKeys) {
+      if (get(query, key, undefined) !== undefined) {
+        unset(query, key);
       }
-      if (!matchedPath) console.log('No match found for key: ', key);
     }
   }
 }
 
+function unwrapNestedKeys(
+  object: any,
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
+) {
+  for (const concatenatedKey of Object.keys(keyMapping)) {
+    if (object.hasOwnProperty(concatenatedKey)) {
+      const { parentKey, childKey } = keyMapping[concatenatedKey];
+      const nestedKeys = parentKey.split('.');
+      let currentObject = object;
+
+      for (const nestedKey of nestedKeys) {
+        if (!currentObject.hasOwnProperty(nestedKey)) {
+          currentObject[nestedKey] = {};
+        }
+        currentObject = currentObject[nestedKey];
+      }
+
+      currentObject[childKey] = object[concatenatedKey];
+      delete object[concatenatedKey];
+    }
+  }
+}
+
+/**
+ * unwraps the object according to the keyMapping
+ * @param object
+ * @param keyMapping
+ * @param relations
+ */
 export function unwrap(
   object: any,
-  objectPaths: string[],
+  keyMapping: {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   relations: {
     [key: string]: SequelizeSchema | SequelizeSchema[];
   },
 ) {
   for (const key in object) {
-    if (isObjectICare(object[key])) {
+    if (potentialNesting(object[key])) {
       if (relations.hasOwnProperty(key)) {
         unwrap(
           object[key],
@@ -82,8 +86,9 @@ export function unwrap(
           (relations[key] as SequelizeSchema).extractedRelations,
         );
       } else {
-        unwrap(object[key], objectPaths, relations);
+        unwrap(object[key], keyMapping, relations);
       }
+      unwrapNestedKeys(object[key], keyMapping);
     }
     if (isArray(object[key])) {
       if (relations.hasOwnProperty(key)) {
@@ -96,15 +101,39 @@ export function unwrap(
         }
       } else {
         for (const element of object[key]) {
-          unwrap(element, objectPaths, relations);
+          unwrap(element, keyMapping, relations);
         }
       }
     }
   }
-  for (const path of objectPaths) {
-    if (object.hasOwnProperty(path)) {
-      dottie.set(object, path.replace(/_/g, '.'), object[path]);
-      delete object[path];
+  unwrapNestedKeys(object, keyMapping);
+}
+
+/**
+ * pre-processes queries to convert potential dot notation to _ notation
+ * according to the keyMapping
+ */
+export function preprocessQuery(query: ParsedQuery, keyDotMapping: string[]) {
+  for (const key in query) {
+    if (potentialNesting(query[key])) {
+      preprocessQuery(query[key], keyDotMapping);
+    }
+    if (isArray(query[key])) {
+      for (const element of query[key]) {
+        preprocessQuery(element, keyDotMapping);
+      }
+    }
+    for (const concatenatedKey of keyDotMapping) {
+      if (key.indexOf(concatenatedKey) !== -1) {
+        const split = key.split(concatenatedKey);
+        const newKey = concatenatedKey.replace(/\./g, '_');
+        if (split[1] !== '') {
+          query[newKey + split[1]] = cloneDeep(query[key]);
+        } else {
+          query[newKey] = cloneDeep(query[key]);
+        }
+        delete query[key];
+      }
     }
   }
 }
