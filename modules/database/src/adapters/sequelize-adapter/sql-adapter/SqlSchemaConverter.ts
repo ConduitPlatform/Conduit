@@ -13,17 +13,21 @@ import {
   extractFieldProperties,
 } from '../../utils';
 import { sqlDataTypeMap } from '../utils/sqlTypeMap';
-import { extractEmbedded, extractRelations, RelationType } from '../utils/extractors';
+import {
+  convertObjectToDotNotation,
+  extractRelations,
+  RelationType,
+} from '../utils/extractors';
 
 /**
  * This function should take as an input a JSON schema and convert it to the sequelize equivalent
  * @param jsonSchema
  */
-export function sqlSchemaConverter(
-  jsonSchema: ConduitSchema,
-): [
+export function sqlSchemaConverter(jsonSchema: ConduitSchema): [
   ConduitSchema,
-  { [key: string]: any },
+  {
+    [key: string]: { parentKey: string; childKey: string };
+  },
   { [key: string]: RelationType | RelationType[] },
 ] {
   let copy = cloneDeep(jsonSchema);
@@ -33,11 +37,13 @@ export function sqlSchemaConverter(
   if (copy.modelOptions.indexes) {
     copy = convertModelOptionsIndexes(copy);
   }
-  const extractedEmbedded = extractEmbedded(jsonSchema.fields, copy.fields);
-  const extractedRelations = extractRelations(jsonSchema.fields, copy.fields);
+  const objectPaths: any = {};
+  convertObjectToDotNotation(jsonSchema.fields, copy.fields, objectPaths);
+  const secondaryCopy = cloneDeep(copy.fields);
+  const extractedRelations = extractRelations(secondaryCopy, copy.fields);
   copy = convertSchemaFieldIndexes(copy);
-  iterDeep(jsonSchema.fields, copy.fields);
-  return [copy, extractedEmbedded, extractedRelations];
+  iterDeep(secondaryCopy, copy.fields);
+  return [copy, objectPaths, extractedRelations];
 }
 
 function extractType(type: string, sqlType?: SQLDataType) {
@@ -91,7 +97,7 @@ function extractType(type: string, sqlType?: SQLDataType) {
       return DataTypes.UUID;
   }
 
-  throw new Error('Failed to extract embedded object type');
+  return DataTypes.JSON;
 }
 
 function iterDeep(schema: any, resSchema: any) {
@@ -100,7 +106,7 @@ function iterDeep(schema: any, resSchema: any) {
       resSchema[key] = extractArrayType(schema[key], key);
     } else if (isObject(schema[key])) {
       resSchema[key] = extractObjectType(schema[key], key);
-      if (!schema[key].hasOwnProperty('type')) {
+      if (!resSchema[key].hasOwnProperty('type')) {
         iterDeep(schema[key], resSchema[key]);
       }
     } else {
@@ -115,7 +121,7 @@ function extractArrayType(arrayField: UntypedArray, field: string) {
     if (arrayField[0].hasOwnProperty('type')) {
       arrayElementType = extractType(arrayField[0].type);
     } else {
-      throw new Error('Failed to extract embedded object type');
+      arrayElementType = DataTypes.JSON;
     }
   } else {
     arrayElementType = extractType(arrayField[0]);
@@ -149,6 +155,8 @@ function extractObjectType(objectField: Indexable, field: string) {
   if (objectField.hasOwnProperty('type')) {
     if (isArray(objectField.type)) {
       res.type = extractArrayType(objectField.type, field).type;
+    } else if (isObject(objectField.type)) {
+      return objectField.type;
     } else {
       res.type = extractType(objectField.type, objectField.sqlType);
     }
@@ -157,7 +165,7 @@ function extractObjectType(objectField: Indexable, field: string) {
       res.defaultValue = checkDefaultValue(objectField.type, objectField.default);
     }
   } else {
-    throw new Error('Failed to extract embedded object type');
+    return objectField;
   }
 
   return extractFieldProperties(objectField, res);

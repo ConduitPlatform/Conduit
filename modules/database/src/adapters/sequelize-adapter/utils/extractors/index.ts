@@ -1,47 +1,6 @@
 import { ConduitModel, Indexable } from '@conduitplatform/grpc-sdk';
 import { isArray, isObject } from 'lodash';
 
-export function extractEmbedded(ogSchema: any, schema: any) {
-  const extracted: Indexable = {};
-  for (const key of Object.keys(schema)) {
-    if (isArray(schema[key])) {
-      const arrayField = schema[key];
-      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (
-          !arrayField[0].hasOwnProperty('type') ||
-          typeof arrayField[0].type !== 'string'
-        ) {
-          extracted[key] = [arrayField[0]];
-          delete schema[key];
-          delete ogSchema[key];
-        }
-      }
-    } else if (schema[key].hasOwnProperty('type') && isArray(schema[key].type)) {
-      const arrayField = schema[key].type;
-      if (arrayField[0] !== null && typeof arrayField[0] === 'object') {
-        if (
-          !arrayField[0].hasOwnProperty('type') ||
-          typeof arrayField[0].type !== 'string'
-        ) {
-          extracted[key] = [arrayField[0]];
-          delete schema[key];
-          delete ogSchema[key];
-        }
-      }
-    } else if (isObject(schema[key])) {
-      if (!schema[key].hasOwnProperty('type')) {
-        extracted[key] = schema[key];
-        delete schema[key];
-        delete ogSchema[key];
-      } else if (typeof schema[key].type !== 'string') {
-        extracted[key] = schema[key].type;
-        delete schema[key];
-        delete ogSchema[key];
-      }
-    }
-  }
-  return extracted;
-}
 export interface RelationType {
   type: 'Relation';
   model: string;
@@ -79,4 +38,68 @@ export function extractRelations(ogSchema: ConduitModel, schema: any) {
     }
   }
   return extracted;
+}
+
+export function convertObjectToDotNotation(
+  schema: any,
+  resSchema: any,
+  keyMapping: any = {},
+  parentKey: string | null = null,
+  prefix: string = '',
+) {
+  for (const key of Object.keys(schema)) {
+    if (!isArray(schema[key]) && isObject(schema[key])) {
+      const extraction = extractObjectType(schema[key]);
+      if (!extraction.hasOwnProperty('type')) {
+        const newParentKey = parentKey ? `${parentKey}.${key}` : key;
+        const newPrefix = prefix ? `${prefix}_${key}` : key;
+        convertObjectToDotNotation(
+          extraction,
+          resSchema,
+          keyMapping,
+          newParentKey,
+          newPrefix,
+        );
+
+        // Remove the original key from resSchema
+        if (prefix) {
+          delete resSchema[`${prefix}_${key}`];
+        } else {
+          delete resSchema[key];
+        }
+      } else {
+        const newKey = prefix ? `${prefix}_${key}` : key;
+        resSchema[newKey] = extraction;
+        if (parentKey || prefix) {
+          keyMapping[newKey] = {
+            parentKey: parentKey || prefix,
+            childKey: key,
+          };
+        }
+      }
+    } else {
+      const newKey = prefix ? `${prefix}_${key}` : key;
+      resSchema[newKey] = schema[key];
+      if (parentKey || prefix) {
+        keyMapping[newKey] = {
+          parentKey: parentKey || prefix,
+          childKey: key,
+        };
+      }
+    }
+  }
+}
+
+function extractObjectType(objectField: Indexable): Indexable {
+  if (objectField.hasOwnProperty('type')) {
+    if (isArray(objectField.type)) {
+      return objectField;
+    } else if (isObject(objectField.type)) {
+      return objectField.type;
+    } else {
+      return objectField;
+    }
+  } else {
+    return objectField;
+  }
 }
