@@ -12,7 +12,7 @@
     "prepublish": "npm run build",
     "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
-    "postbuild": "copyfiles -u 1 src/*.proto ./dist/",
+    "postbuild": "copyfiles -u 1 src/*.proto ./dist/ && copyfiles -u 3 src/adapters/mongoose-adapter/deep-populate.js ./dist/adapters/mongoose-adapter/",
     "build:docker": "docker build -t ghcr.io/conduitplatform/database:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/database:latest",
     "generateTypes": "sh build.sh"
   },
@@ -20,26 +20,25 @@
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.6.7",
-    "@grpc/proto-loader": "^0.6.13",
-    "bson": "^4.6.4",
+    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/proto-loader": "^0.7.6",
+    "bson": "^5.2.0",
     "deepdash": "^5.3.9",
     "deepdash-es": "^5.3.9",
     "dottie": "^2.0.3",
     "escape-string-regexp": "^4.0.0",
     "lodash": "^4.17.21",
-    "mariadb": "^3.0.2",
+    "mariadb": "^3.1.1",
     "mongodb-extended-json": "^1.11.0",
-    "mongodb-schema": "^9.0.0",
-    "mongoose": "6.4.6",
-    "mongoose-deep-populate": "^3.2.0",
-    "mysql2": "^3.0.1",
+    "mongodb-schema": "^10.0.1",
+    "mongoose": "7.0.3",
+    "mysql2": "^3.2.0",
     "object-hash": "^3.0.0",
-    "pg": "^8.7.3",
+    "pg": "^8.10.0",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.21.2",
+    "sequelize": "^6.31.0",
     "sequelize-auto": "^0.8.8",
-    "sqlite3": "^5.1.4"
+    "sqlite3": "^5.1.6"
   },
   "directories": {
     "lib": "src"
@@ -51,12 +50,12 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.192",
+    "@types/node": "18.15.11",
     "@types/dottie": "^2.0.4",
-    "@types/lodash": "^4.14.182",
-    "@types/node": "14.14.31",
     "copyfiles": "^2.4.1",
-    "rimraf": "^3.0.2",
-    "ts-proto": "^1.117.0",
-    "typescript": "~4.7.4"
+    "rimraf": "^5.0.0",
+    "ts-proto": "^1.146.0",
+    "typescript": "~5.0.4"
   }
 }

@@ -3,7 +3,6 @@ import { GraphQlParser, ParseResult } from './GraphQlParser';
 import { findPopulation } from './utils/TypeUtils';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
-import 'apollo-cache-control';
 import { createHashKey, extractCachingGql } from '../cache.utils';
 import moment from 'moment';
 import { processParams } from './utils/SimpleTypeParamUtils';
@@ -19,10 +18,11 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, TypeRegistry } from '../classes';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
 import { merge } from 'lodash';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
-const { ApolloServer } = require('apollo-server-express');
 const cookiePlugin = require('./utils/cookie.plugin');
 
 export class GraphQLController extends ConduitRouter {
@@ -31,7 +31,7 @@ export class GraphQLController extends ConduitRouter {
   queries!: string;
   mutations!: string;
   resolvers: any;
-  private _apollo?: express.Router;
+  private _apollo?: express.RequestHandler;
   private _relationTypes: string[] = [];
   private _apolloRefreshTimeout: NodeJS.Timeout | null = null;
   private readonly _parser: GraphQlParser;
@@ -60,14 +60,17 @@ export class GraphQLController extends ConduitRouter {
       typeDefs: this.typeDefs,
       resolvers: this.resolvers,
       plugins: [cookiePlugin],
-      context: ({ req, res }: Indexable) => {
-        const context = req.conduit || {};
-        const headers = req.headers;
-        const cookies = req.cookies || {};
-        return { context, headers, cookies, setCookie: [], removeCookie: [], res };
-      },
     });
-    this._apollo = server.getMiddleware();
+    server.start().then(() => {
+      this._apollo = expressMiddleware(server, {
+        context: async ({ req, res }) => {
+          const context = (req as any).conduit || {};
+          const headers = req.headers;
+          const cookies = req.cookies || {};
+          return { context, headers, cookies, setCookie: [], removeCookie: [], res };
+        },
+      });
+    });
   }
 
   generateType(
@@ -254,7 +257,7 @@ export class GraphQLController extends ConduitRouter {
         name: 'Date',
         description: 'Date custom scalar type',
         parseValue(value) {
-          return new Date(value); // value from the client
+          return new Date(value as any); // value from the client
         },
         serialize(value) {
           return value; // value sent to the client
