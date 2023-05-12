@@ -153,6 +153,7 @@ export class RoutingManager {
         (this.isAdmin ? '.admin.Admin' : '.router.Router'),
       modifiedFunctions,
     );
+    await this._server.waitForReady();
     const paths = Object.values(this._moduleRoutes);
     return this._router.register(paths as unknown as any, protoDescriptions.protoFile);
   }
