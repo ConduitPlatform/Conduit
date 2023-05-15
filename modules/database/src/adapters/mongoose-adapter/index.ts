@@ -19,6 +19,8 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
+import mongoose from 'mongoose';
+import { isArray } from 'lodash';
 
 const parseSchema = require('mongodb-schema');
 
@@ -260,6 +262,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const queryOperation = Object.keys(rawQuery).filter(v => {
         if (v !== 'options') return v;
       })[0];
+      if (queryOperation === 'aggregate') {
+        rawQuery['aggregate'] = this.convertAggregationQuery(
+          rawQuery['aggregate']!,
+        ) as object[];
+      }
       // @ts-ignore
       result = await collection[queryOperation](
         rawQuery[queryOperation as keyof RawMongoQuery],
@@ -272,6 +279,34 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
     return result;
+  }
+
+  /* aggregate() doesn't automatically convert string ids to ObjectIds
+    & date strings to Date objects like other mongoose functions */
+  convertAggregationQuery(query: object | object[]): object | object[] {
+    if (isArray(query)) {
+      return query.map(stage => this.convertAggregationQuery(stage));
+    }
+    if (typeof query === 'object') {
+      const convertedQuery: any = {};
+      for (const [key, value] of Object.entries(query)) {
+        if (typeof value === 'string') {
+          if (mongoose.isValidObjectId(value) && !value.startsWith('$')) {
+            convertedQuery[key] = new mongoose.Types.ObjectId(value);
+          } else if (!isNaN(Date.parse(value))) {
+            convertedQuery[key] = new Date(value);
+          } else {
+            convertedQuery[key] = value;
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          convertedQuery[key] = this.convertAggregationQuery(value);
+        } else {
+          convertedQuery[key] = value;
+        }
+      }
+      return convertedQuery;
+    }
+    return query;
   }
 
   async syncSchema(name: string) {
