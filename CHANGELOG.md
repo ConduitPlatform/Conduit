@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.10](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.9...v0.16.0-alpha.10) (2023-05-18)
+
+
+### Bug Fixes
+
+* **module-tools:** db losing connection when restarting router ([#620](https://github.com/ConduitPlatform/Conduit/issues/620)) ([fec2e03](https://github.com/ConduitPlatform/Conduit/commit/fec2e03b32814936609773d04627d360de43bf02))
+
 ## [0.16.0-alpha.9](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.8...v0.16.0-alpha.9) (2023-05-10)
 
 
