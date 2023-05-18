@@ -2,13 +2,11 @@ import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
-  ConduitRouteObject,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
-  SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';

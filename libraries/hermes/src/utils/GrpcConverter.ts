@@ -21,7 +21,6 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   ProxyRouteT,
-  RouterDescriptor,
   RouteT,
   SocketProtoDescription,
 } from '../interfaces';
