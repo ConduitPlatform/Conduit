@@ -42,10 +42,6 @@ export default class Sms extends ManagedModule<Config> {
     this.updateHealth(HealthCheckStatus.UNKNOWN, true);
   }
 
-  async onServerStart() {
-    this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
-  }
-
   async preConfig(config: any) {
     if (
       isNil(config.active) ||
@@ -61,6 +57,7 @@ export default class Sms extends ManagedModule<Config> {
     if (!ConfigController.getInstance().config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
+      this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk, this._provider);
       await this.initProvider();
     }
   }
