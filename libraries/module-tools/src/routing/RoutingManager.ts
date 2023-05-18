@@ -1,8 +1,6 @@
 import { RouteBuilder } from './RouteBuilder';
 import { RequestHandlers } from './wrapRouterFunctions';
 import { wrapFunctionsAsync } from './RoutingUtilities';
-import fs from 'fs';
-import path from 'path';
 import {
   Admin,
   ConduitMiddlewareOptions,
@@ -23,12 +21,15 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { GrpcServer } from '../classes';
 import { ProxyRouteBuilder } from './ProxyRouteBuilder';
+import { RoutingController } from './RoutingController';
 
 export class RoutingManager {
   private _moduleRoutes: {
     [key: string]: ConduitRouteObject | SocketProtoDescription;
   } = {};
   private _moduleProxyRoutes: { [key: string]: ConduitProxyObject } = {};
+  static ClientController: RoutingController;
+  static AdminController: RoutingController;
 
   private _routeHandlers: {
     [key: string]: RequestHandlers;
@@ -141,21 +142,13 @@ export class RoutingManager {
     const modifiedFunctions: {
       [name: string]: (call: any, callback: any) => void;
     } = wrapFunctionsAsync(this._routeHandlers, this.isAdmin ? 'admin' : 'client');
-    const protoDescriptions = await this._router.generateProtoFile(
-      this._router.moduleName,
-      Object.values(this._moduleRoutes),
-    );
-    const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-    fs.writeFileSync(protoPath, protoDescriptions.protoFile);
-    await this._server.addService(
-      protoPath,
-      protoDescriptions.formattedModuleName +
-        (this.isAdmin ? '.admin.Admin' : '.router.Router'),
-      modifiedFunctions,
-    );
-    await this._server.waitForReady();
+    if (this.isAdmin) {
+      RoutingManager.AdminController.setRoutes(modifiedFunctions);
+    } else {
+      RoutingManager.ClientController.setRoutes(modifiedFunctions);
+    }
     const paths = Object.values(this._moduleRoutes);
-    return this._router.register(paths as unknown as any, protoDescriptions.protoFile);
+    return this._router.register(paths as unknown as any);
   }
 
   private generateGrpcName(options: ConduitRouteOptions) {

@@ -10,7 +10,9 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "node_modules/.bin/rimraf dist && tsc",
-    "publish": "npm publish"
+    "publish": "npm publish",
+    "postbuild": "copyfiles -u 1 src/*.proto src/**/*.json ./dist/"
+
   },
   "license": "ISC",
   "dependencies": {

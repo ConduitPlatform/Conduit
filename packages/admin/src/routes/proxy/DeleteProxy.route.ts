@@ -47,7 +47,7 @@ export function deleteProxyRoute(adminModule: AdminModule) {
             },
           });
         });
-        adminModule.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
+        adminModule.internalRegisterRoute(proxies, 'admin', 'admin');
       }
       return { message: 'Proxy deleted.' };
     },

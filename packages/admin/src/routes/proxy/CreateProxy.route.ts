@@ -53,7 +53,7 @@ export function createProxyRoute(adminModule: AdminModule) {
         proxyMiddlewareOptions,
       });
       const proxies = await getProxies();
-      adminModule.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
+      adminModule.internalRegisterRoute(proxies, 'admin', 'admin');
       return { message: 'Proxy created.' };
     },
   );
