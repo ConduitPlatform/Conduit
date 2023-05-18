@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.11](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.10...v0.16.0-alpha.11) (2023-05-18)
+
+
+### Bug Fixes
+
+* **functions,sms:** admin route registration before module registration errors ([#625](https://github.com/ConduitPlatform/Conduit/issues/625)) ([a456511](https://github.com/ConduitPlatform/Conduit/commit/a456511e620c84dfb15792901f133391150dcea9))
+
 ## [0.16.0-alpha.10](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.9...v0.16.0-alpha.10) (2023-05-18)
 
 
