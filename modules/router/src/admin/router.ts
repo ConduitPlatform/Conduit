@@ -244,6 +244,6 @@ export class RouterAdmin {
 
   private async registerProxyRoutes(router: ConduitDefaultRouter) {
     const proxies = await this.getProxies();
-    router.internalRegisterRoute(undefined, proxies, 'router', 'router');
+    router.internalRegisterRoute(proxies, 'router', 'router');
   }
 }
