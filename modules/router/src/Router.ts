@@ -403,7 +403,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       if (state.routes) {
         state.routes.forEach((r: any) => {
           try {
-            this.internalRegisterRoute(r.protofile, r.routes, r.url);
+            this.internalRegisterRoute(r.routes, r.url);
           } catch (err) {
             ConduitGrpcSdk.Logger.error(err as Error);
           }
