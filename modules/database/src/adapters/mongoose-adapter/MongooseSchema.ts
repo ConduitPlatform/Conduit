@@ -193,16 +193,22 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
         }
         if (processing === final) {
           populates.push(processing);
-        } else if (this.model.schema.paths[processing].options.ref === undefined) {
+        } else if (
+          this.model.schema.paths[processing].options.ref === undefined &&
+          this.model.schema.paths[processing].options.type[0].ref === undefined
+        ) {
           throw new Error(
             `Failed populating '${final}', path exists for ${processing} but missing ${
               final.split(processing)[1]
             }`,
           );
         } else {
-          const childPopulates = this.adapter.models[
-            this.model.schema.paths[processing].options.ref
-          ].calculatePopulates([final.replace(processing + '.', '')]);
+          let ref =
+            this.model.schema.paths[processing].options.ref ||
+            this.model.schema.paths[processing].options.type[0].ref;
+          const childPopulates = this.adapter.models[ref].calculatePopulates([
+            final.replace(processing + '.', ''),
+          ]);
           if (populates.indexOf(processing) !== -1) {
             populates.splice(populates.indexOf(processing), 1);
             populates.push({ path: processing, populate: childPopulates });
