@@ -51,17 +51,38 @@ export const extractRelations = (
           item.sync();
         }
       } else {
+        const relationsField = findOriginalSchemaField(originalSchema, relation);
         model.belongsTo(value.model, {
           foreignKey: {
             name: relation + 'Id',
-            allowNull: !(originalSchema.compiledFields[relation] as any).required,
-            defaultValue: (originalSchema.compiledFields[relation] as any).default,
+            allowNull: !(relationsField as any).required,
+            defaultValue: (relationsField as any).default,
           },
           as: relation,
           constraints: false,
         });
       }
     }
+  }
+};
+
+const findOriginalSchemaField = (
+  originalSchema: ConduitDatabaseSchema,
+  field: string,
+) => {
+  if (field.indexOf('_') === -1) {
+    return originalSchema.compiledFields[field];
+  } else {
+    const fieldParts = field.split('_');
+    let currentField: any = originalSchema.compiledFields[fieldParts[0]];
+    for (let i = 1; i < fieldParts.length; i++) {
+      if (currentField.type) {
+        currentField = currentField.type[fieldParts[i]];
+      } else {
+        currentField = currentField[fieldParts[i]];
+      }
+    }
+    return currentField;
   }
 };
 
@@ -173,7 +194,7 @@ export function compileSchema(
   sequelizeModels: Indexable,
 ): ConduitDatabaseSchema {
   let compiledSchema = JSON.parse(JSON.stringify(schema));
-  validateFieldConstraints(compiledSchema);
+  validateFieldConstraints(compiledSchema, 'sql');
   (compiledSchema as any).fields = JSON.parse(JSON.stringify(schema.compiledFields));
   if (registeredSchemas.has(compiledSchema.name)) {
     if (compiledSchema.name !== 'Config') {

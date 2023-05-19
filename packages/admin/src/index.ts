@@ -3,18 +3,14 @@ import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
   ConduitRouteActions,
-  ConduitRouteObject,
   GrpcCallback,
   GrpcError,
   GrpcRequest,
   IConduitLogger,
   Indexable,
-  SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
-  GenerateAdminProtoRequest,
-  GenerateAdminProtoResponse,
   IConduitAdmin,
   PatchRouteMiddlewaresRequest,
   RegisterAdminRouteRequest,
@@ -27,6 +23,7 @@ import AppConfigSchema, { Config as ConfigSchema } from './config';
 import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
+import { AdminMiddleware } from './models';
 import { protoTemplate, swaggerMetadata } from './hermes';
 import path from 'path';
 import {
@@ -50,7 +47,6 @@ import metricsSchema from './metrics';
 import * as adminProxyRoutes from './routes/proxy';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
-import { AdminMiddleware } from './models';
 
 export default class AdminModule extends IConduitAdmin {
   grpcSdk: ConduitGrpcSdk;
@@ -110,7 +106,6 @@ export default class AdminModule extends IConduitAdmin {
       path.resolve(__dirname, '../../core/src/core.proto'),
       'conduit.core.Admin',
       {
-        generateAdminProto: this.generateProto.bind(this),
         registerAdminRoute: this.registerAdminRoute.bind(this),
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
@@ -178,26 +173,6 @@ export default class AdminModule extends IConduitAdmin {
     this.onConfig();
   }
 
-  // grpc
-  async generateProto(
-    call: GrpcRequest<GenerateAdminProtoRequest>,
-    callback: GrpcCallback<GenerateAdminProtoResponse>,
-  ) {
-    const moduleName = call.request.moduleName;
-    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
-      call.request.routes.map(r => JSON.parse(r));
-    try {
-      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
-        moduleName,
-        routes,
-      );
-      return callback(null, generatedProto);
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
-    }
-  }
-
   async registerAdminRoute(
     call: GrpcRequest<RegisterAdminRouteRequest>,
     callback: GrpcCallback<null>,
@@ -217,17 +192,11 @@ export default class AdminModule extends IConduitAdmin {
         call.request.routerUrl = result;
       }
       this.internalRegisterRoute(
-        call.request.protoFile,
         call.request.routes,
         call.request.routerUrl,
         moduleName as string,
       );
-      this.updateState(
-        call.request.protoFile,
-        call.request.routes,
-        call.request.routerUrl,
-        moduleName as string,
-      );
+      this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       if (this.databaseHandled) {
         await this.applyStoredMiddleware();
       }
@@ -248,7 +217,6 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   public internalRegisterRoute(
-    protofile: any,
     routes: RegisterAdminRouteRequest_PathDefinition[] | ProxyRouteT[],
     url: string,
     moduleName?: string,
@@ -273,13 +241,9 @@ export default class AdminModule extends IConduitAdmin {
       processedRoutes = proxyToConduitRoute(proxyRoutes as ProxyRouteT[]);
     }
     if (regularRoutes.length > 0) {
-      if (!protofile) {
-        throw new Error('Protofile is required');
-      }
       processedRoutes = grpcToConduitRoute(
         'Admin',
         {
-          protoFile: protofile,
           routes: regularRoutes as RouteT[],
           routerUrl: url,
         },
@@ -411,12 +375,7 @@ export default class AdminModule extends IConduitAdmin {
                 .isModuleUp(r.moduleName)
                 .then(isUp => {
                   if (isUp) {
-                    return this.internalRegisterRoute(
-                      r.protofile,
-                      r.routes,
-                      r.url,
-                      r.moduleName,
-                    );
+                    return this.internalRegisterRoute(r.routes, r.url, r.moduleName);
                   }
                 });
             }
@@ -435,7 +394,7 @@ export default class AdminModule extends IConduitAdmin {
           options: {
             path: route.path,
             action: route.action,
-            description: route.description,
+            description: route.routeDescription,
             middlewares: route.middlewares,
           },
           proxy: {
@@ -447,7 +406,7 @@ export default class AdminModule extends IConduitAdmin {
           `New proxy route registered:  ${route.action} ${route.path} target: ${route.target}`,
         );
       });
-      return this.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
+      return this.internalRegisterRoute(proxies, 'admin', 'admin');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
 
@@ -467,7 +426,6 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private updateState(
-    protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
     moduleName?: string,
@@ -484,10 +442,9 @@ export default class AdminModule extends IConduitAdmin {
           }
         });
         if (index) {
-          state.routes[index] = { protofile, routes, url, moduleName };
+          state.routes[index] = { routes, url, moduleName };
         } else {
           state.routes.push({
-            protofile,
             routes,
             url,
             moduleName,
@@ -496,7 +453,7 @@ export default class AdminModule extends IConduitAdmin {
         return this.grpcSdk.state!.setKey('admin', JSON.stringify(state));
       })
       .then(() => {
-        this.publishAdminRouteData(protofile, routes, url, moduleName);
+        this.publishAdminRouteData(routes, url, moduleName);
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
@@ -505,7 +462,6 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private publishAdminRouteData(
-    protofile: string,
     routes: RegisterAdminRouteRequest_PathDefinition[],
     url: string,
     moduleName?: string,
@@ -513,7 +469,6 @@ export default class AdminModule extends IConduitAdmin {
     this.grpcSdk.bus!.publish(
       'admin',
       JSON.stringify({
-        protofile,
         routes,
         url,
         moduleName,

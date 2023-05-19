@@ -22,14 +22,14 @@ export namespace AuthUtils {
     await Token.getInstance()
       .deleteMany({
         user: dbUserId,
-        type: tokenType,
+        tokenType: tokenType,
       })
       .catch(e => {
         throw e;
       });
     return Token.getInstance().create({
       user: dbUserId,
-      type: tokenType,
+      tokenType: tokenType,
       token: uuid(),
       data: data,
     });
@@ -92,7 +92,7 @@ export namespace AuthUtils {
         data: {
           phone: token.data.phone,
         },
-        type: token.type,
+        tokenType: token.tokenType,
       })
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);

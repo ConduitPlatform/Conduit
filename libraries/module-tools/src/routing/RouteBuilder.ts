@@ -1,10 +1,12 @@
 import {
   ConduitModel,
+  ConduitQueryParams,
+  ConduitReturn,
   ConduitRoute,
   ConduitRouteActions,
-  ConduitRouteOption,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
+  ConduitUrlParams,
 } from '@conduitplatform/grpc-sdk';
 import { RoutingManager } from './RoutingManager';
 import { RequestHandlers } from './wrapRouterFunctions';
@@ -65,22 +67,22 @@ export class RouteBuilder {
     return this;
   }
 
-  queryParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
+  queryParams(params: ConduitQueryParams): RouteBuilder {
     this._options.queryParams = params;
     return this;
   }
 
-  urlParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
+  urlParams(params: ConduitUrlParams): RouteBuilder {
     this._options.urlParams = params;
     return this;
   }
 
-  bodyParams(params: ConduitRouteOption | ConduitModel): RouteBuilder {
+  bodyParams(params: ConduitModel): RouteBuilder {
     this._options.bodyParams = params;
     return this;
   }
 
-  return(name: string, fields: ConduitModel | string): RouteBuilder {
+  return(name: string, fields: ConduitReturn): RouteBuilder {
     this._returns = new ConduitRouteReturnDefinition(name, fields);
     return this;
   }

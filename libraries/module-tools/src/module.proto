@@ -12,3 +12,61 @@ message SetConfigResponse {
 service ConduitModule {
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
 }
+
+service ClientRouter {
+  rpc Route(Request) returns (Response);
+  rpc SocketRoute(SocketRequest) returns (SocketResponse);
+}
+service AdminRouter {
+  rpc Route(Request) returns (Response);
+  rpc SocketRoute(SocketRequest) returns (SocketResponse);
+}
+
+message Request {
+  string params = 1;
+  string path = 2;
+  string headers = 3;
+  string context = 4;
+  string cookies = 5;
+  string bodyParams = 6;
+  string urlParams = 7;
+  string queryParams = 8;
+  string functionName = 9;
+}
+
+message Response {
+  string result = 1;
+  string redirect = 2;
+  repeated Cookie setCookies = 3;
+  repeated Cookie removeCookies = 4;
+}
+message Cookie {
+  string name = 1;
+  optional string value = 2;
+  CookieOptions options = 3;
+}
+
+message CookieOptions {
+  bool httpOnly = 1;
+  bool secure = 2;
+  bool signed = 3;
+  int32 maxAge = 4;
+  string path = 5;
+  string domain = 6;
+  string sameSite = 7;
+
+}
+message SocketRequest {
+  string event = 1;
+  string socketId = 2;
+  string params = 3;
+  string context = 4;
+  string functionName = 5;
+}
+
+message SocketResponse {
+  string event = 1;
+  string data = 2;
+  repeated string receivers = 3;
+  repeated string rooms = 4;
+}

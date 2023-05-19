@@ -1,5 +1,6 @@
 import expressWinston from 'express-winston';
 import winston from 'winston';
+import { ErrorRequestHandler } from 'express';
 
 export function createRouteMiddleware(winstonInstance: winston.Logger) {
   return expressWinston.logger({
@@ -11,7 +12,7 @@ export function createRouteMiddleware(winstonInstance: winston.Logger) {
   });
 }
 
-export function errorLogger(winstonInstance: winston.Logger) {
+export function errorLogger(winstonInstance: winston.Logger): ErrorRequestHandler {
   return expressWinston.errorLogger({
     winstonInstance,
     meta: true,

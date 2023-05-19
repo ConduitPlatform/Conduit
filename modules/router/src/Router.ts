@@ -2,13 +2,11 @@ import { NextFunction } from 'express';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
-  ConduitRouteObject,
   DatabaseProvider,
   GrpcCallback,
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
-  SocketProtoDescription,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
@@ -34,8 +32,6 @@ import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
 import {
-  GenerateProtoRequest,
-  GenerateProtoResponse,
   PatchAppRouteMiddlewaresRequest,
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
@@ -52,7 +48,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     protoPath: path.resolve(__dirname, 'router.proto'),
     protoDescription: 'router.Router',
     functions: {
-      generateProto: this.generateProto.bind(this),
       registerConduitRoute: this.registerGrpcRoute.bind(this),
       socketPush: this.socketPush.bind(this),
       patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
@@ -172,11 +167,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     await this.applyStoredMiddleware();
   }
 
-  updateState(
-    protofile: string,
-    routes: RegisterConduitRouteRequest_PathDefinition[],
-    url: string,
-  ) {
+  updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
     this.grpcSdk
       .state!.getKey('router')
       .then(r => {
@@ -189,10 +180,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           }
         });
         if (index) {
-          state.routes[index] = { protofile, routes, url };
+          state.routes[index] = { routes, url };
         } else {
           state.routes.push({
-            protofile,
             routes,
             url,
           });
@@ -200,7 +190,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         return this.grpcSdk.state!.setKey('router', JSON.stringify(state));
       })
       .then(() => {
-        this.publishAdminRouteData(protofile, routes, url);
+        this.publishAdminRouteData(routes, url);
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
@@ -209,14 +199,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   publishAdminRouteData(
-    protofile: string,
     routes: RegisterConduitRouteRequest_PathDefinition[],
     url: string,
   ) {
     this.grpcSdk.bus!.publish(
       'router',
       JSON.stringify({
-        protofile,
         routes,
         url,
       }),
@@ -236,25 +224,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         platform: platformName,
       });
     });
-  }
-
-  async generateProto(
-    call: GrpcRequest<GenerateProtoRequest>,
-    callback: GrpcCallback<GenerateProtoResponse>,
-  ) {
-    const moduleName = call.request.moduleName;
-    const routes: (ConduitRouteObject | SocketProtoDescription)[] =
-      call.request.routes.map(r => JSON.parse(r));
-    try {
-      const generatedProto = ProtoGenerator.getInstance().generateProtoFile(
-        moduleName,
-        routes,
-      );
-      return callback(null, generatedProto);
-    } catch (err) {
-      ConduitGrpcSdk.Logger.error(err as Error);
-      return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
-    }
   }
 
   async registerGrpcRoute(
@@ -277,17 +246,12 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       }
 
       this.internalRegisterRoute(
-        call.request.protoFile,
         call.request.routes as RouteT[] | ProxyRouteT[],
         call.request.routerUrl,
         moduleName as string,
       );
 
-      this.updateState(
-        call.request.protoFile,
-        call.request.routes,
-        call.request.routerUrl,
-      );
+      this.updateState(call.request.routes, call.request.routerUrl);
       await this.applyStoredMiddleware();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -300,7 +264,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   internalRegisterRoute(
-    protofile: string | undefined,
     routes: RouteT[] | ProxyRouteT[],
     url: string,
     moduleName?: string,
@@ -324,13 +287,9 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       processedRoutes = proxyToConduitRoute(proxyRoutes, 'router');
     }
     if (regularRoutes.length > 0) {
-      if (!protofile) {
-        throw new Error('Protofile is required');
-      }
       processedRoutes = grpcToConduitRoute(
         'Router',
         {
-          protoFile: protofile,
           routes: regularRoutes as RouteT[],
           routerUrl: url,
         },
@@ -442,7 +401,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       if (state.routes) {
         state.routes.forEach((r: any) => {
           try {
-            this.internalRegisterRoute(r.protofile, r.routes, r.url);
+            this.internalRegisterRoute(r.routes, r.url);
           } catch (err) {
             ConduitGrpcSdk.Logger.error(err as Error);
           }
@@ -456,7 +415,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           options: {
             path: route.path,
             action: route.action,
-            description: route.description,
+            description: route.routeDescription,
             middlewares: route.middlewares,
           },
           proxy: {
@@ -465,7 +424,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           },
         });
       });
-      this.internalRegisterRoute(undefined, proxies, 'router', 'router');
+      this.internalRegisterRoute(proxies, 'router', 'router');
     }
     ConduitGrpcSdk.Logger.log('Recovered routes');
   }

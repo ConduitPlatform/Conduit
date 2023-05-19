@@ -19,13 +19,9 @@ import {
 import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
-import {
-  arrayPatch,
-  extractAssociations,
-  extractAssociationsFromObject,
-  parseQuery,
-} from './parser';
+import { parseQuery } from './parser';
 import { isNil } from 'lodash';
+import { processCreateQuery, unwrap } from './utils/pathUtils';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
@@ -36,16 +32,20 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   excludedFields: string[];
   synced: boolean;
   readonly idField;
+  readonly objectDotPaths: string[];
+  readonly objectDotPathMapping: { [key: string]: string } = {};
 
   constructor(
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitDatabaseSchema,
     protected readonly adapter: SequelizeAdapter,
-    protected readonly extractedRelations: {
+    readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
-    readonly associations?: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+    readonly objectPaths: {
+      [key: string]: { parentKey: string; childKey: string };
+    },
   ) {
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
@@ -74,15 +74,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         extractedRelations[relation] = this;
       }
     }
+    this.objectDotPaths = [];
+    for (const concatenatedKey of Object.keys(objectPaths)) {
+      const { parentKey, childKey } = objectPaths[concatenatedKey];
+      this.objectDotPaths.push(`${parentKey}.${childKey}`);
+      this.objectDotPathMapping[concatenatedKey] = `${parentKey}.${childKey}`;
+    }
     extractRelations(
       this.originalSchema.name,
       originalSchema,
       this.model,
       extractedRelations,
     );
-    if (associations) {
-      extractAssociations(this.model, associations);
-    }
   }
 
   async findByIdAndUpdate(
@@ -99,34 +102,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     try {
       const parentDoc = await this.model.findByPk(id, {
         nest: true,
-        include: this.constructAssociationInclusion({}),
         transaction: t,
       });
       if (parsedQuery.hasOwnProperty('$inc')) {
         const inc = parsedQuery['$inc'];
         for (const key in inc) {
           if (!inc.hasOwnProperty(key)) continue;
-          if (key.indexOf('.') > -1) {
-            const [assoc, field] = [
-              key.substring(0, key.indexOf('.')),
-              key.substring(key.indexOf('.') + 1),
-            ];
-            if (!this.associations || !this.associations[assoc]) {
-              throw new Error(`Cannot increment field ${key}`);
-            }
-            if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
-              throw new Error(`Cannot increment array field: ${key}`);
-            }
-            await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-              parentDoc[assoc]._id,
-              {
-                $inc: { [field]: inc[key] },
-              },
-              undefined,
-              t,
-            );
-            continue;
-          }
           if (this.extractedRelations[key]) {
             throw new Error(`Cannot increment relation: ${key}`);
           }
@@ -142,9 +123,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         return this.model
           .findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}).concat(
-              this.constructRelationInclusion(populate),
-            ),
+            include: this.constructRelationInclusion(populate),
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
@@ -152,43 +131,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
         for (const key in push) {
-          if (key.indexOf('.') > -1) {
-            const [assoc, field] = [
-              key.substring(0, key.indexOf('.') - 1),
-              key.substring(key.indexOf('.') + 1),
-            ];
-            if (!this.associations || !this.associations[assoc]) {
-              throw new Error(`Cannot push field ${key}`);
-            }
-            if (this.associations[assoc] && Array.isArray(this.associations[assoc])) {
-              throw new Error(`Cannot push array field: ${key}`);
-            }
-            await (this.associations[assoc] as SequelizeSchema).findByIdAndUpdate(
-              parentDoc[assoc]._id,
-              {
-                $push: { [field]: push[key] },
-              },
-              undefined,
-              t,
-            );
-            continue;
-          }
-          if (this.associations && this.associations[key]) {
-            if (!Array.isArray(this.associations[key])) {
-              throw new Error(`Cannot push in non-array field: ${key}`);
-            }
-            if (push[key]['$each']) {
-              let actualKey = key;
-              if (key.charAt(key.length - 1) !== 's') {
-                actualKey = key + 's';
-              }
-              parentDoc[`add${actualKey}`](push[key]['$each'], parentDoc._id);
-            } else {
-              parentDoc[`add${key}`](push[key], parentDoc._id);
-            }
-            continue;
-          }
-
           if (this.extractedRelations[key]) {
             if (!Array.isArray(this.extractedRelations[key])) {
               throw new Error(`Cannot push in non-array field: ${key}`);
@@ -219,30 +161,13 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         return this.model
           .findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}),
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
-
+      // process the update query after special conditions have been handled.
+      processCreateQuery(parsedQuery, this.objectPaths);
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
-      const associationObjects: Indexable = {};
-      for (const assoc in extractAssociationsFromObject(parsedQuery, this.associations)) {
-        if (
-          Array.isArray(this.associations![assoc]) &&
-          !Array.isArray(parsedQuery[assoc])
-        ) {
-          throw new Error(`Cannot update association ${assoc} with non-array value`);
-        }
-        if (
-          !Array.isArray(this.associations![assoc]) &&
-          Array.isArray(parsedQuery[assoc])
-        ) {
-          throw new Error(`Cannot update association ${assoc} with array value`);
-        }
-        associationObjects[assoc] = parsedQuery[assoc];
-        delete parsedQuery[assoc];
-      }
       const relationObjects = this.extractRelationsModification(parsedQuery);
       await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
       incrementDbQueries();
@@ -250,69 +175,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       const data = await this.model
         .findByPk(id, {
           nest: true,
-          include: this.constructAssociationInclusion({}),
           transaction: t,
-        })
-        .then(doc => {
-          if (!doc) return doc;
-          const promises = [];
-          for (const assoc in associationObjects) {
-            if (!associationObjects.hasOwnProperty(assoc)) continue;
-            if (Array.isArray(associationObjects[assoc])) {
-              for (const obj of associationObjects[assoc]) {
-                if (obj.hasOwnProperty('_id')) {
-                  promises.push(
-                    (this.associations![assoc] as SequelizeSchema[])[0].findByIdAndUpdate(
-                      obj._id,
-                      obj,
-                      undefined,
-                      t,
-                    ),
-                  );
-                } else {
-                  promises.push(
-                    (this.associations![assoc] as SequelizeSchema[])[0]
-                      .create(obj, t)
-                      .then(r => {
-                        let realAssoc = assoc;
-                        if (assoc.endsWith('s')) {
-                          realAssoc = realAssoc.substring(0, realAssoc.length - 1);
-                        }
-                        realAssoc =
-                          realAssoc.charAt(0).toUpperCase() + realAssoc.slice(1);
-                        if (!doc[assoc] || doc[assoc].length === 0) {
-                          doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`]([
-                            r._id,
-                          ]);
-                        } else {
-                          doc[`add${realAssoc}`](r._id);
-                        }
-                      }),
-                  );
-                }
-              }
-            } else {
-              if (doc[assoc]) {
-                promises.push(
-                  (this.associations![assoc] as SequelizeSchema).findByIdAndUpdate(
-                    doc[assoc]._id,
-                    associationObjects[assoc],
-                    undefined,
-                    t,
-                  ),
-                );
-              } else {
-                promises.push(
-                  (this.associations![assoc] as SequelizeSchema)
-                    .create(associationObjects[assoc], t)
-                    .then(r => {
-                      doc[`set${assoc.charAt(0).toUpperCase() + assoc.slice(1)}`](r._id);
-                    }),
-                );
-              }
-            }
-          }
-          return Promise.all(promises).then(() => doc);
         })
         .then(doc => this.createWithPopulation(doc, relationObjects, t!))
         .then(() => {
@@ -324,9 +187,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         .then(() => {
           return this.model.findByPk(id, {
             nest: true,
-            include: this.constructAssociationInclusion({}, false, populate).concat(
-              this.constructRelationInclusion(populate),
-            ),
+            include: this.constructRelationInclusion(populate),
           });
         })
         .then(doc => (doc ? doc.toJSON() : doc));
@@ -339,73 +200,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
   }
 
-  constructAssociationInclusion(
-    requiredAssociations?: { [key: string]: string[] },
-    requiredOnly = false,
-    populate?: string[],
-  ) {
-    if (isNil(requiredAssociations)) return [];
-    const inclusionArray = [];
-    for (const association in this.associations) {
-      if (!this.associations.hasOwnProperty(association)) continue;
-      const associationTarget = this.associations[association];
-      const associationSchema = Array.isArray(associationTarget)
-        ? (associationTarget as SequelizeSchema[])[0]
-        : (associationTarget as SequelizeSchema);
-      if (requiredOnly && !requiredAssociations.hasOwnProperty(association)) continue;
-      const associationObject: {
-        model: ModelStatic<any>;
-        as: string;
-        required: boolean;
-        include?: any;
-        attributes?: { exclude: string[] };
-      } = {
-        model: associationSchema.model,
-        as: association,
-        required: requiredAssociations.hasOwnProperty(association),
-        attributes: { exclude: associationSchema.excludedFields },
-      };
-      if (requiredAssociations.hasOwnProperty(association)) {
-        const newAssociations: { [key: string]: string[] } = {};
-        requiredAssociations[association].forEach(v => {
-          // if v contains ".", which may be contained multiple times, remove the first occurrence of "." and everything before it
-          if (v.indexOf('.') > -1) {
-            const path = v.substring(v.indexOf('.') + 1);
-            if (v.indexOf('.') > -1) {
-              const associationName = v.substring(0, v.indexOf('.'));
-              if (!newAssociations.hasOwnProperty(associationName)) {
-                newAssociations[associationName] = [];
-              }
-              newAssociations[associationName].push(path);
-            }
-          }
-        });
-        // check if association is referenced in population request
-        const populateArray: string[] = [];
-        const removedPopulations: string[] = [];
-        populate?.forEach(population => {
-          if (population.indexOf('.') > -1 && association === population.split('.')[0]) {
-            populateArray.push(population.split('.')[1]);
-            removedPopulations.push(population);
-          }
-        });
-        removedPopulations.forEach(v => {
-          populate!.splice(populate!.indexOf(v), 1);
-        });
-        if (
-          associationSchema.associations &&
-          Object.keys(associationSchema.associations).length > 0
-        ) {
-          associationObject.include = associationSchema
-            .constructAssociationInclusion(newAssociations, requiredOnly)
-            .concat(associationSchema.constructRelationInclusion(populateArray));
-        }
-      }
-      inclusionArray.push(associationObject);
-    }
-    return inclusionArray;
-  }
-
   async create(query: SingleDocQuery, transaction?: Transaction) {
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
@@ -416,25 +210,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
-    const associationObjects: Indexable = {};
-    if (this.associations) {
-      for (const assoc in extractAssociationsFromObject(parsedQuery, this.associations)) {
-        if (
-          Array.isArray(this.associations![assoc]) &&
-          !Array.isArray(parsedQuery[assoc])
-        ) {
-          throw new Error(`Cannot update association ${assoc} with non-array value`);
-        }
-        if (
-          !Array.isArray(this.associations![assoc]) &&
-          Array.isArray(parsedQuery[assoc])
-        ) {
-          throw new Error(`Cannot update association ${assoc} with array value`);
-        }
-        associationObjects[assoc] = parsedQuery[assoc];
-        delete parsedQuery[assoc];
-      }
-    }
+    processCreateQuery(parsedQuery, this.objectPaths);
     const relationObjects = this.extractRelationsModification(parsedQuery);
     let t: Transaction | undefined = transaction;
     const transactionProvided = transaction !== undefined;
@@ -447,17 +223,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       })
       .then(doc => {
         return this.createWithPopulation(doc, relationObjects, t);
-      })
-      .then(doc => {
-        if (Object.keys(associationObjects).length > 0) {
-          return this.findByIdAndUpdate(
-            (doc as any)._id,
-            associationObjects,
-            undefined,
-            t,
-          );
-        }
-        return doc;
       })
       .then(doc => {
         if (!transactionProvided) {
@@ -482,14 +247,18 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       parsedQuery = query;
     }
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
-    return Promise.all(
-      parsedQuery.map(q => {
-        return this.create(q, t);
-      }),
-    ).catch(err => {
-      t.rollback();
-      throw err;
-    });
+    for (let i = 0; i < parsedQuery.length; i++) {
+      processCreateQuery(parsedQuery[i], this.objectPaths);
+    }
+    return this.model
+      .bulkCreate(parsedQuery, { transaction: t })
+      .then(() => {
+        t.commit();
+      })
+      .catch(err => {
+        t.rollback();
+        throw err;
+      });
   }
 
   async findOne(query: Query, select?: string, populate?: string[]) {
@@ -498,30 +267,21 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       where: filter,
       nest: true,
       attributes: parsingResult.attributes! as FindAttributeOptions,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-        false,
-        populate,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
 
     incrementDbQueries();
-    return this.model.findOne(options).then(doc => (doc ? doc.toJSON() : doc));
+    return this.model.findOne(options).then(doc => {
+      if (!doc) return doc;
+      const document = doc.toJSON();
+      unwrap(document, this.objectPaths, this.extractedRelations);
+      return document;
+    });
   }
 
   sync() {
     const syncOptions = { alter: { drop: false } };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
-    for (const association in this.associations) {
-      if (this.associations.hasOwnProperty(association)) {
-        const value = this.associations[association];
-        if (Array.isArray(value)) {
-          promiseChain = promiseChain.then(() => value[0].sync());
-        } else {
-          promiseChain = promiseChain.then(() => value.sync());
-        }
-      }
-    }
     for (const relation in this.extractedRelations) {
       if (!this.extractedRelations.hasOwnProperty(relation)) continue;
       const value = this.extractedRelations[relation];
@@ -557,12 +317,28 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     for (const population of populate) {
       if (population.indexOf('.') > -1) {
         let path = population.split('.');
-        const relationName = path[0];
+        let relationName = path[0];
+        for (const objectPath of this.objectDotPaths) {
+          if (population.startsWith(objectPath)) {
+            relationName = objectPath.replace(/\./g, '_');
+            if (population === objectPath) {
+              path = [relationName];
+            } else {
+              path = [relationName].concat(
+                population
+                  .replace(objectPath + (population === objectPath ? '' : '.'), '')
+                  .split('.'),
+              );
+            }
+            break;
+          }
+        }
         const relationTarget = this.extractedRelations[relationName];
         if (!relationTarget) continue;
         const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
           ? relationTarget[0]
           : relationTarget;
+
         const relationObject: {
           model: ModelStatic<any>;
           as: string;
@@ -573,13 +349,23 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           model: relationSchema.model,
           as: relationName,
           required: required || false,
-          attributes: { exclude: relationSchema.excludedFields },
+          attributes: {
+            exclude: relationSchema.excludedFields.concat(
+              path.length === 1 ||
+                Array.isArray(relationSchema.extractedRelations[path[1]])
+                ? []
+                : [`${path[1]}Id`],
+            ),
+          },
         };
         path.shift();
-        path = [path.join('.')];
-        relationObject.include = relationSchema
-          .constructAssociationInclusion({})
-          .concat(...relationSchema.constructRelationInclusion(path, required));
+        if (path.length > 0) {
+          path = [path.join('.')];
+          relationObject.include = relationSchema.constructRelationInclusion(
+            path,
+            required,
+          );
+        }
         inclusionArray.push(relationObject);
       } else {
         const relationTarget = this.extractedRelations[population];
@@ -599,7 +385,6 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           required: required || false,
           attributes: { exclude: relationSchema.excludedFields },
         };
-        relationObject.include = relationSchema.constructAssociationInclusion({});
         inclusionArray.push(relationObject);
       }
     }
@@ -623,22 +408,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           modelName = modelName + 's';
         }
         // @ts-ignore
-        doc[`set${modelName}`](relationObjects[relation], doc._id);
+        doc[`set${modelName}`](relationObjects[relation]);
       } else {
         const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
         // @ts-ignore
-        doc[`set${actualRel}`](relationObjects[relation], doc._id);
+        doc[`set${actualRel}`](relationObjects[relation]);
       }
     }
     return hasOne ? doc.save({ transaction }) : doc;
-  }
-
-  extractManyRelationsModification(parsedQuery: ParsedQuery[]) {
-    const relationObjects = [];
-    for (const queries of parsedQuery) {
-      relationObjects.push(this.extractRelationsModification(queries));
-    }
-    return relationObjects;
   }
 
   extractRelationsModification(parsedQuery: ParsedQuery) {
@@ -672,11 +449,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       where: filter,
       nest: true,
       attributes: parsingResult.attributes as FindAttributeOptions,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-        false,
-        populate,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, populate || [])),
+      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
     };
     if (!isNil(skip)) {
       options.offset = skip;
@@ -688,9 +461,14 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       options.order = this.parseSort(sort);
     }
 
-    return this.model
-      .findAll(options)
-      .then(docs => (docs ? docs.map(doc => (doc ? doc.toJSON() : doc)) : docs));
+    return this.model.findAll(options).then(docs => {
+      if (!docs) return docs;
+      return docs.map(doc => {
+        const document = doc.toJSON();
+        unwrap(document, this.objectPaths, this.extractedRelations);
+        return document;
+      });
+    });
   }
 
   deleteMany(query: Query) {
@@ -698,9 +476,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return this.model
       .findAll({
         where: filter,
-        include: this.constructAssociationInclusion(
-          parsingResult.requiredAssociations,
-        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+        include: this.includeRelations(parsingResult.requiredRelations, []),
       })
       .then(docs => {
         return Promise.all(docs.map(doc => doc.destroy({ returning: true })));
@@ -715,9 +491,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return this.model
       .findOne({
         where: filter,
-        include: this.constructAssociationInclusion(
-          parsingResult.requiredAssociations,
-        ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+        include: this.includeRelations(parsingResult.requiredRelations, []),
       })
       .then(doc => {
         return doc?.destroy({ returning: true });
@@ -741,13 +515,12 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
-      this.associations,
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
     return this.model.count({
       where: parsingResult.query,
-      include: this.constructAssociationInclusion(
-        parsingResult.requiredAssociations,
-      ).concat(...this.includeRelations(parsingResult.requiredRelations, [])),
+      include: this.includeRelations(parsingResult.requiredRelations, []),
     });
   }
 
@@ -771,17 +544,10 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
-      this.associations,
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
     parsedFilter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      parsedFilter = arrayPatch(
-        parsedFilter,
-        this.originalSchema.fields,
-        this.associations,
-      );
-    }
-
     incrementDbQueries();
     const docs = await this.model.findAll({
       where: parsedFilter,
@@ -834,14 +600,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       queryOptions,
-      this.associations,
+      this.objectDotPaths,
+      this.objectDotPathMapping,
     );
 
-    let filter = parsingResult.query;
-    if (this.sequelize.getDialect() !== 'postgres') {
-      filter = arrayPatch(filter, this.originalSchema.fields, this.associations);
-    }
-
+    const filter = parsingResult.query ?? {};
     return { filter, parsingResult };
   }
 

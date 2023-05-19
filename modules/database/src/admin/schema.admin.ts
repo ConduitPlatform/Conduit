@@ -16,7 +16,7 @@ import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
 import { _ConduitSchema, ParsedQuery } from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import { parseSortParam } from '../handlers/utils';
-import escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class SchemaAdmin {
   constructor(
@@ -101,7 +101,14 @@ export class SchemaAdmin {
     const limit = call.request.params.limit ?? 25;
 
     const queryArray: Indexable[] = [
-      { name: { $nin: this.database.systemSchemas }, parentSchema: { $exists: false } },
+      {
+        name: { $nin: this.database.systemSchemas },
+        $or: [
+          { parentSchema: { $exists: false } },
+          { parentSchema: { $eq: null } },
+          { parentSchema: { $eq: '' } },
+        ],
+      },
     ];
     if (owner && owner?.length !== 0) {
       queryArray.push({ ownerModule: { $in: owner } });

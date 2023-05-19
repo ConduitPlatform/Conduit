@@ -3,20 +3,9 @@ import "google/protobuf/empty.proto";
 package router;
 
 service Router {
-  rpc GenerateProto(GenerateProtoRequest) returns (GenerateProtoResponse);
   rpc RegisterConduitRoute (RegisterConduitRouteRequest) returns (google.protobuf.Empty);
   rpc SocketPush (SocketData) returns (google.protobuf.Empty);
   rpc PatchRouteMiddlewares(PatchAppRouteMiddlewaresRequest) returns (google.protobuf.Empty);
-}
-
-message GenerateProtoRequest {
-  string moduleName = 1;
-  repeated string routes = 2;
-}
-
-message GenerateProtoResponse {
-  string protoFile = 1;
-  string formattedModuleName = 2;
 }
 
 message SocketData {
@@ -34,7 +23,6 @@ message PatchAppRouteMiddlewaresRequest {
 
 message RegisterConduitRouteRequest {
   repeated PathDefinition routes = 1;
-  string protoFile = 2;
   optional string routerUrl = 3;
 
   message PathDefinition {

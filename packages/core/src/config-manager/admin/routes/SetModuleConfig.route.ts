@@ -1,10 +1,12 @@
 import ConduitGrpcSdk, {
   ConduitError,
+  ConduitModel,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitCommons } from '@conduitplatform/commons';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import convict from 'convict';
 
 type SetConfig = (config: { newConfig: string }) => Promise<{ updatedConfig: string }>;
@@ -22,7 +24,7 @@ export function setModuleConfigRoute(
       action: ConduitRouteActions.PATCH,
       description: `Updates ${moduleName} module configuration.`,
       bodyParams: {
-        config: { type: configSchema, required: true },
+        config: { type: configSchema as unknown as ConduitModel, required: true },
       },
     },
     new ConduitRouteReturnDefinition(

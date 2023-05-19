@@ -84,14 +84,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -99,14 +99,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.refreshTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.refreshTokens
-          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.refreshTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -246,7 +246,7 @@ export default class Authentication extends ManagedModule<Config> {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
-          type: TokenType.VERIFICATION_TOKEN,
+          tokenType: TokenType.VERIFICATION_TOKEN,
           user: user._id,
           token: uuid(),
         });

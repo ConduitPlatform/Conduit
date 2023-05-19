@@ -3,9 +3,10 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import { isNil } from 'lodash';
 import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
 

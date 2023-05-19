@@ -1,6 +1,6 @@
-import { TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, TYPE } from '@conduitplatform/grpc-sdk';
 
-export const userTokenSchema = {
+export const userTokenSchema: ConduitModel = {
   user: {
     type: TYPE.Relation,
     model: 'User',

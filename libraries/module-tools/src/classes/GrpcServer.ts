@@ -21,6 +21,12 @@ export class GrpcServer {
     this._url = `0.0.0.0:${port ?? '5000'}`;
   }
 
+  public async waitForReady() {
+    while (!isNil(this.scheduledRestart)) {
+      await this.wait(200);
+    }
+  }
+
   private _url: string;
 
   get url(): string {

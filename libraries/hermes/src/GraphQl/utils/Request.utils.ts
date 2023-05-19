@@ -1,35 +1,45 @@
-import { ApolloError } from 'apollo-server-express';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { GraphQLError } from 'graphql/error';
 
 export const errorHandler = (err: Error | ConduitError | any) => {
   ConduitGrpcSdk.Logger.error(err);
   if (err.hasOwnProperty('status')) {
-    throw new ApolloError(err.message, (err as ConduitError).status.toString(), err);
+    throw new GraphQLError(err.message, {
+      extensions: { code: (err as ConduitError).status.toString() },
+      originalError: err,
+    });
   } else if (err.hasOwnProperty('code')) {
-    let statusCode: string;
-    let name: string;
     switch (err.code) {
       case 3:
-        name = 'INVALID_ARGUMENTS';
-        statusCode = '400';
-        throw new ApolloError(err.details, statusCode, err);
+        throw new GraphQLError(err.details, {
+          extensions: { code: '400' },
+          originalError: err,
+        });
       case 5:
-        name = 'NOT_FOUND';
-        statusCode = '404';
-        throw new ApolloError(err.details, statusCode, err);
+        throw new GraphQLError(err.details, {
+          extensions: { code: '404' },
+          originalError: err,
+        });
       case 7:
-        name = 'FORBIDDEN';
-        statusCode = '403';
-        throw new ApolloError(err.details, statusCode, err);
+        throw new GraphQLError(err.details, {
+          extensions: { code: '403' },
+          originalError: err,
+        });
       case 16:
-        name = 'UNAUTHORIZED';
-        statusCode = '401';
-        throw new ApolloError(err.details, statusCode, err);
+        throw new GraphQLError(err.details, {
+          extensions: { code: '401' },
+          originalError: err,
+        });
       default:
-        name = 'INTERNAL_SERVER_ERROR';
-        throw new ApolloError(err.details, '500', err);
+        throw new GraphQLError(err.details, {
+          extensions: { code: '500' },
+          originalError: err,
+        });
     }
   } else {
-    throw new ApolloError(err.message, '500', err);
+    throw new GraphQLError(err.message, {
+      extensions: { code: '500' },
+      originalError: err,
+    });
   }
 };

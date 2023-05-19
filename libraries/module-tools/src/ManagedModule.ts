@@ -12,6 +12,8 @@ import ConduitGrpcSdk, {
 import { merge } from './utilities';
 import { convictConfigParser } from './utilities/convictConfigParser';
 import { initializeSdk } from './utilities/initializeSdk';
+import { RoutingManager } from './routing';
+import { RoutingController } from './routing/RoutingController';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
@@ -163,6 +165,8 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
         this.service.functions,
       );
     }
+    RoutingManager.ClientController = new RoutingController();
+    RoutingManager.AdminController = new RoutingController();
     await this.addHealthCheckService();
     await this.addModuleService();
     await this.grpcServer.start();

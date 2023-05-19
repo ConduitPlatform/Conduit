@@ -25,7 +25,6 @@ export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
 
     const id = response2.data.data[0].id;
     const email = response2.data.data[0].email;
-    //profile_image_url = response2.data.data[0].profile_image_url;
 
     return {
       id: id,

@@ -112,8 +112,14 @@ export class RouterAdmin {
   }
 
   async createProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -137,7 +143,7 @@ export class RouterAdmin {
       target,
       action,
       middlewares,
-      description,
+      routeDescription,
       proxyMiddlewareOptions,
     });
     await this.registerProxyRoutes(this.router);
@@ -146,8 +152,15 @@ export class RouterAdmin {
   }
 
   async updateProxyRoute(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { path, target, action, middlewares, description, id, proxyMiddlewareOptions } =
-      call.request.params;
+    const {
+      path,
+      target,
+      action,
+      middlewares,
+      routeDescription,
+      id,
+      proxyMiddlewareOptions,
+    } = call.request.params;
     if (!this.isValidUrl(target)) {
       throw new ConduitError(
         'INVALID_ARGUMENT',
@@ -172,7 +185,7 @@ export class RouterAdmin {
         target,
         action,
         middlewares,
-        description,
+        routeDescription,
         proxyMiddlewareOptions,
       },
     );
@@ -217,7 +230,7 @@ export class RouterAdmin {
         options: {
           path: route.path,
           action: route.action,
-          description: route.description,
+          description: route.routeDescription,
           middlewares: route.middlewares,
         },
         proxy: {
@@ -231,6 +244,6 @@ export class RouterAdmin {
 
   private async registerProxyRoutes(router: ConduitDefaultRouter) {
     const proxies = await this.getProxies();
-    router.internalRegisterRoute(undefined, proxies, 'router', 'router');
+    router.internalRegisterRoute(proxies, 'router', 'router');
   }
 }

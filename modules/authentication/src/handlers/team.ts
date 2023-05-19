@@ -44,7 +44,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       token: invitationToken,
     });
     if (!inviteToken) {
@@ -80,7 +80,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const invites = await Token.getInstance().findMany({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       // @ts-ignore
       'data.email': call.request.context.user.email,
     });
@@ -146,7 +146,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     inviter: User;
   }) {
     return Token.getInstance().create({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       token: uuid(),
       data: {
         teamId: invite.teamId,

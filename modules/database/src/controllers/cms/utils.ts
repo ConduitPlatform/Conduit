@@ -1,6 +1,8 @@
 import {
+  ArrayConduitModel,
   ConduitModel,
   ConduitModelField,
+  ConduitModelFieldRelation,
   ConduitRouteActions,
   ConduitSchema,
   Indexable,
@@ -16,13 +18,13 @@ export function compareFunction(schemaA: ConduitModel, schemaB: ConduitModel): n
   const fieldsA = schemaA.fields as ConduitModel;
   const fieldsB = schemaB.fields as ConduitModel;
   for (const k in fieldsA) {
-    if ((fieldsA[k] as ConduitModelField).model) {
-      hasA.push((fieldsA[k] as ConduitModelField).model);
+    if ((fieldsA[k] as ConduitModelFieldRelation).model) {
+      hasA.push((fieldsA[k] as ConduitModelFieldRelation).model);
     }
   }
   for (const k in fieldsB) {
-    if ((fieldsB[k] as ConduitModelField).model) {
-      hasB.push((fieldsB[k] as ConduitModelField).model);
+    if ((fieldsB[k] as ConduitModelFieldRelation).model) {
+      hasB.push((fieldsB[k] as ConduitModelFieldRelation).model);
     }
   }
   const schemaAName = (schemaA as unknown as ConduitSchema).name;
@@ -63,7 +65,7 @@ function removeRequiredFields(fields: ConduitModel) {
     }
     if (Array.isArray(modelField.type)) {
       if (typeof modelField.type[0] === 'object') {
-        modelField.type[0] = removeRequiredFields(modelField.type[0]);
+        (<ConduitModel>modelField.type[0]) = removeRequiredFields(modelField.type[0]);
       }
     } else if (typeof modelField.type === 'object') {
       modelField.type = removeRequiredFields(modelField.type as ConduitModel);
@@ -116,7 +118,7 @@ export function getOps(
   const createIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.create.enabled;
 
-  const assignableFields = Object.assign({}, actualSchema.fields);
+  const assignableFields: ConduitModel = Object.assign({}, actualSchema.fields);
   delete assignableFields._id;
   delete assignableFields.createdAt;
   delete assignableFields.updatedAt;
@@ -135,7 +137,9 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/many`)
       .method(ConduitRouteActions.POST)
-      .bodyParams({ docs: { type: [assignableFields], required: true } })
+      .bodyParams({
+        docs: { type: [assignableFields as ArrayConduitModel], required: true },
+      })
       .return(`createMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
@@ -154,7 +158,9 @@ export function getOps(
       .method(ConduitRouteActions.UPDATE)
       .bodyParams({
         docs: {
-          type: [{ ...assignableFields, _id: { type: 'String', unique: true } }],
+          type: [
+            { ...assignableFields, _id: TYPE.String } as unknown as ArrayConduitModel,
+          ],
           required: true,
         },
       })
@@ -174,7 +180,7 @@ export function getOps(
             {
               ...removeRequiredFields(Object.assign({}, assignableFields)),
               _id: { type: 'String', unique: true },
-            },
+            } as unknown as ArrayConduitModel,
           ],
           required: true,
         },

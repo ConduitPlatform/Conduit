@@ -1,10 +1,10 @@
-import { DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { User } from './User.schema';
 
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
-  type: {
+  tokenType: {
     type: TYPE.String,
     required: true,
   },
@@ -39,7 +39,7 @@ const collectionName = undefined;
 export class Token extends ConduitActiveSchema<Token> {
   private static _instance: Token;
   _id: string;
-  type: string;
+  tokenType: string;
   user?: string | User;
   token: string;
   data?: any;

@@ -18,24 +18,12 @@ service Config {
 }
 
 service Admin {
-  rpc GenerateAdminProto(GenerateAdminProtoRequest) returns (GenerateAdminProtoResponse);
   rpc RegisterAdminRoute (RegisterAdminRouteRequest) returns (google.protobuf.Empty);
   rpc PatchRouteMiddlewares(PatchRouteMiddlewaresRequest) returns (google.protobuf.Empty);
 }
 
-message GenerateAdminProtoRequest {
-  string moduleName = 1;
-  repeated string routes = 2;
-}
-
-message GenerateAdminProtoResponse {
-  string protoFile = 1;
-  string formattedModuleName = 2;
-}
-
 message RegisterAdminRouteRequest {
   repeated PathDefinition routes = 1;
-  string protoFile = 2;
   optional string routerUrl = 3;
 
   message PathDefinition {

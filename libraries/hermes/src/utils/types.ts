@@ -1,6 +1,6 @@
 import ConduitGrpcSdk, {
   ConduitModel,
-  ConduitModelField,
+  ConduitModelFieldRelation,
 } from '@conduitplatform/grpc-sdk';
 import { TypeRegistry } from '../classes';
 import { SwaggerParser } from '../Rest/SwaggerParser';
@@ -61,9 +61,9 @@ function findRelations(typesObject: TypeObject, typeFields: ConduitModel) {
       });
     } else if (
       typeof typeFields[field] === 'object' &&
-      (typeFields[field] as ConduitModelField).type === 'Relation'
+      (typeFields[field] as ConduitModelFieldRelation).type === 'Relation'
     ) {
-      const typeName = (typeFields[field] as ConduitModelField).model!;
+      const typeName = (typeFields[field] as ConduitModelFieldRelation).model!;
       const typeIsKnown =
         typesObject.known.has(typeName) || typesObject.imported.has(typeName);
       if (!typeIsKnown) {

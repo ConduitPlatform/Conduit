@@ -1,7 +1,12 @@
-import { DatabaseProvider, PlatformTypesEnum, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  PlatformTypesEnum,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
-const schema = {
+const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   clientId: {
     type: TYPE.String,
