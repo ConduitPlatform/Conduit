@@ -117,16 +117,27 @@ export class AdminRoutes {
     const folder = await _StorageFolder.getInstance().findOne({
       _id: id,
     });
+
     if (isNil(folder)) {
       throw new GrpcError(status.NOT_FOUND, 'Folder does not exist');
     } else {
+      const files = await File.getInstance().findMany({
+        folder: folder.name,
+      });
+      for (const file of files) {
+        const folder_path = file.container + '/' + file.folder;
+        await this.fileHandlers.storage.container(folder_path).delete(file.name);
+      }
+
       await this.fileHandlers.storage
         .container(folder.container)
         .deleteFolder(folder.name);
+
       await _StorageFolder.getInstance().deleteOne({
         name: folder.name,
         container: folder.container,
       });
+
       await File.getInstance().deleteMany({
         folder: folder.name,
         container: folder.container,
