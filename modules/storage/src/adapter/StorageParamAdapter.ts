@@ -45,9 +45,9 @@ export class StorageParamAdapter {
 
   getFileByUrlResponse(response: UnparsedRouterResponse): FileByUrlResponse {
     return {
-      id: (response as Indexable)._id,
+      id: (response as Indexable).file._id,
       fileUrl: (response as Indexable).file.url,
-      name: (response as Indexable).name,
+      name: (response as Indexable).file.name,
       uploadUrl: (response as Indexable).url,
     };
   }
