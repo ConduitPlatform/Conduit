@@ -34,7 +34,7 @@ export async function getAwsAccountId(config: StorageConfig) {
 
 export function normalizeFolderPath(folderPath?: string) {
   if (!folderPath || folderPath.trim() === '' || folderPath.trim() === '/') return '/';
-  return `/${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
+  return `${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
 }
 
 function getNestedPaths(
