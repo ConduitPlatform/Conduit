@@ -284,7 +284,7 @@ export class FileHandlers {
   ): Promise<_StorageFolder[]> {
     const createdFolders: _StorageFolder[] = [];
     let folder: _StorageFolder | null = null;
-    await deepPathHandler(folderPath, false, true, async (folderPath, isLast) => {
+    await deepPathHandler(folderPath, async (folderPath, isLast) => {
       folder = await _StorageFolder
         .getInstance()
         .findOne({ name: folderPath, container });

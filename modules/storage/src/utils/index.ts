@@ -37,23 +37,17 @@ export function normalizeFolderPath(folderPath?: string) {
   return `${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
 }
 
-function getNestedPaths(
-  inputPath: string,
-  leadingSlash: boolean,
-  trailingSlash: boolean,
-): string[] {
+function getNestedPaths(inputPath: string): string[] {
   const paths: string[] = [];
   const strippedPath = !inputPath.trim()
     ? ''
     : path.normalize(inputPath.trim()).replace(/^\/|\/$/g, '');
   if (strippedPath !== '') {
-    const prefix = leadingSlash ? '/' : '';
-    const suffix = trailingSlash ? '/' : '';
     const pathSegments = strippedPath.split('/');
     let currentPath = '';
     for (const segment of pathSegments) {
       currentPath = path.join(currentPath, segment);
-      paths.push(`${prefix}${currentPath}${suffix}`);
+      paths.push(`${currentPath}/`);
     }
   }
   return paths;
@@ -61,11 +55,9 @@ function getNestedPaths(
 
 export async function deepPathHandler(
   inputPath: string,
-  leadingPath: boolean,
-  trailingPath: boolean,
   handler: (inputPath: string, isLast: boolean) => Promise<void>,
 ): Promise<void> {
-  const paths = getNestedPaths(inputPath, leadingPath, trailingPath);
+  const paths = getNestedPaths(inputPath);
   for (let i = 0; i < paths.length; i++) {
     await handler(paths[i], i === paths.length - 1);
   }
