@@ -18,6 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
+import { normalizeFolderPath } from '../utils';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -78,7 +79,11 @@ export class AdminRoutes {
   }
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, container, isPublic } = call.request.params;
+    const { container, isPublic } = call.request.params;
+    const name = normalizeFolderPath(call.request.params.name);
+    if (name === '/') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Folder name may not be empty');
+    }
     const containerDocument = await _StorageContainer
       .getInstance()
       .findOne({ name: container });
@@ -87,27 +92,15 @@ export class AdminRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
-    let folder = await _StorageFolder.getInstance().findOne({
-      name: newName,
+    const createdFolders = await this.fileHandlers.findOrCreateFolders(
+      name,
       container,
-    });
-    if (isNil(folder)) {
-      folder = await _StorageFolder.getInstance().create({
-        name: newName,
-        container,
-        isPublic,
-      });
-      const exists = await this.fileHandlers.storage
-        .container(container)
-        .folderExists(newName);
-      if (!exists) {
-        await this.fileHandlers.storage.container(container).createFolder(newName);
-      }
-    } else {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
-    }
-    return folder;
+      isPublic,
+      () => {
+        throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+      },
+    );
+    return createdFolders[createdFolders.length - 1];
   }
 
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
