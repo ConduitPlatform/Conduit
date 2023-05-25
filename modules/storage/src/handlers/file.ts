@@ -9,6 +9,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 import { IStorageProvider } from '../interfaces';
+import { normalizeFolderPath, deepPathHandler } from '../utils';
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -43,18 +44,13 @@ export class FileHandlers {
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, data, folder, container, mimeType, isPublic } = call.request.params;
-    let newFolder;
-    if (isNil(folder)) {
-      newFolder = '/';
-    } else {
-      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
-    }
+    const newFolder = isNil(folder) ? '/' : folder;
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findOrCreateContainer(container, isPublic);
     if (!isNil(folder)) {
-      await this.findOrCreateFolder(newFolder, usedContainer, isPublic);
+      await this.findOrCreateFolders(newFolder, usedContainer, isPublic);
     }
 
     const exists = await File.getInstance().findOne({
@@ -81,18 +77,13 @@ export class FileHandlers {
 
   async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, folder, container, size = 0, mimeType, isPublic } = call.request.params;
-    let newFolder;
-    if (isNil(folder)) {
-      newFolder = '/';
-    } else {
-      newFolder = folder.trim().slice(-1) !== '/' ? folder.trim() + '/' : folder.trim();
-    }
+    const newFolder = isNil(folder) ? '/' : folder;
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findOrCreateContainer(container, isPublic);
     if (!isNil(folder)) {
-      await this.findOrCreateFolder(newFolder, usedContainer, isPublic);
+      await this.findOrCreateFolders(newFolder, usedContainer, isPublic);
     }
 
     const exists = await File.getInstance().findOne({
@@ -285,20 +276,34 @@ export class FileHandlers {
     return container;
   }
 
-  private async findOrCreateFolder(
-    folder: string,
+  async findOrCreateFolders(
+    folderPath: string,
     container: string,
     isPublic?: boolean,
-  ): Promise<void> {
-    const exists = await this.storageProvider.container(container).folderExists(folder);
-    if (!exists) {
-      await _StorageFolder.getInstance().create({
-        name: folder,
-        container: container,
-        isPublic,
-      });
-      await this.storageProvider.container(container).createFolder(folder);
-    }
+    lastExistsHandler?: () => void,
+  ): Promise<_StorageFolder[]> {
+    const createdFolders: _StorageFolder[] = [];
+    let folder: _StorageFolder | null = null;
+    await deepPathHandler(folderPath, false, true, async (folderPath, isLast) => {
+      folder = await _StorageFolder
+        .getInstance()
+        .findOne({ name: folderPath, container });
+      if (isNil(folder)) {
+        folder = await _StorageFolder.getInstance().create({
+          name: folderPath,
+          container,
+          isPublic,
+        });
+        createdFolders.push(folder);
+        const exists = await this.storage.container(container).folderExists(folderPath);
+        if (!exists) {
+          await this.storage.container(container).createFolder(folderPath);
+        }
+      } else if (isLast) {
+        lastExistsHandler?.();
+      }
+    });
+    return createdFolders;
   }
 
   private async storeNewFile(
@@ -379,14 +384,9 @@ export class FileHandlers {
     if (newContainer !== file.container) {
       await this.findOrCreateContainer(newContainer);
     }
-    // Existing folder names are currently suffixed by "/" upon creation
-    const newFolder = isNil(folder)
-      ? file.folder
-      : folder.trim().slice(-1) !== '/'
-      ? folder.trim() + '/'
-      : folder.trim();
+    const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
     if (newFolder !== file.folder) {
-      await this.findOrCreateFolder(newFolder, newContainer);
+      await this.findOrCreateFolders(newFolder, newContainer);
     }
     const isDataUpdate =
       newName === file.name &&

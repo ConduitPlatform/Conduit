@@ -18,7 +18,6 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
-import { deepCreateFolders } from '../utils';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -88,11 +87,10 @@ export class AdminRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    const createdFolders = await deepCreateFolders(
+    const createdFolders = await this.fileHandlers.findOrCreateFolders(
       name,
       container,
       isPublic,
-      this.fileHandlers,
       () => {
         throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
       },

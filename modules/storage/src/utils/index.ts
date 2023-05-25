@@ -1,7 +1,5 @@
 import { GetUserCommand, IAMClient } from '@aws-sdk/client-iam';
 import { StorageConfig } from '../interfaces';
-import { _StorageFolder } from '../models';
-import { FileHandlers } from '../handlers/file';
 import { isNil } from 'lodash';
 import path from 'path';
 
@@ -34,6 +32,11 @@ export async function getAwsAccountId(config: StorageConfig) {
   return userId;
 }
 
+export function normalizeFolderPath(folderPath: string) {
+  const strippedPath = path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '');
+  return strippedPath === '' ? '/' : `/${strippedPath}/`;
+}
+
 function getNestedPaths(
   inputPath: string,
   leadingSlash: boolean,
@@ -62,35 +65,4 @@ export async function deepPathHandler(
   for (let i = 0; i < paths.length; i++) {
     await handler(paths[i], i === paths.length - 1);
   }
-}
-
-export async function deepCreateFolders(
-  inputPath: string,
-  container: string,
-  isPublic: string,
-  fileHandlers: FileHandlers,
-  lastExistsHandler?: () => void,
-): Promise<_StorageFolder[]> {
-  const createdFolders: _StorageFolder[] = [];
-  let folder: _StorageFolder | null = null;
-  await deepPathHandler(inputPath, false, true, async (folderPath, isLast) => {
-    folder = await _StorageFolder.getInstance().findOne({ name: folderPath, container });
-    if (isNil(folder)) {
-      folder = await _StorageFolder.getInstance().create({
-        name: folderPath,
-        container,
-        isPublic,
-      });
-      createdFolders.push(folder);
-      const exists = await fileHandlers.storage
-        .container(container)
-        .folderExists(folderPath);
-      if (!exists) {
-        await fileHandlers.storage.container(container).createFolder(folderPath);
-      }
-    } else if (isLast) {
-      lastExistsHandler?.();
-    }
-  });
-  return createdFolders;
 }
