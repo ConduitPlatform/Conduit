@@ -18,7 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
-import { deepPathHandler } from '../utils';
+import { deepCreateFolders } from '../utils';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -88,29 +88,16 @@ export class AdminRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
-    let folder: _StorageFolder | null = null;
-    await deepPathHandler(newName, false, true, async (folderPath, isLast) => {
-      folder = await _StorageFolder
-        .getInstance()
-        .findOne({ name: folderPath, container });
-      if (isNil(folder)) {
-        folder = await _StorageFolder.getInstance().create({
-          name: folderPath,
-          container,
-          isPublic,
-        });
-        const exists = await this.fileHandlers.storage
-          .container(container)
-          .folderExists(folderPath);
-        if (!exists) {
-          await this.fileHandlers.storage.container(container).createFolder(folderPath);
-        }
-      } else if (isLast) {
+    const createdFolders = await deepCreateFolders(
+      name,
+      container,
+      isPublic,
+      this.fileHandlers,
+      () => {
         throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
-      }
-    });
-    return folder!;
+      },
+    );
+    return createdFolders[createdFolders.length - 1];
   }
 
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
