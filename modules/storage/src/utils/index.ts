@@ -32,9 +32,9 @@ export async function getAwsAccountId(config: StorageConfig) {
   return userId;
 }
 
-export function normalizeFolderPath(folderPath: string) {
-  const strippedPath = path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '');
-  return strippedPath === '' ? '/' : `/${strippedPath}/`;
+export function normalizeFolderPath(folderPath?: string) {
+  if (!folderPath || folderPath.trim() === '' || folderPath.trim() === '/') return '/';
+  return `/${path.normalize(folderPath.trim()).replace(/^\/|\/$/g, '')}/`;
 }
 
 function getNestedPaths(
@@ -43,14 +43,18 @@ function getNestedPaths(
   trailingSlash: boolean,
 ): string[] {
   const paths: string[] = [];
-  const normalizedPath = path.normalize(inputPath.trim()).replace(/^\/|\/$/g, '');
-  const prefix = leadingSlash ? '/' : '';
-  const suffix = trailingSlash ? '/' : '';
-  const pathSegments = normalizedPath.split('/');
-  let currentPath = '';
-  for (const segment of pathSegments) {
-    currentPath = path.join(currentPath, segment);
-    paths.push(`${prefix}${currentPath}${suffix}`);
+  const strippedPath = !inputPath.trim()
+    ? ''
+    : path.normalize(inputPath.trim()).replace(/^\/|\/$/g, '');
+  if (strippedPath !== '') {
+    const prefix = leadingSlash ? '/' : '';
+    const suffix = trailingSlash ? '/' : '';
+    const pathSegments = strippedPath.split('/');
+    let currentPath = '';
+    for (const segment of pathSegments) {
+      currentPath = path.join(currentPath, segment);
+      paths.push(`${prefix}${currentPath}${suffix}`);
+    }
   }
   return paths;
 }

@@ -43,20 +43,20 @@ export class FileHandlers {
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, data, folder, container, mimeType, isPublic } = call.request.params;
-    const newFolder = isNil(folder) ? '/' : folder;
+    const { name, data, container, mimeType, isPublic } = call.request.params;
+    const folder = normalizeFolderPath(call.request.params.folder);
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findOrCreateContainer(container, isPublic);
-    if (!isNil(folder)) {
-      await this.findOrCreateFolders(newFolder, usedContainer, isPublic);
+    if (folder !== '/') {
+      await this.findOrCreateFolders(folder, usedContainer, isPublic);
     }
 
     const exists = await File.getInstance().findOne({
       name,
       container: usedContainer,
-      folder: newFolder,
+      folder,
     });
     if (exists) {
       throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
@@ -66,7 +66,7 @@ export class FileHandlers {
     }
 
     try {
-      return this.storeNewFile(data, usedContainer, newFolder, isPublic, name, mimeType);
+      return this.storeNewFile(data, usedContainer, folder, isPublic, name, mimeType);
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -76,20 +76,20 @@ export class FileHandlers {
   }
 
   async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, folder, container, size = 0, mimeType, isPublic } = call.request.params;
-    const newFolder = isNil(folder) ? '/' : folder;
+    const { name, container, size = 0, mimeType, isPublic } = call.request.params;
+    const folder = normalizeFolderPath(call.request.params.folder);
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
       ? config.defaultContainer
       : await this.findOrCreateContainer(container, isPublic);
-    if (!isNil(folder)) {
-      await this.findOrCreateFolders(newFolder, usedContainer, isPublic);
+    if (folder !== '/') {
+      await this.findOrCreateFolders(folder, usedContainer, isPublic);
     }
 
     const exists = await File.getInstance().findOne({
       name,
       container: usedContainer,
-      folder: newFolder,
+      folder,
     });
     if (exists) {
       throw new GrpcError(status.ALREADY_EXISTS, 'File already exists');
@@ -98,7 +98,7 @@ export class FileHandlers {
     try {
       return await this._createFileUploadUrl(
         usedContainer,
-        newFolder,
+        folder,
         isPublic,
         name,
         size,
@@ -385,7 +385,7 @@ export class FileHandlers {
       await this.findOrCreateContainer(newContainer);
     }
     const newFolder = isNil(folder) ? file.folder : normalizeFolderPath(folder);
-    if (newFolder !== file.folder) {
+    if (newFolder !== file.folder && newFolder !== '/') {
       await this.findOrCreateFolders(newFolder, newContainer);
     }
     const isDataUpdate =
