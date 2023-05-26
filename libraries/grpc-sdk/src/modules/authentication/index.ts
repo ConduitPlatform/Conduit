@@ -1,10 +1,11 @@
-import { ConduitModule } from '../../classes/ConduitModule';
+import { ConduitModule } from '../../classes';
 import {
   AuthenticationDefinition,
+  TeamDeleteResponse,
   UserCreateResponse,
   UserDeleteResponse,
   UserLoginResponse,
-} from '../../protoUtils/authentication';
+} from '../../protoUtils';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
@@ -30,5 +31,9 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   changePass(email: string, password?: string): Promise<UserCreateResponse> {
     return this.client!.changePass({ email, password });
+  }
+
+  teamDelete(teamId: string): Promise<TeamDeleteResponse> {
+    return this.client!.teamDelete({ teamId });
   }
 }

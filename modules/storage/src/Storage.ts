@@ -29,7 +29,11 @@ import MetricsSchema from './metrics';
 import { IStorageProvider } from './interfaces';
 import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import {
+  ConfigController,
+  ManagedModule,
+  createParsedRouterRequest,
+} from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter';
 
 export default class Storage extends ManagedModule<Config> {
@@ -140,7 +144,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.getFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
@@ -155,7 +159,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.getFileData(request);
     callback(null, result as GetFileDataResponse);
   }
@@ -169,7 +173,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.createFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
@@ -184,7 +188,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.updateFile(request);
     const response = this.storageParamAdapter.getFileResponse(result);
     callback(null, response);
@@ -199,7 +203,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.deleteFile(request);
     callback(null, result as DeleteFileResponse);
   }
@@ -213,7 +217,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.createFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);
@@ -228,7 +232,7 @@ export default class Storage extends ManagedModule<Config> {
         code: status.INTERNAL,
         message: 'File handlers not initiated',
       });
-    const request = this.storageParamAdapter.createParsedRouterRequest(call.request);
+    const request = createParsedRouterRequest(call.request);
     const result = await this._fileHandlers.updateFileUploadUrl(request);
     const response = this.storageParamAdapter.getFileByUrlResponse(result);
     callback(null, response);

@@ -5,7 +5,6 @@ message UserLoginRequest {
   string userId = 1;
   string clientId = 2;
 }
-
 message UserCreateRequest {
   string email = 1;
   optional string password = 2;
@@ -15,9 +14,11 @@ message UserChangePass {
   string email = 1;
   optional string password = 2;
 }
-
 message UserDeleteRequest {
   string userId = 1;
+}
+message TeamDeleteRequest {
+  string teamId = 1;
 }
 message UserLoginResponse {
   string accessToken = 1;
@@ -29,10 +30,14 @@ message UserDeleteResponse {
 message UserCreateResponse {
   optional string password = 1;
 }
+message TeamDeleteResponse {
+  string message = 1;
+}
 
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
   rpc ChangePass(UserChangePass) returns (UserCreateResponse);
   rpc UserDelete(UserDeleteRequest) returns (UserDeleteResponse);
+  rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
 }
