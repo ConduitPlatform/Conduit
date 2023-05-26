@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.12](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.11...v0.16.0-alpha.12) (2023-05-26)
+
+
+### Features
+
+* **storage:** recursive folder creation ([#628](https://github.com/ConduitPlatform/Conduit/issues/628)) ([22e3ed7](https://github.com/ConduitPlatform/Conduit/commit/22e3ed71553f924004e4082a4326f1f72ae60562))
+* teamDelete auth rpc & grpcToParsedRouterRequest helper ([#629](https://github.com/ConduitPlatform/Conduit/issues/629)) ([62b0640](https://github.com/ConduitPlatform/Conduit/commit/62b06401ed531d37438d78fa17e20826a64b77e1))
+
+
+### Bug Fixes
+
+* **database:** array populate issues ([b047c6a](https://github.com/ConduitPlatform/Conduit/commit/b047c6a287bfc0b46f41bf3db15fa94849cbc760))
+* **storage:** param adapter not working correctly for getFileByUrl ([144bc10](https://github.com/ConduitPlatform/Conduit/commit/144bc10d7342ee218204d9166dced32671f68839))
+
 ## [0.16.0-alpha.11](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.10...v0.16.0-alpha.11) (2023-05-18)
 
 
