@@ -10,6 +10,8 @@ import * as models from './models';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import {
+  AllowedResourcesRequest,
+  AllowedResourcesResponse,
   Decision,
   DeleteResourceRequest,
   FindRelationRequest,
@@ -47,6 +49,7 @@ export default class Authorization extends ManagedModule<Config> {
       deleteRelation: this.deleteRelation.bind(this),
       deleteAllRelations: this.deleteAllRelations.bind(this),
       findRelation: this.findRelation.bind(this),
+      getAllowedResources: this.getAllowedResources.bind(this),
       can: this.can.bind(this),
     },
   };
@@ -161,6 +164,21 @@ export default class Authorization extends ManagedModule<Config> {
       limit,
     );
     callback(null, { relations, count });
+  }
+
+  async getAllowedResources(
+    call: GrpcRequest<AllowedResourcesRequest>,
+    callback: GrpcResponse<AllowedResourcesResponse>,
+  ) {
+    const { subject, action, resourceType, skip, limit } = call.request;
+    const { resources, count } = await this.permissionsController.findPermissions(
+      subject,
+      action,
+      resourceType,
+      skip,
+      limit,
+    );
+    callback(null, { resources, count });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
