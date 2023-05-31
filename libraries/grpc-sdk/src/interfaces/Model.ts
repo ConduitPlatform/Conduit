@@ -154,6 +154,9 @@ export interface ConduitSchemaOptions {
       canModify: 'Everything' | 'Nothing' | 'ExtensionOnly';
       canDelete: boolean;
     };
+    authorization?: {
+      enabled: boolean;
+    };
   };
   indexes?: ModelOptionsIndexes[];
 }

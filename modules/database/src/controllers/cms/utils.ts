@@ -80,7 +80,10 @@ export function getOps(
   handlers: CmsHandlers,
 ) {
   const routesArray: ConduitBuiltRoute[] = [];
+  const authorizationEnabled =
+    actualSchema.modelOptions.conduit!.authorization?.enabled || false;
   const authenticatedRead =
+    authorizationEnabled ||
     actualSchema.modelOptions.conduit!.cms.crudOperations.read.authenticated;
   const readIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.read.enabled;
@@ -92,6 +95,8 @@ export function getOps(
         skip: TYPE.Number,
         limit: TYPE.Number,
         sort: [TYPE.String],
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
       })
       .cacheControl(authenticatedRead ? 'private, max-age=10' : 'public, max-age=10')
       .return(`get${schemaName}`, {
@@ -104,6 +109,10 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.GET)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .urlParams({
         id: { type: TYPE.String, required: true },
       })
@@ -114,6 +123,7 @@ export function getOps(
     routesArray.push(route.build());
   }
   const authenticatedCreate =
+    authorizationEnabled ||
     actualSchema.modelOptions.conduit!.cms.crudOperations.create.authenticated;
   const createIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.create.enabled;
@@ -127,6 +137,10 @@ export function getOps(
       .path(`/${schemaName}`)
       .method(ConduitRouteActions.POST)
       .bodyParams(assignableFields)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .return(`create${schemaName}`, actualSchema.fields)
       .handler(handlers.createDocument.bind(handlers));
 
@@ -137,6 +151,10 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/many`)
       .method(ConduitRouteActions.POST)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .bodyParams({
         docs: { type: [assignableFields as ArrayConduitModel], required: true },
       })
@@ -149,12 +167,17 @@ export function getOps(
   }
 
   const authenticatedUpdate =
+    authorizationEnabled ||
     actualSchema.modelOptions.conduit!.cms.crudOperations.update.authenticated;
   const updateIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.update.enabled;
   if (updateIsEnabled) {
     let route = new RouteBuilder()
       .path(`/${schemaName}/many`)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .method(ConduitRouteActions.UPDATE)
       .bodyParams({
         docs: {
@@ -174,6 +197,10 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/many`)
       .method(ConduitRouteActions.PATCH)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .bodyParams({
         docs: {
           type: [
@@ -188,7 +215,7 @@ export function getOps(
       .return(`patchMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
-      .handler(handlers.patchManyDocuments.bind(handlers));
+      .handler(handlers.updateManyDocuments.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
     routesArray.push(route.build());
@@ -196,6 +223,10 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.UPDATE)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .urlParams({
         id: { type: TYPE.String, required: true },
       })
@@ -209,6 +240,10 @@ export function getOps(
     route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.PATCH)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .urlParams({
         id: { type: TYPE.String, required: true },
       })
@@ -218,12 +253,13 @@ export function getOps(
         ) as unknown as ConduitModel,
       )
       .return(`patch${schemaName}`, actualSchema.fields)
-      .handler(handlers.patchDocument.bind(handlers));
+      .handler(handlers.updateDocument.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
     routesArray.push(route.build());
   }
   const authenticatedDelete =
+    authorizationEnabled ||
     actualSchema.modelOptions.conduit!.cms.crudOperations.delete.authenticated;
   const deleteIsEnabled =
     actualSchema.modelOptions.conduit!.cms.crudOperations.delete.enabled;
@@ -231,6 +267,10 @@ export function getOps(
     const route = new RouteBuilder()
       .path(`/${schemaName}/:id`)
       .method(ConduitRouteActions.DELETE)
+      .queryParams({
+        // scope is used when authorization is enabled, to determine how an authenticated user can access the data
+        ...(authorizationEnabled ? { scope: TYPE.String } : {}),
+      })
       .urlParams({
         id: { type: TYPE.String, required: true },
       })

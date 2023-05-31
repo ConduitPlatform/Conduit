@@ -27,4 +27,7 @@ export const ConduitOptions = {
     canModify: ConduitString.Optional,
     canDelete: ConduitBoolean.Optional,
   },
+  authorization: {
+    enabled: ConduitBoolean.Optional,
+  },
 };
