@@ -8,6 +8,7 @@ export default {
     format: 'String',
     default: 'twilio',
   },
+
   twilio: {
     phoneNumber: {
       format: 'String',
@@ -30,6 +31,21 @@ export default {
         format: 'String',
         default: '',
       },
+    },
+  },
+
+  aws: {
+    region: {
+      format: 'String',
+      default: '',
+    },
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+    secretAccessKey: {
+      format: 'String',
+      default: '',
     },
   },
 };
