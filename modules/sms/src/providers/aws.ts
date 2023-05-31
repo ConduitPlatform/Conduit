@@ -10,7 +10,6 @@ export class AwsProvider implements ISmsProvider {
   private readonly secretAccessKey: string;
   private readonly region: string;
   private client: SNS;
-
   constructor(settings: {
     accessKeyId: string;
     secretAccessKey: string;
@@ -21,7 +20,6 @@ export class AwsProvider implements ISmsProvider {
       secretAccessKey: this.secretAccessKey,
       region: this.region,
     } = settings);
-
     this.client = new AWS.SNS({
       accessKeyId: this.accessKeyId,
       secretAccessKey: this.secretAccessKey,
@@ -39,11 +37,9 @@ export class AwsProvider implements ISmsProvider {
       .catch(error => {
         ConduitGrpcSdk.Logger.error(error);
       });
-
     if (!result) {
       return Promise.reject(Error('could not send message'));
     }
-
     return Promise.resolve(result.MessageId);
   }
 
@@ -54,9 +50,7 @@ export class AwsProvider implements ISmsProvider {
       .catch((error: AWSError) => {
         ConduitGrpcSdk.Logger.error(error);
       });
-
     const otp = generateOTP();
-
     const result = await this.client
       .publish({
         PhoneNumber: phoneNumber,
@@ -66,7 +60,6 @@ export class AwsProvider implements ISmsProvider {
       .catch(error => {
         ConduitGrpcSdk.Logger.error(error);
       });
-
     if (!result) {
       return Promise.reject(Error('could not send verification code'));
     }
