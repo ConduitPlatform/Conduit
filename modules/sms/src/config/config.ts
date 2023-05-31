@@ -8,7 +8,6 @@ export default {
     format: 'String',
     default: 'twilio',
   },
-
   twilio: {
     phoneNumber: {
       format: 'String',
@@ -33,7 +32,6 @@ export default {
       },
     },
   },
-
   aws: {
     region: {
       format: 'String',

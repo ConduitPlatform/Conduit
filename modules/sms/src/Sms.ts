@@ -20,6 +20,7 @@ import {
 } from './protoTypes/sms';
 import metricsSchema from './metrics';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { AwsProvider } from './providers/aws';
 
 export default class Sms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -147,6 +148,14 @@ export default class Sms extends ManagedModule<Config> {
     if (name === 'twilio') {
       try {
         this._provider = new TwilioProvider(settings);
+      } catch (e) {
+        this._provider = undefined;
+        ConduitGrpcSdk.Logger.error(e as Error);
+        return;
+      }
+    } else if (name === 'aws') {
+      try {
+        this._provider = new AwsProvider(settings);
       } catch (e) {
         this._provider = undefined;
         ConduitGrpcSdk.Logger.error(e as Error);
