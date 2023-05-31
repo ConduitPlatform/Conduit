@@ -73,4 +73,47 @@ export class PermissionsController {
 
     return index ?? false;
   }
+
+  async findPermissions(
+    subject: string,
+    action: string,
+    objectType: string,
+    skip: number,
+    limit: number,
+  ) {
+    const computedTuple = `${subject}#${action}@${objectType}`;
+    const allowedIds = [];
+    const permission = await Permission.getInstance().findMany({
+      computedTuple: { $like: `${computedTuple}%` },
+    });
+    for (const perm of permission) {
+      allowedIds.push(perm.resource.split(':')[1]);
+    }
+    let count = await this.indexController.findGeneralIndexCount(
+      subject,
+      action,
+      objectType,
+    );
+    count += allowedIds.length;
+    /**
+     * allowedIds may contain ids to return which could be enough to satisfy the skip/limit
+     * requirements. If not, we need to query the index for the rest of the ids.
+     *
+     */
+    if (allowedIds.length >= skip + limit) {
+      return { resources: allowedIds.slice(skip, skip + limit), count: count };
+    } else {
+      skip -= allowedIds.length;
+      limit -= allowedIds.length;
+    }
+
+    const index = await this.indexController.findGeneralIndex(
+      subject,
+      action,
+      objectType,
+      skip,
+      limit,
+    );
+    return { resources: allowedIds.concat(index), count };
+  }
 }

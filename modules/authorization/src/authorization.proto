@@ -42,8 +42,21 @@ message FindRelationRequest {
   optional int32 skip = 6;
   optional int32 limit = 7;
 }
+
+
 message FindRelationResponse {
   repeated Relation relations = 1;
+  int32 count = 2;
+}
+message AllowedResourcesRequest {
+  string subject = 1;
+  string action = 2;
+  string resourceType = 5;
+  int32 skip = 6;
+  int32 limit = 7;
+}
+message AllowedResourcesResponse {
+  repeated string resources = 1;
   int32 count = 2;
 }
 
@@ -73,4 +86,5 @@ service Authorization {
   rpc DeleteAllRelations(DeleteAllRelationsRequest) returns (google.protobuf.Empty);
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
+  rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);
 }
