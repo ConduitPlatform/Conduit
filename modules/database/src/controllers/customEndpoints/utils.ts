@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { RequestHandlers, RouteBuilder } from '@conduitplatform/module-tools';
-import { ICustomEndpoint, PopulatedCustomEndpoint } from '../../interfaces';
+import { PopulatedCustomEndpoint } from '../../interfaces';
 import { isNil } from 'lodash';
 import { LocationEnum } from '../../enums';
 
@@ -65,14 +65,16 @@ function extractParams(
 }
 
 export function createCustomEndpointRoute(
-  endpoint: ICustomEndpoint | PopulatedCustomEndpoint,
+  endpoint: PopulatedCustomEndpoint,
   handler: RequestHandlers,
 ) {
+  const authorizationEnabled =
+    endpoint.selectedSchema.modelOptions.conduit!.authorization?.enabled || false;
   const route = new RouteBuilder()
     .path(`/function/${endpoint.name}`)
     .method(getOperation(endpoint.operation))
     .handler(handler);
-  if (endpoint.authentication) {
+  if (authorizationEnabled || endpoint.authentication) {
     route.middleware('authMiddleware');
   }
   const inputs = endpoint.inputs;
@@ -81,6 +83,14 @@ export function createCustomEndpointRoute(
     route.cacheControl(
       endpoint.authentication ? 'private, max-age=10' : 'public, max-age=10',
     );
+  }
+  if (authorizationEnabled) {
+    inputs.push({
+      name: 'scope',
+      type: TYPE.String,
+      optional: true,
+      location: LocationEnum.QUERY,
+    });
   }
   if (endpoint.paginated) {
     inputs.push({

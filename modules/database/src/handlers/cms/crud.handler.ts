@@ -9,8 +9,13 @@ import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
 import { Doc } from '../../interfaces';
-import { findSchema, getUpdatedDocument, getUpdatedDocuments } from './utils';
-import { constructSortObj } from '../utils';
+import { findSchema, getUpdatedDocument } from './utils';
+import {
+  collectionPermissionCheck,
+  constructSortObj,
+  documentPermissionAddition,
+  documentPermissionCheck,
+} from '../utils';
 
 export class CmsHandlers {
   constructor(
@@ -19,10 +24,9 @@ export class CmsHandlers {
   ) {}
 
   async getDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { skip, limit, sort, populate } = call.request.params;
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
+    const { skip, limit, sort, populate, scope } = call.request.params;
+    const model = findSchema(call, this.database);
+
     let skipNumber = 0,
       limitNumber = 25;
     if (!isNil(skip)) {
@@ -36,29 +40,55 @@ export class CmsHandlers {
     if (sort && sort.length > 0) {
       parsedSort = constructSortObj(sort);
     }
-
-    const documentsPromise = this.database
-      .getSchemaModel(schemaName)
-      .model.findMany({}, skipNumber, limitNumber, undefined, parsedSort, populate);
-    const countPromise = this.database
-      .getSchemaModel(schemaName)
-      .model.countDocuments({});
+    let validIds = (
+      await collectionPermissionCheck(
+        this.grpcSdk,
+        'read',
+        call.request.context.user._id,
+        model,
+        scope,
+        skip,
+        limit,
+      )
+    )?.resources;
+    let query = {};
+    if (validIds && validIds.length === 0) {
+      return { documents: [], count: 0 };
+    } else if (validIds && validIds.length > 0) {
+      query = {
+        _id: { $in: validIds },
+      };
+    }
+    const documentsPromise = model.findMany(
+      query,
+      skipNumber,
+      limitNumber,
+      undefined,
+      parsedSort,
+      populate,
+    );
+    const countPromise = model.countDocuments({});
     const [documents, count] = await Promise.all([documentsPromise, countPromise]);
 
     return { documents, count };
   }
 
   async getDocumentById(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
-    const document: Doc | undefined = await this.database
-      .getSchemaModel(schemaName)
-      .model?.findOne(
-        { _id: call.request.params.id },
-        undefined,
-        call.request.params.populate,
-      );
+    const { scope, id, populate } = call.request.params;
+    const model = findSchema(call, this.database);
+    await documentPermissionCheck(
+      this.grpcSdk,
+      'read',
+      call.request.context.user._id,
+      model,
+      id,
+      scope,
+    );
+    const document: Doc | undefined = await model.findOne(
+      { _id: id },
+      undefined,
+      populate,
+    );
     if (!document) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }
@@ -66,91 +96,103 @@ export class CmsHandlers {
   }
 
   async createDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
-
-    return this.database.getSchemaModel(schemaName).model!.create(call.request.params);
+    const { scope } = call.request.queryParams;
+    const model = findSchema(call, this.database);
+    const document = await model.create(call.request.bodyParams);
+    await documentPermissionAddition(
+      this.grpcSdk,
+      call.request.context.user?._id,
+      model,
+      document._id,
+      scope,
+    );
+    return document;
   }
 
   async createManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const inputDocuments = call.request.params.docs;
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
+    const model = findSchema(call, this.database);
+    const newDocuments = await model.createMany(inputDocuments).catch((e: Error) => {
+      throw new GrpcError(status.INTERNAL, e.message);
     });
-    const newDocuments = await this.database
-      .getSchemaModel(schemaName)
-      .model?.createMany(inputDocuments)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-
+    if (newDocuments && newDocuments.length !== 0) {
+      for (const doc of newDocuments) {
+        await documentPermissionAddition(
+          this.grpcSdk,
+          call.request.context.user?._id,
+          model,
+          doc._id,
+          call.request.queryParams?.scope,
+        );
+      }
+    }
     return { docs: newDocuments };
   }
 
   async updateDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
+    const { scope } = call.request.queryParams;
+    const { id } = call.request.urlParams;
+    const model = findSchema(call, this.database);
+    await documentPermissionCheck(
+      this.grpcSdk,
+      'edit',
+      call.request.context?.user?._id,
+      model,
+      id,
+      scope,
+    );
+    return getUpdatedDocument(
+      model,
+      id,
+      call.request.bodyParams,
+      call.request.queryParams?.populate,
+    ).catch((e: Error) => {
       throw e;
     });
-    return getUpdatedDocument(schemaName, call.request.params, this.database).catch(
-      (e: Error) => {
-        throw e;
-      },
-    );
-  }
-
-  async patchDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
-    return getUpdatedDocument(schemaName, call.request.params, this.database).catch(
-      (e: Error) => {
-        throw e;
-      },
-    );
   }
 
   async updateManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const updatedDocuments = await this.findAndUpdateDocuments(call).catch((e: Error) => {
-      throw e;
-    });
-    return { docs: updatedDocuments };
-  }
+    const { scope } = call.request.queryParams;
 
-  async patchManyDocuments(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const updatedDocuments = await this.findAndUpdateDocuments(call).catch((e: Error) => {
-      throw e;
-    });
+    const model = findSchema(call, this.database);
+    const updatedDocuments: Doc[] = [];
+    for (const doc of call.request.params.docs) {
+      await documentPermissionCheck(
+        this.grpcSdk,
+        'edit',
+        call.request.context?.user?._id,
+        model,
+        doc._id,
+        scope,
+      );
+    }
+    for (const doc of call.request.params.docs) {
+      const updatedDocument = await model
+        .findByIdAndUpdate(doc._id, doc)
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+      updatedDocuments.push(updatedDocument);
+    }
     return { docs: updatedDocuments };
   }
 
   async deleteDocument(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
+    const { scope } = call.request.queryParams;
+    const { id } = call.request.urlParams;
+    const model = findSchema(call, this.database);
+    await documentPermissionCheck(
+      this.grpcSdk,
+      'delete',
+      call.request.context?.user?._id,
+      model,
+      id,
+      scope,
+    );
+    await model.deleteOne({ _id: id }).catch((e: Error) => {
+      throw new GrpcError(status.INTERNAL, e.message);
     });
-    await this.database
-      .getSchemaModel(schemaName)
-      .model?.deleteOne({ _id: call.request.params.id })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
 
     return 'Ok';
-  }
-
-  private async findAndUpdateDocuments(call: ParsedRouterRequest) {
-    const schemaName = await findSchema(call, this.database).catch((e: Error) => {
-      throw e;
-    });
-
-    const updatedDocuments = await getUpdatedDocuments(
-      schemaName,
-      call.request.params,
-      this.database,
-    ).catch((e: Error) => {
-      throw e;
-    });
-
-    return { docs: updatedDocuments };
   }
 }
