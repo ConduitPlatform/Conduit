@@ -149,8 +149,7 @@ export class UserAdmin {
     if (!user.active) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'User is already blocked');
     }
-    user.active = false;
-    user = await User.getInstance().findByIdAndUpdate(user._id, user);
+    user = await User.getInstance().findByIdAndUpdate(user._id, { active: false });
     this.grpcSdk.bus?.publish('authentication:block:user', JSON.stringify(user));
     return 'User was blocked';
   }
@@ -165,8 +164,7 @@ export class UserAdmin {
     if (user.active) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'user is not blocked');
     }
-    user.active = true;
-    user = await User.getInstance().findByIdAndUpdate(user._id, user);
+    user = await User.getInstance().findByIdAndUpdate(user._id, { active: true });
     this.grpcSdk.bus?.publish('authentication:unblock:user', JSON.stringify(user));
     return 'User was unblocked';
   }
