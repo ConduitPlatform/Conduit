@@ -16,13 +16,13 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { parseQuery } from './parser';
 import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash';
+import { parseQuery } from './parser';
 
 const EJSON = require('mongodb-extended-json');
 
-export class MongooseSchema implements SchemaAdapter<Model<any>> {
+export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
   fieldHash: string;
 
@@ -32,6 +32,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     readonly originalSchema: any,
     private readonly adapter: MongooseAdapter,
   ) {
+    super();
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
@@ -41,40 +42,121 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  async create(query: SingleDocQuery) {
+  parseStringToQuery(
+    query: Query | SingleDocQuery | MultiDocQuery,
+  ): ParsedQuery | ParsedQuery[] {
+    return typeof query === 'string' ? EJSON.parse(query) : query;
+  }
+
+  async create(
+    query: SingleDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+    },
+  ) {
     const parsedQuery = {
-      ...(typeof query === 'string' ? EJSON.parse(query) : query),
+      ...this.parseStringToQuery(query),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     return this.model.create(parsedQuery).then(r => r.toObject());
   }
 
-  async createMany(query: MultiDocQuery) {
-    const docs = typeof query === 'string' ? EJSON.parse(query) : query;
+  async createMany(
+    query: MultiDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+    },
+  ) {
+    const docs = this.parseStringToQuery(query);
     return this.model.insertMany(docs).then(r => r);
   }
 
-  async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
-    parsedQuery['updatedAt'] = new Date();
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+  async findByIdAndUpdate(
+    id: string,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    return this.updateOne({ _id: id }, query, options);
+  }
+
+  async findByIdAndReplace(
+    id: string,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    return this.replaceOne({ _id: id }, query, options);
+  }
+
+  async replaceOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    let parsedFilter: ParsedQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true });
-    if (populate !== undefined && populate !== null) {
-      finalQuery = this.populate(finalQuery, populate);
+    parsedQuery['updatedAt'] = new Date();
+    let finalQuery = this.model.findOneAndReplace(parsedFilter, parsedQuery, {
+      new: true,
+    });
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
     }
     return finalQuery.lean().exec();
   }
 
-  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
-    const parsedFilter = parseQuery(
-      typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
-    );
-    let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
+  async updateOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    let parsedFilter: ParsedQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
+    }
+    parsedQuery['updatedAt'] = new Date();
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
+      new: true,
+    });
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
+    }
+    return finalQuery.lean().exec();
+  }
+
+  async updateMany(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedQuery = this.parseStringToQuery(query);
     if (!parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = {
         $set: parsedQuery,
@@ -92,69 +174,89 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
       .exec()
       .then(() => {
         let finalQuery = this.model.find({ _id: { $in: affectedIds } });
-        if (populate !== undefined && populate !== null) {
-          finalQuery = this.populate(finalQuery, populate);
+        if (options?.populate !== undefined && options?.populate !== null) {
+          finalQuery = this.populate(finalQuery, options?.populate);
         }
         return finalQuery.lean().exec();
       });
   }
 
-  deleteOne(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+  deleteOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.deleteOne(parsedQuery).exec();
   }
 
-  deleteMany(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+  deleteMany(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.deleteMany(parsedQuery).exec();
   }
 
   findMany(
     query: Query,
-    skip?: number,
-    limit?: number,
-    select?: string,
-    sort?: { [key: string]: number },
-    populate?: string[],
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: any;
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
   ) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
-    let finalQuery = this.model.find(parsedQuery, select);
-    if (!isNil(skip)) {
-      finalQuery = finalQuery.skip(skip!);
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let finalQuery = this.model.find(parsedQuery, options?.select);
+    if (!isNil(options?.skip)) {
+      finalQuery = finalQuery.skip(options?.skip!);
     }
-    if (!isNil(limit)) {
-      finalQuery = finalQuery.limit(limit!);
+    if (!isNil(options?.limit)) {
+      finalQuery = finalQuery.limit(options?.limit!);
     }
-    if (!isNil(populate)) {
-      finalQuery = this.populate(finalQuery, populate);
+    if (!isNil(options?.populate)) {
+      finalQuery = this.populate(finalQuery, options?.populate ?? []);
     }
-    if (!isNil(sort)) {
-      finalQuery = finalQuery.sort(this.parseSort(sort));
+    if (!isNil(options?.sort)) {
+      finalQuery = finalQuery.sort(this.parseSort(options?.sort));
     }
     return finalQuery.lean().exec();
   }
 
-  findOne(query: Query, select?: string, populate?: string[]) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
-    let finalQuery = this.model.findOne(parsedQuery, select);
-    if (populate !== undefined && populate !== null) {
-      finalQuery = this.populate(finalQuery, populate);
+  findOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+      select?: string;
+      populate?: string[];
+    },
+  ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let finalQuery = this.model.findOne(parsedQuery, options?.select);
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
     }
     return finalQuery.lean().exec();
   }
 
-  countDocuments(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+  countDocuments(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 

@@ -65,6 +65,14 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
   }
 
+  createView(viewName: string, query: any): Promise<void> {
+    return Promise.resolve(undefined);
+  }
+
+  deleteView(viewName: string, query: any): Promise<void> {
+    return Promise.resolve(undefined);
+  }
+
   async introspectDatabase(): Promise<ConduitSchema[]> {
     const introspectedSchemas: ConduitSchema[] = [];
     const db = this.mongoose.connection.db;

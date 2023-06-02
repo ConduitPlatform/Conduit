@@ -42,6 +42,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     this.connectionUri = connectionUri;
   }
 
+  createView(viewName: string, query: any): Promise<void> {
+    return Promise.resolve(undefined);
+  }
+  deleteView(viewName: string, query: any): Promise<void> {
+    return Promise.resolve(undefined);
+  }
+
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},

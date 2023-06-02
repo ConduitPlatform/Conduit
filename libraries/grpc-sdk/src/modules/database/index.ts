@@ -186,6 +186,26 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
+  findByIdAndReplace<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    populate?: string | string[],
+  ): Promise<T | any> {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.findByIdAndReplace({
+      schemaName,
+      id,
+      query: this.processQuery(document),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
   updateMany<T>(
     schemaName: string,
     filterQuery: Query<T>,
@@ -197,6 +217,46 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       populateArray = [populate];
     }
     return this.client!.updateMany({
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  updateOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+  ) {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.updateOne({
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  replaceOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+  ) {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.replaceOne({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
