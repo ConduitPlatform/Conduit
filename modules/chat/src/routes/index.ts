@@ -158,9 +158,10 @@ export class ChatRoutes {
       });
       return ret!;
     } else {
-      room.participants = Array.from(new Set([...room.participants, ...users]));
       await ChatRoom.getInstance()
-        .findByIdAndUpdate(room._id, room)
+        .findByIdAndUpdate(room._id, {
+          participants: Array.from(new Set([...room.participants, ...users])),
+        })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });

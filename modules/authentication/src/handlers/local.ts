@@ -372,9 +372,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         "Password can't be the same as the old one",
       );
 
-    user.hashedPassword = await AuthUtils.hashPassword(newPassword);
+    const hashedPassword = await AuthUtils.hashPassword(newPassword);
 
-    await User.getInstance().findByIdAndUpdate(user._id, user);
+    await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
     await Token.getInstance().deleteOne(passwordResetTokenDoc);
 
     await TokenProvider.getInstance().deleteUserTokens({
@@ -503,10 +503,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User = verificationTokenDoc.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
-    user.isVerified = true;
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
-      user,
+      { isVerified: true },
     );
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
     await this.grpcSdk.state!.setKey(
