@@ -59,14 +59,12 @@ export class CmsHandlers {
         _id: { $in: validIds },
       };
     }
-    const documentsPromise = model.findMany(
-      query,
-      skipNumber,
-      limitNumber,
-      undefined,
-      parsedSort,
+    const documentsPromise = model.findMany(query, {
+      skip: skipNumber,
+      limit: limitNumber,
+      sort: parsedSort,
       populate,
-    );
+    });
     const countPromise = model.countDocuments({});
     const [documents, count] = await Promise.all([documentsPromise, countPromise]);
 
@@ -86,8 +84,9 @@ export class CmsHandlers {
     );
     const document: Doc | undefined = await model.findOne(
       { _id: id },
-      undefined,
-      populate,
+      {
+        populate,
+      },
     );
     if (!document) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');

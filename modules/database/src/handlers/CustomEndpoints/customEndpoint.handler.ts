@@ -127,14 +127,12 @@ export class CustomEndpointHandler {
       if (endpoint.paginated) {
         const documentsPromise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
-          .model.findMany(
-            searchQuery,
-            params['skip'],
-            params['limit'],
-            undefined,
+          .model.findMany(searchQuery, {
+            skip: params['skip'],
+            limit: params['limit'],
             sort,
-            params['populate'],
-          );
+            populate: params['populate'],
+          });
         const countPromise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
           .model.countDocuments(searchQuery);
@@ -142,14 +140,10 @@ export class CustomEndpointHandler {
       } else {
         promise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
-          .model.findMany(
-            searchQuery,
-            undefined,
-            undefined,
-            undefined,
+          .model.findMany(searchQuery, {
             sort,
-            params['populate'],
-          );
+            populate: params['populate'],
+          });
       }
     } else if (endpoint.operation === OperationsEnum.POST) {
       promise = this.database

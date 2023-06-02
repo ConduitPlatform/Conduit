@@ -139,6 +139,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
+  abstract createView(viewName: string, query: any): Promise<void>;
+
+  abstract deleteView(viewName: string, query: any): Promise<void>;
+
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 
   abstract execRawQuery(
@@ -184,10 +188,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
       { name: storedSchema.name },
-      undefined,
-      1,
-      undefined,
-      { version: -1 },
+      { skip: 1, sort: { version: -1 } },
     );
     const lastVersion =
       lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;

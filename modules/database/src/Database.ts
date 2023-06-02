@@ -61,6 +61,9 @@ export default class DatabaseModule extends ManagedModule<void> {
       create: this.create.bind(this),
       createMany: this.createMany.bind(this),
       findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
+      findByIdAndReplace: this.findByIdAndReplace.bind(this),
+      replaceOne: this.replaceOne.bind(this),
+      updateOne: this.updateOne.bind(this),
       updateMany: this.updateMany.bind(this),
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
@@ -272,11 +275,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const doc = await schemaAdapter.model.findOne(
-        call.request.query,
-        call.request.select,
-        call.request.populate,
-      );
+      const doc = await schemaAdapter.model.findOne(call.request.query, {
+        select: call.request.select,
+        populate: call.request.populate,
+      });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
       callback({
@@ -301,14 +303,13 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const docs = await schemaAdapter.model.findMany(
-        call.request.query,
+      const docs = await schemaAdapter.model.findMany(call.request.query, {
         skip,
         limit,
         select,
-        sort as { [key: string]: -1 | 1 } | undefined,
+        sort,
         populate,
-      );
+      });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
       callback({
@@ -391,11 +392,110 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.populate,
+        { populate: call.request.populate },
       );
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async findByIdAndReplace(
+    call: GrpcRequest<UpdateRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.findByIdAndReplace(
+        call.request.id,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async replaceOne(
+    call: GrpcRequest<UpdateManyRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.replaceOne(
+        call.request.filterQuery,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async updateOne(
+    call: GrpcRequest<UpdateManyRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.updateOne(
+        call.request.filterQuery,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -424,7 +524,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.populate,
+        { populate: call.request.populate },
       );
       const resultString = JSON.stringify(result);
 

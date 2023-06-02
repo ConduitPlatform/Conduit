@@ -23,7 +23,7 @@ export async function getUpdatedDocument(
     throw new GrpcError(status.INTERNAL, e.message);
   });
   updatedDocument = await model
-    .findOne({ _id: updatedDocument._id }, undefined, populate)
+    .findOne({ _id: updatedDocument._id }, { populate })
     .catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });

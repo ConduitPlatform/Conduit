@@ -4,7 +4,7 @@ export * from './CustomEndpoint';
 export * from './CustomEndpointsQuery';
 export * from './DeclaredSchema';
 export * from './DeclaredSchemaExtension';
-export * from './SchemaAdapter';
+export * from '../adapters/SchemaAdapter';
 export * from './TypeHacks';
 export * from './CmsOptions';
 export * from './ConduitOptions';

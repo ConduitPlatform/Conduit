@@ -31,10 +31,13 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
         { 'modelOptions.conduit.cms.enabled': true },
-        undefined,
-        undefined,
-        'name parentSchema fields extensions modelOptions ownerModule collectionName',
-        { updatedAt: 1 },
+        {
+          select:
+            'name parentSchema fields extensions modelOptions ownerModule collectionName',
+          sort: {
+            updatedAt: 1,
+          },
+        },
       )
       .then(r => {
         return { schemas: r };
@@ -137,7 +140,7 @@ export class SchemaAdmin {
     }
     const schemasPromise = this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const documentsCountPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
@@ -157,13 +160,12 @@ export class SchemaAdmin {
       parsedSort = parseSortParam(sort);
     }
     const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
-    const schemasExtensionsPromise = schemaAdapter.model.findMany(
-      query,
+    const schemasExtensionsPromise = schemaAdapter.model.findMany(query, {
       skip,
       limit,
-      'name extensions',
-      parsedSort,
-    );
+      select: 'name extensions',
+      sort: parsedSort,
+    });
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
     const [schemasExtensions, count] = await Promise.all([
@@ -415,7 +417,7 @@ export class SchemaAdmin {
     }
     const schemas = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({}, undefined, undefined, 'ownerModule', parsedSort);
+      .model.findMany({}, { select: 'ownerModule', sort: parsedSort });
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
@@ -493,7 +495,7 @@ export class SchemaAdmin {
     }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const schemasCountPromise = this.database
       .getSchemaModel('_PendingSchemas')
       .model.countDocuments(query);
