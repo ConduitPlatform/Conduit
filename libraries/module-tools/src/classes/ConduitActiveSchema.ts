@@ -63,6 +63,20 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     return this.dbInstance.findByIdAndUpdate<T>(this.name, id, document, populate);
   }
 
+  findByIdAndReplace(
+    id: string,
+    document: Query<T>,
+    populate?: string | string[],
+  ): Promise<T | null> {
+    return this.dbInstance.findByIdAndReplace<T>(this.name, id, document, populate);
+  }
+
+  replaceOne(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
+    return this.dbInstance.replaceOne(this.name, filterQuery, query, populate);
+  }
+  updateOne(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
+    return this.dbInstance.updateOne(this.name, filterQuery, query, populate);
+  }
   updateMany(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
     return this.dbInstance.updateMany(this.name, filterQuery, query, populate);
   }
