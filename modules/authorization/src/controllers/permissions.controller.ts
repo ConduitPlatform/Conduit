@@ -119,18 +119,12 @@ export class PermissionsController {
 
   async createAccessList(subject: string, action: string, objectType: string) {
     const computedTuple = `${subject}#${action}@${objectType}`;
-    const allowedIds = [];
-    const permission = await Permission.getInstance().findMany({
-      computedTuple: { $like: `${computedTuple}%` },
-    });
-    for (const perm of permission) {
-      allowedIds.push(perm.resource.split(':')[1]);
-    }
     await this.grpcSdk.database?.createView(
       objectType,
       `${objectType}_${subject}_${action}`,
       {
         mongoQuery: [
+          // permissions lookup won't work this way
           {
             $lookup: {
               from: 'cnd_permissions',
@@ -140,7 +134,7 @@ export class PermissionsController {
                     $expr: {
                       $regexMatch: {
                         input: '$computedTuple',
-                        regex: 'User:646cb8334ed1c68ca5c5a476#read@Team.*',
+                        regex: `${subject}#${action}@${objectType}.*`,
                         options: 'i',
                       },
                     },
@@ -154,7 +148,7 @@ export class PermissionsController {
             $lookup: {
               from: 'cnd_actorindexes',
               let: {
-                subject: 'User:646cb8334ed1c68ca5c5a476',
+                subject: subject,
               },
               pipeline: [
                 {
@@ -177,7 +171,7 @@ export class PermissionsController {
                     $expr: {
                       $regexMatch: {
                         input: '$subject',
-                        regex: 'Team:.*#read',
+                        regex: `${objectType}:.*#${action}`,
                         options: 'i',
                       },
                     },
