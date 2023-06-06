@@ -42,11 +42,33 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     this.connectionUri = connectionUri;
   }
 
-  createView(viewName: string, query: any): Promise<void> {
-    return Promise.resolve(undefined);
+  async createView(modelName: string, viewName: string, query: any): Promise<void> {
+    if (!this.models[modelName]) {
+      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+    }
+    const model = this.models[modelName];
+    const viewModel = new SequelizeSchema(
+      this.grpcSdk,
+      this.sequelize,
+      model.schema,
+      model.originalSchema,
+      this,
+      model.extractedRelations,
+      model.objectPaths,
+      true,
+    );
+    // await viewModel.model.createCollection({
+    //   viewOn: model.originalSchema.collectionName,
+    //   pipeline: query,
+    // });
+    // this.views[viewName] = viewModel;
   }
-  deleteView(viewName: string, query: any): Promise<void> {
-    return Promise.resolve(undefined);
+
+  async deleteView(viewName: string, query: any): Promise<void> {
+    // if (this.views[viewName]) {
+    //   await this.views[viewName].model.collection.drop();
+    // }
+    // delete this.views[viewName];
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -239,6 +261,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.models,
     );
     this.models[schema.name] = new SequelizeSchema(
+      this.grpcSdk,
       this.sequelize,
       newSchema,
       schema,

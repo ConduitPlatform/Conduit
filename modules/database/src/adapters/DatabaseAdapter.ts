@@ -17,6 +17,7 @@ import * as systemModels from '../models';
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
   models: { [name: string]: T } = {};
+  views: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
@@ -139,7 +140,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
-  abstract createView(viewName: string, query: any): Promise<void>;
+  abstract createView(modelName: string, viewName: string, query: any): Promise<void>;
 
   abstract deleteView(viewName: string, query: any): Promise<void>;
 

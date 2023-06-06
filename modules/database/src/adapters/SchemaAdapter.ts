@@ -1,6 +1,8 @@
-import { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
+import { DatabaseAdapter } from './DatabaseAdapter';
+import { isNil } from 'lodash';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -23,6 +25,152 @@ export abstract class SchemaAdapter<T> {
    * A hash of the schema's compiled fields object
    */
   fieldHash: string;
+
+  protected constructor(
+    readonly grpcSdk: ConduitGrpcSdk,
+    readonly adapter: DatabaseAdapter<any>,
+    readonly isView: boolean = false,
+  ) {}
+
+  transformViewName(...names: string[]): string {
+    return names.join('_').toLowerCase();
+  }
+
+  async permissionCheck(
+    operation: string,
+    userId?: string,
+    scope?: string,
+  ): Promise<SchemaAdapter<T> | undefined> {
+    const model = this.originalSchema.name;
+    if (this.isView) {
+      return undefined;
+    }
+    if (!userId && !scope) {
+      return undefined;
+    }
+    const isAvailable = this.grpcSdk.isAvailable('authorization');
+    if (!isAvailable) {
+      throw new Error('Authorization service is not available');
+    }
+    if (scope) {
+      let allowed = await this.grpcSdk.authorization?.can({
+        subject: `User:${userId}`,
+        actions: [operation],
+        resource: scope,
+      });
+      if (!allowed?.allow) {
+        throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+      }
+      const view = this.adapter.views[this.transformViewName(operation, scope, model)];
+      if (!view) {
+        throw new Error(
+          `View ${this.transformViewName(operation, scope, model)} does not exist`,
+        );
+      }
+      return view;
+    } else {
+      const view = this.adapter.views[this.transformViewName(operation, userId!, model)];
+      if (!view) {
+        throw new Error(
+          `View ${this.transformViewName(operation, userId!, model)} does not exist`,
+        );
+      }
+      return view;
+    }
+  }
+
+  async createPermissionCheck(userId?: string, scope?: string): Promise<void> {
+    if (this.isView) {
+      throw new Error('Cannot create on view');
+    }
+    if (!userId && !scope) return;
+    const isAvailable = this.grpcSdk.isAvailable('authorization');
+    if (!isAvailable) {
+      throw new Error('Authorization service is not available');
+    }
+    if (scope) {
+      let allowed = await this.grpcSdk.authorization?.can({
+        subject: `User:${userId}`,
+        actions: ['edit'],
+        resource: scope,
+      });
+      if (!allowed?.allow) {
+        throw new Error(`User:${userId} is not allowed to edit ${scope}`);
+      }
+    }
+  }
+
+  async guaranteeView(userId?: string, scope?: string) {}
+
+  async getAuthorizedQuery(
+    operation: string,
+    parsedQuery: Indexable,
+    many: boolean = false,
+    userId?: string,
+    scope?: string,
+    skip?: number,
+    limit?: number,
+  ) {
+    if (!isNil(userId) || !isNil(scope)) {
+      const view = await this.permissionCheck(operation, userId, scope);
+      if (!view) return parsedQuery;
+      if (many) {
+        const docs = await view.findMany(parsedQuery, {
+          select: '_id',
+          skip,
+          limit,
+          userId: undefined,
+          scope: undefined,
+        });
+        return { _id: { $in: docs.map((doc: any) => doc._id) } };
+      } else {
+        const doc = await view.findOne(parsedQuery, {
+          userId: undefined,
+          scope: undefined,
+        });
+        return { _id: doc._id };
+      }
+    }
+    return parsedQuery;
+  }
+
+  async addPermissionToData(
+    data: Indexable | Indexable[],
+    options?: { userId?: string; scope?: string },
+  ) {
+    if (!options || (!options?.userId && options?.scope)) {
+      return;
+    }
+    if (Array.isArray(data)) {
+      for (const d of data) {
+        await this.addPermissionToData(d, options);
+      }
+    } else {
+      await this.grpcSdk.authorization?.createRelation({
+        subject: options.scope ?? `User:${options.userId}`,
+        relation: 'owner',
+        resource: `${this.originalSchema.name}:${data._id}}`,
+      });
+    }
+  }
+
+  async canUpdate(assetId: string, userId?: string, scope?: string) {
+    if (this.isView) {
+      throw new Error('Cannot update a view');
+    }
+    if (!userId && !scope) {
+      return true;
+    }
+    const allowed = await this.grpcSdk.authorization?.can({
+      subject: scope ?? `User:${userId}`,
+      actions: ['edit'],
+      resource: `${this.originalSchema.name}:${assetId}`,
+    });
+    if (!allowed || !allowed.allow) {
+      throw new Error('Not allowed to update');
+    }
+    return true;
+  }
 
   abstract parseStringToQuery(
     query: Query | SingleDocQuery | MultiDocQuery,

@@ -4,7 +4,7 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { RawQuery, UntypedArray } from '../../interfaces';
+import { Indexable, RawQuery, UntypedArray } from '../../interfaces';
 import { Query } from '../../types/db';
 import { ConduitSchema } from '../../classes/ConduitSchema';
 import { ConduitSchemaExtension } from '../../interfaces/ConduitSchemaExtension';
@@ -304,6 +304,22 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.rawQuery({ schemaName, query: processed }).then(res => {
       return JSON.parse(res.result);
     });
+  }
+
+  createView(
+    schemaName: string,
+    viewName: string,
+    query: { mongoQuery?: Indexable; sqlQuery?: string },
+  ) {
+    const processed: any = query;
+    if (query.mongoQuery) {
+      processed.mongoQuery = JSON.stringify(processed.mongoQuery);
+    }
+    return this.client!.createView({ schemaName, viewName, query: processed });
+  }
+
+  deleteView(viewName: string) {
+    return this.client!.deleteView({ viewName });
   }
 
   columnExistence(schemaName: string, columns: string[]) {

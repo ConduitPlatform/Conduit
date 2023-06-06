@@ -16,7 +16,11 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  Indexable,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash';
 import { parseQuery } from './parser';
 
@@ -27,18 +31,28 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   fieldHash: string;
 
   constructor(
+    grpcSdk: ConduitGrpcSdk,
     mongoose: Mongoose,
-    schema: ConduitSchema,
+    readonly schema: ConduitSchema,
     readonly originalSchema: any,
-    private readonly adapter: MongooseAdapter,
+    readonly adapter: MongooseAdapter,
+    isView: boolean = false,
   ) {
-    super();
+    super(grpcSdk, adapter, isView);
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.fields as Indexable, schema.modelOptions);
+    const mongooseSchema = new Schema(schema.fields as Indexable, {
+      ...schema.modelOptions,
+      ...(isView
+        ? {
+            autoCreate: false,
+            autoIndex: false,
+          }
+        : {}),
+    });
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
@@ -55,12 +69,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       userId?: string;
     },
   ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery = {
       ...this.parseStringToQuery(query),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    return this.model.create(parsedQuery).then(r => r.toObject());
+
+    const obj = await this.model.create(parsedQuery).then(r => r.toObject());
+    await this.addPermissionToData(obj, options);
+    return obj;
   }
 
   async createMany(
@@ -70,8 +88,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       userId?: string;
     },
   ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
     const docs = this.parseStringToQuery(query);
-    return this.model.insertMany(docs).then(r => r);
+    const addedDocs = await this.model.insertMany(docs);
+    await this.addPermissionToData(addedDocs, options);
+    return addedDocs;
   }
 
   async findByIdAndUpdate(
@@ -107,7 +128,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter: ParsedQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -131,7 +159,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter: ParsedQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -155,55 +190,59 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
-    let parsedQuery = this.parseStringToQuery(query);
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    let parsedQuery: Indexable = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
     }
-    const affectedIds = await this.model
-      .find(parsedFilter, '_id')
-      .lean()
-      .exec()
-      .then(r => {
-        r.map(r => r._id);
-      });
-    return this.model
-      .updateMany(parsedFilter, parsedQuery)
-      .exec()
-      .then(() => {
-        let finalQuery = this.model.find({ _id: { $in: affectedIds } });
-        if (options?.populate !== undefined && options?.populate !== null) {
-          finalQuery = this.populate(finalQuery, options?.populate);
-        }
-        return finalQuery.lean().exec();
-      });
+    parsedQuery['updatedAt'] = new Date();
+    return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 
-  deleteOne(
+  async deleteOne(
     query: Query,
     options?: {
       userId?: string;
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'delete',
+      parsedQuery,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     return this.model.deleteOne(parsedQuery).exec();
   }
 
-  deleteMany(
+  async deleteMany(
     query: Query,
     options?: {
       userId?: string;
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'delete',
+      parsedQuery,
+      true,
+      options?.userId,
+      options?.scope,
+    );
     return this.model.deleteMany(parsedQuery).exec();
   }
 
-  findMany(
+  async findMany(
     query: Query,
     options?: {
       skip?: number;
@@ -215,7 +254,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'read',
+      parsedQuery,
+      true,
+      options?.userId,
+      options?.scope,
+      options?.skip,
+      options?.limit,
+    );
     let finalQuery = this.model.find(parsedQuery, options?.select);
     if (!isNil(options?.skip)) {
       finalQuery = finalQuery.skip(options?.skip!);
@@ -232,7 +280,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return finalQuery.lean().exec();
   }
 
-  findOne(
+  async findOne(
     query: Query,
     options?: {
       userId?: string;
@@ -241,7 +289,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'read',
+      parsedQuery,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     let finalQuery = this.model.findOne(parsedQuery, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -249,13 +304,22 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return finalQuery.lean().exec();
   }
 
-  countDocuments(
+  async countDocuments(
     query: Query,
     options?: {
       userId?: string;
       scope?: string;
     },
   ) {
+    if (!isNil(options?.userId) || !isNil(options?.scope)) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view) {
+        return view.countDocuments(query, {
+          userId: undefined,
+          scope: undefined,
+        });
+      }
+    }
     const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.find(parsedQuery).countDocuments().exec();
   }

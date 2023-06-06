@@ -32,7 +32,7 @@ import {
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
-export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
+export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
@@ -42,6 +42,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   readonly objectDotPathMapping: { [key: string]: string } = {};
 
   constructor(
+    grpcSdk: ConduitGrpcSdk,
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitDatabaseSchema,
@@ -52,7 +53,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     readonly objectPaths: {
       [key: string]: { parentKey: string; childKey: string };
     },
+    readonly isView: boolean = false,
   ) {
+    super(grpcSdk, adapter, isView);
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
       sequelize,
@@ -312,6 +315,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   }
 
   sync() {
+    if (this.isView) return Promise.resolve();
     const syncOptions = { alter: { drop: false } };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
     for (const relation in this.extractedRelations) {
@@ -527,13 +531,11 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   findByIdAndReplace(
     id: string,
     query: SingleDocQuery,
-    options:
-      | {
-          userId?: string;
-          scope?: string;
-          populate?: string[];
-        }
-      | undefined,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
   ): Promise<any> {
     let completeDoc: ParsedQuery = { ...this.parseStringToQuery(query) };
     // remove operators since it is not supported for replace ops

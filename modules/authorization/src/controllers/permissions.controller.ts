@@ -116,4 +116,134 @@ export class PermissionsController {
     );
     return { resources: allowedIds.concat(index), count };
   }
+
+  async createAccessList(subject: string, action: string, objectType: string) {
+    const computedTuple = `${subject}#${action}@${objectType}`;
+    const allowedIds = [];
+    const permission = await Permission.getInstance().findMany({
+      computedTuple: { $like: `${computedTuple}%` },
+    });
+    for (const perm of permission) {
+      allowedIds.push(perm.resource.split(':')[1]);
+    }
+    await this.grpcSdk.database?.createView(
+      objectType,
+      `${objectType}_${subject}_${action}`,
+      {
+        mongoQuery: [
+          {
+            $lookup: {
+              from: 'cnd_permissions',
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $regexMatch: {
+                        input: '$computedTuple',
+                        regex: 'User:646cb8334ed1c68ca5c5a476#read@Team.*',
+                        options: 'i',
+                      },
+                    },
+                  },
+                },
+              ],
+              as: 'permissions',
+            },
+          },
+          {
+            $lookup: {
+              from: 'cnd_actorindexes',
+              let: {
+                subject: 'User:646cb8334ed1c68ca5c5a476',
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ['$subject', '$$subject'],
+                    },
+                  },
+                },
+              ],
+              as: 'actors',
+            },
+          },
+          {
+            $lookup: {
+              from: 'cnd_objectindexes',
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $regexMatch: {
+                        input: '$subject',
+                        regex: 'Team:.*#read',
+                        options: 'i',
+                      },
+                    },
+                  },
+                },
+              ],
+              as: 'objects',
+            },
+          },
+          {
+            $project: {
+              resource: '$$ROOT',
+              intersection: {
+                $setIntersection: ['$actors.entity', '$objects.entity'],
+              },
+            },
+          },
+          {
+            $match: {
+              intersection: { $ne: [] },
+            },
+          },
+          {
+            $replaceRoot: {
+              newRoot: '$resource',
+            },
+          },
+
+          {
+            $project: {
+              actors: 0,
+              objects: 0,
+            },
+          },
+        ],
+        sqlQuery: `SELECT 
+    ${objectType}.*
+FROM 
+    ${objectType}
+INNER JOIN (
+    SELECT 
+        *
+    FROM 
+        cnd_permissions
+    WHERE 
+        computedTuple LIKE '${computedTuple}%'
+) permissions ON 1=1
+INNER JOIN (
+    SELECT 
+        *
+    FROM 
+        cnd_actorindexes
+    WHERE 
+        subject = '${subject}'
+) actors ON 1=1
+INNER JOIN (
+    SELECT 
+        *
+    FROM 
+        cnd_objectindexes
+    WHERE 
+        subject LIKE '${objectType}:%#${action}'
+) objects ON actors.entity = objects.entity;`,
+      },
+    );
+
+    return;
+  }
 }

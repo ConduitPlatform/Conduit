@@ -65,12 +65,31 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
   }
 
-  createView(viewName: string, query: any): Promise<void> {
-    return Promise.resolve(undefined);
+  async createView(modelName: string, viewName: string, query: any): Promise<void> {
+    if (!this.models[modelName]) {
+      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+    }
+    const model = this.models[modelName];
+    const viewModel = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      model.schema,
+      model.originalSchema,
+      this,
+      true,
+    );
+    await viewModel.model.createCollection({
+      viewOn: model.originalSchema.collectionName,
+      pipeline: query,
+    });
+    this.views[viewName] = viewModel;
   }
 
-  deleteView(viewName: string, query: any): Promise<void> {
-    return Promise.resolve(undefined);
+  async deleteView(viewName: string, query: any): Promise<void> {
+    if (this.views[viewName]) {
+      await this.views[viewName].model.collection.drop();
+    }
+    delete this.views[viewName];
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
@@ -363,7 +382,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
-    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, schema, this);
+    this.models[schema.name] = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      newSchema,
+      schema,
+      this,
+    );
     if (saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
