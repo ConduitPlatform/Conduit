@@ -117,7 +117,7 @@ export async function collectionPermissionCheck(
   const authz = grpcSdk.authorization;
 
   if (scope) {
-    let permission = await authz?.can({
+    const permission = await authz?.can({
       subject: `User:${userId}`,
       actions: [operation],
       resource: scope,

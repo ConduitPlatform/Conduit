@@ -53,7 +53,7 @@ export abstract class SchemaAdapter<T> {
       throw new Error('Authorization service is not available');
     }
     if (scope) {
-      let allowed = await this.grpcSdk.authorization?.can({
+      const allowed = await this.grpcSdk.authorization?.can({
         subject: `User:${userId}`,
         actions: [operation],
         resource: scope,
@@ -85,7 +85,7 @@ export abstract class SchemaAdapter<T> {
       throw new Error('Authorization service is not available');
     }
     if (scope) {
-      let allowed = await this.grpcSdk.authorization?.can({
+      const allowed = await this.grpcSdk.authorization?.can({
         subject: `User:${userId}`,
         actions: ['edit'],
         resource: scope,
