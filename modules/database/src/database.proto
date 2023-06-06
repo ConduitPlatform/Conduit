@@ -103,8 +103,9 @@ message CreateViewRequest {
     string mongoQuery = 1;
     string sqlQuery = 2;
   };
-  string viewName = 1;
-  RawQuery query = 2;
+  string schemaName = 1;
+  string viewName = 2;
+  RawQuery query = 3;
 }
 
 message DeleteViewRequest {

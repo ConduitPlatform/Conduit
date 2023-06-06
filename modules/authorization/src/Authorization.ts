@@ -21,6 +21,7 @@ import {
   Resource,
   Resource_Permission,
   Resource_Relation,
+  ResourceAccessListRequest,
 } from './protoTypes/authorization';
 import {
   IndexController,
@@ -51,6 +52,7 @@ export default class Authorization extends ManagedModule<Config> {
       findRelation: this.findRelation.bind(this),
       getAllowedResources: this.getAllowedResources.bind(this),
       can: this.can.bind(this),
+      createResourceAccessList: this.createResourceAccessList.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -177,6 +179,19 @@ export default class Authorization extends ManagedModule<Config> {
       resourceType,
       skip,
       limit,
+    );
+    callback(null, { resources, count });
+  }
+
+  async createResourceAccessList(
+    call: GrpcRequest<ResourceAccessListRequest>,
+    callback: GrpcResponse<Empty>,
+  ) {
+    const { subject, action, resourceType } = call.request;
+    const { resources, count } = await this.permissionsController.createAccessList(
+      subject,
+      action,
+      resourceType,
     );
     callback(null, { resources, count });
   }

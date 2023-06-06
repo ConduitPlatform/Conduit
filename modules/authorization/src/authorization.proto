@@ -59,6 +59,11 @@ message AllowedResourcesResponse {
   repeated string resources = 1;
   int32 count = 2;
 }
+message ResourceAccessListRequest {
+  string subject = 1;
+  string action = 2;
+  string resourceType = 5;
+}
 
 message PermissionCheck {
   string subject = 1;
@@ -87,4 +92,5 @@ service Authorization {
   rpc FindRelation(FindRelationRequest) returns (FindRelationResponse);
   rpc Can(PermissionCheck) returns (Decision);
   rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);
+  rpc CreateResourceAccessList(ResourceAccessListRequest) returns (google.protobuf.Empty);
 }
