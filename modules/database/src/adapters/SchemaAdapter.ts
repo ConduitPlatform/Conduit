@@ -33,7 +33,7 @@ export abstract class SchemaAdapter<T> {
   ) {}
 
   transformViewName(...names: string[]): string {
-    return names.join('_').toLowerCase();
+    return names.join('_');
   }
 
   async permissionCheck(
@@ -63,17 +63,13 @@ export abstract class SchemaAdapter<T> {
       }
       const view = this.adapter.views[this.transformViewName(operation, scope, model)];
       if (!view) {
-        throw new Error(
-          `View ${this.transformViewName(operation, scope, model)} does not exist`,
-        );
+        await this.guaranteeView(operation, userId, scope);
       }
       return view;
     } else {
       const view = this.adapter.views[this.transformViewName(operation, userId!, model)];
       if (!view) {
-        throw new Error(
-          `View ${this.transformViewName(operation, userId!, model)} does not exist`,
-        );
+        await this.guaranteeView(operation, userId);
       }
       return view;
     }
@@ -100,7 +96,13 @@ export abstract class SchemaAdapter<T> {
     }
   }
 
-  async guaranteeView(userId?: string, scope?: string) {}
+  async guaranteeView(operation: string, userId?: string, scope?: string) {
+    await this.grpcSdk.authorization?.createResourceAccessList({
+      subject: scope ?? `User:${userId}`,
+      action: operation,
+      resourceType: this.originalSchema.name,
+    });
+  }
 
   async getAuthorizedQuery(
     operation: string,
