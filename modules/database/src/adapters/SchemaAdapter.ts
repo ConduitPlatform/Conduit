@@ -53,13 +53,16 @@ export abstract class SchemaAdapter<T> {
       throw new Error('Authorization service is not available');
     }
     if (scope) {
-      const allowed = await this.grpcSdk.authorization?.can({
-        subject: `User:${userId}`,
-        actions: [operation],
-        resource: scope,
-      });
-      if (!allowed?.allow) {
-        throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+      // check user permissions only if user is provided
+      if (userId) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${userId}`,
+          actions: [operation],
+          resource: scope,
+        });
+        if (!allowed?.allow) {
+          throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+        }
       }
       const view = this.adapter.views[this.transformViewName(operation, scope, model)];
       if (!view) {
@@ -85,13 +88,16 @@ export abstract class SchemaAdapter<T> {
       throw new Error('Authorization service is not available');
     }
     if (scope) {
-      const allowed = await this.grpcSdk.authorization?.can({
-        subject: `User:${userId}`,
-        actions: ['edit'],
-        resource: scope,
-      });
-      if (!allowed?.allow) {
-        throw new Error(`User:${userId} is not allowed to edit ${scope}`);
+      // check user permissions only if user is provided
+      if (userId) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${userId}`,
+          actions: ['edit'],
+          resource: scope,
+        });
+        if (!allowed?.allow) {
+          throw new Error(`User:${userId} is not allowed to edit ${scope}`);
+        }
       }
     }
   }
