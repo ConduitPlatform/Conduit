@@ -28,11 +28,16 @@
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",
+    "aws-sdk": "^2.1388.0",
+    "bluebird": "^3.7.2",
+    "clicksend": "^5.0.37",
     "convict": "^6.2.4",
     "lodash": "^4.17.21",
+    "messagebird": "^4.0.1",
     "twilio": "4.10.0"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.38",
     "@types/convict": "^6.1.1",
     "@types/lodash": "^4.14.192",
     "@types/node": "18.15.11",

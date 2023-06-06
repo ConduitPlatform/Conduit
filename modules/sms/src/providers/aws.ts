@@ -1,30 +1,40 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import AWS, { SNS, AWSError } from 'aws-sdk';
+import AWS, { SNS } from 'aws-sdk';
 
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, '0');
 }
 export class AwsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly region: string;
+  private grpcSdk: ConduitGrpcSdk;
   private client: SNS;
-  constructor(settings: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    region: string;
-  }) {
+  constructor(
+    settings: {
+      accessKeyId: string;
+      secretAccessKey: string;
+      region: string;
+    },
+    grpcSdk: ConduitGrpcSdk,
+  ) {
     ({
       accessKeyId: this.accessKeyId,
       secretAccessKey: this.secretAccessKey,
       region: this.region,
     } = settings);
-    this.client = new AWS.SNS({
-      accessKeyId: this.accessKeyId,
-      secretAccessKey: this.secretAccessKey,
+    this.grpcSdk = grpcSdk;
+    AWS.config.update({
       region: this.region,
+      credentials: {
+        accessKeyId: this.accessKeyId,
+        secretAccessKey: this.secretAccessKey,
+      },
     });
+    this.client = new AWS.SNS();
   }
 
   async sendSms(phoneNumber: string, message: string) {
@@ -44,17 +54,11 @@ export class AwsProvider implements ISmsProvider {
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    await this.client
-      .createSMSSandboxPhoneNumber({ PhoneNumber: phoneNumber })
-      .promise()
-      .catch((error: AWSError) => {
-        ConduitGrpcSdk.Logger.error(error);
-      });
     const otp = generateOTP();
     const result = await this.client
       .publish({
         PhoneNumber: phoneNumber,
-        Message: `Your OTP is: ${otp}`,
+        Message: `Your verification code is: ${otp}`,
       })
       .promise()
       .catch(error => {
@@ -63,21 +67,18 @@ export class AwsProvider implements ISmsProvider {
     if (!result) {
       return Promise.reject(Error('could not send verification code'));
     }
-    return phoneNumber;
+    await this.grpcSdk.state!.setKey(phoneNumber, otp, 60.0);
+    return Promise.resolve(phoneNumber);
   }
 
   async verify(phoneNumber: string, otp: string): Promise<boolean> {
-    const params = {
-      PhoneNumber: phoneNumber,
-      OneTimePassword: otp,
-    };
-    this.client.verifySMSSandboxPhoneNumber(params, function (error, data) {
-      if (error) {
-        ConduitGrpcSdk.Logger.error(error);
-      } else {
-        return Promise.resolve('OTP verification successful!');
-      }
-    });
-    return Promise.reject(Error('OTP verification failed!'));
+    const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumber);
+    if (otpCode == null) {
+      return Promise.reject(false);
+    }
+    if (otpCode === otp) {
+      return Promise.resolve(true);
+    }
+    return Promise.reject(false);
   }
 }
