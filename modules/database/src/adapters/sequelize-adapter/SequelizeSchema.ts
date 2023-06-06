@@ -221,7 +221,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       transaction?: Transaction;
     },
   ) {
-    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
@@ -261,7 +261,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       userId?: string;
     },
   ) {
-    let parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
+    const parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
@@ -469,7 +469,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     const parsingResult = parseQuery(
       this.originalSchema,
       this.parseStringToQuery(filterQuery),
@@ -537,7 +537,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    let completeDoc: ParsedQuery = { ...this.parseStringToQuery(query) };
+    const completeDoc: ParsedQuery = { ...this.parseStringToQuery(query) };
     // remove operators since it is not supported for replace ops
     for (const key of Object.keys(completeDoc)) {
       if (key.startsWith('$')) {
