@@ -16,14 +16,43 @@ export function findSchema(
 export async function getUpdatedDocument(
   model: Schema,
   id: string,
+  patch: boolean = false,
   data: Indexable,
-  populate?: string[],
+  options: {
+    populate?: string[];
+    userId?: string;
+    scope?: string;
+  },
 ) {
-  let updatedDocument: Doc = await model.findByIdAndUpdate(id, data).catch((e: Error) => {
-    throw new GrpcError(status.INTERNAL, e.message);
-  });
+  let updatedDocument: Doc;
+  if (!patch) {
+    updatedDocument = await model
+      .findByIdAndReplace(id, data, {
+        userId: options.userId,
+        scope: options.scope,
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  } else {
+    updatedDocument = await model
+      .findByIdAndUpdate(id, data, {
+        userId: options.userId,
+        scope: options.scope,
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  }
   updatedDocument = await model
-    .findOne({ _id: updatedDocument._id }, { populate })
+    .findOne(
+      { _id: updatedDocument._id },
+      {
+        populate: options.populate,
+        userId: options.userId,
+        scope: options.scope,
+      },
+    )
     .catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });

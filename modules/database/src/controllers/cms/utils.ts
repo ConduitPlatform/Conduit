@@ -215,7 +215,7 @@ export function getOps(
       .return(`patchMany${schemaName}`, {
         docs: [actualSchema.fields],
       })
-      .handler(handlers.updateManyDocuments.bind(handlers));
+      .handler(handlers.patchManyDocuments.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
     routesArray.push(route.build());
@@ -253,7 +253,7 @@ export function getOps(
         ) as unknown as ConduitModel,
       )
       .return(`patch${schemaName}`, actualSchema.fields)
-      .handler(handlers.updateDocument.bind(handlers));
+      .handler(handlers.patchDocument.bind(handlers));
     if (authenticatedUpdate) route.middleware('authMiddleware');
 
     routesArray.push(route.build());
