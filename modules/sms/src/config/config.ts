@@ -46,4 +46,20 @@ export default {
       default: '',
     },
   },
+  messageBird: {
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+  },
+  clickSend: {
+    username: {
+      format: 'String',
+      default: '',
+    },
+    clicksendApiKey: {
+      format: 'String',
+      default: '',
+    },
+  },
 };
