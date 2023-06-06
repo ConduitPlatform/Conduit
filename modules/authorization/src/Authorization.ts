@@ -188,12 +188,8 @@ export default class Authorization extends ManagedModule<Config> {
     callback: GrpcResponse<Empty>,
   ) {
     const { subject, action, resourceType } = call.request;
-    const { resources, count } = await this.permissionsController.createAccessList(
-      subject,
-      action,
-      resourceType,
-    );
-    callback(null, { resources, count });
+    await this.permissionsController.createAccessList(subject, action, resourceType);
+    callback(null);
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {
