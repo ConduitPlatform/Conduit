@@ -192,6 +192,15 @@ export class SchemaAdmin {
       authorization: call.request.params.conduitOptions?.authorization,
       timestamps: call.request.params.timestamps,
     });
+    if (
+      call.request.params.conduitOptions?.authorization?.enabled &&
+      !this.grpcSdk.isAvailable('authorization')
+    ) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Authorization service is not available',
+      );
+    }
     try {
       validateSchemaInput(name, fields, modelOptions);
     } catch (err: unknown) {
@@ -221,6 +230,15 @@ export class SchemaAdmin {
       permissions: call.request.params.conduitOptions?.permissions,
       existingModelOptions: requestedSchema.modelOptions,
     });
+    if (
+      call.request.params.conduitOptions?.authorization?.enabled &&
+      !this.grpcSdk.isAvailable('authorization')
+    ) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Authorization service is not available',
+      );
+    }
     try {
       validateSchemaInput(requestedSchema.name, fields, modelOptions);
     } catch (err: unknown) {
