@@ -64,15 +64,20 @@ export abstract class SchemaAdapter<T> {
           throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
         }
       }
-      const view = this.adapter.views[this.transformViewName(operation, scope, model)];
+      const view = this.adapter.views[this.transformViewName(model, scope, operation)];
       if (!view) {
         await this.guaranteeView(operation, userId, scope);
+        return this.adapter.views[this.transformViewName(model, scope, operation)];
       }
       return view;
     } else {
-      const view = this.adapter.views[this.transformViewName(operation, userId!, model)];
+      const view =
+        this.adapter.views[this.transformViewName(model, 'User:' + userId!, operation)];
       if (!view) {
         await this.guaranteeView(operation, userId);
+        return this.adapter.views[
+          this.transformViewName(model, 'User:' + userId!, operation)
+        ];
       }
       return view;
     }
@@ -157,7 +162,7 @@ export abstract class SchemaAdapter<T> {
       await this.grpcSdk.authorization?.createRelation({
         subject: options.scope ?? `User:${options.userId}`,
         relation: 'owner',
-        resource: `${this.originalSchema.name}:${data._id}}`,
+        resource: `${this.originalSchema.name}:${data._id}`,
       });
     }
   }

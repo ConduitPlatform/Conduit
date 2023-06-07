@@ -64,7 +64,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     // this.views[viewName] = viewModel;
   }
 
-  async deleteView(viewName: string, query: any): Promise<void> {
+  async deleteView(viewName: string): Promise<void> {
     // if (this.views[viewName]) {
     //   await this.views[viewName].model.collection.drop();
     // }

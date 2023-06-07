@@ -20,6 +20,7 @@ import {
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
 
+const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -69,23 +70,29 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
+    if (this.views[viewName]) {
+      return;
+    }
     const model = this.models[modelName];
+    const newSchema = JSON.parse(JSON.stringify(model.schema));
+    newSchema.name = viewName;
+    newSchema.collectionName = viewName;
     const viewModel = new MongooseSchema(
       this.grpcSdk,
       this.mongoose,
-      model.schema,
+      newSchema,
       model.originalSchema,
       this,
       true,
     );
     await viewModel.model.createCollection({
       viewOn: model.originalSchema.collectionName,
-      pipeline: query,
+      pipeline: EJSON.parse(query.mongoQuery),
     });
     this.views[viewName] = viewModel;
   }
 
-  async deleteView(viewName: string, query: any): Promise<void> {
+  async deleteView(viewName: string): Promise<void> {
     if (this.views[viewName]) {
       await this.views[viewName].model.collection.drop();
     }
