@@ -128,8 +128,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
-    await this._activeAdapter.registerAuthorizationDefinitions();
     this.grpcSdk.core.watch('');
+    await this._activeAdapter.registerAuthorizationDefinitions();
   }
 
   async initializeMetrics() {

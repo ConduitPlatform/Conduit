@@ -207,13 +207,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     });
     for (let model of models) {
       if (model.modelOptions.conduit?.authorization?.enabled) {
-        // const authzUp = this.grpcSdk.isAvailable('authorization');
         await this.grpcSdk.waitForExistence('authorization');
-        // if (!authzUp) {
-        //   ConduitGrpcSdk.Logger.warn(
-        //     `Authorization is not available, skipping authorization setup for ${model.name}`,
-        //   );
-        // } else {
         this.grpcSdk.authorization?.defineResource({
           name: model.name,
           relations: [
@@ -228,7 +222,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
           ],
         });
       }
-      // }
     }
   }
 
