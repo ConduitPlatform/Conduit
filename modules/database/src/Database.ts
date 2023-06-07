@@ -12,6 +12,8 @@ import * as models from './models';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
+  CreateViewRequest,
+  DeleteViewRequest,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
@@ -44,6 +46,7 @@ import { isNil } from 'lodash';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
 import { ManagedModule } from '@conduitplatform/module-tools';
+import { Empty } from './protoTypes/google/protobuf/empty';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -60,6 +63,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       findMany: this.findMany.bind(this),
       create: this.create.bind(this),
       createMany: this.createMany.bind(this),
+      createView: this.createView.bind(this),
+      deleteView: this.deleteView.bind(this),
       findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
       findByIdAndReplace: this.findByIdAndReplace.bind(this),
       replaceOne: this.replaceOne.bind(this),
@@ -123,7 +128,8 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
-    await this.grpcSdk.core.watch('');
+    await this._activeAdapter.registerAuthorizationDefinitions();
+    this.grpcSdk.core.watch('');
   }
 
   async initializeMetrics() {
@@ -187,6 +193,44 @@ export default class DatabaseModule extends ManagedModule<void> {
           schemaAdapter as ConduitDatabaseSchema,
         ),
       ); // @dirty-type-cast
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Given a schema name, returns the schema adapter assigned
+   * @param call
+   * @param callback
+   */
+  async createView(call: GrpcRequest<CreateViewRequest>, callback: GrpcResponse<Empty>) {
+    try {
+      await this._activeAdapter.createView(
+        call.request.schemaName,
+        call.request.viewName,
+        call.request.query,
+      );
+      callback(null); // @dirty-type-cast
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Given a schema name, returns the schema adapter assigned
+   * @param call
+   * @param callback
+   */
+  async deleteView(call: GrpcRequest<DeleteViewRequest>, callback: GrpcResponse<Empty>) {
+    try {
+      await this._activeAdapter.deleteView(call.request.viewName);
+      callback(null);
     } catch (err) {
       callback({
         code: status.INTERNAL,

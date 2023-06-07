@@ -165,15 +165,16 @@ export class PermissionsController {
           {
             $lookup: {
               from: 'cnd_objectindexes',
+              let: {
+                id_action: {
+                  $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
+                },
+              },
               pipeline: [
                 {
                   $match: {
                     $expr: {
-                      $regexMatch: {
-                        input: '$subject',
-                        regex: `${objectType}:.*#${action}`,
-                        options: 'i',
-                      },
+                      $eq: ['$subject', '$$id_action'],
                     },
                   },
                 },

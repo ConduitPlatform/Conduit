@@ -189,6 +189,7 @@ export class SchemaAdmin {
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
+      authorization: call.request.params.conduitOptions?.authorization,
       timestamps: call.request.params.timestamps,
     });
     try {
@@ -211,11 +212,12 @@ export class SchemaAdmin {
       call.request.params.conduitOptions?.authorization?.enabled
     ) {
       // wipe all data when enabling authz
-      await requestedSchema.delete({});
+      // await requestedSchema.delete({});
     }
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
+      authorization: call.request.params.conduitOptions?.authorization,
       permissions: call.request.params.conduitOptions?.permissions,
       existingModelOptions: requestedSchema.modelOptions,
     });

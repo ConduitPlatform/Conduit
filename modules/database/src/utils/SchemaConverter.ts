@@ -126,7 +126,8 @@ export namespace SchemaConverter {
       enabled:
         opts.authorization?.enabled ??
         existing?.authorization?.enabled ??
-        defaults.conduit!.authorization.enabled,
+        defaults.conduit!.authorization?.enabled ??
+        false,
     };
     modelOptions.conduit.permissions = {
       extendable:

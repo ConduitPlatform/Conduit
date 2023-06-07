@@ -733,8 +733,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     const config: Config = ConfigController.getInstance().config;
     if (config.teams.enabled && this.grpcSdk.isAvailable('authorization')) {
       if (this.initialized) return true;
-      await this.grpcSdk.authorization!.defineResource(UserAuthz);
-      await this.grpcSdk.authorization!.defineResource(TeamAuthz);
+
       if (config.teams.enableDefaultTeam) {
         const existingTeam = await Team.getInstance().findOne({ isDefault: true });
         if (!existingTeam) {

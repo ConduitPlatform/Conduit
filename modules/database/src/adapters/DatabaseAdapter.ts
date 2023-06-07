@@ -86,28 +86,6 @@ export abstract class DatabaseAdapter<T extends Schema> {
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
     const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
-    if (schema.modelOptions.conduit?.authorization?.enabled) {
-      const authzUp = this.grpcSdk.isAvailable('authorization');
-      if (!authzUp) {
-        ConduitGrpcSdk.Logger.warn(
-          `Authorization is not available, skipping authorization setup for ${schema.name}`,
-        );
-      } else {
-        this.grpcSdk.authorization?.defineResource({
-          name: schema.name,
-          relations: [
-            { name: 'owner', resourceType: ['User', 'Team'] },
-            { name: 'reader', resourceType: ['User', 'Team'] },
-            { name: 'editor', resourceType: ['User', 'Team'] },
-          ],
-          permissions: [
-            { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
-            { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
-            { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
-          ],
-        });
-      }
-    }
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -164,7 +142,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract createView(modelName: string, viewName: string, query: any): Promise<void>;
 
-  abstract deleteView(viewName: string, query: any): Promise<void>;
+  abstract deleteView(viewName: string): Promise<void>;
 
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 
@@ -221,6 +199,37 @@ export abstract class DatabaseAdapter<T extends Schema> {
       version: lastVersion + 1,
       schema: storedSchema,
     });
+  }
+
+  async registerAuthorizationDefinitions() {
+    let models = await this.models!['_DeclaredSchema'].findMany({
+      'modelOptions.conduit.authorization.enabled': true,
+    });
+    for (let model of models) {
+      if (model.modelOptions.conduit?.authorization?.enabled) {
+        // const authzUp = this.grpcSdk.isAvailable('authorization');
+        await this.grpcSdk.waitForExistence('authorization');
+        // if (!authzUp) {
+        //   ConduitGrpcSdk.Logger.warn(
+        //     `Authorization is not available, skipping authorization setup for ${model.name}`,
+        //   );
+        // } else {
+        this.grpcSdk.authorization?.defineResource({
+          name: model.name,
+          relations: [
+            { name: 'owner', resourceType: ['User', 'Team'] },
+            { name: 'reader', resourceType: ['User', 'Team'] },
+            { name: 'editor', resourceType: ['User', 'Team'] },
+          ],
+          permissions: [
+            { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
+            { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
+            { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
+          ],
+        });
+      }
+      // }
+    }
   }
 
   async recoverSchemasFromDatabase() {
