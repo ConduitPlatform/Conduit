@@ -128,15 +128,15 @@ export class PermissionsController {
           {
             $lookup: {
               from: 'cnd_permissions',
+              let: { x_id: { $toString: '$_id' } },
               pipeline: [
                 {
                   $match: {
                     $expr: {
-                      $regexMatch: {
-                        input: '$computedTuple',
-                        regex: `${subject}#${action}@${objectType}.*`,
-                        options: 'i',
-                      },
+                      $eq: [
+                        '$computedTuple',
+                        { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
+                      ],
                     },
                   },
                 },
@@ -183,8 +183,7 @@ export class PermissionsController {
             },
           },
           {
-            $project: {
-              resource: '$$ROOT',
+            $addFields: {
               intersection: {
                 $setIntersection: ['$actors.entity', '$objects.entity'],
               },
@@ -196,15 +195,11 @@ export class PermissionsController {
             },
           },
           {
-            $replaceRoot: {
-              newRoot: '$resource',
-            },
-          },
-
-          {
             $project: {
               actors: 0,
               objects: 0,
+              permissions: 0,
+              intersection: 0,
             },
           },
         ],
