@@ -57,18 +57,19 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       model.objectPaths,
       true,
     );
-    // await viewModel.model.createCollection({
-    //   viewOn: model.originalSchema.collectionName,
-    //   pipeline: query,
-    // });
-    // this.views[viewName] = viewModel;
+    const viewQuery =
+      this.sequelize.getDialect() !== 'sqlite'
+        ? `CREATE OR REPLACE VIEW ${viewName} AS ${query.sqlQuery}` // TODO: change names for views
+        : `CREATE VIEW IF NOT EXISTS" '${viewName}' AS ${query.sqlQuery}`;
+    await this.sequelize.query(viewQuery);
+    this.views[viewName] = viewModel;
   }
 
   async deleteView(viewName: string): Promise<void> {
-    // if (this.views[viewName]) {
-    //   await this.views[viewName].model.collection.drop();
-    // }
-    // delete this.views[viewName];
+    if (this.views[viewName]) {
+      await this.sequelize.query(`DROP VIEW IF EXISTS ${viewName}`);
+    }
+    delete this.views[viewName];
   }
 
   async retrieveForeignSchemas(): Promise<void> {

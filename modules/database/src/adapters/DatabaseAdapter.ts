@@ -202,10 +202,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
   }
 
   async registerAuthorizationDefinitions() {
-    let models = await this.models!['_DeclaredSchema'].findMany({
+    const models = await this.models!['_DeclaredSchema'].findMany({
       'modelOptions.conduit.authorization.enabled': true,
     });
-    for (let model of models) {
+    for (const model of models) {
       if (model.modelOptions.conduit?.authorization?.enabled) {
         await this.grpcSdk.waitForExistence('authorization');
         this.grpcSdk.authorization?.defineResource({
