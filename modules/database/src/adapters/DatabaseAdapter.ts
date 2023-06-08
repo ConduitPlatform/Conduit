@@ -206,22 +206,19 @@ export abstract class DatabaseAdapter<T extends Schema> {
       'modelOptions.conduit.authorization.enabled': true,
     });
     for (const model of models) {
-      if (model.modelOptions.conduit?.authorization?.enabled) {
-        await this.grpcSdk.waitForExistence('authorization');
-        this.grpcSdk.authorization?.defineResource({
-          name: model.name,
-          relations: [
-            { name: 'owner', resourceType: ['User', 'Team'] },
-            { name: 'reader', resourceType: ['User', 'Team'] },
-            { name: 'editor', resourceType: ['User', 'Team'] },
-          ],
-          permissions: [
-            { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
-            { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
-            { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
-          ],
-        });
-      }
+      this.grpcSdk.authorization?.defineResource({
+        name: model.name,
+        relations: [
+          { name: 'owner', resourceType: ['User', 'Team'] },
+          { name: 'reader', resourceType: ['User', 'Team'] },
+          { name: 'editor', resourceType: ['User', 'Team'] },
+        ],
+        permissions: [
+          { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
+          { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
+          { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
+        ],
+      });
     }
   }
 
