@@ -32,7 +32,7 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-iam": "^3.310.0",
-    "@aws-sdk/client-s3": "^3.310.0",
+    "@aws-sdk/client-s3": "^3.347.1",
     "@aws-sdk/client-sts": "^3.310.0",
     "@aws-sdk/s3-request-presigner": "^3.310.0",
     "@azure/storage-blob": "^12.13.0",
