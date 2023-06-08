@@ -5,10 +5,13 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
-  PostgresIndexOptions,
+  MySQLMariaDBIndexType,
   PostgresIndexType,
   RawSQLQuery,
+  SequelizeIndexOptions,
   sleep,
+  SQLIndexType,
+  SQLiteIndexType,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
@@ -16,7 +19,7 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import {
-  checkIfPostgresOptions,
+  checkIfSequelizeIndexOptions,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
@@ -28,7 +31,7 @@ import {
 } from '../../interfaces';
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil, merge } from 'lodash';
+import { isArray, isNil, merge } from 'lodash';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -484,21 +487,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   ) {
     for (const index of indexes) {
       if (!index.types && !index.options) continue;
-      if (index.types) {
-        if (
-          Array.isArray(index.types) ||
-          !Object.values(PostgresIndexType).includes(index.types)
-        ) {
-          throw new GrpcError(
-            status.INVALID_ARGUMENT,
-            'Invalid index type for PostgreSQL',
-          );
-        }
-        (index.options as PostgresIndexOptions).using = index.types;
-        delete index.types;
-      }
       if (index.options) {
-        if (!checkIfPostgresOptions(index.options)) {
+        if (!checkIfSequelizeIndexOptions(index.options)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             'Invalid index options for PostgreSQL',
@@ -513,6 +503,24 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
             'Not authorized to create unique index',
           );
         }
+      }
+      if (index.types) {
+        if (isArray(index.types) || !(index.types in PostgresIndexType)) {
+          throw new GrpcError(
+            status.INVALID_ARGUMENT,
+            'Invalid index type for PostgreSQL',
+          );
+        }
+        if (index.types in MySQLMariaDBIndexType) {
+          (index.options as SequelizeIndexOptions).type =
+            index.types as MySQLMariaDBIndexType;
+        } else {
+          (index.options as SequelizeIndexOptions).using = index.types as
+            | SQLIndexType
+            | PostgresIndexType
+            | SQLiteIndexType;
+        }
+        delete index.types;
       }
     }
     return indexes;

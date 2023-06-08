@@ -1,10 +1,17 @@
-import { MongoIndexOptions, PostgresIndexOptions } from '@conduitplatform/grpc-sdk';
+import {
+  MongoIndexOptions,
+  MySQLMariaDBIndexType,
+  PostgresIndexType,
+  SequelizeIndexOptions,
+  SQLIndexType,
+  SQLiteIndexType,
+} from '@conduitplatform/grpc-sdk';
 
 export * from './schema';
 export * from './collectionUtils';
 
-export function checkIfPostgresOptions(
-  options: MongoIndexOptions | PostgresIndexOptions,
+export function checkIfSequelizeIndexOptions(
+  options: MongoIndexOptions | SequelizeIndexOptions,
 ) {
   const postgresOptions = [
     'concurrently',
@@ -15,7 +22,17 @@ export function checkIfPostgresOptions(
     'unique',
     'using',
     'where',
+    'fields',
   ];
   const result = Object.keys(options).some(option => !postgresOptions.includes(option));
   return !result;
+}
+
+export function checkIfSequelizeIndexType(type: any) {
+  return (
+    Object.values(SQLIndexType).includes(type as SQLIndexType) ||
+    Object.values(PostgresIndexType).includes(type as PostgresIndexType) ||
+    Object.values(MySQLMariaDBIndexType).includes(type as MySQLMariaDBIndexType) ||
+    Object.values(SQLiteIndexType).includes(type as SQLiteIndexType)
+  );
 }

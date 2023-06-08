@@ -2,7 +2,7 @@ import {
   ConduitModel,
   Indexable,
   MongoIndexOptions,
-  PostgresIndexOptions,
+  SequelizeIndexOptions,
 } from '@conduitplatform/grpc-sdk';
 import { MongooseAdapter } from './index';
 import _, { isArray, isObject } from 'lodash';
@@ -79,7 +79,7 @@ async function _createWithPopulations(
   }
 }
 
-export function checkIfMongoOptions(options: MongoIndexOptions | PostgresIndexOptions) {
+export function checkIfMongoOptions(options: MongoIndexOptions | SequelizeIndexOptions) {
   const mongoOptions = [
     'background',
     'unique',

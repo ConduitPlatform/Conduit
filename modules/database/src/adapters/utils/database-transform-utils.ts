@@ -3,10 +3,16 @@ import {
   ConduitModelField,
   ConduitSchema,
   Indexable,
-  PostgresIndexOptions,
+  MySQLMariaDBIndexType,
   PostgresIndexType,
+  SequelizeIndexType,
+  SQLIndexType,
+  SQLiteIndexType,
 } from '@conduitplatform/grpc-sdk';
-import { checkIfPostgresOptions } from '../sequelize-adapter/utils';
+import {
+  checkIfSequelizeIndexType,
+  checkIfSequelizeIndexOptions,
+} from '../sequelize-adapter/utils';
 
 export function checkDefaultValue(type: string, value: string) {
   switch (type) {
@@ -29,24 +35,27 @@ export function checkDefaultValue(type: string, value: string) {
 
 export function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
-    if (index.types) {
-      if (
-        isArray(index.types) ||
-        !Object.values(PostgresIndexType).includes(index.types as PostgresIndexType)
-      ) {
-        throw new Error('Incorrect index type for PostgreSQL');
-      }
-      index.using = index.types as PostgresIndexType;
-      delete index.types;
-    }
     if (index.options) {
-      if (!checkIfPostgresOptions(index.options)) {
-        throw new Error('Incorrect index options for PostgreSQL');
+      if (!checkIfSequelizeIndexOptions(index.options)) {
+        throw new Error('Incorrect index options for sequelize');
       }
-      for (const [option, value] of Object.entries(index.options)) {
-        index[option as keyof PostgresIndexOptions] = value;
-      }
+      // if ((index.options as SequelizeIndexOptions).fields) { // TODO: integrate this logic somehow
+      //   delete index.fields;
+      // }
+      Object.assign(index, index.options);
       delete index.options;
+    }
+    if (index.types) {
+      // TODO: put null to check
+      if (isArray(index.types) || !checkIfSequelizeIndexType(index.types)) {
+        throw new Error('Invalid index type');
+      }
+      if (index.types in MySQLMariaDBIndexType) {
+        index.type = index.types as MySQLMariaDBIndexType;
+      } else {
+        index.using = index.types as SQLIndexType | PostgresIndexType | SQLiteIndexType;
+      }
+      delete index.types;
     }
   }
   return copy;
@@ -54,35 +63,38 @@ export function convertModelOptionsIndexes(copy: ConduitSchema) {
 
 export function convertSchemaFieldIndexes(copy: ConduitSchema) {
   const indexes = [];
-  for (const field of Object.entries(copy.fields)) {
-    const fieldName = field[0];
-    const index = (copy.fields[fieldName] as ConduitModelField).index;
+  for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
+    const field = fieldValue as ConduitModelField;
+    // Move unique field indexes to modelOptions workaround
+    // if (field.unique && fieldName !== '_id') {
+    //   field.index = {
+    //     options: { unique: true }
+    //   };
+    //   delete (field as ConduitModelField).unique;
+    // }
+    const index = field.index;
     if (!index) continue;
-    const newIndex: any = {
-      fields: [fieldName],
-    };
+    const newIndex: any = { fields: [fieldName] }; // TODO: remove this any
     if (index.type) {
-      if (!Object.values(PostgresIndexType).includes(index.type as PostgresIndexType)) {
-        throw new Error('Invalid index type for PostgreSQL');
+      if (isArray(index.type) || !checkIfSequelizeIndexType(index.type)) {
+        throw new Error('Invalid index type');
       }
-      newIndex.using = index.type;
-    }
-    if (index.options) {
-      if (!checkIfPostgresOptions(index.options)) {
-        throw new Error('Invalid index options for PostgreSQL');
-      }
-      for (const [option, value] of Object.entries(index.options)) {
-        newIndex[option] = value;
+      if (!(index.type in MySQLMariaDBIndexType)) {
+        newIndex.using = index.type as SQLIndexType | PostgresIndexType | SQLiteIndexType;
+      } else {
+        newIndex.type = index.type as MySQLMariaDBIndexType;
       }
     }
+    if (index.options && !checkIfSequelizeIndexOptions(index.options)) {
+      throw new Error('Invalid index options for sequelize');
+    }
+    Object.assign(newIndex, index.options);
     indexes.push(newIndex);
     delete copy.fields[fieldName];
   }
-  if (copy.modelOptions.indexes) {
-    copy.modelOptions.indexes = [...copy.modelOptions.indexes, ...indexes];
-  } else {
-    copy.modelOptions.indexes = indexes;
-  }
+  copy.modelOptions.indexes = copy.modelOptions.indexes
+    ? [...copy.modelOptions.indexes, ...indexes]
+    : indexes;
   return copy;
 }
 
