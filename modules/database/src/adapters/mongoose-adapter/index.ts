@@ -90,6 +90,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       pipeline: EJSON.parse(query.mongoQuery),
     });
     this.views[viewName] = viewModel;
+    await this.models['Views'].create({
+      name: viewName,
+      originalSchema: model.originalSchema.name,
+      query,
+    });
   }
 
   async deleteView(viewName: string): Promise<void> {

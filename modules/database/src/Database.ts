@@ -112,6 +112,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
+    await this._activeAdapter.recoverViewsFromDatabase();
     await runMigrations(this._activeAdapter);
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       return this._activeAdapter.registerSystemSchema(model).then(() => {
@@ -713,7 +714,16 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
-      await this._activeAdapter.syncSchema(call.request.schemaName);
+      const schemaName = call.request.schemaName;
+      await this._activeAdapter.syncSchema(schemaName).catch(async () => {
+        const views = this._activeAdapter.views;
+        for (const viewName in views) {
+          if (views[viewName].originalSchema.name === schemaName) {
+            await this._activeAdapter.deleteView(viewName);
+          }
+        }
+        await this._activeAdapter.syncSchema(schemaName);
+      });
     }
     callback(null, null);
   }

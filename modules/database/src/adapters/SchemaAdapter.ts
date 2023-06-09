@@ -144,7 +144,7 @@ export abstract class SchemaAdapter<T> {
         if (isNil(docs)) {
           return null;
         }
-        return { _id: { $in: docs.map((doc: any) => doc._id) } };
+        return { _id: { $in: docs.map((doc: any) => doc._id) } }; // TODO: $in doesnt work for sql
       } else {
         const doc = await view.findOne(parsedQuery, {
           userId: undefined,

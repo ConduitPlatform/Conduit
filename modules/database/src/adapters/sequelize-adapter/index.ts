@@ -66,6 +66,11 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         : `CREATE VIEW IF NOT EXISTS" "${viewName}" AS ${query.sqlQuery}`;
     await this.sequelize.query(viewQuery);
     this.views[viewName] = viewModel;
+    await this.models['Views'].create({
+      name: viewName,
+      originalSchema: model.originalSchema.name,
+      query,
+    });
   }
 
   async deleteView(viewName: string): Promise<void> {
