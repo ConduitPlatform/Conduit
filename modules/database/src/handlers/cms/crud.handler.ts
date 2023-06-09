@@ -46,7 +46,10 @@ export class CmsHandlers {
         scope,
       },
     );
-    const countPromise = model.countDocuments({});
+    const countPromise = model.countDocuments(
+      {},
+      { userId: call.request.context.user?._id, scope },
+    );
     const [documents, count] = await Promise.all([documentsPromise, countPromise]);
 
     return { documents, count };
