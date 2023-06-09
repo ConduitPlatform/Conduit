@@ -20,14 +20,17 @@ import {
   Resource_Permission,
   Resource_Relation,
 } from './protoTypes/authorization';
-import { IndexController } from './controllers/index.controller';
-import { PermissionsController } from './controllers/permissions.controller';
-import { RelationsController } from './controllers/relations.controller';
-import { ResourceController } from './controllers/resource.controller';
+import {
+  IndexController,
+  PermissionsController,
+  RelationsController,
+  ResourceController,
+} from './controllers';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import { Empty } from './protoTypes/google/protobuf/empty';
+import { AuthorizationRouter } from './router';
 
 export default class Authorization extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -49,6 +52,7 @@ export default class Authorization extends ManagedModule<Config> {
   };
   protected metricsSchema = metricsSchema;
   private adminRouter: AdminHandlers;
+  private clientRouter: AuthorizationRouter;
   private indexController: IndexController;
   private permissionsController: PermissionsController;
   private relationsController: RelationsController;
@@ -81,6 +85,7 @@ export default class Authorization extends ManagedModule<Config> {
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
       this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
+      this.clientRouter = new AuthorizationRouter(this.grpcServer, this.grpcSdk);
       this.updateHealth(HealthCheckStatus.SERVING);
     }
   }
