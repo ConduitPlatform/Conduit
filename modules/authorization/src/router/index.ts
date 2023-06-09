@@ -7,10 +7,13 @@ import {
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
+  GrpcError,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
 import { PermissionsController } from '../controllers';
-import { Relationship } from '../models';
+import { Permission, Relationship } from '../models';
+import { isEmpty } from 'lodash';
+import { Status } from '@grpc/grpc-js/build/src/constants';
 
 export class AuthorizationRouter {
   private _routingManager: RoutingManager;
@@ -41,6 +44,24 @@ export class AuthorizationRouter {
       async (call: ParsedRouterRequest) => {
         const { action, resource, scope } = call.request.queryParams;
         const { user } = call.request.context;
+        if (scope && !isEmpty(scope)) {
+          const scopeRelations = await Relationship.getInstance().findMany({
+            subject: `User:${user._id}`,
+            resource: scope,
+          });
+          if (scopeRelations.length === 0) {
+            const scopePermissions = await Permission.getInstance().findMany({
+              subject: `User:${user._id}`,
+              resource: scope,
+            });
+            if (scopePermissions.length === 0) {
+              throw new GrpcError(
+                Status.PERMISSION_DENIED,
+                'User does not have access to scope',
+              );
+            }
+          }
+        }
         const allowed = await this._permissionsController.can(
           scope ?? `User:${user._id}`,
           action,
@@ -66,9 +87,27 @@ export class AuthorizationRouter {
         roles: [ConduitString.Required],
       }),
       async (call: ParsedRouterRequest) => {
+        const { user } = call.request.context;
         const { resource } = call.request.urlParams;
         const { scope } = call.request.queryParams;
-        const { user } = call.request.context;
+        if (scope && !isEmpty(scope)) {
+          const scopeRelations = await Relationship.getInstance().findMany({
+            subject: `User:${user._id}`,
+            resource: scope,
+          });
+          if (scopeRelations.length === 0) {
+            const scopePermissions = await Permission.getInstance().findMany({
+              subject: `User:${user._id}`,
+              resource: scope,
+            });
+            if (scopePermissions.length === 0) {
+              throw new GrpcError(
+                Status.PERMISSION_DENIED,
+                'User does not have access to scope',
+              );
+            }
+          }
+        }
         const relations = await Relationship.getInstance().findMany({
           subject: scope ?? `User:${user._id}`,
           resource,
