@@ -119,6 +119,9 @@ export class PermissionsController {
 
   async createAccessList(subject: string, action: string, objectType: string) {
     const computedTuple = `${subject}#${action}@${objectType}`;
+    const objectTypeCollection = await this.grpcSdk
+      .database!.getSchema(objectType)
+      .then(r => r.collectionName);
     await this.grpcSdk.database?.createView(
       objectType,
       `${objectType}_${subject}_${action}`,
@@ -203,37 +206,21 @@ export class PermissionsController {
             },
           },
         ],
-        sqlQuery: `SELECT 
-    ${objectType}.*
-FROM 
-    ${objectType}
-INNER JOIN (
-    SELECT 
-        *
-    FROM 
-        cnd_permissions
-    WHERE 
-        computedTuple LIKE '${computedTuple}%'
-) permissions ON 1=1
-INNER JOIN (
-    SELECT 
-        *
-    FROM 
-        cnd_actorindexes
-    WHERE 
-        subject = '${subject}'
-) actors ON 1=1
-INNER JOIN (
-    SELECT 
-        *
-    FROM 
-        cnd_objectindexes
-    WHERE 
-        subject LIKE '${objectType}:%#${action}'
-) objects ON actors.entity = objects.entity;`,
+        sqlQuery: `SELECT "${objectTypeCollection}".* FROM "${objectTypeCollection}"
+          INNER JOIN (
+              SELECT * FROM "cnd_Permission"
+              WHERE "computedTuple" LIKE '${computedTuple}%'
+          ) permissions ON permissions."computedTuple" = '${computedTuple}:' || "${objectTypeCollection}"._id
+          INNER JOIN (
+              SELECT * FROM "cnd_ActorIndex"
+              WHERE subject = '${subject}'
+          ) actors ON 1=1
+          INNER JOIN (
+              SELECT * FROM "cnd_ObjectIndex"
+              WHERE subject LIKE '${objectType}:%#${action}'
+          ) objects ON actors.entity = objects.entity;`,
       },
     );
-
     return;
   }
 }

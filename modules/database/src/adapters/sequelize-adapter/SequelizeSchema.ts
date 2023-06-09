@@ -294,8 +294,15 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         select: options?.select,
       },
     );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'read',
+      filter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     const findOptions: FindOptions = {
-      where: filter,
+      where: parsedFilter,
       nest: true,
       attributes: parsingResult.attributes! as FindAttributeOptions,
       include: includeRelations(
