@@ -59,8 +59,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     );
     const viewQuery =
       this.sequelize.getDialect() !== 'sqlite'
-        ? `CREATE OR REPLACE VIEW ${viewName} AS ${query.sqlQuery}` // TODO: change names for views
-        : `CREATE VIEW IF NOT EXISTS" '${viewName}' AS ${query.sqlQuery}`;
+        ? `CREATE OR REPLACE VIEW "${viewName}" AS ${query.sqlQuery}`
+        : `CREATE VIEW IF NOT EXISTS" "${viewName}" AS ${query.sqlQuery}`;
     await this.sequelize.query(viewQuery);
     this.views[viewName] = viewModel;
   }
