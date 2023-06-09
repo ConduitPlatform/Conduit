@@ -13,6 +13,7 @@ import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
 import moment from 'moment/moment';
+import getToken = AuthUtils.getToken;
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie
@@ -94,31 +95,6 @@ async function handleAuthentication(
 function handleTokenRefresh(context: Indexable, headers: Headers, cookies: Cookies) {
   const token = getToken(headers, cookies, 'refresh');
   return { refreshToken: token };
-}
-
-function getToken(headers: Headers, cookies: Cookies, reqType: 'access' | 'refresh') {
-  const tokenHeader = (headers['Authorization'] || headers['authorization']) as string; // formatted token
-  const tokenCookie = cookies[`${reqType}Token`] as string; // token
-  if (isNil(tokenHeader) && isNil(tokenCookie)) {
-    throw new GrpcError(
-      status.UNAUTHENTICATED,
-      `No 'Authorization' header or '${reqType}Token' cookie present`,
-    );
-  }
-  let headerArgs: string[] = [];
-  if (tokenHeader) {
-    headerArgs = tokenHeader.split(' ');
-    if (headerArgs.length !== 2) {
-      throw new GrpcError(status.UNAUTHENTICATED, "'Authorization' header malformed");
-    }
-    if (headerArgs[0] !== 'Bearer') {
-      throw new GrpcError(
-        status.UNAUTHENTICATED,
-        "The 'Authorization' header must be prefixed by 'Bearer '",
-      );
-    }
-  }
-  return headerArgs[1] || tokenCookie;
 }
 
 export async function captchaMiddleware(call: ParsedRouterRequest) {
