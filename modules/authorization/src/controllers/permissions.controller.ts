@@ -4,6 +4,7 @@ import { IndexController } from './index.controller';
 import { RuleCache } from './cache.controller';
 import { isNil } from 'lodash';
 import { Permission } from '../models';
+import { createHash } from 'crypto';
 
 export class PermissionsController {
   private static _instance: PermissionsController;
@@ -124,7 +125,7 @@ export class PermissionsController {
       .then(r => r.collectionName);
     await this.grpcSdk.database?.createView(
       objectType,
-      `${objectType}_${subject}_${action}`,
+      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
       {
         mongoQuery: [
           // permissions lookup won't work this way

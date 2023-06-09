@@ -8,6 +8,7 @@ import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
 import { isNil } from 'lodash';
+import { createHash } from 'crypto';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -38,7 +39,7 @@ export abstract class SchemaAdapter<T> {
   ) {}
 
   transformViewName(...names: string[]): string {
-    return names.join('_');
+    return createHash('sha256').update(names.join('_')).digest('hex');
   }
 
   async permissionCheck(
