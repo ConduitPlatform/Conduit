@@ -112,8 +112,15 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       query,
       this.sequelize,
     );
+    const parsedId = await this.getAuthorizedQuery(
+      'edit',
+      { _id: id },
+      false,
+      options?.userId,
+      options?.scope,
+    ).then(r => r!._id);
     try {
-      const parentDoc = await this.model.findByPk(id, {
+      const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
         transaction: t,
       });
@@ -134,7 +141,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       }
       if (Object.keys(parsedQuery).length === 0) {
         return this.model
-          .findByPk(id, {
+          .findByPk(parsedId, {
             nest: true,
             include: constructRelationInclusion(this, options?.populate),
           })
@@ -172,7 +179,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
 
       if (Object.keys(parsedQuery).length === 0) {
         return this.model
-          .findByPk(id, {
+          .findByPk(parsedId, {
             nest: true,
           })
           .then(doc => (doc ? doc.toJSON() : doc));
@@ -182,11 +189,14 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const relationObjects = extractRelationsModification(this, parsedQuery);
-      await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
+      await this.model.update(
+        { ...parsedQuery },
+        { where: { _id: parsedId }, transaction: t },
+      );
       incrementDbQueries();
 
       const data = await this.model
-        .findByPk(id, {
+        .findByPk(parsedId, {
           nest: true,
           transaction: t,
         })
@@ -198,7 +208,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           return;
         })
         .then(() => {
-          return this.model.findByPk(id, {
+          return this.model.findByPk(parsedId, {
             nest: true,
             include: constructRelationInclusion(this, options?.populate),
           });
@@ -221,6 +231,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       transaction?: Transaction;
     },
   ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
@@ -232,7 +243,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
-    return this.model
+    const obj = await this.model
       .create(parsedQuery, {
         transaction: t,
       })
@@ -252,6 +263,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         throw err;
       });
+    await this.addPermissionToData(obj, options);
   }
 
   async createMany(
@@ -261,20 +273,23 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       userId?: string;
     },
   ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
     }
-    return this.model
+    const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
-      .then(() => {
+      .then(docs => {
         t.commit();
+        return docs;
       })
       .catch(err => {
         t.rollback();
         throw err;
       });
+    await this.addPermissionToData(docs, options);
   }
 
   async findOne(
@@ -302,7 +317,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.scope,
     );
     const findOptions: FindOptions = {
-      where: parsedFilter,
+      where: parsedFilter!,
       nest: true,
       attributes: parsingResult.attributes! as FindAttributeOptions,
       include: includeRelations(
@@ -360,8 +375,20 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         select: options?.select,
       },
     );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'read',
+      filter,
+      true,
+      options?.userId,
+      options?.scope,
+      options?.skip,
+      options?.limit,
+    );
+    if (isNil(parsedFilter)) {
+      return [];
+    }
     const findOptions: FindOptions = {
-      where: filter,
+      where: parsedFilter,
       nest: true,
       attributes: parsingResult.attributes as FindAttributeOptions,
       include: includeRelations(
@@ -390,7 +417,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     });
   }
 
-  deleteMany(
+  async deleteMany(
     query: Query,
     options?: {
       userId?: string;
@@ -401,9 +428,19 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       this,
       this.parseStringToQuery(query),
     );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'delete',
+      filter,
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedFilter)) {
+      return [];
+    }
     return this.model
       .findAll({
-        where: filter,
+        where: parsedFilter,
         include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(docs => {
@@ -414,7 +451,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       });
   }
 
-  deleteOne(
+  async deleteOne(
     query: Query,
     options?: {
       userId?: string;
@@ -425,9 +462,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       this,
       this.parseStringToQuery(query),
     );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'delete',
+      filter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     return this.model
       .findOne({
-        where: filter,
+        where: parsedFilter!,
         include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(doc => {
@@ -438,13 +482,22 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       });
   }
 
-  countDocuments(
+  async countDocuments(
     query: Query,
     options?: {
       userId?: string;
       scope?: string;
     },
   ): Promise<number> {
+    if (!isNil(options?.userId) || !isNil(options?.scope)) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view) {
+        return view.countDocuments(query, {
+          userId: undefined,
+          scope: undefined,
+        });
+      }
+    }
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -477,9 +530,19 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     },
   ) {
     const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    const parsedFilterQuery = await this.getAuthorizedQuery(
+      'edit',
+      this.parseStringToQuery(filterQuery),
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedFilterQuery)) {
+      return [];
+    }
     const parsingResult = parseQuery(
       this.originalSchema,
-      this.parseStringToQuery(filterQuery),
+      parsedFilterQuery,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
