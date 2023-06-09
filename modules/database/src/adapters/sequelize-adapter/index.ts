@@ -47,10 +47,13 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
     const model = this.models[modelName];
+    const newSchema = JSON.parse(JSON.stringify(model.schema));
+    newSchema.name = viewName;
+    newSchema.collectionName = viewName;
     const viewModel = new SequelizeSchema(
       this.grpcSdk,
       this.sequelize,
-      model.schema,
+      newSchema,
       model.originalSchema,
       this,
       model.extractedRelations,

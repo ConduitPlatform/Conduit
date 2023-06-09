@@ -264,6 +264,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         throw err;
       });
     await this.addPermissionToData(obj, options);
+    return obj;
   }
 
   async createMany(
@@ -290,6 +291,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         throw err;
       });
     await this.addPermissionToData(docs, options);
+    return docs;
   }
 
   async findOne(
