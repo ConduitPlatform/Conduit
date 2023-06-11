@@ -39,6 +39,7 @@ export class RelationsController {
         if (!resourceDefinition) {
           throw new Error('Object resource definition not found');
         }
+        if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
         if (
           !resourceDefinition.relations[relation] ||
           resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
