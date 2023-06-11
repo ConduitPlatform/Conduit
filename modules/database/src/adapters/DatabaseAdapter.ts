@@ -209,9 +209,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
       this.grpcSdk.authorization?.defineResource({
         name: model.name,
         relations: [
-          { name: 'owner', resourceType: ['User', 'Team'] },
-          { name: 'reader', resourceType: ['User', 'Team'] },
-          { name: 'editor', resourceType: ['User', 'Team'] },
+          { name: 'owner', resourceType: ['User', '*'] },
+          { name: 'reader', resourceType: ['User', '*'] },
+          { name: 'editor', resourceType: ['User', '*'] },
         ],
         permissions: [
           { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
