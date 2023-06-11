@@ -1,9 +1,7 @@
 import path from 'path';
-import fs from 'fs';
 import {
   Client,
   credentials,
-  GrpcObject,
   loadPackageDefinition,
   Metadata,
   ServiceClientConstructor,
@@ -11,6 +9,7 @@ import {
 import {
   ConduitRouteOptions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
   Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -22,22 +21,15 @@ import {
   instanceOfSocketProtoDescription,
   JoinRoomResponse,
   ProxyRouteT,
-  RouterDescriptor,
   RouteT,
   SocketProtoDescription,
 } from '../interfaces';
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  instanceOfConduitProxy,
-  ProxyRoute,
-} from '../classes';
+import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes';
 
 const protoLoader = require('@grpc/proto-loader');
 
-function getDescriptor(protofile: string) {
-  const protoPath = path.resolve(__dirname, Math.random().toString(36).substring(7));
-  fs.writeFileSync(protoPath, protofile);
+function getDescriptor() {
+  const protoPath = path.resolve(__dirname, '../module.proto');
   const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
     longs: String,
@@ -45,14 +37,12 @@ function getDescriptor(protofile: string) {
     defaults: true,
     oneofs: true,
   });
-  fs.unlink(protoPath, () => {});
   return loadPackageDefinition(packageDefinition);
 }
 
 export function grpcToConduitRoute(
   routerName: string,
   request: {
-    protoFile: string;
     routes: RouteT[] | ProxyRouteT[];
     routerUrl: string;
   },
@@ -61,12 +51,12 @@ export function grpcToConduitRoute(
 ): (ConduitRoute | ConduitMiddleware | ConduitSocket | ProxyRoute)[] {
   const routes = request.routes;
 
-  let routerDescriptor: RouterDescriptor = getDescriptor(request.protoFile);
-  //this can break everything change it
-  while (Object.keys(routerDescriptor)[0] !== routerName) {
-    routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]] as GrpcObject;
+  let routerDescriptor: any = getDescriptor();
+  if (routerName === 'Router') {
+    routerDescriptor = routerDescriptor.conduit.module.v1.ClientRouter;
+  } else {
+    routerDescriptor = routerDescriptor.conduit.module.v1.AdminRouter;
   }
-  routerDescriptor = routerDescriptor[Object.keys(routerDescriptor)[0]];
   const serverIp = request.routerUrl;
   const client = new (routerDescriptor as ServiceClientConstructor)(
     serverIp,
@@ -134,18 +124,15 @@ function createHandlerForRoute(
       headers: JSON.stringify(req.headers),
       context: JSON.stringify(req.context),
       cookies: JSON.stringify(req.cookies),
+      functionName: route.grpcFunction,
     };
     return new Promise((resolve, reject) => {
-      client[route.grpcFunction](
-        request,
-        metadata,
-        (err: Error, result: Indexable | string) => {
-          if (err) {
-            return reject(err);
-          }
-          resolve(result);
-        },
-      );
+      client.route(request, metadata, (err: Error, result: Indexable | string) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(result);
+      });
     });
   };
 
@@ -214,10 +201,11 @@ function createHandlerForSocket(
         socketId: req.socketId,
         params: req.params ? JSON.stringify(req.params) : null,
         context: req.context ? JSON.stringify(req.context) : null,
+        functionName: events[req.event].grpcFunction,
       };
 
       return new Promise<EventResponse | JoinRoomResponse>((resolve, reject) => {
-        client[events[req.event].grpcFunction](
+        client.socketRoute(
           request,
           metadata,
           (

@@ -15,6 +15,8 @@ import { AuthUtils } from './utils';
 import { TokenType } from './constants';
 import { v4 as uuid } from 'uuid';
 import {
+  TeamDeleteRequest,
+  TeamDeleteResponse,
   UserChangePass,
   UserCreateRequest,
   UserCreateResponse,
@@ -30,8 +32,10 @@ import { configMigration } from './migrations/configMigration';
 import {
   ConduitActiveSchema,
   ConfigController,
+  createParsedRouterRequest,
   ManagedModule,
 } from '@conduitplatform/module-tools';
+import { TeamsAdmin } from './admin/team';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -43,6 +47,7 @@ export default class Authentication extends ManagedModule<Config> {
       userCreate: this.userCreate.bind(this),
       changePass: this.changePass.bind(this),
       userDelete: this.userDelete.bind(this),
+      teamDelete: this.teamDelete.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -84,14 +89,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.accessTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -99,14 +104,14 @@ export default class Authentication extends ManagedModule<Config> {
     if (
       (
         config.refreshTokens
-          .cookieOptions as typeof config.accessTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.accessTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       ).maxAge
     ) {
       delete (
         config.refreshTokens
-          .cookieOptions as typeof config.refreshTokens['cookieOptions'] & {
+          .cookieOptions as (typeof config.refreshTokens)['cookieOptions'] & {
           maxAge?: number;
         }
       )['maxAge'];
@@ -246,7 +251,7 @@ export default class Authentication extends ManagedModule<Config> {
         const serverConfig = await this.grpcSdk.config.get('router');
         const url = serverConfig.hostUrl;
         const verificationToken: models.Token = await models.Token.getInstance().create({
-          type: TokenType.VERIFICATION_TOKEN,
+          tokenType: TokenType.VERIFICATION_TOKEN,
           user: user._id,
           token: uuid(),
         });
@@ -312,6 +317,17 @@ export default class Authentication extends ManagedModule<Config> {
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
+  }
+
+  async teamDelete(
+    call: GrpcRequest<TeamDeleteRequest>,
+    callback: GrpcCallback<TeamDeleteResponse>,
+  ) {
+    const request = createParsedRouterRequest(call.request);
+    const result = await new TeamsAdmin(this.grpcSdk).deleteTeam(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, { message: result as string });
   }
 
   protected registerSchemas() {

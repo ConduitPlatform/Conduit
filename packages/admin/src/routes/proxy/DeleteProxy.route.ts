@@ -2,14 +2,11 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
 import { isNil } from 'lodash';
-import {
-  ConduitRoute,
-  ConduitRouteReturnDefinition,
-  ProxyRouteT,
-} from '@conduitplatform/hermes';
+import { ConduitRoute, ProxyRouteT } from '@conduitplatform/hermes';
 import { AdminProxyRoute } from '../../models';
 import AdminModule from '../../index';
 
@@ -41,7 +38,7 @@ export function deleteProxyRoute(adminModule: AdminModule) {
             options: {
               path: route.path,
               action: route.action,
-              description: route.description,
+              description: route.routeDescription,
               middlewares: route.middlewares,
             },
             proxy: {
@@ -50,7 +47,7 @@ export function deleteProxyRoute(adminModule: AdminModule) {
             },
           });
         });
-        adminModule.internalRegisterRoute(undefined, proxies, 'admin', 'admin');
+        adminModule.internalRegisterRoute(proxies, 'admin', 'admin');
       }
       return { message: 'Proxy deleted.' };
     },

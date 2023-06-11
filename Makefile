@@ -28,7 +28,11 @@ define build_docker_image
 endef
 
 conduit-builder: Dockerfile scripts/Dockerfile.builder
-	docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./
+	@if [ "$(filter-out $@,$(MAKECMDGOALS))" = "all" ]; then \
+    		docker build --no-cache -t conduit-base:latest -f ./Dockerfile ./ ; \
+    	else \
+    		docker build --no-cache -t conduit-base:latest --build-arg BUILDING_SERVICE=$(filter-out $@,$(MAKECMDGOALS)) -f ./Dockerfile ./ ; \
+    	fi
 	docker build --no-cache -t conduit-builder:latest -f ./scripts/Dockerfile.builder ./scripts
 
 conduit: conduit-builder

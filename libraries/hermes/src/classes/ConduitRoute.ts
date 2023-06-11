@@ -1,8 +1,8 @@
-import { ConduitRouteReturnDefinition } from './ConduitRouteReturn';
 import {
-  ConduitModel,
+  ConduitReturn,
   ConduitRouteOptions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 
 export class ConduitRoute {
@@ -28,7 +28,7 @@ export class ConduitRoute {
     return this._input;
   }
 
-  get returnTypeFields(): ConduitModel | string {
+  get returnTypeFields(): ConduitReturn {
     return this._returnType.fields;
   }
 

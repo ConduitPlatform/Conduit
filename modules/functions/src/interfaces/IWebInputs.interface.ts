@@ -1,12 +1,14 @@
-import { ConduitModel, ConduitRouteOption } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  ConduitQueryParams,
+  ConduitUrlParams,
+} from '@conduitplatform/grpc-sdk';
 
 export interface IWebInputsInterface {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-
-  bodyParams?: ConduitRouteOption | ConduitModel;
   event?: string;
-  urlParams?: ConduitRouteOption | ConduitModel;
-
-  queryParams?: ConduitRouteOption | ConduitModel;
+  bodyParams?: ConduitModel;
+  urlParams?: ConduitUrlParams;
+  queryParams?: ConduitQueryParams;
   auth?: boolean;
 }

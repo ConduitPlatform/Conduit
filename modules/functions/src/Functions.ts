@@ -27,26 +27,31 @@ export default class Functions extends ManagedModule<Config> {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
     await this.registerSchemas();
-    this.grpcSdk
-      .waitForExistence('router')
-      .then(() => {
-        this.isRunning = true;
-        this.functionsController = new FunctionController(this.grpcServer, this.grpcSdk);
-        this.adminRouter = new AdminHandlers(
-          this.grpcServer,
-          this.grpcSdk,
-          this.functionsController,
-        );
-        return this.functionsController.refreshRoutes();
-      })
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
   }
 
   async onConfig() {
     if (!ConfigController.getInstance().config.active) {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
+    }
+    if (!this.isRunning) {
+      this.grpcSdk
+        .waitForExistence('router')
+        .then(() => {
+          this.isRunning = true;
+          this.functionsController = new FunctionController(
+            this.grpcServer,
+            this.grpcSdk,
+          );
+          this.adminRouter = new AdminHandlers(
+            this.grpcServer,
+            this.grpcSdk,
+            this.functionsController,
+          );
+          return this.functionsController.refreshRoutes();
+        })
+        .catch(e => {
+          ConduitGrpcSdk.Logger.error(e.message);
+        });
     }
     this.updateHealth(HealthCheckStatus.SERVING);
   }

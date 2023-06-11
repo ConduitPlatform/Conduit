@@ -31,30 +31,30 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-iam": "^3.276.0",
-    "@aws-sdk/client-s3": "^3.276.0",
-    "@aws-sdk/client-sts": "^3.276.0",
-    "@aws-sdk/s3-request-presigner": "^3.276.0",
+    "@aws-sdk/client-iam": "^3.310.0",
+    "@aws-sdk/client-s3": "^3.347.1",
+    "@aws-sdk/client-sts": "^3.310.0",
+    "@aws-sdk/s3-request-presigner": "^3.310.0",
     "@azure/storage-blob": "^12.13.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@google-cloud/storage": "^6.2.2",
-    "@grpc/grpc-js": "^1.6.7",
-    "@grpc/proto-loader": "^0.6.13",
+    "@google-cloud/storage": "^6.9.5",
+    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/proto-loader": "^0.7.6",
     "ali-oss": "^6.17.1",
-    "convict": "^6.2.3",
+    "convict": "^6.2.4",
     "lodash": "^4.17.21",
-    "uuid": "^8.3.2"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "@types/ali-oss": "^6.16.4",
+    "@types/ali-oss": "^6.16.7",
     "@types/convict": "^6.1.1",
-    "@types/lodash": "^4.14.182",
-    "@types/node": "14.14.31",
-    "@types/uuid": "^8.3.4",
+    "@types/lodash": "^4.14.192",
+    "@types/node": "18.15.11",
+    "@types/uuid": "^9.0.1",
     "copyfiles": "^2.4.1",
-    "rimraf": "^3.0.2",
-    "ts-proto": "^1.117.0",
-    "typescript": "~4.7.4"
+    "rimraf": "^5.0.0",
+    "ts-proto": "^1.146.0",
+    "typescript": "~5.0.4"
   }
 }

@@ -1,7 +1,7 @@
 import ConduitGrpcSdk, {
+  ArrayConduitModel,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
@@ -126,7 +126,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetSchema', '_DeclaredSchema'),
@@ -173,7 +173,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: `Updates a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           fields: ConduitJson.Optional,
@@ -202,7 +202,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         queryParams: {
           deleteData: ConduitBoolean.Required,
@@ -233,7 +233,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Enables/disables a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('ToggleSchema', {
@@ -249,7 +249,7 @@ export class AdminHandlers {
         description: `Sets a database-owned extension for target schema, expanding it 
                         with additional fields. Passing an empty fields object removes the extension.`,
         urlParams: {
-          schemaId: { type: RouteOptionType.String, required: true },
+          schemaId: { type: TYPE.String, required: true },
         },
         bodyParams: {
           fields: ConduitJson.Required,
@@ -264,7 +264,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: `Updates schema permissions.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           extendable: ConduitBoolean.Optional,
@@ -308,7 +308,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns a pending schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetSPendingSchema', PendingSchemas.fields),
@@ -337,7 +337,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Converts a previously imported pending schema to a CMS schema.`,
         bodyParams: {
-          schemas: { type: [PendingSchemas.fields], required: true },
+          schemas: { type: [PendingSchemas.fields as ArrayConduitModel], required: true },
         },
       },
       new ConduitRouteReturnDefinition('FinalizeSchemas', TYPE.String),
@@ -350,8 +350,8 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns a document.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
-          id: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetDocument', TYPE.JSON),
@@ -363,7 +363,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Returns queried documents.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
         },
         queryParams: {
           skip: ConduitNumber.Optional,
@@ -386,7 +386,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Creates a new document.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
         },
         bodyParams: {
           inputDocument: ConduitJson.Required,
@@ -401,7 +401,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Creates multiple documents.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
         },
         bodyParams: {
           inputDocuments: { type: [TYPE.JSON], required: true },
@@ -418,7 +418,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.UPDATE,
         description: `Updates multiple documents.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
         },
         bodyParams: {
           changedDocuments: { type: [TYPE.JSON], required: true },
@@ -435,8 +435,8 @@ export class AdminHandlers {
         action: ConduitRouteActions.UPDATE,
         description: `Updates a document.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
-          id: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           changedDocument: ConduitJson.Required,
@@ -451,8 +451,8 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a document.`,
         urlParams: {
-          schemaName: { type: RouteOptionType.String, required: true },
-          id: { type: RouteOptionType.String, required: true },
+          schemaName: { type: TYPE.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteDocument', 'String'),
@@ -548,7 +548,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: `Updates a custom endpoint.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           selectedSchema: ConduitString.Optional,
@@ -570,7 +570,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a custom endpoint.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('deleteCustomEndpoint', 'String'),
@@ -600,7 +600,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.POST,
         description: `Creates indexes for a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           indexes: [ConduitJson.Required],
@@ -615,7 +615,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns indexes of a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('getSchemaIndexes', {
@@ -629,7 +629,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes indexes of a schema.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         queryParams: {
           indexNames: { type: [TYPE.String], required: true },

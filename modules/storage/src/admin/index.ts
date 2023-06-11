@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -19,6 +18,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
+import { normalizeFolderPath } from '../utils';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -79,7 +79,11 @@ export class AdminRoutes {
   }
 
   async createFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, container, isPublic } = call.request.params;
+    const { container, isPublic } = call.request.params;
+    const name = normalizeFolderPath(call.request.params.name);
+    if (name === '/') {
+      throw new GrpcError(status.INVALID_ARGUMENT, 'Folder name may not be empty');
+    }
     const containerDocument = await _StorageContainer
       .getInstance()
       .findOne({ name: container });
@@ -88,27 +92,15 @@ export class AdminRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     }
-    const newName = name.trim().slice(-1) !== '/' ? name.trim() + '/' : name.trim();
-    let folder = await _StorageFolder.getInstance().findOne({
-      name: newName,
+    const createdFolders = await this.fileHandlers.findOrCreateFolders(
+      name,
       container,
-    });
-    if (isNil(folder)) {
-      folder = await _StorageFolder.getInstance().create({
-        name: newName,
-        container,
-        isPublic,
-      });
-      const exists = await this.fileHandlers.storage
-        .container(container)
-        .folderExists(newName);
-      if (!exists) {
-        await this.fileHandlers.storage.container(container).createFolder(newName);
-      }
-    } else {
-      throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
-    }
-    return folder;
+      isPublic,
+      () => {
+        throw new GrpcError(status.ALREADY_EXISTS, 'Folder already exists');
+      },
+    );
+    return createdFolders[createdFolders.length - 1];
   }
 
   async deleteFolder(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -189,7 +181,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition(File.name),
@@ -258,7 +250,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.PATCH,
         description: `Updates a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Optional,
@@ -299,7 +291,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFile', {
@@ -313,7 +305,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns the file's url and optionally redirects to it.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         queryParams: {
           redirect: ConduitBoolean.Optional,
@@ -331,7 +323,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.GET,
         description: `Returns the data of a file.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetFileData', {
@@ -379,7 +371,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a folder.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFolder', 'String'),
@@ -421,7 +413,7 @@ export class AdminRoutes {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a container.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteContainer', _StorageContainer.name),

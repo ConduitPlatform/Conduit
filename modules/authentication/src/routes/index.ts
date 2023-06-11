@@ -1,5 +1,6 @@
 import { LocalHandlers } from '../handlers/local';
 import ConduitGrpcSdk, {
+  ConduitReturn,
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
@@ -109,7 +110,7 @@ export class AuthenticationRoutes {
     errorMessage = null;
     authActive = await this.serviceHandler.validate().catch(e => (errorMessage = e));
     if (!errorMessage && authActive) {
-      const returnField = {
+      const returnField: ConduitReturn = {
         serviceId: ConduitString.Required,
         accessToken: ConduitString.Optional,
         refreshToken: ConduitString.Optional,

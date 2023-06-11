@@ -1,4 +1,4 @@
-FROM node:gallium
+FROM node:hydrogen
 
 ARG BUILDING_SERVICE
 

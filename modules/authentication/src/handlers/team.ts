@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 
 import {
+  ConduitBoolean,
   ConduitNumber,
   ConduitObjectId,
   ConduitString,
@@ -44,7 +45,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async addUserToTeam(user: User, invitationToken: string) {
     if (!this.initialized) return;
     const inviteToken = await Token.getInstance().findOne({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       token: invitationToken,
     });
     if (!inviteToken) {
@@ -80,7 +81,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async getUserInvites(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const invites = await Token.getInstance().findMany({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       // @ts-ignore
       'data.email': call.request.context.user.email,
     });
@@ -146,7 +147,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
     inviter: User;
   }) {
     return Token.getInstance().create({
-      type: TokenType.TEAM_INVITE_TOKEN,
+      tokenType: TokenType.TEAM_INVITE_TOKEN,
       token: uuid(),
       data: {
         teamId: invite.teamId,
@@ -166,7 +167,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
   async createTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
-    const { name, parentTeam } = call.request.params;
+    const { name, parentTeam, addCreatorToTeam } = call.request.params;
 
     if (parentTeam) {
       const allowed = await this.grpcSdk.authorization!.can({
@@ -192,14 +193,16 @@ export class TeamsHandler implements IAuthenticationStrategy {
       isDefault: false,
     });
 
-    await this.grpcSdk.authorization!.createRelation({
-      subject: 'User:' + user._id,
-      relation: 'owner',
-      resource: 'Team:' + team._id,
-    });
     if (parentTeam) {
       await this.grpcSdk.authorization!.createRelation({
         subject: 'Team:' + parentTeam,
+        relation: 'owner',
+        resource: 'Team:' + team._id,
+      });
+    }
+    if (!parentTeam || addCreatorToTeam) {
+      await this.grpcSdk.authorization!.createRelation({
+        subject: 'User:' + user._id,
         relation: 'owner',
         resource: 'Team:' + team._id,
       });
@@ -519,9 +522,10 @@ export class TeamsHandler implements IAuthenticationStrategy {
     routingManager.route(
       {
         path: '/teams',
-        description: `Creates a new team.`,
+        description: `Creates a new team. If addCreatorToTeam is true, the current user will be added as an owner when providing a parent team.`,
         bodyParams: {
           name: ConduitString.Required,
+          addCreatorToTeam: ConduitBoolean.Optional,
           parentTeam: ConduitString.Optional,
         },
         action: ConduitRouteActions.POST,

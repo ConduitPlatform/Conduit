@@ -14,6 +14,7 @@ import ConduitGrpcSdk, {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
+import { RoutingManager } from '../routing';
 
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;
@@ -126,12 +127,37 @@ export abstract class ConduitServiceModule {
       },
     );
   }
+
   protected async addModuleService() {
     await this.grpcServer.addService(
       path.resolve(__dirname, '../module.proto'),
       'conduit.module.v1.ConduitModule',
       {
         SetConfig: this.setConfig.bind(this),
+      },
+    );
+    await this.grpcServer.addService(
+      path.resolve(__dirname, '../module.proto'),
+      'conduit.module.v1.ClientRouter',
+      {
+        Route: RoutingManager.ClientController.handleRequest.bind(
+          RoutingManager.ClientController,
+        ),
+        SocketRoute: RoutingManager.ClientController.handleRequest.bind(
+          RoutingManager.ClientController,
+        ),
+      },
+    );
+    await this.grpcServer.addService(
+      path.resolve(__dirname, '../module.proto'),
+      'conduit.module.v1.AdminRouter',
+      {
+        Route: RoutingManager.AdminController.handleRequest.bind(
+          RoutingManager.AdminController,
+        ),
+        SocketRoute: RoutingManager.AdminController.handleRequest.bind(
+          RoutingManager.AdminController,
+        ),
       },
     );
   }

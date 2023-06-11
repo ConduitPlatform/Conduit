@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -185,7 +184,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.UPDATE,
         description: `Updates a form.`,
         urlParams: {
-          formId: { type: RouteOptionType.String, required: true },
+          formId: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Required,
@@ -219,7 +218,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: `Returns queried form replies and their total count.`,
         urlParams: {
-          formId: { type: RouteOptionType.String, required: true },
+          formId: { type: TYPE.String, required: true },
         },
         queryParams: {
           skip: ConduitNumber.Optional,

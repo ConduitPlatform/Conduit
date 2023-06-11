@@ -2,12 +2,13 @@ import {
   ConduitError,
   ConduitRouteActions,
   ConduitRouteParameters,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
 import { hash } from 'bcrypt';
 import { isNil } from 'lodash';
 import { Admin } from '../models';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 
 export function changeUsersPasswordRoute() {
   return new ConduitRoute(

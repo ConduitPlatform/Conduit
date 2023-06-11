@@ -6,9 +6,10 @@ import {
   ConduitRouteActions,
   ConduitRouteParameters,
   GrpcError,
+  ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, ConfigController } from '@conduitplatform/module-tools';
-import { ConduitRoute, ConduitRouteReturnDefinition } from '@conduitplatform/hermes';
+import { ConduitRoute } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
 
 export function getLoginRoute() {

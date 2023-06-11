@@ -145,7 +145,7 @@ export class TokenProvider {
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
     const signTokenOptions: SignOptions = {
-      expiresIn: tokenOptions.config.accessTokens.expiryPeriod as number,
+      expiresIn: (tokenOptions.config.accessTokens.expiryPeriod as number) / 1000,
     };
     let authorized = false;
     if (
@@ -204,7 +204,7 @@ export class TokenProvider {
         value: (tokens[0] as AccessToken).token,
         options: {
           ...cookieOptions,
-          maxAge: tokenOptions.config.accessTokens.expiryPeriod,
+          maxAge: tokenOptions.config.accessTokens.expiryPeriod / 1000,
         },
       };
     }
@@ -216,7 +216,7 @@ export class TokenProvider {
           value: (tokens[1] as RefreshToken).token,
           options: {
             ...cookieOptions,
-            maxAge: tokenOptions.config.refreshTokens.expiryPeriod,
+            maxAge: tokenOptions.config.refreshTokens.expiryPeriod / 1000,
           },
         };
       }

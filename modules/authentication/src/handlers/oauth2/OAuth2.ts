@@ -90,7 +90,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const baseUrl = this.settings.authorizeUrl;
     const stateToken = await Token.getInstance()
       .create({
-        type: TokenType.STATE_TOKEN,
+        tokenType: TokenType.STATE_TOKEN,
         token: uuid(),
         data: {
           invitationToken: call.request.params?.invitationToken,

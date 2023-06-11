@@ -4,12 +4,12 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitString,
   GrpcServer,
@@ -181,8 +181,8 @@ export class AdminHandlers {
           name: ConduitString.Required,
           functionCode: ConduitString.Required,
           functionType: ConduitString.Required,
-          inputs: { type: TYPE.JSON, required: false },
-          returns: { type: TYPE.JSON, required: false },
+          inputs: ConduitJson.Optional,
+          returns: ConduitJson.Optional,
           timeout: ConduitNumber.Optional,
         },
       },
@@ -195,7 +195,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: 'Deletes multiple functions',
         queryParams: {
-          ids: { type: [RouteOptionType.String], required: true },
+          ids: { type: [TYPE.String], required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFunctions', 'String'),
@@ -207,7 +207,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: 'Delete a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteFunction', 'String'),
@@ -238,7 +238,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: 'Get a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('GetFunction', 'String'),
@@ -264,7 +264,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.GET,
         description: 'Get function executions for specific function',
         urlParams: {
-          functionName: { type: RouteOptionType.String, required: true },
+          functionName: { type: TYPE.String, required: true },
         },
         queryParams: {
           success: ConduitBoolean.Optional,
@@ -279,13 +279,13 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: 'Update a function',
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Optional,
           functionCode: ConduitString.Optional,
-          inputs: { type: TYPE.JSON, required: false },
-          returns: { type: TYPE.JSON, required: false },
+          inputs: ConduitJson.Optional,
+          returns: ConduitJson.Optional,
           timeout: ConduitNumber.Optional,
         },
       },

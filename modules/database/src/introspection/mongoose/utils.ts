@@ -18,7 +18,7 @@ export function mongoSchemaConverter(mongoSchema: any): ConduitModel {
 }
 
 function extractType(field: Indexable) {
-  const conduitField: ConduitModelField = {};
+  const conduitField: Indexable = {};
   if (Array.isArray(field.type)) {
     conduitField.type = field.type.filter(
       (t: string) => t !== 'Undefined' && t !== 'Null',
@@ -33,10 +33,10 @@ function extractType(field: Indexable) {
   } else {
     conduitField.type = field.type ?? field.name;
   }
-  if (conduitField.type === 'Document') {
+  if ((conduitField.type as any) === 'Document') {
     conduitField.type = TYPE.JSON; //workaround for Document types
   }
-  if (conduitField.type === 'ObjectID') {
+  if (conduitField.type === TYPE.ObjectId) {
     conduitField.type = TYPE.ObjectId; // fix casing for ObjectID
   }
 

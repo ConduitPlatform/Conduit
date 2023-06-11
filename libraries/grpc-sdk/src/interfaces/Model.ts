@@ -1,5 +1,3 @@
-import { UntypedArray } from './UntypedArray';
-
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -45,29 +43,99 @@ export enum PostgresIndexType {
 
 export type Array = any[];
 
-export interface ConduitModelField {
-  type?: TYPE | Array | ConduitModel | ConduitModelField;
+type BaseConduitModelField = {
+  type?: TYPE | TYPE[] | ConduitModel | ArrayConduitModel[];
   sqlType?: SQLDataType;
-  enum?: any;
   default?: any;
-  model?: string;
-  unique?: boolean;
-  select?: boolean;
-  required?: boolean;
   description?: string;
-  systemRequired?: boolean;
-  index?: SchemaFieldIndex;
-}
+  required?: boolean;
+  select?: boolean;
+};
 
-export interface ConduitModel {
-  [field: string]:
-    | ConduitModelField
-    | ConduitModelField[]
+type UniqueAndRequiredField = {
+  unique: true;
+  required: true;
+  index?: SchemaFieldIndex;
+};
+
+type NotUniqueField = {
+  unique?: false;
+  required?: boolean;
+  index?: SchemaFieldIndex;
+};
+
+export type BasicConduitModelField = BaseConduitModelField &
+  (UniqueAndRequiredField | NotUniqueField);
+
+export type ConduitModelFieldRelation = BasicConduitModelField & {
+  type: TYPE.Relation | TYPE.Relation[];
+  model: string;
+};
+
+export type ConduitModelFieldJSON = BasicConduitModelField & {
+  type: TYPE.JSON | TYPE.JSON[];
+};
+
+export type ConduitModelFieldEnum = BasicConduitModelField & {
+  type: ExcludeJSONRelation<TYPE> | ExcludeJSONRelation<TYPE>[];
+  enum: any;
+};
+
+export type ConduitModelField = BasicConduitModelField & {
+  type?:
+    | ExcludeJSONRelation<TYPE>
+    | ExcludeJSONRelation<TYPE>[]
     | ConduitModel
-    | TYPE
-    | TYPE[]
-    | UntypedArray; // removing this caused multiple issues
-}
+    | ArrayConduitModel[];
+};
+
+export type allowedTypes =
+  | ExcludeRelation<TYPE>
+  | ConduitModelField
+  | ConduitModelFieldEnum
+  | ConduitModelFieldJSON
+  | ConduitModelFieldRelation;
+
+type embeddableArray =
+  | ExcludeRelation<TYPE>
+  | ConduitModelField
+  | ConduitModelFieldEnum
+  | ConduitModelFieldJSON;
+
+type ExcludeRelation<T> = T extends TYPE.Relation ? never : T;
+type ExcludeJSON<T> = T extends TYPE.JSON ? never : T;
+type ExcludeJSONRelation<T> = ExcludeJSON<ExcludeRelation<T>>;
+
+export type ArrayConduitModel = {
+  // block special keywords
+  type?: never;
+  sqlType?: never;
+  default?: never;
+  description?: never;
+  required?: never;
+  select?: never;
+  unique?: never;
+  index?: never;
+  enum?: never;
+  model?: never;
+} & {
+  [field in string]: embeddableArray | embeddableArray[];
+};
+export type ConduitModel = {
+  // block special keywords
+  type?: never;
+  sqlType?: never;
+  default?: never;
+  description?: never;
+  required?: never;
+  select?: never;
+  unique?: never;
+  index?: never;
+  enum?: never;
+  model?: never;
+} & {
+  [field in string]: allowedTypes | allowedTypes[] | ConduitModel;
+};
 
 export const ConduitModelOptionsPermModifyType = [
   'Everything',

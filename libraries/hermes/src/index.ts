@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response, Router } from 'express';
+import express, { Express, NextFunction, Request, Response, Router } from 'express';
 import { RestController } from './Rest';
 import { GraphQLController } from './GraphQl/GraphQL';
 import { SocketController } from './Socket/Socket';
@@ -12,6 +12,7 @@ import {
   ConduitMiddleware,
   ConduitRequest,
   ConduitSocket,
+  MiddlewarePatch,
   SocketPush,
 } from './interfaces';
 import { SwaggerRouterMetadata } from './types';
@@ -31,7 +32,7 @@ export class ConduitRoutingController {
   private _middlewareRouter: Router;
   private readonly _cleanupTimeoutMs: number;
   private _cleanupTimeout: NodeJS.Timeout | null = null;
-  readonly expressApp = express();
+  readonly expressApp: Express = express();
   readonly server = http.createServer(this.expressApp);
 
   constructor(
@@ -157,11 +158,35 @@ export class ConduitRoutingController {
     }
   }
 
-  registerRouteMiddleware(middleware: ConduitMiddleware) {
-    this._restRouter?.registerMiddleware(middleware);
-    this._graphQLRouter?.registerMiddleware(middleware);
-    this._socketRouter?.registerMiddleware(middleware);
-    this._proxyRouter?.registerMiddleware(middleware);
+  registerRouteMiddleware(middleware: ConduitMiddleware, moduleUrl: string) {
+    this._restRouter?.registerMiddleware(middleware, moduleUrl);
+    this._graphQLRouter?.registerMiddleware(middleware, moduleUrl);
+    this._socketRouter?.registerMiddleware(middleware, moduleUrl);
+    this._proxyRouter?.registerMiddleware(middleware, moduleUrl);
+  }
+
+  patchRouteMiddlewares(patch: MiddlewarePatch) {
+    this._restRouter?.patchRouteMiddlewares(patch);
+    this._graphQLRouter?.patchRouteMiddlewares(patch);
+  }
+
+  filterMiddlewaresPatch(
+    routeMiddlewares: string[],
+    patchMiddlewares: string[],
+    moduleUrl: string,
+  ) {
+    return (
+      this._restRouter?.filterMiddlewaresPatch(
+        routeMiddlewares,
+        patchMiddlewares,
+        moduleUrl,
+      ) ??
+      this._graphQLRouter?.filterMiddlewaresPatch(
+        routeMiddlewares,
+        patchMiddlewares,
+        moduleUrl,
+      )
+    );
   }
 
   registerRoute(
@@ -225,7 +250,7 @@ export class ConduitRoutingController {
         ConduitGrpcSdk.Logger.log(
           'New middleware registered: ' + r.input.path + ' handler url: ' + url,
         );
-        this.registerRouteMiddleware(r);
+        this.registerRouteMiddleware(r, url!);
       } else if (r instanceof ConduitSocket) {
         ConduitGrpcSdk.Logger.log(
           'New socket registered: ' + r.input.path + ' handler url: ' + url,

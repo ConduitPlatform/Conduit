@@ -4,7 +4,6 @@ import ConduitGrpcSdk, {
   GrpcError,
   ParsedRouterRequest,
   Query,
-  RouteOptionType,
   TYPE,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -427,7 +426,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.PATCH,
         description: `Updates an email template.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
         bodyParams: {
           name: ConduitString.Optional,
@@ -460,7 +459,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes an email template.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteTemplate', {

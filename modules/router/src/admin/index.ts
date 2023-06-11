@@ -1,11 +1,11 @@
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
-  RouteOptionType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitBoolean,
+  ConduitJson,
   ConduitNumber,
   ConduitString,
   GrpcServer,
@@ -48,6 +48,37 @@ export class AdminHandlers {
         response: TYPE.JSON,
       }),
       this.routerAdmin.getMiddlewares.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/router/route-middlewares',
+        action: ConduitRouteActions.GET,
+        description: `Returns the middleware of an app route.`,
+        queryParams: {
+          path: ConduitString.Required,
+          action: ConduitString.Required,
+        },
+      },
+      new ConduitRouteReturnDefinition('GetAppRouteMiddleware', {
+        middlewares: [TYPE.String],
+      }),
+      this.routerAdmin.getRouteMiddlewares.bind(this.routerAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/router/patch-middleware',
+        action: ConduitRouteActions.PATCH,
+        description: `Patches the middleware of an app route.`,
+        queryParams: {
+          path: ConduitString.Required,
+          action: ConduitString.Required,
+        },
+        bodyParams: {
+          middlewares: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition('PatchAppMiddleware', 'String'),
+      this.routerAdmin.patchRouteMiddlewares.bind(this.routerAdmin),
     );
     this.routingManager.route(
       {
@@ -100,12 +131,9 @@ export class AdminHandlers {
           path: ConduitString.Required,
           target: ConduitString.Required,
           action: ConduitString.Required,
-          description: ConduitString.Optional,
+          routeDescription: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          proxyMiddlewareOptions: {
-            type: TYPE.JSON,
-            required: false,
-          },
+          proxyMiddlewareOptions: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('CreateProxyRoute', {
@@ -134,7 +162,7 @@ export class AdminHandlers {
         action: ConduitRouteActions.DELETE,
         description: `Deletes a security client.`,
         urlParams: {
-          id: { type: RouteOptionType.String, required: true },
+          id: { type: TYPE.String, required: true },
         },
       },
       new ConduitRouteReturnDefinition('DeleteSecurityClient', {
@@ -182,12 +210,9 @@ export class AdminHandlers {
           path: ConduitString.Optional,
           target: ConduitString.Optional,
           action: ConduitString.Optional,
-          description: ConduitString.Optional,
+          routeDescription: ConduitString.Optional,
           middlewares: [ConduitString.Optional],
-          proxyMiddlewareOptions: {
-            type: TYPE.JSON,
-            required: false,
-          },
+          proxyMiddlewareOptions: ConduitJson.Optional,
         },
       },
       new ConduitRouteReturnDefinition('UpdateProxyRoute', RouterProxyRoute.name),
