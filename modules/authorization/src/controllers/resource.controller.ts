@@ -39,8 +39,10 @@ export class ResourceController {
     resourceName: string,
   ) {
     const relationResources = [];
+    let hasWildcard = false;
     for (const relation of Object.keys(relations)) {
       for (const resource of relations[relation]) {
+        if (resource.indexOf('*') !== -1) hasWildcard = true;
         if (
           resourceName === resource ||
           relationResources.indexOf(resource) !== -1 ||
@@ -53,7 +55,10 @@ export class ResourceController {
     const found = await ResourceDefinition.getInstance().countDocuments({
       name: { $in: relationResources },
     });
-    if (found !== relationResources.length)
+    if (hasWildcard) {
+      if (found !== relationResources.length - 1)
+        throw new Error('One or more related resources was not found');
+    } else if (found !== relationResources.length)
       throw new Error('One or more related resources was not found');
   }
 
