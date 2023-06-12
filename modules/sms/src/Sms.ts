@@ -147,17 +147,17 @@ export default class Sms extends ManagedModule<Config> {
     const name = smsConfig.providerName;
     const settings = smsConfig[name];
     try {
-      switch (true) {
-        case name === 'twilio':
+      switch (name) {
+        case 'twilio':
           this._provider = new TwilioProvider(settings);
           break;
-        case name === 'aws':
+        case 'aws':
           this._provider = new AwsProvider(settings, this.grpcSdk);
           break;
-        case name === 'messageBird':
+        case 'messageBird':
           this._provider = new messageBirdProvider(settings);
           break;
-        case name === 'clickSend':
+        case 'clickSend':
           this._provider = new clickSendProvider(settings, this.grpcSdk);
           break;
         default:

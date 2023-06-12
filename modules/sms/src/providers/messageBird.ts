@@ -1,6 +1,6 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import messagebird, { initClient } from 'messagebird';
+import messagebird, { initClient, MessageBird } from 'messagebird';
 
 export class messageBirdProvider implements ISmsProvider {
   private readonly accessKeyId: string;
@@ -13,8 +13,8 @@ export class messageBirdProvider implements ISmsProvider {
   async sendSms(phoneNumber: string, message: string) {
     await this.client.messages.create(
       {
-        recipients: [phoneNumber],
         originator: 'Verification',
+        recipients: [phoneNumber],
         body: message,
       },
       (error: Error | null) => {
@@ -26,7 +26,7 @@ export class messageBirdProvider implements ISmsProvider {
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    this.client.verify.create(
+    await this.client.verify.create(
       phoneNumber,
       {
         originator: 'Verification',
@@ -45,7 +45,7 @@ export class messageBirdProvider implements ISmsProvider {
   }
 
   async verify(verificationId: string, otp: string): Promise<boolean> {
-    this.client.verify.verify(verificationId, otp, (error: Error | null) => {
+    await this.client.verify.verify(verificationId, otp, (error: Error | null) => {
       if (error) {
         ConduitGrpcSdk.Logger.error(error);
         return Promise.reject(false);

@@ -1,12 +1,7 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import AWS, { SNS } from 'aws-sdk';
-
-function generateOTP(): string {
-  return Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, '0');
-}
+import { generate } from 'otp-generator';
 export class AwsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
@@ -54,7 +49,12 @@ export class AwsProvider implements ISmsProvider {
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    const otp = generateOTP();
+    const otp = generate(4, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
     const result = await this.client
       .publish({
         PhoneNumber: phoneNumber,

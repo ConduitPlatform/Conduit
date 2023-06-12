@@ -28,12 +28,14 @@
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",
+    "@types/otp-generator": "^4.0.0",
     "aws-sdk": "^2.1388.0",
     "bluebird": "^3.7.2",
     "clicksend": "^5.0.37",
     "convict": "^6.2.4",
     "lodash": "^4.17.21",
     "messagebird": "^4.0.1",
+    "otp-generator": "^4.0.1",
     "twilio": "4.10.0"
   },
   "devDependencies": {

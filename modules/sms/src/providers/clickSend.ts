@@ -1,12 +1,8 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SMSApi, SmsMessage, SmsMessageCollection } from 'clicksend';
+import { generate } from 'otp-generator';
 
-function generateOTP(): string {
-  return Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, '0');
-}
 export class clickSendProvider implements ISmsProvider {
   private readonly username: string;
   private readonly clicksendApiKey: string;
@@ -40,7 +36,13 @@ export class clickSendProvider implements ISmsProvider {
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    const otp = generateOTP();
+    //const otp = otpGenerator.generate(6, { digits: true, alphabets: false, specialChars: false });
+    const otp = generate(4, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
     const smsMessage: SmsMessage = {
       body: `Your verification code is ${otp}`,
       to: phoneNumber,
