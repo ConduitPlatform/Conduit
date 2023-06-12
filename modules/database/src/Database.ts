@@ -18,6 +18,7 @@ import {
   DropCollectionResponse,
   FindOneRequest,
   FindRequest,
+  GetDatabaseTypeResponse,
   GetSchemaRequest,
   GetSchemasRequest,
   MigrateRequest,
@@ -76,6 +77,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       rawQuery: this.rawQuery.bind(this),
       columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
+      getDatabaseType: this.getDatabaseType.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -729,6 +731,14 @@ export default class DatabaseModule extends ManagedModule<void> {
       });
     }
     callback(null, null);
+  }
+
+  async getDatabaseType(
+    call: GrpcRequest<Empty>,
+    callback: GrpcResponse<GetDatabaseTypeResponse>,
+  ) {
+    const result = this._activeAdapter.getDatabaseType();
+    callback(null, { result });
   }
 
   private registerInstanceSyncEvents() {

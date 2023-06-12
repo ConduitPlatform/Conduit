@@ -65,10 +65,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       model.objectPaths,
       true,
     );
+    const dialect = this.sequelize.getDialect();
+    const queryViewName = dialect === 'postgres' ? `"${viewName}"` : viewName;
     const viewQuery =
-      this.sequelize.getDialect() !== 'sqlite'
-        ? `CREATE OR REPLACE VIEW "${viewName}" AS ${query.sqlQuery}`
-        : `CREATE VIEW IF NOT EXISTS" "${viewName}" AS ${query.sqlQuery}`;
+      dialect !== 'sqlite'
+        ? `CREATE OR REPLACE VIEW ${queryViewName} AS ${query.sqlQuery}`
+        : `CREATE VIEW IF NOT EXISTS" ${queryViewName} AS ${query.sqlQuery}`;
     await this.sequelize.query(viewQuery);
     this.views[viewName] = viewModel;
     const foundView = await this.models['Views'].findOne({ name: viewName });
@@ -357,9 +359,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  //todo change to dialect
   getDatabaseType(): string {
-    return 'PostgreSQL';
+    const type = this.sequelize.getDialect();
+    if (type === 'postgres') {
+      return 'PostgreSQL'; // TODO: clean up
+    }
+    return type;
   }
 
   async createIndexes(

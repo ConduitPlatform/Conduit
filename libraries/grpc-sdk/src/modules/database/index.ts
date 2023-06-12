@@ -336,6 +336,10 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     return this.client!.migrate({ schemaName });
   }
 
+  getDatabaseType() {
+    return this.client!.getDatabaseType({});
+  }
+
   private constructSortObj(sort: string[]) {
     const sortObj: { [field: string]: -1 | 1 } = {};
     sort.forEach((sortVal: string) => {
