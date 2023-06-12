@@ -221,7 +221,7 @@ export class SchemaAdmin {
       call.request.params.conduitOptions?.authorization?.enabled
     ) {
       // wipe all data when enabling authz
-      // await requestedSchema.delete({});
+      await this.database.getSchemaModel(requestedSchema.name).model.deleteMany({});
     }
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
