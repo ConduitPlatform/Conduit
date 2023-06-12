@@ -1,7 +1,13 @@
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import ConduitGrpcSdk, { GrpcError, Indexable, SMS } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  Cookies,
+  GrpcError,
+  Headers,
+  Indexable,
+  SMS,
+} from '@conduitplatform/grpc-sdk';
 import { Team, Token, User } from '../models';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -14,6 +20,34 @@ export namespace AuthUtils {
     return crypto.randomBytes(size).toString('base64');
   }
 
+  export function getToken(
+    headers: Headers,
+    cookies: Cookies,
+    reqType: 'access' | 'refresh',
+  ) {
+    const tokenHeader = (headers['Authorization'] || headers['authorization']) as string; // formatted token
+    const tokenCookie = cookies[`${reqType}Token`] as string; // token
+    if (isNil(tokenHeader) && isNil(tokenCookie)) {
+      throw new GrpcError(
+        status.UNAUTHENTICATED,
+        `No 'Authorization' header or '${reqType}Token' cookie present`,
+      );
+    }
+    let headerArgs: string[] = [];
+    if (tokenHeader) {
+      headerArgs = tokenHeader.split(' ');
+      if (headerArgs.length !== 2) {
+        throw new GrpcError(status.UNAUTHENTICATED, "'Authorization' header malformed");
+      }
+      if (headerArgs[0] !== 'Bearer') {
+        throw new GrpcError(
+          status.UNAUTHENTICATED,
+          "The 'Authorization' header must be prefixed by 'Bearer '",
+        );
+      }
+    }
+    return headerArgs[1] || tokenCookie;
+  }
   export async function createToken(
     dbUserId: string,
     data: Indexable,

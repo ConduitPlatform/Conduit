@@ -17,6 +17,8 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { AuthUtils } from '../utils';
+import getToken = AuthUtils.getToken;
 
 export class CommonHandlers implements IAuthenticationStrategy {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
@@ -68,7 +70,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
     const clientId = context.clientId;
     const user = context.user;
     const config: Config = ConfigController.getInstance().config;
-    const authToken = call.request.headers.authorization;
+    const authToken = getToken(call.request.headers, call.request.cookies, 'access');
     const clientConfig = config.clients;
     ConduitGrpcSdk.Metrics?.decrement('logged_in_users_total');
     await TokenProvider.getInstance().logOutClientOperations(
