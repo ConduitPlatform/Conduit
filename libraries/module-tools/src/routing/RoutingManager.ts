@@ -12,12 +12,10 @@ import {
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
-  ParsedRouterRequest,
   ProxyMiddlewareOptions,
   ProxyRouteOptions,
   Router,
   SocketProtoDescription,
-  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { GrpcServer } from '../classes';
 import { ProxyRouteBuilder } from './ProxyRouteBuilder';
