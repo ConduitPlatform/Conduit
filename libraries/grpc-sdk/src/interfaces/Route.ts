@@ -18,7 +18,8 @@ export type ConduitUrlParam = AllowedTypes | { type: AllowedTypes; required?: bo
 export type ConduitQueryParam =
   | ConduitUrlParam
   | AllowedTypes[]
-  | { type: AllowedTypes[]; required?: boolean };
+  | { type: AllowedTypes[]; required: boolean }
+  | { type: AllowedTypes; required?: boolean }[];
 
 export type ConduitUrlParams = {
   [field in string]: ConduitUrlParam;
