@@ -9,6 +9,7 @@ import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
 import { isNil } from 'lodash';
 import { createHash } from 'crypto';
+import { Op } from 'sequelize';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -144,7 +145,11 @@ export abstract class SchemaAdapter<T> {
         if (isNil(docs)) {
           return null;
         }
-        return { _id: { $in: docs.map((doc: any) => doc._id) } }; // TODO: $in doesnt work for sql
+        if (this.adapter.getDatabaseType() === 'MongoDB') {
+          return { _id: { $in: docs.map((doc: any) => doc._id) } };
+        } else {
+          return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
+        }
       } else {
         const doc = await view.findOne(parsedQuery, {
           userId: undefined,
