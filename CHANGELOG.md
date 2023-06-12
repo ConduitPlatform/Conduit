@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.13](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.12...v0.16.0-alpha.13) (2023-06-12)
+
+
+### Features
+
+* **authorization:** client routes to check permissions and roles for user ([289051d](https://github.com/ConduitPlatform/Conduit/commit/289051d0350044843d8a5450ac35b11c9f4e6441))
+* **database:** enable authorized schema support ([#632](https://github.com/ConduitPlatform/Conduit/issues/632)) ([6c0cb4b](https://github.com/ConduitPlatform/Conduit/commit/6c0cb4b1a4614456f85961377bbfaba90bcf8248))
+* **functions:** webhook,event,socket,middlware functions support ([#609](https://github.com/ConduitPlatform/Conduit/issues/609)) ([fce847b](https://github.com/ConduitPlatform/Conduit/commit/fce847b2023d2f82f7cb2661d0b4d05370444add))
+
+
+### Bug Fixes
+
+* **authentication:** user logout not working with cookies ([3927275](https://github.com/ConduitPlatform/Conduit/commit/3927275aa091418530094fe2d5bb0fc81158525f))
+* **grpc-sdk:** conduitQueryParams type disallowing required object-formatted array param definition ([#640](https://github.com/ConduitPlatform/Conduit/issues/640)) ([6d09cd9](https://github.com/ConduitPlatform/Conduit/commit/6d09cd9dd12dd398f8efe319e5d90d64181c4f8c))
+* modules/storage/package.json to reduce vulnerabilities ([#634](https://github.com/ConduitPlatform/Conduit/issues/634)) ([7adb9b5](https://github.com/ConduitPlatform/Conduit/commit/7adb9b57ad414fe1984e142490b791bbff316774))
+* **storage:** build failing due to aws lib version mismatch ([#639](https://github.com/ConduitPlatform/Conduit/issues/639)) ([37e5417](https://github.com/ConduitPlatform/Conduit/commit/37e541704dc032eaedd89d16413c494720e48c71))
+
 ## [0.16.0-alpha.12](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.11...v0.16.0-alpha.12) (2023-05-26)
 
 
