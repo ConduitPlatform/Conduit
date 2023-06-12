@@ -12,12 +12,10 @@ import {
   ConduitSocketEventHandler,
   ConduitSocketOptions,
   EventsProtoDescription,
-  ParsedRouterRequest,
   ProxyMiddlewareOptions,
   ProxyRouteOptions,
   Router,
   SocketProtoDescription,
-  UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { GrpcServer } from '../classes';
 import { ProxyRouteBuilder } from './ProxyRouteBuilder';
@@ -75,10 +73,7 @@ export class RoutingManager {
     this._moduleProxyRoutes = {};
   }
 
-  middleware(
-    input: ConduitMiddlewareOptions,
-    handler: (request: ParsedRouterRequest) => Promise<UnparsedRouterResponse>,
-  ) {
+  middleware(input: ConduitMiddlewareOptions, handler: RequestHandlers) {
     const routeObject: ConduitRouteObject = this.parseRouteObject({
       options: input,
       grpcFunction: input.name,

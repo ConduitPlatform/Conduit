@@ -88,10 +88,10 @@ async function executeFunction(
   }
 }
 
-export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
+export function createRequestOrWebhookFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
   const compiledFunctionCode = compileFunctionCode(func.functionCode);
   const route = new RouteBuilder()
-    .path(`/${func.name}`)
+    .path(`${func.functionType !== 'request' ? '/hook' : ''}/${func.name}`)
     .method(getOperation(func.inputs?.method))
     .handler((call: ParsedRouterRequest) => {
       return executeFunction(
@@ -103,7 +103,7 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
         grpcSdk,
       );
     });
-  if (func.inputs?.auth) {
+  if (func.inputs?.auth && func.functionType === 'request') {
     route.middleware('authMiddleware');
   }
   const returns = !isNil(func.returns) ? func.returns : 'String';
@@ -127,6 +127,99 @@ export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
   }
   route.return(getOperation(func.inputs?.method) + func.name, returns);
   return route.build();
+}
+
+export function createSocketFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  return {
+    input: {
+      path: `/${func.name}`,
+      name: func.name,
+      middlewares: func.inputs.auth ? ['authMiddleware'] : undefined,
+    },
+    events: {
+      [func.inputs.event!]: (call: ParsedRouterRequest) => {
+        return executeFunction(
+          func,
+          call,
+          compiledFunctionCode,
+          func.timeout,
+          func.name,
+          grpcSdk,
+        );
+      },
+    },
+  };
+}
+
+export function createMiddlewareFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  return {
+    input: { path: '/', name: func.name },
+    handler: (call: ParsedRouterRequest) => {
+      return executeFunction(
+        func,
+        call,
+        compiledFunctionCode,
+        func.timeout,
+        func.name,
+        grpcSdk,
+      );
+    },
+  };
+}
+
+export function createEventFunction(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  const compiledFunctionCode = compileFunctionCode(func.functionCode);
+  grpcSdk.bus?.subscribe(
+    func.inputs.event!,
+    (data: any) => {
+      ConduitGrpcSdk.Logger.log(`Received event ${func.inputs.event} for ${func.name}`);
+      let parsedData = data;
+      if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+        parsedData = JSON.parse(data);
+      }
+
+      executeFunction(
+        func,
+        { request: parsedData },
+        compiledFunctionCode,
+        func.timeout,
+        func.name,
+        grpcSdk,
+      )
+        .then(() => {
+          ConduitGrpcSdk.Logger.log(
+            `Executed ${func.name} for event ${func.inputs.event}`,
+          );
+        })
+        .catch(err => {
+          ConduitGrpcSdk.Logger.error(
+            `Execution failed for ${func.name} for event ${func.inputs.event} with: `,
+          );
+          ConduitGrpcSdk.Logger.error(err);
+        });
+    },
+    func._id,
+  );
+}
+
+export function createFunctionRoute(func: Functions, grpcSdk: ConduitGrpcSdk) {
+  switch (func.functionType) {
+    case 'request':
+      return createRequestOrWebhookFunction(func, grpcSdk);
+    case 'webhook':
+      return createRequestOrWebhookFunction(func, grpcSdk);
+    case 'cron':
+    //todo
+    case 'event':
+      createEventFunction(func, grpcSdk);
+      return null;
+    case 'socket':
+      return createSocketFunction(func, grpcSdk);
+    case 'middleware':
+      return createMiddlewareFunction(func, grpcSdk);
+  }
 }
 
 async function addFunctionExecutions(
