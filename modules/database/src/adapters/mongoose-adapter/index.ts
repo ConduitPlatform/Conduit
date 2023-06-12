@@ -19,6 +19,7 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
+import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
@@ -66,7 +67,12 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
   }
 
-  async createView(modelName: string, viewName: string, query: any): Promise<void> {
+  async createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
@@ -90,12 +96,22 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       pipeline: EJSON.parse(query.mongoQuery),
     });
     this.views[viewName] = viewModel;
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
+    }
   }
 
   async deleteView(viewName: string): Promise<void> {
     if (this.views[viewName]) {
       await this.views[viewName].model.collection.drop();
     }
+    await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
   }
 

@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
+import { _ConduitSchema, ConduitDatabaseSchema, IView, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash';
@@ -140,7 +140,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
-  abstract createView(modelName: string, viewName: string, query: any): Promise<void>;
+  abstract createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void>;
 
   abstract deleteView(viewName: string): Promise<void>;
 
@@ -154,7 +159,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract syncSchema(name: string): Promise<void>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas'];
+    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas', 'Views'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }
@@ -265,6 +270,19 @@ export abstract class DatabaseAdapter<T extends Schema> {
       });
 
     await Promise.all(models);
+  }
+
+  async recoverViewsFromDatabase() {
+    let views = await this.models!['Views'].findMany({});
+    views = views.map((view: IView) => {
+      return this.createView(
+        view.originalSchema,
+        view.name,
+        view.joinedSchemas,
+        view.query,
+      );
+    });
+    await Promise.all(views);
   }
 
   setSchemaExtension(

@@ -9,3 +9,4 @@ export * from './TypeHacks';
 export * from './CmsOptions';
 export * from './ConduitOptions';
 export * from './ConduitPermissions';
+export * from './View';

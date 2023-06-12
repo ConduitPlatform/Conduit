@@ -128,7 +128,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
       parsedFilter,
@@ -141,7 +141,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       parsedQuery = parsedQuery['$set'];
     }
     parsedQuery['updatedAt'] = new Date();
-    let finalQuery = this.model.findOneAndReplace(parsedFilter, parsedQuery, {
+    let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -159,7 +159,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
       parsedFilter,
@@ -172,7 +172,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       parsedQuery = parsedQuery['$set'];
     }
     parsedQuery['updatedAt'] = new Date();
-    let finalQuery = this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -190,7 +190,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedFilter = parseQuery(this.parseStringToQuery(filterQuery));
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
       parsedFilter,
@@ -198,6 +198,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      return [];
+    }
     let parsedQuery: Indexable = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -213,7 +216,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     parsedQuery = await this.getAuthorizedQuery(
       'delete',
       parsedQuery,
@@ -221,7 +224,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    return this.model.deleteOne(parsedQuery).exec();
+    return this.model.deleteOne(parsedQuery!).exec();
   }
 
   async deleteMany(
@@ -231,7 +234,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     parsedQuery = await this.getAuthorizedQuery(
       'delete',
       parsedQuery,
@@ -239,6 +242,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedQuery)) {
+      return [];
+    }
     return this.model.deleteMany(parsedQuery).exec();
   }
 
@@ -254,7 +260,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     parsedQuery = await this.getAuthorizedQuery(
       'read',
       parsedQuery,
@@ -264,6 +270,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.skip,
       options?.limit,
     );
+    if (isNil(parsedQuery)) {
+      return [];
+    }
     let finalQuery = this.model.find(parsedQuery, options?.select);
     if (!isNil(options?.skip)) {
       finalQuery = finalQuery.skip(options?.skip!);
@@ -289,7 +298,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedQuery = parseQuery(this.parseStringToQuery(query));
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     parsedQuery = await this.getAuthorizedQuery(
       'read',
       parsedQuery,
@@ -297,7 +306,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    let finalQuery = this.model.findOne(parsedQuery, options?.select);
+    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
@@ -369,7 +378,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
             }`,
           );
         } else {
-          let ref =
+          const ref =
             this.model.schema.paths[processing].options.ref ||
             this.model.schema.paths[processing].options.type[0].ref;
           const childPopulates = this.adapter.models[ref].calculatePopulates([

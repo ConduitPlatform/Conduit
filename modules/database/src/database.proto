@@ -105,7 +105,8 @@ message CreateViewRequest {
   };
   string schemaName = 1;
   string viewName = 2;
-  RawQuery query = 3;
+  repeated string joinedSchemas = 3;
+  RawQuery query = 4;
 }
 
 message DeleteViewRequest {
@@ -148,6 +149,10 @@ message ColumnExistenceResponse {
   bool result = 1;
 }
 
+message GetDatabaseTypeResponse {
+  string result = 1;
+}
+
 service DatabaseProvider {
   rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
   rpc GetSchema(GetSchemaRequest) returns (Schema);
@@ -155,6 +160,7 @@ service DatabaseProvider {
   rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
   rpc SetSchemaExtension(SchemaExtension) returns (Schema);
   rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
+  rpc GetDatabaseType(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);

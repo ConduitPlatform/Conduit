@@ -1,5 +1,10 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { checkRelation, computePermissionTuple } from '../utils';
+import {
+  checkRelation,
+  computePermissionTuple,
+  getPostgresAccessListQuery,
+  getSQLAccessListQuery,
+} from '../utils';
 import { IndexController } from './index.controller';
 import { RuleCache } from './cache.controller';
 import { isNil } from 'lodash';
@@ -123,9 +128,11 @@ export class PermissionsController {
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
+    const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
     await this.grpcSdk.database?.createView(
       objectType,
       createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      ['Permission', 'ActorIndex', 'ObjectIndex'],
       {
         mongoQuery: [
           // permissions lookup won't work this way
@@ -207,19 +214,22 @@ export class PermissionsController {
             },
           },
         ],
-        sqlQuery: `SELECT "${objectTypeCollection}".* FROM "${objectTypeCollection}"
-          INNER JOIN (
-              SELECT * FROM "cnd_Permission"
-              WHERE "computedTuple" LIKE '${computedTuple}%'
-          ) permissions ON permissions."computedTuple" = '${computedTuple}:' || "${objectTypeCollection}"._id
-          INNER JOIN (
-              SELECT * FROM "cnd_ActorIndex"
-              WHERE subject = '${subject}'
-          ) actors ON 1=1
-          INNER JOIN (
-              SELECT * FROM "cnd_ObjectIndex"
-              WHERE subject LIKE '${objectType}:%#${action}'
-          ) objects ON actors.entity = objects.entity;`,
+        sqlQuery:
+          dbType === 'PostgreSQL'
+            ? getPostgresAccessListQuery(
+                objectTypeCollection,
+                computedTuple,
+                subject,
+                objectType,
+                action,
+              )
+            : getSQLAccessListQuery(
+                objectTypeCollection,
+                computedTuple,
+                subject,
+                objectType,
+                action,
+              ),
       },
     );
     return;

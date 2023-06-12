@@ -1,9 +1,15 @@
-import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  GrpcError,
+  Indexable,
+  status,
+} from '@conduitplatform/grpc-sdk';
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
 import { isNil } from 'lodash';
 import { createHash } from 'crypto';
+import { Op } from 'sequelize';
 
 export type SingleDocQuery = string | Indexable;
 export type MultiDocQuery = string | Indexable[];
@@ -136,12 +142,22 @@ export abstract class SchemaAdapter<T> {
           userId: undefined,
           scope: undefined,
         });
-        return { _id: { $in: docs.map((doc: any) => doc._id) } };
+        if (isNil(docs)) {
+          return null;
+        }
+        if (this.adapter.getDatabaseType() === 'MongoDB') {
+          return { _id: { $in: docs.map((doc: any) => doc._id) } };
+        } else {
+          return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
+        }
       } else {
         const doc = await view.findOne(parsedQuery, {
           userId: undefined,
           scope: undefined,
         });
+        if (isNil(doc)) {
+          throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+        }
         return { _id: doc._id };
       }
     }

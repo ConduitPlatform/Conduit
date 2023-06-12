@@ -18,6 +18,7 @@ import {
   DropCollectionResponse,
   FindOneRequest,
   FindRequest,
+  GetDatabaseTypeResponse,
   GetSchemaRequest,
   GetSchemasRequest,
   MigrateRequest,
@@ -33,7 +34,7 @@ import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, Schema } from './interfaces';
+import { ConduitDatabaseSchema, IView, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -76,6 +77,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       rawQuery: this.rawQuery.bind(this),
       columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
+      getDatabaseType: this.getDatabaseType.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -112,6 +114,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
+    await this._activeAdapter.recoverViewsFromDatabase();
     await runMigrations(this._activeAdapter);
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       return this._activeAdapter.registerSystemSchema(model).then(() => {
@@ -213,6 +216,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter.createView(
         call.request.schemaName,
         call.request.viewName,
+        call.request.joinedSchemas,
         call.request.query,
       );
       callback(null); // @dirty-type-cast
@@ -713,9 +717,28 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
-      await this._activeAdapter.syncSchema(call.request.schemaName);
+      const schemaName = call.request.schemaName;
+      await this._activeAdapter.syncSchema(schemaName).catch(async () => {
+        const views: IView[] = await this._activeAdapter
+          .getSchemaModel('Views')
+          .model.findMany({});
+        for (const view of views) {
+          if (view.joinedSchemas.includes(schemaName)) {
+            await this._activeAdapter.deleteView(view.name);
+          }
+        }
+        await this._activeAdapter.syncSchema(schemaName);
+      });
     }
     callback(null, null);
+  }
+
+  async getDatabaseType(
+    call: GrpcRequest<Empty>,
+    callback: GrpcResponse<GetDatabaseTypeResponse>,
+  ) {
+    const result = this._activeAdapter.getDatabaseType();
+    callback(null, { result });
   }
 
   private registerInstanceSyncEvents() {
