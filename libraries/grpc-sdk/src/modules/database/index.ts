@@ -309,13 +309,19 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
   createView(
     schemaName: string,
     viewName: string,
+    joinedSchemas: string[],
     query: { mongoQuery?: Indexable; sqlQuery?: string },
   ) {
     const processed: any = query;
     if (query.mongoQuery) {
       processed.mongoQuery = JSON.stringify(processed.mongoQuery);
     }
-    return this.client!.createView({ schemaName, viewName, query: processed });
+    return this.client!.createView({
+      schemaName,
+      viewName,
+      joinedSchemas,
+      query: processed,
+    });
   }
 
   deleteView(viewName: string) {

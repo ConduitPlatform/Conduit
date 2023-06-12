@@ -126,6 +126,7 @@ export class PermissionsController {
     await this.grpcSdk.database?.createView(
       objectType,
       createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      ['Permission', 'ActorIndex', 'ObjectIndex'],
       {
         mongoQuery: [
           // permissions lookup won't work this way

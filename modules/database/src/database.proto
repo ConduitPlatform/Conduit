@@ -105,7 +105,8 @@ message CreateViewRequest {
   };
   string schemaName = 1;
   string viewName = 2;
-  RawQuery query = 3;
+  repeated string joinedSchemas = 3;
+  RawQuery query = 4;
 }
 
 message DeleteViewRequest {

@@ -33,7 +33,7 @@ import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, Schema } from './interfaces';
+import { ConduitDatabaseSchema, IView, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -214,6 +214,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       await this._activeAdapter.createView(
         call.request.schemaName,
         call.request.viewName,
+        call.request.joinedSchemas,
         call.request.query,
       );
       callback(null); // @dirty-type-cast
@@ -716,10 +717,12 @@ export default class DatabaseModule extends ManagedModule<void> {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
       const schemaName = call.request.schemaName;
       await this._activeAdapter.syncSchema(schemaName).catch(async () => {
-        const views = this._activeAdapter.views;
-        for (const viewName in views) {
-          if (views[viewName].originalSchema.name === schemaName) {
-            await this._activeAdapter.deleteView(viewName);
+        const views: IView[] = await this._activeAdapter
+          .getSchemaModel('Views')
+          .model.findMany({});
+        for (const view of views) {
+          if (view.joinedSchemas.includes(schemaName)) {
+            await this._activeAdapter.deleteView(view.name);
           }
         }
         await this._activeAdapter.syncSchema(schemaName);

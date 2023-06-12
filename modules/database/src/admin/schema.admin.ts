@@ -578,6 +578,19 @@ export class SchemaAdmin {
   }
 
   async getDatabaseType(): Promise<UnparsedRouterResponse> {
+    //const per = await this.grpcSdk.authorization!.grantPermission({  subject: 'User:c90a2e7e-ed63-42f6-9cbf-3128fc32bb2d', action: 'read', resource: 'File:56039993-be6f-4a3b-a2d9-69400e9388fa' });
+    const test = await this.database
+      .getSchemaModel('File')
+      .model.findOne(
+        { _id: '56039993-be6f-4a3b-a2d9-69400e9388fa' },
+        { userId: 'c90a2e7e-ed63-42f6-9cbf-3128fc32bb2d' },
+      );
+    const test2 = await this.database
+      .getSchemaModel('File')
+      .model.findOne(
+        { _id: '56039993-be6f-4a3b-a2d9-69400e9388fa' },
+        { userId: '75ca6d25-8cc8-4149-bfdb-9fd4bc624bb9' },
+      );
     return this.database.getDatabaseType();
   }
 

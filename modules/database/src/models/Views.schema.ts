@@ -5,10 +5,15 @@ export const Views = new ConduitSchema(
     _id: TYPE.ObjectId,
     name: {
       type: TYPE.String,
+      unique: true,
       required: true,
     },
     originalSchema: {
       type: TYPE.String,
+      required: true,
+    },
+    joinedSchemas: {
+      type: [TYPE.String],
       required: true,
     },
     query: {

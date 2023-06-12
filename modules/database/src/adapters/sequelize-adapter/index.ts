@@ -42,7 +42,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     this.connectionUri = connectionUri;
   }
 
-  async createView(modelName: string, viewName: string, query: any): Promise<void> {
+  async createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void> {
     if (!this.models[modelName]) {
       throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
     }
@@ -66,17 +71,22 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         : `CREATE VIEW IF NOT EXISTS" "${viewName}" AS ${query.sqlQuery}`;
     await this.sequelize.query(viewQuery);
     this.views[viewName] = viewModel;
-    await this.models['Views'].create({
-      name: viewName,
-      originalSchema: model.originalSchema.name,
-      query,
-    });
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
+    }
   }
 
   async deleteView(viewName: string): Promise<void> {
     if (this.views[viewName]) {
-      await this.sequelize.query(`DROP VIEW IF EXISTS ${viewName}`);
+      await this.sequelize.query(`DROP VIEW IF EXISTS "${viewName}"`);
     }
+    await this.models['Views'].deleteOne({ name: viewName });
     delete this.views[viewName];
   }
 

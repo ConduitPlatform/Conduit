@@ -140,7 +140,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
-  abstract createView(modelName: string, viewName: string, query: any): Promise<void>;
+  abstract createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void>;
 
   abstract deleteView(viewName: string): Promise<void>;
 
@@ -270,7 +275,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
   async recoverViewsFromDatabase() {
     let views = await this.models!['Views'].findMany({});
     views = views.map((view: IView) => {
-      return this.createView(view.originalSchema, view.name, view.query);
+      return this.createView(
+        view.originalSchema,
+        view.name,
+        view.joinedSchemas,
+        view.query,
+      );
     });
     await Promise.all(views);
   }
