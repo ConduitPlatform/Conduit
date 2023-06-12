@@ -69,7 +69,7 @@ export class RouterAdmin {
   }
 
   async getRoutes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    let response: { [key: string]: any } = {};
+    const response: { [key: string]: any } = {};
     const module = this.router.getGrpcRoutes();
     (ConduitGrpcSdk.Logger as IConduitLogger).logObject(module);
 
@@ -108,7 +108,7 @@ export class RouterAdmin {
             handler: (<ProxyRouteT>item).proxy.target,
           };
         } else if ((item as any).events) {
-          let eventObject = JSON.parse((item as any).events);
+          const eventObject = JSON.parse((item as any).events);
           response[moduleName].socketRoutes[item.options.path] = {};
           Object.keys(eventObject).forEach((event: string) => {
             response[moduleName].socketRoutes[item.options.path][event] = {
