@@ -85,9 +85,6 @@ export class AdminHandlers {
         path: '/routes',
         action: ConduitRouteActions.GET,
         description: `Returns available routes.`,
-        queryParams: {
-          sortByName: ConduitBoolean.Optional,
-        },
       },
       new ConduitRouteReturnDefinition('GetRoutes', {
         response: TYPE.JSON,
