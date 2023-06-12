@@ -144,7 +144,7 @@ export class CustomEndpointsAdmin {
     }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const count: number = await this.database
       .getSchemaModel('CustomEndpoints')
       .model.countDocuments(query);
@@ -337,7 +337,10 @@ export class CustomEndpointsAdmin {
     }
     const customEndpoints = await this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({}, skip, limit, 'selectedSchema selectedSchemaName', parsedSort);
+      .model.findMany(
+        {},
+        { skip, limit, select: 'selectedSchema selectedSchemaName', sort: parsedSort },
+      );
     customEndpoints.forEach((endpoint: Indexable) => {
       if (!schemaIds.includes(endpoint.selectedSchema.toString())) {
         schemaIds.push(endpoint.selectedSchema.toString());

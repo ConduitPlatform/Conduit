@@ -89,6 +89,27 @@ export class SchemaController {
         ConduitGrpcSdk.Logger.error(err);
         throw err;
       });
+    if (schema.modelOptions.conduit?.authorization?.enabled) {
+      if (this.grpcSdk.isAvailable('authorization')) {
+        this.grpcSdk.authorization?.defineResource({
+          name: schema.name,
+          relations: [
+            { name: 'owner', resourceType: ['User', '*'] },
+            { name: 'reader', resourceType: ['User', '*'] },
+            { name: 'editor', resourceType: ['User', '*'] },
+          ],
+          permissions: [
+            { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
+            { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
+            { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
+          ],
+        });
+      } else {
+        ConduitGrpcSdk.Logger.error(
+          'Authorization service is not available, skipping resource definition',
+        );
+      }
+    }
     if (operation === 'create') {
       this.grpcSdk.bus?.publish(
         'database:customSchema:create',

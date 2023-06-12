@@ -35,6 +35,9 @@ export namespace SchemaConverter {
         delete?: { enabled?: boolean; authenticated?: boolean };
       };
     };
+    authorization?: {
+      enabled?: boolean;
+    };
     permissions?: {
       extendable?: boolean;
       canCreate?: boolean;
@@ -119,6 +122,13 @@ export namespace SchemaConverter {
         },
       };
     }
+    modelOptions.conduit.authorization = {
+      enabled:
+        opts.authorization?.enabled ??
+        existing?.authorization?.enabled ??
+        defaults.conduit!.authorization?.enabled ??
+        false,
+    };
     modelOptions.conduit.permissions = {
       extendable:
         explicit.permissions?.extendable !== undefined
@@ -173,6 +183,9 @@ export namespace SchemaConverter {
               authenticated: false,
             },
           },
+        },
+        authorization: {
+          enabled: false,
         },
         permissions: {
           extendable: !importedSchema,

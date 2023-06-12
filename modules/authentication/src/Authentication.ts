@@ -36,6 +36,7 @@ import {
   ManagedModule,
 } from '@conduitplatform/module-tools';
 import { TeamsAdmin } from './admin/team';
+import { User as UserAuthz } from './authz';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -64,6 +65,9 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
+    this.grpcSdk.onceModuleUp('authorization', async () => {
+      await this.grpcSdk.authorization!.defineResource(UserAuthz);
+    });
     this.database = this.grpcSdk.database!;
     TokenProvider.getInstance(this.grpcSdk);
     await this.registerSchemas();

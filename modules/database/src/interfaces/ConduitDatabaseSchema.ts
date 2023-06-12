@@ -4,7 +4,12 @@ import {
   ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
 import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
-import { MultiDocQuery, ParsedQuery, Schema, SchemaAdapter } from './SchemaAdapter';
+import {
+  MultiDocQuery,
+  ParsedQuery,
+  Schema,
+  SchemaAdapter,
+} from '../adapters/SchemaAdapter';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
   extensions: DeclaredSchemaExtension[];
@@ -27,7 +32,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   }
 
   findOne(query: ParsedQuery, select?: string, populate?: string[] | undefined) {
-    return this.model.findOne(query, select, populate);
+    return this.model.findOne(query, { select, populate });
   }
 
   findMany(
@@ -38,7 +43,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     sort?: { [key: string]: number } | string[],
     populate?: string[] | undefined,
   ) {
-    return this.model.findMany(query, skip, limit, select, sort, populate);
+    return this.model.findMany(query, { skip, limit, select, sort, populate });
   }
 
   create(query: ParsedQuery) {
@@ -50,7 +55,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
   }
 
   findByIdAndUpdate(id: string, document: ParsedQuery, populate?: string[] | undefined) {
-    return this.model.findByIdAndUpdate(id, document, populate);
+    return this.model.findByIdAndUpdate(id, document, { populate });
   }
 
   updateMany(
@@ -58,7 +63,7 @@ export class ConduitDatabaseSchema extends ConduitSchema {
     query: ParsedQuery,
     populate?: string[] | undefined,
   ) {
-    return this.model.updateMany(filterQuery, query, populate);
+    return this.model.updateMany(filterQuery, query, { populate });
   }
 
   deleteOne(query: ParsedQuery) {

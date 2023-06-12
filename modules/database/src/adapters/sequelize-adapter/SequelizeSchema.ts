@@ -1,7 +1,6 @@
 import {
   FindAttributeOptions,
   FindOptions,
-  Model,
   ModelStatic,
   Order,
   OrderItem,
@@ -22,11 +21,18 @@ import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery } from './parser';
 import { isNil } from 'lodash';
 import { processCreateQuery, unwrap } from './utils/pathUtils';
+import {
+  constructRelationInclusion,
+  createWithPopulation,
+  extractRelationsModification,
+  includeRelations,
+  parseQueryFilter,
+} from './utils/query';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
-export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
+export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   model: ModelStatic<any>;
   fieldHash: string;
   excludedFields: string[];
@@ -36,17 +42,20 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   readonly objectDotPathMapping: { [key: string]: string } = {};
 
   constructor(
+    grpcSdk: ConduitGrpcSdk,
     readonly sequelize: Sequelize,
     readonly schema: Indexable,
     readonly originalSchema: ConduitDatabaseSchema,
-    protected readonly adapter: SequelizeAdapter,
+    readonly adapter: SequelizeAdapter,
     readonly extractedRelations: {
       [key: string]: SequelizeSchema | SequelizeSchema[];
     },
     readonly objectPaths: {
       [key: string]: { parentKey: string; childKey: string };
     },
+    readonly isView: boolean = false,
   ) {
+    super(grpcSdk, adapter, isView);
     this.excludedFields = [];
     this.idField = sqlTypesProcess(
       sequelize,
@@ -91,16 +100,27 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   async findByIdAndUpdate(
     id: string,
     query: SingleDocQuery,
-    populate?: string[],
-    transaction?: Transaction,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+      transaction?: Transaction;
+    },
   ): Promise<Indexable> {
     const { t, parsedQuery, transactionProvided } = await getTransactionAndParsedQuery(
-      transaction,
+      options?.transaction,
       query,
       this.sequelize,
     );
+    const parsedId = await this.getAuthorizedQuery(
+      'edit',
+      { _id: id },
+      false,
+      options?.userId,
+      options?.scope,
+    ).then(r => r!._id);
     try {
-      const parentDoc = await this.model.findByPk(id, {
+      const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
         transaction: t,
       });
@@ -121,9 +141,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       }
       if (Object.keys(parsedQuery).length === 0) {
         return this.model
-          .findByPk(id, {
+          .findByPk(parsedId, {
             nest: true,
-            include: this.constructRelationInclusion(populate),
+            include: constructRelationInclusion(this, options?.populate),
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
@@ -159,7 +179,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
 
       if (Object.keys(parsedQuery).length === 0) {
         return this.model
-          .findByPk(id, {
+          .findByPk(parsedId, {
             nest: true,
           })
           .then(doc => (doc ? doc.toJSON() : doc));
@@ -168,16 +188,19 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       processCreateQuery(parsedQuery, this.objectPaths);
       parsedQuery.updatedAt = new Date();
       incrementDbQueries();
-      const relationObjects = this.extractRelationsModification(parsedQuery);
-      await this.model.update({ ...parsedQuery }, { where: { _id: id }, transaction: t });
+      const relationObjects = extractRelationsModification(this, parsedQuery);
+      await this.model.update(
+        { ...parsedQuery },
+        { where: { _id: parsedId }, transaction: t },
+      );
       incrementDbQueries();
 
       const data = await this.model
-        .findByPk(id, {
+        .findByPk(parsedId, {
           nest: true,
           transaction: t,
         })
-        .then(doc => this.createWithPopulation(doc, relationObjects, t!))
+        .then(doc => createWithPopulation(this, doc, relationObjects, t!))
         .then(() => {
           if (!transactionProvided) {
             return t!.commit();
@@ -185,9 +208,9 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
           return;
         })
         .then(() => {
-          return this.model.findByPk(id, {
+          return this.model.findByPk(parsedId, {
             nest: true,
-            include: this.constructRelationInclusion(populate),
+            include: constructRelationInclusion(this, options?.populate),
           });
         })
         .then(doc => (doc ? doc.toJSON() : doc));
@@ -200,29 +223,32 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     }
   }
 
-  async create(query: SingleDocQuery, transaction?: Transaction) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+  async create(
+    query: SingleDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+      transaction?: Transaction;
+    },
+  ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
+    const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     parsedQuery.createdAt = new Date();
     parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     processCreateQuery(parsedQuery, this.objectPaths);
-    const relationObjects = this.extractRelationsModification(parsedQuery);
-    let t: Transaction | undefined = transaction;
-    const transactionProvided = transaction !== undefined;
+    const relationObjects = extractRelationsModification(this, parsedQuery);
+    let t: Transaction | undefined = options?.transaction;
+    const transactionProvided = t !== undefined;
     if (!transactionProvided) {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
-    return this.model
+    const obj = await this.model
       .create(parsedQuery, {
         transaction: t,
       })
       .then(doc => {
-        return this.createWithPopulation(doc, relationObjects, t);
+        return createWithPopulation(this, doc, relationObjects, t);
       })
       .then(doc => {
         if (!transactionProvided) {
@@ -237,41 +263,74 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
         }
         throw err;
       });
+    await this.addPermissionToData(obj, options);
+    return obj;
   }
 
-  async createMany(query: MultiDocQuery) {
-    let parsedQuery: ParsedQuery[];
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
+  async createMany(
+    query: MultiDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+    },
+  ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
+    const parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
     }
-    return this.model
+    const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
-      .then(() => {
+      .then(docs => {
         t.commit();
+        return docs;
       })
       .catch(err => {
         t.rollback();
         throw err;
       });
+    await this.addPermissionToData(docs, options);
+    return docs;
   }
 
-  async findOne(query: Query, select?: string, populate?: string[]) {
-    const { filter, parsingResult } = this.parseQueryFilter(query, { populate, select });
-    const options: FindOptions = {
-      where: filter,
+  async findOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+      select?: string;
+      populate?: string[];
+    },
+  ) {
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+      {
+        populate: options?.populate,
+        select: options?.select,
+      },
+    );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'read',
+      filter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
+    const findOptions: FindOptions = {
+      where: parsedFilter!,
       nest: true,
       attributes: parsingResult.attributes! as FindAttributeOptions,
-      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
+      include: includeRelations(
+        this,
+        parsingResult.requiredRelations,
+        options?.populate || [],
+      ),
     };
 
     incrementDbQueries();
-    return this.model.findOne(options).then(doc => {
+    return this.model.findOne(findOptions).then(doc => {
       if (!doc) return doc;
       const document = doc.toJSON();
       unwrap(document, this.objectPaths, this.extractedRelations);
@@ -280,6 +339,7 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
   }
 
   sync() {
+    if (this.isView) return Promise.resolve();
     const syncOptions = { alter: { drop: false } };
     let promiseChain: Promise<any> = this.model.sync(syncOptions);
     for (const relation in this.extractedRelations) {
@@ -297,171 +357,59 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return promiseChain;
   }
 
-  includeRelations(relationDirectory: string[], populate: string[]) {
-    return this.constructRelationInclusion(relationDirectory, true).concat(
-      this.constructRelationInclusion(
-        populate?.filter(p => !relationDirectory.includes(p)) || [],
-      ),
-    );
-  }
-
-  constructRelationInclusion(populate?: string[], required?: boolean) {
-    const inclusionArray: {
-      model: ModelStatic<any>;
-      as: string;
-      required: boolean;
-      include?: any;
-      attributes?: { exclude: string[] };
-    }[] = [];
-    if (!populate) return inclusionArray;
-    for (const population of populate) {
-      if (population.indexOf('.') > -1) {
-        let path = population.split('.');
-        let relationName = path[0];
-        for (const objectPath of this.objectDotPaths) {
-          if (population.startsWith(objectPath)) {
-            relationName = objectPath.replace(/\./g, '_');
-            if (population === objectPath) {
-              path = [relationName];
-            } else {
-              path = [relationName].concat(
-                population
-                  .replace(objectPath + (population === objectPath ? '' : '.'), '')
-                  .split('.'),
-              );
-            }
-            break;
-          }
-        }
-        const relationTarget = this.extractedRelations[relationName];
-        if (!relationTarget) continue;
-        const relationSchema: SequelizeSchema = Array.isArray(relationTarget)
-          ? relationTarget[0]
-          : relationTarget;
-
-        const relationObject: {
-          model: ModelStatic<any>;
-          as: string;
-          required: boolean;
-          include?: any;
-          attributes?: { exclude: string[] };
-        } = {
-          model: relationSchema.model,
-          as: relationName,
-          required: required || false,
-          attributes: {
-            exclude: relationSchema.excludedFields.concat(
-              path.length === 1 ||
-                Array.isArray(relationSchema.extractedRelations[path[1]])
-                ? []
-                : [`${path[1]}Id`],
-            ),
-          },
-        };
-        path.shift();
-        if (path.length > 0) {
-          path = [path.join('.')];
-          relationObject.include = relationSchema.constructRelationInclusion(
-            path,
-            required,
-          );
-        }
-        inclusionArray.push(relationObject);
-      } else {
-        const relationTarget = this.extractedRelations[population];
-        if (!relationTarget) continue;
-        const relationSchema = Array.isArray(relationTarget)
-          ? relationTarget[0]
-          : relationTarget;
-        const relationObject: {
-          model: ModelStatic<any>;
-          as: string;
-          required: boolean;
-          include?: any;
-          attributes?: { exclude: string[] };
-        } = {
-          model: relationSchema.model,
-          as: population,
-          required: required || false,
-          attributes: { exclude: relationSchema.excludedFields },
-        };
-        inclusionArray.push(relationObject);
-      }
-    }
-    return inclusionArray;
-  }
-
-  createWithPopulation(
-    doc: Model,
-    relationObjects: Indexable,
-    transaction?: Transaction,
-  ) {
-    let hasOne = false;
-    for (const relation in this.extractedRelations) {
-      if (!this.extractedRelations.hasOwnProperty(relation)) continue;
-      if (!relationObjects.hasOwnProperty(relation)) continue;
-      const relationTarget = this.extractedRelations[relation];
-      hasOne = true;
-      if (Array.isArray(relationTarget)) {
-        let modelName = relation.charAt(0).toUpperCase() + relation.slice(1);
-        if (!modelName.endsWith('s')) {
-          modelName = modelName + 's';
-        }
-        // @ts-ignore
-        doc[`set${modelName}`](relationObjects[relation]);
-      } else {
-        const actualRel = relation.charAt(0).toUpperCase() + relation.slice(1);
-        // @ts-ignore
-        doc[`set${actualRel}`](relationObjects[relation]);
-      }
-    }
-    return hasOne ? doc.save({ transaction }) : doc;
-  }
-
-  extractRelationsModification(parsedQuery: ParsedQuery) {
-    const relationObjects = {};
-    for (const target in parsedQuery) {
-      if (!parsedQuery.hasOwnProperty(target)) continue;
-      if (this.extractedRelations.hasOwnProperty(target)) {
-        if (Array.isArray(parsedQuery[target])) {
-          // @ts-ignore
-          relationObjects[target] = parsedQuery[target];
-          delete parsedQuery[target];
-        } else {
-          parsedQuery[target + 'Id'] = parsedQuery[target];
-          delete parsedQuery[target];
-        }
-      }
-    }
-    return relationObjects;
-  }
-
   async findMany(
     query: Query,
-    skip?: number,
-    limit?: number,
-    select?: string,
-    sort?: { [field: string]: -1 | 1 },
-    populate?: string[],
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: any;
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
   ) {
-    const { filter, parsingResult } = this.parseQueryFilter(query, { populate, select });
-    const options: FindOptions = {
-      where: filter,
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+      {
+        populate: options?.populate,
+        select: options?.select,
+      },
+    );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'read',
+      filter,
+      true,
+      options?.userId,
+      options?.scope,
+      options?.skip,
+      options?.limit,
+    );
+    if (isNil(parsedFilter)) {
+      return [];
+    }
+    const findOptions: FindOptions = {
+      where: parsedFilter,
       nest: true,
       attributes: parsingResult.attributes as FindAttributeOptions,
-      include: this.includeRelations(parsingResult.requiredRelations, populate || []),
+      include: includeRelations(
+        this,
+        parsingResult.requiredRelations,
+        options?.populate || [],
+      ),
     };
-    if (!isNil(skip)) {
-      options.offset = skip;
+    if (!isNil(options?.skip)) {
+      findOptions.offset = options?.skip;
     }
-    if (!isNil(limit)) {
-      options.limit = limit;
+    if (!isNil(options?.limit)) {
+      findOptions.limit = options?.limit;
     }
-    if (!isNil(sort)) {
-      options.order = this.parseSort(sort);
+    if (!isNil(options?.sort)) {
+      findOptions.order = this.parseSort(options?.sort);
     }
 
-    return this.model.findAll(options).then(docs => {
+    return this.model.findAll(findOptions).then(docs => {
       if (!docs) return docs;
       return docs.map(doc => {
         const document = doc.toJSON();
@@ -471,12 +419,31 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     });
   }
 
-  deleteMany(query: Query) {
-    const { filter, parsingResult } = this.parseQueryFilter(query);
+  async deleteMany(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+    );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'delete',
+      filter,
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedFilter)) {
+      return [];
+    }
     return this.model
       .findAll({
-        where: filter,
-        include: this.includeRelations(parsingResult.requiredRelations, []),
+        where: parsedFilter,
+        include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(docs => {
         return Promise.all(docs.map(doc => doc.destroy({ returning: true })));
@@ -486,12 +453,28 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       });
   }
 
-  deleteOne(query: Query) {
-    const { filter, parsingResult } = this.parseQueryFilter(query);
+  async deleteOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+    );
+    const parsedFilter = await this.getAuthorizedQuery(
+      'delete',
+      filter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
     return this.model
       .findOne({
-        where: filter,
-        include: this.includeRelations(parsingResult.requiredRelations, []),
+        where: parsedFilter!,
+        include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(doc => {
         return doc?.destroy({ returning: true });
@@ -501,7 +484,22 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
       });
   }
 
-  countDocuments(query: Query): Promise<number> {
+  async countDocuments(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ): Promise<number> {
+    if (!isNil(options?.userId) || !isNil(options?.scope)) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view) {
+        return view.countDocuments(query, {
+          userId: undefined,
+          scope: undefined,
+        });
+      }
+    }
     let parsedQuery: ParsedQuery;
     if (typeof query === 'string') {
       parsedQuery = JSON.parse(query);
@@ -520,43 +518,53 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     );
     return this.model.count({
       where: parsingResult.query,
-      include: this.includeRelations(parsingResult.requiredRelations, []),
+      include: includeRelations(this, parsingResult.requiredRelations, []),
     });
   }
 
-  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
+  async updateMany(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    const parsedFilterQuery = await this.getAuthorizedQuery(
+      'edit',
+      this.parseStringToQuery(filterQuery),
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedFilterQuery)) {
+      return [];
     }
-    let parsedFilter: ParsedQuery | undefined;
-    if (typeof filterQuery === 'string') {
-      parsedFilter = JSON.parse(filterQuery);
-    } else {
-      parsedFilter = filterQuery;
-    }
-
     const parsingResult = parseQuery(
       this.originalSchema,
-      parsedFilter!,
+      parsedFilterQuery,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
       this.objectDotPaths,
       this.objectDotPathMapping,
     );
-    parsedFilter = parsingResult.query;
     incrementDbQueries();
     const docs = await this.model.findAll({
-      where: parsedFilter,
+      where: parsingResult.query,
       attributes: ['_id'],
     });
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     try {
       const data = await Promise.all(
-        docs.map(doc => this.findByIdAndUpdate(doc._id, parsedQuery, populate, t)),
+        docs.map(doc =>
+          this.findByIdAndUpdate(doc._id, parsedQuery, {
+            populate: options?.populate,
+            transaction: t,
+          }),
+        ),
       );
       await t.commit();
       return data;
@@ -584,35 +592,76 @@ export class SequelizeSchema implements SchemaAdapter<ModelStatic<any>> {
     return columns.every(column => result.includes(column));
   }
 
-  parseQueryFilter(query: Query, options?: { populate?: string[]; select?: string }) {
-    let parsedQuery: ParsedQuery;
-    if (typeof query === 'string') {
-      parsedQuery = JSON.parse(query);
-    } else {
-      parsedQuery = query;
-    }
-    const queryOptions = !isNil(options)
-      ? { ...options, exclude: [...this.excludedFields] }
-      : {};
-    const parsingResult = parseQuery(
-      this.originalSchema,
-      parsedQuery,
-      this.adapter.sequelize.getDialect(),
-      this.extractedRelations,
-      queryOptions,
-      this.objectDotPaths,
-      this.objectDotPathMapping,
-    );
-
-    const filter = parsingResult.query ?? {};
-    return { filter, parsingResult };
-  }
-
   protected parseSort(sort: { [field: string]: -1 | 1 }) {
     const order: Order = [];
     Object.keys(sort).forEach(field => {
       order.push([field, sort[field] === 1 ? 'ASC' : 'DESC'] as OrderItem);
     });
     return order;
+  }
+
+  findByIdAndReplace(
+    id: string,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ): Promise<any> {
+    const completeDoc: ParsedQuery = { ...this.parseStringToQuery(query) };
+    // remove operators since it is not supported for replace ops
+    for (const key of Object.keys(completeDoc)) {
+      if (key.startsWith('$')) {
+        delete completeDoc[key];
+      }
+    }
+    for (const key of Object.keys(this.schema.fields)) {
+      if (!completeDoc.hasOwnProperty(key)) {
+        completeDoc[key] = null;
+      }
+    }
+    return this.findByIdAndUpdate(id, completeDoc, options);
+  }
+
+  parseStringToQuery(
+    query: Query | SingleDocQuery | MultiDocQuery,
+  ): ParsedQuery | ParsedQuery[] {
+    return typeof query === 'string' ? JSON.parse(query) : query;
+  }
+
+  replaceOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ): Promise<any> {
+    return this.findOne(filterQuery, options).then(doc => {
+      if (!doc) {
+        throw new Error('Document not found');
+      }
+      return this.findByIdAndReplace(doc._id, query, options);
+    });
+  }
+
+  async updateOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+      transaction?: Transaction;
+    },
+  ): Promise<any> {
+    return this.findOne(filterQuery, options).then(doc => {
+      if (!doc) {
+        throw new Error('Document not found');
+      }
+      return this.findByIdAndUpdate(doc._id, query, options);
+    });
   }
 }

@@ -16,145 +16,320 @@ import {
   SingleDocQuery,
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
-import { parseQuery } from './parser';
-import { ConduitSchema, Indexable, UntypedArray } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  ConduitSchema,
+  Indexable,
+  UntypedArray,
+} from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash';
+import { parseQuery } from './parser';
 
 const EJSON = require('mongodb-extended-json');
 
-export class MongooseSchema implements SchemaAdapter<Model<any>> {
+export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;
   fieldHash: string;
 
   constructor(
+    grpcSdk: ConduitGrpcSdk,
     mongoose: Mongoose,
-    schema: ConduitSchema,
+    readonly schema: ConduitSchema,
     readonly originalSchema: any,
-    private readonly adapter: MongooseAdapter,
+    readonly adapter: MongooseAdapter,
+    isView: boolean = false,
   ) {
+    super(grpcSdk, adapter, isView);
     if (!isNil(schema.collectionName)) {
       (schema.modelOptions as _ConduitSchemaOptions).collection = schema.collectionName; // @dirty-type-cast
     } else {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.fields as Indexable, schema.modelOptions);
+    const mongooseSchema = new Schema(schema.fields as Indexable, {
+      ...schema.modelOptions,
+      ...(isView
+        ? {
+            autoCreate: false,
+            autoIndex: false,
+          }
+        : {}),
+    });
     this.model = mongoose.model(schema.name, mongooseSchema);
   }
 
-  async create(query: SingleDocQuery) {
+  parseStringToQuery(
+    query: Query | SingleDocQuery | MultiDocQuery,
+  ): ParsedQuery | ParsedQuery[] {
+    return typeof query === 'string' ? EJSON.parse(query) : query;
+  }
+
+  async create(
+    query: SingleDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+    },
+  ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery = {
-      ...(typeof query === 'string' ? EJSON.parse(query) : query),
+      ...this.parseStringToQuery(query),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    return this.model.create(parsedQuery).then(r => r.toObject());
+
+    const obj = await this.model.create(parsedQuery).then(r => r.toObject());
+    await this.addPermissionToData(obj, options);
+    return obj;
   }
 
-  async createMany(query: MultiDocQuery) {
-    const docs = typeof query === 'string' ? EJSON.parse(query) : query;
-    return this.model.insertMany(docs).then(r => r);
+  async createMany(
+    query: MultiDocQuery,
+    options?: {
+      scope?: string;
+      userId?: string;
+    },
+  ) {
+    await this.createPermissionCheck(options?.userId, options?.scope);
+    const docs = this.parseStringToQuery(query);
+    const addedDocs = await this.model.insertMany(docs);
+    await this.addPermissionToData(addedDocs, options);
+    return addedDocs;
   }
 
-  async findByIdAndUpdate(id: string, query: SingleDocQuery, populate?: string[]) {
-    let parsedQuery: ParsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
-    parsedQuery['updatedAt'] = new Date();
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+  async findByIdAndUpdate(
+    id: string,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    return this.updateOne({ _id: id }, query, options);
+  }
+
+  async findByIdAndReplace(
+    id: string,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    return this.replaceOne({ _id: id }, query, options);
+  }
+
+  async replaceOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      false,
+      options?.userId,
+      options?.scope,
+    );
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findByIdAndUpdate(id, parsedQuery, { new: true });
-    if (populate !== undefined && populate !== null) {
-      finalQuery = this.populate(finalQuery, populate);
+    parsedQuery['updatedAt'] = new Date();
+    let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
+      new: true,
+    });
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
     }
     return finalQuery.lean().exec();
   }
 
-  async updateMany(filterQuery: Query, query: SingleDocQuery, populate?: string[]) {
-    const parsedFilter = parseQuery(
-      typeof filterQuery === 'string' ? EJSON.parse(filterQuery) : filterQuery,
+  async updateOne(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      userId?: string;
+      scope?: string;
+      populate?: string[];
+    },
+  ) {
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      false,
+      options?.userId,
+      options?.scope,
     );
-    let parsedQuery = typeof query === 'string' ? EJSON.parse(query) : query;
-    if (!parsedQuery.hasOwnProperty('$set')) {
-      parsedQuery = {
-        $set: parsedQuery,
-      };
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
     }
-    const affectedIds = await this.model
-      .find(parsedFilter, '_id')
-      .lean()
-      .exec()
-      .then(r => {
-        r.map(r => r._id);
-      });
-    return this.model
-      .updateMany(parsedFilter, parsedQuery)
-      .exec()
-      .then(() => {
-        let finalQuery = this.model.find({ _id: { $in: affectedIds } });
-        if (populate !== undefined && populate !== null) {
-          finalQuery = this.populate(finalQuery, populate);
-        }
-        return finalQuery.lean().exec();
-      });
+    parsedQuery['updatedAt'] = new Date();
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
+      new: true,
+    });
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
+    }
+    return finalQuery.lean().exec();
   }
 
-  deleteOne(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
+  async updateMany(
+    filterQuery: Query,
+    query: SingleDocQuery,
+    options?: {
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
+    parsedFilter = await this.getAuthorizedQuery(
+      'edit',
+      parsedFilter,
+      true,
+      options?.userId,
+      options?.scope,
     );
-    return this.model.deleteOne(parsedQuery).exec();
+    if (isNil(parsedFilter)) {
+      return [];
+    }
+    let parsedQuery: Indexable = this.parseStringToQuery(query);
+    if (parsedQuery.hasOwnProperty('$set')) {
+      parsedQuery = parsedQuery['$set'];
+    }
+    parsedQuery['updatedAt'] = new Date();
+    return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 
-  deleteMany(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
+  async deleteOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'delete',
+      parsedQuery,
+      false,
+      options?.userId,
+      options?.scope,
     );
+    return this.model.deleteOne(parsedQuery!).exec();
+  }
+
+  async deleteMany(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'delete',
+      parsedQuery,
+      true,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(parsedQuery)) {
+      return [];
+    }
     return this.model.deleteMany(parsedQuery).exec();
   }
 
-  findMany(
+  async findMany(
     query: Query,
-    skip?: number,
-    limit?: number,
-    select?: string,
-    sort?: { [key: string]: number },
-    populate?: string[],
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: any;
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
   ) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'read',
+      parsedQuery,
+      true,
+      options?.userId,
+      options?.scope,
+      options?.skip,
+      options?.limit,
     );
-    let finalQuery = this.model.find(parsedQuery, select);
-    if (!isNil(skip)) {
-      finalQuery = finalQuery.skip(skip!);
+    if (isNil(parsedQuery)) {
+      return [];
     }
-    if (!isNil(limit)) {
-      finalQuery = finalQuery.limit(limit!);
+    let finalQuery = this.model.find(parsedQuery, options?.select);
+    if (!isNil(options?.skip)) {
+      finalQuery = finalQuery.skip(options?.skip!);
     }
-    if (!isNil(populate)) {
-      finalQuery = this.populate(finalQuery, populate);
+    if (!isNil(options?.limit)) {
+      finalQuery = finalQuery.limit(options?.limit!);
     }
-    if (!isNil(sort)) {
-      finalQuery = finalQuery.sort(this.parseSort(sort));
+    if (!isNil(options?.populate)) {
+      finalQuery = this.populate(finalQuery, options?.populate ?? []);
+    }
+    if (!isNil(options?.sort)) {
+      finalQuery = finalQuery.sort(this.parseSort(options?.sort));
     }
     return finalQuery.lean().exec();
   }
 
-  findOne(query: Query, select?: string, populate?: string[]) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
+  async findOne(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+      select?: string;
+      populate?: string[];
+    },
+  ) {
+    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    parsedQuery = await this.getAuthorizedQuery(
+      'read',
+      parsedQuery,
+      false,
+      options?.userId,
+      options?.scope,
     );
-    let finalQuery = this.model.findOne(parsedQuery, select);
-    if (populate !== undefined && populate !== null) {
-      finalQuery = this.populate(finalQuery, populate);
+    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    if (options?.populate !== undefined && options?.populate !== null) {
+      finalQuery = this.populate(finalQuery, options?.populate);
     }
     return finalQuery.lean().exec();
   }
 
-  countDocuments(query: Query) {
-    const parsedQuery = parseQuery(
-      typeof query === 'string' ? EJSON.parse(query) : query,
-    );
+  async countDocuments(
+    query: Query,
+    options?: {
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    if (!isNil(options?.userId) || !isNil(options?.scope)) {
+      const view = await this.permissionCheck('read', options?.userId, options?.scope);
+      if (view) {
+        return view.countDocuments(query, {
+          userId: undefined,
+          scope: undefined,
+        });
+      }
+    }
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 
@@ -203,7 +378,7 @@ export class MongooseSchema implements SchemaAdapter<Model<any>> {
             }`,
           );
         } else {
-          let ref =
+          const ref =
             this.model.schema.paths[processing].options.ref ||
             this.model.schema.paths[processing].options.type[0].ref;
           const childPopulates = this.adapter.models[ref].calculatePopulates([

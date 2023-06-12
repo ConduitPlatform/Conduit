@@ -159,6 +159,7 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
         if (
           conduitKey !== 'cms' &&
           conduitKey !== 'permissions' &&
+          conduitKey !== 'authorization' &&
           conduitKey !== 'imported'
         )
           throw new Error(

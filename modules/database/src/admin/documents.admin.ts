@@ -31,7 +31,7 @@ export class DocumentsAdmin {
     }
     const document: Doc = await this.database
       .getSchemaModel(schemaName)
-      .model.findOne({ _id: id }, undefined, populates);
+      .model.findOne({ _id: id }, { populate: populates });
     if (isNil(document)) {
       throw new GrpcError(status.NOT_FOUND, 'Document does not exist');
     }
@@ -56,7 +56,7 @@ export class DocumentsAdmin {
     }
     const documentsPromise = this.database
       .getSchemaModel(schemaName)
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const countPromise = this.database
       .getSchemaModel(schemaName)
       .model.countDocuments(query);

@@ -17,7 +17,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { Team, Token, User } from '../models';
 import { Config } from '../config';
-import { Team as TeamAuthz, User as UserAuthz } from '../authz';
+import { Team as TeamAuthz } from '../authz';
 import { TeamInviteTemplate } from '../templates';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils';
@@ -732,9 +732,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async validate() {
     const config: Config = ConfigController.getInstance().config;
     if (config.teams.enabled && this.grpcSdk.isAvailable('authorization')) {
-      if (this.initialized) return true;
-      await this.grpcSdk.authorization!.defineResource(UserAuthz);
       await this.grpcSdk.authorization!.defineResource(TeamAuthz);
+      if (this.initialized) return true;
+
       if (config.teams.enableDefaultTeam) {
         const existingTeam = await Team.getInstance().findOne({ isDefault: true });
         if (!existingTeam) {

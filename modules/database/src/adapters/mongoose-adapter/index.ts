@@ -19,7 +19,9 @@ import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
+import { isNil } from 'lodash';
 
+const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -63,6 +65,54 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         this.foreignSchemaCollections.add(collection);
       }
     }
+  }
+
+  async createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void> {
+    if (!this.models[modelName]) {
+      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+    }
+    if (this.views[viewName]) {
+      return;
+    }
+    const model = this.models[modelName];
+    const newSchema = JSON.parse(JSON.stringify(model.schema));
+    newSchema.name = viewName;
+    newSchema.collectionName = viewName;
+    const viewModel = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      newSchema,
+      model.originalSchema,
+      this,
+      true,
+    );
+    await viewModel.model.createCollection({
+      viewOn: model.originalSchema.collectionName,
+      pipeline: EJSON.parse(query.mongoQuery),
+    });
+    this.views[viewName] = viewModel;
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
+    }
+  }
+
+  async deleteView(viewName: string): Promise<void> {
+    if (this.views[viewName]) {
+      await this.views[viewName].model.collection.drop();
+    }
+    await this.models['Views'].deleteOne({ name: viewName });
+    delete this.views[viewName];
   }
 
   async introspectDatabase(): Promise<ConduitSchema[]> {
@@ -355,7 +405,13 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
     );
-    this.models[schema.name] = new MongooseSchema(this.mongoose, newSchema, schema, this);
+    this.models[schema.name] = new MongooseSchema(
+      this.grpcSdk,
+      this.mongoose,
+      newSchema,
+      schema,
+      this,
+    );
     if (saveToDb) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);

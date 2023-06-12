@@ -13,7 +13,8 @@ export async function UserIdToUserAccessTokenSchemaMigration(grpcSdk: ConduitGrp
   );
   for (const accessTokenSchema of accessTokenSchemas) {
     accessTokenSchema.user = accessTokenSchema.userId;
-    await grpcSdk.databaseProvider!.findByIdAndUpdate(
+    delete accessTokenSchema.userId;
+    await grpcSdk.databaseProvider!.findByIdAndReplace(
       'AccessToken',
       accessTokenSchema._id,
       accessTokenSchema,
