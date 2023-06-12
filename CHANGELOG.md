@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.18](https://github.com/ConduitPlatform/Conduit/compare/v0.15.17...v0.15.18) (2023-06-12)
+
+
+### Bug Fixes
+
+* **database:** use strictQuery ([b07c78c](https://github.com/ConduitPlatform/Conduit/commit/b07c78c7b6cb0383a28998d44fc976af5dd6e755))
+
 ### [0.15.17](https://github.com/ConduitPlatform/Conduit/compare/v0.15.16...v0.15.17) (2023-04-26)
 
 
