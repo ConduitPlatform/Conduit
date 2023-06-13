@@ -22,6 +22,7 @@ export class AuthorizationRouter {
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
     this._permissionsController = PermissionsController.getInstance(this.grpcSdk);
+    this.registeredRoutes();
   }
 
   async registeredRoutes() {
