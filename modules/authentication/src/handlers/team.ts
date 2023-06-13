@@ -299,7 +299,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
-      actions: ['read'],
+      actions: ['viewMembers'],
       resource: 'Team:' + teamId,
     });
     if (!allowed.allow) {
@@ -330,12 +330,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, populate } = call.request.params;
-    const allowed = await this.grpcSdk.authorization!.can({
+    const relations = await this.grpcSdk.authorization!.findRelation({
       subject: 'User:' + user._id,
-      actions: ['read'],
       resource: 'Team:' + teamId,
+      skip: 0,
+      limit: 1,
     });
-    if (!allowed.allow) {
+    if (!relations || relations.relations.length === 0) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team',
@@ -383,7 +384,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
-      actions: ['read'],
+      actions: ['viewSubTeams'],
       resource: 'Team:' + teamId,
     });
     if (!allowed.allow) {
