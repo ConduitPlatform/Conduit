@@ -481,6 +481,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
   private checkAndConvertIndexes(
+    //TODO: check types & options depending on dialect
     schemaName: string,
     indexes: ModelOptionsIndexes[],
     callerModule: string,

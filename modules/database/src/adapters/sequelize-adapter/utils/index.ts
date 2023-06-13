@@ -36,3 +36,18 @@ export function checkIfSequelizeIndexType(type: any) {
     Object.values(SQLiteIndexType).includes(type as SQLiteIndexType)
   );
 }
+
+export function checkSequelizeIndexType(type: any, dialect?: string) {
+  switch (dialect) {
+    case 'postgres':
+      return Object.values(PostgresIndexType).includes(type as PostgresIndexType);
+    case 'mysql':
+      return Object.values(MySQLMariaDBIndexType).includes(type as MySQLMariaDBIndexType);
+    case 'mariadb':
+      return Object.values(MySQLMariaDBIndexType).includes(type as MySQLMariaDBIndexType);
+    case 'sqlite':
+      return Object.values(SQLiteIndexType).includes(type as SQLiteIndexType);
+    default:
+      return;
+  }
+}
