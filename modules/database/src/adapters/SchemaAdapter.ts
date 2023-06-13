@@ -52,7 +52,10 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       return undefined;
     }
-    if (!userId && !scope) {
+    if (
+      (!userId && !scope) ||
+      !this.originalSchema.modelOptions.conduit?.authorizatio?.enabled
+    ) {
       return undefined;
     }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
@@ -94,7 +97,11 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       throw new Error('Cannot create on view');
     }
-    if (!userId && !scope) return;
+    if (
+      (!userId && !scope) ||
+      !this.originalSchema.modelOptions.conduit?.authorizatio?.enabled
+    )
+      return;
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
       throw new Error('Authorization service is not available');
@@ -131,6 +138,8 @@ export abstract class SchemaAdapter<T> {
     skip?: number,
     limit?: number,
   ) {
+    if (!this.originalSchema.modelOptions.conduit?.authorizatio?.enabled)
+      return parsedQuery;
     if (!isNil(userId) || !isNil(scope)) {
       const view = await this.permissionCheck(operation, userId, scope);
       if (!view) return parsedQuery;
@@ -168,6 +177,7 @@ export abstract class SchemaAdapter<T> {
     data: Indexable | Indexable[],
     options?: { userId?: string; scope?: string },
   ) {
+    if (!this.originalSchema.modelOptions.conduit?.authorizatio?.enabled) return;
     if (!options || (!options?.userId && options?.scope)) {
       return;
     }
