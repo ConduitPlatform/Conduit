@@ -29,7 +29,7 @@ export async function documentPermissionCheck(
 ) {
   if (
     operation === 'create' ||
-    !model.originalSchema.modelOptions.conduit.authorization.enabled
+    !model.originalSchema.modelOptions.conduit.authorization?.enabled
   ) {
     return;
   }
@@ -75,7 +75,7 @@ export async function documentPermissionAddition(
   documentId: string,
   scope?: string,
 ) {
-  if (!model.originalSchema.modelOptions.conduit.authorization.enabled) {
+  if (!model.originalSchema.modelOptions.conduit.authorization?.enabled) {
     return;
   }
   const authzOnline = grpcSdk.isAvailable('authorization');
@@ -107,7 +107,7 @@ export async function collectionPermissionCheck(
   limit: number,
   scope?: string,
 ) {
-  if (!model.originalSchema.modelOptions.conduit.authorization.enabled) {
+  if (!model.originalSchema.modelOptions.conduit.authorization?.enabled) {
     return;
   }
   const authzOnline = grpcSdk.isAvailable('authorization');

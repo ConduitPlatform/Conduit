@@ -217,7 +217,7 @@ export class SchemaAdmin {
     const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.fields = fields ?? requestedSchema.fields;
     if (
-      !requestedSchema.modelOptions.conduit.authorization.enabled &&
+      !requestedSchema.modelOptions.conduit.authorization?.enabled &&
       call.request.params.conduitOptions?.authorization?.enabled
     ) {
       // wipe all data when enabling authz
