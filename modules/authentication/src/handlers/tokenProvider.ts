@@ -121,7 +121,6 @@ export class TokenProvider {
     userId: string,
   ) {
     const isAnonymous = 'anonymous-client' === clientId;
-    const token = authToken.split(' ')[1];
     if (!clientConfig.multipleUserSessions) {
       await this.deleteUserTokens({
         ...(!isAnonymous && clientConfig.multipleClientLogins ? { clientId } : {}),
@@ -129,7 +128,7 @@ export class TokenProvider {
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
       await this.deleteUserTokens({
-        token: token,
+        token: authToken,
       });
     }
   }
