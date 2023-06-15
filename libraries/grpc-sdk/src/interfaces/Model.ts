@@ -173,7 +173,7 @@ export enum SQLIndexType {
   HASH = 'HASH',
 }
 
-export enum PostgresIndexType {
+export enum PgIndexType {
   GIST = 'GIST',
   SPGIST = 'SPGIST',
   GIN = 'GIN',
@@ -192,7 +192,7 @@ export enum SQLiteIndexType {
 
 export type SequelizeIndexType =
   | SQLIndexType
-  | PostgresIndexType
+  | PgIndexType
   | MySQLMariaDBIndexType
   | SQLiteIndexType;
 
@@ -223,7 +223,6 @@ export interface SequelizeIndexOptions {
   name?: string;
   parser?: string | null;
   unique?: boolean;
-  concurrently?: boolean; // Postgres only
   // used instead of ModelOptionsIndexes fields for more complex index definitions
   fields?: {
     name: string;
@@ -232,11 +231,18 @@ export interface SequelizeIndexOptions {
     collate?: string;
     operator?: string;
   }[];
-  operator?: string; // Postgres only
   where?: {
     [opt: string]: any;
   };
   prefix?: string;
-  using?: SQLIndexType | PostgresIndexType | SQLiteIndexType;
+  using?: SQLIndexType | PgIndexType | SQLiteIndexType;
+}
+
+export interface PgIndexOptions extends SequelizeIndexOptions {
+  concurrently?: boolean;
+  operator?: string;
+}
+
+export interface MySQLMariaDBIndexOptions extends SequelizeIndexOptions {
   type?: MySQLMariaDBIndexType;
 }

@@ -5,8 +5,9 @@ import ConduitGrpcSdk, {
   GrpcError,
   Indexable,
   ModelOptionsIndexes,
+  MySQLMariaDBIndexOptions,
   MySQLMariaDBIndexType,
-  PostgresIndexType,
+  PgIndexType,
   RawSQLQuery,
   SequelizeIndexOptions,
   sleep,
@@ -19,7 +20,8 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import {
-  checkIfSequelizeIndexOptions,
+  checkSequelizeIndexOptions,
+  checkSequelizeIndexType,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
@@ -273,8 +275,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     const dialect = this.sequelize.getDialect();
     const [newSchema, objectPaths, extractedRelations] =
       dialect === 'postgres'
-        ? pgSchemaConverter(compiledSchema)
-        : sqlSchemaConverter(compiledSchema);
+        ? pgSchemaConverter(compiledSchema, dialect)
+        : sqlSchemaConverter(compiledSchema, dialect);
     this.registeredSchemas.set(
       schema.name,
       Object.freeze(JSON.parse(JSON.stringify(schema))),
@@ -481,18 +483,28 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
   private checkAndConvertIndexes(
-    //TODO: check types & options depending on dialect
     schemaName: string,
     indexes: ModelOptionsIndexes[],
     callerModule: string,
   ) {
+    const dialect = this.sequelize.getDialect();
     for (const index of indexes) {
+      if (
+        index.fields.some(
+          field =>
+            !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
+              field,
+            ),
+        )
+      ) {
+        throw new Error(`Invalid fields for index creation`);
+      }
       if (!index.types && !index.options) continue;
       if (index.options) {
-        if (!checkIfSequelizeIndexOptions(index.options)) {
+        if (!checkSequelizeIndexOptions(index.options, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
-            'Invalid index options for PostgreSQL',
+            `Invalid index options for ${dialect}`,
           );
         }
         if (
@@ -506,19 +518,19 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         }
       }
       if (index.types) {
-        if (isArray(index.types) || !(index.types in PostgresIndexType)) {
+        if (isArray(index.types) || !checkSequelizeIndexType(index.types, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
-            'Invalid index type for PostgreSQL',
+            `Invalid index type for ${dialect}`,
           );
         }
         if (index.types in MySQLMariaDBIndexType) {
-          (index.options as SequelizeIndexOptions).type =
+          (index.options as MySQLMariaDBIndexOptions).type =
             index.types as MySQLMariaDBIndexType;
         } else {
           (index.options as SequelizeIndexOptions).using = index.types as
             | SQLIndexType
-            | PostgresIndexType
+            | PgIndexType
             | SQLiteIndexType;
         }
         delete index.types;
