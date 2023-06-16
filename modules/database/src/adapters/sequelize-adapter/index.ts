@@ -42,6 +42,56 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     this.connectionUri = connectionUri;
   }
 
+  async createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void> {
+    if (!this.models[modelName]) {
+      throw new GrpcError(status.NOT_FOUND, `Model ${modelName} not found`);
+    }
+    const model = this.models[modelName];
+    const newSchema = JSON.parse(JSON.stringify(model.schema));
+    newSchema.name = viewName;
+    newSchema.collectionName = viewName;
+    const viewModel = new SequelizeSchema(
+      this.grpcSdk,
+      this.sequelize,
+      newSchema,
+      model.originalSchema,
+      this,
+      model.extractedRelations,
+      model.objectPaths,
+      true,
+    );
+    const dialect = this.sequelize.getDialect();
+    const queryViewName = dialect === 'postgres' ? `"${viewName}"` : viewName;
+    const viewQuery =
+      dialect !== 'sqlite'
+        ? `CREATE OR REPLACE VIEW ${queryViewName} AS ${query.sqlQuery}`
+        : `CREATE VIEW IF NOT EXISTS" ${queryViewName} AS ${query.sqlQuery}`;
+    await this.sequelize.query(viewQuery);
+    this.views[viewName] = viewModel;
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
+    }
+  }
+
+  async deleteView(viewName: string): Promise<void> {
+    if (this.views[viewName]) {
+      await this.sequelize.query(`DROP VIEW IF EXISTS "${viewName}"`);
+    }
+    await this.models['Views'].deleteOne({ name: viewName });
+    delete this.views[viewName];
+  }
+
   async retrieveForeignSchemas(): Promise<void> {
     const declaredSchemas = await this.getSchemaModel('_DeclaredSchema').model.findMany(
       {},
@@ -232,6 +282,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       this.models,
     );
     this.models[schema.name] = new SequelizeSchema(
+      this.grpcSdk,
       this.sequelize,
       newSchema,
       schema,
@@ -308,9 +359,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     throw new GrpcError(status.NOT_FOUND, `Schema ${schemaName} not defined yet`);
   }
 
-  //todo change to dialect
   getDatabaseType(): string {
-    return 'PostgreSQL';
+    const type = this.sequelize.getDialect();
+    if (type === 'postgres') {
+      return 'PostgreSQL'; // TODO: clean up
+    }
+    return type;
   }
 
   async createIndexes(

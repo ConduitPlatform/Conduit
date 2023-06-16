@@ -31,10 +31,13 @@ export class SchemaAdmin {
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
         { 'modelOptions.conduit.cms.enabled': true },
-        undefined,
-        undefined,
-        'name parentSchema fields extensions modelOptions ownerModule collectionName',
-        { updatedAt: 1 },
+        {
+          select:
+            'name parentSchema fields extensions modelOptions ownerModule collectionName',
+          sort: {
+            updatedAt: 1,
+          },
+        },
       )
       .then(r => {
         return { schemas: r };
@@ -137,7 +140,7 @@ export class SchemaAdmin {
     }
     const schemasPromise = this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const documentsCountPromise = this.database
       .getSchemaModel('_DeclaredSchema')
       .model.countDocuments(query);
@@ -157,13 +160,12 @@ export class SchemaAdmin {
       parsedSort = parseSortParam(sort);
     }
     const schemaAdapter = this.database.getSchemaModel('_DeclaredSchema');
-    const schemasExtensionsPromise = schemaAdapter.model.findMany(
-      query,
+    const schemasExtensionsPromise = schemaAdapter.model.findMany(query, {
       skip,
       limit,
-      'name extensions',
-      parsedSort,
-    );
+      select: 'name extensions',
+      sort: parsedSort,
+    });
     const totalCountPromise = schemaAdapter.model.countDocuments(query);
 
     const [schemasExtensions, count] = await Promise.all([
@@ -187,8 +189,18 @@ export class SchemaAdmin {
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
       permissions: call.request.params.conduitOptions?.permissions,
+      authorization: call.request.params.conduitOptions?.authorization,
       timestamps: call.request.params.timestamps,
     });
+    if (
+      call.request.params.conduitOptions?.authorization?.enabled &&
+      !this.grpcSdk.isAvailable('authorization')
+    ) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Authorization service is not available',
+      );
+    }
     try {
       validateSchemaInput(name, fields, modelOptions);
     } catch (err: unknown) {
@@ -204,12 +216,29 @@ export class SchemaAdmin {
     const { id, fields } = call.request.params;
     const requestedSchema = await this.checkRequestedSchema(id);
     requestedSchema.fields = fields ?? requestedSchema.fields;
+    if (
+      !requestedSchema.modelOptions.conduit.authorization?.enabled &&
+      call.request.params.conduitOptions?.authorization?.enabled
+    ) {
+      // wipe all data when enabling authz
+      await this.database.getSchemaModel(requestedSchema.name).model.deleteMany({});
+    }
     const modelOptions = SchemaConverter.getModelOptions({
       cmsSchema: true,
       cms: call.request.params.conduitOptions?.cms,
+      authorization: call.request.params.conduitOptions?.authorization,
       permissions: call.request.params.conduitOptions?.permissions,
       existingModelOptions: requestedSchema.modelOptions,
     });
+    if (
+      call.request.params.conduitOptions?.authorization?.enabled &&
+      !this.grpcSdk.isAvailable('authorization')
+    ) {
+      throw new GrpcError(
+        status.FAILED_PRECONDITION,
+        'Authorization service is not available',
+      );
+    }
     try {
       validateSchemaInput(requestedSchema.name, fields, modelOptions);
     } catch (err: unknown) {
@@ -415,7 +444,7 @@ export class SchemaAdmin {
     }
     const schemas = await this.database
       .getSchemaModel('_DeclaredSchema')
-      .model.findMany({}, undefined, undefined, 'ownerModule', parsedSort);
+      .model.findMany({}, { select: 'ownerModule', sort: parsedSort });
     schemas.forEach((schema: ConduitSchema) => {
       if (!modules.includes(schema.ownerModule)) modules.push(schema.ownerModule);
     });
@@ -493,7 +522,7 @@ export class SchemaAdmin {
     }
     const schemasPromise = this.database
       .getSchemaModel('_PendingSchemas')
-      .model.findMany(query, skip, limit, undefined, parsedSort);
+      .model.findMany(query, { skip, limit, sort: parsedSort });
     const schemasCountPromise = this.database
       .getSchemaModel('_PendingSchemas')
       .model.countDocuments(query);

@@ -304,4 +304,38 @@ export class IndexController {
     });
     return !!objectDefinition;
   }
+
+  async findGeneralIndex(
+    subject: string,
+    action: string,
+    objectType: string,
+    skip: number,
+    limit: number,
+  ) {
+    const subjectDefinition = await ActorIndex.getInstance().findMany({
+      subject: subject,
+    });
+
+    const objectDefinition = await ObjectIndex.getInstance().findMany(
+      {
+        subject: { $like: `${objectType}:%#${action}` },
+        entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
+      },
+      undefined,
+      skip,
+      limit,
+    );
+    return objectDefinition.map(index => index.subject.split('#')[0].split(':')[1]);
+  }
+
+  async findGeneralIndexCount(subject: string, action: string, objectType: string) {
+    const subjectDefinition = await ActorIndex.getInstance().findMany({
+      subject: subject,
+    });
+
+    return await ObjectIndex.getInstance().countDocuments({
+      subject: { $like: `${objectType}:%#${action}` },
+      entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
+    });
+  }
 }

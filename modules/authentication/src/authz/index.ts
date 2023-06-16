@@ -7,11 +7,17 @@ export const Team = new ConduitAuthorizedResource(
   {
     member: 'User',
     owner: ['User', 'Team'],
+    readAll: ['User', 'Team'],
+    editAll: ['User', 'Team'],
   },
   {
-    read: ['member', 'owner->read', 'owner'],
-    edit: ['owner', 'owner->edit'],
-    delete: ['owner', 'owner->delete'],
-    invite: ['owner'],
+    read: ['owner', 'readAll', 'editAll', 'owner->read', 'owner->edit'],
+    edit: ['owner', 'editAll', 'owner->edit'],
+    delete: ['owner', 'owner->edit'],
+    invite: ['owner', 'editAll', 'owner->edit'],
+    viewMembers: ['member', 'owner', 'readAll', 'owner->read', 'editAll', 'owner->edit'],
+    manageMembers: ['owner', 'owner->edit'],
+    viewSubTeams: ['owner', 'readAll', 'editAll', 'owner->read', 'owner->edit'],
+    manageSubTeams: ['owner', 'editAll', 'owner->edit'],
   },
 );

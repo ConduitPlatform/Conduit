@@ -13,7 +13,8 @@ export async function UserIdToUserTwoFactorSchemaMigration(grpcSdk: ConduitGrpcS
   );
   for (const twoFactorSecretSchema of twoFactorSecretSchemas) {
     twoFactorSecretSchema.user = twoFactorSecretSchema.userId;
-    await grpcSdk.databaseProvider!.findByIdAndUpdate(
+    delete twoFactorSecretSchema.userId;
+    await grpcSdk.databaseProvider!.findByIdAndReplace(
       'TwoFactorSecret',
       twoFactorSecretSchema._id,
       twoFactorSecretSchema,

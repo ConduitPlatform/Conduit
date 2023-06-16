@@ -4,7 +4,7 @@ import {
   DropCollectionResponse,
   Schema,
 } from '../../protoUtils/database';
-import { RawQuery, UntypedArray } from '../../interfaces';
+import { Indexable, RawQuery, UntypedArray } from '../../interfaces';
 import { Query } from '../../types/db';
 import { ConduitSchema } from '../../classes/ConduitSchema';
 import { ConduitSchemaExtension } from '../../interfaces/ConduitSchemaExtension';
@@ -186,6 +186,26 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
+  findByIdAndReplace<T>(
+    schemaName: string,
+    id: string,
+    document: Query<T>,
+    populate?: string | string[],
+  ): Promise<T | any> {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.findByIdAndReplace({
+      schemaName,
+      id,
+      query: this.processQuery(document),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
   updateMany<T>(
     schemaName: string,
     filterQuery: Query<T>,
@@ -197,6 +217,46 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       populateArray = [populate];
     }
     return this.client!.updateMany({
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  updateOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+  ) {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.updateOne({
+      schemaName,
+      filterQuery: this.processQuery(filterQuery),
+      query: this.processQuery(query),
+      populate: (populateArray as string[]) ?? [],
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
+  }
+
+  replaceOne<T>(
+    schemaName: string,
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+  ) {
+    let populateArray = populate;
+    if (populate && !Array.isArray(populate)) {
+      populateArray = [populate];
+    }
+    return this.client!.replaceOne({
       schemaName,
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
@@ -246,12 +306,38 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     });
   }
 
+  createView(
+    schemaName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: { mongoQuery?: Indexable; sqlQuery?: string },
+  ) {
+    const processed: any = query;
+    if (query.mongoQuery) {
+      processed.mongoQuery = JSON.stringify(processed.mongoQuery);
+    }
+    return this.client!.createView({
+      schemaName,
+      viewName,
+      joinedSchemas,
+      query: processed,
+    });
+  }
+
+  deleteView(viewName: string) {
+    return this.client!.deleteView({ viewName });
+  }
+
   columnExistence(schemaName: string, columns: string[]) {
     return this.client!.columnExistence({ schemaName, columns }).then(r => r.result);
   }
 
   migrate(schemaName: string) {
     return this.client!.migrate({ schemaName });
+  }
+
+  getDatabaseType() {
+    return this.client!.getDatabaseType({});
   }
 
   private constructSortObj(sort: string[]) {

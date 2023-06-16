@@ -39,9 +39,15 @@ export class ResourceController {
     resourceName: string,
   ) {
     const relationResources = [];
+    let hasWildcard = false;
     for (const relation of Object.keys(relations)) {
       for (const resource of relations[relation]) {
-        if (resourceName === resource || relationResources.indexOf(resource) !== -1)
+        if (resource.indexOf('*') !== -1) hasWildcard = true;
+        if (
+          resourceName === resource ||
+          relationResources.indexOf(resource) !== -1 ||
+          resourceName === '*'
+        )
           continue;
         relationResources.push(resource);
       }
@@ -49,22 +55,37 @@ export class ResourceController {
     const found = await ResourceDefinition.getInstance().countDocuments({
       name: { $in: relationResources },
     });
-    if (found !== relationResources.length)
+    if (hasWildcard) {
+      if (found !== relationResources.length - 1)
+        throw new Error('One or more related resources was not found');
+    } else if (found !== relationResources.length)
       throw new Error('One or more related resources was not found');
+  }
+
+  excludeWildcard(relations: string[]) {
+    const newRelations = [];
+    for (const relation of relations) {
+      if (relation.indexOf('*') === -1) {
+        newRelations.push(relation);
+      }
+    }
+    return newRelations;
   }
 
   async validateResourcePermissions(resource: any) {
     const perms = resource.permissions;
+    const relations = resource.relations;
     for (const perm of Object.keys(perms)) {
       if (!Array.isArray(perms[perm])) {
         throw new Error('Permissions must be an array');
       }
       if (perm.indexOf('->') !== -1) {
         const found = await ResourceDefinition.getInstance().findMany({
-          name: { $in: resource.relations[perm.split('->')[0]] },
+          name: { $in: this.excludeWildcard(relations[perm.split('->')[0]]) },
           [`permissions.${perm.split('->')[1]}`]: { $exists: true },
         });
-        if (found.length === resource.relations[perm.split('->')[0]].length) continue;
+        if (found.length === this.excludeWildcard(relations[perm.split('->')[0]]).length)
+          continue;
         throw new Error(`Permission ${perm} not found in related resources`);
       }
     }

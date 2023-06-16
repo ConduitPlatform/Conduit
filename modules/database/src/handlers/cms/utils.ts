@@ -3,62 +3,59 @@ import { status } from '@grpc/grpc-js';
 import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import { Doc } from '../../interfaces';
+import { Doc, Schema } from '../../interfaces';
 
-export async function findSchema(
+export function findSchema(
   call: ParsedRouterRequest,
   database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
 ) {
   const schemaName = call.request.path.split('/')[2];
-  const schema = await database
-    .getSchemaModel('_DeclaredSchema')
-    .model?.findOne({ name: schemaName })
-    .catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-  if (!schema) {
-    throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
-  }
-  return schemaName;
+  return database.getSchemaModel(schemaName).model;
 }
 
 export async function getUpdatedDocument(
-  schemaName: string,
-  params: Indexable,
-  database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
+  model: Schema,
+  id: string,
+  patch: boolean = false,
+  data: Indexable,
+  options: {
+    populate?: string[];
+    userId?: string;
+    scope?: string;
+  },
 ) {
-  const id = params.id;
-  let updatedDocument: Doc = await database
-    .getSchemaModel(schemaName)
-    .model?.findByIdAndUpdate(id, params)
-    .catch((e: Error) => {
-      throw new GrpcError(status.INTERNAL, e.message);
-    });
-  updatedDocument = await database
-    .getSchemaModel(schemaName)
-    .model?.findOne({ _id: updatedDocument._id }, undefined, params.populate)
+  let updatedDocument: Doc;
+  if (!patch) {
+    updatedDocument = await model
+      .findByIdAndReplace(id, data, {
+        userId: options.userId,
+        scope: options.scope,
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  } else {
+    updatedDocument = await model
+      .findByIdAndUpdate(id, data, {
+        userId: options.userId,
+        scope: options.scope,
+      })
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+  }
+  updatedDocument = await model
+    .findOne(
+      { _id: updatedDocument._id },
+      {
+        populate: options.populate,
+        userId: options.userId,
+        scope: options.scope,
+      },
+    )
     .catch((e: Error) => {
       throw new GrpcError(status.INTERNAL, e.message);
     });
 
   return updatedDocument;
-}
-
-export async function getUpdatedDocuments(
-  schemaName: string,
-  params: Indexable,
-  database: DatabaseAdapter<MongooseSchema | SequelizeSchema>,
-) {
-  const updatedDocuments: Doc[] = [];
-  for (const doc of params.docs) {
-    const updatedDocument = await database
-      .getSchemaModel(schemaName)
-      .model?.findByIdAndUpdate(doc._id, doc)
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    updatedDocuments.push(updatedDocument);
-  }
-
-  return updatedDocuments;
 }

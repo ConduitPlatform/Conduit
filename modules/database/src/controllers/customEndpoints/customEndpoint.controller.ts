@@ -37,9 +37,12 @@ export class CustomEndpointController {
     }
     return this.database
       .getSchemaModel('CustomEndpoints')
-      .model.findMany({ enabled: true }, undefined, undefined, undefined, undefined, [
-        'selectedSchema',
-      ])
+      .model.findMany(
+        { enabled: true },
+        {
+          populate: ['selectedSchema'],
+        },
+      )
       .then((r: PopulatedCustomEndpoint[]) => {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No custom endpoints to register');

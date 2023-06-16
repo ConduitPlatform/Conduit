@@ -13,6 +13,11 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
   },
+  functionType: {
+    type: TYPE.String,
+    enum: ['request', 'webhook', 'middleware', 'socket', 'event', 'cron'],
+    required: true,
+  },
   functionCode: {
     type: TYPE.String,
     required: true,
@@ -51,6 +56,7 @@ export class Functions extends ConduitActiveSchema<Functions> {
   _id!: string;
   name!: string;
   functionCode!: string;
+  functionType!: 'request' | 'webhook' | 'middleware' | 'socket' | 'event' | 'cron';
 
   inputs!: IWebInputsInterface;
 

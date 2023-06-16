@@ -32,6 +32,7 @@ export class CustomEndpointHandler {
     const path = call.request.path.split('/')[3];
     const endpoint: ICustomEndpoint = CustomEndpointHandler.routeControllers[path];
     const params = call.request.params;
+    const scope = call.request.queryParams.scope;
     let searchQuery: Indexable = {};
     let createString = '';
 
@@ -127,46 +128,53 @@ export class CustomEndpointHandler {
       if (endpoint.paginated) {
         const documentsPromise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
-          .model.findMany(
-            searchQuery,
-            params['skip'],
-            params['limit'],
-            undefined,
+          .model.findMany(searchQuery, {
+            skip: params['skip'],
+            limit: params['limit'],
+            scope,
+            userId: call.request.context.user?._id,
             sort,
-            params['populate'],
-          );
+            populate: params['populate'],
+          });
         const countPromise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
-          .model.countDocuments(searchQuery);
+          .model.countDocuments(searchQuery, {
+            scope,
+            userId: call.request.context.user?._id,
+          });
         promise = Promise.all([documentsPromise, countPromise]);
       } else {
         promise = this.database
           .getSchemaModel(endpoint.selectedSchemaName)
-          .model.findMany(
-            searchQuery,
-            undefined,
-            undefined,
-            undefined,
+          .model.findMany(searchQuery, {
             sort,
-            params['populate'],
-          );
+            populate: params['populate'],
+            scope,
+            userId: call.request.context.user?._id,
+          });
       }
     } else if (endpoint.operation === OperationsEnum.POST) {
       promise = this.database
         .getSchemaModel(endpoint.selectedSchemaName)
-        .model.create(createObj);
+        .model.create(createObj, { scope, userId: call.request.context.user?._id });
     } else if (endpoint.operation === OperationsEnum.PUT) {
       promise = this.database
         .getSchemaModel(endpoint.selectedSchemaName)
-        .model.updateMany(searchQuery, createObj);
+        .model.updateMany(searchQuery, createObj, {
+          scope,
+          userId: call.request.context.user?._id,
+        });
     } else if (endpoint.operation === OperationsEnum.DELETE) {
       promise = this.database
         .getSchemaModel(endpoint.selectedSchemaName)
-        .model.deleteMany(searchQuery);
+        .model.deleteMany(searchQuery, { scope, userId: call.request.context.user?._id });
     } else if (endpoint.operation === OperationsEnum.PATCH) {
       promise = this.database
         .getSchemaModel(endpoint.selectedSchemaName)
-        .model.updateMany(searchQuery, createObj);
+        .model.updateMany(searchQuery, createObj, {
+          scope,
+          userId: call.request.context.user?._id,
+        });
     } else {
       process.exit(-1);
     }

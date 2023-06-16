@@ -10,6 +10,8 @@ import * as models from './models';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import {
+  AllowedResourcesRequest,
+  AllowedResourcesResponse,
   Decision,
   DeleteResourceRequest,
   FindRelationRequest,
@@ -19,6 +21,7 @@ import {
   Resource,
   Resource_Permission,
   Resource_Relation,
+  ResourceAccessListRequest,
 } from './protoTypes/authorization';
 import {
   IndexController,
@@ -47,7 +50,9 @@ export default class Authorization extends ManagedModule<Config> {
       deleteRelation: this.deleteRelation.bind(this),
       deleteAllRelations: this.deleteAllRelations.bind(this),
       findRelation: this.findRelation.bind(this),
+      getAllowedResources: this.getAllowedResources.bind(this),
       can: this.can.bind(this),
+      createResourceAccessList: this.createResourceAccessList.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -161,6 +166,30 @@ export default class Authorization extends ManagedModule<Config> {
       limit,
     );
     callback(null, { relations, count });
+  }
+
+  async getAllowedResources(
+    call: GrpcRequest<AllowedResourcesRequest>,
+    callback: GrpcResponse<AllowedResourcesResponse>,
+  ) {
+    const { subject, action, resourceType, skip, limit } = call.request;
+    const { resources, count } = await this.permissionsController.findPermissions(
+      subject,
+      action,
+      resourceType,
+      skip,
+      limit,
+    );
+    callback(null, { resources, count });
+  }
+
+  async createResourceAccessList(
+    call: GrpcRequest<ResourceAccessListRequest>,
+    callback: GrpcResponse<Empty>,
+  ) {
+    const { subject, action, resourceType } = call.request;
+    await this.permissionsController.createAccessList(subject, action, resourceType);
+    callback(null);
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

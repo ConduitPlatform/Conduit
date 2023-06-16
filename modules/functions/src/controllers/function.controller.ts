@@ -1,7 +1,9 @@
 import ConduitGrpcSdk, {
+  ConduitMiddlewareOptions,
   ConduitRouteOptions,
   ConduitRouteReturnDefinition,
-  UntypedArray,
+  ConduitSocketEventHandler,
+  ConduitSocketOptions,
 } from '@conduitplatform/grpc-sdk';
 import {
   GrpcServer,
@@ -12,12 +14,22 @@ import {
 import { Functions } from '../models';
 import { createFunctionRoute } from './utils';
 
+type Socket = {
+  input: ConduitSocketOptions;
+  events: Record<string, ConduitSocketEventHandler>;
+};
+type Route = {
+  input: ConduitRouteOptions;
+  type: ConduitRouteReturnDefinition;
+  handler: RequestHandlers;
+  returnType: ConduitRouteReturnDefinition;
+};
+type Middleware = {
+  input: ConduitMiddlewareOptions;
+  handler: RequestHandlers;
+};
 export class FunctionController {
-  private functionRoutes: {
-    input: ConduitRouteOptions;
-    returnType: ConduitRouteReturnDefinition;
-    handler: RequestHandlers;
-  }[] = [];
+  private functionRoutes: (Route | Socket | Middleware)[] = [];
 
   private _routingManager: RoutingManager;
 
@@ -40,15 +52,33 @@ export class FunctionController {
         if (!r || r.length == 0) {
           ConduitGrpcSdk.Logger.log('No functions to register');
         }
-        const routes: UntypedArray = [];
+        this.functionRoutes = [];
 
         r.forEach(func => {
-          routes.push(createFunctionRoute(func, this.grpcSdk));
+          const route = createFunctionRoute(func, this.grpcSdk);
+          if (route) {
+            this.functionRoutes.push(route as any);
+          }
         });
-        this.functionRoutes = routes;
         this._routingManager.clear();
         this.functionRoutes.forEach(route => {
-          this._routingManager.route(route.input, route.returnType, route.handler);
+          if ((route as Socket).events) {
+            this._routingManager.socket(
+              (route as Socket).input,
+              (route as Socket).events,
+            );
+          } else if (!(route as Middleware).hasOwnProperty('returnType')) {
+            this._routingManager.middleware(
+              (route as Middleware).input,
+              (route as Middleware).handler,
+            );
+          } else {
+            this._routingManager.route(
+              (route as Route).input,
+              (route as Route).returnType,
+              (route as Route).handler,
+            );
+          }
         });
         this._routingManager
           .registerRoutes()

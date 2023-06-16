@@ -42,6 +42,8 @@ message FindOneRequest {
   string query = 2;
   optional string select = 3;
   repeated string populate = 4;
+  optional string userId = 5;
+  optional string scope = 6;
 }
 
 message FindRequest {
@@ -52,6 +54,8 @@ message FindRequest {
   optional int32 limit = 5;
   map<string, int32> sort = 6; // -1 | 1
   repeated string populate = 7;
+  optional string userId = 8;
+  optional string scope = 9;
 }
 
 message QueryResponse {
@@ -61,6 +65,8 @@ message QueryResponse {
 message QueryRequest {
   string schemaName = 1;
   string query = 2;
+  optional string userId = 3;
+  optional string scope = 4;
 }
 
 message RawQueryRequest {
@@ -92,11 +98,28 @@ message RawQueryRequest {
   RawQuery query = 2;
 }
 
+message CreateViewRequest {
+  message RawQuery {
+    string mongoQuery = 1;
+    string sqlQuery = 2;
+  };
+  string schemaName = 1;
+  string viewName = 2;
+  repeated string joinedSchemas = 3;
+  RawQuery query = 4;
+}
+
+message DeleteViewRequest {
+  string viewName = 1;
+}
+
 message UpdateRequest {
   string schemaName = 1;
   string id = 2;
   string query = 3;
   repeated string populate = 4;
+  optional string userId = 5;
+  optional string scope = 6;
 }
 
 message UpdateManyRequest {
@@ -104,6 +127,8 @@ message UpdateManyRequest {
   string filterQuery = 2;
   string query = 3;
   repeated string populate = 4;
+  optional string userId = 5;
+  optional string scope = 6;
 }
 
 message DropCollectionRequest {
@@ -124,6 +149,10 @@ message ColumnExistenceResponse {
   bool result = 1;
 }
 
+message GetDatabaseTypeResponse {
+  string result = 1;
+}
+
 service DatabaseProvider {
   rpc CreateSchemaFromAdapter(CreateSchemaRequest) returns (Schema);
   rpc GetSchema(GetSchemaRequest) returns (Schema);
@@ -131,6 +160,7 @@ service DatabaseProvider {
   rpc DeleteSchema(DropCollectionRequest) returns (DropCollectionResponse);
   rpc SetSchemaExtension(SchemaExtension) returns (Schema);
   rpc Migrate(MigrateRequest) returns (google.protobuf.Empty);
+  rpc GetDatabaseType(google.protobuf.Empty) returns (GetDatabaseTypeResponse);
   // Database queries
   rpc findOne(FindOneRequest) returns (QueryResponse);
   rpc findMany(FindRequest) returns (QueryResponse);
@@ -139,8 +169,13 @@ service DatabaseProvider {
   rpc deleteOne(QueryRequest) returns (QueryResponse);
   rpc deleteMany(QueryRequest) returns (QueryResponse);
   rpc findByIdAndUpdate(UpdateRequest) returns (QueryResponse);
+  rpc findByIdAndReplace(UpdateRequest) returns (QueryResponse);
   rpc updateMany(UpdateManyRequest) returns (QueryResponse);
+  rpc updateOne(UpdateManyRequest) returns (QueryResponse);
+  rpc replaceOne(UpdateManyRequest) returns (QueryResponse);
   rpc countDocuments(QueryRequest) returns (QueryResponse);
   rpc rawQuery(RawQueryRequest) returns (QueryResponse);
+  rpc createView(CreateViewRequest) returns (google.protobuf.Empty);
+  rpc deleteView(DeleteViewRequest) returns (google.protobuf.Empty);
   rpc columnExistence(ColumnExistenceRequest) returns (ColumnExistenceResponse);
 }

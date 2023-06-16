@@ -13,7 +13,8 @@ export async function UserIdToUserRefreshTokenSchemaMigration(grpcSdk: ConduitGr
   );
   for (const refreshTokenSchema of refreshTokenSchemas) {
     refreshTokenSchema.user = refreshTokenSchema.userId;
-    await grpcSdk.databaseProvider!.findByIdAndUpdate(
+    delete refreshTokenSchema.userId;
+    await grpcSdk.databaseProvider!.findByIdAndReplace(
       'RefreshToken',
       refreshTokenSchema._id,
       refreshTokenSchema,

@@ -7,7 +7,7 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { _ConduitSchema, ConduitDatabaseSchema, Schema } from '../interfaces';
+import { _ConduitSchema, ConduitDatabaseSchema, IView, Schema } from '../interfaces';
 import { stitchSchema, validateExtensionFields } from './utils/extensions';
 import { status } from '@grpc/grpc-js';
 import { isEqual, isNil } from 'lodash';
@@ -17,6 +17,7 @@ import * as systemModels from '../models';
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
   models: { [name: string]: T } = {};
+  views: { [name: string]: T } = {};
   foreignSchemaCollections: Set<string> = new Set([]); // not in DeclaredSchemas
   protected readonly maxConnTimeoutMs: number;
   protected grpcSdk: ConduitGrpcSdk;
@@ -139,6 +140,15 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
 
+  abstract createView(
+    modelName: string,
+    viewName: string,
+    joinedSchemas: string[],
+    query: any,
+  ): Promise<void>;
+
+  abstract deleteView(viewName: string): Promise<void>;
+
   abstract deleteIndexes(schemaName: string, indexNames: string[]): Promise<string>;
 
   abstract execRawQuery(
@@ -149,7 +159,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   abstract syncSchema(name: string): Promise<void>;
 
   fixDatabaseSchemaOwnership(schema: ConduitSchema) {
-    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas'];
+    const dbSchemas = ['CustomEndpoints', '_PendingSchemas', 'MigratedSchemas', 'Views'];
     if (dbSchemas.includes(schema.name)) {
       schema.ownerModule = 'database';
     }
@@ -184,10 +194,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     const lastMigratedSchemas = await this.models['MigratedSchemas'].findMany(
       { name: storedSchema.name },
-      undefined,
-      1,
-      undefined,
-      { version: -1 },
+      { skip: 1, sort: { version: -1 } },
     );
     const lastVersion =
       lastMigratedSchemas.length === 0 ? 0 : lastMigratedSchemas[0].version;
@@ -197,6 +204,27 @@ export abstract class DatabaseAdapter<T extends Schema> {
       version: lastVersion + 1,
       schema: storedSchema,
     });
+  }
+
+  async registerAuthorizationDefinitions() {
+    const models = await this.models!['_DeclaredSchema'].findMany({
+      'modelOptions.conduit.authorization.enabled': true,
+    });
+    for (const model of models) {
+      this.grpcSdk.authorization?.defineResource({
+        name: model.name,
+        relations: [
+          { name: 'owner', resourceType: ['User', '*'] },
+          { name: 'reader', resourceType: ['User', '*'] },
+          { name: 'editor', resourceType: ['User', '*'] },
+        ],
+        permissions: [
+          { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
+          { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
+          { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
+        ],
+      });
+    }
   }
 
   async recoverSchemasFromDatabase() {
@@ -242,6 +270,19 @@ export abstract class DatabaseAdapter<T extends Schema> {
       });
 
     await Promise.all(models);
+  }
+
+  async recoverViewsFromDatabase() {
+    let views = await this.models!['Views'].findMany({});
+    views = views.map((view: IView) => {
+      return this.createView(
+        view.originalSchema,
+        view.name,
+        view.joinedSchemas,
+        view.query,
+      );
+    });
+    await Promise.all(views);
   }
 
   setSchemaExtension(

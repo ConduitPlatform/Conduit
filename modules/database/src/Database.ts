@@ -12,10 +12,13 @@ import * as models from './models';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
+  CreateViewRequest,
+  DeleteViewRequest,
   DropCollectionRequest,
   DropCollectionResponse,
   FindOneRequest,
   FindRequest,
+  GetDatabaseTypeResponse,
   GetSchemaRequest,
   GetSchemasRequest,
   MigrateRequest,
@@ -31,7 +34,7 @@ import { DatabaseAdapter } from './adapters/DatabaseAdapter';
 import { MongooseAdapter } from './adapters/mongoose-adapter';
 import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, Schema } from './interfaces';
+import { ConduitDatabaseSchema, IView, Schema } from './interfaces';
 import { canCreate, canDelete, canModify } from './permissions';
 import { runMigrations } from './migrations';
 import { SchemaController } from './controllers/cms/schema.controller';
@@ -44,6 +47,7 @@ import { isNil } from 'lodash';
 import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
 import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
 import { ManagedModule } from '@conduitplatform/module-tools';
+import { Empty } from './protoTypes/google/protobuf/empty';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;
@@ -60,7 +64,12 @@ export default class DatabaseModule extends ManagedModule<void> {
       findMany: this.findMany.bind(this),
       create: this.create.bind(this),
       createMany: this.createMany.bind(this),
+      createView: this.createView.bind(this),
+      deleteView: this.deleteView.bind(this),
       findByIdAndUpdate: this.findByIdAndUpdate.bind(this),
+      findByIdAndReplace: this.findByIdAndReplace.bind(this),
+      replaceOne: this.replaceOne.bind(this),
+      updateOne: this.updateOne.bind(this),
       updateMany: this.updateMany.bind(this),
       deleteOne: this.deleteOne.bind(this),
       deleteMany: this.deleteMany.bind(this),
@@ -68,6 +77,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       rawQuery: this.rawQuery.bind(this),
       columnExistence: this.columnExistence.bind(this),
       migrate: this.migrate.bind(this),
+      getDatabaseType: this.getDatabaseType.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -104,6 +114,7 @@ export default class DatabaseModule extends ManagedModule<void> {
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
+    await this._activeAdapter.recoverViewsFromDatabase();
     await runMigrations(this._activeAdapter);
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       return this._activeAdapter.registerSystemSchema(model).then(() => {
@@ -120,7 +131,10 @@ export default class DatabaseModule extends ManagedModule<void> {
     this.registerInstanceSyncEvents();
     const coreHealth = (await this.grpcSdk.core.check()) as unknown as HealthCheckStatus;
     this.onCoreHealthChange(coreHealth);
-    await this.grpcSdk.core.watch('');
+    this.grpcSdk.core.watch('');
+    this.grpcSdk.onceModuleUp('authorization', async () => {
+      await this._activeAdapter.registerAuthorizationDefinitions();
+    });
   }
 
   async initializeMetrics() {
@@ -184,6 +198,45 @@ export default class DatabaseModule extends ManagedModule<void> {
           schemaAdapter as ConduitDatabaseSchema,
         ),
       ); // @dirty-type-cast
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Given a schema name, returns the schema adapter assigned
+   * @param call
+   * @param callback
+   */
+  async createView(call: GrpcRequest<CreateViewRequest>, callback: GrpcResponse<Empty>) {
+    try {
+      await this._activeAdapter.createView(
+        call.request.schemaName,
+        call.request.viewName,
+        call.request.joinedSchemas,
+        call.request.query,
+      );
+      callback(null); // @dirty-type-cast
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  /**
+   * Given a schema name, returns the schema adapter assigned
+   * @param call
+   * @param callback
+   */
+  async deleteView(call: GrpcRequest<DeleteViewRequest>, callback: GrpcResponse<Empty>) {
+    try {
+      await this._activeAdapter.deleteView(call.request.viewName);
+      callback(null);
     } catch (err) {
       callback({
         code: status.INTERNAL,
@@ -272,11 +325,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const doc = await schemaAdapter.model.findOne(
-        call.request.query,
-        call.request.select,
-        call.request.populate,
-      );
+      const doc = await schemaAdapter.model.findOne(call.request.query, {
+        select: call.request.select,
+        populate: call.request.populate,
+      });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
       callback({
@@ -301,14 +353,13 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const docs = await schemaAdapter.model.findMany(
-        call.request.query,
+      const docs = await schemaAdapter.model.findMany(call.request.query, {
         skip,
         limit,
         select,
-        sort as { [key: string]: -1 | 1 } | undefined,
+        sort,
         populate,
-      );
+      });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
       callback({
@@ -391,11 +442,110 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        call.request.populate,
+        { populate: call.request.populate },
       );
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async findByIdAndReplace(
+    call: GrpcRequest<UpdateRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.findByIdAndReplace(
+        call.request.id,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async replaceOne(
+    call: GrpcRequest<UpdateManyRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.replaceOne(
+        call.request.filterQuery,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:update:${schemaName}`, resultString);
+
+      callback(null, { result: resultString });
+    } catch (err) {
+      callback({
+        code: status.INTERNAL,
+        message: (err as Error).message,
+      });
+    }
+  }
+
+  async updateOne(
+    call: GrpcRequest<UpdateManyRequest>,
+    callback: GrpcResponse<QueryResponse>,
+  ) {
+    const moduleName = call.metadata!.get('module-name')![0] as string;
+    const { schemaName } = call.request;
+    try {
+      const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
+      if (!(await canModify(moduleName, schemaAdapter.model))) {
+        return callback({
+          code: status.PERMISSION_DENIED,
+          message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
+        });
+      }
+
+      const result = await schemaAdapter.model.updateOne(
+        call.request.filterQuery,
+        call.request.query,
+        { populate: call.request.populate },
+      );
+      const resultString = JSON.stringify(result);
+
+      this.grpcSdk.bus?.publish(`${this.name}:updateMany:${schemaName}`, resultString);
 
       callback(null, { result: resultString });
     } catch (err) {
@@ -424,7 +574,7 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        call.request.populate,
+        { populate: call.request.populate },
       );
       const resultString = JSON.stringify(result);
 
@@ -567,9 +717,28 @@ export default class DatabaseModule extends ManagedModule<void> {
 
   async migrate(call: GrpcRequest<MigrateRequest>, callback: GrpcResponse<null>) {
     if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
-      await this._activeAdapter.syncSchema(call.request.schemaName);
+      const schemaName = call.request.schemaName;
+      await this._activeAdapter.syncSchema(schemaName).catch(async () => {
+        const views: IView[] = await this._activeAdapter
+          .getSchemaModel('Views')
+          .model.findMany({});
+        for (const view of views) {
+          if (view.joinedSchemas.includes(schemaName)) {
+            await this._activeAdapter.deleteView(view.name);
+          }
+        }
+        await this._activeAdapter.syncSchema(schemaName);
+      });
     }
     callback(null, null);
+  }
+
+  async getDatabaseType(
+    call: GrpcRequest<Empty>,
+    callback: GrpcResponse<GetDatabaseTypeResponse>,
+  ) {
+    const result = this._activeAdapter.getDatabaseType();
+    callback(null, { result });
   }
 
   private registerInstanceSyncEvents() {

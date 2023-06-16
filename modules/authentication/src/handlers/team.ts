@@ -17,7 +17,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { Team, Token, User } from '../models';
 import { Config } from '../config';
-import { Team as TeamAuthz, User as UserAuthz } from '../authz';
+import { Team as TeamAuthz } from '../authz';
 import { TeamInviteTemplate } from '../templates';
 import { status } from '@grpc/grpc-js';
 import { AuthUtils } from '../utils';
@@ -299,7 +299,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
-      actions: ['read'],
+      actions: ['viewMembers'],
       resource: 'Team:' + teamId,
     });
     if (!allowed.allow) {
@@ -330,12 +330,13 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, populate } = call.request.params;
-    const allowed = await this.grpcSdk.authorization!.can({
+    const relations = await this.grpcSdk.authorization!.findRelation({
       subject: 'User:' + user._id,
-      actions: ['read'],
       resource: 'Team:' + teamId,
+      skip: 0,
+      limit: 1,
     });
-    if (!allowed.allow) {
+    if (!relations || relations.relations.length === 0) {
       throw new GrpcError(
         status.PERMISSION_DENIED,
         'User does not have permission to view team',
@@ -383,7 +384,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
 
     const allowed = await this.grpcSdk.authorization!.can({
       subject: 'User:' + user._id,
-      actions: ['read'],
+      actions: ['viewSubTeams'],
       resource: 'Team:' + teamId,
     });
     if (!allowed.allow) {
@@ -732,9 +733,9 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async validate() {
     const config: Config = ConfigController.getInstance().config;
     if (config.teams.enabled && this.grpcSdk.isAvailable('authorization')) {
-      if (this.initialized) return true;
-      await this.grpcSdk.authorization!.defineResource(UserAuthz);
       await this.grpcSdk.authorization!.defineResource(TeamAuthz);
+      if (this.initialized) return true;
+
       if (config.teams.enableDefaultTeam) {
         const existingTeam = await Team.getInstance().findOne({ isDefault: true });
         if (!existingTeam) {

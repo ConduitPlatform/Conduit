@@ -1,9 +1,15 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { checkRelation, computePermissionTuple } from '../utils';
+import {
+  checkRelation,
+  computePermissionTuple,
+  getPostgresAccessListQuery,
+  getSQLAccessListQuery,
+} from '../utils';
 import { IndexController } from './index.controller';
 import { RuleCache } from './cache.controller';
 import { isNil } from 'lodash';
 import { Permission } from '../models';
+import { createHash } from 'crypto';
 
 export class PermissionsController {
   private static _instance: PermissionsController;
@@ -72,5 +78,160 @@ export class PermissionsController {
     await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
 
     return index ?? false;
+  }
+
+  async findPermissions(
+    subject: string,
+    action: string,
+    objectType: string,
+    skip: number,
+    limit: number,
+  ) {
+    const computedTuple = `${subject}#${action}@${objectType}`;
+    const allowedIds = [];
+    const permission = await Permission.getInstance().findMany({
+      computedTuple: { $like: `${computedTuple}%` },
+    });
+    for (const perm of permission) {
+      allowedIds.push(perm.resource.split(':')[1]);
+    }
+    let count = await this.indexController.findGeneralIndexCount(
+      subject,
+      action,
+      objectType,
+    );
+    count += allowedIds.length;
+    /**
+     * allowedIds may contain ids to return which could be enough to satisfy the skip/limit
+     * requirements. If not, we need to query the index for the rest of the ids.
+     *
+     */
+    if (allowedIds.length >= skip + limit) {
+      return { resources: allowedIds.slice(skip, skip + limit), count: count };
+    } else {
+      skip -= allowedIds.length;
+      limit -= allowedIds.length;
+    }
+
+    const index = await this.indexController.findGeneralIndex(
+      subject,
+      action,
+      objectType,
+      skip,
+      limit,
+    );
+    return { resources: allowedIds.concat(index), count };
+  }
+
+  async createAccessList(subject: string, action: string, objectType: string) {
+    const computedTuple = `${subject}#${action}@${objectType}`;
+    const objectTypeCollection = await this.grpcSdk
+      .database!.getSchema(objectType)
+      .then(r => r.collectionName);
+    const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
+    await this.grpcSdk.database?.createView(
+      objectType,
+      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      ['Permission', 'ActorIndex', 'ObjectIndex'],
+      {
+        mongoQuery: [
+          // permissions lookup won't work this way
+          {
+            $lookup: {
+              from: 'cnd_permissions',
+              let: { x_id: { $toString: '$_id' } },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: [
+                        '$computedTuple',
+                        { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: 'permissions',
+            },
+          },
+          {
+            $lookup: {
+              from: 'cnd_actorindexes',
+              let: {
+                subject: subject,
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ['$subject', '$$subject'],
+                    },
+                  },
+                },
+              ],
+              as: 'actors',
+            },
+          },
+          {
+            $lookup: {
+              from: 'cnd_objectindexes',
+              let: {
+                id_action: {
+                  $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
+                },
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ['$subject', '$$id_action'],
+                    },
+                  },
+                },
+              ],
+              as: 'objects',
+            },
+          },
+          {
+            $addFields: {
+              intersection: {
+                $setIntersection: ['$actors.entity', '$objects.entity'],
+              },
+            },
+          },
+          {
+            $match: {
+              intersection: { $ne: [] },
+            },
+          },
+          {
+            $project: {
+              actors: 0,
+              objects: 0,
+              permissions: 0,
+              intersection: 0,
+            },
+          },
+        ],
+        sqlQuery:
+          dbType === 'PostgreSQL'
+            ? getPostgresAccessListQuery(
+                objectTypeCollection,
+                computedTuple,
+                subject,
+                objectType,
+                action,
+              )
+            : getSQLAccessListQuery(
+                objectTypeCollection,
+                computedTuple,
+                subject,
+                objectType,
+                action,
+              ),
+      },
+    );
+    return;
   }
 }

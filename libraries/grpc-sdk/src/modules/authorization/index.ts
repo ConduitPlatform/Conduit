@@ -1,5 +1,7 @@
 import { ConduitModule } from '../../classes';
 import {
+  AllowedResourcesRequest,
+  AllowedResourcesResponse,
   AuthorizationDefinition,
   Decision,
   DeleteAllRelationsRequest,
@@ -9,6 +11,7 @@ import {
   PermissionRequest,
   Relation,
   Resource,
+  ResourceAccessListRequest,
 } from '../../protoUtils';
 import { Empty } from '../../protoUtils/google/protobuf/empty';
 
@@ -56,5 +59,13 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
 
   removePermission(data: PermissionRequest): Promise<Empty> {
     return this.client!.removePermission(data);
+  }
+
+  getAllowedResources(data: AllowedResourcesRequest): Promise<AllowedResourcesResponse> {
+    return this.client!.getAllowedResources(data);
+  }
+
+  createResourceAccessList(data: ResourceAccessListRequest): Promise<Empty> {
+    return this.client!.createResourceAccessList(data);
   }
 }
