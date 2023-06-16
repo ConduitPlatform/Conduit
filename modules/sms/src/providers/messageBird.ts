@@ -33,7 +33,7 @@ export class messageBirdProvider implements ISmsProvider {
       const options = {
         originator: this.originatorName,
         template: 'Your verification code is %token.',
-        timeout: 120,
+        timeout: 60,
       };
       this.client.verify.create(
         phoneNumber,

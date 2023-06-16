@@ -52,7 +52,7 @@ export class clickSendProvider implements ISmsProvider {
     };
     try {
       await this.client.smsSendPost(smsMessageCollection);
-      await this.grpcSdk.state!.setKey(phoneNumber, otp, 120000);
+      await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
       return Promise.resolve(phoneNumber);
     } catch (error) {
       ConduitGrpcSdk.Logger.error(error as Error);

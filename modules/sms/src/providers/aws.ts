@@ -65,7 +65,7 @@ export class AwsProvider implements ISmsProvider {
       ConduitGrpcSdk.Logger.error(error as Error);
       return Promise.reject(Error('could not send verification code'));
     }
-    await this.grpcSdk.state!.setKey(phoneNumber, otp, 120000);
+    await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
     return Promise.resolve(phoneNumber);
   }
 
