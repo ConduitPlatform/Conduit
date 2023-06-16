@@ -51,6 +51,10 @@ export default {
       format: 'String',
       default: '',
     },
+    originatorName: {
+      format: 'String',
+      default: '',
+    },
   },
   clickSend: {
     username: {

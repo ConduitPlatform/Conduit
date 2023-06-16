@@ -31,13 +31,13 @@ export class clickSendProvider implements ISmsProvider {
     try {
       return await this.client.smsSendPost(smsMessageCollection);
     } catch (error) {
+      ConduitGrpcSdk.Logger.error(error as Error);
       return Promise.reject(Error('could not send message'));
     }
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    //const otp = otpGenerator.generate(6, { digits: true, alphabets: false, specialChars: false });
-    const otp = generate(4, {
+    const otp: string = generate(6, {
       digits: true,
       lowerCaseAlphabets: false,
       upperCaseAlphabets: false,
@@ -52,19 +52,20 @@ export class clickSendProvider implements ISmsProvider {
     };
     try {
       await this.client.smsSendPost(smsMessageCollection);
-      await this.grpcSdk.state!.setKey(phoneNumber, otp, 60.0);
+      await this.grpcSdk.state!.setKey(phoneNumber, otp, 120000);
       return Promise.resolve(phoneNumber);
     } catch (error) {
+      ConduitGrpcSdk.Logger.error(error as Error);
       return Promise.reject(Error('could not send verification code'));
     }
   }
 
   async verify(phoneNumber: string, otp: string): Promise<boolean> {
     const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumber);
-    if (otpCode == null) {
+    if (otpCode === null) {
       return Promise.reject(false);
     }
-    if (otpCode == otp) {
+    if (otpCode === otp) {
       return Promise.resolve(true);
     }
     return Promise.reject(false);

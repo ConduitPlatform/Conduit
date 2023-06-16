@@ -1,13 +1,14 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import AWS, { SNS } from 'aws-sdk';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { generate } from 'otp-generator';
+
 export class AwsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly region: string;
   private grpcSdk: ConduitGrpcSdk;
-  private client: SNS;
+  private client: SNSClient;
   constructor(
     settings: {
       accessKeyId: string;
@@ -22,58 +23,55 @@ export class AwsProvider implements ISmsProvider {
       region: this.region,
     } = settings);
     this.grpcSdk = grpcSdk;
-    AWS.config.update({
+    this.client = new SNSClient({
       region: this.region,
       credentials: {
         accessKeyId: this.accessKeyId,
         secretAccessKey: this.secretAccessKey,
       },
     });
-    this.client = new AWS.SNS();
   }
 
   async sendSms(phoneNumber: string, message: string) {
-    const result = await this.client
-      .publish({
-        PhoneNumber: phoneNumber,
-        Message: message,
-      })
-      .promise()
-      .catch(error => {
-        ConduitGrpcSdk.Logger.error(error);
-      });
-    if (!result) {
+    const params = {
+      Message: message,
+      PhoneNumber: phoneNumber,
+    };
+    const command = new PublishCommand(params);
+    try {
+      const result = await this.client.send(command);
+      return Promise.resolve(result.MessageId);
+    } catch (error) {
+      ConduitGrpcSdk.Logger.error(error as Error);
       return Promise.reject(Error('could not send message'));
     }
-    return Promise.resolve(result.MessageId);
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    const otp = generate(4, {
+    const otp = generate(6, {
       digits: true,
       lowerCaseAlphabets: false,
       upperCaseAlphabets: false,
       specialChars: false,
     });
-    const result = await this.client
-      .publish({
-        PhoneNumber: phoneNumber,
-        Message: `Your verification code is: ${otp}`,
-      })
-      .promise()
-      .catch(error => {
-        ConduitGrpcSdk.Logger.error(error);
-      });
-    if (!result) {
+    const params = {
+      Message: `Your verification code is: ${otp}`,
+      PhoneNumber: phoneNumber,
+    };
+    const command = new PublishCommand(params);
+    try {
+      await this.client.send(command);
+    } catch (error) {
+      ConduitGrpcSdk.Logger.error(error as Error);
       return Promise.reject(Error('could not send verification code'));
     }
-    await this.grpcSdk.state!.setKey(phoneNumber, otp, 60.0);
+    await this.grpcSdk.state!.setKey(phoneNumber, otp, 120000);
     return Promise.resolve(phoneNumber);
   }
 
   async verify(phoneNumber: string, otp: string): Promise<boolean> {
     const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumber);
-    if (otpCode == null) {
+    if (otpCode === null) {
       return Promise.reject(false);
     }
     if (otpCode === otp) {
