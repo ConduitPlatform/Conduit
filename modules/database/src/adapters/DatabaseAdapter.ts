@@ -219,9 +219,19 @@ export abstract class DatabaseAdapter<T extends Schema> {
           { name: 'editor', resourceType: ['User', '*'] },
         ],
         permissions: [
-          { name: 'read', roles: ['reader', 'editor', 'owner', 'owner->read'] },
-          { name: 'edit', roles: ['editor', 'owner', 'owner->edit'] },
-          { name: 'delete', roles: ['editor', 'owner', 'owner->edit'] },
+          {
+            name: 'read',
+            roles: [
+              'reader',
+              'reader->read',
+              'editor',
+              'editor->read',
+              'owner',
+              'owner->read',
+            ],
+          },
+          { name: 'edit', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
+          { name: 'delete', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
         ],
       });
     }
