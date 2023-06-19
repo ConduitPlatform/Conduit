@@ -80,8 +80,10 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    const newSchema = JSON.parse(JSON.stringify(model.schema));
+    let newSchema = model.schema;
+    //@ts-ignore
     newSchema.name = viewName;
+    //@ts-ignore
     newSchema.collectionName = viewName;
     const viewModel = new MongooseSchema(
       this.grpcSdk,

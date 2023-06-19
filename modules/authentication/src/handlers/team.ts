@@ -330,17 +330,24 @@ export class TeamsHandler implements IAuthenticationStrategy {
   async getTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { user } = call.request.context;
     const { teamId, populate } = call.request.params;
-    const relations = await this.grpcSdk.authorization!.findRelation({
+    const allowed = await this.grpcSdk.authorization?.can({
       subject: 'User:' + user._id,
+      actions: ['read'],
       resource: 'Team:' + teamId,
-      skip: 0,
-      limit: 1,
     });
-    if (!relations || relations.relations.length === 0) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not have permission to view team',
-      );
+    if (!allowed || !allowed.allow) {
+      const relations = await this.grpcSdk.authorization!.findRelation({
+        subject: 'User:' + user._id,
+        resource: 'Team:' + teamId,
+        skip: 0,
+        limit: 1,
+      });
+      if (!relations || relations.relations.length === 0) {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'User does not have permission to view team',
+        );
+      }
     }
     const team: Team | null = await Team.getInstance().findOne(
       { _id: teamId },

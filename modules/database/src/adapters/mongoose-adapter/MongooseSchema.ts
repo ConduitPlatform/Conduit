@@ -44,8 +44,8 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     } else {
       (schema as _ConduitSchema).collectionName = schema.name; //restore collectionName
     }
-    const mongooseSchema = new Schema(schema.fields as Indexable, {
-      ...schema.modelOptions,
+    const mongooseSchema = new Schema(cloneDeep(schema.fields as Indexable), {
+      ...cloneDeep(schema.modelOptions),
       ...(isView
         ? {
             autoCreate: false,
@@ -53,7 +53,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
           }
         : {}),
     });
-    this.model = mongoose.model(schema.name, mongooseSchema);
+    this.model = mongoose.model(cloneDeep(schema.name), mongooseSchema);
   }
 
   parseStringToQuery(
