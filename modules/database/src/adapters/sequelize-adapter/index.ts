@@ -11,7 +11,6 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   SequelizeIndexOptions,
   sleep,
-  SQLIndexType,
   SQLiteIndexType,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
@@ -20,8 +19,8 @@ import { SequelizeAuto } from 'sequelize-auto';
 import { DatabaseAdapter } from '../DatabaseAdapter';
 import { SequelizeSchema } from './SequelizeSchema';
 import {
-  checkSequelizeIndexOptions,
-  checkSequelizeIndexType,
+  checkIfSequelizeIndexOptions,
+  checkIfSequelizeIndexType,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
@@ -502,7 +501,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       }
       if (!types && !options) continue;
       if (options) {
-        if (!checkSequelizeIndexOptions(options, dialect)) {
+        if (!checkIfSequelizeIndexOptions(options, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             `Invalid index options for ${dialect}`,
@@ -519,7 +518,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         }
       }
       if (types) {
-        if (isArray(types) || !checkSequelizeIndexType(types, dialect)) {
+        if (isArray(types) || !checkIfSequelizeIndexType(types, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             `Invalid index type for ${dialect}`,
@@ -530,7 +529,6 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
             types as MySQLMariaDBIndexType;
         } else {
           (index.options as SequelizeIndexOptions).using = types as
-            | SQLIndexType
             | PgIndexType
             | SQLiteIndexType;
         }

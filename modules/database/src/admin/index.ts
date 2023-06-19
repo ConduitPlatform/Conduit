@@ -619,7 +619,7 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('getSchemaIndexes', {
-        indexes: [ConduitJson.Required],
+        indexes: [ConduitJson.Required], // TODO: define this more clearly if possible
       }),
       this.schemaAdmin.getIndexes.bind(this.schemaAdmin),
     );

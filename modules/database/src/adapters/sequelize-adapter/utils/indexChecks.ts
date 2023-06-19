@@ -1,29 +1,25 @@
 import {
   MySQLMariaDBIndexType,
   PgIndexType,
-  SQLIndexType,
   SQLiteIndexType,
 } from '@conduitplatform/grpc-sdk';
 
-export function checkSequelizeIndexType(type: any, dialect?: string) {
+export function checkIfSequelizeIndexType(type: any, dialect?: string) {
   switch (dialect) {
     case 'postgres':
-      return Object.values(PgIndexType).includes(type as PgIndexType);
+      return type in PgIndexType;
     case 'mysql' || 'mariadb':
-      return Object.values(MySQLMariaDBIndexType).includes(type as MySQLMariaDBIndexType);
+      return type in MySQLMariaDBIndexType;
     case 'sqlite':
-      return Object.values(SQLiteIndexType).includes(type as SQLiteIndexType);
+      return type in SQLiteIndexType;
     default:
       return (
-        Object.values(SQLIndexType).includes(type as SQLIndexType) ||
-        Object.values(PgIndexType).includes(type as PgIndexType) ||
-        Object.values(MySQLMariaDBIndexType).includes(type as MySQLMariaDBIndexType) ||
-        Object.values(SQLiteIndexType).includes(type as SQLiteIndexType)
+        type in PgIndexType || type in MySQLMariaDBIndexType || type in SQLiteIndexType
       );
   }
 }
 
-export function checkSequelizeIndexOptions(options: any, dialect?: string) {
+export function checkIfSequelizeIndexOptions(options: any, dialect?: string) {
   const sequelizeOptions = [
     'name',
     'parser',

@@ -167,12 +167,9 @@ export enum MongoIndexType {
   Text = 'text',
 }
 
-export enum SQLIndexType {
+export enum PgIndexType {
   BTREE = 'BTREE',
   HASH = 'HASH',
-}
-
-export enum PgIndexType {
   GIST = 'GIST',
   SPGIST = 'SPGIST',
   GIN = 'GIN',
@@ -180,6 +177,8 @@ export enum PgIndexType {
 }
 
 export enum MySQLMariaDBIndexType {
+  BTREE = 'BTREE',
+  HASH = 'HASH',
   UNIQUE = 'UNIQUE',
   FULLTEXT = 'FULLTEXT',
   SPATIAL = 'SPATIAL',
@@ -189,11 +188,7 @@ export enum SQLiteIndexType {
   BTREE = 'BTREE',
 }
 
-export type SequelizeIndexType =
-  | SQLIndexType
-  | PgIndexType
-  | MySQLMariaDBIndexType
-  | SQLiteIndexType;
+export type SequelizeIndexType = PgIndexType | MySQLMariaDBIndexType | SQLiteIndexType;
 
 // Used for more complex index definitions
 export interface SequelizeObjectIndexType {
@@ -243,7 +238,7 @@ export interface SequelizeIndexOptions {
     [opt: string]: any;
   };
   prefix?: string;
-  using?: SQLIndexType | PgIndexType | SQLiteIndexType;
+  using?: PgIndexType | SQLiteIndexType;
 }
 
 export interface PgIndexOptions extends SequelizeIndexOptions {
