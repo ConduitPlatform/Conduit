@@ -1,8 +1,7 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SMSApi, SmsMessage, SmsMessageCollection } from 'clicksend';
-import { generate } from 'otp-generator';
-
+import { generateToken } from '../utils';
 export class clickSendProvider implements ISmsProvider {
   private readonly username: string;
   private readonly clicksendApiKey: string;
@@ -32,17 +31,12 @@ export class clickSendProvider implements ISmsProvider {
       return await this.client.smsSendPost(smsMessageCollection);
     } catch (error) {
       ConduitGrpcSdk.Logger.error(error as Error);
-      return Promise.reject(Error('could not send message'));
+      return 'could not send message';
     }
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    const otp: string = generate(6, {
-      digits: true,
-      lowerCaseAlphabets: false,
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
+    const otp: string = generateToken();
     const smsMessage: SmsMessage = {
       body: `Your verification code is ${otp}`,
       to: phoneNumber,
@@ -53,10 +47,10 @@ export class clickSendProvider implements ISmsProvider {
     try {
       await this.client.smsSendPost(smsMessageCollection);
       await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
-      return Promise.resolve(phoneNumber);
+      return phoneNumber;
     } catch (error) {
       ConduitGrpcSdk.Logger.error(error as Error);
-      return Promise.reject(Error('could not send verification code'));
+      return 'could not send verification code';
     }
   }
 

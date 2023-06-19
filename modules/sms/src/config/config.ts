@@ -32,7 +32,7 @@ export default {
       },
     },
   },
-  aws: {
+  AwsSns: {
     region: {
       format: 'String',
       default: '',

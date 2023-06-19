@@ -29,7 +29,6 @@
     "@conduitplatform/module-tools": "*",
     "@grpc/grpc-js": "^1.8.13",
     "@grpc/proto-loader": "^0.7.6",
-    "@types/otp-generator": "^4.0.0",
     "aws-sdk": "^2.1388.0",
     "aws-sdk-js-codemod": "^0.14.1",
     "bluebird": "^3.7.2",
@@ -42,6 +41,7 @@
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.38",
+    "@types/otp-generator": "^4.0.0",
     "@types/convict": "^6.1.1",
     "@types/lodash": "^4.14.192",
     "@types/node": "18.15.11",

@@ -12,20 +12,23 @@ export class messageBirdProvider implements ISmsProvider {
   }
 
   async sendSms(phoneNumber: string, message: string) {
-    await this.client.messages.create(
-      {
-        originator: this.originatorName,
-        recipients: [phoneNumber],
-        body: message,
-      },
-      function (error: Error | null, response: messagebird.Message | null) {
-        if (error) {
-          ConduitGrpcSdk.Logger.error(error);
-        } else {
-          return response;
-        }
-      },
-    );
+    return new Promise((resolve, reject) => {
+      this.client.messages.create(
+        {
+          originator: this.originatorName,
+          recipients: [phoneNumber],
+          body: message,
+        },
+        (error: Error | null, response: messagebird.Message | null) => {
+          if (error) {
+            ConduitGrpcSdk.Logger.error(error);
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
 
   async sendVerificationCode(phoneNumber: string) {

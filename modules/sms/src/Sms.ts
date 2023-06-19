@@ -7,7 +7,7 @@ import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { ISmsProvider } from './interfaces/ISmsProvider';
 import { TwilioProvider } from './providers/twilio';
-import { AwsProvider } from './providers/aws';
+import { AwsSnsProvider } from './providers/awsSns';
 import { messageBirdProvider } from './providers/messageBird';
 import { clickSendProvider } from './providers/clickSend';
 import path from 'path';
@@ -151,8 +151,8 @@ export default class Sms extends ManagedModule<Config> {
         case 'twilio':
           this._provider = new TwilioProvider(settings);
           break;
-        case 'aws':
-          this._provider = new AwsProvider(settings, this.grpcSdk);
+        case 'AwsSns':
+          this._provider = new AwsSnsProvider(settings, this.grpcSdk);
           break;
         case 'messageBird':
           this._provider = new messageBirdProvider(settings);

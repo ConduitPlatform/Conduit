@@ -1,9 +1,9 @@
 import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
-import { generate } from 'otp-generator';
+import { generateToken } from '../utils';
 
-export class AwsProvider implements ISmsProvider {
+export class AwsSnsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
   private readonly secretAccessKey: string;
   private readonly region: string;
@@ -40,20 +40,15 @@ export class AwsProvider implements ISmsProvider {
     const command = new PublishCommand(params);
     try {
       const result = await this.client.send(command);
-      return Promise.resolve(result.MessageId);
+      return result.MessageId;
     } catch (error) {
       ConduitGrpcSdk.Logger.error(error as Error);
-      return Promise.reject(Error('could not send message'));
+      return 'could not send message';
     }
   }
 
   async sendVerificationCode(phoneNumber: string) {
-    const otp = generate(6, {
-      digits: true,
-      lowerCaseAlphabets: false,
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
+    const otp: string = generateToken();
     const params = {
       Message: `Your verification code is: ${otp}`,
       PhoneNumber: phoneNumber,
@@ -63,7 +58,7 @@ export class AwsProvider implements ISmsProvider {
       await this.client.send(command);
     } catch (error) {
       ConduitGrpcSdk.Logger.error(error as Error);
-      return Promise.reject(Error('could not send verification code'));
+      return 'could not send verification code';
     }
     await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
     return Promise.resolve(phoneNumber);
