@@ -151,7 +151,7 @@ export default class Sms extends ManagedModule<Config> {
         case 'twilio':
           this._provider = new TwilioProvider(settings);
           break;
-        case 'AwsSns':
+        case 'awsSns':
           this._provider = new AwsSnsProvider(settings, this.grpcSdk);
           break;
         case 'messageBird':

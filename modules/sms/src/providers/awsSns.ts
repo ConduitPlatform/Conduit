@@ -61,7 +61,7 @@ export class AwsSnsProvider implements ISmsProvider {
       return 'could not send verification code';
     }
     await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
-    return Promise.resolve(phoneNumber);
+    return phoneNumber;
   }
 
   async verify(phoneNumber: string, otp: string): Promise<boolean> {
