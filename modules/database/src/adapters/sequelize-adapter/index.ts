@@ -403,7 +403,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         fieldNames.push(field.attribute);
       }
       index.fields = fieldNames;
-      // extract index type from index definition
+      // Extract index type from index definition
       let tmp = index.definition.split('USING ');
       tmp = tmp[1].split(' ');
       index.types = tmp[0];
@@ -489,8 +489,9 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   ) {
     const dialect = this.sequelize.getDialect();
     for (const index of indexes) {
+      const { fields, types, options } = index;
       if (
-        index.fields.some(
+        fields.some(
           field =>
             !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
               field,
@@ -499,16 +500,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       ) {
         throw new Error(`Invalid fields for index creation`);
       }
-      if (!index.types && !index.options) continue;
-      if (index.options) {
-        if (!checkSequelizeIndexOptions(index.options, dialect)) {
+      if (!types && !options) continue;
+      if (options) {
+        if (!checkSequelizeIndexOptions(options, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             `Invalid index options for ${dialect}`,
           );
         }
         if (
-          Object.keys(index.options).includes('unique') &&
+          Object.keys(options).includes('unique') &&
           this.models[schemaName].originalSchema.ownerModule !== callerModule
         ) {
           throw new GrpcError(
@@ -517,18 +518,18 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
           );
         }
       }
-      if (index.types) {
-        if (isArray(index.types) || !checkSequelizeIndexType(index.types, dialect)) {
+      if (types) {
+        if (isArray(types) || !checkSequelizeIndexType(types, dialect)) {
           throw new GrpcError(
             status.INVALID_ARGUMENT,
             `Invalid index type for ${dialect}`,
           );
         }
-        if (index.types in MySQLMariaDBIndexType) {
+        if (types in MySQLMariaDBIndexType) {
           (index.options as MySQLMariaDBIndexOptions).type =
-            index.types as MySQLMariaDBIndexType;
+            types as MySQLMariaDBIndexType;
         } else {
-          (index.options as SequelizeIndexOptions).using = index.types as
+          (index.options as SequelizeIndexOptions).using = types as
             | SQLIndexType
             | PgIndexType
             | SQLiteIndexType;

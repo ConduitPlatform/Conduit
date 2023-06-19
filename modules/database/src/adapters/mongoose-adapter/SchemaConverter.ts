@@ -6,7 +6,8 @@ import {
   SchemaFieldIndex,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isArray, isNil, isObject } from 'lodash';
-import { checkIfMongoOptions } from './utils';
+import { checkMongoOptions } from './utils';
+import { ConduitDatabaseSchema } from '../../interfaces';
 
 const deepdash = require('deepdash/standalone');
 
@@ -71,7 +72,7 @@ function convert(value: any, key: any, parentValue: any) {
       _id: false,
       timestamps: false,
     });
-    parentValue[key] = schemaConverter(typeSchema).fields;
+    parentValue[key] = schemaConverter(typeSchema as ConduitDatabaseSchema).fields;
     return true;
   }
 
@@ -100,13 +101,12 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
   for (const field of Object.entries(copy.fields)) {
     const index = (field[1] as ConduitModelField).index;
     if (!index) continue;
-    const type = index.type;
-    const options = index.options;
-    if (type && !Object.values(MongoIndexType).includes(type)) {
+    const { type, options } = index;
+    if (type && !(type in MongoIndexType)) {
       throw new Error('Incorrect index type for MongoDB');
     }
     if (options) {
-      if (!checkIfMongoOptions(options)) {
+      if (!checkMongoOptions(options)) {
         throw new Error('Incorrect index options for MongoDB');
       }
       for (const [option, optionValue] of Object.entries(options)) {
@@ -120,31 +120,34 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
 
 function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
-    // compound indexes are maintained in modelOptions in order to be created after schema creation
-    // single field index => add it to specified schema field
-    if (index.fields.length !== 1) continue;
-    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
-    if (!modelField) {
-      throw new Error(`Field ${modelField} in index definition doesn't exist`);
+    // Compound indexes are maintained in modelOptions in order to be created after schema creation
+    // Single field index => add it to specified schema field
+    const { fields, types, options } = index;
+    if (fields.length === 0) {
+      throw new Error('Undefined fields for index creation');
     }
-    if (index.types) {
+    if (fields.some(field => !Object.keys(copy.fields).includes(field))) {
+      throw new Error(`Invalid fields for index creation`);
+    }
+    if (fields.length !== 1) continue;
+    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
+    if (types) {
       if (
-        !isArray(index.types) ||
-        !Object.values(MongoIndexType).includes(index.types[0]) ||
-        index.fields.length !== index.types.length
+        !isArray(types) ||
+        !(types[0] in MongoIndexType) ||
+        fields.length !== types.length
       ) {
         throw new Error('Invalid index type for MongoDB');
       }
-      const type = index.types[0] as MongoIndexType;
       modelField.index = {
-        type: type,
+        type: types[0] as MongoIndexType,
       };
     }
-    if (index.options) {
-      if (!checkIfMongoOptions(index.options)) {
+    if (options) {
+      if (!checkMongoOptions(options)) {
         throw new Error('Incorrect index options for MongoDB');
       }
-      for (const [option, optionValue] of Object.entries(index.options)) {
+      for (const [option, optionValue] of Object.entries(options)) {
         modelField.index![option as keyof SchemaFieldIndex] = optionValue;
       }
     }

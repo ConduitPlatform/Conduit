@@ -1,9 +1,10 @@
-import { isArray, isBoolean, isNumber, isString } from 'lodash';
+import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import {
   ConduitModelField,
   Indexable,
   MySQLMariaDBIndexType,
   PgIndexType,
+  SequelizeIndexOptions,
   SQLIndexType,
   SQLiteIndexType,
 } from '@conduitplatform/grpc-sdk';
@@ -34,28 +35,39 @@ export function checkDefaultValue(type: string, value: string) {
 
 export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect: string) {
   for (const index of copy.modelOptions.indexes!) {
-    if (index.fields.some(field => !Object.keys(copy.compiledFields).includes(field))) {
+    const { fields, types, options } = index;
+    const compiledFields = Object.keys(copy.compiledFields);
+    if (fields.length === 0) {
+      throw new Error('Undefined fields for index creation');
+    }
+    if (fields.some(field => !compiledFields.includes(field))) {
       throw new Error(`Invalid fields for index creation`);
     }
-    if (index.options) {
-      if (!checkSequelizeIndexOptions(index.options, dialect)) {
+    // Convert conduit indexes to sequelize indexes
+    if (options) {
+      if (!checkSequelizeIndexOptions(options, dialect)) {
         throw new Error(`Invalid index options for ${dialect}`);
       }
-      // if ((index.options as SequelizeIndexOptions).fields) { // TODO: integrate this logic somehow
-      //   delete index.fields;
-      // }
-      Object.assign(index, index.options);
+      // Used instead of ModelOptionsIndexes fields for more complex index definitions
+      const seqOptions = options as SequelizeIndexOptions;
+      if (
+        !isNil(seqOptions.fields) &&
+        seqOptions.fields.every(f => compiledFields.includes(f.name))
+      ) {
+        (index.fields as any) = seqOptions.fields;
+        delete (index.options as SequelizeIndexOptions).fields;
+      }
+      Object.assign(index, options);
       delete index.options;
     }
-    if (index.types) {
-      // TODO: put null to check
-      if (isArray(index.types) || !checkSequelizeIndexType(index.types, dialect)) {
+    if (types) {
+      if (isArray(types) || !checkSequelizeIndexType(types, dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (index.types in MySQLMariaDBIndexType) {
-        index.type = index.types as MySQLMariaDBIndexType;
+      if (types in MySQLMariaDBIndexType) {
+        index.type = types as MySQLMariaDBIndexType;
       } else {
-        index.using = index.types as SQLIndexType | PgIndexType | SQLiteIndexType;
+        index.using = types as SQLIndexType | PgIndexType | SQLiteIndexType;
       }
       delete index.types;
     }
@@ -68,29 +80,31 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
   for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
     const field = fieldValue as ConduitModelField;
     // Move unique field constraints to modelOptions workaround
-    // if (field.unique && fieldName !== '_id') {
-    //   field.index = {
-    //     options: { unique: true }
-    //   };
-    //   delete (field as ConduitModelField).unique;
-    // }
+    if (field.unique) {
+      field.index = {
+        options: { unique: true },
+      };
+      delete (field as ConduitModelField).unique;
+    }
     const index = field.index;
     if (!index) continue;
-    const newIndex: any = { fields: [fieldName] }; // TODO: remove this any
-    if (index.type) {
-      if (isArray(index.type) || !checkSequelizeIndexType(index.type, dialect)) {
+    // Convert conduit indexes to sequelize indexes
+    const { type, options } = index;
+    const newIndex: any = { fields: [fieldName] };
+    if (type) {
+      if (isArray(type) || !checkSequelizeIndexType(type, dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (!(index.type in MySQLMariaDBIndexType)) {
-        newIndex.using = index.type as SQLIndexType | PgIndexType | SQLiteIndexType;
+      if (!(type in MySQLMariaDBIndexType)) {
+        newIndex.using = type as SQLIndexType | PgIndexType | SQLiteIndexType;
       } else {
-        newIndex.type = index.type as MySQLMariaDBIndexType;
+        newIndex.type = type as MySQLMariaDBIndexType;
       }
     }
-    if (index.options && !checkSequelizeIndexOptions(index.options, dialect)) {
+    if (options && !checkSequelizeIndexOptions(options, dialect)) {
       throw new Error(`Invalid index options for ${dialect}`);
     }
-    Object.assign(newIndex, index.options);
+    Object.assign(newIndex, options);
     indexes.push(newIndex);
     delete copy.fields[fieldName];
   }

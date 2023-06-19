@@ -1,5 +1,4 @@
 import { Document } from 'bson';
-import { IndexesOptions } from 'sequelize';
 export enum TYPE {
   String = 'String',
   Number = 'Number',
@@ -196,6 +195,15 @@ export type SequelizeIndexType =
   | MySQLMariaDBIndexType
   | SQLiteIndexType;
 
+// Used for more complex index definitions
+export interface SequelizeObjectIndexType {
+  name: string;
+  length?: number;
+  order?: 'ASC' | 'DESC';
+  collate?: string;
+  operator?: string; // pg only
+}
+
 export interface MongoIndexOptions {
   background?: boolean;
   unique?: boolean;
@@ -223,7 +231,7 @@ export interface SequelizeIndexOptions {
   name?: string;
   parser?: string | null;
   unique?: boolean;
-  // used instead of ModelOptionsIndexes fields for more complex index definitions
+  // Used instead of ModelOptionsIndexes fields for more complex index definitions
   fields?: {
     name: string;
     length?: number;

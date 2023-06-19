@@ -14,7 +14,7 @@ import { validateFieldChanges, validateFieldConstraints } from '../utils';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
-import { checkIfMongoOptions } from './utils';
+import { checkMongoOptions } from './utils';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
@@ -431,11 +431,20 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     callerModule: string,
   ) {
     for (const index of indexes) {
-      const options = index.options;
-      const types = index.types;
+      const { fields, types, options } = index;
+      if (
+        fields.some(
+          field =>
+            !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
+              field,
+            ),
+        )
+      ) {
+        throw new Error(`Invalid fields for index creation`);
+      }
       if (!options && !types) continue;
       if (options) {
-        if (!checkIfMongoOptions(options)) {
+        if (!checkMongoOptions(options)) {
           throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
         }
         if (
