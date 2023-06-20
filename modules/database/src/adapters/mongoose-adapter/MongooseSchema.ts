@@ -351,8 +351,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       if (final.indexOf('.') !== -1) {
         let controlBool = true;
         let processing = cloneDeep(final);
+        let validPath;
         while (controlBool) {
           if (this.model.schema.paths[processing]) {
+            validPath = this.model.schema.paths[processing];
+            controlBool = false;
+          } else if ((this.model.schema as any).subpaths[processing]) {
+            validPath = (this.model.schema as any).subpaths[processing];
             controlBool = false;
           } else if (
             processing === undefined ||
@@ -369,8 +374,8 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
         if (processing === final) {
           populates.push(processing);
         } else if (
-          this.model.schema.paths[processing].options.ref === undefined &&
-          this.model.schema.paths[processing].options.type[0].ref === undefined
+          validPath.options.ref === undefined &&
+          validPath.options.type[0].ref === undefined
         ) {
           throw new Error(
             `Failed populating '${final}', path exists for ${processing} but missing ${
@@ -378,9 +383,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
             }`,
           );
         } else {
-          const ref =
-            this.model.schema.paths[processing].options.ref ||
-            this.model.schema.paths[processing].options.type[0].ref;
+          const ref = validPath.options.ref || validPath.options.type[0].ref;
           const childPopulates = this.adapter.models[ref].calculatePopulates([
             final.replace(processing + '.', ''),
           ]);
