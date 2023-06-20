@@ -7,6 +7,9 @@ import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { ISmsProvider } from './interfaces/ISmsProvider';
 import { TwilioProvider } from './providers/twilio';
+import { AwsSnsProvider } from './providers/awsSns';
+import { messageBirdProvider } from './providers/messageBird';
+import { clickSendProvider } from './providers/clickSend';
 import path from 'path';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
@@ -143,19 +146,30 @@ export default class Sms extends ManagedModule<Config> {
     const smsConfig = ConfigController.getInstance().config;
     const name = smsConfig.providerName;
     const settings = smsConfig[name];
-
-    if (name === 'twilio') {
-      try {
-        this._provider = new TwilioProvider(settings);
-      } catch (e) {
-        this._provider = undefined;
-        ConduitGrpcSdk.Logger.error(e as Error);
-        return;
+    try {
+      switch (name) {
+        case 'twilio':
+          this._provider = new TwilioProvider(settings);
+          break;
+        case 'awsSns':
+          this._provider = new AwsSnsProvider(settings, this.grpcSdk);
+          break;
+        case 'messageBird':
+          this._provider = new messageBirdProvider(settings);
+          break;
+        case 'clickSend':
+          this._provider = new clickSendProvider(settings, this.grpcSdk);
+          break;
+        default:
+          ConduitGrpcSdk.Logger.error('SMS provider not supported');
+          return;
       }
-    } else {
-      ConduitGrpcSdk.Logger.error('SMS provider not supported');
+    } catch (e) {
+      this._provider = undefined;
+      ConduitGrpcSdk.Logger.error(e as Error);
       return;
     }
+
     this.adminRouter.updateProvider(this._provider!);
     this.isRunning = true;
     this.updateHealth(

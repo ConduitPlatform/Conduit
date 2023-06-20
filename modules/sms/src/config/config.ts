@@ -32,4 +32,38 @@ export default {
       },
     },
   },
+  awsSns: {
+    region: {
+      format: 'String',
+      default: '',
+    },
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+    secretAccessKey: {
+      format: 'String',
+      default: '',
+    },
+  },
+  messageBird: {
+    accessKeyId: {
+      format: 'String',
+      default: '',
+    },
+    originatorName: {
+      format: 'String',
+      default: '',
+    },
+  },
+  clickSend: {
+    username: {
+      format: 'String',
+      default: '',
+    },
+    clicksendApiKey: {
+      format: 'String',
+      default: '',
+    },
+  },
 };
