@@ -14,7 +14,7 @@ import { validateFieldChanges, validateFieldConstraints } from '../utils';
 import pluralize from '../../utils/pluralize';
 import { mongoSchemaConverter } from '../../introspection/mongoose/utils';
 import { status } from '@grpc/grpc-js';
-import { checkMongoOptions } from './utils';
+import { checkIfMongoOptions } from './utils';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
@@ -438,7 +438,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     }
     if (!options && !types) return;
     if (options) {
-      if (!checkMongoOptions(options)) {
+      if (!checkIfMongoOptions(options)) {
         throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
       }
       if (

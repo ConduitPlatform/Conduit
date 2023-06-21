@@ -6,7 +6,7 @@ import {
   SchemaFieldIndex,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isArray, isNil, isObject } from 'lodash';
-import { checkMongoOptions } from './utils';
+import { checkIfMongoOptions } from './utils';
 import { ConduitDatabaseSchema } from '../../interfaces';
 
 const deepdash = require('deepdash/standalone');
@@ -106,7 +106,7 @@ function convertSchemaFieldIndexes(copy: ConduitSchema) {
       throw new Error('Incorrect index type for MongoDB');
     }
     if (options) {
-      if (!checkMongoOptions(options)) {
+      if (!checkIfMongoOptions(options)) {
         throw new Error('Incorrect index options for MongoDB');
       }
       for (const [option, optionValue] of Object.entries(options)) {
@@ -144,7 +144,7 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
       };
     }
     if (options) {
-      if (!checkMongoOptions(options)) {
+      if (!checkIfMongoOptions(options)) {
         throw new Error('Incorrect index options for MongoDB');
       }
       for (const [option, optionValue] of Object.entries(options)) {

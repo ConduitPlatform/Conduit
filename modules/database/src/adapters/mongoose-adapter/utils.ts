@@ -79,7 +79,7 @@ async function _createWithPopulations(
   }
 }
 
-export function checkMongoOptions(options: MongoIndexOptions | SequelizeIndexOptions) {
+export function checkIfMongoOptions(options: MongoIndexOptions | SequelizeIndexOptions) {
   const mongoOptions = [
     'background',
     'unique',
