@@ -189,15 +189,6 @@ export enum SQLiteIndexType {
 
 export type SequelizeIndexType = PgIndexType | MySQLMariaDBIndexType | SQLiteIndexType;
 
-// Used for more complex index definitions
-export interface SequelizeObjectIndexType {
-  name: string;
-  length?: number;
-  order?: 'ASC' | 'DESC';
-  collate?: string;
-  operator?: string; // pg only
-}
-
 export interface MongoIndexOptions {
   background?: boolean;
   unique?: boolean;
