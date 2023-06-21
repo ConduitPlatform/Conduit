@@ -130,14 +130,23 @@ export class PhoneHandlers implements IAuthenticationStrategy {
     const { phone, invitationToken } = call.request.params;
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ phoneNumber: phone });
+    let foundInvitationToken;
+    if (invitationToken) {
+      foundInvitationToken = await Token.getInstance().findOne({
+        token: invitationToken,
+      });
+    }
     if (!user) {
       const teams = ConfigController.getInstance().config.teams;
       if (
         teams.enabled &&
         !teams.allowRegistrationWithoutInvite &&
-        isNil(invitationToken)
+        !foundInvitationToken
       ) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Registration requires invitation');
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'Registration requires valid invitation',
+        );
       }
     }
     const existingToken = await Token.getInstance().findOne({
@@ -174,7 +183,7 @@ export class PhoneHandlers implements IAuthenticationStrategy {
       tokenType: isNil(user)
         ? TokenType.REGISTER_WITH_PHONE_NUMBER_TOKEN
         : TokenType.LOGIN_WITH_PHONE_NUMBER_TOKEN,
-      user: user,
+      user: user ? user._id : undefined,
       data: {
         clientId,
         phone,

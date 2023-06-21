@@ -2,6 +2,7 @@ import { ISmsProvider } from '../interfaces/ISmsProvider';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { generateToken } from '../utils';
+import * as bcrypt from 'bcrypt';
 
 export class AwsSnsProvider implements ISmsProvider {
   private readonly accessKeyId: string;
@@ -60,12 +61,13 @@ export class AwsSnsProvider implements ISmsProvider {
       ConduitGrpcSdk.Logger.error(error as Error);
       return 'could not send verification code';
     }
-    await this.grpcSdk.state!.setKey(phoneNumber, otp, 60000);
-    return phoneNumber;
+    const phoneNumberHash = await bcrypt.hash(phoneNumber, 11);
+    await this.grpcSdk.state!.setKey(phoneNumberHash, otp, 60000);
+    return phoneNumberHash;
   }
 
-  async verify(phoneNumber: string, otp: string): Promise<boolean> {
-    const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumber);
+  async verify(phoneNumberHash: string, otp: string): Promise<boolean> {
+    const otpCode: string | null = await this.grpcSdk.state!.getKey(phoneNumberHash);
     if (otpCode === null) {
       return Promise.reject(false);
     }
