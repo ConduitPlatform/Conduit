@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   ConduitSchema,
   GrpcError,
   Indexable,
-  ModelOptionsIndexes,
+  ModelOptionsIndex,
   MongoIndexType,
   RawMongoQuery,
 } from '@conduitplatform/grpc-sdk';
@@ -239,32 +239,30 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return 'MongoDB';
   }
 
-  async createIndexes(
+  async createIndex(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    index: ModelOptionsIndex,
     callerModule: string,
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    this.checkIndexes(schemaName, indexes, callerModule);
+    this.checkIndex(schemaName, index, callerModule);
     const collection = this.mongoose.model(schemaName).collection;
-    for (const index of indexes) {
-      const indexSpecs = [];
-      for (let i = 0; i < index.fields.length; i++) {
-        const spec: any = {};
-        spec[index.fields[i]] = index.types ? index.types[i] : 1;
-        indexSpecs.push(spec);
-      }
-      await collection
-        .createIndex(indexSpecs, index.options as IndexOptions)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+    const indexSpecs = [];
+    for (let i = 0; i < index.fields.length; i++) {
+      const spec: any = {};
+      spec[index.fields[i]] = index.types ? index.types[i] : 1;
+      indexSpecs.push(spec);
     }
-    return 'Indexes created!';
+    await collection
+      .createIndex(indexSpecs, index.options as IndexOptions)
+      .catch((e: Error) => {
+        throw new GrpcError(status.INTERNAL, e.message);
+      });
+    return 'Index created!';
   }
 
-  async getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]> {
+  async getIndexes(schemaName: string): Promise<ModelOptionsIndex[]> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     const collection = this.mongoose.model(schemaName).collection;
@@ -290,7 +288,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         delete index.key;
       }
     });
-    return result as ModelOptionsIndexes[];
+    return result as ModelOptionsIndex[];
   }
 
   async deleteIndexes(schemaName: string, indexNames: string[]): Promise<string> {
@@ -418,54 +416,47 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }
-
     if (indexes) {
-      await this.createIndexes(schema.name, indexes, schema.ownerModule);
+      for (const i of indexes) {
+        await this.createIndex(schema.name, i, schema.ownerModule);
+      }
     }
     return this.models[schema.name];
   }
 
-  private checkIndexes(
-    schemaName: string,
-    indexes: ModelOptionsIndexes[],
-    callerModule: string,
-  ) {
-    for (const index of indexes) {
-      const { fields, types, options } = index;
+  private checkIndex(schemaName: string, index: ModelOptionsIndex, callerModule: string) {
+    const { fields, types, options } = index;
+    if (
+      fields.some(
+        field =>
+          !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
+            field,
+          ),
+      )
+    ) {
+      throw new Error(`Invalid fields for index creation`);
+    }
+    if (!options && !types) return;
+    if (options) {
+      if (!checkMongoOptions(options)) {
+        throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
+      }
       if (
-        fields.some(
-          field =>
-            !Object.keys(this.models[schemaName].originalSchema.compiledFields).includes(
-              field,
-            ),
-        )
+        Object.keys(options).includes('unique') &&
+        this.models[schemaName].originalSchema.ownerModule !== callerModule
       ) {
-        throw new Error(`Invalid fields for index creation`);
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          'Not authorized to create unique index',
+        );
       }
-      if (!options && !types) continue;
-      if (options) {
-        if (!checkMongoOptions(options)) {
-          throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
-        }
-        if (
-          Object.keys(options).includes('unique') &&
-          this.models[schemaName].originalSchema.ownerModule !== callerModule
-        ) {
-          throw new GrpcError(
-            status.PERMISSION_DENIED,
-            'Not authorized to create unique index',
-          );
-        }
-      }
-      if (types) {
-        if (!Array.isArray(types) || types.length !== index.fields.length) {
-          throw new GrpcError(status.INTERNAL, 'Invalid index types format');
-        }
-        for (const type of types) {
-          if (!Object.values(MongoIndexType).includes(type)) {
-            throw new GrpcError(status.INTERNAL, 'Invalid index type for mongoDB');
-          }
-        }
+    }
+    if (types) {
+      if (
+        types.length !== index.fields.length ||
+        types.some(type => !(type in MongoIndexType))
+      ) {
+        throw new GrpcError(status.INTERNAL, 'Invalid index types');
       }
     }
   }

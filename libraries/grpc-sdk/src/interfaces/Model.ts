@@ -140,19 +140,18 @@ export interface ConduitSchemaOptions {
       enabled: boolean;
     };
   };
-  indexes?: ModelOptionsIndexes[];
+  indexes?: ModelOptionsIndex[];
 }
 
 // Index types
 export interface SchemaFieldIndex {
   type?: MongoIndexType | SequelizeIndexType;
   options?: MongoIndexOptions | SequelizeIndexOptions;
-  //[field: string]: any;
 }
 
-export interface ModelOptionsIndexes {
+export interface ModelOptionsIndex {
   fields: string[];
-  types?: MongoIndexType[] | SequelizeIndexType;
+  types?: MongoIndexType[] | SequelizeIndexType[];
   options?: MongoIndexOptions | SequelizeIndexOptions;
   [field: string]: any;
 }
@@ -238,14 +237,18 @@ export interface SequelizeIndexOptions {
     [opt: string]: any;
   };
   prefix?: string;
-  using?: PgIndexType | SQLiteIndexType;
 }
 
 export interface PgIndexOptions extends SequelizeIndexOptions {
   concurrently?: boolean;
   operator?: string;
+  using?: PgIndexType;
 }
 
 export interface MySQLMariaDBIndexOptions extends SequelizeIndexOptions {
   type?: MySQLMariaDBIndexType;
+}
+
+export interface SQLiteIndexOptions extends SequelizeIndexOptions {
+  using?: SQLiteIndexType;
 }

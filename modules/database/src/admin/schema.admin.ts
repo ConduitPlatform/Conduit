@@ -581,15 +581,44 @@ export class SchemaAdmin {
     return this.database.getDatabaseType();
   }
 
-  async createIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, indexes } = call.request.params;
+  async importIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    for (const index of call.request.params.indexes) {
+      await this.database.createIndex(index.schemaName, index, 'database').catch(e => {
+        throw new GrpcError(status.INTERNAL, `${index.options.name}: ${e.message}`);
+      });
+    }
+    return 'Indexes imported successfully';
+  }
+
+  async exportIndexes(): Promise<UnparsedRouterResponse> {
+    const indexes = [];
+    const schemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({});
+    for (const schema of schemas) {
+      const schemaIndexes = await this.database.getIndexes(schema.name);
+      if (!isNil(schemaIndexes) && !isEmpty(schemaIndexes)) {
+        indexes.push(
+          ...schemaIndexes.map(index => ({ ...index, schemaName: schema.name })),
+        );
+      }
+    }
+    return { indexes };
+  }
+
+  async createIndex(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { id, fields, types, options } = call.request.params;
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return await this.database.createIndexes(requestedSchema.name, indexes, 'database');
+    return await this.database.createIndex(
+      requestedSchema.name,
+      { fields, types, options },
+      'database',
+    );
   }
 
   async getIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -600,7 +629,8 @@ export class SchemaAdmin {
     if (isNil(requestedSchema)) {
       throw new GrpcError(status.NOT_FOUND, 'Schema does not exist');
     }
-    return this.database.getIndexes(requestedSchema.name);
+    const indexes = await this.database.getIndexes(requestedSchema.name);
+    return { indexes };
   }
 
   async deleteIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

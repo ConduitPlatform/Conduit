@@ -596,18 +596,50 @@ export class AdminHandlers {
     );
     this.routingManager.route(
       {
-        path: '/schemas/:id/indexes',
+        path: '/schemas/indexes/import',
         action: ConduitRouteActions.POST,
-        description: `Creates indexes for a schema.`,
-        urlParams: {
-          id: { type: TYPE.String, required: true },
-        },
+        description: `Imports indexes.`,
         bodyParams: {
           indexes: [ConduitJson.Required],
         },
       },
-      new ConduitRouteReturnDefinition('CreateSchemaIndexes', 'String'),
-      this.schemaAdmin.createIndexes.bind(this.schemaAdmin),
+      new ConduitRouteReturnDefinition('ImportIndexes', 'String'),
+      this.schemaAdmin.importIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/indexes/export',
+        action: ConduitRouteActions.GET,
+        description: `Exports indexes.`,
+      },
+      new ConduitRouteReturnDefinition('ExportIndexes', {
+        indexes: [
+          {
+            schemaName: ConduitString.Required,
+            fields: [ConduitString.Required],
+            types: [ConduitString.Required],
+            options: ConduitJson.Optional,
+          },
+        ],
+      }),
+      this.schemaAdmin.exportIndexes.bind(this.schemaAdmin),
+    );
+    this.routingManager.route(
+      {
+        path: '/schemas/:id/indexes',
+        action: ConduitRouteActions.POST,
+        description: `Creates an index for a schema.`,
+        urlParams: {
+          id: { type: TYPE.String, required: true },
+        },
+        bodyParams: {
+          fields: [ConduitString.Required],
+          types: [ConduitString.Required],
+          options: ConduitJson.Optional,
+        },
+      },
+      new ConduitRouteReturnDefinition('CreateSchemaIndex', 'String'),
+      this.schemaAdmin.createIndex.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
@@ -619,7 +651,13 @@ export class AdminHandlers {
         },
       },
       new ConduitRouteReturnDefinition('getSchemaIndexes', {
-        indexes: [ConduitJson.Required], // TODO: define this more clearly if possible
+        indexes: [
+          {
+            fields: [ConduitString.Required],
+            types: [ConduitString.Required],
+            options: ConduitJson.Optional, // TODO: check this and the other places
+          },
+        ],
       }),
       this.schemaAdmin.getIndexes.bind(this.schemaAdmin),
     );

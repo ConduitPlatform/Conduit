@@ -2,7 +2,9 @@ import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
 import {
   ConduitModelField,
   Indexable,
+  MySQLMariaDBIndexOptions,
   MySQLMariaDBIndexType,
+  PgIndexOptions,
   PgIndexType,
   SequelizeIndexOptions,
   SQLiteIndexType,
@@ -60,13 +62,13 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
       delete index.options;
     }
     if (types) {
-      if (isArray(types) || !checkIfSequelizeIndexType(types, dialect)) {
+      if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (types in MySQLMariaDBIndexType) {
-        index.type = types as MySQLMariaDBIndexType;
-      } else {
-        index.using = types as PgIndexType | SQLiteIndexType;
+      if (dialect === 'mysql' || dialect === 'mariadb') {
+        index.type = types[0] as MySQLMariaDBIndexType;
+      } else if (dialect === 'postgres') {
+        index.using = types[0] as PgIndexType | SQLiteIndexType;
       }
       delete index.types;
     }
@@ -77,15 +79,7 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
 export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: string) {
   const indexes = [];
   for (const [fieldName, fieldValue] of Object.entries(copy.fields)) {
-    const field = fieldValue as ConduitModelField;
-    // Move unique field constraints to modelOptions workaround
-    if (field.unique) {
-      field.index = {
-        options: { unique: true },
-      };
-      delete (field as ConduitModelField).unique;
-    }
-    const index = field.index;
+    const index = (fieldValue as ConduitModelField).index;
     if (!index) continue;
     // Convert conduit indexes to sequelize indexes
     const { type, options } = index;
@@ -94,10 +88,10 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
       if (isArray(type) || !checkIfSequelizeIndexType(type, dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (!(type in MySQLMariaDBIndexType)) {
-        newIndex.using = type as PgIndexType | SQLiteIndexType;
-      } else {
+      if (dialect === 'mysql' || dialect === 'mariadb') {
         newIndex.type = type as MySQLMariaDBIndexType;
+      } else if (dialect === 'postgres') {
+        newIndex.using = type as PgIndexType;
       }
     }
     if (options && !checkIfSequelizeIndexOptions(options, dialect)) {
