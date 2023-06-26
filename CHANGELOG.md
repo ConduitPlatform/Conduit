@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.14](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.13...v0.16.0-alpha.14) (2023-06-26)
+
+
+### Features
+
+* **push-notification:** support data-only silent messages ([#645](https://github.com/ConduitPlatform/Conduit/issues/645)) ([321da9c](https://github.com/ConduitPlatform/Conduit/commit/321da9c1823d7624f5881a2afee69d96e21ca196))
+* **sms:** AWS, ClickSend, MessageBird providers ([#633](https://github.com/ConduitPlatform/Conduit/issues/633)) ([f3ee5c5](https://github.com/ConduitPlatform/Conduit/commit/f3ee5c5a7b008fdb2a3a462f65064d0a406a4872))
+
+
+### Bug Fixes
+
+* **authentication,sms:** hash sms phone numbers & fix bugs in authenticate() ([#644](https://github.com/ConduitPlatform/Conduit/issues/644)) ([66ec17f](https://github.com/ConduitPlatform/Conduit/commit/66ec17f9160f5cffeb5d0421ab294480341303f0))
+* **authentication:** getTeam checks not working correctly ([c0ef200](https://github.com/ConduitPlatform/Conduit/commit/c0ef20097859311cdc970cebf3504e5b3d56e062))
+* **authentication:** token fetching in logout ([ba7f1fd](https://github.com/ConduitPlatform/Conduit/commit/ba7f1fd0c7e7d8558e6d97623d464bf4d1f87316))
+* **authorization:** not registering routes ([686ed43](https://github.com/ConduitPlatform/Conduit/commit/686ed43de82bffd6e2e5fb5071f258d9b989f8e7))
+* broken readme markdown ([1bf1f56](https://github.com/ConduitPlatform/Conduit/commit/1bf1f5686570e2d46b273b9beba137c69a3c2d32))
+* **database:** correct typos ([#641](https://github.com/ConduitPlatform/Conduit/issues/641)) ([b9d7fdc](https://github.com/ConduitPlatform/Conduit/commit/b9d7fdcc8798a5994bbc351fc1a3068444158fb5))
+* **database:** missing optional operator for authorization checks ([8df90ba](https://github.com/ConduitPlatform/Conduit/commit/8df90bab0ae77ebcef4d4b1e4ce861d39429e9e1))
+* **database:** missing permission inheritance for reader/editor roles ([1904ed7](https://github.com/ConduitPlatform/Conduit/commit/1904ed703d7791f6e505de067291bab9fe542a3b))
+* **database:** populate failing in mongo when in subpath ([8f855c9](https://github.com/ConduitPlatform/Conduit/commit/8f855c9c450fbdfbb02c259dc43eccc70398b576))
+* **database:** trying to create view even when not required ([4112c2b](https://github.com/ConduitPlatform/Conduit/commit/4112c2b66352e9d304fa3126e98148c489ec6b30))
+
 ## [0.16.0-alpha.13](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.12...v0.16.0-alpha.13) (2023-06-12)
 
 
