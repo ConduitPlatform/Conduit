@@ -20,20 +20,20 @@ import { NotificationToken } from '../models';
 import { ISendNotification } from '../interfaces/ISendNotification';
 
 export class AdminHandlers {
-  private provider: BaseNotificationProvider;
+  private provider: BaseNotificationProvider<unknown>;
   private readonly routingManager: RoutingManager;
 
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    provider: BaseNotificationProvider,
+    provider: BaseNotificationProvider<unknown>,
   ) {
     this.provider = provider;
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
   }
 
-  updateProvider(provider: BaseNotificationProvider) {
+  updateProvider(provider: BaseNotificationProvider<unknown>) {
     this.provider = provider;
   }
 
@@ -43,6 +43,7 @@ export class AdminHandlers {
       title: call.request.params.title,
       body: call.request.params.body,
       data: call.request.params.data,
+      isSilent: call.request.params.isSilent,
       platform: call.request.params.platform,
       doNotStore: call.request.params.doNotStore,
     };
@@ -67,6 +68,7 @@ export class AdminHandlers {
       sendTo: call.request.params.userIds,
       title: call.request.params.title,
       body: call.request.params.body,
+      isSilent: call.request.params.isSilent,
       data: call.request.params.data,
       doNotStore: call.request.params.doNotStore,
     };
@@ -114,8 +116,9 @@ export class AdminHandlers {
         description: `Sends a notification.`,
         bodyParams: {
           userId: ConduitString.Required,
-          title: ConduitString.Required,
+          title: ConduitString.Optional,
           body: ConduitString.Optional,
+          isSilent: ConduitBoolean.Optional,
           data: ConduitJson.Optional,
           platform: ConduitString.Optional,
           doNotStore: ConduitBoolean.Optional,
@@ -131,9 +134,10 @@ export class AdminHandlers {
         description: `Sends a notification to multiple devices.`,
         bodyParams: {
           userIds: { type: [TYPE.String], required: true }, // handler array check is still required
-          title: ConduitString.Required,
+          title: ConduitString.Optional,
           body: ConduitString.Optional,
           data: ConduitJson.Optional,
+          isSilent: ConduitBoolean.Optional,
           platform: ConduitString.Optional,
           doNotStore: ConduitBoolean.Optional,
         },
@@ -151,8 +155,9 @@ export class AdminHandlers {
             type: [
               {
                 sendTo: ConduitString.Required,
-                title: ConduitString.Required,
+                title: ConduitString.Optional,
                 body: ConduitString.Optional,
+                isSilent: ConduitBoolean.Optional,
                 platform: ConduitString.Optional,
                 doNotStore: ConduitBoolean.Optional,
               },

@@ -1,33 +1,33 @@
-import { DatabaseProvider, HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import {
+  DatabaseProvider,
+  GrpcRequest,
+  GrpcResponse,
+  HealthCheckStatus,
+} from '@conduitplatform/grpc-sdk';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
 import { PushNotificationsRoutes } from './routes';
 import * as models from './models';
+import { FirebaseProvider } from './providers/Firebase.provider';
+import { BaseNotificationProvider } from './providers/base.provider';
+import path from 'path';
+import { isNil } from 'lodash';
+import { status } from '@grpc/grpc-js';
+import { ISendNotification } from './interfaces/ISendNotification';
+import { runMigrations } from './migrations';
+import metricsSchema from './metrics';
+import { OneSignalProvider } from './providers/OneSignal.provider';
+import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
 import {
   GetNotificationTokensRequest,
   GetNotificationTokensResponse,
   SendManyNotificationsRequest,
   SendNotificationRequest,
   SendNotificationResponse,
-  SendToManyDevicesNotificationRequest,
+  SendNotificationToManyDevicesRequest,
   SetNotificationTokenRequest,
   SetNotificationTokenResponse,
-} from './types';
-import { FirebaseProvider } from './providers/Firebase.provider';
-import { IFirebaseSettings } from './interfaces/IFirebaseSettings';
-import { BaseNotificationProvider } from './providers/base.provider';
-import path from 'path';
-import { isNil } from 'lodash';
-import { status } from '@grpc/grpc-js';
-import {
-  ISendNotification,
-  ISendNotificationToManyDevices,
-} from './interfaces/ISendNotification';
-import { runMigrations } from './migrations';
-import metricsSchema from './metrics';
-import { OneSignalProvider } from './providers/OneSignal.provider';
-import { IOneSignalSettings } from './interfaces/IOneSignalSettings';
-import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+} from './protoTypes/push-notifications';
 
 export default class PushNotifications extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -48,7 +48,7 @@ export default class PushNotifications extends ManagedModule<Config> {
   private adminRouter!: AdminHandlers;
   private userRouter!: PushNotificationsRoutes;
   private database!: DatabaseProvider;
-  private _provider: BaseNotificationProvider | undefined;
+  private _provider: BaseNotificationProvider<unknown> | undefined;
 
   constructor() {
     super('pushNotifications');
@@ -82,8 +82,8 @@ export default class PushNotifications extends ManagedModule<Config> {
 
   // gRPC Service
   async setNotificationToken(
-    call: SetNotificationTokenRequest,
-    callback: SetNotificationTokenResponse,
+    call: GrpcRequest<SetNotificationTokenRequest>,
+    callback: GrpcResponse<SetNotificationTokenResponse>,
   ) {
     const { token, platform, userId } = call.request;
     let errorMessage: string | null = null;
@@ -115,8 +115,8 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   async getNotificationTokens(
-    call: GetNotificationTokensRequest,
-    callback: GetNotificationTokensResponse,
+    call: GrpcRequest<GetNotificationTokensRequest>,
+    callback: GrpcResponse<GetNotificationTokensResponse>,
   ) {
     const userId = call.request.userId;
     let errorMessage: string | null = null;
@@ -137,85 +137,50 @@ export default class PushNotifications extends ManagedModule<Config> {
   }
 
   async sendNotification(
-    call: SendNotificationRequest,
-    callback: SendNotificationResponse,
+    call: GrpcRequest<SendNotificationRequest>,
+    callback: GrpcResponse<SendNotificationResponse>,
   ) {
-    let errorMessage: string | null = null;
     try {
-      const params: ISendNotification = this.parseParams(call, call.request.data);
-      await this._provider!.sendToDevice(params).catch(e => {
-        errorMessage = e;
+      await this._provider!.sendToDevice({
+        ...call.request,
+        data: call.request.data ? JSON.parse(call.request.data) : {},
       });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
-    }
-    if (errorMessage) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
     }
     return callback(null, { message: 'Ok' });
   }
 
   async sendToManyDevices(
-    call: SendToManyDevicesNotificationRequest,
-    callback: SendNotificationResponse,
+    call: GrpcRequest<SendNotificationToManyDevicesRequest>,
+    callback: GrpcResponse<SendNotificationResponse>,
   ) {
-    let errorMessage: string | null = null;
     try {
-      const params: ISendNotificationToManyDevices = this.parseParams(
-        call,
-        call.request.data,
-      );
-      await this._provider!.sendToManyDevices(params).catch(e => {
-        errorMessage = e;
+      await this._provider!.sendToManyDevices({
+        ...call.request,
+        data: call.request.data ? JSON.parse(call.request.data) : {},
       });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    if (errorMessage) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
     return callback(null, { message: 'Ok' });
   }
 
-  async sendMany(call: SendManyNotificationsRequest, callback: SendNotificationResponse) {
+  async sendMany(
+    call: GrpcRequest<SendManyNotificationsRequest>,
+    callback: GrpcResponse<SendNotificationResponse>,
+  ) {
     let params: ISendNotification[];
     try {
       params = call.request.notifications.map(notification => ({
-        sendTo: notification.sendTo,
-        title: notification.title,
-        body: notification.body,
+        ...notification,
         data: notification.data ? JSON.parse(notification.data) : {},
-        type: notification.type,
-        platform: notification.platform,
-        doNotStore: notification.doNotStore,
       }));
+      await this._provider!.sendMany(params);
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
-    let errorMessage: string | null = null;
-    await this._provider!.sendMany(params).catch(e => {
-      errorMessage = e;
-    });
-    if (errorMessage) {
-      return callback({ code: status.INTERNAL, message: errorMessage });
-    }
     return callback(null, { message: 'Ok' });
-  }
-
-  parseParams(call: any, data?: string) {
-    try {
-      return {
-        sendTo: call.request.sendTo,
-        title: call.request.title,
-        body: call.request.body,
-        data: data ? JSON.parse(data) : {},
-        type: call.request.type,
-        platform: call.request.platform,
-        doNotStore: call.request.doNotStore,
-      };
-    } catch (e) {
-      throw new Error((e as Error).message);
-    }
   }
 
   protected registerSchemas() {
@@ -285,9 +250,9 @@ export default class PushNotifications extends ManagedModule<Config> {
     const name = notificationsConfig.providerName;
     const settings = notificationsConfig[name];
     if (name === 'firebase') {
-      this._provider = new FirebaseProvider(settings as IFirebaseSettings);
+      this._provider = new FirebaseProvider(settings);
     } else if (name === 'onesignal') {
-      this._provider = new OneSignalProvider(settings as IOneSignalSettings);
+      this._provider = new OneSignalProvider(settings);
     } else if (name === 'basic') {
       this._provider = new BaseNotificationProvider();
     } else {

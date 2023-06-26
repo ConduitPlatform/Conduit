@@ -21,20 +21,22 @@ message GetNotificationTokensResponse {
 
 message SendNotificationRequest {
   string sendTo = 1;
-  string title = 2;
+  optional string title = 2;
   optional string platform = 3;
   optional string body = 4;
   optional string data = 5;
   optional bool doNotStore = 6;
+  optional bool isSilent = 7;
 }
 
 message SendNotificationToManyDevicesRequest {
   repeated string sendTo = 1;
-  string title = 2;
+  optional string title = 2;
   optional string body = 3;
   optional string data = 4;
   optional string platform = 5;
   optional bool doNotStore = 6;
+  optional bool isSilent = 7;
 }
 
 message SendManyNotificationsRequest {

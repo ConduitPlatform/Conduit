@@ -11,9 +11,11 @@
   "scripts": {
     "start": "node dist/index.js",
     "prepublish": "npm run build",
+    "prebuild": "npm run generateTypes",
     "build": "rimraf dist && tsc",
     "postbuild": "copyfiles -u 1 src/**/*.proto src/*.proto src/**/*.json ./dist/",
     "prepare": "npm run build",
+    "generateTypes": "sh build.sh",
     "build:docker": "docker build -t ghcr.io/conduitplatform/push-notifications:latest -f ./Dockerfile ../../ && docker push ghcr.io/conduitplatform/push-notifications:latest"
   },
   "author": "",
@@ -42,6 +44,7 @@
     "@types/lodash": "^4.14.192",
     "@types/node": "18.15.11",
     "copyfiles": "^2.4.1",
+    "ts-proto": "^1.146.0",
     "rimraf": "^5.0.0",
     "typescript": "~5.0.4"
   }
