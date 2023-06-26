@@ -54,7 +54,9 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
     if (params.isSilent) {
       message = {
         token: token,
-        data,
+        data: {
+          ...data,
+        },
         android: {
           priority: 'high',
         },
