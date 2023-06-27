@@ -253,25 +253,29 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
     this.checkIndex(schemaName, index, callerModule);
     const collection = this.mongoose.model(schemaName).collection;
-    const indexSpecs = [];
-    for (let i = 0; i < index.fields.length; i++) {
-      // TODO: make this simpler
-      const spec: any = {};
-      spec[index.fields[i]] = index.types ? index.types[i] : 1;
-      indexSpecs.push(spec);
-    }
+    const indexSpecs: Indexable[] = index.fields.map((field, i) => ({
+      [field]: index.types
+        ? MongoIndexType[index.types[i] as unknown as keyof typeof MongoIndexType]
+        : 1,
+    }));
     await collection
       .createIndex(indexSpecs, { name: index.name, ...index.options } as IndexOptions)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     // Add index to modelOptions
+    const schema = this.models[schemaName].originalSchema;
+    const indexes = schema.modelOptions.indexes ?? [];
+    if (!indexes.map((i: ModelOptionsIndex) => i.name).includes(index.name)) {
+      indexes.push(index);
+    }
+    Object.assign(schema.modelOptions, { indexes });
     const foundSchema = await this.models['_DeclaredSchema'].findOne({
       name: schemaName,
     });
     await this.models['_DeclaredSchema'].findByIdAndUpdate(foundSchema!._id, {
-      modelOptions: foundSchema.modelOptions.push(index),
-    }); // TODO: check
+      modelOptions: schema.modelOptions,
+    });
     return 'Index created!';
   }
 

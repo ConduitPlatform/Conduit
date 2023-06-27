@@ -658,7 +658,7 @@ export class AdminHandlers {
             name: ConduitString.Required,
             fields: [ConduitString.Required],
             types: [ConduitString.Optional],
-            options: ConduitJson.Optional, // TODO: check this and the other places
+            options: ConduitJson.Optional,
           },
         ],
       }),
