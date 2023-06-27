@@ -13,6 +13,7 @@ import {
   ConduitModelOptionsPermModifyType as ValidModifyPermValues,
   ConduitSchemaOptions,
   Indexable,
+  ModelOptionsIndex,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
@@ -148,8 +149,8 @@ export function populateArray(pop: any) {
 function validateModelOptions(modelOptions: ConduitSchemaOptions) {
   if (!isPlainObject(modelOptions)) throw new Error('Model options must be an object');
   Object.keys(modelOptions).forEach(key => {
-    if (key !== 'conduit' && key !== 'timestamps')
-      throw new Error("Only 'conduit' and 'timestamps' options allowed");
+    if (key !== 'conduit' && key !== 'timestamps' && key !== 'indexes')
+      throw new Error("Only 'conduit', 'timestamps' and 'indexes' options allowed");
     else if (key === 'timestamps' && !isBoolean(modelOptions.timestamps))
       throw new Error("Option 'timestamps' must be of type Boolean");
     else if (key === 'conduit') {
@@ -163,7 +164,7 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
           conduitKey !== 'imported'
         )
           throw new Error(
-            "Only 'cms' and 'permissions' fields allowed inside 'conduit' field",
+            "Only 'cms', 'permissions', 'authorization' and 'imported' fields allowed inside 'conduit' field",
           );
         if (conduitKey === 'imported') {
           if (!isBoolean(modelOptions.conduit!.imported))
@@ -183,6 +184,32 @@ function validateModelOptions(modelOptions: ConduitSchemaOptions) {
       if (modelOptions.conduit!.permissions) {
         validatePermissions(modelOptions.conduit.permissions);
       }
+    } else if (key === 'indexes') {
+      if (!isArray(modelOptions.indexes))
+        throw new Error("Option 'indexes' must be an array");
+      modelOptions.indexes.forEach((index: ModelOptionsIndex) => {
+        if (
+          Object.keys(index).some(
+            key => !['name', 'fields', 'types', 'options'].includes(key),
+          )
+        ) {
+          throw new Error(
+            "Only 'name', 'fields', 'types' and 'options' fields allowed inside 'indexes' array",
+          );
+        }
+        if (!isString(index.name)) {
+          throw new Error("Index field option 'name' must be of type String");
+        }
+        if (!isArray(index.fields)) {
+          throw new Error("Index field option 'fields' must be of type Array");
+        }
+        if (index.types && !isArray(index.types)) {
+          throw new Error("Index field option 'types' must be of type Array");
+        }
+        if (index.options && !isObject(index.options)) {
+          throw new Error("Index field option 'options' must be of type Object");
+        }
+      });
     }
   });
 }

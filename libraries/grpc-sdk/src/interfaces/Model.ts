@@ -145,11 +145,13 @@ export interface ConduitSchemaOptions {
 
 // Index types
 export interface SchemaFieldIndex {
+  name: string;
   type?: MongoIndexType | SequelizeIndexType;
   options?: MongoIndexOptions | SequelizeIndexOptions;
 }
 
 export interface ModelOptionsIndex {
+  name: string;
   fields: string[];
   types?: MongoIndexType[] | SequelizeIndexType[];
   options?: MongoIndexOptions | SequelizeIndexOptions;
@@ -192,7 +194,6 @@ export type SequelizeIndexType = PgIndexType | MySQLMariaDBIndexType | SQLiteInd
 export interface MongoIndexOptions {
   background?: boolean;
   unique?: boolean;
-  name?: string;
   partialFilterExpression?: Document;
   sparse?: boolean;
   expireAfterSeconds?: number;
@@ -213,7 +214,6 @@ export interface MongoIndexOptions {
 }
 
 export interface SequelizeIndexOptions {
-  name?: string;
   parser?: string | null;
   unique?: boolean;
   // Used instead of ModelOptionsIndexes fields for more complex index definitions

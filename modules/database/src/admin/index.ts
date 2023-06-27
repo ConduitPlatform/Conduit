@@ -616,8 +616,9 @@ export class AdminHandlers {
         indexes: [
           {
             schemaName: ConduitString.Required,
+            name: ConduitString.Required,
             fields: [ConduitString.Required],
-            types: [ConduitString.Required],
+            types: [ConduitString.Optional],
             options: ConduitJson.Optional,
           },
         ],
@@ -633,6 +634,7 @@ export class AdminHandlers {
           id: { type: TYPE.String, required: true },
         },
         bodyParams: {
+          name: ConduitString.Required,
           fields: [ConduitString.Required],
           types: [ConduitString.Required],
           options: ConduitJson.Optional,
@@ -653,8 +655,9 @@ export class AdminHandlers {
       new ConduitRouteReturnDefinition('getSchemaIndexes', {
         indexes: [
           {
+            name: ConduitString.Required,
             fields: [ConduitString.Required],
-            types: [ConduitString.Required],
+            types: [ConduitString.Optional],
             options: ConduitJson.Optional, // TODO: check this and the other places
           },
         ],

@@ -122,7 +122,7 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
   for (const index of copy.modelOptions.indexes!) {
     // Compound indexes are maintained in modelOptions in order to be created after schema creation
     // Single field index => add it to specified schema field
-    const { fields, types, options } = index;
+    const { name, fields, types, options } = index;
     if (fields.length === 0) {
       throw new Error('Undefined fields for index creation');
     }
@@ -140,6 +140,7 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
         throw new Error('Invalid index type for MongoDB');
       }
       modelField.index = {
+        name,
         type: types[0] as MongoIndexType,
       };
     }

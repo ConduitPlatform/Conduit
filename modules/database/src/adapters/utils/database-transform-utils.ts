@@ -1,10 +1,18 @@
-import { isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
+import {
+  isArray,
+  isBoolean,
+  isNil,
+  isNumber,
+  isString,
+  isObject,
+  forEach,
+  has,
+} from 'lodash';
 import {
   ConduitModelField,
   Indexable,
-  MySQLMariaDBIndexOptions,
+  ModelOptionsIndex,
   MySQLMariaDBIndexType,
-  PgIndexOptions,
   PgIndexType,
   SequelizeIndexOptions,
   SQLiteIndexType,
@@ -82,8 +90,8 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
     const index = (fieldValue as ConduitModelField).index;
     if (!index) continue;
     // Convert conduit indexes to sequelize indexes
-    const { type, options } = index;
-    const newIndex: any = { fields: [fieldName] };
+    const { name, type, options } = index;
+    const newIndex: any = { name, fields: [fieldName] };
     if (type) {
       if (isArray(type) || !checkIfSequelizeIndexType(type, dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
@@ -129,4 +137,22 @@ export function extractFieldProperties(
   }
 
   return res;
+}
+
+export function findAndRemoveIndex(schema: any, indexName: string) {
+  const arrayIndex = schema.modelOptions.indexes.findIndex(
+    (i: ModelOptionsIndex) => i.name === indexName,
+  );
+  if (arrayIndex !== -1) {
+    schema.modelOptions.indexes.splice(arrayIndex, 1);
+    return schema;
+  }
+  forEach(schema.fields, (value: ConduitModelField, key: string, fields: any) => {
+    if (isObject(value) && has(value, 'index') && value.index!.name === indexName) {
+      delete fields[key].index;
+      delete schema.compiledFields[key].index;
+      return schema;
+    }
+  });
+  throw new Error('Index not found in schema');
 }

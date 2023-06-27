@@ -607,7 +607,7 @@ export class SchemaAdmin {
   }
 
   async createIndex(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, fields, types, options } = call.request.params;
+    const { id, name, fields, types, options } = call.request.params;
     const requestedSchema = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findOne({ _id: id });
@@ -616,7 +616,7 @@ export class SchemaAdmin {
     }
     return await this.database.createIndex(
       requestedSchema.name,
-      { fields, types, options },
+      { name, fields, types, options },
       'database',
     );
   }
