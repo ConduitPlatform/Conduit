@@ -107,6 +107,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     query: Query<T>,
     select?: string,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T> {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -117,6 +119,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       query: this.processQuery(query),
       select: select === null ? undefined : select,
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -130,6 +134,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     limit?: number,
     sort?: { [field: string]: -1 | 1 } | string[] | string,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T[]> {
     if (typeof sort === 'string') sort = [sort];
     const sortObj = Array.isArray(sort) ? this.constructSortObj(sort) : sort;
@@ -145,25 +151,43 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       limit,
       sort: sortObj,
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
 
-  create<T>(schemaName: string, query: Query<T>): Promise<T> {
-    return this.client!.create({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+  create<T>(
+    schemaName: string,
+    query: Query<T>,
+    userId?: string,
+    scope?: string,
+  ): Promise<T> {
+    return this.client!.create({
+      schemaName,
+      query: this.processQuery(query),
+      userId,
+      scope,
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
-  createMany<T>(schemaName: string, query: Query<T>[]): Promise<T[] | UntypedArray> {
-    return this.client!.createMany({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+  createMany<T>(
+    schemaName: string,
+    query: Query<T>[],
+    userId?: string,
+    scope?: string,
+  ): Promise<T[] | UntypedArray> {
+    return this.client!.createMany({
+      schemaName,
+      query: this.processQuery(query),
+      userId,
+      scope,
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
   findByIdAndUpdate<T>(
@@ -171,6 +195,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     id: string,
     document: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | any> {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -181,6 +207,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       id,
       query: this.processQuery(document),
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -191,6 +219,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     id: string,
     document: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | any> {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -201,6 +231,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       id,
       query: this.processQuery(document),
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -211,6 +243,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     filterQuery: Query<T>,
     query: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ) {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -221,6 +255,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -231,6 +267,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     filterQuery: Query<T>,
     query: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ) {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -241,6 +279,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
@@ -251,6 +291,8 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
     filterQuery: Query<T>,
     query: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ) {
     let populateArray = populate;
     if (populate && !Array.isArray(populate)) {
@@ -261,31 +303,46 @@ export class DatabaseProvider extends ConduitModule<typeof DatabaseProviderDefin
       filterQuery: this.processQuery(filterQuery),
       query: this.processQuery(query),
       populate: (populateArray as string[]) ?? [],
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });
   }
 
-  deleteOne<T>(schemaName: string, query: Query<T>) {
-    return this.client!.deleteOne({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+  deleteOne<T>(schemaName: string, query: Query<T>, userId?: string, scope?: string) {
+    return this.client!.deleteOne({
+      schemaName,
+      query: this.processQuery(query),
+      userId,
+      scope,
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
-  deleteMany<T>(schemaName: string, query: Query<T>) {
-    return this.client!.deleteMany({ schemaName, query: this.processQuery(query) }).then(
-      res => {
-        return JSON.parse(res.result);
-      },
-    );
+  deleteMany<T>(schemaName: string, query: Query<T>, userId?: string, scope?: string) {
+    return this.client!.deleteMany({
+      schemaName,
+      query: this.processQuery(query),
+      userId,
+      scope,
+    }).then(res => {
+      return JSON.parse(res.result);
+    });
   }
 
-  countDocuments<T>(schemaName: string, query: Query<T>): Promise<number> {
+  countDocuments<T>(
+    schemaName: string,
+    query: Query<T>,
+    userId?: string,
+    scope?: string,
+  ): Promise<number> {
     return this.client!.countDocuments({
       schemaName,
       query: this.processQuery(query),
+      userId,
+      scope,
     }).then(res => {
       return JSON.parse(res.result);
     });

@@ -24,8 +24,10 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     query: Query<T>,
     select?: string,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | null> {
-    return this.dbInstance.findOne<T>(this.name, query, select, populate);
+    return this.dbInstance.findOne<T>(this.name, query, select, populate, userId, scope);
   }
 
   findMany(
@@ -35,6 +37,8 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
     limit?: number,
     sort?: { [field: string]: -1 | 1 } | string[] | string,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T[]> {
     return this.dbInstance.findMany<T>(
       this.name,
@@ -44,52 +48,113 @@ export class ConduitActiveSchema<T> extends ConduitSchema {
       limit,
       sort,
       populate,
+      userId,
+      scope,
     );
   }
 
-  create(query: Query<T>): Promise<T> {
-    return this.dbInstance.create<T>(this.name, query);
+  create(query: Query<T>, userId?: string, scope?: string): Promise<T> {
+    return this.dbInstance.create<T>(this.name, query, userId, scope);
   }
 
-  createMany(query: Query<T>[]): Promise<T[]> {
-    return this.dbInstance.createMany<T>(this.name, query);
+  createMany(query: Query<T>[], userId?: string, scope?: string): Promise<T[]> {
+    return this.dbInstance.createMany<T>(this.name, query, userId, scope);
   }
 
   findByIdAndUpdate(
     id: string,
     document: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | null> {
-    return this.dbInstance.findByIdAndUpdate<T>(this.name, id, document, populate);
+    return this.dbInstance.findByIdAndUpdate<T>(
+      this.name,
+      id,
+      document,
+      populate,
+      userId,
+      scope,
+    );
   }
 
   findByIdAndReplace(
     id: string,
     document: Query<T>,
     populate?: string | string[],
+    userId?: string,
+    scope?: string,
   ): Promise<T | null> {
-    return this.dbInstance.findByIdAndReplace<T>(this.name, id, document, populate);
+    return this.dbInstance.findByIdAndReplace<T>(
+      this.name,
+      id,
+      document,
+      populate,
+      userId,
+      scope,
+    );
   }
 
-  replaceOne(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
-    return this.dbInstance.replaceOne(this.name, filterQuery, query, populate);
-  }
-  updateOne(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
-    return this.dbInstance.updateOne(this.name, filterQuery, query, populate);
-  }
-  updateMany(filterQuery: Query<T>, query: Query<T>, populate?: string | string[]) {
-    return this.dbInstance.updateMany(this.name, filterQuery, query, populate);
+  replaceOne(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
+  ) {
+    return this.dbInstance.replaceOne(
+      this.name,
+      filterQuery,
+      query,
+      populate,
+      userId,
+      scope,
+    );
   }
 
-  deleteOne(query: Query<T>) {
-    return this.dbInstance.deleteOne(this.name, query);
+  updateOne(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
+  ) {
+    return this.dbInstance.updateOne(
+      this.name,
+      filterQuery,
+      query,
+      populate,
+      userId,
+      scope,
+    );
   }
 
-  deleteMany(query: Query<T>) {
-    return this.dbInstance.deleteMany(this.name, query);
+  updateMany(
+    filterQuery: Query<T>,
+    query: Query<T>,
+    populate?: string | string[],
+    userId?: string,
+    scope?: string,
+  ) {
+    return this.dbInstance.updateMany(
+      this.name,
+      filterQuery,
+      query,
+      populate,
+      userId,
+      scope,
+    );
   }
 
-  countDocuments(query: Query<T>): Promise<number> {
-    return this.dbInstance.countDocuments(this.name, query);
+  deleteOne(query: Query<T>, userId?: string, scope?: string) {
+    return this.dbInstance.deleteOne(this.name, query, userId, scope);
+  }
+
+  deleteMany(query: Query<T>, userId?: string, scope?: string) {
+    return this.dbInstance.deleteMany(this.name, query, userId, scope);
+  }
+
+  countDocuments(query: Query<T>, userId?: string, scope?: string): Promise<number> {
+    return this.dbInstance.countDocuments(this.name, query, userId, scope);
   }
 }

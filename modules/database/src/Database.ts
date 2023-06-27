@@ -328,6 +328,8 @@ export default class DatabaseModule extends ManagedModule<void> {
       const doc = await schemaAdapter.model.findOne(call.request.query, {
         select: call.request.select,
         populate: call.request.populate,
+        userId: call.request.userId,
+        scope: call.request.scope,
       });
       callback(null, { result: JSON.stringify(doc) });
     } catch (err) {
@@ -359,6 +361,8 @@ export default class DatabaseModule extends ManagedModule<void> {
         select,
         sort,
         populate,
+        userId: call.request.userId,
+        scope: call.request.scope,
       });
       callback(null, { result: JSON.stringify(docs) });
     } catch (err) {
@@ -381,7 +385,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
 
-      const doc = await schemaAdapter.model.create(call.request.query);
+      const doc = await schemaAdapter.model.create(call.request.query, {
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
       const docString = JSON.stringify(doc);
 
       this.grpcSdk.bus?.publish(`${this.name}:create:${schemaName}`, docString);
@@ -410,7 +417,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
 
-      const docs = await schemaAdapter.model.createMany(call.request.query);
+      const docs = await schemaAdapter.model.createMany(call.request.query, {
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
       const docsString = JSON.stringify(docs);
 
       this.grpcSdk.bus?.publish(`${this.name}:createMany:${schemaName}`, docsString);
@@ -442,7 +452,11 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndUpdate(
         call.request.id,
         call.request.query,
-        { populate: call.request.populate },
+        {
+          populate: call.request.populate,
+          userId: call.request.userId,
+          scope: call.request.scope,
+        },
       );
       const resultString = JSON.stringify(result);
 
@@ -475,7 +489,11 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.findByIdAndReplace(
         call.request.id,
         call.request.query,
-        { populate: call.request.populate },
+        {
+          populate: call.request.populate,
+          userId: call.request.userId,
+          scope: call.request.scope,
+        },
       );
       const resultString = JSON.stringify(result);
 
@@ -508,7 +526,11 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.replaceOne(
         call.request.filterQuery,
         call.request.query,
-        { populate: call.request.populate },
+        {
+          populate: call.request.populate,
+          userId: call.request.userId,
+          scope: call.request.scope,
+        },
       );
       const resultString = JSON.stringify(result);
 
@@ -541,7 +563,11 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateOne(
         call.request.filterQuery,
         call.request.query,
-        { populate: call.request.populate },
+        {
+          populate: call.request.populate,
+          userId: call.request.userId,
+          scope: call.request.scope,
+        },
       );
       const resultString = JSON.stringify(result);
 
@@ -574,7 +600,11 @@ export default class DatabaseModule extends ManagedModule<void> {
       const result = await schemaAdapter.model.updateMany(
         call.request.filterQuery,
         call.request.query,
-        { populate: call.request.populate },
+        {
+          populate: call.request.populate,
+          userId: call.request.userId,
+          scope: call.request.scope,
+        },
       );
       const resultString = JSON.stringify(result);
 
@@ -604,7 +634,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
 
-      const result = await schemaAdapter.model.deleteOne(query);
+      const result = await schemaAdapter.model.deleteOne(query, {
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
@@ -633,7 +666,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         });
       }
 
-      const result = await schemaAdapter.model.deleteMany(query);
+      const result = await schemaAdapter.model.deleteMany(query, {
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
       const resultString = JSON.stringify(result);
 
       this.grpcSdk.bus?.publish(`${this.name}:delete:${schemaName}`, resultString);
@@ -653,7 +689,10 @@ export default class DatabaseModule extends ManagedModule<void> {
   ) {
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
-      const result = await schemaAdapter.model.countDocuments(call.request.query);
+      const result = await schemaAdapter.model.countDocuments(call.request.query, {
+        userId: call.request.userId,
+        scope: call.request.scope,
+      });
       callback(null, { result: JSON.stringify(result) });
     } catch (err) {
       callback({
