@@ -584,7 +584,7 @@ export class SchemaAdmin {
   async importIndexes(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     for (const index of call.request.params.indexes) {
       await this.database.createIndex(index.schemaName, index, 'database').catch(e => {
-        throw new GrpcError(status.INTERNAL, `${index.options.name}: ${e.message}`);
+        throw new GrpcError(status.INTERNAL, `${index.name}: ${e.message}`);
       });
     }
     return 'Indexes imported successfully';

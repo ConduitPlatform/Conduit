@@ -251,23 +251,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   ): Promise<string> {
     if (!this.models[schemaName])
       throw new GrpcError(status.NOT_FOUND, 'Requested schema not found');
-    this.checkIndex(schemaName, index, callerModule);
     const collection = this.mongoose.model(schemaName).collection;
-    const indexSpecs: Indexable[] = index.fields.map((field, i) => ({
-      [field]: index.types
-        ? MongoIndexType[index.types[i] as unknown as keyof typeof MongoIndexType]
-        : 1,
+    const convIndex = this.checkAndConvertIndex(schemaName, index, callerModule);
+    const indexSpecs: Indexable[] = convIndex.fields.map((field, i) => ({
+      [field]: convIndex.types?.[i] ?? 1,
     }));
     await collection
-      .createIndex(indexSpecs, { name: index.name, ...index.options } as IndexOptions)
+      .createIndex(indexSpecs, {
+        name: convIndex.name,
+        ...convIndex.options,
+      } as IndexOptions)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     // Add index to modelOptions
     const schema = this.models[schemaName].originalSchema;
     const indexes = schema.modelOptions.indexes ?? [];
-    if (!indexes.map((i: ModelOptionsIndex) => i.name).includes(index.name)) {
-      indexes.push(index);
+    if (!indexes.map((i: ModelOptionsIndex) => i.name).includes(convIndex.name)) {
+      indexes.push(convIndex);
     }
     Object.assign(schema.modelOptions, { indexes });
     const foundSchema = await this.models['_DeclaredSchema'].findOne({
@@ -441,7 +442,11 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     return this.models[schema.name];
   }
 
-  private checkIndex(schemaName: string, index: ModelOptionsIndex, callerModule: string) {
+  private checkAndConvertIndex(
+    schemaName: string,
+    index: ModelOptionsIndex,
+    callerModule: string,
+  ) {
     const { fields, types, options } = index;
     if (
       fields.some(
@@ -453,7 +458,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     ) {
       throw new Error(`Invalid fields for index creation`);
     }
-    if (!options && !types) return;
+    if (!options && !types) return index;
     if (options) {
       if (!checkIfMongoOptions(options)) {
         throw new GrpcError(status.INTERNAL, 'Invalid index options for mongoDB');
@@ -471,10 +476,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     if (types) {
       if (
         types.length !== index.fields.length ||
-        types.some(type => !(type in MongoIndexType))
+        types.some(
+          type =>
+            !(type in MongoIndexType) && !Object.values(MongoIndexType).includes(type),
+        )
       ) {
         throw new GrpcError(status.INTERNAL, 'Invalid index types');
       }
+      // Convert index types (if called by endpoint index.types contains the keys of MongoIndexType enum)
+      index.types = types.map(type => {
+        if (
+          Object.keys(MongoIndexType).includes(
+            type as unknown as keyof typeof MongoIndexType,
+          )
+        )
+          return MongoIndexType[type as unknown as keyof typeof MongoIndexType];
+        return type;
+      }) as MongoIndexType[];
     }
+    return index;
   }
 }

@@ -130,16 +130,15 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
       throw new Error(`Invalid fields for index creation`);
     }
     if (fields.length !== 1) continue;
-    const modelField = copy.fields[index.fields[0]] as ConduitModelField;
     if (types) {
       if (
         !isArray(types) ||
-        !(types[0] in MongoIndexType) ||
+        !Object.values(MongoIndexType).includes(types[0]) ||
         fields.length !== types.length
       ) {
         throw new Error('Invalid index type for MongoDB');
       }
-      modelField.index = {
+      (copy.fields[index.fields[0]] as ConduitModelField).index = {
         name,
         type: types[0] as MongoIndexType,
       };
@@ -149,7 +148,9 @@ function convertModelOptionsIndexes(copy: ConduitSchema) {
         throw new Error('Incorrect index options for MongoDB');
       }
       for (const [option, optionValue] of Object.entries(options)) {
-        modelField.index![option as keyof SchemaFieldIndex] = optionValue;
+        (copy.fields[index.fields[0]] as ConduitModelField).index![
+          option as keyof SchemaFieldIndex
+        ] = optionValue;
       }
     }
     copy.modelOptions.indexes!.splice(copy.modelOptions.indexes!.indexOf(index), 1);
