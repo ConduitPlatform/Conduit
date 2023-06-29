@@ -406,7 +406,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     if (!isNil(options?.limit) && !modified) {
       findOptions.limit = options?.limit;
     }
-    if (!isNil(options?.sort) && !modified) {
+    if (!isNil(options?.sort)) {
       findOptions.order = this.parseSort(options?.sort);
     }
 

@@ -282,7 +282,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (!isNil(options?.populate)) {
       finalQuery = this.populate(finalQuery, options?.populate ?? []);
     }
-    if (!isNil(options?.sort) && !modified) {
+    if (!isNil(options?.sort)) {
       finalQuery = finalQuery.sort(this.parseSort(options?.sort));
     }
     return finalQuery.lean().exec();
