@@ -8,13 +8,11 @@ import { validateNotification } from './utils';
 import { isNil, keyBy } from 'lodash';
 
 export class BaseNotificationProvider<T> {
-  _initialized: boolean = false;
+  _initialized: boolean = true;
 
   get isInitialized(): boolean {
     return this._initialized;
   }
-
-  updateProvider(settings: T): void {}
 
   sendMessage(
     token: string | string[],
