@@ -135,42 +135,82 @@ export abstract class SchemaAdapter<T> {
     many: boolean = false,
     userId?: string,
     scope?: string,
+  ) {
+    if (
+      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
+      (isNil(userId) && isNil(scope))
+    )
+      return parsedQuery;
+    const view = await this.permissionCheck(operation, userId, scope);
+    if (!view) return parsedQuery;
+    if (many) {
+      const docs = await view.findMany(parsedQuery, {
+        select: '_id',
+        userId: undefined,
+        scope: undefined,
+      });
+      if (isNil(docs)) {
+        return null;
+      }
+      if (this.adapter.getDatabaseType() === 'MongoDB') {
+        return { _id: { $in: docs.map((doc: any) => doc._id) } };
+      } else {
+        return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
+      }
+    } else {
+      const doc = await view.findOne(parsedQuery, {
+        userId: undefined,
+        scope: undefined,
+      });
+      if (isNil(doc)) {
+        throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+      }
+      return { _id: doc._id };
+    }
+  }
+
+  async getPaginatedAuthorizedQuery(
+    operation: string,
+    parsedQuery: Indexable,
+    userId?: string,
+    scope?: string,
     skip?: number,
     limit?: number,
+    sort?: Indexable,
   ) {
-    if (!this.originalSchema.modelOptions.conduit?.authorization?.enabled)
-      return parsedQuery;
-    if (!isNil(userId) || !isNil(scope)) {
-      const view = await this.permissionCheck(operation, userId, scope);
-      if (!view) return parsedQuery;
-      if (many) {
-        const docs = await view.findMany(parsedQuery, {
-          select: '_id',
-          skip,
-          limit,
-          userId: undefined,
-          scope: undefined,
-        });
-        if (isNil(docs)) {
-          return null;
-        }
-        if (this.adapter.getDatabaseType() === 'MongoDB') {
-          return { _id: { $in: docs.map((doc: any) => doc._id) } };
-        } else {
-          return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
-        }
-      } else {
-        const doc = await view.findOne(parsedQuery, {
-          userId: undefined,
-          scope: undefined,
-        });
-        if (isNil(doc)) {
-          throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
-        }
-        return { _id: doc._id };
-      }
+    if (
+      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
+      (isNil(userId) && isNil(scope))
+    )
+      return { parsedQuery, modified: false };
+    const view = await this.permissionCheck(operation, userId, scope);
+    if (!view) return { parsedQuery, modified: false };
+    const docs = await view.findMany(parsedQuery, {
+      select: '_id',
+      skip,
+      limit,
+      sort,
+      userId: undefined,
+      scope: undefined,
+    });
+    if (isNil(docs)) {
+      return { parsedQuery: null, modified: false };
     }
-    return parsedQuery;
+    if (this.adapter.getDatabaseType() === 'MongoDB') {
+      return {
+        parsedQuery: {
+          _id: {
+            $in: docs.map((doc: any) => doc._id),
+          },
+        },
+        modified: true,
+      };
+    } else {
+      return {
+        parsedQuery: { _id: { [Op.in]: docs.map((doc: any) => doc._id) } },
+        modified: true,
+      };
+    }
   }
 
   async addPermissionToData(

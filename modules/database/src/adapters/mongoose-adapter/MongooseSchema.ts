@@ -260,30 +260,29 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
-      parsedQuery,
-      true,
+      parseQuery(this.parseStringToQuery(query)),
       options?.userId,
       options?.scope,
       options?.skip,
       options?.limit,
+      options?.sort,
     );
     if (isNil(parsedQuery)) {
       return [];
     }
     let finalQuery = this.model.find(parsedQuery, options?.select);
-    if (!isNil(options?.skip)) {
+    if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options?.skip!);
     }
-    if (!isNil(options?.limit)) {
+    if (!isNil(options?.limit) && !modified) {
       finalQuery = finalQuery.limit(options?.limit!);
     }
     if (!isNil(options?.populate)) {
       finalQuery = this.populate(finalQuery, options?.populate ?? []);
     }
-    if (!isNil(options?.sort)) {
+    if (!isNil(options?.sort) && !modified) {
       finalQuery = finalQuery.sort(this.parseSort(options?.sort));
     }
     return finalQuery.lean().exec();

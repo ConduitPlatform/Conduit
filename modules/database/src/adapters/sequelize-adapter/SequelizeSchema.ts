@@ -377,15 +377,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         select: options?.select,
       },
     );
-    const parsedFilter = await this.getAuthorizedQuery(
-      'read',
-      filter,
-      true,
-      options?.userId,
-      options?.scope,
-      options?.skip,
-      options?.limit,
-    );
+    const { parsedQuery: parsedFilter, modified } =
+      await this.getPaginatedAuthorizedQuery(
+        'read',
+        filter,
+        options?.userId,
+        options?.scope,
+        options?.skip,
+        options?.limit,
+        options?.sort,
+      );
     if (isNil(parsedFilter)) {
       return [];
     }
@@ -399,13 +400,13 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         options?.populate || [],
       ),
     };
-    if (!isNil(options?.skip)) {
+    if (!isNil(options?.skip) && !modified) {
       findOptions.offset = options?.skip;
     }
-    if (!isNil(options?.limit)) {
+    if (!isNil(options?.limit) && !modified) {
       findOptions.limit = options?.limit;
     }
-    if (!isNil(options?.sort)) {
+    if (!isNil(options?.sort) && !modified) {
       findOptions.order = this.parseSort(options?.sort);
     }
 
