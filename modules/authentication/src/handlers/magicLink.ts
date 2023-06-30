@@ -84,7 +84,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   async sendMagicLink(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { email } = call.request.params;
     const { clientId } = call.request.context;
-    const user: User | null = await User.getInstance().findOne({ email: email });
+    const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
     const token: Token = await Token.getInstance().create({
@@ -101,7 +101,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { verificationToken } = call.request.params.verificationToken;
+    const { verificationToken } = call.request.params;
     const config = ConfigController.getInstance().config;
     const uri = call.request.params.redirectUri;
     const redirectUri =
