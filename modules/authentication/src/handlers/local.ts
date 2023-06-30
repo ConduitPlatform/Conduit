@@ -416,7 +416,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    const { newEmail } = call.request.params;
+    const newEmail = call.request.params.newEmail.toLowerCase();
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
 
