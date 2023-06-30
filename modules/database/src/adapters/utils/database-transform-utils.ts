@@ -73,9 +73,12 @@ export function convertModelOptionsIndexes(copy: ConduitDatabaseSchema, dialect:
       if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (dialect === 'mysql' || dialect === 'mariadb') {
+      if (
+        (dialect === 'mysql' || dialect === 'mariadb') &&
+        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
+      ) {
         index.type = types[0] as MySQLMariaDBIndexType;
-      } else if (dialect === 'postgres') {
+      } else {
         index.using = types[0] as PgIndexType | SQLiteIndexType;
       }
       delete index.types;
@@ -96,10 +99,13 @@ export function convertSchemaFieldIndexes(copy: ConduitDatabaseSchema, dialect: 
       if (isArray(type) || !checkIfSequelizeIndexType(type, dialect)) {
         throw new Error(`Invalid index type for ${dialect}`);
       }
-      if (dialect === 'mysql' || dialect === 'mariadb') {
+      if (
+        (dialect === 'mysql' || dialect === 'mariadb') &&
+        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(type as string)
+      ) {
         newIndex.type = type as MySQLMariaDBIndexType;
-      } else if (dialect === 'postgres') {
-        newIndex.using = type as PgIndexType;
+      } else {
+        newIndex.using = type as PgIndexType | SQLiteIndexType;
       }
     }
     if (options && !checkIfSequelizeIndexOptions(options, dialect)) {

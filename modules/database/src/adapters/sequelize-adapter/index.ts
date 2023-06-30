@@ -512,9 +512,12 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       if (types.length !== 1 || !checkIfSequelizeIndexType(types[0], dialect)) {
         throw new GrpcError(status.INVALID_ARGUMENT, `Invalid index type for ${dialect}`);
       }
-      if (dialect === 'mysql' || dialect === 'mariadb') {
+      if (
+        (dialect === 'mysql' || dialect === 'mariadb') &&
+        ['UNIQUE', 'FULLTEXT', 'SPATIAL'].includes(types[0] as string)
+      ) {
         index.options = { ...index.options, type: types[0] } as MySQLMariaDBIndexOptions;
-      } else if (dialect === 'postgres') {
+      } else {
         index.options = { ...index.options, using: types[0] } as PgIndexOptions;
       }
       delete index.types;
