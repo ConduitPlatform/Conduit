@@ -273,7 +273,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    let email = call.request.params.email;
+    const email = call.request.params.email.toLowerCase();
     const password = call.request.params.password;
     const context = call.request.context;
     if (isNil(context))
@@ -285,7 +285,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
-    email = email.toLowerCase();
     const config = ConfigController.getInstance().config;
 
     const user: User | null = await User.getInstance().findOne(
@@ -304,7 +303,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
   }
 
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
     const config = ConfigController.getInstance().config;
 
     const user: User | null = await User.getInstance().findOne({ email });
@@ -557,15 +556,12 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async resendVerificationEmail(
     call: ParsedRouterRequest,
   ): Promise<UnparsedRouterResponse> {
-    let { email } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
     const invalidAddress = AuthUtils.invalidEmailAddress(email);
     if (invalidAddress) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
-    email = email.toLowerCase();
-    const user: User | null = await User.getInstance().findOne({
-      email: email,
-    });
+    const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
     if (user.isVerified)
       throw new GrpcError(status.FAILED_PRECONDITION, 'User already verified');
@@ -586,7 +582,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       tokenType: TokenType.VERIFICATION_TOKEN,
       token: uuid(),
       data: {
-        email: email,
+        email,
       },
     });
 
@@ -594,7 +590,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const result = { token: verificationToken.token, hostUrl: serverConfig.hostUrl };
     const link = `${result.hostUrl}/hook/authentication/verify-email/${result.token}`;
     await this.emailModule.sendEmail('EmailVerification', {
-      email: email,
+      email,
       sender: 'no-reply',
       variables: {
         link,

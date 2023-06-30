@@ -296,12 +296,11 @@ export default class Authentication extends ManagedModule<Config> {
   }
 
   // gRPC Service
-
   async changePass(
     call: GrpcRequest<UserChangePass>,
     callback: GrpcCallback<UserCreateResponse>,
   ) {
-    const email = call.request.email;
+    const email = call.request.email.toLowerCase();
     let password = call.request.password;
     if (isNil(password) || password.length === 0) {
       password = AuthUtils.randomToken(8);
