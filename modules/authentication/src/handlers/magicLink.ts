@@ -82,7 +82,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   async sendMagicLink(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
