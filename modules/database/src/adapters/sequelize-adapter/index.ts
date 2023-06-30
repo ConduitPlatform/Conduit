@@ -363,11 +363,7 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
   }
 
   getDatabaseType(): string {
-    const type = this.sequelize.getDialect();
-    if (type === 'postgres') {
-      return 'PostgreSQL'; // TODO: clean up
-    }
-    return type;
+    return this.sequelize.getDialect();
   }
 
   async createIndex(

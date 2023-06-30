@@ -215,7 +215,7 @@ export class PermissionsController {
           },
         ],
         sqlQuery:
-          dbType === 'PostgreSQL'
+          dbType === 'postgres'
             ? getPostgresAccessListQuery(
                 objectTypeCollection,
                 computedTuple,
