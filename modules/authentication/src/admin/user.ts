@@ -51,13 +51,14 @@ export class UserAdmin {
   }
 
   async createUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { email, password } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
+    const password = call.request.params.password;
     if (AuthUtils.invalidEmailAddress(email)) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid email address provided');
     }
 
     let user: User | null = await User.getInstance().findOne({
-      email: email.toLowerCase(),
+      email: email,
     });
     if (!isNil(user)) {
       throw new GrpcError(status.ALREADY_EXISTS, 'User already exists');
@@ -65,7 +66,7 @@ export class UserAdmin {
 
     const hashedPassword = await AuthUtils.hashPassword(password);
     user = await User.getInstance().create({
-      email,
+      email: email,
       hashedPassword,
       isVerified: true,
     });
@@ -75,7 +76,8 @@ export class UserAdmin {
   }
 
   async patchUser(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, email, isVerified, hasTwoFA, phoneNumber } = call.request.params;
+    const { id, isVerified, hasTwoFA, phoneNumber } = call.request.params;
+    const email = call.request.params.email.toLowerCase();
 
     const user: User | null = await User.getInstance().findOne({ _id: id });
     if (isNil(user)) {
@@ -85,6 +87,12 @@ export class UserAdmin {
         status.INVALID_ARGUMENT,
         'Can not enable 2fa without a phone number',
       );
+    }
+    if (user.email !== email) {
+      const duplicateEmail: User | null = await User.getInstance().findOne({ email });
+      if (!isNil(duplicateEmail)) {
+        throw new GrpcError(status.INVALID_ARGUMENT, 'Email already exists');
+      }
     }
     let twoFaMethod: string | undefined;
     if (hasTwoFA) {

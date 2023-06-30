@@ -216,7 +216,7 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<UserCreateRequest>,
     callback: GrpcCallback<UserCreateResponse>,
   ) {
-    const email = call.request.email;
+    const email = call.request.email.toLowerCase();
     let password = call.request.password;
     const verify = call.request.verify;
 
