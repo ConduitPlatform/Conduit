@@ -2,8 +2,6 @@ import {
   ConduitModel,
   DatabaseProvider,
   Indexable,
-  ModelOptionsIndex,
-  SQLiteIndexType,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
@@ -36,9 +34,6 @@ const schema: ConduitModel = {
   email: {
     type: TYPE.String,
     required: false,
-    index: {
-      name: 'emailIndex',
-    },
   },
   hashedPassword: {
     type: TYPE.String,
@@ -84,20 +79,6 @@ const schema: ConduitModel = {
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
-const indexes: ModelOptionsIndex[] = [
-  {
-    name: 'compoundIndex',
-    fields: ['phoneNumber', 'hashedPassword'],
-  },
-  {
-    name: 'createdAtIndex',
-    fields: ['createdAt'],
-    types: [SQLiteIndexType.BTREE],
-    options: {
-      unique: true,
-    },
-  },
-];
 const modelOptions = {
   timestamps: true,
   conduit: {
@@ -108,7 +89,6 @@ const modelOptions = {
       canDelete: false,
     },
   },
-  indexes,
 } as const;
 const collectionName = undefined;
 
