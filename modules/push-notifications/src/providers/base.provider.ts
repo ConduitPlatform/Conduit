@@ -9,6 +9,7 @@ import { isNil, keyBy } from 'lodash';
 
 export class BaseNotificationProvider<T> {
   _initialized: boolean = true;
+  isBaseProvider: boolean = true;
 
   get isInitialized(): boolean {
     return this._initialized;
@@ -35,6 +36,7 @@ export class BaseNotificationProvider<T> {
         platform: params.platform,
       });
     }
+    if (this.isBaseProvider) return;
     const notificationToken = (await this.fetchTokens(sendTo)) as NotificationToken;
     if (isNil(notificationToken)) {
       throw new Error('No notification token found');
@@ -78,6 +80,7 @@ export class BaseNotificationProvider<T> {
     if (notifications.length !== 0) {
       await Notification.getInstance().createMany(notifications);
     }
+    if (this.isBaseProvider) return;
     const userIds = params.map(param => param.sendTo);
     const notificationsObj = keyBy(params, param => param.sendTo);
 
@@ -109,6 +112,7 @@ export class BaseNotificationProvider<T> {
         })),
       );
     }
+    if (this.isBaseProvider) return;
     const notificationTokens = (await this.fetchTokens(
       params.sendTo,
     )) as NotificationToken[];

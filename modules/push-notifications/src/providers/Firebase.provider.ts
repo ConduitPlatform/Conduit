@@ -13,6 +13,7 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
   constructor(settings: IFirebaseSettings) {
     super();
     this._initialized = false;
+    this.isBaseProvider = false;
     this.updateProvider(settings);
   }
 
