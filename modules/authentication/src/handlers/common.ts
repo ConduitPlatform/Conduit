@@ -8,7 +8,7 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { RefreshToken, User } from '../models';
+import { AccessToken, RefreshToken, User } from '../models';
 import { IAuthenticationStrategy } from '../interfaces';
 import { Config } from '../config';
 import { TokenProvider } from './tokenProvider';
@@ -50,6 +50,9 @@ export class CommonHandlers implements IAuthenticationStrategy {
 
     // delete the old refresh token
     await RefreshToken.getInstance().deleteOne({ _id: oldRefreshToken._id });
+    await AccessToken.getInstance().deleteOne({
+      _id: oldRefreshToken.accessToken as string,
+    });
     // delete all expired tokens
     RefreshToken.getInstance()
       .deleteMany({
@@ -87,7 +90,7 @@ export class CommonHandlers implements IAuthenticationStrategy {
         options: config.refreshTokens.cookieOptions,
       });
     }
-    if (config.refreshTokens.enabled && config.refreshTokens.setCookie) {
+    if (config.accessTokens.setCookie) {
       removeCookies.push({
         name: 'accessToken',
         options: config.accessTokens.cookieOptions,
