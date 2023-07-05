@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  SQLDataType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 const schema: ConduitModel = {
@@ -11,10 +16,12 @@ const schema: ConduitModel = {
   subject: {
     type: TYPE.String,
     required: true,
+    sqlType: SQLDataType.TEXT,
   },
   body: {
     type: TYPE.String,
     required: true,
+    sqlType: SQLDataType.TEXT,
   },
   variables: {
     type: [TYPE.String],
