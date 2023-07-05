@@ -144,6 +144,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       email: user.email,
       sender: 'no-reply',
       variables: {
+        user,
         link,
       },
     });
