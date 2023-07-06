@@ -21,7 +21,7 @@ import ConduitGrpcSdk, {
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isNil } from 'lodash';
+import { cloneDeep, isElement, isEmpty, isNil } from 'lodash';
 import { parseQuery } from './parser';
 
 const EJSON = require('mongodb-extended-json');
@@ -260,6 +260,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
+    const authorizedQuery = await this.getTestAuthorizedQuery(
+      'read',
+      options?.userId,
+      options?.scope,
+    );
     let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
       parseQuery(this.parseStringToQuery(query)),
@@ -284,6 +289,21 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     }
     if (!isNil(options?.sort)) {
       finalQuery = finalQuery.sort(this.parseSort(options?.sort));
+    }
+    if (!isEmpty(authorizedQuery)) {
+      //{
+      //         $expr: { $eq: ['$productInfo.team._id', { $toObjectId: team }] },
+      //       }
+      const pipeline = [
+        {
+          $match: {
+            $expr: { $eq: ['$_id', { $toObjectId: '64a41678894aa4e2c0fdbc08' }] },
+          },
+        }, //{ $match: parseQuery(this.parseStringToQuery(query)) },
+        ...authorizedQuery,
+      ];
+      const result = await this.model.aggregate(pipeline);
+      return result;
     }
     return finalQuery.lean().exec();
   }

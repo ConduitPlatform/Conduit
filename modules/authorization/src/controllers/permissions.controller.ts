@@ -1,7 +1,9 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
 import {
+  AccessListQueryParams,
   checkRelation,
   computePermissionTuple,
+  getMongoAccessListQuery,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
 } from '../utils';
@@ -124,114 +126,35 @@ export class PermissionsController {
   }
 
   async createAccessList(subject: string, action: string, objectType: string) {
+    const query = await this.getAuthorizedQuery(subject, action, objectType);
+    await this.grpcSdk.database?.createView(
+      objectType,
+      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      ['Permission', 'ActorIndex', 'ObjectIndex'],
+      query,
+    );
+    return;
+  }
+
+  async getAuthorizedQuery(subject: string, action: string, objectType: string) {
     const computedTuple = `${subject}#${action}@${objectType}`;
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
     const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
-    await this.grpcSdk.database?.createView(
+    const params: AccessListQueryParams = {
+      objectTypeCollection,
+      computedTuple,
+      subject,
       objectType,
-      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
-      ['Permission', 'ActorIndex', 'ObjectIndex'],
-      {
-        mongoQuery: [
-          // permissions lookup won't work this way
-          {
-            $lookup: {
-              from: 'cnd_permissions',
-              let: { x_id: { $toString: '$_id' } },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: [
-                        '$computedTuple',
-                        { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
-                      ],
-                    },
-                  },
-                },
-              ],
-              as: 'permissions',
-            },
-          },
-          {
-            $lookup: {
-              from: 'cnd_actorindexes',
-              let: {
-                subject: subject,
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$subject'],
-                    },
-                  },
-                },
-              ],
-              as: 'actors',
-            },
-          },
-          {
-            $lookup: {
-              from: 'cnd_objectindexes',
-              let: {
-                id_action: {
-                  $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
-                },
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$id_action'],
-                    },
-                  },
-                },
-              ],
-              as: 'objects',
-            },
-          },
-          {
-            $addFields: {
-              intersection: {
-                $setIntersection: ['$actors.entity', '$objects.entity'],
-              },
-            },
-          },
-          {
-            $match: {
-              intersection: { $ne: [] },
-            },
-          },
-          {
-            $project: {
-              actors: 0,
-              objects: 0,
-              permissions: 0,
-              intersection: 0,
-            },
-          },
-        ],
-        sqlQuery:
-          dbType === 'PostgreSQL'
-            ? getPostgresAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              )
-            : getSQLAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              ),
-      },
-    );
-    return;
+      action,
+    };
+    return {
+      mongoQuery: getMongoAccessListQuery(params),
+      sqlQuery:
+        dbType === 'PostgreSQL'
+          ? getPostgresAccessListQuery(params)
+          : getSQLAccessListQuery(params),
+    };
   }
 }

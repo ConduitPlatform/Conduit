@@ -578,6 +578,18 @@ export class SchemaAdmin {
   }
 
   async getDatabaseType(): Promise<UnparsedRouterResponse> {
+    const test1 = await this.database.getSchemaModel('File').model.findMany(
+      {
+        _id: '64a41678894aa4e2c0fdbc08',
+      },
+      { userId: '64a415a2894aa4e2c0fdbb3f' },
+    );
+    const test2 = await this.database.getSchemaModel('File').model.findMany(
+      {
+        _id: '64a41678894aa4e2c0fdbc08',
+      },
+      { userId: '64a415b2894aa4e2c0fdbb42' },
+    );
     return this.database.getDatabaseType();
   }
 

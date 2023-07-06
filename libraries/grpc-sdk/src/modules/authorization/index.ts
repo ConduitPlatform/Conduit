@@ -68,4 +68,8 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
   createResourceAccessList(data: ResourceAccessListRequest): Promise<Empty> {
     return this.client!.createResourceAccessList(data);
   }
+
+  getAuthorizedQuery(data: ResourceAccessListRequest): Promise<any> {
+    return this.client!.getAuthorizedQuery(data).then(r => JSON.parse(r.query));
+  }
 }

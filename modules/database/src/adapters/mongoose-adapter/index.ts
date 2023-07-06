@@ -23,6 +23,7 @@ import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
+const castAggregation = require('mongoose-cast-aggregation');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
@@ -38,7 +39,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   constructor(connectionString: string) {
     super();
     this.connectionString = connectionString;
-    this.mongoose = new Mongoose();
+    this.mongoose = new Mongoose().plugin(castAggregation);
   }
 
   async retrieveForeignSchemas(): Promise<void> {
