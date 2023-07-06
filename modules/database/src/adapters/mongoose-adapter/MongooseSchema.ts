@@ -1,6 +1,7 @@
 import {
   Model,
   Mongoose,
+  PipelineStage,
   PopulateOptions,
   Query as MongooseQuery,
   Schema,
@@ -17,11 +18,12 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import ConduitGrpcSdk, {
+  ConduitModel,
   ConduitSchema,
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isElement, isEmpty, isNil } from 'lodash';
+import { cloneDeep, isEmpty, isNil } from 'lodash';
 import { parseQuery } from './parser';
 
 const EJSON = require('mongodb-extended-json');
@@ -260,50 +262,32 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const authorizedQuery = await this.getTestAuthorizedQuery(
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    const authorizedQueryPipeline = await this.getAuthorizedQueryPipeline(
       'read',
       options?.userId,
       options?.scope,
     );
-    let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
-      'read',
-      parseQuery(this.parseStringToQuery(query)),
-      options?.userId,
-      options?.scope,
-      options?.skip,
-      options?.limit,
-      options?.sort,
-    );
-    if (isNil(parsedQuery)) {
-      return [];
+    if (!isEmpty(authorizedQueryPipeline)) {
+      const pipeline = this.constructAggregationPipeline(
+        parsedQuery,
+        authorizedQueryPipeline,
+        options,
+      );
+      return this.model.aggregate(pipeline as PipelineStage[]);
     }
     let finalQuery = this.model.find(parsedQuery, options?.select);
-    if (!isNil(options?.skip) && !modified) {
-      finalQuery = finalQuery.skip(options?.skip!);
+    if (!isNil(options?.skip)) {
+      finalQuery = finalQuery.skip(options!.skip);
     }
-    if (!isNil(options?.limit) && !modified) {
-      finalQuery = finalQuery.limit(options?.limit!);
+    if (!isNil(options?.limit)) {
+      finalQuery = finalQuery.limit(options!.limit);
     }
     if (!isNil(options?.populate)) {
       finalQuery = this.populate(finalQuery, options?.populate ?? []);
     }
     if (!isNil(options?.sort)) {
       finalQuery = finalQuery.sort(this.parseSort(options?.sort));
-    }
-    if (!isEmpty(authorizedQuery)) {
-      //{
-      //         $expr: { $eq: ['$productInfo.team._id', { $toObjectId: team }] },
-      //       }
-      const pipeline = [
-        {
-          $match: {
-            $expr: { $eq: ['$_id', { $toObjectId: '64a41678894aa4e2c0fdbc08' }] },
-          },
-        }, //{ $match: parseQuery(this.parseStringToQuery(query)) },
-        ...authorizedQuery,
-      ];
-      const result = await this.model.aggregate(pipeline);
-      return result;
     }
     return finalQuery.lean().exec();
   }
@@ -317,14 +301,20 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    const authorizedQueryPipeline = await this.getAuthorizedQueryPipeline(
       'read',
-      parsedQuery,
-      false,
       options?.userId,
       options?.scope,
     );
+    if (!isEmpty(authorizedQueryPipeline)) {
+      const pipeline = this.constructAggregationPipeline(
+        parsedQuery,
+        authorizedQueryPipeline,
+        options,
+      );
+      return this.model.aggregate(pipeline as PipelineStage[]);
+    }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
@@ -451,5 +441,96 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {
     return sort as { [p: string]: SortOrder };
+  }
+
+  private constructAggregationPipeline(
+    parsedQuery: Indexable,
+    authorizedQueryPipeline: object[],
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: any;
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const pipeline = [{ $match: parsedQuery }, ...authorizedQueryPipeline];
+    if (!isNil(options?.skip)) {
+      pipeline.push({ $skip: options?.skip });
+    }
+    if (!isNil(options?.limit)) {
+      pipeline.push({ $limit: options?.limit });
+    }
+    if (!isNil(options?.sort)) {
+      pipeline.push({ $sort: this.parseSort(options?.sort) });
+    }
+    if (!isNil(options?.populate) && !isEmpty(options?.populate)) {
+      pipeline.push([...this.parsePipelinePopulate(options!.populate)]);
+    }
+    return pipeline;
+  }
+
+  // TODO: check this
+  private parsePipelinePopulate(population: string[]) {
+    const pipeline: object[] = [];
+    const populates = this.calculatePopulates(population);
+    for (const populate of populates) {
+      let field;
+      if (typeof populate === 'object') {
+        field = populate.path;
+      } else {
+        field = populate;
+      }
+      const model = (
+        (this.schema as _ConduitSchema).compiledFields[field as string] as ConduitModel
+      ).model!;
+      const relatedCollection = this.adapter.models[model].originalSchema.collectionName;
+      pipeline.push({
+        $lookup: {
+          from: relatedCollection,
+          localField: field,
+          foreignField: '_id',
+          as: field,
+        },
+      });
+    }
+    return pipeline;
+  }
+
+  private async getAuthorizedQueryPipeline(
+    operation: string,
+    userId?: string,
+    scope?: string,
+  ) {
+    if (
+      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
+      (isNil(userId) && isNil(scope))
+    ) {
+      return [];
+    }
+    const isAvailable = this.grpcSdk.isAvailable('authorization');
+    if (!isAvailable) {
+      throw new Error('Authorization service is not available');
+    }
+    if (scope) {
+      if (userId) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${userId}`,
+          actions: [operation],
+          resource: scope,
+        });
+        if (!allowed?.allow) {
+          throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+        }
+      }
+    }
+    const query = await this.grpcSdk.authorization!.getAuthorizedQuery({
+      subject: scope ?? `User:${userId}`,
+      action: operation,
+      resourceType: this.originalSchema.name,
+    });
+    return query.mongoQuery;
   }
 }

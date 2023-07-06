@@ -169,20 +169,6 @@ export abstract class SchemaAdapter<T> {
     }
   }
 
-  async getTestAuthorizedQuery(operation: string, userId?: string, scope?: string) {
-    if (
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
-      (isNil(userId) && isNil(scope))
-    )
-      return [];
-    const query = await this.grpcSdk.authorization!.getAuthorizedQuery({
-      subject: `User:${userId}`,
-      action: operation,
-      resourceType: this.originalSchema.name,
-    });
-    return query.mongoQuery;
-  }
-
   async getPaginatedAuthorizedQuery(
     operation: string,
     parsedQuery: Indexable,

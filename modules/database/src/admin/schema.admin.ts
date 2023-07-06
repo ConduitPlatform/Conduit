@@ -590,6 +590,9 @@ export class SchemaAdmin {
       },
       { userId: '64a415b2894aa4e2c0fdbb42' },
     );
+    const test3 = await this.database
+      .getSchemaModel('AccessToken')
+      .model.findMany({}, { populate: ['user'] });
     return this.database.getDatabaseType();
   }
 
