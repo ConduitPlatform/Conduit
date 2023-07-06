@@ -268,6 +268,10 @@ export function parseQuery(
       relations,
       objectDotPathMapping,
     );
+    if (queryOptions.exclude)
+      parsingResult.attributes.exclude = parsingResult.attributes.exclude!.concat(
+        queryOptions.exclude,
+      );
   }
   if (
     Object.keys(parsingResult.query).length === 0 &&
