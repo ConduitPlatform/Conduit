@@ -28,6 +28,11 @@ export abstract class ConduitServiceModule {
     this._moduleName = camelCase(moduleName);
   }
 
+  private _registered = false;
+  set registered(registered: boolean) {
+    this._registered = registered;
+  }
+
   protected _port!: string; // port to bring up gRPC service
 
   get port(): string {
@@ -71,8 +76,11 @@ export abstract class ConduitServiceModule {
     }
     if (this._serviceHealthState !== state) {
       this._serviceHealthState = state;
-      this.events.emit(`grpc-health-change:${this._serviceName}`, state);
-      this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
+      // do not emit health updates until registered
+      if (this._registered) {
+        this.events.emit(`grpc-health-change:${this._serviceName}`, state);
+        this._grpcSdk?.config.moduleHealthProbe(this._moduleName, this._address);
+      }
     }
   }
 
@@ -87,6 +95,11 @@ export abstract class ConduitServiceModule {
           HealthCheckStatus.SERVICE_UNKNOWN as unknown as HealthCheckResponse_ServingStatus,
       });
     } else {
+      if (!this._registered) {
+        return callback(null, {
+          status: HealthCheckResponse_ServingStatus.UNKNOWN,
+        });
+      }
       callback(null, {
         status: this._serviceHealthState as unknown as HealthCheckResponse_ServingStatus,
       });

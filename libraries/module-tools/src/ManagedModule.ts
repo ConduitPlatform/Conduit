@@ -14,6 +14,7 @@ import { convictConfigParser } from './utilities/convictConfigParser';
 import { initializeSdk } from './utilities/initializeSdk';
 import { RoutingManager } from './routing';
 import { RoutingController } from './routing/RoutingController';
+import { ModuleLifecycleStage } from './interfaces/ModuleLifecycleStage';
 
 export abstract class ManagedModule<T> extends ConduitServiceModule {
   readonly config?: convict.Config<T>;
@@ -23,9 +24,11 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
   protected abstract readonly metricsSchema?: object;
   private readonly serviceAddress: string;
   private readonly servicePort: string;
+  private _moduleState: ModuleLifecycleStage;
 
   protected constructor(moduleName: string) {
     super(moduleName);
+    this._moduleState = ModuleLifecycleStage.CREATE_GRPC;
     if (!process.env.CONDUIT_SERVER) {
       throw new Error('CONDUIT_SERVER is undefined, specify Conduit server URL');
     }
@@ -224,17 +227,22 @@ export abstract class ManagedModule<T> extends ConduitServiceModule {
 
   private async preRegisterLifecycle(): Promise<void> {
     await this.createGrpcServer();
+    this._moduleState = ModuleLifecycleStage.PRE_SERVER_START;
     await this.preServerStart();
     await this.grpcSdk.initializeEventBus();
     await this.handleConfigSyncUpdate();
     await this.registerMetrics();
     await this.startGrpcServer();
+    this._moduleState = ModuleLifecycleStage.SERVER_STARTED;
     await this.onServerStart();
     await this.initializeMetrics();
+    this._moduleState = ModuleLifecycleStage.PRE_REGISTER;
     await this.preRegister();
   }
 
   private async postRegisterLifecycle(): Promise<void> {
+    this._moduleState = ModuleLifecycleStage.POST_REGISTER;
+    this.registered = true;
     await this.onRegister();
     if (this.config) {
       const configSchema = this.config.getSchema();
