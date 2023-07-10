@@ -1,7 +1,7 @@
 export enum ModuleLifecycleStage {
-  CREATE_GRPC = 'pre-register',
-  PRE_SERVER_START = 'post-register',
-  SERVER_STARTED = 'pre-activate',
-  PRE_REGISTER = 'post-activate',
-  POST_REGISTER = 'pre-deactivate',
+  CREATE_GRPC = 'creat-grpc-server',
+  PRE_SERVER_START = 'pre-grpc-start',
+  SERVER_STARTED = 'grpc-server-started',
+  PRE_REGISTER = 'pre-register',
+  POST_REGISTER = 'post-register',
 }
