@@ -18,9 +18,10 @@ import {
 } from '../../interfaces';
 import { MongooseAdapter } from './index';
 import ConduitGrpcSdk, {
-  ConduitModel,
   ConduitSchema,
+  GrpcError,
   Indexable,
+  status,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isEmpty, isNil } from 'lodash';
@@ -77,7 +78,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-
     const obj = await this.model.create(parsedQuery).then(r => r.toObject());
     await this.addPermissionToData(obj, options);
     return obj;
@@ -130,14 +130,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+    const parsedFilter = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
-      parsedFilter,
-      false,
-      options?.userId,
-      options?.scope,
-    );
+      options,
+    ).then(r => r.parsedQuery);
+    if (isNil(parsedFilter)) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -161,14 +161,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+    const parsedFilter = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
-      parsedFilter,
-      false,
-      options?.userId,
-      options?.scope,
-    );
+      options,
+    ).then(r => r.parsedQuery);
+    if (isNil(parsedFilter)) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -192,14 +192,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+    const parsedFilter = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
-      parsedFilter,
-      true,
-      options?.userId,
-      options?.scope,
-    );
+      options,
+    ).then(r => r.parsedQuery);
     if (isNil(parsedFilter)) {
       return [];
     }
@@ -218,14 +215,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const { parsedQuery } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
-      parsedQuery,
-      false,
-      options?.userId,
-      options?.scope,
+      options,
     );
+    if (isNil(parsedQuery)) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+    }
     return this.model.deleteOne(parsedQuery!).exec();
   }
 
@@ -236,13 +233,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const { parsedQuery } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
-      parsedQuery,
-      true,
-      options?.userId,
-      options?.scope,
+      options,
     );
     if (isNil(parsedQuery)) {
       return [];
@@ -262,26 +256,20 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
-    const authorizedQueryPipeline = await this.getAuthorizedQueryPipeline(
+    const { parsedQuery, modified } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'read',
-      options?.userId,
-      options?.scope,
+      options,
     );
-    if (!isEmpty(authorizedQueryPipeline)) {
-      const pipeline = this.constructAggregationPipeline(
-        parsedQuery,
-        authorizedQueryPipeline,
-        options,
-      );
-      return this.model.aggregate(pipeline as PipelineStage[]);
+    if (isNil(parsedQuery)) {
+      return [];
     }
     let finalQuery = this.model.find(parsedQuery, options?.select);
-    if (!isNil(options?.skip)) {
-      finalQuery = finalQuery.skip(options!.skip);
+    if (!isNil(options?.skip) && !modified) {
+      finalQuery = finalQuery.skip(options!.skip!);
     }
-    if (!isNil(options?.limit)) {
-      finalQuery = finalQuery.limit(options!.limit);
+    if (!isNil(options?.limit) && !modified) {
+      finalQuery = finalQuery.limit(options!.limit!);
     }
     if (!isNil(options?.populate)) {
       finalQuery = this.populate(finalQuery, options?.populate ?? []);
@@ -301,21 +289,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
-    const authorizedQueryPipeline = await this.getAuthorizedQueryPipeline(
+    const { parsedQuery } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'read',
-      options?.userId,
-      options?.scope,
+      options,
     );
-    if (!isEmpty(authorizedQueryPipeline)) {
-      const pipeline = this.constructAggregationPipeline(
-        parsedQuery,
-        authorizedQueryPipeline,
-        options,
-      );
-      return this.model.aggregate(pipeline as PipelineStage[]);
+    if (isNil(parsedQuery)) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
     }
-    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    let finalQuery = this.model.findOne(parsedQuery, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
@@ -329,16 +311,39 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     if (!isNil(options?.userId) || !isNil(options?.scope)) {
-      const view = await this.permissionCheck('read', options?.userId, options?.scope);
-      if (view) {
-        return view.countDocuments(query, {
-          userId: undefined,
-          scope: undefined,
-        });
+      const authorizedPipeline = await this.getAuthorizedPipeline(
+        'read',
+        options?.userId,
+        options?.scope,
+      );
+      if (!isEmpty(authorizedPipeline)) {
+        authorizedPipeline.push(
+          ...[
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                count: 1,
+              },
+            },
+          ],
+        );
+        const pipeline = this.constructAggregationPipeline(
+          parsedQuery,
+          authorizedPipeline,
+        );
+        return this.model
+          .aggregate(pipeline as PipelineStage[])
+          .then(r => (!isEmpty(r) ? r[0].count : 0));
       }
     }
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 
@@ -466,40 +471,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (!isNil(options?.sort)) {
       pipeline.push({ $sort: this.parseSort(options?.sort) });
     }
-    if (!isNil(options?.populate) && !isEmpty(options?.populate)) {
-      pipeline.push([...this.parsePipelinePopulate(options!.populate)]);
-    }
     return pipeline;
   }
 
-  // TODO: check this
-  private parsePipelinePopulate(population: string[]) {
-    const pipeline: object[] = [];
-    const populates = this.calculatePopulates(population);
-    for (const populate of populates) {
-      let field;
-      if (typeof populate === 'object') {
-        field = populate.path;
-      } else {
-        field = populate;
-      }
-      const model = (
-        (this.schema as _ConduitSchema).compiledFields[field as string] as ConduitModel
-      ).model!;
-      const relatedCollection = this.adapter.models[model].originalSchema.collectionName;
-      pipeline.push({
-        $lookup: {
-          from: relatedCollection,
-          localField: field,
-          foreignField: '_id',
-          as: field,
-        },
-      });
-    }
-    return pipeline;
-  }
-
-  private async getAuthorizedQueryPipeline(
+  private async getAuthorizedPipeline(
     operation: string,
     userId?: string,
     scope?: string,
@@ -532,5 +507,40 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       resourceType: this.originalSchema.name,
     });
     return query.mongoQuery;
+  }
+
+  private async getAuthorizedIdsQuery(
+    parsedQuery: Indexable,
+    operation: string,
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: any;
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const authorizedPipeline = await this.getAuthorizedPipeline(
+      operation,
+      options?.userId,
+      options?.scope,
+    );
+    if (isEmpty(authorizedPipeline)) {
+      return { parsedQuery, modified: false };
+    }
+    const pipeline = this.constructAggregationPipeline(
+      parsedQuery,
+      authorizedPipeline,
+      options,
+    );
+    const ids = await this.model
+      .aggregate(pipeline as PipelineStage[])
+      .then(r => r.map(r => r._id));
+    if (isEmpty(ids)) {
+      return { parsedQuery: null, modified: false };
+    }
+    return { parsedQuery: { _id: { $in: ids } }, modified: true };
   }
 }
