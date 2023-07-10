@@ -290,6 +290,7 @@ export class ServiceDiscovery {
     broadcast = true,
   ) {
     if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
+      this.grpcSdk.updateModuleHealth(moduleName, false);
       // Deregister Unresponsive Module
       delete this.moduleHealth[moduleName];
       this.registeredModules.delete(moduleName);
@@ -312,6 +313,10 @@ export class ServiceDiscovery {
         this.servingStatusUpdate = true;
       }
     }
+    this.grpcSdk.updateModuleHealth(
+      moduleName,
+      moduleStatus === HealthCheckStatus.SERVING,
+    );
     this.registeredModules.set(moduleName, module);
     this.moduleHealth[moduleName] = {
       address: moduleUrl,

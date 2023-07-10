@@ -299,28 +299,25 @@ export default class ConduitGrpcSdk {
     this.config.watchModules().then();
     emitter.on('serving-modules-update', modules => {
       Object.keys(this._modules).forEach(r => {
-        if (r !== this.name) {
-          const found = modules.filter(
-            (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
-          );
-          if ((!found || found.length === 0) && this._modules[r]) {
-            this._modules[r]?.closeConnection();
-            emitter.emit(`module-connection-update:${r}`, false);
-          }
+        if (r === this.name) return;
+        const found = modules.filter(
+          (m: ModuleListResponse_ModuleResponse) => m.moduleName === r && m.serving,
+        );
+        if ((!found || found.length === 0) && this._modules[r]) {
+          this._modules[r]?.closeConnection();
+          emitter.emit(`module-connection-update:${r}`, false);
         }
       });
       modules.forEach((m: ModuleListResponse_ModuleResponse) => {
-        if (m.moduleName !== this.name) {
-          const alreadyActive = this._modules[m.moduleName]?.active;
-          if (!alreadyActive && m.serving) {
-            if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
-              this._modules[m.moduleName].openConnection();
-            } else {
-              this.createModuleClient(m.moduleName, m.url);
-            }
-            emitter.emit(`module-connection-update:${m.moduleName}`, true);
-          }
+        if (m.moduleName === this.name || !m.serving) return;
+        const alreadyActive = this._modules[m.moduleName]?.active;
+        if (alreadyActive) return;
+        if (this._availableModules[m.moduleName] && this._modules[m.moduleName]) {
+          this._modules[m.moduleName].openConnection();
+        } else {
+          this.createModuleClient(m.moduleName, m.url);
         }
+        emitter.emit(`module-connection-update:${m.moduleName}`, true);
       });
     });
   }
@@ -418,6 +415,11 @@ export default class ConduitGrpcSdk {
       });
   }
 
+  updateModuleHealth(moduleName: string, serving: boolean) {
+    const emitter = this.config.getModuleWatcher();
+    emitter.emit(`module-connection-update:${moduleName}`, serving);
+  }
+
   createModuleClient(moduleName: string, moduleUrl: string) {
     if (this._modules[moduleName]) return;
     moduleUrl =
@@ -488,11 +490,18 @@ export default class ConduitGrpcSdk {
     return !!this._modules[moduleName]?.active;
   }
 
-  async waitForExistence(moduleName: string) {
-    while (!this._modules[moduleName]) {
-      await sleep(1000);
-    }
-    return true;
+  async waitForExistence(moduleName: string, onlyIfServing: boolean = true) {
+    if (this.isAvailable(moduleName)) return true;
+    const emitter = this.config.getModuleWatcher();
+    return new Promise(resolve => {
+      const listener = (serving: boolean) => {
+        if (!onlyIfServing || (onlyIfServing && serving)) {
+          emitter.removeListener(`module-connection-update:${moduleName}`, listener);
+          return resolve(true);
+        }
+      };
+      emitter.on(`module-connection-update:${moduleName}`, listener);
+    });
   }
 
   onceModuleUp(moduleName: string, callback: () => void) {
