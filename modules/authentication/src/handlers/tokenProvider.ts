@@ -127,20 +127,22 @@ export class TokenProvider {
         user: userId,
       });
     } else if (clientConfig.multipleUserSessions || clientConfig.multipleClientLogins) {
-      await this.deleteUserTokens({
-        token: authToken,
-      });
+      const accessToken = await AccessToken.getInstance().findOne({ token: authToken });
+      if (accessToken) {
+        await AccessToken.getInstance().deleteOne({ token: authToken });
+        await RefreshToken.getInstance().deleteOne({ accessToken: accessToken._id });
+      }
     }
   }
 
-  deleteUserTokens(query: Query<AccessToken | RefreshToken>) {
+  deleteUserTokens(query: Query<AccessToken>) {
     const promise1 = AccessToken.getInstance().deleteMany(query);
-    const promise2 = RefreshToken.getInstance().deleteMany(query);
+    const promise2 = RefreshToken.getInstance().deleteMany(query as Query<RefreshToken>);
 
     return Promise.all([promise1, promise2]);
   }
 
-  private createUserTokens(
+  private async createUserTokens(
     tokenOptions: TokenOptions,
   ): Promise<[AccessToken, RefreshToken?]> {
     const signTokenOptions: SignOptions = {
@@ -158,7 +160,7 @@ export class TokenProvider {
     // the tokens should not be created during the refresh token flow
     // and the noSudo flag needs to be false or not set
     const sudo = authorized && !tokenOptions.isRefresh && !tokenOptions.noSudo;
-    const accessTokenPromise = AccessToken.getInstance().create({
+    const accessToken = await AccessToken.getInstance().create({
       user: tokenOptions.user._id,
       clientId: tokenOptions.clientId,
       token: this.signToken(
@@ -170,25 +172,20 @@ export class TokenProvider {
         .add(tokenOptions.config.accessTokens.expiryPeriod as number, 'milliseconds')
         .toDate(),
     });
-    const promises: [
-      accesstoken: Promise<AccessToken>,
-      refreshToken?: Promise<RefreshToken>,
-    ] = [accessTokenPromise];
-    let refreshTokenPromise;
-    // do not construct refresh tokens when the user has 2fa enabled
-    // the tokens will be constructed when the user has successfully verified the 2fa
+
+    let refreshToken;
     if (tokenOptions.config.refreshTokens.enabled && authorized) {
-      refreshTokenPromise = RefreshToken.getInstance().create({
+      refreshToken = await RefreshToken.getInstance().create({
         user: tokenOptions.user._id,
         clientId: tokenOptions.clientId,
         token: AuthUtils.randomToken(),
+        accessToken: accessToken._id,
         expiresOn: moment()
           .add(tokenOptions.config.refreshTokens.expiryPeriod as number, 'milliseconds')
           .toDate(),
       });
-      promises.push(refreshTokenPromise);
     }
-    return Promise.all(promises);
+    return [accessToken, refreshToken];
   }
 
   private constructCookies(

@@ -15,6 +15,7 @@ export class OneSignalProvider extends BaseNotificationProvider<IOneSignalSettin
   constructor(settings: IOneSignalSettings) {
     super();
     this._initialized = false;
+    this.isBaseProvider = false;
     this.updateProvider(settings);
     this.appId = settings.appId;
   }
