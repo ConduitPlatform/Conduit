@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
@@ -24,6 +25,9 @@ import {
   UserDeleteResponse,
   UserLoginRequest,
   UserLoginResponse,
+  GetTeamRequest,
+  CreateTeamRequest,
+  Team as GrpcTeam,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
@@ -48,6 +52,8 @@ export default class Authentication extends ManagedModule<Config> {
       userCreate: this.userCreate.bind(this),
       changePass: this.changePass.bind(this),
       userDelete: this.userDelete.bind(this),
+      getTeam: this.getTeam.bind(this),
+      createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
     },
   };
@@ -317,6 +323,41 @@ export default class Authentication extends ManagedModule<Config> {
       });
 
       return callback(null, { password });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async getTeam(call: GrpcRequest<GetTeamRequest>, callback: GrpcCallback<GrpcTeam>) {
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const team = (await new TeamsAdmin(this.grpcSdk).getTeam(request)) as models.Team;
+      return callback(null, {
+        id: team._id,
+        name: team.name,
+        parentTeam: team.parentTeam,
+        isDefault: team.isDefault,
+      });
+    } catch (e) {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    }
+  }
+
+  async createTeam(
+    call: GrpcRequest<CreateTeamRequest>,
+    callback: GrpcCallback<GrpcTeam>,
+  ) {
+    const request = createParsedRouterRequest(call.request);
+    try {
+      const team = (await new TeamsAdmin(this.grpcSdk).createTeam(
+        request,
+      )) as models.Team;
+      return callback(null, {
+        id: team._id,
+        name: team.name,
+        parentTeam: team.parentTeam,
+        isDefault: team.isDefault,
+      });
     } catch (e) {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     }
