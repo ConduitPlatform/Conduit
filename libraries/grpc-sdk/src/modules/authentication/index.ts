@@ -5,6 +5,7 @@ import {
   UserCreateResponse,
   UserDeleteResponse,
   UserLoginResponse,
+  Team,
 } from '../../protoUtils';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
@@ -31,6 +32,14 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   changePass(email: string, password?: string): Promise<UserCreateResponse> {
     return this.client!.changePass({ email, password });
+  }
+
+  getTeam(teamId: string): Promise<Team> {
+    return this.client!.getTeam({ teamId });
+  }
+
+  createTeam(name: string, parentTeam?: string, isDefault: boolean = false) {
+    return this.client!.createTeam({ name, parentTeam, isDefault });
   }
 
   teamDelete(teamId: string): Promise<TeamDeleteResponse> {
