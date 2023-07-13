@@ -3,7 +3,6 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   HealthCheckStatus,
-  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
 import { isNil } from 'lodash';
