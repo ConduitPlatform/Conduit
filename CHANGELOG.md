@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.16](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.15...v0.16.0-alpha.16) (2023-07-13)
+
+
+### Features
+
+* **authentication,grpc-sdk:** getTeam, createTeam gRPC methods ([#659](https://github.com/ConduitPlatform/Conduit/issues/659)) ([d7b686e](https://github.com/ConduitPlatform/Conduit/commit/d7b686e0844e99b5eddc041c05eef9cb647b2ad5))
+* **authentication:** pass user object to magicLink email template ([#651](https://github.com/ConduitPlatform/Conduit/issues/651)) ([15022d4](https://github.com/ConduitPlatform/Conduit/commit/15022d497e5a49b1d542dfb8ee5dc02b36c785c9))
+
+
+### Bug Fixes
+
+* **authentication:** case-sensitive User.email queries ([#649](https://github.com/ConduitPlatform/Conduit/issues/649)) ([938d45a](https://github.com/ConduitPlatform/Conduit/commit/938d45a0ab156c850c372ee7fa0fef2a27d617fe))
+* **authentication:** emails are not always converted to lowercase before storing ([#648](https://github.com/ConduitPlatform/Conduit/issues/648)) ([810cf4f](https://github.com/ConduitPlatform/Conduit/commit/810cf4fdd24c73ca43bb812ea0aae825f13b5efb))
+* **authentication:** magic link hook verificationToken url param ([#647](https://github.com/ConduitPlatform/Conduit/issues/647)) ([9d3d902](https://github.com/ConduitPlatform/Conduit/commit/9d3d902ffb283b834ce9a076c4ece43d0f1442d6))
+* **authentication:** refresh tokens not being deleted on logout ([#650](https://github.com/ConduitPlatform/Conduit/issues/650)) ([0f40412](https://github.com/ConduitPlatform/Conduit/commit/0f40412b6ac822835726beff0aadef5497df0397))
+* **database:** excluded fields ignored when not using select ([#653](https://github.com/ConduitPlatform/Conduit/issues/653)) ([032701c](https://github.com/ConduitPlatform/Conduit/commit/032701cd78bc9cef13a55de04fb0cadd15726426))
+* **database:** paginating/sorting on findMany twice, causing data issues ([a5bf9da](https://github.com/ConduitPlatform/Conduit/commit/a5bf9da51143dd794131a40f8fe4f8cec1835d06))
+* **database:** sorting not triggering after view ([988482f](https://github.com/ConduitPlatform/Conduit/commit/988482f6489eeabc4a00ac3c7a616d1a742374f3))
+* **email:** email template model subject/body field sql size ([#652](https://github.com/ConduitPlatform/Conduit/issues/652)) ([44a47dd](https://github.com/ConduitPlatform/Conduit/commit/44a47ddedc5b0de67d4892d61f8152898c2e33d3))
+* libraries/grpc-sdk/package.json to reduce vulnerabilities ([#654](https://github.com/ConduitPlatform/Conduit/issues/654)) ([ef8fb00](https://github.com/ConduitPlatform/Conduit/commit/ef8fb00e8d5a356fe934f12d3910aa1a2a9905ed))
+* **push-notifications:** base provider starting as not initialized ([25b612c](https://github.com/ConduitPlatform/Conduit/commit/25b612c010f24337174da0ed07aff1d14122df62))
+* **push-notifications:** base provider trying to fetch tokens ([5f751eb](https://github.com/ConduitPlatform/Conduit/commit/5f751eb8346e1ae49a509dc7c11d867e10e8f258))
+
 ## [0.16.0-alpha.15](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.14...v0.16.0-alpha.15) (2023-06-27)
 
 ## [0.16.0-alpha.14](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.13...v0.16.0-alpha.14) (2023-06-26)
