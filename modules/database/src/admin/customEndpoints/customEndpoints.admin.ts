@@ -36,7 +36,7 @@ export class CustomEndpointsAdmin {
       .getSchemaModel('CustomEndpoints')
       .model.findMany({})
       .then(r =>
-        r.map(obj => {
+        r.map((obj: any) => {
           delete obj._id;
           delete obj.selectedSchema;
           delete obj.createdAt;

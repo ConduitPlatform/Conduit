@@ -127,7 +127,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
@@ -158,7 +158,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
     parsedFilter = await this.getAuthorizedQuery(
       'edit',
@@ -259,7 +259,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       userId?: string;
       scope?: string;
     },
-  ) {
+  ): Promise<any> {
     let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
       parseQuery(this.parseStringToQuery(query)),
@@ -296,7 +296,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       select?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     parsedQuery = await this.getAuthorizedQuery(
       'read',

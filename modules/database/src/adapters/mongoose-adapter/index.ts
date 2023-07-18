@@ -29,7 +29,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   mongoose: Mongoose;
   connectionString: string;
   options: ConnectOptions = {
-    keepAlive: true,
     minPoolSize: 5,
     connectTimeoutMS: this.maxConnTimeoutMs,
     serverSelectionTimeoutMS: this.maxConnTimeoutMs,
