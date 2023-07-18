@@ -34,6 +34,7 @@ export class StorageRoutes {
         },
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
+        middlewares: ['authMiddleware?'],
         description: `Returns a file.`,
       },
       new ConduitRouteReturnDefinition(File.name),
@@ -48,6 +49,7 @@ export class StorageRoutes {
         queryParams: {
           redirect: { type: TYPE.Boolean, required: false },
         },
+        middlewares: ['authMiddleware?'],
         action: ConduitRouteActions.GET,
         path: '/storage/getFileUrl/:id',
         description: `Returns the file's url and optionally redirects to it.`,

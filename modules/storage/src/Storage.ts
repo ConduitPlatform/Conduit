@@ -31,10 +31,11 @@ import { createStorageProvider } from './providers';
 import { getAwsAccountId } from './utils';
 import {
   ConfigController,
-  ManagedModule,
   createParsedRouterRequest,
+  ManagedModule,
 } from '@conduitplatform/module-tools';
 import { StorageParamAdapter } from './adapter/StorageParamAdapter';
+import { FileResource } from './authz';
 
 export default class Storage extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -97,8 +98,13 @@ export default class Storage extends ManagedModule<Config> {
         },
         false,
       );
-      const { provider, local, google, azure, aws, aliyun } =
+      const { provider, local, google, azure, aws, aliyun, authorization } =
         ConfigController.getInstance().config;
+      if (authorization.enabled) {
+        this.grpcSdk.onceModuleUp('authorization', () => {
+          this.grpcSdk.authorization!.defineResource(FileResource);
+        });
+      }
       this.storageProvider = createStorageProvider(provider, {
         local,
         google,

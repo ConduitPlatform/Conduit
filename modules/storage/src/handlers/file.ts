@@ -1,6 +1,7 @@
 import ConduitGrpcSdk, {
   DatabaseProvider,
   GrpcError,
+  Indexable,
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
@@ -9,7 +10,7 @@ import { status } from '@grpc/grpc-js';
 import { isNil, isString } from 'lodash';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 import { IStorageProvider } from '../interfaces';
-import { normalizeFolderPath, deepPathHandler } from '../utils';
+import { deepPathHandler, normalizeFolderPath } from '../utils';
 
 export class FileHandlers {
   private readonly database: DatabaseProvider;
@@ -34,16 +35,79 @@ export class FileHandlers {
     this.storageProvider = storageProvider;
   }
 
+  async fileAccessCheck(
+    action: 'read' | 'create' | 'edit' | 'delete',
+    request: Indexable,
+    file?: File,
+  ) {
+    if (!request.context.user) {
+      throw new GrpcError(status.PERMISSION_DENIED, 'File is not public');
+    }
+    if (ConfigController.getInstance().config.authorization.enabled) {
+      if (action === 'create' && request.params.scope) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${request.context.user._id}`,
+          actions: [action],
+          resource: request.params.scope,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to create files in this scope',
+          );
+        }
+      }
+      if (['read', 'edit', 'delete'].includes(action)) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${request.context.user._id}`,
+          actions: [action],
+          resource: `File:${file!._id}`,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(status.PERMISSION_DENIED, 'You do not have access to file');
+        }
+      }
+    }
+  }
+
+  async fileAccessAdd(file: File, request: Indexable) {
+    if (ConfigController.getInstance().config.authorization.enabled) {
+      if (request.params.scope) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${request.context.user._id}`,
+          actions: ['create'],
+          resource: request.params.scope,
+        });
+        if (!allowed || !allowed.allow) {
+          throw new GrpcError(
+            status.PERMISSION_DENIED,
+            'You are not allowed to create files in this scope',
+          );
+        }
+      }
+      await this.grpcSdk.authorization?.createRelation({
+        subject: request.params.scope ?? `User:${request.context.user._id}`,
+        relation: 'owner',
+        resource: `File:${file._id}`,
+      });
+    }
+  }
+
   async getFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const file = await File.getInstance().findOne({ _id: call.request.params.id });
     if (isNil(file)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
+    }
+
+    if (!file.isPublic) {
+      await this.fileAccessCheck('read', call.request, file);
     }
     return file;
   }
 
   async createFile(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, data, container, mimeType, isPublic } = call.request.params;
+    await this.fileAccessCheck('create', call.request);
     const folder = normalizeFolderPath(call.request.params.folder);
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
@@ -66,7 +130,16 @@ export class FileHandlers {
     }
 
     try {
-      return this.storeNewFile(data, usedContainer, folder, isPublic, name, mimeType);
+      const file = await this.storeNewFile(
+        data,
+        usedContainer,
+        folder,
+        isPublic,
+        name,
+        mimeType,
+      );
+      await this.fileAccessAdd(file, call.request);
+      return file;
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -77,6 +150,7 @@ export class FileHandlers {
 
   async createFileUploadUrl(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { name, container, size = 0, mimeType, isPublic } = call.request.params;
+    await this.fileAccessCheck('create', call.request);
     const folder = normalizeFolderPath(call.request.params.folder);
     const config = ConfigController.getInstance().config;
     const usedContainer = isNil(container)
@@ -96,7 +170,7 @@ export class FileHandlers {
     }
 
     try {
-      return await this._createFileUploadUrl(
+      const { file, url } = await this._createFileUploadUrl(
         usedContainer,
         folder,
         isPublic,
@@ -104,6 +178,8 @@ export class FileHandlers {
         size,
         mimeType,
       );
+      await this.fileAccessAdd(file, call.request);
+      return { file, url };
     } catch (e) {
       throw new GrpcError(
         status.INTERNAL,
@@ -118,6 +194,7 @@ export class FileHandlers {
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
+    await this.fileAccessCheck('edit', call.request, found);
     const { name, folder, container } = await this.validateFilenameAndContainer(
       call,
       found,
@@ -145,6 +222,7 @@ export class FileHandlers {
     if (isNil(found)) {
       throw new GrpcError(status.NOT_FOUND, 'File does not exist');
     }
+    await this.fileAccessCheck('edit', call.request, found);
     const { name, folder, container } = await this.validateFilenameAndContainer(
       call,
       found,
@@ -175,6 +253,7 @@ export class FileHandlers {
       if (isNil(found)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
+      await this.fileAccessCheck('delete', call.request, found);
       const success = await this.storageProvider
         .container(found.container)
         .delete((found.folder === '/' ? '' : found.folder) + found.name);
@@ -202,6 +281,7 @@ export class FileHandlers {
       if (found.isPublic) {
         return { redirect: found.url };
       }
+      await this.fileAccessCheck('read', call.request, found);
       const url = await this.storageProvider
         .container(found.container)
         .getSignedUrl((found.folder === '/' ? '' : found.folder) + found.name);
@@ -227,7 +307,7 @@ export class FileHandlers {
       if (isNil(file)) {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
-
+      await this.fileAccessCheck('read', call.request, file);
       let data: Buffer;
       const result = await this.storageProvider
         .container(file.container)
