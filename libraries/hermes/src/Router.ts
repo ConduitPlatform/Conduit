@@ -93,7 +93,7 @@ export abstract class ConduitRouter {
           return this._middlewares![middleware].executeRequest.bind(
             this._middlewares![m],
           )(params)
-            .then((p: any) => {
+            .then(p => {
               if (p.result) {
                 Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
               }
