@@ -7,6 +7,7 @@ import ConduitGrpcSdk, {
 import {
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -26,11 +27,14 @@ export class StorageRoutes {
 
   async registerRoutes() {
     this._routingManager.clear();
-
+    const authzEnabled = ConfigController.getInstance().config.authorization.enabled;
     this._routingManager.route(
       {
         urlParams: {
           id: { type: TYPE.String, required: true },
+        },
+        queryParams: {
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         action: ConduitRouteActions.GET,
         path: '/storage/file/:id',
@@ -48,6 +52,7 @@ export class StorageRoutes {
         },
         queryParams: {
           redirect: { type: TYPE.Boolean, required: false },
+          ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
         },
         middlewares: ['authMiddleware?'],
         action: ConduitRouteActions.GET,
@@ -69,6 +74,9 @@ export class StorageRoutes {
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
           },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           action: ConduitRouteActions.POST,
           path: '/storage/file',
           description: `Creates a new file.`,
@@ -86,6 +94,9 @@ export class StorageRoutes {
             size: { type: TYPE.Number, required: false },
             container: { type: TYPE.String, required: false },
             isPublic: TYPE.Boolean,
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.POST,
           path: '/storage/upload',
@@ -110,6 +121,9 @@ export class StorageRoutes {
             mimeType: ConduitString.Optional,
             size: ConduitNumber.Optional,
           },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           action: ConduitRouteActions.PATCH,
           path: '/storage/upload/:id',
           description: `Updates a file and provides a URL to upload its data to.`,
@@ -125,6 +139,9 @@ export class StorageRoutes {
         {
           urlParams: {
             id: { type: TYPE.String, required: true },
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           action: ConduitRouteActions.GET,
           middlewares: ['authMiddleware'],
@@ -142,6 +159,9 @@ export class StorageRoutes {
           urlParams: {
             id: { type: TYPE.String, required: true },
           },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
+          },
           action: ConduitRouteActions.DELETE,
           path: '/storage/file/:id',
           description: `Deletes a file.`,
@@ -157,6 +177,9 @@ export class StorageRoutes {
         {
           urlParams: {
             id: { type: TYPE.String, required: true },
+          },
+          queryParams: {
+            ...(authzEnabled && { scope: { type: TYPE.String, required: false } }),
           },
           bodyParams: {
             name: ConduitString.Optional,
