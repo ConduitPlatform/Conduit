@@ -19,6 +19,7 @@ import { isNil } from 'lodash';
 import { FileHandlers } from '../handlers/file';
 import { _StorageContainer, _StorageFolder, File } from '../models';
 import { normalizeFolderPath } from '../utils';
+import { AdminFileHandlers } from './adminFile';
 
 export class AdminRoutes {
   private readonly routingManager: RoutingManager;
@@ -26,7 +27,7 @@ export class AdminRoutes {
   constructor(
     private readonly server: GrpcServer,
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly fileHandlers: FileHandlers,
+    private readonly fileHandlers: AdminFileHandlers,
   ) {
     this.routingManager = new RoutingManager(this.grpcSdk.admin, this.server);
     this.registerAdminRoutes();
