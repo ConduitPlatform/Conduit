@@ -44,7 +44,7 @@ export class FileHandlers {
       throw new GrpcError(status.PERMISSION_DENIED, 'File access is not public');
     }
     if (ConfigController.getInstance().config.authorization.enabled) {
-      if (action === 'create' && request.params.scope) {
+      if (action === 'create' && request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
           subject: `User:${request.context.user._id}`,
           actions: [action],
@@ -72,7 +72,7 @@ export class FileHandlers {
 
   async fileAccessAdd(file: File, request: Indexable) {
     if (ConfigController.getInstance().config.authorization.enabled) {
-      if (request.params.scope) {
+      if (request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
           subject: `User:${request.context.user._id}`,
           actions: ['create'],
