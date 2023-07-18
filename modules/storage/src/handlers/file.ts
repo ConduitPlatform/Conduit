@@ -279,6 +279,9 @@ export class FileHandlers {
         throw new GrpcError(status.NOT_FOUND, 'File does not exist');
       }
       if (found.isPublic) {
+        if (!call.request.params.redirect) {
+          return { result: found.url };
+        }
         return { redirect: found.url };
       }
       await this.fileAccessCheck('read', call.request, found);
