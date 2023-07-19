@@ -91,7 +91,7 @@ export abstract class ConduitRouter {
       } else {
         primaryPromise = primaryPromise.then(r => {
           return this._middlewares![middleware].executeRequest.bind(
-            this._middlewares![m],
+            this._middlewares![middleware],
           )(params)
             .then(p => {
               if (p.result) {
