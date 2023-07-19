@@ -402,9 +402,11 @@ export default class ConduitGrpcSdk {
   initializeModules() {
     return this._config!.moduleList()
       .then(r => {
+        const emitter = this.config.getModuleWatcher();
         this.lastSearch = Date.now();
         r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
         });
         return 'ok';
       })
