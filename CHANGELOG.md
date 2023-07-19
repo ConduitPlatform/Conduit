@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.17](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.16...v0.16.0-alpha.17) (2023-07-19)
+
+
+### Features
+
+* **storage:** authorization integration ([#661](https://github.com/ConduitPlatform/Conduit/issues/661)) ([008b81e](https://github.com/ConduitPlatform/Conduit/commit/008b81e9f0d6f747c44a48a258b027374123707d))
+
+
+### Bug Fixes
+
+* **database:** fix types in mongoose ([#662](https://github.com/ConduitPlatform/Conduit/issues/662)) ([818be97](https://github.com/ConduitPlatform/Conduit/commit/818be97e77331c30193a2e941ed954e7dfb41fa7))
+
 ## [0.16.0-alpha.16](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.15...v0.16.0-alpha.16) (2023-07-13)
 
 
