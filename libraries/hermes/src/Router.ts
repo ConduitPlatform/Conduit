@@ -85,18 +85,23 @@ export abstract class ConduitRouter {
       resolve({});
     });
     middlewares?.forEach(m => {
-      if (!this._middlewares?.hasOwnProperty(m)) {
+      const middleware = m.split('?')[0];
+      if (!this._middlewares?.hasOwnProperty(middleware)) {
         primaryPromise = Promise.reject('Middleware does not exist');
       } else {
         primaryPromise = primaryPromise.then(r => {
-          return this._middlewares![m].executeRequest.bind(this._middlewares![m])(
-            params,
-          ).then((p: any) => {
-            if (p.result) {
-              Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
-            }
-            return r;
-          });
+          return this._middlewares![middleware].executeRequest.bind(
+            this._middlewares![middleware],
+          )(params)
+            .then(p => {
+              if (p.result) {
+                Object.assign(r as Record<string, unknown>, JSON.parse(p.result));
+              }
+              return r;
+            })
+            .catch((err: Error) => {
+              if (!m.includes('?')) throw err;
+            });
         });
       }
     });
