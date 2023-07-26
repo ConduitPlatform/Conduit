@@ -38,19 +38,29 @@ export function getPostgresAccessListQuery(
   objectType: string,
   action: string,
 ) {
-  return `SELECT "${objectTypeCollection}".* FROM "${objectTypeCollection}"
-          INNER JOIN (
-              SELECT * FROM "cnd_Permission"
-              WHERE "computedTuple" LIKE '${computedTuple}%'
-          ) permissions ON permissions."computedTuple" = '${computedTuple}:' || "${objectTypeCollection}"._id
-          INNER JOIN (
-              SELECT * FROM "cnd_ActorIndex"
-              WHERE subject = '${subject}'
-          ) actors ON 1=1
-          INNER JOIN (
-              SELECT * FROM "cnd_ObjectIndex"
-              WHERE subject LIKE '${objectType}:%#${action}'
-          ) objects ON actors.entity = objects.entity;`;
+  return `
+  SELECT s.* FROM "${objectTypeCollection}" as s 
+  INNER JOIN (
+    (
+      SELECT obj.entity
+      FROM (
+        SELECT * FROM "cnd_ActorIndex"         
+        WHERE subject = '${subject}'
+      ) as actors
+      INNER JOIN (
+          SELECT * FROM "cnd_ObjectIndex"
+          WHERE subject LIKE '${objectType}:%#${action}'
+      ) as obj 
+      ON actors.entity = obj.entity
+    )
+    UNION (
+      SELECT "computedTuple" 
+      FROM "cnd_Permission"          
+      WHERE "computedTuple" LIKE '${computedTuple}%'
+    )
+  ) idx
+  ON  idx.entity LIKE '%' || TEXT(s._id) || '%'
+  `;
 }
 
 export function getSQLAccessListQuery(
