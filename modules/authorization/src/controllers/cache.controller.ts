@@ -23,7 +23,7 @@ export namespace RuleCache {
       .state!.getKey(`ruleCache:${computedTuple}`)
       .then((value: string | null) => {
         if (!isNil(value)) {
-          return Boolean(value);
+          return value === 'true';
         }
         return null;
       });
