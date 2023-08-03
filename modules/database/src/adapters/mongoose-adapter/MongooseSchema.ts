@@ -260,7 +260,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ): Promise<any> {
-    let { parsedQuery, modified } = await this.getPaginatedAuthorizedQuery(
+    const { query: filter, modified } = await this.getPaginatedAuthorizedQuery(
       'read',
       parseQuery(this.parseStringToQuery(query)),
       options?.userId,
@@ -269,10 +269,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.limit,
       options?.sort,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(filter)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedQuery, options?.select);
+    let finalQuery = this.model.find(filter, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options?.skip!);
     }
