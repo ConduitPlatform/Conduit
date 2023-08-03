@@ -303,20 +303,23 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       populate?: string[];
     },
   ) {
-    const { filter, parsingResult } = parseQueryFilter(
+    const filter = await this.getAuthorizedQuery(
+      'read',
+      query as Indexable,
+      false,
+      options?.userId,
+      options?.scope,
+    );
+    if (isNil(filter)) {
+      return null;
+    }
+    const { filter: parsedFilter, parsingResult } = parseQueryFilter(
       this,
       this.parseStringToQuery(query),
       {
         populate: options?.populate,
         select: options?.select,
       },
-    );
-    const parsedFilter = await this.getAuthorizedQuery(
-      'read',
-      filter,
-      false,
-      options?.userId,
-      options?.scope,
     );
     const findOptions: FindOptions = {
       where: parsedFilter!,
