@@ -1,9 +1,4 @@
-import ConduitGrpcSdk, {
-  ConduitSchema,
-  GrpcError,
-  Indexable,
-  status,
-} from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-sdk';
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
@@ -131,7 +126,7 @@ export abstract class SchemaAdapter<T> {
 
   async getAuthorizedQuery(
     operation: string,
-    parsedQuery: Indexable,
+    query: Indexable,
     many: boolean = false,
     userId?: string,
     scope?: string,
@@ -140,11 +135,11 @@ export abstract class SchemaAdapter<T> {
       !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
       (isNil(userId) && isNil(scope))
     )
-      return parsedQuery;
+      return query;
     const view = await this.permissionCheck(operation, userId, scope);
-    if (!view) return parsedQuery;
+    if (!view) return query;
     if (many) {
-      const docs = await view.findMany(parsedQuery, {
+      const docs = await view.findMany(query, {
         select: '_id',
         userId: undefined,
         scope: undefined,
@@ -158,12 +153,12 @@ export abstract class SchemaAdapter<T> {
         return { _id: { [Op.in]: docs.map((doc: any) => doc._id) } };
       }
     } else {
-      const doc = await view.findOne(parsedQuery, {
+      const doc = await view.findOne(query, {
         userId: undefined,
         scope: undefined,
       });
       if (isNil(doc)) {
-        throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+        return null;
       }
       return { _id: doc._id };
     }
