@@ -171,7 +171,7 @@ export abstract class SchemaAdapter<T> {
 
   async getPaginatedAuthorizedQuery(
     operation: string,
-    parsedQuery: Indexable,
+    query: Indexable,
     userId?: string,
     scope?: string,
     skip?: number,
@@ -182,10 +182,10 @@ export abstract class SchemaAdapter<T> {
       !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
       (isNil(userId) && isNil(scope))
     )
-      return { parsedQuery, modified: false };
+      return { query, modified: false };
     const view = await this.permissionCheck(operation, userId, scope);
-    if (!view) return { parsedQuery, modified: false };
-    const docs = await view.findMany(parsedQuery, {
+    if (!view) return { query, modified: false };
+    const docs = await view.findMany(query, {
       select: '_id',
       skip,
       limit,
@@ -194,23 +194,12 @@ export abstract class SchemaAdapter<T> {
       scope: undefined,
     });
     if (isNil(docs)) {
-      return { parsedQuery: null, modified: false };
+      return { query: null, modified: false };
     }
-    if (this.adapter.getDatabaseType() === 'MongoDB') {
-      return {
-        parsedQuery: {
-          _id: {
-            $in: docs.map((doc: any) => doc._id),
-          },
-        },
-        modified: true,
-      };
-    } else {
-      return {
-        parsedQuery: { _id: { [Op.in]: docs.map((doc: any) => doc._id) } },
-        modified: true,
-      };
-    }
+    return {
+      query: { _id: { $in: docs.map((doc: any) => doc._id) } },
+      modified: true,
+    };
   }
 
   async addPermissionToData(
