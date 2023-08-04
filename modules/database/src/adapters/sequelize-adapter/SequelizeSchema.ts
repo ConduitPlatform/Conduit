@@ -413,7 +413,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     }
 
     return this.model.findAll(findOptions).then(docs => {
-      if (!docs) return docs;
+      if (!docs.length) return docs;
       return docs.map(doc => {
         const document = doc.toJSON();
         unwrap(document, this.objectPaths, this.extractedRelations);

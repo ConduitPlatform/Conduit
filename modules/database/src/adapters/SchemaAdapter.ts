@@ -188,7 +188,7 @@ export abstract class SchemaAdapter<T> {
       userId: undefined,
       scope: undefined,
     });
-    if (isNil(docs)) {
+    if (!docs?.length) {
       return { query: null, modified: false };
     }
     return {
