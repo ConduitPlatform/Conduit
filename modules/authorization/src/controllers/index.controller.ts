@@ -24,7 +24,14 @@ export class IndexController {
   async createOrUpdateObject(subject: string, entity: string) {
     const index = await ObjectIndex.getInstance().findOne({ subject, entity });
     if (!index) {
-      await ObjectIndex.getInstance().create({ subject, entity });
+      await ObjectIndex.getInstance().create({
+        subject,
+        subjectType: subject.split(':')[0],
+        subjectPermission: subject.split('#')[1],
+        entity,
+        entityType: entity.split(':')[0],
+        relation: entity.split('#')[1],
+      });
     }
   }
 
@@ -42,7 +49,10 @@ export class IndexController {
     if (!found) {
       await ActorIndex.getInstance().create({
         subject: subject,
+        subjectType: subject.split(':')[0],
         entity: `${object}#${relation}`,
+        entityType: object.split(':')[0],
+        relation: relation,
       });
     }
     const permissions = Object.keys(objectDefinition.permissions);

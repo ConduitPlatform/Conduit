@@ -41,7 +41,7 @@ export function getPostgresAccessListQuery(
   return `SELECT "${objectTypeCollection}".* FROM "${objectTypeCollection}"
           INNER JOIN (
               SELECT * FROM "cnd_Permission"
-              WHERE "computedTuple" LIKE '${computedTuple}%'
+                WHERE "computedTuple" LIKE '${computedTuple}%'
           ) permissions ON permissions."computedTuple" = '${computedTuple}:' || "${objectTypeCollection}"._id
           INNER JOIN (
               SELECT * FROM "cnd_ActorIndex"

@@ -50,8 +50,10 @@ export class RelationsController {
 
     relationResource = await Relationship.getInstance().create({
       subject: subject,
+      subjectType: subject.split(':')[0],
       relation: relation,
       resource: object,
+      resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     await this.indexController.constructRelationIndex(subject, relation, object);

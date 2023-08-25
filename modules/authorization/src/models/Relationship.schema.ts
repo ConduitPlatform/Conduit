@@ -12,10 +12,22 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
   },
+  // organization
+  resourceType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
+  },
   // user:1adasdas
   subject: {
     type: TYPE.String,
     required: true,
+  },
+  // user
+  subjectType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   // member relation: "owner"
   relation: {
@@ -47,8 +59,9 @@ export class Relationship extends ConduitActiveSchema<Relationship> {
   private static _instance: Relationship;
   _id: string;
   resource: string;
-  resourceId: string;
+  resourceType: string;
   subject: string;
+  subjectType: string;
   relation: string;
   computedTuple: string;
   createdAt: Date;
