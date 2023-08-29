@@ -57,21 +57,6 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
 
-  ui:
-    container_name: 'conduit-ui'
-    image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-      - loki
-    ports:
-      - '${UI_PORT:-8080}:8080'
-    environment:
-      CONDUIT_URL: 'http://conduit:3030'
-      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
-      PROMETHEUS_URL: 'http://conduit-prometheus:9090'
-      LOKI_URL: 'http://conduit-loki:3100'
-
   database:
     container_name: 'conduit-database'
     image: 'docker.io/conduitplatform/database:${IMAGE_TAG}'
@@ -155,6 +140,48 @@ services:
       - host.docker.internal:host-gateway
 
 #  # Optional Services
+  ui:
+    container_name: 'conduit-ui'
+    image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    ports:
+      - '${UI_PORT:-8080}:8080'
+    environment:
+      CONDUIT_URL: 'http://conduit:3030'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+      PROMETHEUS_URL: 'http://conduit-prometheus:9090'
+      LOKI_URL: 'http://conduit-loki:3100'
+    profiles: [ 'ui' ]
+
+  authorization:
+    container_name: 'conduit-authorization'
+    image: 'docker.io/conduitplatform/authorization:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - core
+      - database
+      - authentication
+      - prometheus
+      - loki
+    ports:
+      - '${AUTHZ_GRPC_PORT:-55169}:${AUTHZ_GRPC_PORT:-55169}'
+    environment:
+      CONDUIT_SERVER: 'conduit:${CORE_GRPC_PORT:-55159}'
+      SERVICE_URL: 'conduit-authorization:${AUTHZ_GRPC_PORT:-55169}'
+      GRPC_PORT: '55169'
+      METRICS_PORT: '9191'
+      LOKI_URL: 'http://conduit-loki:3100'
+      GRPC_KEY: '${GRPC_KEY}'
+    networks:
+      default:
+        aliases:
+          - conduit-authorization
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
   chat:
     container_name: 'conduit-chat'
     image: 'docker.io/conduitplatform/chat:${IMAGE_TAG}'
