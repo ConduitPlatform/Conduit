@@ -23,14 +23,14 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
       'ExtensionOnly' &&
     data
   ) {
-    let extensionFields = schema.originalSchema.extensions
+    const extensionFields = schema.originalSchema.extensions
       .filter(
         (extension: DeclaredSchemaExtension) =>
           extension.ownerModule === moduleName || extension.ownerModule === 'database',
       )
       .map((extension: DeclaredSchemaExtension) => extension.fields)
       .map((fields: ConduitModel) => Object.keys(fields));
-    let dataFields = Object.keys(data);
+    const dataFields = Object.keys(data);
     return dataFields.every((field: string) => extensionFields.includes(field));
   }
   return false;
