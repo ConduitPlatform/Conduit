@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.19](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.18...v0.16.0-alpha.19) (2023-08-30)
+
+
+### Bug Fixes
+
+* **authorization:** Postgres access list query ([#666](https://github.com/ConduitPlatform/Conduit/issues/666)) ([1b92a09](https://github.com/ConduitPlatform/Conduit/commit/1b92a099cd1c291ae61c647a2d13941f2b12336a))
+* **database:** permission checks for extensions ([#671](https://github.com/ConduitPlatform/Conduit/issues/671)) ([9edf2d1](https://github.com/ConduitPlatform/Conduit/commit/9edf2d1e592e56286554e3c381fa9e2f6e10b180))
+* **database:** sql authorized findMany queries ([#668](https://github.com/ConduitPlatform/Conduit/issues/668)) ([f98c18a](https://github.com/ConduitPlatform/Conduit/commit/f98c18a3e29205de2a6b2448a07bae58780a9bcd))
+* **database:** sql authorized findOne query ([#669](https://github.com/ConduitPlatform/Conduit/issues/669)) ([04458f1](https://github.com/ConduitPlatform/Conduit/commit/04458f1f707c94773c5f9ee85ed5c50a76b5491c))
+* **database:** sql findMany authorized pagination ([#670](https://github.com/ConduitPlatform/Conduit/issues/670)) ([e642ebb](https://github.com/ConduitPlatform/Conduit/commit/e642ebb6575fac35f62da935a8bfb903a18a726c))
+* libraries/grpc-sdk/package.json to reduce vulnerabilities ([#667](https://github.com/ConduitPlatform/Conduit/issues/667)) ([f4564a2](https://github.com/ConduitPlatform/Conduit/commit/f4564a251a1d619fd9bc1cb1bbf793ffdd68b9f9))
+
 ## [0.16.0-alpha.18](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.17...v0.16.0-alpha.18) (2023-07-19)
 
 ## [0.16.0-alpha.17](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.16...v0.16.0-alpha.17) (2023-07-19)
