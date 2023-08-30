@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.20](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.19...v0.16.0-alpha.20) (2023-08-30)
+
+
+### Bug Fixes
+
+* **database:** missing fields reduce in permission check ([1efc868](https://github.com/ConduitPlatform/Conduit/commit/1efc868ba49a302d4af8acb5baabf5f59c3773d1))
+
 ## [0.16.0-alpha.19](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.18...v0.16.0-alpha.19) (2023-08-30)
 
 
