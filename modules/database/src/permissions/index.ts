@@ -24,6 +24,10 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
     data
   ) {
     let extensionFields = schema.originalSchema.extensions
+      .filter(
+        (extension: DeclaredSchemaExtension) =>
+          extension.ownerModule === moduleName || extension.ownerModule === 'database',
+      )
       .map((extension: DeclaredSchemaExtension) => extension.fields)
       .map((fields: ConduitModel) => Object.keys(fields));
     let dataFields = Object.keys(data);
