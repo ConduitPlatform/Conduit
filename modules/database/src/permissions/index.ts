@@ -29,7 +29,8 @@ export async function canModify(moduleName: string, schema: Schema, data?: Index
           extension.ownerModule === moduleName || extension.ownerModule === 'database',
       )
       .map((extension: DeclaredSchemaExtension) => extension.fields)
-      .map((fields: ConduitModel) => Object.keys(fields));
+      .map((fields: ConduitModel) => Object.keys(fields))
+      .reduce((acc: string[], curr: string[]) => [...acc, ...curr], []);
     const dataFields = Object.keys(data);
     return dataFields.every((field: string) => extensionFields.includes(field));
   }

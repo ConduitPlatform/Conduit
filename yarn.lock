@@ -14508,6 +14508,11 @@ url-parse@^1.4.3, url-parse@^1.5.9:
     querystringify "^2.1.1"
     requires-port "^1.0.0"
 
+url-polyfill@^1.1.12:
+  version "1.1.12"
+  resolved "https://registry.yarnpkg.com/url-polyfill/-/url-polyfill-1.1.12.tgz#6cdaa17f6b022841b3aec0bf8dbd87ac0cd33331"
+  integrity sha512-mYFmBHCapZjtcNHW0MDq9967t+z4Dmg5CJ0KqysK3+ZbyoNOWQHksGCTWwDhxGXllkWlOc10Xfko6v4a3ucM6A==
+
 url@0.10.3:
   version "0.10.3"
   resolved "https://registry.yarnpkg.com/url/-/url-0.10.3.tgz#021e4d9c7705f21bbf37d03ceb58767402774c64"
@@ -14800,6 +14805,19 @@ winston-loki@^6.0.6:
     async-exit-hook "2.0.1"
     btoa "^1.2.1"
     protobufjs "^6.8.8"
+    winston-transport "^4.3.0"
+  optionalDependencies:
+    snappy "7.1.1"
+
+winston-loki@^6.0.7:
+  version "6.0.7"
+  resolved "https://registry.yarnpkg.com/winston-loki/-/winston-loki-6.0.7.tgz#c16e8385f90f3bccb28d98479158a77103974436"
+  integrity sha512-6psEy428ckTXP/ni+DrA4vas2Ldt/43TFm7beoVExKLlTyEwu7zu2c8GBGbnxrdzRQAxXUfom2sK7zr4QP8y5g==
+  dependencies:
+    async-exit-hook "2.0.1"
+    btoa "^1.2.1"
+    protobufjs "^7.2.4"
+    url-polyfill "^1.1.12"
     winston-transport "^4.3.0"
   optionalDependencies:
     snappy "7.1.1"
