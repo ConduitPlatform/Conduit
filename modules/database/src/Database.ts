@@ -442,7 +442,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -553,7 +559,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
@@ -590,7 +602,13 @@ export default class DatabaseModule extends ManagedModule<void> {
     const { schemaName } = call.request;
     try {
       const schemaAdapter = this._activeAdapter.getSchemaModel(schemaName);
-      if (!(await canModify(moduleName, schemaAdapter.model))) {
+      if (
+        !(await canModify(
+          moduleName,
+          schemaAdapter.model,
+          JSON.parse(call.request.query),
+        ))
+      ) {
         return callback({
           code: status.PERMISSION_DENIED,
           message: `Module ${moduleName} is not authorized to modify ${schemaName} entries!`,
