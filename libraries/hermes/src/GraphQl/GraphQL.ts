@@ -20,7 +20,7 @@ import ConduitGrpcSdk, {
 import { ConduitRoute, TypeRegistry } from '../classes';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-import { merge } from 'lodash';
+import { merge, isArray } from 'lodash';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const cookiePlugin = require('./utils/cookie.plugin');
@@ -480,7 +480,7 @@ export class GraphQLController extends ConduitRouter {
             }
           }
 
-          return result;
+          return isArray(result) ? { result } : result;
         })
         .catch(errorHandler);
     };
