@@ -117,7 +117,8 @@ function _parseQuery(
     isBoolean(query) ||
     isNumber(query) ||
     query instanceof Buffer ||
-    query instanceof Date
+    query instanceof Date ||
+    query === null
   )
     return query;
   for (const key in query) {
