@@ -46,7 +46,7 @@ export class Admin extends ConduitActiveSchema<Admin> {
   password!: string;
   createdAt!: Date;
   updatedAt!: Date;
-  hasTwoFA?: boolean | null; // remove null after phasing out migration
+  hasTwoFA?: boolean;
   isSuperAdmin!: boolean;
 
   private constructor(database: DatabaseProvider) {
