@@ -18,7 +18,7 @@ import {
 import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
-import { parseQuery } from './parser';
+import { parseQuery, parseCreateRelations } from './parser';
 import { isNil } from 'lodash';
 import { processCreateQuery, unwrap } from './utils/pathUtils';
 import {
@@ -256,13 +256,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         return doc;
       })
-      .then(doc => (doc ? doc.toJSON() : doc))
+      .then(doc =>
+        doc ? parseCreateRelations(doc.toJSON(), this.extractedRelations) : doc,
+      )
       .catch(err => {
         if (!transactionProvided) {
           t!.rollback();
         }
         throw err;
       });
+    unwrap(obj, this.objectPaths);
     await this.addPermissionToData(obj, options);
     return obj;
   }
@@ -279,12 +282,22 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
+      extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
       .then(docs => {
         t.commit();
         return docs;
+      })
+      .then(docs => {
+        const parsedDocs: Indexable[] = [];
+        for (const doc of docs) {
+          const document = parseCreateRelations(doc.toJSON(), this.extractedRelations);
+          unwrap(document, this.objectPaths);
+          parsedDocs.push(document);
+        }
+        return parsedDocs;
       })
       .catch(err => {
         t.rollback();
