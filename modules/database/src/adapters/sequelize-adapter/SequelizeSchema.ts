@@ -624,6 +624,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         completeDoc[key] = null;
       }
     }
+    delete completeDoc._id;
+    delete completeDoc.createdAt;
     return this.findByIdAndUpdate(id, completeDoc, options);
   }
 
