@@ -279,6 +279,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
       processCreateQuery(parsedQuery[i], this.objectPaths);
+      extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
