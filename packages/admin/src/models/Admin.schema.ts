@@ -14,7 +14,8 @@ const schema: ConduitModel = {
   },
   hasTwoFA: {
     type: TYPE.Boolean,
-    required: false,
+    default: false,
+    required: false, // update this at some point
   },
   isSuperAdmin: {
     type: TYPE.Boolean,
@@ -45,7 +46,7 @@ export class Admin extends ConduitActiveSchema<Admin> {
   password!: string;
   createdAt!: Date;
   updatedAt!: Date;
-  hasTwoFA?: boolean;
+  hasTwoFA?: boolean | null; // remove null after phasing out migration
   isSuperAdmin!: boolean;
 
   private constructor(database: DatabaseProvider) {
