@@ -73,6 +73,7 @@ const schema: ConduitModel = {
   hasTwoFA: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
