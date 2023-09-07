@@ -73,13 +73,13 @@ export function unwrap(
   keyMapping: {
     [key: string]: { parentKey: string; childKey: string };
   },
-  relations: {
+  relations?: {
     [key: string]: SequelizeSchema | SequelizeSchema[];
   },
 ) {
   for (const key in object) {
     if (potentialNesting(object[key])) {
-      if (relations.hasOwnProperty(key)) {
+      if (relations?.hasOwnProperty(key)) {
         unwrap(
           object[key],
           (relations[key] as SequelizeSchema).objectPaths,
@@ -91,7 +91,7 @@ export function unwrap(
       unwrapNestedKeys(object[key], keyMapping);
     }
     if (isArray(object[key])) {
-      if (relations.hasOwnProperty(key)) {
+      if (relations?.hasOwnProperty(key)) {
         for (const element of object[key]) {
           unwrap(
             element,

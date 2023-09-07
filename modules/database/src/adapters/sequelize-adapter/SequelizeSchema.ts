@@ -264,6 +264,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         throw err;
       });
+    unwrap(obj, this.objectPaths);
     await this.addPermissionToData(obj, options);
     return obj;
   }
@@ -291,7 +292,9 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       .then(docs => {
         const parsedDocs: Indexable[] = [];
         for (const doc of docs) {
-          parsedDocs.push(parseCreateRelations(doc.toJSON(), this.extractedRelations));
+          const document = parseCreateRelations(doc.toJSON(), this.extractedRelations);
+          unwrap(document, this.objectPaths);
+          parsedDocs.push(document);
         }
         return parsedDocs;
       })
