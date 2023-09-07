@@ -14,7 +14,8 @@ const schema: ConduitModel = {
   },
   hasTwoFA: {
     type: TYPE.Boolean,
-    required: false,
+    default: false,
+    required: false, // update this at some point
   },
   isSuperAdmin: {
     type: TYPE.Boolean,
