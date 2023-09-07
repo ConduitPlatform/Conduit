@@ -411,7 +411,7 @@ export function parseCreateRelations(
   for (const relation in relations) {
     const dbName = `${relation}Id`;
     if (doc.hasOwnProperty(dbName)) {
-      doc[relation] = { _id: doc[dbName] };
+      doc[relation] = doc[dbName];
       delete doc[dbName];
     }
   }
