@@ -18,7 +18,7 @@ import {
 import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from './utils';
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
-import { parseQuery } from './parser';
+import { parseQuery, parseCreateRelations } from './parser';
 import { isNil } from 'lodash';
 import { processCreateQuery, unwrap } from './utils/pathUtils';
 import {
@@ -256,7 +256,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         return doc;
       })
-      .then(doc => (doc ? doc.toJSON() : doc))
+      .then(doc => doc.toJSON())
+      .then(doc => parseCreateRelations(doc, this.extractedRelations))
       .catch(err => {
         if (!transactionProvided) {
           t!.rollback();
@@ -286,6 +287,13 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       .then(docs => {
         t.commit();
         return docs;
+      })
+      .then(docs => {
+        const parsedDocs: Indexable[] = [];
+        for (const doc of docs) {
+          parsedDocs.push(parseCreateRelations(doc.toJSON(), this.extractedRelations));
+        }
+        return parsedDocs;
       })
       .catch(err => {
         t.rollback();
