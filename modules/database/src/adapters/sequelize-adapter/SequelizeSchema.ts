@@ -256,8 +256,9 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         }
         return doc;
       })
-      .then(doc => doc.toJSON())
-      .then(doc => parseCreateRelations(doc, this.extractedRelations))
+      .then(doc =>
+        doc ? parseCreateRelations(doc.toJSON(), this.extractedRelations) : doc,
+      )
       .catch(err => {
         if (!transactionProvided) {
           t!.rollback();
