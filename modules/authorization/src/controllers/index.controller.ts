@@ -59,14 +59,9 @@ export class IndexController {
     for (const permission of permissions) {
       const roles = objectDefinition.permissions[permission];
       for (const role of roles) {
-        // no index needed for "allowAll" permissions
-        // or for self modification
-        if (role === '*' || role.indexOf('->') === -1) {
-          await this.createOrUpdateObject(
-            object + '#' + permission,
-            role === '*' ? `*` : `${object}#${role}`,
-          );
-        } else {
+        if (role.indexOf('->') === -1) {
+          await this.createOrUpdateObject(object + '#' + permission, `${object}#${role}`);
+        } else if (role !== '*') {
           const [relatedSubject, action] = role.split('->');
           if (relation !== relatedSubject) continue;
           const possibleConnections = await ObjectIndex.getInstance().findMany({
@@ -77,6 +72,17 @@ export class IndexController {
           }
         }
       }
+    }
+    const actors = await ActorIndex.getInstance().findMany({
+      subject: object,
+    });
+    if (actors.length === 0) return;
+    for (const actor of actors) {
+      await this.constructRelationIndex(
+        actor.subject,
+        actor.relation,
+        actor.entity.split('#')[0],
+      );
     }
   }
 
