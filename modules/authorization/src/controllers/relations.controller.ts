@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { Relation } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { ActorIndex, Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
@@ -60,13 +60,8 @@ export class RelationsController {
 
   async checkRelations(subject: string, relation: string, resources: string[]) {
     checkRelation(subject, relation, resources[0]);
-    const mergeResources: { computedTuple: string; resource: string }[] = [];
-    const computedTuples = resources.map(r => {
-      const ct = computeRelationTuple(subject, relation, r);
-      mergeResources.push({ computedTuple: ct, resource: r });
-      return ct;
-    });
-    let relationResources = await Relationship.getInstance().findMany({
+    const computedTuples = resources.map(r => computeRelationTuple(subject, relation, r));
+    const relationResources = await Relationship.getInstance().findMany({
       computedTuple: { $in: computedTuples },
     });
     if (relationResources.length) throw new Error('Relations already exists');
@@ -88,22 +83,17 @@ export class RelationsController {
           throw new Error('Relation not allowed');
         }
       });
-    return mergeResources;
   }
 
-  async createRelations(
-    subject: string,
-    relation: string,
-    resources: { computedTuple: string; resource: string }[],
-  ) {
+  async createRelations(subject: string, relation: string, resources: string[]) {
     const entities: string[] = [];
     const relations = resources.map(r => {
-      entities.push(`${r.resource}#${relation}`);
+      entities.push(`${r}#${relation}`);
       return {
         subject,
         relation,
-        resource: r.resource,
-        computedTuple: r.computedTuple,
+        resource: r,
+        computedTuple: computeRelationTuple(subject, relation, r),
       };
     });
 

@@ -43,7 +43,7 @@ export class RelationHandler {
         bodyParams: {
           subject: ConduitString.Required,
           relation: ConduitString.Required,
-          object: ConduitString.Required,
+          resources: [ConduitString.Required],
         },
       },
       new ConduitRouteReturnDefinition(
@@ -113,11 +113,11 @@ export class RelationHandler {
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { subject, relation, object } = call.request.params;
+    const { subject, relation, resources } = call.request.params;
     const newRelation = await RelationsController.getInstance().createRelations(
       subject,
       relation,
-      object,
+      resources,
     );
     this.grpcSdk.bus?.publish(
       'authentication:create:relation',
