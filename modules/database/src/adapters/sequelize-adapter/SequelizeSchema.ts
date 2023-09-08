@@ -67,6 +67,22 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     this.model = sequelize.define(schema.collectionName, schema.fields, {
       ...schema.modelOptions,
       freezeTableName: true,
+      hooks: this.schema.modelOptions
+        ? {
+            beforeCreate: doc => {
+              const date = new Date();
+              doc.createdAt = date;
+              doc.updatedAt = date;
+            },
+            beforeBulkCreate: docs => {
+              const date = new Date();
+              docs.forEach(doc => {
+                doc.createdAt = date;
+                doc.updatedAt = date;
+              });
+            },
+          }
+        : undefined,
     });
     // if a relation is to self, then it will be undefined inside the extractedRelations
     // so we set it manually to self
@@ -186,7 +202,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       }
       // process the update query after special conditions have been handled.
       processCreateQuery(parsedQuery, this.objectPaths);
-      parsedQuery.updatedAt = new Date();
       incrementDbQueries();
       const relationObjects = extractRelationsModification(this, parsedQuery);
       await this.model.update(
@@ -233,8 +248,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
-    parsedQuery.createdAt = new Date();
-    parsedQuery.updatedAt = new Date();
     incrementDbQueries();
     processCreateQuery(parsedQuery, this.objectPaths);
     const relationObjects = extractRelationsModification(this, parsedQuery);
@@ -247,9 +260,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       .create(parsedQuery, {
         transaction: t,
       })
-      .then(doc => {
-        return createWithPopulation(this, doc, relationObjects, t);
-      })
+      .then(doc => createWithPopulation(this, doc, relationObjects, t))
       .then(doc => {
         if (!transactionProvided) {
           t!.commit();

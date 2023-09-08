@@ -323,12 +323,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
     if (extIndex === -1 && extFieldsCount === 0) {
       return Promise.resolve(schema as unknown as Schema); // @dirty-type-cast
     } else if (extIndex === -1) {
+      const date = new Date(); // TODO FORMAT
       // Create Extension
       schema.extensions.push({
         fields: extFields,
         ownerModule: extOwner,
-        createdAt: new Date(), // TODO FORMAT
-        updatedAt: new Date(), // TODO FORMAT
+        createdAt: date,
+        updatedAt: date,
       });
     } else {
       if (extFieldsCount === 0) {
