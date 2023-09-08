@@ -1,4 +1,5 @@
 import ConduitGrpcSdk, {
+  CreateRelationsRequest,
   DatabaseProvider,
   GrpcRequest,
   GrpcResponse,
@@ -45,6 +46,7 @@ export default class Authorization extends ManagedModule<Config> {
       deleteResource: this.deleteResource.bind(this),
       updateResource: this.updateResource.bind(this),
       createRelation: this.createRelation.bind(this),
+      createRelations: this.createRelations.bind(this),
       grantPermission: this.grantPermission.bind(this),
       removePermission: this.removePermission.bind(this),
       deleteRelation: this.deleteRelation.bind(this),
@@ -122,6 +124,22 @@ export default class Authorization extends ManagedModule<Config> {
   async createRelation(call: GrpcRequest<Relation>, callback: GrpcResponse<Empty>) {
     const { relation, resource, subject } = call.request;
     await this.relationsController.createRelation(subject, relation, resource);
+    callback(null, {});
+  }
+
+  async createRelations(
+    call: GrpcRequest<CreateRelationsRequest>,
+    callback: GrpcResponse<Empty>,
+  ) {
+    const subject = call.request.subject;
+    const relation = call.request.relation;
+    const resources = call.request.resources;
+    const mergedResources = await this.relationsController.checkRelations(
+      subject,
+      relation,
+      resources,
+    );
+    await this.relationsController.createRelations(subject, relation, mergedResources);
     callback(null, {});
   }
 

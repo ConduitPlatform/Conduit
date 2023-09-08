@@ -32,30 +32,18 @@ export class IndexController {
     const objectDefinition = (await ResourceDefinition.getInstance().findOne({
       name: object.split(':')[0],
     }))!;
-    // relations can only be created between actors and resources
-    // object indexes represent relations between actors and permissions on resources
-    // construct actor index
-    const found = await ActorIndex.getInstance().findOne({
-      subject: subject,
-      entity: `${object}#${relation}`,
-    });
-    if (!found) {
-      await ActorIndex.getInstance().create({
-        subject: subject,
-        entity: `${object}#${relation}`,
-      });
-    }
     const permissions = Object.keys(objectDefinition.permissions);
+    const obj = [];
     for (const permission of permissions) {
       const roles = objectDefinition.permissions[permission];
       for (const role of roles) {
         // no index needed for "allowAll" permissions
         // or for self modification
         if (role === '*' || role.indexOf('->') === -1) {
-          await this.createOrUpdateObject(
-            object + '#' + permission,
-            role === '*' ? `*` : `${object}#${role}`,
-          );
+          obj.push({
+            subject: object + '#' + permission,
+            entity: role === '*' ? `*` : `${object}#${role}`,
+          });
         } else {
           const [relatedSubject, action] = role.split('->');
           if (relation !== relatedSubject) continue;
@@ -63,11 +51,21 @@ export class IndexController {
             subject: `${subject}#${action}`,
           });
           for (const connection of possibleConnections) {
-            await this.createOrUpdateObject(object + '#' + permission, connection.entity);
+            obj.push({ subject: object + '#' + permission, entity: connection.entity });
           }
         }
       }
     }
+    const indexes = await ObjectIndex.getInstance().findMany({
+      $and: [
+        { subject: { $in: obj.map(i => i.subject) } },
+        { entity: { $in: obj.map(i => i.entity) } },
+      ],
+    });
+    const toCreate = obj.filter(
+      i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
+    );
+    await ObjectIndex.getInstance().createMany(toCreate);
   }
 
   async removeRelation(subject: string, relation: string, object: string) {
