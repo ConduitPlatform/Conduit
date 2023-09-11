@@ -26,8 +26,8 @@ export class SchemaAdmin {
     private readonly customEndpointController: CustomEndpointController,
   ) {}
 
-  async exportCustomSchemas(): Promise<UnparsedRouterResponse> {
-    return await this.database
+  async exportSchemas(): Promise<UnparsedRouterResponse> {
+    const cmsSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
         { 'modelOptions.conduit.cms.enabled': true },
@@ -38,45 +38,57 @@ export class SchemaAdmin {
             updatedAt: 1,
           },
         },
-      )
-      .then(r => {
-        return { schemas: r };
-      });
+      );
+    const cndSchemas = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany(
+        { 'modelOptions.conduit.cms': { $exists: false } },
+        {
+          select: 'name extensions',
+          sort: {
+            updatedAt: 1,
+          },
+        },
+      );
+    return { schemas: cmsSchemas.concat(cndSchemas) };
   }
 
-  async importCustomSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async importSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const schemas = call.request.params.schemas;
     for (const schema of schemas) {
-      const existingSchema = await this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ name: schema.name });
-      const operation = isNil(existingSchema) ? 'create' : 'update';
-      const imported = schema.modelOptions.conduit.imported === true;
-      const modelOptions = SchemaConverter.getModelOptions({
-        cmsSchema: true,
-        existingModelOptions: schema.modelOptions,
-        importedSchema: imported,
-      });
-      try {
-        validateSchemaInput(schema.name, schema.fields, modelOptions);
-      } catch (err: unknown) {
-        throw new GrpcError(status.INTERNAL, (err as Error).message);
+      const isCmsSchema = schema.modelOptions;
+      if (isCmsSchema) {
+        const existingSchema = await this.database
+          .getSchemaModel('_DeclaredSchema')
+          .model.findOne({ name: schema.name });
+        const operation = isNil(existingSchema) ? 'create' : 'update';
+        const imported = schema.modelOptions.conduit.imported;
+        const modelOptions = SchemaConverter.getModelOptions({
+          cmsSchema: true,
+          existingModelOptions: schema.modelOptions,
+          importedSchema: imported,
+        });
+        try {
+          validateSchemaInput(schema.name, schema.fields, modelOptions);
+        } catch (err: unknown) {
+          throw new GrpcError(status.INTERNAL, (err as Error).message);
+        }
+        await this.schemaController.createSchema(
+          new ConduitSchema(
+            schema.name,
+            schema.fields,
+            modelOptions,
+            schema.collectionName,
+          ),
+          operation,
+          imported,
+        );
       }
-      await this.schemaController.createSchema(
-        new ConduitSchema(
-          schema.name,
-          schema.fields,
-          modelOptions,
-          schema.collectionName,
-        ),
-        operation,
-        imported,
-      );
       if (schema.extensions.length > 0) {
         for (const extension of schema.extensions) {
           await this.database.setSchemaExtension(
             schema.name,
-            extension.owner,
+            extension.ownerModule,
             extension.fields,
           );
         }

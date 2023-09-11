@@ -309,7 +309,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
       !baseSchema.modelOptions.conduit.permissions ||
       !baseSchema.modelOptions.conduit.permissions.extendable
     ) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Schema is not extendable');
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        `Schema ${schemaName} is not extendable`,
+      );
     }
     // Hacky input type conversion, clean up input flow types asap // @dirty-type-cast
     const schema: ConduitDatabaseSchema = baseSchema as ConduitDatabaseSchema;
