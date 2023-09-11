@@ -20,7 +20,7 @@ export class RelationHandler {
   registerRoutes(routingManager: RoutingManager) {
     routingManager.route(
       {
-        path: '/relation',
+        path: '/relations',
         action: ConduitRouteActions.POST,
         description: `Creates a new relation.`,
         bodyParams: {
@@ -37,7 +37,7 @@ export class RelationHandler {
     );
     routingManager.route(
       {
-        path: '/relations',
+        path: '/relations/many',
         action: ConduitRouteActions.POST,
         description: `Creates many relations.`,
         bodyParams: {
