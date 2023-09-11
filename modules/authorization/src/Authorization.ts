@@ -134,7 +134,6 @@ export default class Authorization extends ManagedModule<Config> {
     const subject = call.request.subject;
     const relation = call.request.relation;
     const resources = call.request.resources;
-    await this.relationsController.checkRelations(subject, relation, resources);
     await this.relationsController.createRelations(subject, relation, resources);
     callback(null, {});
   }

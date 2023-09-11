@@ -58,7 +58,7 @@ export class RelationsController {
     return relationResource;
   }
 
-  async checkRelations(subject: string, relation: string, resources: string[]) {
+  private async checkRelations(subject: string, relation: string, resources: string[]) {
     checkRelation(subject, relation, resources[0]);
     const computedTuples = resources.map(r => computeRelationTuple(subject, relation, r));
     const relationResources = await Relationship.getInstance().findMany({
@@ -86,6 +86,7 @@ export class RelationsController {
   }
 
   async createRelations(subject: string, relation: string, resources: string[]) {
+    await this.checkRelations(subject, relation, resources);
     const entities: string[] = [];
     const relations = resources.map(r => {
       entities.push(`${r}#${relation}`);
