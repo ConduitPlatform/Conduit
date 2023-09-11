@@ -64,7 +64,7 @@ export class RelationsController {
     const relationResources = await Relationship.getInstance().findMany({
       computedTuple: { $in: computedTuples },
     });
-    if (relationResources.length) throw new Error('Relations already exists');
+    if (relationResources.length) throw new Error('Relations already exist');
     const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
     });
