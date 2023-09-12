@@ -6,17 +6,14 @@ message Resource {
   string name = 1;
   repeated _Relation relations = 2;
   repeated _Permission permissions = 3;
-
   message _Relation {
     string name = 1;
     repeated string resourceType = 2;
   }
-
   message _Permission {
     string name = 1;
     repeated string roles = 2;
   }
-
 }
 
 message Relation {
@@ -25,10 +22,17 @@ message Relation {
   string resource = 3;
 }
 
+message CreateRelationsRequest {
+  string subject = 1;
+  string relation = 2;
+  repeated string resources = 3;
+}
+
 message DeleteAllRelationsRequest {
   optional string subject = 1;
   optional string resource = 2;
 }
+
 message DeleteResourceRequest {
   string name = 1;
 }
@@ -43,11 +47,11 @@ message FindRelationRequest {
   optional int32 limit = 7;
 }
 
-
 message FindRelationResponse {
   repeated Relation relations = 1;
   int32 count = 2;
 }
+
 message AllowedResourcesRequest {
   string subject = 1;
   string action = 2;
@@ -55,10 +59,12 @@ message AllowedResourcesRequest {
   int32 skip = 6;
   int32 limit = 7;
 }
+
 message AllowedResourcesResponse {
   repeated string resources = 1;
   int32 count = 2;
 }
+
 message ResourceAccessListRequest {
   string subject = 1;
   string action = 2;
@@ -70,6 +76,7 @@ message PermissionCheck {
   repeated string actions = 2;
   string resource = 3;
 }
+
 message PermissionRequest {
   string subject = 1;
   string action = 2;
@@ -85,6 +92,7 @@ service Authorization {
   rpc DeleteResource(DeleteResourceRequest) returns (google.protobuf.Empty);
   rpc UpdateResource(Resource) returns (google.protobuf.Empty);
   rpc CreateRelation(Relation) returns (google.protobuf.Empty);
+  rpc CreateRelations(CreateRelationsRequest) returns (google.protobuf.Empty);
   rpc DeleteRelation(Relation) returns (google.protobuf.Empty);
   rpc GrantPermission(PermissionRequest) returns (google.protobuf.Empty);
   rpc RemovePermission(PermissionRequest) returns (google.protobuf.Empty);
