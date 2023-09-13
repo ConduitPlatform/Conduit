@@ -13,7 +13,12 @@ import { CustomEndpointController } from '../controllers/customEndpoints/customE
 import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
 import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { _ConduitSchema, ParsedQuery } from '../interfaces';
+import {
+  _ConduitSchema,
+  ConduitDatabaseSchema,
+  DeclaredSchemaExtension,
+  ParsedQuery,
+} from '../interfaces';
 import { SchemaConverter } from '../utils/SchemaConverter';
 import { parseSortParam } from '../handlers/utils';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -42,7 +47,12 @@ export class SchemaAdmin {
     const cndSchemas = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
-        { 'modelOptions.conduit.cms': { $exists: false } },
+        {
+          $and: [
+            { 'modelOptions.conduit.cms': { $exists: false } },
+            { 'modelOptions.conduit.permissions.extendable': true },
+          ],
+        },
         {
           select: 'name extensions',
           sort: {
@@ -50,13 +60,25 @@ export class SchemaAdmin {
           },
         },
       );
-    return { schemas: cmsSchemas.concat(cndSchemas) };
+    return {
+      schemas: cmsSchemas
+        .concat(cndSchemas)
+        .map((schema: ConduitDatabaseSchema) => ({
+          ...schema,
+          extensions: schema.extensions.filter(ext => ext.ownerModule === 'database'),
+        })),
+    };
   }
 
   async importSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const schemas = call.request.params.schemas;
     for (const schema of schemas) {
-      const isCmsSchema = schema.modelOptions;
+      const found = await this.database
+        .getSchemaModel('_DeclaredSchema')
+        .model.findOne({ name: schema.name });
+      const isCmsSchema = found
+        ? !!found.modelOptions.conduit.cms
+        : !!schema?.modelOptions.conduit.cms;
       if (isCmsSchema) {
         const existingSchema = await this.database
           .getSchemaModel('_DeclaredSchema')
@@ -84,15 +106,14 @@ export class SchemaAdmin {
           imported,
         );
       }
-      if (schema.extensions.length > 0) {
-        for (const extension of schema.extensions) {
-          await this.database.setSchemaExtension(
-            schema.name,
-            extension.ownerModule,
-            extension.fields,
-          );
-        }
-      }
+      const extension = (schema.extensions as DeclaredSchemaExtension[]).find(
+        ext => ext.ownerModule === 'database',
+      );
+      await this.database.setSchemaExtension(
+        schema.name,
+        'database',
+        extension?.fields ?? {},
+      );
     }
     return 'Schemas imported successfully';
   }
