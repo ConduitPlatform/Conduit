@@ -61,12 +61,10 @@ export class SchemaAdmin {
         },
       );
     return {
-      schemas: cmsSchemas
-        .concat(cndSchemas)
-        .map((schema: ConduitDatabaseSchema) => ({
-          ...schema,
-          extensions: schema.extensions.filter(ext => ext.ownerModule === 'database'),
-        })),
+      schemas: cmsSchemas.concat(cndSchemas).map((schema: ConduitDatabaseSchema) => ({
+        ...schema,
+        extensions: schema.extensions.filter(ext => ext.ownerModule === 'database'),
+      })),
     };
   }
 
@@ -78,7 +76,7 @@ export class SchemaAdmin {
         .model.findOne({ name: schema.name });
       const isCmsSchema = found
         ? !!found.modelOptions.conduit.cms
-        : !!schema?.modelOptions.conduit.cms;
+        : !!schema.modelOptions?.conduit?.cms;
       if (isCmsSchema) {
         const existingSchema = await this.database
           .getSchemaModel('_DeclaredSchema')
