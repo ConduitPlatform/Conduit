@@ -163,6 +163,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
   ): void {
     this.addToRelation(this.result, value);
+    this.requestedTypes.add(value);
     this.constructResolver(resolverName, name, true);
     processingObject.typeString +=
       name +

@@ -187,6 +187,7 @@ export class SwaggerParser extends ConduitParser<ParseResult, ProcessingObject> 
         format: 'uuid',
       };
     } else {
+      this.requestedTypes.add(value);
       processingObject.properties[name] = {
         oneOf: [
           {
