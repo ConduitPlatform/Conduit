@@ -71,16 +71,29 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       dialect !== 'sqlite'
         ? `CREATE OR REPLACE VIEW ${queryViewName} AS ${query.sqlQuery}`
         : `CREATE VIEW IF NOT EXISTS" ${queryViewName} AS ${query.sqlQuery}`;
-    await this.sequelize.query(viewQuery);
+    await this.sequelize.query(viewQuery).catch(err => {
+      if (
+        err.name !== 'SequelizeUniqueConstraintError' &&
+        (err.name !== 'SequelizeDatabaseError' || !err.message.includes('already exists'))
+      ) {
+        throw err;
+      }
+    });
     this.views[viewName] = viewModel;
     const foundView = await this.models['Views'].findOne({ name: viewName });
     if (isNil(foundView)) {
-      await this.models['Views'].create({
-        name: viewName,
-        originalSchema: modelName,
-        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
-        query,
-      });
+      await this.models['Views']
+        .create({
+          name: viewName,
+          originalSchema: modelName,
+          joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+          query,
+        })
+        .catch(err => {
+          if (err.name !== 'SequelizeUniqueConstraintError') {
+            throw err;
+          }
+        });
     }
   }
 
