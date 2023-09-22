@@ -217,16 +217,16 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         })
         .then(doc => createWithPopulation(this, doc, relationObjects, t!))
         .then(() => {
-          if (!transactionProvided) {
-            return t!.commit();
-          }
-          return;
-        })
-        .then(() => {
           return this.model.findByPk(parsedId, {
             nest: true,
             include: constructRelationInclusion(this, options?.populate),
           });
+        })
+        .then(doc => {
+          if (!transactionProvided) {
+            t!.commit();
+          }
+          return doc;
         })
         .then(doc => (doc ? doc.toJSON() : doc));
       return data;
@@ -261,15 +261,15 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         transaction: t,
       })
       .then(doc => createWithPopulation(this, doc, relationObjects, t))
+      .then(doc =>
+        doc ? parseCreateRelations(doc.toJSON(), this.extractedRelations) : doc,
+      )
       .then(doc => {
         if (!transactionProvided) {
           t!.commit();
         }
         return doc;
       })
-      .then(doc =>
-        doc ? parseCreateRelations(doc.toJSON(), this.extractedRelations) : doc,
-      )
       .catch(err => {
         if (!transactionProvided) {
           t!.rollback();
@@ -298,10 +298,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const docs = await this.model
       .bulkCreate(parsedQuery, { transaction: t })
       .then(docs => {
-        t.commit();
-        return docs;
-      })
-      .then(docs => {
         const parsedDocs: Indexable[] = [];
         for (const doc of docs) {
           const document = parseCreateRelations(doc.toJSON(), this.extractedRelations);
@@ -309,6 +305,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           parsedDocs.push(document);
         }
         return parsedDocs;
+      })
+      .then(docs => {
+        t.commit();
+        return docs;
       })
       .catch(err => {
         t.rollback();
