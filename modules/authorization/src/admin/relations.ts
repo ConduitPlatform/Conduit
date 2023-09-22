@@ -37,6 +37,23 @@ export class RelationHandler {
     );
     routingManager.route(
       {
+        path: '/relations/many',
+        action: ConduitRouteActions.POST,
+        description: `Creates many relations.`,
+        bodyParams: {
+          subject: ConduitString.Required,
+          relation: ConduitString.Required,
+          resources: [ConduitString.Required],
+        },
+      },
+      new ConduitRouteReturnDefinition(
+        'CreateRelations',
+        Relationship.getInstance().fields,
+      ),
+      this.createRelations.bind(this),
+    );
+    routingManager.route(
+      {
         path: '/relations/:id',
         action: ConduitRouteActions.GET,
         description: `Returns a relation.`,
@@ -87,6 +104,20 @@ export class RelationHandler {
       subject,
       relation,
       object,
+    );
+    this.grpcSdk.bus?.publish(
+      'authentication:create:relation',
+      JSON.stringify(newRelation),
+    );
+    return newRelation;
+  }
+
+  async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+    const { subject, relation, resources } = call.request.params;
+    const newRelation = await RelationsController.getInstance().createRelations(
+      subject,
+      relation,
+      resources,
     );
     this.grpcSdk.bus?.publish(
       'authentication:create:relation',

@@ -70,11 +70,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
-    const parsedQuery = {
-      ...this.parseStringToQuery(query),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const parsedQuery = this.parseStringToQuery(query);
 
     const obj = await this.model.create(parsedQuery).then(r => r.toObject());
     await this.addPermissionToData(obj, options);
@@ -140,7 +136,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -171,7 +166,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -205,7 +199,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 

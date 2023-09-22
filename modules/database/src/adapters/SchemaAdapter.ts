@@ -205,14 +205,15 @@ export abstract class SchemaAdapter<T> {
     if (!options || (!options?.userId && options?.scope)) {
       return;
     }
+    const subject = options.scope ?? `User:${options.userId}`;
+    const relation = 'owner';
     if (Array.isArray(data)) {
-      for (const d of data) {
-        await this.addPermissionToData(d, options);
-      }
+      const resources = data.map(d => `${this.originalSchema.name}:${d._id}`);
+      await this.grpcSdk.authorization?.createRelations(subject, relation, resources);
     } else {
       await this.grpcSdk.authorization?.createRelation({
-        subject: options.scope ?? `User:${options.userId}`,
-        relation: 'owner',
+        subject,
+        relation,
         resource: `${this.originalSchema.name}:${data._id}`,
       });
     }
