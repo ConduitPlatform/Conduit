@@ -95,6 +95,87 @@ export class IndexController {
     }
   }
 
+  async constructRelationIndexes(
+    relations: { subject: string; relation: string; object: string }[],
+  ) {
+    // Note: bulk variant does not perform recursive index creation!
+    const objectNames = relations.map(r => r.object.split(':')[0]);
+    const objectDefinitions = await ResourceDefinition.getInstance().findMany({
+      name: { $in: objectNames },
+    });
+    const obj = [];
+    const possibleConnectionSubjects = [];
+    for (const r of relations) {
+      const objectDefinition = objectDefinitions.find(
+        o => o.name === r.object.split(':')[0],
+      )!;
+      const permissions = Object.keys(objectDefinition.permissions);
+      for (const permission of permissions) {
+        const roles = objectDefinition.permissions[permission];
+        for (const role of roles) {
+          if (role.indexOf('->') !== -1 && role !== '*') {
+            const [relatedSubject, action] = role.split('->');
+            if (r.relation === relatedSubject) {
+              possibleConnectionSubjects.push(`${r.subject}#${action}`);
+            }
+          }
+        }
+      }
+    }
+    const possibleConnections = await ObjectIndex.getInstance().findMany({
+      subject: { $in: possibleConnectionSubjects },
+    });
+    for (const r of relations) {
+      const objectDefinition = objectDefinitions.find(
+        o => o.name === r.object.split(':')[0],
+      )!;
+      const permissions = Object.keys(objectDefinition.permissions);
+      const subjectType = r.subject.split(':')[0];
+      const subjectPermission = r.subject.split('#')[1];
+      for (const permission of permissions) {
+        const roles = objectDefinition.permissions[permission];
+        for (const role of roles) {
+          if (role.indexOf('->') === -1) {
+            obj.push({
+              subject: r.object + '#' + permission,
+              subjectType,
+              subjectPermission,
+              entity: role === '*' ? `*` : `${r.object}#${role}`,
+              entityType: r.object.split(':')[0],
+              relation: role,
+            });
+          } else if (role !== '*') {
+            const [relatedSubject, action] = role.split('->');
+            if (r.relation !== relatedSubject) continue;
+            const relationConnections = possibleConnections.filter(
+              connection => connection.subject === `${r.subject}#${action}`,
+            );
+            for (const connection of relationConnections) {
+              obj.push({
+                subject: r.object + '#' + permission,
+                subjectType,
+                subjectPermission,
+                entity: connection.entity,
+                entityType: connection.entity.split(':')[0],
+                relation: role,
+              });
+            }
+          }
+        }
+      }
+    }
+    const indexes = await ObjectIndex.getInstance().findMany({
+      $and: [
+        { subject: { $in: obj.map(i => i.subject) } },
+        { entity: { $in: obj.map(i => i.entity) } },
+      ],
+    });
+    const toCreate = obj.filter(
+      i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
+    );
+    await ObjectIndex.getInstance().createMany(toCreate);
+  }
+
   async removeRelation(subject: string, relation: string, object: string) {
     // delete applicable actor indexes
     await ActorIndex.getInstance().deleteMany({

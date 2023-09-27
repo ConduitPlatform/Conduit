@@ -121,11 +121,12 @@ export class RelationsController {
       };
     });
     await ActorIndex.getInstance().createMany(toCreate);
-    await Promise.all(
-      relations.map(r =>
-        this.indexController.constructRelationIndex(r.subject, r.relation, r.resource),
-      ),
-    );
+    const relationEntries = relations.map(r => ({
+      subject: r.subject,
+      relation: r.relation,
+      object: r.resource,
+    }));
+    await this.indexController.constructRelationIndexes(relationEntries);
     return relationResource;
   }
 
