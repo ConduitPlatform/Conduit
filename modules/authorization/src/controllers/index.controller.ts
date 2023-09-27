@@ -47,7 +47,11 @@ export class IndexController {
         if (role.indexOf('->') === -1) {
           obj.push({
             subject: object + '#' + permission,
+            subjectType: subject.split(':')[0],
+            subjectPermission: subject.split('#')[1],
             entity: role === '*' ? `*` : `${object}#${role}`,
+            entityType: object.split(':')[0],
+            relation: role,
           });
         } else if (role !== '*') {
           const [relatedSubject, action] = role.split('->');
@@ -56,7 +60,14 @@ export class IndexController {
             subject: `${subject}#${action}`,
           });
           for (const connection of possibleConnections) {
-            obj.push({ subject: object + '#' + permission, entity: connection.entity });
+            obj.push({
+              subject: object + '#' + permission,
+              subjectType: subject.split(':')[0],
+              subjectPermission: subject.split('#')[1],
+              entity: role === '*' ? `*` : `${object}#${role}`,
+              entityType: connection.entity.split(':')[0],
+              relation: role,
+            });
           }
         }
       }
