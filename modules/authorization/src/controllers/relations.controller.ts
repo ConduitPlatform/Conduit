@@ -100,7 +100,12 @@ export class RelationsController {
       };
     });
     const relationDocs = await Relationship.getInstance().createMany(relations);
-    await this.indexController.constructRelationIndexes(subject, relation, resources);
+    const relationEntries = relations.map(r => ({
+      subject: r.subject,
+      relation: r.relation,
+      object: r.resource,
+    }));
+    await this.indexController.constructRelationIndexes(relationEntries);
     return relationDocs;
   }
 
