@@ -62,12 +62,12 @@ export class IndexController {
       for (const role of roles) {
         if (role.indexOf('->') === -1) {
           obj.push({
-            subject: object + '#' + permission,
-            subjectType: subject.split(':')[0],
-            subjectPermission: subject.split('#')[1],
-            entity: role === '*' ? `*` : `${object}#${role}`,
-            entityType: object.split(':')[0],
-            relation: role,
+            subject: `${object}#${permission}`,
+            subjectType: `${object}#${permission}`.split(':')[0],
+            subjectPermission: `${object}#${permission}`.split('#')[1],
+            entity: `${object}#${role}`,
+            entityType: `${object}#${role}`.split(':')[0],
+            relation: `${object}#${role}`.split('#')[1],
           });
         } else if (role !== '*') {
           const [relatedSubject, action] = role.split('->');
@@ -77,12 +77,12 @@ export class IndexController {
           });
           for (const connection of possibleConnections) {
             obj.push({
-              subject: object + '#' + permission,
-              subjectType: subject.split(':')[0],
-              subjectPermission: subject.split('#')[1],
-              entity: role === '*' ? `*` : `${object}#${role}`,
+              subject: `${object}#${permission}`,
+              subjectType: `${object}#${permission}`.split(':')[0],
+              subjectPermission: `${object}#${permission}`.split('#')[1],
+              entity: connection.entity,
               entityType: connection.entity.split(':')[0],
-              relation: role,
+              relation: connection.entity.split('#')[1],
             });
           }
         }
