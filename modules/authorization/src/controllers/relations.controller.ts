@@ -1,6 +1,6 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
-import { ActorIndex, Relationship, ResourceDefinition } from '../models';
+import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 
 export class RelationsController {
@@ -100,11 +100,12 @@ export class RelationsController {
       };
     });
     const relationDocs = await Relationship.getInstance().createMany(relations);
-    await Promise.all(
-      relations.map(r =>
-        this.indexController.constructRelationIndex(r.subject, r.relation, r.resource),
-      ),
-    );
+    const relationEntries = relations.map(r => ({
+      subject: r.subject,
+      relation: r.relation,
+      object: r.resource,
+    }));
+    await this.indexController.constructRelationIndexes(relationEntries);
     return relationDocs;
   }
 
