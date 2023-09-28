@@ -166,19 +166,17 @@ export class IndexController {
         o => o.name === r.object.split(':')[0],
       )!;
       const permissions = Object.keys(objectDefinition.permissions);
-      const subjectType = r.subject.split(':')[0];
-      const subjectPermission = r.subject.split('#')[1];
       for (const permission of permissions) {
         const roles = objectDefinition.permissions[permission];
         for (const role of roles) {
           if (role.indexOf('->') === -1) {
             obj.push({
-              subject: r.object + '#' + permission,
-              subjectType,
-              subjectPermission,
-              entity: role === '*' ? `*` : `${r.object}#${role}`,
-              entityType: r.object.split(':')[0],
-              relation: role,
+              subject: `${r.object}#${permission}`,
+              subjectType: `${r.object}#${permission}`.split(':')[0],
+              subjectPermission: `${r.object}#${permission}`.split('#')[1],
+              entity: `${r.object}#${role}`,
+              entityType: `${r.object}#${role}`.split(':')[0],
+              relation: `${r.object}#${role}`.split('#')[1],
             });
           } else if (role !== '*') {
             const [relatedSubject, action] = role.split('->');
@@ -188,12 +186,12 @@ export class IndexController {
             );
             for (const connection of relationConnections) {
               obj.push({
-                subject: r.object + '#' + permission,
-                subjectType,
-                subjectPermission,
+                subject: `${r.object}#${permission}`,
+                subjectType: `${r.object}#${permission}`.split(':')[0],
+                subjectPermission: `${r.object}#${permission}`.split('#')[1],
                 entity: connection.entity,
                 entityType: connection.entity.split(':')[0],
-                relation: role,
+                relation: connection.entity.split('#')[1],
               });
             }
           }
