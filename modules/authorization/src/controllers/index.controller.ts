@@ -123,8 +123,7 @@ export class IndexController {
     const possibleConnectionSubjects = [];
     const actorsToCreate = [];
     for (const r of relations) {
-      const entities: string[] = [];
-      entities.push(`${r.object}#${r.relation}`);
+      const entity = `${r.object}#${r.relation}`;
       const objectDefinition = objectDefinitions.find(
         o => o.name === r.object.split(':')[0],
       )!;
@@ -141,21 +140,18 @@ export class IndexController {
         }
       }
       const found = await ActorIndex.getInstance().findMany({
-        $and: [{ subject: { $eq: r.subject } }, { entity: { $in: entities } }],
+        $and: [{ subject: r.subject }, { entity }],
       });
-      actorsToCreate.push(
-        ...entities.flatMap(e => {
-          const exists = found.find(f => f.entity === e);
-          if (exists) return [];
-          return {
-            subject: r.subject,
-            subjectType: r.subject.split(':')[0],
-            entity: e,
-            entityType: e.split(':')[0],
-            relation: r.relation,
-          };
-        }),
-      );
+      const exists = found.find(f => f.entity === entity);
+      if (!exists) {
+        actorsToCreate.push({
+          subject: r.subject,
+          subjectType: r.subject.split(':')[0],
+          entity,
+          entityType: entity.split(':')[0],
+          relation: r.relation,
+        });
+      }
     }
     await ActorIndex.getInstance().createMany(actorsToCreate);
     const possibleConnections = await ObjectIndex.getInstance().findMany({
