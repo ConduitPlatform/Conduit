@@ -102,19 +102,18 @@ export class IndexController {
       subject: object,
     });
     if (actors.length === 0) return;
-    for (const actor of actors) {
-      await this.constructRelationIndex(
-        actor.subject,
-        actor.relation,
-        actor.entity.split('#')[0],
-      );
-    }
+    await this.constructRelationIndexes(
+      actors.map(actor => ({
+        subject: actor.subject,
+        relation: actor.relation,
+        object: actor.entity.split('#')[0],
+      })),
+    );
   }
 
   async constructRelationIndexes(
     relations: { subject: string; relation: string; object: string }[],
   ) {
-    // Note: bulk variant does not perform recursive index creation!
     const objectNames = relations.map(r => r.object.split(':')[0]);
     const objectDefinitions = await ResourceDefinition.getInstance().findMany({
       name: { $in: objectNames },
@@ -122,7 +121,9 @@ export class IndexController {
     const obj = [];
     const possibleConnectionSubjects = [];
     const actorsToCreate = [];
+    const relationObjects: string[] = [];
     for (const r of relations) {
+      relationObjects.push(r.object);
       const entity = `${r.object}#${r.relation}`;
       const objectDefinition = objectDefinitions.find(
         o => o.name === r.object.split(':')[0],
@@ -204,6 +205,17 @@ export class IndexController {
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );
     await ObjectIndex.getInstance().createMany(objectsToCreate);
+    const actors = await ActorIndex.getInstance().findMany({
+      subject: { $in: relationObjects },
+    });
+    if (actors.length === 0) return;
+    await this.constructRelationIndexes(
+      actors.map(actor => ({
+        subject: actor.subject,
+        relation: actor.relation,
+        object: actor.entity.split('#')[0],
+      })),
+    );
   }
 
   async removeRelation(subject: string, relation: string, object: string) {
