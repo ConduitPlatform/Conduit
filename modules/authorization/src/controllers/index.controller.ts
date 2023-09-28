@@ -448,7 +448,7 @@ export class IndexController {
 
     const objectDefinition = await ObjectIndex.getInstance().findOne({
       subject: object + '#' + action,
-      entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
+      entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
     });
     return !!objectDefinition;
   }
@@ -467,7 +467,7 @@ export class IndexController {
     const objectDefinition = await ObjectIndex.getInstance().findMany(
       {
         subject: { $like: `${objectType}:%#${action}` },
-        entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
+        entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
       },
       undefined,
       skip,
@@ -483,7 +483,7 @@ export class IndexController {
 
     return await ObjectIndex.getInstance().countDocuments({
       subject: { $like: `${objectType}:%#${action}` },
-      entity: { $in: [...subjectDefinition?.map(index => index.entity), '*'] },
+      entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
     });
   }
 }
