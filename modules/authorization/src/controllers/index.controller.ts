@@ -39,6 +39,22 @@ export class IndexController {
     const objectDefinition = (await ResourceDefinition.getInstance().findOne({
       name: object.split(':')[0],
     }))!;
+    // relations can only be created between actors and resources
+    // object indexes represent relations between actors and permissions on resources
+    // construct actor index
+    const found = await ActorIndex.getInstance().findOne({
+      subject: subject,
+      entity: `${object}#${relation}`,
+    });
+    if (!found) {
+      await ActorIndex.getInstance().create({
+        subject: subject,
+        subjectType: subject.split(':')[0],
+        entity: `${object}#${relation}`,
+        entityType: object.split(':')[0],
+        relation: relation,
+      });
+    }
     const permissions = Object.keys(objectDefinition.permissions);
     const obj = [];
     for (const permission of permissions) {
