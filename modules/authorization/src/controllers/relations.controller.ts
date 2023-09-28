@@ -89,9 +89,7 @@ export class RelationsController {
 
   async createRelations(subject: string, relation: string, resources: string[]) {
     await this.checkRelations(subject, relation, resources);
-    const entities: string[] = [];
     const relations = resources.map(r => {
-      entities.push(`${r}#${relation}`);
       return {
         subject,
         subjectType: subject.split(':')[0],
@@ -101,33 +99,14 @@ export class RelationsController {
         computedTuple: computeRelationTuple(subject, relation, r),
       };
     });
-
-    const relationResource = await Relationship.getInstance().createMany(relations);
-    // relations can only be created between actors and resources
-    // object indexes represent relations between actors and permissions on resources
-    // construct actor index
-    const found = await ActorIndex.getInstance().findMany({
-      $and: [{ subject: { $eq: subject } }, { entity: { $in: entities } }],
-    });
-    const toCreate = entities.flatMap(e => {
-      const exists = found.find(f => f.entity === e);
-      if (exists) return [];
-      return {
-        subject,
-        subjectType: subject.split(':')[0],
-        entity: e,
-        entityType: e.split(':')[0],
-        relation: relation,
-      };
-    });
-    await ActorIndex.getInstance().createMany(toCreate);
+    const relationDocs = await Relationship.getInstance().createMany(relations);
     const relationEntries = relations.map(r => ({
       subject: r.subject,
       relation: r.relation,
       object: r.resource,
     }));
     await this.indexController.constructRelationIndexes(relationEntries);
-    return relationResource;
+    return relationDocs;
   }
 
   async deleteRelation(subject: string, relation: string, object: string) {
