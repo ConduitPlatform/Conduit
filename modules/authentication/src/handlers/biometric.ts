@@ -104,8 +104,8 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Key not found!');
     }
 
-    let data = Buffer.from((key.user as User)._id);
-    let verificationResult = crypto.verify('SHA256', data, key.publicKey, encryptedData);
+    const data = Buffer.from((key.user as User)._id);
+    const verificationResult = crypto.verify('SHA256', data, key.publicKey, encryptedData);
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
@@ -168,8 +168,8 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
       user: call.request.context.user._id,
     });
-    let data = Buffer.from(existingToken.data.challenge);
-    let verificationResult = crypto.verify(
+    const data = Buffer.from(existingToken.data.challenge);
+    const verificationResult = crypto.verify(
       'SHA256',
       data,
       existingToken.data.publicKey,
