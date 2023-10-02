@@ -121,19 +121,19 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     const { clientId, user } = call.request.context;
     const existingToken = await Token.getInstance().findOne({
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: call.request.context.user._id,
+      user: user._id,
     });
     if (existingToken) {
       AuthUtils.checkResendThreshold(existingToken);
       await Token.getInstance().deleteMany({
         tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-        user: call.request.context.user._id,
+        user: user._id,
       });
     }
     const challenge = crypto.randomBytes(64).toString('hex');
     const token = await Token.getInstance().create({
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: call.request.context.user._id,
+      user: user._id,
       data: {
         clientId,
         challenge,
@@ -153,7 +153,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     const { clientId, user } = call.request.context;
     const existingToken = await Token.getInstance().findOne({
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: call.request.context.user._id,
+      user: user._id,
     });
     if (!existingToken) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid token!');
@@ -166,7 +166,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     }
     await Token.getInstance().deleteMany({
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
-      user: call.request.context.user._id,
+      user: user._id,
     });
     const data = Buffer.from(existingToken.data.challenge);
     const verificationResult = crypto.verify(
@@ -179,7 +179,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
     const biometricToken = await BiometricToken.getInstance().create({
-      user: call.request.context.user._id,
+      user: user._id,
       publicKey: existingToken.data.publicKey,
     });
     return {
