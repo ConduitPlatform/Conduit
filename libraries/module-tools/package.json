@@ -23,7 +23,7 @@
     "prom-client": "^14.2.0",
     "protobufjs": "^7.2.3",
     "winston": "^3.8.2",
-    "winston-loki": "^6.0.6"
+    "winston-loki": "^6.0.7"
   },
   "directories": {
     "lib": "dist",
@@ -48,7 +48,7 @@
     "@types/node": "18.15.11",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
+    "ts-proto": "^1.159.2",
     "typescript": "~5.0.4"
   },
   "peerDependencies": {
