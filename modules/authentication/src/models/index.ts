@@ -6,4 +6,5 @@ export * from './Service.schema';
 export * from './TwoFactorSecret.schema';
 export * from './Team.schema';
 export * from './TwoFactorBackUpCodes.schema';
+export * from './BiometricToken.schema';
 export * from './Client.model';

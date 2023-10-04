@@ -67,7 +67,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         },
         middlewares: ['authMiddleware'],
       },
-      new ConduitRouteReturnDefinition('BiometricsAuthenticateResponse', {
+      new ConduitRouteReturnDefinition('BiometricsEnrollResponse', {
         challenge: ConduitString.Required,
       }),
       this.enroll.bind(this),
@@ -81,6 +81,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
         bodyParams: {
           encryptedData: ConduitString.Required,
         },
+        middlewares: ['authMiddleware'],
       },
       new ConduitRouteReturnDefinition('VerifyBiometricEnrollResponse', {
         keyId: ConduitString.Required,
@@ -103,9 +104,15 @@ export class BiometricHandlers implements IAuthenticationStrategy {
     if (!key) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Key not found!');
     }
-
-    const data = Buffer.from((key.user as User)._id);
-    const verificationResult = crypto.verify('SHA256', data, key.publicKey, encryptedData);
+    const verifier = crypto.createVerify('sha256WithRSAEncryption');
+    verifier.update(Buffer.from((key.user as User)._id));
+    const cryptoKey = crypto.createPublicKey({
+      key: key.publicKey,
+      format: 'der',
+      type: 'spki',
+      encoding: 'base64',
+    });
+    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
@@ -142,7 +149,7 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       token: uuid(),
     });
     return {
-      token: token.token,
+      challenge,
     };
   }
 
@@ -168,13 +175,15 @@ export class BiometricHandlers implements IAuthenticationStrategy {
       tokenType: TokenType.REGISTER_BIOMETRICS_TOKEN,
       user: user._id,
     });
-    const data = Buffer.from(existingToken.data.challenge);
-    const verificationResult = crypto.verify(
-      'SHA256',
-      data,
-      existingToken.data.publicKey,
-      encryptedData,
-    );
+    const verifier = crypto.createVerify('sha256WithRSAEncryption');
+    verifier.update(Buffer.from(existingToken.data.challenge));
+    const cryptoKey = crypto.createPublicKey({
+      key: existingToken.data.publicKey,
+      format: 'der',
+      type: 'spki',
+      encoding: 'base64',
+    });
+    const verificationResult = verifier.verify(cryptoKey, encryptedData, 'base64');
     if (!verificationResult) {
       throw new GrpcError(status.INVALID_ARGUMENT, 'Invalid signature!');
     }
