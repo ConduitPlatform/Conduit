@@ -122,9 +122,16 @@ message GetConfigRequest {
 }
 
 message GetRedisDetailsResponse {
+  optional string redisHost = 1;
+  optional int32 redisPort = 2;
+  optional string redisUsername = 3;
+  optional string redisPassword = 4;
+  optional string redisConfig = 5;
+  // temporarily keeping these^ around to avoid a breaking change
+
   oneof config {
-    string standalone = 1;
-    string cluster = 2;
+    string standalone = 6;
+    string cluster = 7;
   }
 }
 

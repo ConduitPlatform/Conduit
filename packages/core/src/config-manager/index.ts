@@ -23,6 +23,7 @@ import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
 import { merge } from 'lodash';
 import { GrpcServer } from '@conduitplatform/module-tools';
+import { RedisOptions } from 'ioredis';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -155,6 +156,11 @@ export default class ConfigManager implements IConfigManager {
     } else {
       callback(null, {
         standalone: JSON.stringify(redisDetails),
+        // maintain backwards compatibility with <=grpc-sdk-v0.16.0-alpha.20
+        redisHost: (redisDetails as RedisOptions).host,
+        redisPort: (redisDetails as RedisOptions).port,
+        redisUsername: (redisDetails as RedisOptions).username,
+        redisPassword: (redisDetails as RedisOptions).password,
       });
     }
   }
