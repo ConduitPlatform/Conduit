@@ -33,8 +33,10 @@ export class PermissionsController {
     const computedTuple = computePermissionTuple(subject, action, resource);
     await Permission.getInstance().create({
       subject,
+      subjectType: subject.split(':')[0],
       permission: action,
       resource,
+      resourceType: resource.split(':')[0],
       computedTuple,
     });
   }

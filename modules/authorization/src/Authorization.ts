@@ -74,7 +74,6 @@ export default class Authorization extends ManagedModule<Config> {
   async onServerStart() {
     await this.grpcSdk.waitForExistence('database');
     this.database = this.grpcSdk.database!;
-    await runMigrations(this.grpcSdk);
   }
 
   async onConfig() {
@@ -83,6 +82,7 @@ export default class Authorization extends ManagedModule<Config> {
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
     } else {
       await this.registerSchemas();
+      await runMigrations(this.grpcSdk);
       this.indexController = IndexController.getInstance(this.grpcSdk);
       this.relationsController = RelationsController.getInstance(
         this.grpcSdk,

@@ -1,6 +1,6 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
-import { ActorIndex, Relationship, ResourceDefinition } from '../models';
+import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 
 export class RelationsController {
@@ -27,7 +27,7 @@ export class RelationsController {
     let relationResource = await Relationship.getInstance().findOne({
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    if (relationResource) throw new Error('Relation already exists');
+    if (relationResource) return relationResource;
 
     const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
@@ -50,8 +50,10 @@ export class RelationsController {
 
     relationResource = await Relationship.getInstance().create({
       subject: subject,
+      subjectType: subject.split(':')[0],
       relation: relation,
       resource: object,
+      resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     await this.indexController.constructRelationIndex(subject, relation, object);
@@ -87,39 +89,24 @@ export class RelationsController {
 
   async createRelations(subject: string, relation: string, resources: string[]) {
     await this.checkRelations(subject, relation, resources);
-    const entities: string[] = [];
     const relations = resources.map(r => {
-      entities.push(`${r}#${relation}`);
       return {
         subject,
+        subjectType: subject.split(':')[0],
         relation,
         resource: r,
+        resourceType: r.split(':')[0],
         computedTuple: computeRelationTuple(subject, relation, r),
       };
     });
-
-    const relationResource = await Relationship.getInstance().createMany(relations);
-    // relations can only be created between actors and resources
-    // object indexes represent relations between actors and permissions on resources
-    // construct actor index
-    const found = await ActorIndex.getInstance().findMany({
-      $and: [{ subject: { $eq: subject } }, { entity: { $in: entities } }],
-    });
-    const toCreate = entities.flatMap(e => {
-      const exists = found.find(f => f.entity === e);
-      if (exists) return [];
-      return {
-        subject,
-        entity: e,
-      };
-    });
-    await ActorIndex.getInstance().createMany(toCreate);
-    await Promise.all(
-      relations.map(r =>
-        this.indexController.constructRelationIndex(r.subject, r.relation, r.resource),
-      ),
-    );
-    return relationResource;
+    const relationDocs = await Relationship.getInstance().createMany(relations);
+    const relationEntries = relations.map(r => ({
+      subject: r.subject,
+      relation: r.relation,
+      object: r.resource,
+    }));
+    await this.indexController.constructRelationIndexes(relationEntries);
+    return relationDocs;
   }
 
   async deleteRelation(subject: string, relation: string, object: string) {
