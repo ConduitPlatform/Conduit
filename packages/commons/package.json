@@ -41,7 +41,7 @@
     "@types/validator": "^13.7.14",
     "express": "~4.18.2",
     "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
+    "ts-proto": "^1.159.2",
     "typescript": "~5.0.4"
   }
 }

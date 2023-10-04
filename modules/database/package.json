@@ -55,7 +55,7 @@
     "@types/dottie": "^2.0.4",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.0",
-    "ts-proto": "^1.146.0",
+    "ts-proto": "^1.159.2",
     "typescript": "~5.0.4"
   }
 }
