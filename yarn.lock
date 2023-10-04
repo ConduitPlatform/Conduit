@@ -4649,6 +4649,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/object-hash@^3.0.4":
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-3.0.4.tgz#31865a3d69de1042fec2ede56fd8cf0bb4e01641"
+  integrity sha512-w4fEy2suq1bepUxHoJRCBHJz0vS5DPAYpSbcgNwOahljxwyJsiKmi8qyes2/TJc+4Avd7fsgP+ZgUuXZjPvdug==
+
 "@types/otp-generator@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@types/otp-generator/-/otp-generator-4.0.0.tgz#da28b1e254f46262e176ba96541bcfa32660da98"
