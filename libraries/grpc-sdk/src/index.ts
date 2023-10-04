@@ -363,9 +363,9 @@ export default class ConduitGrpcSdk {
         .then(() => this.config.getRedisDetails())
         .then(r => {
           if (r.standalone) {
-            this._redisDetails = JSON.parse(r.standalone);
+            this._redisDetails = r.standalone;
           } else {
-            this._redisDetails = JSON.parse(r.cluster!);
+            this._redisDetails = r.cluster!;
           }
         });
     }

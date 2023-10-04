@@ -8,6 +8,7 @@ import {
 } from '../../protoUtils/core';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';
+import { ClusterOptions, RedisOptions } from 'ioredis';
 
 export class Config extends ConduitModule<typeof ConfigDefinition> {
   private readonly emitter = new EventEmitter();
@@ -76,9 +77,27 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
       });
   }
 
-  getRedisDetails() {
+  async getRedisDetails(): Promise<{
+    standalone?: RedisOptions;
+    cluster?: ClusterOptions;
+    redisHost?: string;
+    redisPort?: number;
+    redisUsername?: string;
+    redisPassword?: string;
+    redisConfig?: string;
+  }> {
     const request: Indexable = {};
-    return this.client!.getRedisDetails(request);
+    const r = await this.client!.getRedisDetails(request);
+    return {
+      ...(r.standalone ? { standalone: JSON.parse(r.standalone) } : undefined),
+      ...(r.cluster ? { cluster: JSON.parse(r.cluster) } : undefined),
+      // maintain backwards compatibility with <=grpc-sdk-v0.16.0-alpha.20
+      redisHost: r.redisHost,
+      redisPort: r.redisPort,
+      redisUsername: r.redisUsername,
+      redisPassword: r.redisPassword,
+      redisConfig: r.redisConfig,
+    };
   }
 
   registerModule(
