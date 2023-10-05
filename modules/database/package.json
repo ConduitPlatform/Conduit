@@ -34,7 +34,7 @@
     "mongoose": "7.5.0",
     "mysql2": "^3.2.0",
     "object-hash": "^3.0.0",
-    "pg": "^8.10.0",
+    "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.31.0",
     "sequelize-auto": "^0.8.8",
