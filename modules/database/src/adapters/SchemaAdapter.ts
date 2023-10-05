@@ -2,7 +2,7 @@ import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 
@@ -137,7 +137,7 @@ export abstract class SchemaAdapter<T> {
         userId: undefined,
         scope: undefined,
       });
-      if (isNil(docs)) {
+      if (isEmpty(docs)) {
         return null;
       }
       if (this.adapter.getDatabaseType() === 'MongoDB') {
