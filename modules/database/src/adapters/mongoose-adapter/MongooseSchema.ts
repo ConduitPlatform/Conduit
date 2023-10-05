@@ -132,6 +132,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error(`Document doesn't exist or can't be modified by user.`);
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -162,6 +165,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error(`Document doesn't exist or can't be modified by user.`);
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
