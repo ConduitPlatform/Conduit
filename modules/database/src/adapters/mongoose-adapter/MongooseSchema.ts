@@ -242,9 +242,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(parsedQuery)) {
-      return [];
+      return { deletedCount: 0 };
     }
-    return this.model.deleteMany(parsedQuery).exec();
+    return this.model
+      .deleteMany(parsedQuery)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async findMany(
