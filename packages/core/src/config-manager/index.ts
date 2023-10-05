@@ -21,9 +21,9 @@ import { ConfigStorage } from './config-storage';
 import parseConfigSchema from '../utils';
 import { IModuleConfig } from '../interfaces/IModuleConfig';
 import convict from 'convict';
-import fs from 'fs-extra';
-import { isNil, merge } from 'lodash';
+import { merge } from 'lodash';
 import { GrpcServer } from '@conduitplatform/module-tools';
+import { RedisOptions } from 'ioredis';
 
 export default class ConfigManager implements IConfigManager {
   grpcSdk: ConduitGrpcSdk;
@@ -148,39 +148,19 @@ export default class ConfigManager implements IConfigManager {
     call: GrpcRequest<null>,
     callback: GrpcCallback<GetRedisDetailsResponse>,
   ) {
-    let redisJson;
-    const redisConfig = process.env.REDIS_CONFIG;
-    if (redisConfig) {
-      if (redisConfig.startsWith('{')) {
-        try {
-          redisJson = JSON.parse(redisConfig);
-        } catch (e) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Failed to parse redis config',
-          });
-        }
-      } else {
-        try {
-          redisJson = JSON.parse(fs.readFileSync(redisConfig, 'utf8'));
-        } catch (e) {
-          return callback({
-            code: status.INTERNAL,
-            message: 'Failed to parse redis config',
-          });
-        }
-      }
-    }
-    if (!isNil(redisJson)) {
+    const redisDetails = this.grpcSdk.redisDetails;
+    if (redisDetails.hasOwnProperty('nodes')) {
       callback(null, {
-        redisConfig: JSON.stringify(redisJson),
+        cluster: JSON.stringify(redisDetails),
       });
     } else {
       callback(null, {
-        redisHost: process.env.REDIS_HOST!,
-        redisPort: parseInt(process.env.REDIS_PORT!),
-        redisPassword: process.env.REDIS_PASSWORD,
-        redisUsername: process.env.REDIS_USERNAME,
+        standalone: JSON.stringify(redisDetails),
+        // maintain backwards compatibility with <=grpc-sdk-v0.16.0-alpha.20
+        redisHost: (redisDetails as RedisOptions).host,
+        redisPort: (redisDetails as RedisOptions).port,
+        redisUsername: (redisDetails as RedisOptions).username,
+        redisPassword: (redisDetails as RedisOptions).password,
       });
     }
   }
