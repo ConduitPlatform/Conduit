@@ -344,7 +344,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
       this,
-      this.parseStringToQuery(query),
+      this.parseStringToQuery(filter),
       {
         populate: options?.populate,
         select: options?.select,
