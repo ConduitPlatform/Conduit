@@ -217,7 +217,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    return this.model.deleteOne(parsedQuery!).exec();
+    if (isNil(parsedQuery)) {
+      return { deletedCount: 0 };
+    }
+    return this.model
+      .deleteOne(parsedQuery!)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async deleteMany(
