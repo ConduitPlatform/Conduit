@@ -470,7 +470,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.scope,
     );
     if (isNil(parsedFilter)) {
-      return [];
+      return { deletedCount: 0 };
     }
     return this.model
       .findAll({
