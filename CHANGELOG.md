@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.21](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.20...v0.16.0-alpha.21) (2023-10-05)
+
+
+### Features
+
+* **authorization, database:**  create bulk relations in authorization ([#681](https://github.com/ConduitPlatform/Conduit/issues/681)) ([d48d7b3](https://github.com/ConduitPlatform/Conduit/commit/d48d7b38b33b669311b2e20ead015df750a7675c))
+* biometric authentication for mobile devices ([#693](https://github.com/ConduitPlatform/Conduit/issues/693)) ([d69ff51](https://github.com/ConduitPlatform/Conduit/commit/d69ff51fc43176967355f7982e858dcd3e443b88))
+
+
+### Bug Fixes
+
+* **authentication:** biometrics issues ([#695](https://github.com/ConduitPlatform/Conduit/issues/695)) ([3902715](https://github.com/ConduitPlatform/Conduit/commit/390271523dccf323af5e379687e2ebb3bf431baf))
+* **core:** config schema array field parsing ([#691](https://github.com/ConduitPlatform/Conduit/issues/691)) ([0a06464](https://github.com/ConduitPlatform/Conduit/commit/0a06464775c2b78e523c62a9c1c1a7fe1ee0c0d0))
+* **database:** _parseQuery() dropping query fields ([#677](https://github.com/ConduitPlatform/Conduit/issues/677)) ([fb0f7ce](https://github.com/ConduitPlatform/Conduit/commit/fb0f7ce4fa717cd24aae9d8b045159fbc1903977))
+* **database:** schema/extension creation timestamp field values mismatch ([#682](https://github.com/ConduitPlatform/Conduit/issues/682)) ([1543e07](https://github.com/ConduitPlatform/Conduit/commit/1543e07fd85e8891593c6af409cf5f88872298cc))
+* **database:** SQL create/createMany relation parsing, group unwrapping ([#676](https://github.com/ConduitPlatform/Conduit/issues/676)) ([0784716](https://github.com/ConduitPlatform/Conduit/commit/07847164dff277fa32470f5e7124c6c9ff3af5c0))
+* **database:** sql createView() already exists race condition ([#688](https://github.com/ConduitPlatform/Conduit/issues/688)) ([e78cde4](https://github.com/ConduitPlatform/Conduit/commit/e78cde481894fcb1349882c5b2a3b4921d8046cd))
+* **database:** sql findByIdAndReplace() setting _id, createdAt to undefined ([#679](https://github.com/ConduitPlatform/Conduit/issues/679)) ([e90ce7b](https://github.com/ConduitPlatform/Conduit/commit/e90ce7bd478647e9610ed5d73a35b11f8d5225a0))
+* grpc await promise transpilation, bump ecmascript target to es2018 ([#689](https://github.com/ConduitPlatform/Conduit/issues/689)) ([8058195](https://github.com/ConduitPlatform/Conduit/commit/8058195511f0a0ccc7141a685e23225bd8413562))
+* **hermes:** graphQl null array responses ([#675](https://github.com/ConduitPlatform/Conduit/issues/675)) ([01c2ad8](https://github.com/ConduitPlatform/Conduit/commit/01c2ad82a8eb52f1eaf22908df65e6f1fb899e8d))
+* **hermes:** graphQl parser constructResolver() unpopulated relation field formatting ([#680](https://github.com/ConduitPlatform/Conduit/issues/680)) ([7e0bb8e](https://github.com/ConduitPlatform/Conduit/commit/7e0bb8e814b13f8af7b851a9742bed7056399ae6))
+* **hermes:** object-hash issues ([9f3ed29](https://github.com/ConduitPlatform/Conduit/commit/9f3ed291aca76bd81f2c0b0f34351ec5a94b7536))
+* **hermes:** swagger/graphql parsers not pulling related db schema types ([#687](https://github.com/ConduitPlatform/Conduit/issues/687)) ([057828a](https://github.com/ConduitPlatform/Conduit/commit/057828a5b79b8c4dd4b989bd3d4ed2b5610a8aed))
+
 ## [0.16.0-alpha.20](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.19...v0.16.0-alpha.20) (2023-08-30)
 
 
