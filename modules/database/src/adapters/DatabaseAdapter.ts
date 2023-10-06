@@ -231,7 +231,10 @@ export abstract class DatabaseAdapter<T extends Schema> {
             ],
           },
           { name: 'edit', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
-          { name: 'delete', roles: ['editor', 'editor->edit', 'owner', 'owner->edit'] },
+          {
+            name: 'delete',
+            roles: ['editor', 'editor->delete', 'owner', 'owner->delete'],
+          },
         ],
       });
     }
