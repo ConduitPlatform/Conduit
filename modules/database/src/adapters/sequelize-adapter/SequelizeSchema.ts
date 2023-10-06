@@ -134,7 +134,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       false,
       options?.userId,
       options?.scope,
-    ).then(r => r!._id);
+    ).then(r => {
+      if (!r) {
+        throw new Error("Document doesn't exist or can't be modified by user.");
+      }
+      return r._id;
+    });
     try {
       const parentDoc = await this.model.findByPk(parsedId, {
         nest: true,
@@ -339,7 +344,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
       this,
-      this.parseStringToQuery(query),
+      this.parseStringToQuery(filter),
       {
         populate: options?.populate,
         select: options?.select,
@@ -465,7 +470,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.scope,
     );
     if (isNil(parsedFilter)) {
-      return [];
+      return { deletedCount: 0 };
     }
     return this.model
       .findAll({
@@ -498,6 +503,9 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      return { deletedCount: 0 };
+    }
     return this.model
       .findOne({
         where: parsedFilter!,

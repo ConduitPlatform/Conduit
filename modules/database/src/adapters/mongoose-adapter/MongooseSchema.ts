@@ -132,6 +132,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -162,6 +165,9 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedFilter)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
+    }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
@@ -217,7 +223,13 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    return this.model.deleteOne(parsedQuery!).exec();
+    if (isNil(parsedQuery)) {
+      return { deletedCount: 0 };
+    }
+    return this.model
+      .deleteOne(parsedQuery!)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async deleteMany(
@@ -236,9 +248,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(parsedQuery)) {
-      return [];
+      return { deletedCount: 0 };
     }
-    return this.model.deleteMany(parsedQuery).exec();
+    return this.model
+      .deleteMany(parsedQuery)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async findMany(

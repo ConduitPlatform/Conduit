@@ -2,7 +2,7 @@ import ConduitGrpcSdk, { ConduitSchema, Indexable } from '@conduitplatform/grpc-
 import { MongooseSchema } from './mongoose-adapter/MongooseSchema';
 import { SequelizeSchema } from './sequelize-adapter/SequelizeSchema';
 import { DatabaseAdapter } from './DatabaseAdapter';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 
@@ -34,6 +34,10 @@ export abstract class SchemaAdapter<T> {
     readonly isView: boolean = false,
   ) {}
 
+  get authzEnabled() {
+    return this.originalSchema.modelOptions.conduit?.authorization?.enabled;
+  }
+
   transformViewName(...names: string[]): string {
     return createHash('sha256').update(names.join('_')).digest('hex');
   }
@@ -47,10 +51,7 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       return undefined;
     }
-    if (
-      (!userId && !scope) ||
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled
-    ) {
+    if ((!userId && !scope) || !this.authzEnabled) {
       return undefined;
     }
     const isAvailable = this.grpcSdk.isAvailable('authorization');
@@ -92,11 +93,7 @@ export abstract class SchemaAdapter<T> {
     if (this.isView) {
       throw new Error('Cannot create on view');
     }
-    if (
-      (!userId && !scope) ||
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled
-    )
-      return;
+    if ((!userId && !scope) || !this.authzEnabled) return;
     const isAvailable = this.grpcSdk.isAvailable('authorization');
     if (!isAvailable) {
       throw new Error('Authorization service is not available');
@@ -131,11 +128,7 @@ export abstract class SchemaAdapter<T> {
     userId?: string,
     scope?: string,
   ) {
-    if (
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
-      (isNil(userId) && isNil(scope))
-    )
-      return query;
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope))) return query;
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return query;
     if (many) {
@@ -144,7 +137,7 @@ export abstract class SchemaAdapter<T> {
         userId: undefined,
         scope: undefined,
       });
-      if (isNil(docs)) {
+      if (isEmpty(docs)) {
         return null;
       }
       if (this.adapter.getDatabaseType() === 'MongoDB') {
@@ -173,10 +166,7 @@ export abstract class SchemaAdapter<T> {
     limit?: number,
     sort?: Indexable,
   ) {
-    if (
-      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
-      (isNil(userId) && isNil(scope))
-    )
+    if (!this.authzEnabled || (isNil(userId) && isNil(scope)))
       return { query, modified: false };
     const view = await this.permissionCheck(operation, userId, scope);
     if (!view) return { query, modified: false };
@@ -201,7 +191,7 @@ export abstract class SchemaAdapter<T> {
     data: Indexable | Indexable[],
     options?: { userId?: string; scope?: string },
   ) {
-    if (!this.originalSchema.modelOptions.conduit?.authorization?.enabled) return;
+    if (!this.authzEnabled) return;
     if (!options || (!options?.userId && options?.scope)) {
       return;
     }
