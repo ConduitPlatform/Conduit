@@ -10801,13 +10801,11 @@ mongodb-ns@^2.4.0:
   resolved "https://registry.yarnpkg.com/mongodb-ns/-/mongodb-ns-2.4.0.tgz#72cfab2833354c84534cf0baa89c2b1673b5c3df"
   integrity sha512-pCutlP/AU0hcJ/f1h2h3nmn79/gXrQo6088QvPCbdx7SBDkAeGPH4AYu28DgqZzFvsn5mtt2RUpsFicYhjaHow==
 
-mongodb-schema@^10.0.1:
-  version "10.0.1"
-  resolved "https://registry.yarnpkg.com/mongodb-schema/-/mongodb-schema-10.0.1.tgz#f72332fc3afdd2a1998f3ac99eabb8253bad5df9"
-  integrity sha512-RVdQRVpGIqaKvhZVEBFNhITVfOkoUKjAYsZ0bPhIjqSNc6OZ7U34xTLRWfvhE8lIZwrYsE/yc8KyACEdFzJzWA==
+mongodb-schema@^11.2.2:
+  version "11.2.2"
+  resolved "https://registry.yarnpkg.com/mongodb-schema/-/mongodb-schema-11.2.2.tgz#2fd8e3ef8511a63f0f06ca3d74ab6d0c8db63288"
+  integrity sha512-kDpmht5ZAV89l8jx4LOcTWYiIRn9s6Uulz6SCpR28HlRDrC/OFLoEFBBU0Z07TmQZmFvRMvN0z206szB5vY4Hg==
   dependencies:
-    lodash "^4.17.21"
-    progress "^2.0.3"
     reservoir "^0.1.2"
   optionalDependencies:
     bson "^5.0.1"
@@ -10817,7 +10815,9 @@ mongodb-schema@^10.0.1:
     mongodb-collection-sample "^5.0.0"
     mongodb-ns "^2.4.0"
     numeral "^2.0.6"
+    progress "^2.0.3"
     stats-lite "^2.0.0"
+    yargs "^17.6.2"
 
 mongodb@5.8.1, mongodb@^5.0.1:
   version "5.8.1"
