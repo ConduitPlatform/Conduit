@@ -136,9 +136,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.scope,
     ).then(r => {
       if (!r) {
-        throw new Error(
-          `Record '${id}' doesn't exist in schema '${this.schema.name}' or can't be modified by user.`,
-        );
+        throw new Error("Document doesn't exist or can't be modified by user.");
       }
       return r._id;
     });
