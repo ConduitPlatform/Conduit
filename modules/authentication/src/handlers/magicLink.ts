@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { TokenType } from '../constants';
 import { v4 as uuid } from 'uuid';
 import ConduitGrpcSdk, {
@@ -85,7 +85,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const email = call.request.params.email.toLowerCase();
     const config = ConfigController.getInstance().config;
     const redirectUri =
-      config.customRedirectUris && !isNil(call.request.bodyParams.redirectUri)
+      config.customRedirectUris && !isEmpty(call.request.bodyParams.redirectUri)
         ? call.request.bodyParams.redirectUri
         : undefined;
     const { clientId } = call.request.context;
