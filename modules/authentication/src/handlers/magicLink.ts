@@ -48,19 +48,22 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
+    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/magic-link',
         action: ConduitRouteActions.POST,
         description: `Send magic link to a user.`,
-        bodyParams: {
-          email: ConduitString.Required,
-        },
+        bodyParams: config.customRedirectUris
+          ? {
+              email: ConduitString.Required,
+              redirectUri: ConduitString.Optional,
+            }
+          : { email: ConduitString.Required },
       },
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
       this.sendMagicLink.bind(this),
     );
-    const config = ConfigController.getInstance().config;
     routingManager.route(
       {
         path: '/hook/magic-link/:verificationToken',
@@ -83,6 +86,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
   async sendMagicLink(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = call.request.params.email.toLowerCase();
+    const config = ConfigController.getInstance().config;
+    const redirectUri =
+      config.customRedirectUris && !isNil(call.request.bodyParams.redirectUri)
+        ? call.request.bodyParams.redirectUri
+        : config.magic_link.redirect_uri;
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -96,16 +104,17 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       token: uuid(),
     });
 
-    await this.sendMagicLinkMail(user, token);
+    await this.sendMagicLinkMail(user, token, redirectUri);
     return 'token sent';
   }
 
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { verificationToken } = call.request.params;
+    const { verificationToken } = call.request.urlParams;
     const config = ConfigController.getInstance().config;
-    const uri = call.request.params.redirectUri;
     const redirectUri =
-      config.customRedirectUris && !isNil(uri) ? uri : config.magic_link.redirect_uri;
+      config.customRedirectUris && !isNil(call.request.queryParams.redirectUri)
+        ? call.request.queryParams.redirectUri
+        : config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.MAGIC_LINK,
       token: verificationToken,
@@ -134,12 +143,15 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     );
   }
 
-  private async sendMagicLinkMail(user: User, token: Token) {
+  private async sendMagicLinkMail(user: User, token: Token, redirectUri?: string) {
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
 
     const result = { token, hostUrl: url };
-    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
+    let link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
+    if (redirectUri) {
+      link = link.concat(`?redirectUri=${redirectUri}`);
+    }
     await this.emailModule.sendEmail('MagicLink', {
       email: user.email,
       sender: 'no-reply',
