@@ -72,9 +72,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
-        queryParams: config.customRedirectUris
-          ? { redirectUri: ConduitString.Optional }
-          : {},
       },
       new ConduitRouteReturnDefinition('VerifyMagicLinkLoginResponse', {
         accessToken: ConduitString.Optional,
@@ -90,7 +87,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const redirectUri =
       config.customRedirectUris && !isNil(call.request.bodyParams.redirectUri)
         ? call.request.bodyParams.redirectUri
-        : config.magic_link.redirect_uri;
+        : undefined;
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -100,21 +97,18 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       user: user._id,
       data: {
         clientId,
+        ...(redirectUri !== undefined ? { redirectUri } : {}),
       },
       token: uuid(),
     });
 
-    await this.sendMagicLinkMail(user, token, redirectUri);
+    await this.sendMagicLinkMail(user, token);
     return 'token sent';
   }
 
   async verifyLogin(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.urlParams;
     const config = ConfigController.getInstance().config;
-    const redirectUri =
-      config.customRedirectUris && !isNil(call.request.queryParams.redirectUri)
-        ? call.request.queryParams.redirectUri
-        : config.magic_link.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne({
       tokenType: TokenType.MAGIC_LINK,
       token: verificationToken,
@@ -132,7 +126,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       .catch(e => {
         ConduitGrpcSdk.Logger.error(e);
       });
-
+    const redirectUri =
+      config.customRedirectUris && token.data.redirectUri
+        ? token.data.redirectUri
+        : config.magic_link.redirect_uri;
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
@@ -143,15 +140,11 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     );
   }
 
-  private async sendMagicLinkMail(user: User, token: Token, redirectUri?: string) {
+  private async sendMagicLinkMail(user: User, token: Token) {
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-
     const result = { token, hostUrl: url };
-    let link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
-    if (redirectUri) {
-      link = link.concat(`?redirectUri=${redirectUri}`);
-    }
+    const link = `${result.hostUrl}/hook/authentication/magic-link/${result.token.token}`;
     await this.emailModule.sendEmail('MagicLink', {
       email: user.email,
       sender: 'no-reply',
