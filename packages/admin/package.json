@@ -39,7 +39,7 @@
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "graphql-tag": "^2.12.6",
-    "helmet": "6.1.2",
+    "helmet": "7.0.0",
     "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21"
   },
