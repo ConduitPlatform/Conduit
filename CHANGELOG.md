@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.21...v0.16.0-alpha.22) (2023-10-09)
+
+
+### Bug Fixes
+
+* **database:** update/delete operations authz checks, sql authz/dialect parsing order ([#706](https://github.com/ConduitPlatform/Conduit/issues/706)) ([0e49e7b](https://github.com/ConduitPlatform/Conduit/commit/0e49e7b0070d0104f4fc207efe9e81ace6b1fc04))
+* delete permissions ([#710](https://github.com/ConduitPlatform/Conduit/issues/710)) ([6808d38](https://github.com/ConduitPlatform/Conduit/commit/6808d382f6df5d3977a3235f941bb668f7a577fa))
+* **grpc-sdk:** redis password env setting redis username ([#705](https://github.com/ConduitPlatform/Conduit/issues/705)) ([fcb4d32](https://github.com/ConduitPlatform/Conduit/commit/fcb4d328152edebd1a6cbb33ac4648cc9526af71))
+
 ## [0.16.0-alpha.21](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.20...v0.16.0-alpha.21) (2023-10-05)
 
 
