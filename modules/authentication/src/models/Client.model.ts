@@ -4,7 +4,7 @@ import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 export class Client extends ConduitActiveSchema<Client> {
   private static _instance: Client;
   _id!: string;
-  clientId!: string;
+  clientId!: string | 'anonymous-client';
   clientSecret!: string;
   alias?: string;
   notes?: string;
