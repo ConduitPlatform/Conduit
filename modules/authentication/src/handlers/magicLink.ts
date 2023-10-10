@@ -179,10 +179,13 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
   }
 
   private async sendMagicLinkMail(user: User, token: Token) {
-    const authConfig = ConfigController.getInstance().config;
+    const linkUri = ConfigController.getInstance().config.magic_link.link_uri?.replace(
+      /\/$/,
+      '',
+    );
     const serverConfig = await this.grpcSdk.config.get('router');
-    const baseUrl = !isEmpty(authConfig.magic_link.link_uri)
-      ? authConfig.magic_link.link_uri.replace(/\/$/, '')
+    const baseUrl = !isEmpty(linkUri)
+      ? linkUri
       : `${serverConfig.hostUrl.replace(/\/$/, '')}/hook/authentication/magic-link`;
     const link = `${baseUrl}/${token.token}`;
     await this.emailModule.sendEmail('MagicLink', {
