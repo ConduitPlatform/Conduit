@@ -31,7 +31,7 @@
     "express-winston": "^4.2.0",
     "graphql": "^16.8.1",
     "graphql-parse-resolve-info": "^4.13.0",
-    "graphql-tools": "^8.3.19",
+    "graphql-tools": "^9.0.0",
     "graphql-type-json": "^0.3.2",
     "http-proxy-middleware": "^2.0.6",
     "ioredis": "^5.3.1",
