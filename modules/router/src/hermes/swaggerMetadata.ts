@@ -1,7 +1,8 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
-export const swaggerMetadata: SwaggerRouterMetadata = {
+export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
   securitySchemes: {
     clientId: {
@@ -25,18 +26,24 @@ export const swaggerMetadata: SwaggerRouterMetadata = {
         'A user authentication token, retrievable through [POST] /authentication/local or [POST] /authentication/renew',
     },
   },
-  globalSecurityHeaders: [
-    {
-      clientId: [],
-      clientSecret: [],
-    },
-  ],
+  globalSecurityHeaders: ConfigController.getInstance().config.security.clientValidation
+    ? [
+        {
+          clientId: [],
+          clientSecret: [],
+        },
+      ]
+    : [],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     if (
       route.input.middlewares?.includes('authMiddleware') ||
       route.input.middlewares?.includes('authMiddleware?')
     ) {
-      swaggerRouteDoc.security[0].userToken = [];
+      if (swaggerRouteDoc.security.length > 0) {
+        swaggerRouteDoc.security[0].userToken = [];
+      } else {
+        swaggerRouteDoc.security = [{ userToken: [] }];
+      }
     }
   },
-};
+});

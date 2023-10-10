@@ -1,7 +1,7 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
-export const swaggerMetadata: SwaggerRouterMetadata = {
+export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
   securitySchemes: {
     masterKey: {
@@ -28,4 +28,4 @@ export const swaggerMetadata: SwaggerRouterMetadata = {
       swaggerRouteDoc.security[0].adminToken = [];
     }
   },
-};
+});
