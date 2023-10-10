@@ -35,15 +35,23 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
       ]
     : [],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (
-      route.input.middlewares?.includes('authMiddleware') ||
-      route.input.middlewares?.includes('authMiddleware?')
-    ) {
-      if (swaggerRouteDoc.security.length > 0) {
-        swaggerRouteDoc.security[0].userToken = [];
-      } else {
-        swaggerRouteDoc.security = [{ userToken: [] }];
-      }
+    // https://swagger.io/docs/specification/authentication/#multiple
+    if (route.input.middlewares?.includes('authMiddleware')) {
+      // Logical AND
+      swaggerRouteDoc.security = swaggerRouteDoc.security.map(
+        (originalSecEntry: { [field: string]: string }) => ({
+          ...originalSecEntry,
+          userToken: [],
+        }),
+      );
+    }
+    if (route.input.middlewares?.includes('authMiddleware?')) {
+      // Logical OR
+      swaggerRouteDoc.security.forEach(
+        (originalSecEntry: { [field: string]: string }) => {
+          swaggerRouteDoc.security.push({ ...originalSecEntry, userToken: [] });
+        },
+      );
     }
   },
 });
