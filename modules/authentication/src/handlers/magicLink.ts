@@ -83,7 +83,7 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
       routingManager.route(
         {
           path: '/magic-link/:magicToken',
-          action: ConduitRouteActions.GET,
+          action: ConduitRouteActions.POST,
           description: 'Exchange magic token for login tokens.',
           urlParams: {
             magicToken: ConduitString.Required,
