@@ -4449,10 +4449,10 @@
   dependencies:
     "@types/node" "*"
 
-"@types/is-natural-number@^4.0.1":
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/@types/is-natural-number/-/is-natural-number-4.0.1.tgz#4ce767a825d73096ac1a107d2b06bd99b6aa419a"
-  integrity sha512-wL5qGLnRWqIz3qklY3xSfmFIaBgjX+xrzRf8dOG4xAGX2u/Zo8vh0K9PxE7dAn1Vt7Zet9Nj8odUJ1YPlaQo3g==
+"@types/is-natural-number@^4.0.2":
+  version "4.0.2"
+  resolved "https://registry.yarnpkg.com/@types/is-natural-number/-/is-natural-number-4.0.2.tgz#bddb050f08770b6a6b922382cbaab065a794e51d"
+  integrity sha512-iUeF9EgopURPjH/5ra9eq41eO4dnoyc/Hum+wGkxfguIBX6oDpQgV/NvyppHBjRDrJ9jNkx4oGdEmkrQyRpX2A==
 
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0", "@types/istanbul-lib-coverage@^2.0.1":
   version "2.0.4"
