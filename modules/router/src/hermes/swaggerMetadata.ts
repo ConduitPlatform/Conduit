@@ -32,7 +32,10 @@ export const swaggerMetadata: SwaggerRouterMetadata = {
     },
   ],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
-    if (route.input.middlewares?.includes('authMiddleware')) {
+    if (
+      route.input.middlewares?.includes('authMiddleware') ||
+      route.input.middlewares?.includes('authMiddleware?')
+    ) {
       swaggerRouteDoc.security[0].userToken = [];
     }
   },
