@@ -408,7 +408,6 @@ export default class Authentication extends ManagedModule<Config> {
             return ValidateAccessTokenResponse_Status.UNAUTHENTICATED;
         }
       });
-
     return callback(null, { status: accessStatus, userId });
   }
 
