@@ -25,7 +25,12 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   ],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     if (route.input.path !== '/login' && route.input.path !== '/modules') {
-      swaggerRouteDoc.security[0].adminToken = [];
+      swaggerRouteDoc.security = swaggerRouteDoc.security.map(
+        (originalSecEntry: { [field: string]: string }) => ({
+          ...originalSecEntry,
+          adminToken: [],
+        }),
+      );
     }
   },
 });
