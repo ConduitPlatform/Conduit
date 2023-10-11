@@ -41,7 +41,7 @@ export class ConduitRoutingController {
     private readonly baseUrl: string,
     private readonly grpcSdk: ConduitGrpcSdk,
     cleanupTimeoutMs: number = 0,
-    private readonly swaggerMetadata?: SwaggerRouterMetadata,
+    private readonly getSwaggerMetadata?: () => SwaggerRouterMetadata,
     private readonly metrics?: {
       registeredRoutes?: {
         name: string;
@@ -99,7 +99,7 @@ export class ConduitRoutingController {
     if (this._restRouter) return;
     this._restRouter = new RestController(
       this.grpcSdk,
-      this.swaggerMetadata,
+      this.getSwaggerMetadata,
       this.metrics,
     );
   }

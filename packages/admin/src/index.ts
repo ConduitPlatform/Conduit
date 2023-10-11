@@ -24,7 +24,7 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import { AdminMiddleware } from './models';
-import { protoTemplate, swaggerMetadata } from './hermes';
+import { protoTemplate, getSwaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -88,7 +88,7 @@ export default class AdminModule extends IConduitAdmin {
       '/',
       this.grpcSdk,
       1000,
-      swaggerMetadata,
+      getSwaggerMetadata,
       { registeredRoutes: { name: 'admin_routes_total' } },
     );
     this._grpcRoutes = {};
