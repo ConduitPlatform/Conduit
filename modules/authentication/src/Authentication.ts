@@ -27,6 +27,9 @@ import {
   GetTeamRequest,
   CreateTeamRequest,
   Team as GrpcTeam,
+  ValidateAccessTokenRequest,
+  ValidateAccessTokenResponse,
+  ValidateAccessTokenResponse_Status,
 } from './protoTypes/authentication';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
@@ -40,6 +43,7 @@ import {
 } from '@conduitplatform/module-tools';
 import { TeamsAdmin } from './admin/team';
 import { User as UserAuthz } from './authz';
+import { handleAuthentication } from './routes/middleware';
 
 export default class Authentication extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -54,6 +58,7 @@ export default class Authentication extends ManagedModule<Config> {
       getTeam: this.getTeam.bind(this),
       createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
+      validateAccessToken: this.validateAccessToken.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -371,6 +376,40 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     });
     return callback(null, { message: result as string });
+  }
+
+  async validateAccessToken(
+    call: GrpcRequest<ValidateAccessTokenRequest>,
+    callback: GrpcCallback<ValidateAccessTokenResponse>,
+  ) {
+    const accessToken = call.request.accessToken;
+    const path = call.request.path ?? '';
+    let userId: string | undefined = undefined;
+    const accessStatus = await handleAuthentication(
+      {},
+      { authorization: `Bearer ${accessToken}` },
+      {},
+      path,
+    )
+      .then(r => {
+        userId = (r.user as models.User)._id;
+        return ValidateAccessTokenResponse_Status.AUTHENTICATED;
+      })
+      .catch(err => {
+        switch (err.code as status) {
+          case status.PERMISSION_DENIED:
+            return ValidateAccessTokenResponse_Status.USER_BLOCKED;
+          case status.UNAUTHENTICATED:
+            if (err.message.includes('2FA')) {
+              return ValidateAccessTokenResponse_Status.REQUIRES_2FA;
+            }
+          // intentional fall through
+          default:
+            return ValidateAccessTokenResponse_Status.UNAUTHENTICATED;
+        }
+      });
+
+    return callback(null, { status: accessStatus, userId });
   }
 
   protected registerSchemas() {
