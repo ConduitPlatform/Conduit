@@ -6,6 +6,7 @@ import {
   UserDeleteResponse,
   UserLoginResponse,
   Team,
+  ValidateAccessTokenResponse,
 } from '../../protoUtils';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
@@ -44,5 +45,12 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   teamDelete(teamId: string): Promise<TeamDeleteResponse> {
     return this.client!.teamDelete({ teamId });
+  }
+
+  validateAccessToken(
+    accessToken: string,
+    path?: string,
+  ): Promise<ValidateAccessTokenResponse> {
+    return this.client!.validateAccessToken({ accessToken, path });
   }
 }
