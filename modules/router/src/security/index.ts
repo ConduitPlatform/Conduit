@@ -21,7 +21,6 @@ export default class SecurityModule {
     this.router.registerGlobalMiddleware(
       'rateLimiter',
       new RateLimiter(this.grpcSdk).limiter,
-      true,
     );
     this.router.registerGlobalMiddleware(
       'corsMiddleware',
