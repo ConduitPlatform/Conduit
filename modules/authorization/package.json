@@ -38,7 +38,7 @@
     "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
@@ -46,7 +46,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/lodash": "^4.14.192",
     "@types/node": "18.15.11",
-    "@types/uuid": "^9.0.1",
+    "@types/uuid": "^9.0.5",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",
