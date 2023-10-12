@@ -2,7 +2,11 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { PushNotificationsDefinition } from '../../protoUtils/push-notifications';
 
 export class PushNotifications extends ConduitModule<typeof PushNotificationsDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'push-notifications', url, grpcToken);
     this.initializeClient(PushNotificationsDefinition);
   }
@@ -21,7 +25,9 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
     return this.client!.getNotificationTokens({
       userId,
     }).then(res => {
-      return res.tokenDocuments;
+      return res.tokenDocuments.map((tokenDocument: string) => {
+        return JSON.parse(tokenDocument);
+      });
     });
   }
 
@@ -38,8 +44,6 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
       body,
       data,
       platform,
-    }).then(res => {
-      return JSON.parse(res.message);
     });
   }
 
@@ -50,8 +54,6 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
   ) {
     return this.client!.sendManyNotifications({
       notifications,
-    }).then(res => {
-      return JSON.parse(res.message);
     });
   }
 
@@ -68,8 +70,6 @@ export class PushNotifications extends ConduitModule<typeof PushNotificationsDef
       body,
       data,
       platform,
-    }).then(res => {
-      return JSON.parse(res.message);
     });
   }
 }
