@@ -84,7 +84,7 @@ export class SocketController extends ConduitRouter {
 
     const self = this;
     this.globalMiddlewares.forEach(middleware => {
-      self.io.engine.use((req: Request, res: Response, next: NextFunction) => {
+      self.io.engine.use((req: any, res: any, next: any) => {
         req.path = namespace;
         middleware(req, res, next);
       });
