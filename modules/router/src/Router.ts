@@ -27,7 +27,7 @@ import {
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
-import { protoTemplate, swaggerMetadata } from './hermes';
+import { protoTemplate, getSwaggerMetadata } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
@@ -85,7 +85,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       '',
       this.grpcSdk,
       1000,
-      swaggerMetadata,
+      getSwaggerMetadata,
       { registeredRoutes: { name: 'client_routes_total' } },
     );
     this.registerGlobalMiddleware(

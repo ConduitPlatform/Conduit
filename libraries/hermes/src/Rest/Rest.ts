@@ -23,18 +23,18 @@ import { merge } from 'lodash';
 const swaggerUi = require('swagger-ui-express');
 
 export class RestController extends ConduitRouter {
-  private readonly _privateHeaders: string[];
+  private _privateHeaders: string[];
   private _registeredLocalRoutes: Map<string, Handler | Handler[]>;
   private _swagger?: SwaggerGenerator;
 
   constructor(
     grpcSdk: ConduitGrpcSdk,
-    swaggerRouterMetadata: SwaggerRouterMetadata = {
+    getSwaggerRouterMetadata: () => SwaggerRouterMetadata = () => ({
       urlPrefix: '',
       securitySchemes: {},
       globalSecurityHeaders: [],
-      setExtraRouteHeaders(): void {},
-    },
+      setExtraRouteHeaders: () => {},
+    }),
     private readonly metrics?: {
       registeredRoutes?: {
         name: string;
@@ -43,11 +43,7 @@ export class RestController extends ConduitRouter {
   ) {
     super(grpcSdk);
     this._registeredLocalRoutes = new Map();
-    this._privateHeaders =
-      swaggerRouterMetadata.globalSecurityHeaders.length > 0
-        ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0])
-        : [];
-    this._swagger = new SwaggerGenerator(swaggerRouterMetadata);
+    this._swagger = new SwaggerGenerator(getSwaggerRouterMetadata);
     this.initializeRouter();
     TypeRegistry.getInstance(grpcSdk, {
       name: 'rest',
@@ -312,6 +308,13 @@ export class RestController extends ConduitRouter {
   }
 
   private initializeRouter() {
+    const swaggerRouterMetadata = this._swagger?.getSwaggerRouterMetadata();
+    if (swaggerRouterMetadata) {
+      this._privateHeaders =
+        swaggerRouterMetadata.globalSecurityHeaders.length > 0
+          ? Object.keys(swaggerRouterMetadata.globalSecurityHeaders[0] ?? {})
+          : [];
+    }
     this.createRouter();
     const self = this;
     this._expressRouter!.use('/swagger', swaggerUi.serve);

@@ -38,7 +38,7 @@ export async function authMiddleware(
   return handleAuthentication(context, headers, cookies, call.request.path);
 }
 
-async function handleAuthentication(
+export async function handleAuthentication(
   context: Indexable,
   headers: Headers,
   cookies: Cookies,

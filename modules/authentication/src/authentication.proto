@@ -59,6 +59,22 @@ message TeamDeleteResponse {
   string message = 1;
 }
 
+message ValidateAccessTokenRequest {
+  string accessToken = 1;
+  optional string path = 2;
+}
+
+message ValidateAccessTokenResponse {
+  enum Status {
+    AUTHENTICATED = 0;
+    UNAUTHENTICATED = 1;
+    REQUIRES_2FA = 2;
+    USER_BLOCKED = 3;
+  }
+  Status status = 1;
+  optional string userId = 2;
+}
+
 service Authentication {
   rpc UserLogin(UserLoginRequest) returns (UserLoginResponse);
   rpc UserCreate(UserCreateRequest) returns (UserCreateResponse);
@@ -67,4 +83,5 @@ service Authentication {
   rpc GetTeam(GetTeamRequest) returns (Team);
   rpc CreateTeam(CreateTeamRequest) returns (Team);
   rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
+  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
 }
