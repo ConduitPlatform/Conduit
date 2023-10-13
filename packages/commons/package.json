@@ -38,7 +38,7 @@
     "@types/is-natural-number": "^4.0.2",
     "@types/lodash": "^4.14.199",
     "@types/node": "18.15.11",
-    "@types/validator": "^13.7.14",
+    "@types/validator": "^13.11.2",
     "express": "~4.18.2",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",
