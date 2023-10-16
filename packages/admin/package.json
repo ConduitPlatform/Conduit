@@ -40,7 +40,7 @@
     "crypto": "^1.0.1",
     "graphql-tag": "^2.12.6",
     "helmet": "7.0.0",
-    "jsonwebtoken": "^9.0.0",
+    "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
