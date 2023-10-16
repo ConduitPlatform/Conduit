@@ -4328,10 +4328,10 @@
   dependencies:
     "@types/ms" "*"
 
-"@types/dottie@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@types/dottie/-/dottie-2.0.4.tgz#3d1ae16db8a7d2d760395bf9f1961a781a293194"
-  integrity sha512-tsrbuFtAEQ1RuaBh+HLd/Q9V4wn4CSRQEk6kRlWNQgOB6cCdHWGrfyQxjXCRsk6z4bxf/qlmFv30FhjQstT/gQ==
+"@types/dottie@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@types/dottie/-/dottie-2.0.5.tgz#b173f016b84c9fb0da0bc62d6970db78847222b5"
+  integrity sha512-6lh3CsUe+tkKwH6prgCP/kCGPMyv9bYapqFr+c4BSM4gy1DHdaPbm0/owmFugSAAFiVTBrCRqAKni4KqQPFhXQ==
 
 "@types/express-serve-static-core@^4.17.30", "@types/express-serve-static-core@^4.17.33":
   version "4.17.34"
@@ -6742,15 +6742,10 @@ dotgitignore@^2.1.0:
     find-up "^3.0.0"
     minimatch "^3.0.4"
 
-dottie@^2.0.2:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/dottie/-/dottie-2.0.3.tgz#797a4f4c92a9a65499806be4051b9d9dcd5a5d77"
-  integrity sha512-4liA0PuRkZWQFQjwBypdxPfZaRWiv5tkhMXY2hzsa2pNf5s7U3m9cwUchfNKe8wZQxdGPQQzO6Rm2uGe0rvohQ==
-
-dottie@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/dottie/-/dottie-2.0.4.tgz#9ce42965f45e577a6fa7d988d47852fac70c4e82"
-  integrity sha512-iz64WUOmp/ECQhWMJjTWFzJN/wQ7RJ5v/a6A2OiCwjaGCpNo66WGIjlSf+IULO9DQd0b4cFawLOTbiKSrpKodw==
+dottie@^2.0.2, dottie@^2.0.6:
+  version "2.0.6"
+  resolved "https://registry.yarnpkg.com/dottie/-/dottie-2.0.6.tgz#34564ebfc6ec5e5772272d466424ad5b696484d4"
+  integrity sha512-iGCHkfUc5kFekGiqhe8B/mdaurD+lakO9txNnTvKtA6PISrw86LgqHvRzWYPyoE2Ph5aMIrCw9/uko6XHTKCwA==
 
 dprint-node@^1.0.7:
   version "1.0.7"
