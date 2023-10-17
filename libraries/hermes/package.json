@@ -17,7 +17,7 @@
   "dependencies": {
     "@apollo/server": "^4.6.0",
     "@conduitplatform/grpc-sdk": "*",
-    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/grpc-js": "^1.9.5",
     "@grpc/proto-loader": "^0.7.6",
     "@socket.io/redis-adapter": "^8.1.0",
     "@types/object-hash": "^3.0.4",
