@@ -973,15 +973,15 @@
     "@smithy/util-middleware" "^2.0.4"
     tslib "^2.5.0"
 
-"@aws-sdk/s3-request-presigner@^3.428.0":
-  version "3.428.0"
-  resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.428.0.tgz#ee50a2f2c054087ce1f52e1abeecaf9a117e8e15"
-  integrity sha512-Jup4vrMm4Xk/5aEitktjtFmFW21PQsqA4MXvhxEaUh6yk9CgLKKGIk4UvyazaNrCEqo/G/EsnMGandXN5wYnpw==
+"@aws-sdk/s3-request-presigner@^3.429.0":
+  version "3.429.0"
+  resolved "https://registry.yarnpkg.com/@aws-sdk/s3-request-presigner/-/s3-request-presigner-3.429.0.tgz#fd2e0c41010bb5cc0b55ec4c6a43d4ae4c933100"
+  integrity sha512-PZF5dLiIltc7cczNGcLp044e86e2FuOyFO43lPJxVRLPgbKeyddTmDlOpf/clgT+D/s4LX7UA3EV7DSG32RDeA==
   dependencies:
     "@aws-sdk/signature-v4-multi-region" "3.428.0"
     "@aws-sdk/types" "3.428.0"
     "@aws-sdk/util-format-url" "3.428.0"
-    "@smithy/middleware-endpoint" "^2.1.0"
+    "@smithy/middleware-endpoint" "^2.1.1"
     "@smithy/protocol-http" "^3.0.7"
     "@smithy/smithy-client" "^2.1.11"
     "@smithy/types" "^2.3.5"
@@ -1059,20 +1059,12 @@
     "@smithy/types" "^1.1.0"
     tslib "^2.5.0"
 
-"@aws-sdk/types@3.428.0":
+"@aws-sdk/types@3.428.0", "@aws-sdk/types@^3.222.0":
   version "3.428.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/types/-/types-3.428.0.tgz#fcb62a5fc38c4e579dc2b251194483aaad393df0"
   integrity sha512-4T0Ps2spjg3qbWE6ZK13Vd3FnzpfliaiotqjxUK5YhjDrKXeT36HJp46JhDupElQuHtTkpdiJOSYk2lvY2H4IA==
   dependencies:
     "@smithy/types" "^2.3.5"
-    tslib "^2.5.0"
-
-"@aws-sdk/types@^3.222.0":
-  version "3.425.0"
-  resolved "https://registry.yarnpkg.com/@aws-sdk/types/-/types-3.425.0.tgz#8d4e94743a69c865a83785a9f3bcfd49945836f7"
-  integrity sha512-6lqbmorwerN4v+J5dqbHPAsjynI0mkEF+blf+69QTaKKGaxBBVaXgqoqul9RXYcK5MMrrYRbQIMd0zYOoy90kA==
-  dependencies:
-    "@smithy/types" "^2.3.4"
     tslib "^2.5.0"
 
 "@aws-sdk/util-arn-parser@3.310.0":
@@ -3675,14 +3667,14 @@
     "@smithy/util-middleware" "^1.0.2"
     tslib "^2.5.0"
 
-"@smithy/middleware-endpoint@^2.1.0":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@smithy/middleware-endpoint/-/middleware-endpoint-2.1.1.tgz#6eec29c380a8f0f9cadc9b28bf8b453c5b671985"
-  integrity sha512-YAqGagBvHqDEew4EGz9BrQ7M+f+u7ck9EL4zzYirOhIcXeBS/+q4A5+ObHDDwEp38lD6t88YUtFy3OptqEaDQg==
+"@smithy/middleware-endpoint@^2.1.0", "@smithy/middleware-endpoint@^2.1.1":
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@smithy/middleware-endpoint/-/middleware-endpoint-2.1.2.tgz#c6610f17b3c5773e4f272eb4de5c18a878607fe0"
+  integrity sha512-dua4r2EbSTRzNefz72snz+KDuXN73RCe1K+rGeemzUyYemxuh1jujFbLQbTU6DVlTgHkhtrbH0+kdOFY/SV4Qg==
   dependencies:
     "@smithy/middleware-serde" "^2.0.11"
-    "@smithy/node-config-provider" "^2.1.1"
-    "@smithy/shared-ini-file-loader" "^2.2.0"
+    "@smithy/node-config-provider" "^2.1.2"
+    "@smithy/shared-ini-file-loader" "^2.2.1"
     "@smithy/types" "^2.3.5"
     "@smithy/url-parser" "^2.0.11"
     "@smithy/util-middleware" "^2.0.4"
@@ -3763,6 +3755,16 @@
   dependencies:
     "@smithy/property-provider" "^2.0.12"
     "@smithy/shared-ini-file-loader" "^2.2.0"
+    "@smithy/types" "^2.3.5"
+    tslib "^2.5.0"
+
+"@smithy/node-config-provider@^2.1.2":
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@smithy/node-config-provider/-/node-config-provider-2.1.2.tgz#fc016d065dd1153a162c83f175b6050c850491dd"
+  integrity sha512-tbYh/JK/ddxKWYTtjLgap0juyivJ0wCvywMqINb54zyOVHoKYM6iYl7DosQA0owFaNp6GAx1lXFjqGz7L2fAqA==
+  dependencies:
+    "@smithy/property-provider" "^2.0.12"
+    "@smithy/shared-ini-file-loader" "^2.2.1"
     "@smithy/types" "^2.3.5"
     tslib "^2.5.0"
 
@@ -3882,6 +3884,14 @@
     "@smithy/types" "^2.3.5"
     tslib "^2.5.0"
 
+"@smithy/shared-ini-file-loader@^2.2.1":
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/@smithy/shared-ini-file-loader/-/shared-ini-file-loader-2.2.1.tgz#447c8510fee6857268c28180853ccc91d12963fc"
+  integrity sha512-eAYajwo2eTTVU5KPX90+V6ccfrWphrzcUwOt7n9pLOMBO0fOKlRVshbvCBqfRCxEn7OYDGH6TsL3yrx+hAjddA==
+  dependencies:
+    "@smithy/types" "^2.3.5"
+    tslib "^2.5.0"
+
 "@smithy/signature-v4@^1.0.1":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@smithy/signature-v4/-/signature-v4-1.0.2.tgz#3a7b10ac66c337b404aa061e5f268f0550729680"
@@ -3937,7 +3947,7 @@
   dependencies:
     tslib "^2.5.0"
 
-"@smithy/types@^2.3.4", "@smithy/types@^2.3.5":
+"@smithy/types@^2.3.5":
   version "2.3.5"
   resolved "https://registry.yarnpkg.com/@smithy/types/-/types-2.3.5.tgz#7684a74d4368f323b478bd9e99e7dc3a6156b5e5"
   integrity sha512-ehyDt8M9hehyxrLQGoA1BGPou8Js1Ocoh5M0ngDhJMqbFmNK5N6Xhr9/ZExWkyIW8XcGkiMPq3ZUEE0ScrhbuQ==
