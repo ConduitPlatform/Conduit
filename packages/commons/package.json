@@ -42,6 +42,6 @@
     "express": "~4.18.2",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",
-    "typescript": "~5.0.4"
+    "typescript": "~5.2.2"
   }
 }
