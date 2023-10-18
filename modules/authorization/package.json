@@ -32,7 +32,7 @@
     "@grpc/grpc-js": "^1.9.5",
     "@grpc/proto-loader": "^0.7.6",
     "axios": "^1.5.1",
-    "bcrypt": "^5.1.0",
+    "bcrypt": "^5.1.1",
     "convict": "^6.2.4",
     "escape-string-regexp": "^4.0.0",
     "jsonwebtoken": "^9.0.2",
@@ -41,7 +41,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.0",
+    "@types/bcrypt": "^5.0.1",
     "@types/convict": "^6.1.1",
     "@types/jsonwebtoken": "^9.0.1",
     "@types/lodash": "^4.14.199",
