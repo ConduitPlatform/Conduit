@@ -2,7 +2,7 @@ import ConduitGrpcSdk, {
   ConduitModel,
   ConduitSchema,
   GrpcError,
-  ModelOptionsIndexes,
+  ModelOptionsIndex,
   RawMongoQuery,
   RawSQLQuery,
   TYPE,
@@ -132,13 +132,13 @@ export abstract class DatabaseAdapter<T extends Schema> {
 
   abstract getDatabaseType(): string;
 
-  abstract createIndexes(
+  abstract createIndex(
     schemaName: string,
-    indexes: ModelOptionsIndexes[],
+    index: ModelOptionsIndex,
     callerModule: string,
   ): Promise<string>;
 
-  abstract getIndexes(schemaName: string): Promise<ModelOptionsIndexes[]>;
+  abstract getIndexes(schemaName: string): Promise<ModelOptionsIndex[]>;
 
   abstract createView(
     modelName: string,
