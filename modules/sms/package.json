@@ -27,7 +27,7 @@
     "@aws-sdk/client-sns": "^3.429.0",
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.9.5",
+    "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
     "aws-sdk": "^2.1475.0",
     "aws-sdk-js-codemod": "^0.14.1",
