@@ -4571,10 +4571,10 @@ aws-sdk-js-codemod@^0.14.1:
   dependencies:
     jscodeshift "0.14.0"
 
-aws-sdk@^2.1475.0:
-  version "2.1475.0"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.1475.0.tgz#2b7dc55e7779964a9174c4595b239be76080bc32"
-  integrity sha512-fYlDnmh7sDH/CS6TtP0EEH2RcLBemgHnJjUhkHGIqQvMTzi3N13EvBtyaYozoJsJ2i8/rcwU10/48HO7rNwL5g==
+aws-sdk@^2.1477.0:
+  version "2.1477.0"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.1477.0.tgz#ec878ea5584fee217eb02ec8f6ebfd9ace47f908"
+  integrity sha512-DLsrKosrKRe5P1E+BcJAVpOXkma4oUOrcyBUridDmUhdf9k3jj5dnL1roFuDpTmNDDhK8a1tUgY3wmXoKQtv7A==
   dependencies:
     buffer "4.9.2"
     events "1.1.1"
