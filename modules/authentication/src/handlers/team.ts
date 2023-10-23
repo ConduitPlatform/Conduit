@@ -103,7 +103,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
       actions: ['invite'],
       resource: 'Team:' + teamId,
     });
-    if (!allowed.allow || !config.teams.allowAddWithoutInvite) {
+    if (!allowed.allow && !config.teams.allowAddWithoutInvite) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,
         'Could not add user to team, user does not have permission ' +
