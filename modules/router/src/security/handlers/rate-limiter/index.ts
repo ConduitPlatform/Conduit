@@ -17,6 +17,10 @@ export class RateLimiter {
       blockDuration: config.exceedQuotaPenaltyDuration,
       execEvenly: false,
     });
+    const redis = grpcSdk.redisManager.getClient();
+    redis.keys('mainLimiter:*').then(keys => {
+      redis.del(keys);
+    });
   }
 
   private _limiter: RateLimiterRedis;
