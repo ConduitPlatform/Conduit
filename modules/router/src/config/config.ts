@@ -73,4 +73,21 @@ export default {
       default: false,
     },
   },
+  rateLimit: {
+    maxRequests: {
+      format: 'Number',
+      default: 50,
+      doc: 'Maximum number of allowed user requests per reset interval.',
+    },
+    resetInterval: {
+      format: 'Number',
+      default: 1,
+      doc: 'Request count reset timeframe. Expressed in seconds.',
+    },
+    exceedQuotaPenaltyDuration: {
+      format: 'Number',
+      default: 10,
+      doc: 'Penalty duration for which to automatically block any subsequent requests once rate limit is exceeded. Expressed in seconds.',
+    },
+  },
 };
