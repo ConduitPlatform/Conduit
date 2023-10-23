@@ -4020,10 +4020,10 @@
   resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-9.0.5.tgz#25a71eb73eba95ac0e559ff3dd018fc08294acf6"
   integrity sha512-xfHdwa1FMJ082prjSJpoEI57GZITiQz10r3vEJCHa2khEFQjKy91aWKz6+zybzssCvXUwE1LQWgWVwZ4nYUvHQ==
 
-"@types/validator@^13.11.2", "@types/validator@^13.7.1":
-  version "13.11.2"
-  resolved "https://registry.yarnpkg.com/@types/validator/-/validator-13.11.2.tgz#a2502325a3c0bd29f36dbac3b763223edd801e17"
-  integrity sha512-nIKVVQKT6kGKysnNt+xLobr+pFJNssJRi2s034wgWeFBUx01fI8BeHTW2TcRp7VcFu9QCYG8IlChTuovcm0oKQ==
+"@types/validator@^13.11.5", "@types/validator@^13.7.1":
+  version "13.11.5"
+  resolved "https://registry.yarnpkg.com/@types/validator/-/validator-13.11.5.tgz#1911964fd5556b08d3479d1ded977c06f89a44a7"
+  integrity sha512-xW4qsT4UIYILu+7ZrBnfQdBYniZrMLYYK3wN9M/NdeIHgBN5pZI2/8Q7UfdWIcr5RLJv/OGENsx91JIpUUoC7Q==
 
 "@types/webidl-conversions@*":
   version "6.1.1"
