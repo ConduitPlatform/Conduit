@@ -186,7 +186,7 @@ export class ChatRoutes {
       room.participants.splice(index, 1);
       if (
         room.participants.length === 1 &&
-        ConfigController.getInstance().config.destroyRoomWhenEmpty
+        ConfigController.getInstance().config.deleteEmptyRooms
       ) {
         await ChatRoom.getInstance().deleteOne({ _id: room._id });
         this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));

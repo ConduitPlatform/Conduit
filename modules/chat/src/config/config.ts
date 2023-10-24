@@ -11,7 +11,8 @@ export default {
     format: 'Boolean',
     default: true,
   },
-  destroyRoomWhenEmpty: {
+  deleteEmptyRooms: {
+    doc: 'Defines whether rooms should be automatically deleted after all participants have left',
     format: 'Boolean',
     default: false,
   },
