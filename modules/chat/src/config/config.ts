@@ -11,6 +11,10 @@ export default {
     format: 'Boolean',
     default: true,
   },
+  destroyRoomWhenEmpty: {
+    format: 'Boolean',
+    default: false,
+  },
   explicit_room_joins: {
     enabled: {
       doc: 'Defines whether users should explicitly accept an invitation before being introduced into a chat room',

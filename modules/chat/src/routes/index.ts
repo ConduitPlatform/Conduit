@@ -12,6 +12,7 @@ import ConduitGrpcSdk, {
 import {
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -183,13 +184,20 @@ export class ChatRoutes {
     const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
-      await ChatRoom.getInstance()
-        .findByIdAndUpdate(room._id, room)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
+      if (
+        room.participants.length === 1 &&
+        ConfigController.getInstance().config.destroyRoomWhenEmpty
+      ) {
+        await ChatRoom.getInstance().deleteOne({ _id: room._id });
+        this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));
+      } else {
+        await ChatRoom.getInstance()
+          .findByIdAndUpdate(room._id, room)
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+      }
     }
-
     this.grpcSdk.bus?.publish(
       'chat:leaveRoom:ChatRoom',
       JSON.stringify({ roomId, user: user._id }),
