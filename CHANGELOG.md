@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.22...v0.16.0-alpha.23) (2023-10-24)
+
+
+### Features
+
+* **authentication,grpc-sdk:** ValidateAccessToken gRPC method ([#729](https://github.com/ConduitPlatform/Conduit/issues/729)) ([8733eea](https://github.com/ConduitPlatform/Conduit/commit/8733eea2903633e060971daf2f7593a000c3c771))
+* **authentication:** configurable magicLink dispatch URI, magic token consumption endpoint ([#722](https://github.com/ConduitPlatform/Conduit/issues/722)) ([64d4714](https://github.com/ConduitPlatform/Conduit/commit/64d47142a0d534c24b4b72022a29e26ee572a1a5))
+* **router:** request rate limit configuration ([#760](https://github.com/ConduitPlatform/Conduit/issues/760)) ([5629cb3](https://github.com/ConduitPlatform/Conduit/commit/5629cb3736a182b220a2b840b4819793242af3e0))
+
+
+### Bug Fixes
+
+* **authentication:** sendMagicLink missing redirectUri, magic link hook invalid redirectUri param type ([#716](https://github.com/ConduitPlatform/Conduit/issues/716)) ([911d795](https://github.com/ConduitPlatform/Conduit/commit/911d795f6477ed549dd2882f2f371a88fa5bcf05))
+* **grpc-sdk:** push notifications responses type mismatch ([#731](https://github.com/ConduitPlatform/Conduit/issues/731)) ([2b981c5](https://github.com/ConduitPlatform/Conduit/commit/2b981c5230701d094f6b9f21e84769fc76a10b92))
+* **hermes,router,admin:** Swagger missing optional authMiddleware headers, conditional security client headers ([#728](https://github.com/ConduitPlatform/Conduit/issues/728)) ([0e074c0](https://github.com/ConduitPlatform/Conduit/commit/0e074c0dc97db6375c7d9cc276b2e011f2c8a00b))
+* **router:** disable rate limiter for sockets due to IP not being available ([#730](https://github.com/ConduitPlatform/Conduit/issues/730)) ([8d7c0d9](https://github.com/ConduitPlatform/Conduit/commit/8d7c0d90bee1c464eb37c46a3e242b85e5b0a1aa))
+
 ## [0.16.0-alpha.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.21...v0.16.0-alpha.22) (2023-10-09)
 
 
