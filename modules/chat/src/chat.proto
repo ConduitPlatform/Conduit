@@ -14,7 +14,7 @@ message SendMessageRequest {
 }
 
 message DeleteRoomRequest {
-  string id = 1;
+  string _id = 1;
 }
 
 message Room {
