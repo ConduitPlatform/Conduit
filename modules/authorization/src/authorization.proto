@@ -4,13 +4,13 @@ package authorization;
 
 message Resource {
   string name = 1;
-  repeated _Relation relations = 2;
-  repeated _Permission permissions = 3;
-  message _Relation {
+  repeated Relation relations = 2;
+  repeated Permission permissions = 3;
+  message Relation {
     string name = 1;
     repeated string resourceType = 2;
   }
-  message _Permission {
+  message Permission {
     string name = 1;
     repeated string roles = 2;
   }
