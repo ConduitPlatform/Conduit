@@ -151,7 +151,7 @@ export default class Chat extends ManagedModule<Config> {
       }),
     );
     callback(null, {
-      Id: room._id,
+      _id: room._id,
       name: room.name,
       participants: room.participants as string[],
     });
@@ -203,13 +203,11 @@ export default class Chat extends ManagedModule<Config> {
   }
 
   async deleteRoom(call: GrpcRequest<DeleteRoomRequest>, callback: GrpcCallback<Room>) {
-    const { id } = call.request;
+    const { _id } = call.request;
 
     let errorMessage: string | null = null;
     const room: models.ChatRoom = await models.ChatRoom.getInstance()
-      .deleteOne({
-        _id: id,
-      })
+      .deleteOne({ _id })
       .catch((e: Error) => {
         errorMessage = e.message;
       });
@@ -219,7 +217,7 @@ export default class Chat extends ManagedModule<Config> {
 
     models.ChatMessage.getInstance()
       .deleteMany({
-        room: id,
+        room: _id,
       })
       .catch((e: Error) => {
         errorMessage = e.message;
@@ -237,7 +235,7 @@ export default class Chat extends ManagedModule<Config> {
       }),
     );
     callback(null, {
-      Id: room._id,
+      _id: room._id,
       name: room.name,
       participants: room.participants as string[],
     });
