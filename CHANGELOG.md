@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.24](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.23...v0.16.0-alpha.24) (2023-10-26)
+
+
+### Features
+
+* **chat:** add config to delete rooms when participants have left ([#764](https://github.com/ConduitPlatform/Conduit/issues/764)) ([1f7d31f](https://github.com/ConduitPlatform/Conduit/commit/1f7d31fa7a640426a1edb9ae05f3cc1750d410d0))
+
+
+### Bug Fixes
+
+* ts-proto snake_case to camelCase, Chat.gRPC.createRoom() empty id res field ([#770](https://github.com/ConduitPlatform/Conduit/issues/770)) ([510b2be](https://github.com/ConduitPlatform/Conduit/commit/510b2be597e44bb848f374c138c20b224f983211))
+
 ## [0.16.0-alpha.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.22...v0.16.0-alpha.23) (2023-10-24)
 
 
