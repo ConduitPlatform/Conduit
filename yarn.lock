@@ -2046,7 +2046,7 @@
   resolved "https://registry.yarnpkg.com/@graphql-typed-document-node/core/-/core-3.2.0.tgz#5f3d96ec6b2354ad6d8a28bf216a1d97b5426861"
   integrity sha512-mB9oAsNCm9aM3/SOv4YtBMqZbYj10R7dkq8byBqxGY/ncFwhf2oQzMV+LCRlWoDSEBJ3COiR1yeDvMtsoOsuFQ==
 
-"@grpc/grpc-js@^1.7.3", "@grpc/grpc-js@^1.9.7":
+"@grpc/grpc-js@^1.9.5", "@grpc/grpc-js@^1.9.7":
   version "1.9.7"
   resolved "https://registry.yarnpkg.com/@grpc/grpc-js/-/grpc-js-1.9.7.tgz#7d0e29bc162287bee2523901c9bc9320d8402397"
   integrity sha512-yMaA/cIsRhGzW3ymCNpdlPcInXcovztlgu/rirThj2b87u3RzWUszliOqZ/pldy7yhmJPS8uwog+kZSTa4A0PQ==
@@ -4309,12 +4309,7 @@ abbrev@1, abbrev@^1.0.0:
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
-abort-controller-x@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/abort-controller-x/-/abort-controller-x-0.4.0.tgz#fde25da52548c7ff3d8b3b32dffc943452874d5f"
-  integrity sha512-cuNbw3c/SvEOkWkgxoWOOS3QzcTCC6YXCFH6oTZ/jvjZPBhkjaoUyCLwdAViRRhYmluJPD7vGaTLkHCp67xQVQ==
-
-abort-controller-x@^0.4.1:
+abort-controller-x@^0.4.0, abort-controller-x@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/abort-controller-x/-/abort-controller-x-0.4.1.tgz#b2eefab8503897e0bbdf3dd7a4d33e05ea1ffce9"
   integrity sha512-lJ2ssrl3FoTK3cX/g15lRCkXFWKiwRTRtBjfwounO2EM/Q65rI/MEZsfsch1juWU2pH2aLSaq0HGowlDP/imrw==
@@ -10292,12 +10287,12 @@ nice-grpc-common@^2.0.2:
   dependencies:
     ts-error "^1.0.6"
 
-nice-grpc@^2.1.4:
-  version "2.1.4"
-  resolved "https://registry.yarnpkg.com/nice-grpc/-/nice-grpc-2.1.4.tgz#f0d2fe5879ed55157be672b2691242a800339ce0"
-  integrity sha512-ZCSnFxg/k6PM1zZ2u/SbuySTrpK7q4klwRE4ymAdiMfZM3Rl1LRUdqUslKSbSjd9XQHzi80Y5JJL5fE58lSrVA==
+nice-grpc@^2.1.7:
+  version "2.1.7"
+  resolved "https://registry.yarnpkg.com/nice-grpc/-/nice-grpc-2.1.7.tgz#0ad0495dee85514f0d895e3797cedc8eabd0462f"
+  integrity sha512-pSaZk5Y3PHGAPObOSXTrANgimA6T//szxlcKOnnyttpYwO0gyOpX2WsaFK4fbGJizPVxXjwqrXpPOSHMwM2vlg==
   dependencies:
-    "@grpc/grpc-js" "^1.7.3"
+    "@grpc/grpc-js" "^1.9.5"
     abort-controller-x "^0.4.0"
     nice-grpc-common "^2.0.2"
 

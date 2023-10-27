@@ -27,7 +27,7 @@
     "fs-extra": "^11.1.1",
     "ioredis": "^5.3.2",
     "lodash": "^4.17.21",
-    "nice-grpc": "^2.1.4",
+    "nice-grpc": "^2.1.7",
     "nice-grpc-client-middleware-retry": "^3",
     "prom-client": "^14.2.0",
     "protobufjs": "^7.2.4",
