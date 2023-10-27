@@ -81,7 +81,7 @@ export abstract class ConduitRouter {
   }
 
   async checkMiddlewares(params: ConduitRouteParameters, middlewares?: string[]) {
-    let primaryPromise = new Promise<void>(resolve => resolve());
+    let primaryPromise = Promise.resolve();
     middlewares?.forEach(m => {
       const middleware = m.split('?')[0];
       if (!this._middlewares?.hasOwnProperty(middleware)) {
