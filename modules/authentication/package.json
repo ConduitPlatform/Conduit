@@ -32,7 +32,7 @@
     "@conduitplatform/node-2fa": "^1.0.0",
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
-    "axios": "^1.5.1",
+    "axios": "^1.6.0",
     "bcrypt": "^5.1.1",
     "convict": "^6.2.4",
     "crypto": "^1.0.1",

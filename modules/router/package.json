@@ -23,7 +23,7 @@
     "@conduitplatform/hermes": "^1.0.1",
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
-    "axios": "^1.5.1",
+    "axios": "^1.6.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "deep-object-diff": "^1.1.9",
