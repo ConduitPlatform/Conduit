@@ -166,8 +166,7 @@ export class RestController extends ConduitRouter {
       };
       self
         .checkMiddlewares(context, route.input.middlewares)
-        .then(r => {
-          Object.assign(context.context, r);
+        .then(() => {
           if (route.input.action !== ConduitRouteActions.GET) {
             return route.executeRequest(context);
           }
