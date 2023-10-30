@@ -36,7 +36,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/node": "18.15.11",
+    "@types/node": "20.8.9",
     "@types/uuid": "^9.0.5",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
