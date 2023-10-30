@@ -4057,10 +4057,10 @@
   resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-3.0.4.tgz#31865a3d69de1042fec2ede56fd8cf0bb4e01641"
   integrity sha512-w4fEy2suq1bepUxHoJRCBHJz0vS5DPAYpSbcgNwOahljxwyJsiKmi8qyes2/TJc+4Avd7fsgP+ZgUuXZjPvdug==
 
-"@types/otp-generator@^4.0.0":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@types/otp-generator/-/otp-generator-4.0.0.tgz#da28b1e254f46262e176ba96541bcfa32660da98"
-  integrity sha512-QsMc+jgx2WX5ciAwc4Wj37eaGYGnoQcUishOWUgpZ+8nypK6hr5jgUE3xumQ7hvX4AC+gxZktpg/dUHWa4FZRA==
+"@types/otp-generator@^4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@types/otp-generator/-/otp-generator-4.0.1.tgz#039089f153f17a0616f8a3cfcbfb14568168ee57"
+  integrity sha512-U+ZUCGHKU/DOMW/UXIh9Isi2yvLsyUMA0mE6j0O7xL4czkNGHcr76Q9PeBMoJNKZ2LhdivAzsi18Y2y10/x1JQ==
 
 "@types/qs@*":
   version "6.9.7"
