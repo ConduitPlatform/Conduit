@@ -48,7 +48,7 @@ export class TwoFactorSecret extends ConduitActiveSchema<TwoFactorSecret> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, TwoFactorSecret.name, schema, modelOptions, collectionName);
   }
 

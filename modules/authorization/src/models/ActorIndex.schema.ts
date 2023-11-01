@@ -66,7 +66,7 @@ export class ActorIndex extends ConduitActiveSchema<ActorIndex> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ActorIndex.name, schema, schemaOptions, collectionName);
   }
 

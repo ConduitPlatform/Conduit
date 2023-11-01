@@ -73,7 +73,7 @@ export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ObjectIndex.name, schema, schemaOptions, collectionName);
   }
 

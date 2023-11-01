@@ -50,7 +50,7 @@ export class InvitationToken extends ConduitActiveSchema<InvitationToken> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, InvitationToken.name, schema, modelOptions, collectionName);
   }
 
