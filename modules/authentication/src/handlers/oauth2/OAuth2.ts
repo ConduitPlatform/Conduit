@@ -138,7 +138,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const providerResponse: { data: { access_token: string } } = await axios(
       providerOptions,
     ).catch(err => {
-      ConduitGrpcSdk.Logger.error(err.response.data);
+      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
       throw new GrpcError(status.INTERNAL, err.message);
     });
     const access_token = providerResponse.data.access_token;
@@ -150,7 +150,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
       clientId,
       scope: scope,
     }).catch(err => {
-      ConduitGrpcSdk.Logger.error(err.response.data);
+      ConduitGrpcSdk.Logger.error(JSON.stringify(err.response.data));
       throw new GrpcError(status.INTERNAL, err.message);
     });
 
