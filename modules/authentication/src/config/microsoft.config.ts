@@ -8,5 +8,10 @@ export default {
       format: 'Boolean',
       default: true,
     },
+    tenantId: {
+      doc: 'The tenant id for the microsoft app. Used ONLY when app is not multi-tenant.',
+      format: 'String',
+      default: '',
+    },
   },
 };
