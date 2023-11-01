@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.25](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.24...v0.16.0-alpha.25) (2023-11-01)
+
+
+### Bug Fixes
+
+* **authentication:** not logging authn errors properly in oAuth2 ([68993af](https://github.com/ConduitPlatform/Conduit/commit/68993afa9c64130ce183dcfb4752f43c7cbdffef))
+* **hermes:** cumulative middleware context ([#771](https://github.com/ConduitPlatform/Conduit/issues/771)) ([65dbfac](https://github.com/ConduitPlatform/Conduit/commit/65dbfac5376b2f22c5dc2318637e2437bdeb86db))
+* model controller class constructor visibility ([#781](https://github.com/ConduitPlatform/Conduit/issues/781)) ([0cfe373](https://github.com/ConduitPlatform/Conduit/commit/0cfe3734b43865010ec3acc5ec564adca8ca23ba))
+
 ## [0.16.0-alpha.24](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.23...v0.16.0-alpha.24) (2023-10-26)
 
 
