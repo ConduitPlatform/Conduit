@@ -67,7 +67,7 @@ export class Relationship extends ConduitActiveSchema<Relationship> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, Relationship.name, schema, schemaOptions, collectionName);
   }
 

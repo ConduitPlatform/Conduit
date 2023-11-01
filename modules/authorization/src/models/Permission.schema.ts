@@ -68,7 +68,7 @@ export class Permission extends ConduitActiveSchema<Permission> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, Permission.name, schema, schemaOptions, collectionName);
   }
 

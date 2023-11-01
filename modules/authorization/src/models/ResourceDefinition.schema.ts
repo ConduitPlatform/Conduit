@@ -70,7 +70,7 @@ export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> 
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ResourceDefinition.name, schema, schemaOptions, collectionName);
   }
 
