@@ -2496,6 +2496,11 @@
     yargs "16.2.0"
     yargs-parser "20.2.4"
 
+"@lukeed/ms@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@lukeed/ms/-/ms-2.0.1.tgz#3c2bbc258affd9cc0e0cc7828477383c73afa6ee"
+  integrity sha512-Xs/4RZltsAL7pkvaNStUQt7netTkyxrS0K+RILcVr3TRMS/ToOg4I6uNfhB9SlGsnWBym4U+EaXq0f0cEMNkHA==
+
 "@mapbox/node-pre-gyp@^1.0.0", "@mapbox/node-pre-gyp@^1.0.11":
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/@mapbox/node-pre-gyp/-/node-pre-gyp-1.0.11.tgz#417db42b7f5323d79e93b34a6d7a2a12c0df43fa"
@@ -6790,11 +6795,12 @@ fast-json-stable-stringify@2.x, fast-json-stable-stringify@^2.0.0, fast-json-sta
   resolved "https://registry.yarnpkg.com/fast-json-stable-stringify/-/fast-json-stable-stringify-2.1.0.tgz#874bf69c6f404c2b5d99c481341399fd55892633"
   integrity sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==
 
-fast-jwt@^2.2.1:
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/fast-jwt/-/fast-jwt-2.2.1.tgz#422adeca0b95b52e17d7fe0f541ee523a49ba159"
-  integrity sha512-r5zKugIE/4ZgGv98fE6wtIglkOwMVJOlYVa/nXyivAV56sLtAtH1eJX+WiZAwOgy387PJeZdBQsjfJhoPwOqvA==
+fast-jwt@^3.3.0:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/fast-jwt/-/fast-jwt-3.3.1.tgz#dccac262fb919ec16b367d19d24304eff5706175"
+  integrity sha512-1YuuIJeh1hEvfcYDe89P2oGACWI5hd2GadRDKHalSxkc1Z0z8I6yzuVK6SF15sW09QZngTV6d7g4+TFL9bvs5A==
   dependencies:
+    "@lukeed/ms" "^2.0.1"
     asn1.js "^5.4.1"
     ecdsa-sig-formatter "^1.0.11"
     mnemonist "^0.39.5"

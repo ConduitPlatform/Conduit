@@ -18,7 +18,7 @@
     "abort-controller-x": "^0.4.1",
     "convict": "^6.2.4",
     "express": "^4.18.2",
-    "fast-jwt": "^2.2.1",
+    "fast-jwt": "^3.3.0",
     "lodash": "^4.17.21",
     "prom-client": "^14.2.0",
     "protobufjs": "^7.2.3",
