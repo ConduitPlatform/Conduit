@@ -27,8 +27,10 @@ export class IndexController {
       await ObjectIndex.getInstance().create({
         subject,
         subjectType: subject.split(':')[0],
+        subjectId: subject.split(':')[1].split('#')[0],
         subjectPermission: subject.split('#')[1],
         entity,
+        entityId: entity.split(':')[1].split('#')[0],
         entityType: entity.split(':')[0],
         relation: entity.split('#')[1],
       });
@@ -49,8 +51,10 @@ export class IndexController {
     if (!found) {
       await ActorIndex.getInstance().create({
         subject: subject,
+        subjectId: subject.split(':')[1],
         subjectType: subject.split(':')[0],
         entity: `${object}#${relation}`,
+        entityId: object.split(':')[1],
         entityType: object.split(':')[0],
         relation: relation,
       });
@@ -63,9 +67,11 @@ export class IndexController {
         if (role.indexOf('->') === -1) {
           obj.push({
             subject: `${object}#${permission}`,
+            subjectId: object.split(':')[1],
             subjectType: `${object}#${permission}`.split(':')[0],
             subjectPermission: `${object}#${permission}`.split('#')[1],
             entity: `${object}#${role}`,
+            entityId: object.split(':')[1],
             entityType: `${object}#${role}`.split(':')[0],
             relation: `${object}#${role}`.split('#')[1],
           });
@@ -78,9 +84,11 @@ export class IndexController {
           for (const connection of possibleConnections) {
             obj.push({
               subject: `${object}#${permission}`,
+              subjectId: object.split(':')[1],
               subjectType: `${object}#${permission}`.split(':')[0],
               subjectPermission: `${object}#${permission}`.split('#')[1],
               entity: connection.entity,
+              entityId: connection.entity.split(':')[1].split('#')[0],
               entityType: connection.entity.split(':')[0],
               relation: connection.entity.split('#')[1],
             });
@@ -147,8 +155,10 @@ export class IndexController {
       if (!exists) {
         actorsToCreate.push({
           subject: r.subject,
+          subjectId: r.subject.split(':')[1].split('#')[0],
           subjectType: r.subject.split(':')[0],
           entity,
+          entityId: entity.split(':')[1].split('#')[0],
           entityType: entity.split(':')[0],
           relation: r.relation,
         });
@@ -169,9 +179,11 @@ export class IndexController {
           if (role.indexOf('->') === -1) {
             obj.push({
               subject: `${r.object}#${permission}`,
+              subjectId: r.object.split(':')[1],
               subjectType: `${r.object}#${permission}`.split(':')[0],
               subjectPermission: `${r.object}#${permission}`.split('#')[1],
               entity: `${r.object}#${role}`,
+              entityId: r.object.split(':')[1],
               entityType: `${r.object}#${role}`.split(':')[0],
               relation: `${r.object}#${role}`.split('#')[1],
             });
@@ -184,9 +196,11 @@ export class IndexController {
             for (const connection of relationConnections) {
               obj.push({
                 subject: `${r.object}#${permission}`,
+                subjectId: r.object.split(':')[1],
                 subjectType: `${r.object}#${permission}`.split(':')[0],
                 subjectPermission: `${r.object}#${permission}`.split('#')[1],
                 entity: connection.entity,
+                entityId: connection.entity.split(':')[1].split('#')[0],
                 entityType: connection.entity.split(':')[0],
                 relation: connection.entity.split('#')[1],
               });
@@ -417,28 +431,16 @@ export class IndexController {
   }
 
   async removeResource(resourceName: string) {
-    await ActorIndex.getInstance().deleteMany({
+    const query = {
       $or: [
         {
-          subject: {
-            $regex: `${resourceName}.*`,
-            $options: 'i',
-          },
+          subjectType: resourceName,
         },
-        { entity: { $regex: `${resourceName}.*`, $options: 'i' } },
+        { entityType: resourceName },
       ],
-    });
-    await ObjectIndex.getInstance().deleteMany({
-      $or: [
-        {
-          subject: {
-            $regex: `${resourceName}.*`,
-            $options: 'i',
-          },
-        },
-        { entity: { $regex: `${resourceName}.*`, $options: 'i' } },
-      ],
-    });
+    };
+    await ActorIndex.getInstance().deleteMany(query);
+    await ObjectIndex.getInstance().deleteMany(query);
   }
 
   async findIndex(subject: string, action: string, object: string) {
@@ -466,7 +468,8 @@ export class IndexController {
 
     const objectDefinition = await ObjectIndex.getInstance().findMany(
       {
-        subject: { $like: `${objectType}:%#${action}` },
+        subjectType: objectType,
+        subjectPermission: action,
         entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
       },
       undefined,
@@ -482,7 +485,8 @@ export class IndexController {
     });
 
     return await ObjectIndex.getInstance().countDocuments({
-      subject: { $like: `${objectType}:%#${action}` },
+      subjectType: objectType,
+      subjectPermission: action,
       entity: { $in: [...subjectDefinition.map(index => index.entity), '*'] },
     });
   }

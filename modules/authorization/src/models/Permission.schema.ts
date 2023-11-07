@@ -13,6 +13,10 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
   },
+  resourceId: {
+    type: TYPE.ObjectId,
+    required: true,
+  },
   // organization
   resourceType: {
     type: TYPE.String,
@@ -22,6 +26,10 @@ const schema: ConduitModel = {
   // user:1adasdas
   subject: {
     type: TYPE.String,
+    required: true,
+  },
+  subjectId: {
+    type: TYPE.ObjectId,
     required: true,
   },
   // user
@@ -60,8 +68,10 @@ export class Permission extends ConduitActiveSchema<Permission> {
   private static _instance: Permission;
   _id: string;
   resource: string;
+  resourceId: string;
   resourceType: string;
   subject: string;
+  subjectId: string;
   subjectType: string;
   permission: string;
   computedTuple: string;

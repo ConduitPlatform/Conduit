@@ -150,9 +150,6 @@ export class ResourceController {
   async deleteResource(name: string) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
-    await Relationship.getInstance().deleteMany({
-      name: { $regex: `.*${resourceDefinition.name}.*`, $options: 'i' },
-    });
     await this.relationsController.removeResource(name);
     await this.indexController.removeResource(name);
     return await ResourceDefinition.getInstance().deleteOne({ name });

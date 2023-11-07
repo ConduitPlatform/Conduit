@@ -17,6 +17,10 @@ const schema: ConduitModel = {
     type: TYPE.String,
     required: true,
   },
+  subjectId: {
+    type: TYPE.ObjectId,
+    required: true,
+  },
   // organization
   subjectType: {
     type: TYPE.String,
@@ -31,6 +35,10 @@ const schema: ConduitModel = {
   },
   entity: {
     type: TYPE.String,
+    required: true,
+  },
+  entityId: {
+    type: TYPE.ObjectId,
     required: true,
   },
   // organization
@@ -65,9 +73,11 @@ export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   private static _instance: ObjectIndex;
   _id: string;
   subject: string;
+  subjectId: string;
   subjectType: string;
   subjectPermission: string;
   entity: string;
+  entityId: string;
   entityType: string;
   relation: string;
   createdAt: Date;

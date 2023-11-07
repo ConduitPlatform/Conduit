@@ -155,12 +155,9 @@ export class RelationsController {
     await Relationship.getInstance().deleteMany({
       $or: [
         {
-          subject: {
-            $regex: `${name}.*`,
-            $options: 'i',
-          },
+          subjectType: name,
         },
-        { resource: { $regex: `${name}.*`, $options: 'i' } },
+        { resourceType: name },
       ],
     });
   }
