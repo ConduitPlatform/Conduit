@@ -234,7 +234,7 @@ export class TeamsAdmin {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
-    const found = await Team.getInstance().findOne({ name });
+    const found = await Team.getInstance().findOne({ name, parentTeam });
     if (found) {
       throw new GrpcError(status.ALREADY_EXISTS, 'Team already exists');
     }
@@ -290,15 +290,26 @@ export class TeamsAdmin {
         throw new GrpcError(status.ALREADY_EXISTS, 'There already is a default team');
       }
     }
+    const found = await Team.getInstance().findOne({ _id: teamId });
+    if (!found) {
+      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
+    }
+    if (found.name !== name) {
+      const duplicateName = await Team.getInstance().findOne({
+        name,
+        parentTeam: found.parentTeam,
+      });
+      if (duplicateName) {
+        throw new GrpcError(status.ALREADY_EXISTS, 'Team with that name already exists');
+      }
+    }
 
     const updatedTeam = await Team.getInstance().findByIdAndUpdate(teamId, {
       name,
       isDefault: isNil(isDefault) ? false : isDefault,
     });
-    if (!updatedTeam) {
-      throw new GrpcError(status.NOT_FOUND, 'Team does not exist');
-    }
-    return updatedTeam;
+
+    return updatedTeam!;
   }
 
   async deleteTeam(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
