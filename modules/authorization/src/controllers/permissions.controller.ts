@@ -184,29 +184,39 @@ export class PermissionsController {
                 id_action: {
                   $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
                 },
+                entities: '$actors.entity',
               },
               pipeline: [
                 {
                   $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$id_action'],
-                    },
+                    $and: [
+                      {
+                        $expr: {
+                          $eq: ['$subject', '$$id_action'],
+                        },
+                      },
+                      {
+                        $expr: {
+                          $eq: ['$entity', '$$entities'],
+                        },
+                      },
+                    ],
                   },
                 },
               ],
-              as: 'objects',
-            },
-          },
-          {
-            $addFields: {
-              intersection: {
-                $setIntersection: ['$actors.entity', '$objects.entity'],
-              },
+              as: 'intersection',
             },
           },
           {
             $match: {
-              intersection: { $ne: [] },
+              $or: [
+                {
+                  'intersection.0': { $exists: true },
+                },
+                {
+                  'permissions.0': { $exists: true },
+                },
+              ],
             },
           },
           {
