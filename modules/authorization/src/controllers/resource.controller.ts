@@ -1,5 +1,5 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { Relationship, ResourceDefinition } from '../models';
+import { ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { RelationsController } from './relations.controller';
 
