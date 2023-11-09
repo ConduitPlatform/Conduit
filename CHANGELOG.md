@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.25...v0.16.0-alpha.26) (2023-11-09)
+
+
+### Bug Fixes
+
+* **authentication:** admin team name change not checking name availability ([#786](https://github.com/ConduitPlatform/Conduit/issues/786)) ([c526a34](https://github.com/ConduitPlatform/Conduit/commit/c526a34da963f663bd6429374df827d95136560e))
+* **authentication:** error log not showing properly ([460904b](https://github.com/ConduitPlatform/Conduit/commit/460904bb964ceb972c64cd0ccbe098036c721424))
+
 ## [0.16.0-alpha.25](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.24...v0.16.0-alpha.25) (2023-11-01)
 
 
