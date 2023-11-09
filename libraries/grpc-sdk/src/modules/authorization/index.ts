@@ -45,6 +45,14 @@ export class Authorization extends ConduitModule<typeof AuthorizationDefinition>
     return this.client!.createRelation(data);
   }
 
+  createRelations(
+    subject: string,
+    relation: string,
+    resources: string[],
+  ): Promise<Empty> {
+    return this.client!.createRelations({ subject, relation, resources });
+  }
+
   findRelation(data: FindRelationRequest): Promise<FindRelationResponse> {
     return this.client!.findRelation(data);
   }

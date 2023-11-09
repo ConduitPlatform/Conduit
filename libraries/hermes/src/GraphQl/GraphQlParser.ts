@@ -163,6 +163,7 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
     isArray: boolean,
   ): void {
     this.addToRelation(this.result, value);
+    this.requestedTypes.add(value);
     this.constructResolver(resolverName, name, true);
     processingObject.typeString +=
       name +
@@ -192,13 +193,13 @@ export class GraphQlParser extends ConduitParser<ParseResult, ProcessingObject> 
         if (Array.isArray(parentObj[fieldName])) {
           if (typeof parentObj[fieldName][0] === 'string') {
             return parentObj[fieldName].map((obj: Indexable) => {
-              id: obj;
+              _id: obj;
             });
           }
           return parentObj[fieldName];
         } else {
           if (typeof parentObj[fieldName] === 'string') {
-            return { id: parentObj[fieldName] };
+            return { _id: parentObj[fieldName] };
           }
           return parentObj[fieldName];
         }

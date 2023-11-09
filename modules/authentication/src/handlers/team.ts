@@ -182,7 +182,7 @@ export class TeamsHandler implements IAuthenticationStrategy {
         );
       }
     }
-    const existingTeam = await Team.getInstance().findOne({ name });
+    const existingTeam = await Team.getInstance().findOne({ name, parentTeam });
     if (existingTeam) {
       throw new GrpcError(status.ALREADY_EXISTS, 'A team with that name already exists');
     }

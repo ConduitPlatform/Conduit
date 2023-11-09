@@ -37,6 +37,12 @@ export default {
       default: false,
     },
   },
+  biometricAuthentication: {
+    enabled: {
+      format: 'Boolean',
+      default: true,
+    },
+  },
   captcha: {
     enabled: {
       format: 'Boolean',

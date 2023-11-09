@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  MongoIndexType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -12,13 +17,41 @@ const schema: ConduitModel = {
   resource: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  resourceId: {
+    type: TYPE.ObjectId,
+    required: true,
+    default: '',
+  },
+  // organization
+  resourceType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   // user:1adasdas
   subject: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
   },
-  // member relation: "owner"
+  subjectId: {
+    type: TYPE.ObjectId,
+    required: true,
+    default: '',
+  },
+  // user
+  subjectType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
+  },
+  // read
   permission: {
     type: TYPE.String,
     required: true,
@@ -48,13 +81,17 @@ export class Permission extends ConduitActiveSchema<Permission> {
   private static _instance: Permission;
   _id: string;
   resource: string;
+  resourceId: string;
+  resourceType: string;
   subject: string;
+  subjectId: string;
+  subjectType: string;
   permission: string;
   computedTuple: string;
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, Permission.name, schema, schemaOptions, collectionName);
   }
 

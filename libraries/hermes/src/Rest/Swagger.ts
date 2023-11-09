@@ -9,18 +9,15 @@ import { processSwaggerParams } from './SimpleTypeParamUtils';
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;
   private _routerMetadata: SwaggerRouterMetadata;
-  private readonly _stringifiedGlobalSecurityHeaders: string;
   private readonly _parser: SwaggerParser;
 
-  constructor(private readonly initialRouterMetadata: SwaggerRouterMetadata) {
+  constructor(readonly getSwaggerRouterMetadata: () => SwaggerRouterMetadata) {
     this.cleanup();
     this._parser = new SwaggerParser();
-    this._stringifiedGlobalSecurityHeaders = JSON.stringify(
-      this._routerMetadata.globalSecurityHeaders,
-    );
   }
 
   cleanup() {
+    this._routerMetadata = this.getSwaggerRouterMetadata();
     this._swaggerDoc = {
       openapi: '3.0.0',
       info: {
@@ -35,10 +32,9 @@ export class SwaggerGenerator {
             format: 'uuid',
           },
         },
-        securitySchemes: this.initialRouterMetadata.securitySchemes,
+        securitySchemes: this._routerMetadata.securitySchemes,
       },
     };
-    this._routerMetadata = cloneDeep(this.initialRouterMetadata);
   }
 
   get swaggerDoc() {
@@ -73,7 +69,7 @@ export class SwaggerGenerator {
           },
         },
       },
-      security: JSON.parse(this._stringifiedGlobalSecurityHeaders),
+      security: cloneDeep(this._routerMetadata.globalSecurityHeaders),
     };
 
     if (

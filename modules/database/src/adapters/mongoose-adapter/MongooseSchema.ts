@@ -73,11 +73,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
-    const parsedQuery = {
-      ...this.parseStringToQuery(query),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const parsedQuery = this.parseStringToQuery(query);
     const obj = await this.model.create(parsedQuery).then(r => r.toObject());
     await this.addPermissionToData(obj, options);
     return obj;
@@ -142,7 +138,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -173,7 +168,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
       new: true,
     });
@@ -204,7 +198,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    parsedQuery['updatedAt'] = new Date();
     return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 
@@ -221,9 +214,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options,
     );
     if (isNil(parsedQuery)) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+      return { deletedCount: 0 };
     }
-    return this.model.deleteOne(parsedQuery!).exec();
+    return this.model
+      .deleteOne(parsedQuery!)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));;
   }
 
   async deleteMany(
@@ -239,9 +235,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options,
     );
     if (isNil(parsedQuery)) {
-      return [];
+      return { deletedCount: 0 };
     }
-    return this.model.deleteMany(parsedQuery).exec();
+    return this.model
+      .deleteMany(parsedQuery)
+      .exec()
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async findMany(
@@ -261,10 +260,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'read',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(filter)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedQuery, options?.select);
+    let finalQuery = this.model.find(filter, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }

@@ -32,20 +32,20 @@
   "dependencies": {
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
-    "@grpc/grpc-js": "^1.8.13",
+    "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
     "@onesignal/node-onesignal": "^1.0.0-beta9",
     "convict": "^6.2.4",
-    "firebase-admin": "^11.6.0",
+    "firebase-admin": "^11.11.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/convict": "^6.1.1",
-    "@types/lodash": "^4.14.192",
-    "@types/node": "18.15.11",
+    "@types/lodash": "^4.14.200",
+    "@types/node": "20.8.10",
     "copyfiles": "^2.4.1",
-    "ts-proto": "^1.146.0",
-    "rimraf": "^5.0.0",
+    "ts-proto": "^1.160.0",
+    "rimraf": "^5.0.5",
     "typescript": "~5.0.4"
   }
 }

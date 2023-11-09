@@ -20,7 +20,6 @@ import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
 import {
   ConduitModuleDefinition,
-  GetRedisDetailsResponse,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
   ModuleListResponse_ModuleResponse,
@@ -355,22 +354,18 @@ export default class ConduitGrpcSdk {
       this._redisDetails = {
         host: process.env.REDIS_HOST!,
         port: parseInt(process.env.REDIS_PORT!, 10),
-        username: process.env.REDIS_USERNAME,
-        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB!, 10) || 0,
+        ...(process.env.REDIS_USERNAME ? { username: process.env.REDIS_USERNAME } : {}),
+        ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
       };
     } else {
       promise = promise
         .then(() => this.config.getRedisDetails())
-        .then((r: GetRedisDetailsResponse) => {
-          if (r.redisConfig) {
-            this._redisDetails = JSON.parse(r.redisConfig);
+        .then(r => {
+          if (r.standalone) {
+            this._redisDetails = r.standalone;
           } else {
-            this._redisDetails = {
-              host: r.redisHost,
-              port: r.redisPort,
-              username: r.redisUsername,
-              password: r.redisPassword,
-            };
+            this._redisDetails = r.cluster!;
           }
         });
     }
@@ -402,9 +397,11 @@ export default class ConduitGrpcSdk {
   initializeModules() {
     return this._config!.moduleList()
       .then(r => {
+        const emitter = this.config.getModuleWatcher();
         this.lastSearch = Date.now();
         r.forEach(m => {
           this.createModuleClient(m.moduleName, m.url);
+          emitter.emit(`module-connection-update:${m.moduleName}`, m.serving);
         });
         return 'ok';
       })

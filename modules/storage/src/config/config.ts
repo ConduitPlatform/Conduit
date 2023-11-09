@@ -7,6 +7,12 @@ export default {
     format: 'String',
     default: 'local',
   },
+  authorization: {
+    enabled: {
+      format: 'Boolean',
+      default: false,
+    },
+  },
   defaultContainer: {
     format: 'String',
     default: 'conduit',

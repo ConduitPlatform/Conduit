@@ -1,7 +1,7 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 
-export const swaggerMetadata: SwaggerRouterMetadata = {
+export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
   securitySchemes: {
     masterKey: {
@@ -25,7 +25,12 @@ export const swaggerMetadata: SwaggerRouterMetadata = {
   ],
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     if (route.input.path !== '/login' && route.input.path !== '/modules') {
-      swaggerRouteDoc.security[0].adminToken = [];
+      swaggerRouteDoc.security = swaggerRouteDoc.security.map(
+        (originalSecEntry: { [field: string]: string }) => ({
+          ...originalSecEntry,
+          adminToken: [],
+        }),
+      );
     }
   },
-};
+});

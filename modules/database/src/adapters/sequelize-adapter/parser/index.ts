@@ -117,7 +117,8 @@ function _parseQuery(
     isBoolean(query) ||
     isNumber(query) ||
     query instanceof Buffer ||
-    query instanceof Date
+    query instanceof Date ||
+    query === null
   )
     return query;
   for (const key in query) {
@@ -401,4 +402,18 @@ export function renameRelations(
     include,
     exclude,
   };
+}
+
+export function parseCreateRelations(
+  doc: Indexable,
+  relations: { [key: string]: SequelizeSchema | SequelizeSchema[] },
+) {
+  for (const relation in relations) {
+    const dbName = `${relation}Id`;
+    if (doc.hasOwnProperty(dbName)) {
+      doc[relation] = doc[dbName];
+      delete doc[dbName];
+    }
+  }
+  return doc;
 }

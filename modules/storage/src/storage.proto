@@ -3,6 +3,9 @@ package storage;
 
 message GetFileRequest {
   string id = 1;
+  optional string userId = 2;
+  optional string scope = 3;
+
 }
 
 message CreateFileRequest {
@@ -12,6 +15,8 @@ message CreateFileRequest {
   optional string folder = 4;
   optional string container = 5;
   optional string mimeType = 6;
+  optional string userId = 7;
+  optional string scope = 8;
 }
 
 message UpdateFileRequest {
@@ -21,6 +26,8 @@ message UpdateFileRequest {
   optional string folder = 4;
   optional string container = 5;
   optional string mimeType = 6;
+  optional string userId = 7;
+  optional string scope = 8;
 }
 
 message FileResponse {
@@ -43,6 +50,8 @@ message CreateFileByUrlRequest {
   optional string container = 4;
   optional string mimeType = 5;
   optional int32 size = 6; // todo: support int64
+  optional string userId = 7;
+  optional string scope = 8;
 }
 
 message FileByUrlResponse {
@@ -59,6 +68,8 @@ message UpdateFileByUrlRequest {
   optional string container = 4;
   optional string mimeType = 5;
   optional int32 size = 6; // todo: support int64
+  optional string userId = 7;
+  optional string scope = 8;
 }
 
 service Storage {

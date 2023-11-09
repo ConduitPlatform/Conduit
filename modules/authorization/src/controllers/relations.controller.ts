@@ -27,7 +27,7 @@ export class RelationsController {
     let relationResource = await Relationship.getInstance().findOne({
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    if (relationResource) throw new Error('Relation already exists');
+    if (relationResource) return relationResource;
 
     const subjectResource = await ResourceDefinition.getInstance().findOne({
       name: subject.split(':')[0],
@@ -50,12 +50,63 @@ export class RelationsController {
 
     relationResource = await Relationship.getInstance().create({
       subject: subject,
+      subjectType: subject.split(':')[0],
       relation: relation,
       resource: object,
+      resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     await this.indexController.constructRelationIndex(subject, relation, object);
     return relationResource;
+  }
+
+  private async checkRelations(subject: string, relation: string, resources: string[]) {
+    checkRelation(subject, relation, resources[0]);
+    const computedTuples = resources.map(r => computeRelationTuple(subject, relation, r));
+    const relationResources = await Relationship.getInstance().findMany({
+      computedTuple: { $in: computedTuples },
+    });
+    if (relationResources.length) throw new Error('Relations already exist');
+    const subjectResource = await ResourceDefinition.getInstance().findOne({
+      name: subject.split(':')[0],
+    });
+    if (!subjectResource) throw new Error('Subject resource not found');
+    await ResourceDefinition.getInstance()
+      .findOne({ name: resources[0].split(':')[0] })
+      .then(resourceDefinition => {
+        if (!resourceDefinition) {
+          throw new Error('Object resource definition not found');
+        }
+        if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
+        if (
+          !resourceDefinition.relations[relation] ||
+          resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
+        ) {
+          throw new Error('Relation not allowed');
+        }
+      });
+  }
+
+  async createRelations(subject: string, relation: string, resources: string[]) {
+    await this.checkRelations(subject, relation, resources);
+    const relations = resources.map(r => {
+      return {
+        subject,
+        subjectType: subject.split(':')[0],
+        relation,
+        resource: r,
+        resourceType: r.split(':')[0],
+        computedTuple: computeRelationTuple(subject, relation, r),
+      };
+    });
+    const relationDocs = await Relationship.getInstance().createMany(relations);
+    const relationEntries = relations.map(r => ({
+      subject: r.subject,
+      relation: r.relation,
+      object: r.resource,
+    }));
+    await this.indexController.constructRelationIndexes(relationEntries);
+    return relationDocs;
   }
 
   async deleteRelation(subject: string, relation: string, object: string) {
@@ -104,12 +155,9 @@ export class RelationsController {
     await Relationship.getInstance().deleteMany({
       $or: [
         {
-          subject: {
-            $regex: `${name}.*`,
-            $options: 'i',
-          },
+          subjectType: name,
         },
-        { resource: { $regex: `${name}.*`, $options: 'i' } },
+        { resourceType: name },
       ],
     });
   }

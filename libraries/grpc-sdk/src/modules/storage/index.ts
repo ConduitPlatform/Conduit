@@ -12,12 +12,12 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     this.initializeClient(StorageDefinition);
   }
 
-  getFile(id: string): Promise<FileResponse> {
-    return this.client!.getFile({ id });
+  getFile(id: string, userId?: string, scope?: string): Promise<FileResponse> {
+    return this.client!.getFile({ id, userId, scope });
   }
 
-  getFileData(id: string): Promise<GetFileDataResponse> {
-    return this.client!.getFileData({ id });
+  getFileData(id: string, userId?: string, scope?: string): Promise<GetFileDataResponse> {
+    return this.client!.getFileData({ id, userId, scope });
   }
 
   createFile(
@@ -27,8 +27,19 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     container?: string,
     mimeType?: string,
     isPublic: boolean = false,
+    userId?: string,
+    scope?: string,
   ): Promise<FileResponse> {
-    return this.client!.createFile({ name, mimeType, data, folder, isPublic, container });
+    return this.client!.createFile({
+      name,
+      mimeType,
+      data,
+      folder,
+      isPublic,
+      container,
+      userId,
+      scope,
+    });
   }
 
   updateFile(
@@ -38,12 +49,23 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     folder?: string,
     container?: string,
     mimeType?: string,
+    userId?: string,
+    scope?: string,
   ): Promise<FileResponse> {
-    return this.client!.updateFile({ name, mimeType, data, folder, id, container });
+    return this.client!.updateFile({
+      name,
+      mimeType,
+      data,
+      folder,
+      id,
+      container,
+      userId,
+      scope,
+    });
   }
 
-  deleteFile(id: string): Promise<DeleteFileResponse> {
-    return this.client!.deleteFile({ id });
+  deleteFile(id: string, userId?: string, scope?: string): Promise<DeleteFileResponse> {
+    return this.client!.deleteFile({ id, userId, scope });
   }
 
   createFileByUrl(
@@ -53,6 +75,8 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     mimeType?: string,
     size?: number,
     isPublic: boolean = false,
+    userId?: string,
+    scope?: string,
   ) {
     return this.client!.createFileByUrl({
       name,
@@ -61,6 +85,8 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
       container,
       size,
       isPublic,
+      userId,
+      scope,
     });
   }
 
@@ -71,7 +97,18 @@ export class Storage extends ConduitModule<typeof StorageDefinition> {
     container?: string,
     mimeType?: string,
     size?: number,
+    userId?: string,
+    scope?: string,
   ) {
-    return this.client!.updateFileByUrl({ id, name, folder, container, mimeType, size });
+    return this.client!.updateFileByUrl({
+      id,
+      name,
+      folder,
+      container,
+      mimeType,
+      size,
+      userId,
+      scope,
+    });
   }
 }

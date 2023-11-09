@@ -73,6 +73,7 @@ const schema: ConduitModel = {
   hasTwoFA: {
     type: TYPE.Boolean,
     default: false,
+    required: true,
   },
   twoFaMethod: TYPE.String,
   phoneNumber: TYPE.String,
@@ -112,7 +113,7 @@ export class User extends ConduitActiveSchema<User> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, User.name, schema, modelOptions, collectionName);
   }
 

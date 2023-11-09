@@ -1,11 +1,11 @@
 {
   "name": "conduit",
-  "version": "0.16.0-alpha.16",
+  "version": "0.16.0-alpha.25",
   "description": "",
   "main": "index.js",
   "private": true,
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -23,17 +23,17 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@commitlint/cli": "^17.5.1",
-    "@commitlint/config-conventional": "^17.4.4",
+    "@commitlint/cli": "^17.8.0",
+    "@commitlint/config-conventional": "^17.7.0",
     "@commitlint/config-lerna-scopes": "^17.4.2",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^8.0.3",
-    "lerna": "^6.6.1",
+    "lerna": "^7.3.1",
     "lint-staged": ">=13",
-    "prettier": "^2.8.7",
+    "prettier": "^3.0.3",
     "standard-version": "^9.5.0",
-    "turbo": "^1.8.8"
+    "turbo": "^1.10.16"
   },
   "dependencies": {},
   "config": {

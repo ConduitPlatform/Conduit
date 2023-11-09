@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  MongoIndexType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -9,16 +14,53 @@ const schema: ConduitModel = {
   _id: TYPE.ObjectId,
   /**
    * {
+   *    subject         entity
    *   "user:12312312": "organization:123123#member"
    * }
    */
   subject: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  subjectId: {
+    type: TYPE.ObjectId,
+    default: '',
+
+    required: true,
+  },
+  // user
+  subjectType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   entity: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  entityId: {
+    type: TYPE.ObjectId,
+    default: '',
+
+    required: true,
+  },
+  // organization
+  entityType: {
+    type: TYPE.String,
+    required: true,
+    default: '',
+  },
+  // member
+  relation: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -40,11 +82,16 @@ export class ActorIndex extends ConduitActiveSchema<ActorIndex> {
   private static _instance: ActorIndex;
   _id: string;
   subject: string;
+  subjectId: string;
+  subjectType: string;
   entity: string;
+  entityId: string;
+  entityType: string;
+  relation: string;
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ActorIndex.name, schema, schemaOptions, collectionName);
   }
 

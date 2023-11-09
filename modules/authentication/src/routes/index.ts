@@ -21,6 +21,7 @@ import { authMiddleware, captchaMiddleware } from './middleware';
 import { MagicLinkHandlers } from '../handlers/magicLink';
 import { Config } from '../config';
 import { TeamsHandler } from '../handlers/team';
+import { BiometricHandlers } from '../handlers/biometric';
 
 type OAuthHandler = typeof oauth2;
 
@@ -32,6 +33,7 @@ export class AuthenticationRoutes {
   private readonly _routingManager: RoutingManager;
   private readonly twoFaHandlers: TwoFa;
   private readonly magicLinkHandlers: MagicLinkHandlers;
+  private readonly biometricHandlers: BiometricHandlers;
 
   constructor(readonly server: GrpcServer, private readonly grpcSdk: ConduitGrpcSdk) {
     this._routingManager = new RoutingManager(this.grpcSdk.router!, server);
@@ -41,50 +43,57 @@ export class AuthenticationRoutes {
     this.localHandlers = new LocalHandlers(this.grpcSdk);
     this.twoFaHandlers = new TwoFa(this.grpcSdk);
     this.magicLinkHandlers = new MagicLinkHandlers(this.grpcSdk);
+    this.biometricHandlers = new BiometricHandlers(this.grpcSdk);
   }
 
   async registerRoutes() {
     const config: Config = ConfigController.getInstance().config;
     this._routingManager.clear();
     let enabled = false;
-    let errorMessage = null;
+
     const phoneActive = await this.phoneHandlers
       .validate()
-      .catch(e => (errorMessage = e));
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
 
-    if (phoneActive && !errorMessage) {
+    if (phoneActive) {
       await this.phoneHandlers.declareRoutes(this._routingManager);
+    }
+
+    const biometricActive = await this.biometricHandlers
+      .validate()
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+
+    if (biometricActive) {
+      await this.biometricHandlers.declareRoutes(this._routingManager);
     }
 
     const magicLinkActive = await this.magicLinkHandlers
       .validate()
-      .catch(e => (errorMessage = e));
-    if (magicLinkActive && !errorMessage) {
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (magicLinkActive) {
       await this.magicLinkHandlers.declareRoutes(this._routingManager);
     }
-
-    let authActive = await this.localHandlers.validate().catch(e => (errorMessage = e));
-    if (!errorMessage && authActive) {
+    let authActive = await this.localHandlers
+      .validate()
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (authActive) {
       await this.localHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
-
     const teamsActivated = await TeamsHandler.getInstance(this.grpcSdk)
       .validate()
-      .catch(e => (errorMessage = e));
-    if (!errorMessage && teamsActivated) {
-      await TeamsHandler.getInstance().declareRoutes(this._routingManager);
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (teamsActivated) {
+      TeamsHandler.getInstance().declareRoutes(this._routingManager);
       enabled = true;
     }
-    errorMessage = null;
     const twoFaActive = await this.twoFaHandlers
       .validate()
-      .catch(e => (errorMessage = e));
-    if (!errorMessage && twoFaActive) {
-      await this.twoFaHandlers.declareRoutes(this._routingManager);
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (twoFaActive) {
+      this.twoFaHandlers.declareRoutes(this._routingManager);
       enabled = true;
     }
-    errorMessage = null;
 
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
@@ -107,9 +116,10 @@ export class AuthenticationRoutes {
       }),
     );
 
-    errorMessage = null;
-    authActive = await this.serviceHandler.validate().catch(e => (errorMessage = e));
-    if (!errorMessage && authActive) {
+    authActive = await this.serviceHandler
+      .validate()
+      .catch(e => ConduitGrpcSdk.Logger.error(e));
+    if (authActive) {
       const returnField: ConduitReturn = {
         serviceId: ConduitString.Required,
         accessToken: ConduitString.Optional,
