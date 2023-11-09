@@ -3,14 +3,14 @@ import { Relationship } from '../models';
 
 export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
   const count = await Relationship.getInstance().countDocuments({
-    resourceType: '',
+    $or: [{ resourceType: '' }, { resourceId: '' }],
   });
   if (count === 0) {
     return;
   }
   let relationships = await Relationship.getInstance().findMany(
     {
-      resourceType: '',
+      $or: [{ resourceType: '' }, { resourceId: '' }],
     },
     undefined,
     0,
@@ -21,12 +21,14 @@ export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
     for (const objectIndex of relationships) {
       await Relationship.getInstance().findByIdAndUpdate(objectIndex._id, {
         subjectType: objectIndex.subject.split(':')[0],
+        subjectId: objectIndex.subject.split(':')[1].split('#')[0],
         resourceType: objectIndex.resource.split(':')[0],
+        resourceId: objectIndex.resource.split(':')[1].split('#')[0],
       });
     }
     relationships = await Relationship.getInstance().findMany(
       {
-        resourceType: '',
+        $or: [{ resourceType: '' }, { resourceId: '' }],
       },
       undefined,
       ++iterator * 100,

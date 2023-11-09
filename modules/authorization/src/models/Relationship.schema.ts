@@ -23,6 +23,7 @@ const schema: ConduitModel = {
   resourceId: {
     type: TYPE.ObjectId,
     required: true,
+    default: '',
   },
   // organization
   resourceType: {
@@ -42,6 +43,7 @@ const schema: ConduitModel = {
   subjectId: {
     type: TYPE.ObjectId,
     required: true,
+    default: '',
   },
   // user
   subjectType: {

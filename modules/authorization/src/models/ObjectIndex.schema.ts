@@ -28,6 +28,7 @@ const schema: ConduitModel = {
   subjectId: {
     type: TYPE.ObjectId,
     required: true,
+    default: '',
   },
   // organization
   subjectType: {
@@ -50,6 +51,8 @@ const schema: ConduitModel = {
   },
   entityId: {
     type: TYPE.ObjectId,
+    default: '',
+
     required: true,
   },
   // organization

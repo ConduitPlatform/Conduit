@@ -27,6 +27,8 @@ const schema: ConduitModel = {
   },
   subjectId: {
     type: TYPE.ObjectId,
+    default: '',
+
     required: true,
   },
   // user
@@ -44,6 +46,8 @@ const schema: ConduitModel = {
   },
   entityId: {
     type: TYPE.ObjectId,
+    default: '',
+
     required: true,
   },
   // organization
