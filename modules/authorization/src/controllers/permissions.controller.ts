@@ -33,9 +33,11 @@ export class PermissionsController {
     const computedTuple = computePermissionTuple(subject, action, resource);
     await Permission.getInstance().create({
       subject,
+      subjectId: subject.split(':')[1],
       subjectType: subject.split(':')[0],
       permission: action,
       resource,
+      resourceId: resource.split(':')[1],
       resourceType: resource.split(':')[0],
       computedTuple,
     });
@@ -182,29 +184,39 @@ export class PermissionsController {
                 id_action: {
                   $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
                 },
+                entities: '$actors.entity',
               },
               pipeline: [
                 {
                   $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$id_action'],
-                    },
+                    $and: [
+                      {
+                        $expr: {
+                          $eq: ['$subject', '$$id_action'],
+                        },
+                      },
+                      {
+                        $expr: {
+                          $eq: ['$entity', '$$entities'],
+                        },
+                      },
+                    ],
                   },
                 },
               ],
-              as: 'objects',
-            },
-          },
-          {
-            $addFields: {
-              intersection: {
-                $setIntersection: ['$actors.entity', '$objects.entity'],
-              },
+              as: 'intersection',
             },
           },
           {
             $match: {
-              intersection: { $ne: [] },
+              $or: [
+                {
+                  'intersection.0': { $exists: true },
+                },
+                {
+                  'permissions.0': { $exists: true },
+                },
+              ],
             },
           },
           {

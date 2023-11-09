@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  MongoIndexType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -12,6 +17,13 @@ const schema: ConduitModel = {
   resource: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  resourceId: {
+    type: TYPE.ObjectId,
+    required: true,
   },
   // organization
   resourceType: {
@@ -22,6 +34,13 @@ const schema: ConduitModel = {
   // user:1adasdas
   subject: {
     type: TYPE.String,
+    required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  subjectId: {
+    type: TYPE.ObjectId,
     required: true,
   },
   // user
@@ -60,8 +79,10 @@ export class Permission extends ConduitActiveSchema<Permission> {
   private static _instance: Permission;
   _id: string;
   resource: string;
+  resourceId: string;
   resourceType: string;
   subject: string;
+  subjectId: string;
   subjectType: string;
   permission: string;
   computedTuple: string;

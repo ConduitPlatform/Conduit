@@ -1,5 +1,5 @@
 import { isArray, isBoolean, isNumber, isString } from 'lodash';
-import {
+import ConduitGrpcSdk, {
   ConduitModelField,
   ConduitSchema,
   Indexable,
@@ -34,14 +34,22 @@ export function convertModelOptionsIndexes(copy: ConduitSchema) {
         isArray(index.types) ||
         !Object.values(PostgresIndexType).includes(index.types as PostgresIndexType)
       ) {
-        throw new Error('Incorrect index type for PostgreSQL');
+        // ignore index instead of error
+        ConduitGrpcSdk.Logger.warn('Invalid index type for PostgreSQL, ignoring index');
+        continue;
+        // throw new Error('Incorrect index type for PostgreSQL');
       }
       index.using = index.types as PostgresIndexType;
       delete index.types;
     }
     if (index.options) {
       if (!checkIfPostgresOptions(index.options)) {
-        throw new Error('Incorrect index options for PostgreSQL');
+        // ignore index instead of error
+        ConduitGrpcSdk.Logger.warn(
+          'Invalid index options for PostgreSQL, ignoring index',
+        );
+        continue;
+        // throw new Error('Incorrect index options for PostgreSQL');
       }
       for (const [option, value] of Object.entries(index.options)) {
         index[option as keyof PostgresIndexOptions] = value;
@@ -63,13 +71,21 @@ export function convertSchemaFieldIndexes(copy: ConduitSchema) {
     };
     if (index.type) {
       if (!Object.values(PostgresIndexType).includes(index.type as PostgresIndexType)) {
-        throw new Error('Invalid index type for PostgreSQL');
+        // ignore index instead of error
+        ConduitGrpcSdk.Logger.warn('Invalid index type for PostgreSQL, ignoring index');
+        continue;
+        // throw new Error('Invalid index type for PostgreSQL');
       }
       newIndex.using = index.type;
     }
     if (index.options) {
       if (!checkIfPostgresOptions(index.options)) {
-        throw new Error('Invalid index options for PostgreSQL');
+        // ignore index instead of error
+        ConduitGrpcSdk.Logger.warn(
+          'Invalid index options for PostgreSQL, ignoring index',
+        );
+        continue;
+        // throw new Error('Invalid index options for PostgreSQL');
       }
       for (const [option, value] of Object.entries(index.options)) {
         newIndex[option] = value;
