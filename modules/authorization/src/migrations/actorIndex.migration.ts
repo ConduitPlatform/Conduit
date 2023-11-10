@@ -1,21 +1,20 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
 import { ActorIndex } from '../models';
 
 export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
-  const count = await ActorIndex.getInstance().countDocuments({
-    $or: [{ entityType: '' }, { entityId: '' }],
-  });
+  const query: Query<any> = {
+    $or: [
+      { entityType: '' },
+      { entityId: '' },
+      { entityType: { $exists: false } },
+      { entityId: { $exists: false } },
+    ],
+  };
+  const count = await ActorIndex.getInstance().countDocuments(query);
   if (count === 0) {
     return;
   }
-  let actorIndexes = await ActorIndex.getInstance().findMany(
-    {
-      $or: [{ entityType: '' }, { entityId: '' }],
-    },
-    undefined,
-    0,
-    100,
-  );
+  let actorIndexes = await ActorIndex.getInstance().findMany(query, undefined, 0, 100);
   let iterator = 0;
   while (actorIndexes.length > 0) {
     for (const actorIndex of actorIndexes) {
@@ -28,9 +27,7 @@ export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
       });
     }
     actorIndexes = await ActorIndex.getInstance().findMany(
-      {
-        $or: [{ entityType: '' }, { entityId: '' }],
-      },
+      query,
       undefined,
       ++iterator * 100,
       100,

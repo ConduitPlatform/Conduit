@@ -1,21 +1,20 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
 import { Permission } from '../models';
 
 export const migratePermission = async (grpcSdk: ConduitGrpcSdk) => {
-  const count = await Permission.getInstance().countDocuments({
-    $or: [{ resourceType: '' }, { resourceId: '' }],
-  });
+  const query: Query<any> = {
+    $or: [
+      { resourceType: '' },
+      { resourceId: '' },
+      { resourceType: { $exists: false } },
+      { resourceId: { $exists: false } },
+    ],
+  };
+  const count = await Permission.getInstance().countDocuments(query);
   if (count === 0) {
     return;
   }
-  let permissions = await Permission.getInstance().findMany(
-    {
-      $or: [{ resourceType: '' }, { resourceId: '' }],
-    },
-    undefined,
-    0,
-    100,
-  );
+  let permissions = await Permission.getInstance().findMany(query, undefined, 0, 100);
   let iterator = 0;
   while (permissions.length > 0) {
     for (const permission of permissions) {
@@ -27,9 +26,7 @@ export const migratePermission = async (grpcSdk: ConduitGrpcSdk) => {
       });
     }
     permissions = await Permission.getInstance().findMany(
-      {
-        $or: [{ resourceType: '' }, { resourceId: '' }],
-      },
+      query,
       undefined,
       ++iterator * 100,
       100,
