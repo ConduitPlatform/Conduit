@@ -10,12 +10,7 @@ export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
       { resourceId: { $exists: false } },
     ],
   };
-  const count = await Relationship.getInstance().countDocuments(query);
-  if (count === 0) {
-    return;
-  }
   let relationships = await Relationship.getInstance().findMany(query, undefined, 0, 100);
-  let iterator = 0;
   while (relationships.length > 0) {
     for (const objectIndex of relationships) {
       await Relationship.getInstance().findByIdAndUpdate(objectIndex._id, {
@@ -25,11 +20,6 @@ export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
         resourceId: objectIndex.resource.split(':')[1].split('#')[0],
       });
     }
-    relationships = await Relationship.getInstance().findMany(
-      query,
-      undefined,
-      ++iterator * 100,
-      100,
-    );
+    relationships = await Relationship.getInstance().findMany(query, undefined, 0, 100);
   }
 };

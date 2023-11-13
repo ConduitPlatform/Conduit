@@ -10,12 +10,8 @@ export const migratePermission = async (grpcSdk: ConduitGrpcSdk) => {
       { resourceId: { $exists: false } },
     ],
   };
-  const count = await Permission.getInstance().countDocuments(query);
-  if (count === 0) {
-    return;
-  }
   let permissions = await Permission.getInstance().findMany(query, undefined, 0, 100);
-  let iterator = 0;
+
   while (permissions.length > 0) {
     for (const permission of permissions) {
       await Permission.getInstance().findByIdAndUpdate(permission._id, {
@@ -25,11 +21,6 @@ export const migratePermission = async (grpcSdk: ConduitGrpcSdk) => {
         resourceId: permission.resource.split(':')[1].split('#')[0],
       });
     }
-    permissions = await Permission.getInstance().findMany(
-      query,
-      undefined,
-      ++iterator * 100,
-      100,
-    );
+    permissions = await Permission.getInstance().findMany(query, undefined, 0, 100);
   }
 };

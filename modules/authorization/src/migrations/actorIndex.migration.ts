@@ -10,12 +10,7 @@ export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
       { entityId: { $exists: false } },
     ],
   };
-  const count = await ActorIndex.getInstance().countDocuments(query);
-  if (count === 0) {
-    return;
-  }
   let actorIndexes = await ActorIndex.getInstance().findMany(query, undefined, 0, 100);
-  let iterator = 0;
   while (actorIndexes.length > 0) {
     for (const actorIndex of actorIndexes) {
       await ActorIndex.getInstance().findByIdAndUpdate(actorIndex._id, {
@@ -26,11 +21,6 @@ export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
         relation: actorIndex.subject.split('#')[1],
       });
     }
-    actorIndexes = await ActorIndex.getInstance().findMany(
-      query,
-      undefined,
-      ++iterator * 100,
-      100,
-    );
+    actorIndexes = await ActorIndex.getInstance().findMany(query, undefined, 0, 100);
   }
 };
