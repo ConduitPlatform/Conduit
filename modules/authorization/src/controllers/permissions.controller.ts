@@ -197,7 +197,7 @@ export class PermissionsController {
                       },
                       {
                         $expr: {
-                          $eq: ['$entity', '$$entities'],
+                          $in: ['$entity', '$$entities'],
                         },
                       },
                     ],
