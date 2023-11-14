@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.28) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
+## [0.16.0-alpha.27](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.27) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
 ## [0.16.0-alpha.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.25...v0.16.0-alpha.26) (2023-11-09)
 
 
