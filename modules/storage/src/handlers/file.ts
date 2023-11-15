@@ -47,7 +47,7 @@ export class FileHandlers {
       if (action === 'create' && request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
           subject: `User:${request.context.user._id}`,
-          actions: [action],
+          actions: ['read'],
           resource: request.params.scope,
         });
         if (!allowed || !allowed.allow) {
@@ -75,7 +75,7 @@ export class FileHandlers {
       if (request.queryParams.scope) {
         const allowed = await this.grpcSdk.authorization?.can({
           subject: `User:${request.context.user._id}`,
-          actions: ['create'],
+          actions: ['read'],
           resource: request.params.scope,
         });
         if (!allowed || !allowed.allow) {
