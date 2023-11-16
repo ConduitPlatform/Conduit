@@ -1,8 +1,8 @@
-import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
+import { Query } from '@conduitplatform/grpc-sdk';
 import { Relationship } from '../models';
 
-export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
-  const query: Query<any> = {
+export const migrateRelationships = async () => {
+  const query: Query<Relationship> = {
     $or: [
       { resourceType: '' },
       { resourceId: '' },

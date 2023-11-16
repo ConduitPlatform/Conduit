@@ -63,7 +63,7 @@ export class ChatRoom extends ConduitActiveSchema<ChatRoom> {
   private static _instance: ChatRoom;
   _id: string;
   name: string;
-  creator: string | User;
+  creator?: string | User;
   participants: string[] | User[];
   participantsLog: {
     action: 'add' | 'remove' | 'create' | 'join' | 'leave';

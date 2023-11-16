@@ -1,8 +1,8 @@
-import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
+import { Query } from '@conduitplatform/grpc-sdk';
 import { Permission } from '../models';
 
-export const migratePermission = async (grpcSdk: ConduitGrpcSdk) => {
-  const query: Query<any> = {
+export const migratePermission = async () => {
+  const query: Query<Permission> = {
     $or: [
       { resourceType: '' },
       { resourceId: '' },
