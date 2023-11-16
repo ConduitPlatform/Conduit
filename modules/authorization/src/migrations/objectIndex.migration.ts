@@ -1,8 +1,8 @@
-import ConduitGrpcSdk, { Query } from '@conduitplatform/grpc-sdk';
+import { Query } from '@conduitplatform/grpc-sdk';
 import { ObjectIndex } from '../models';
 
-export const migrateObjectIndex = async (grpcSdk: ConduitGrpcSdk) => {
-  const query: Query<any> = {
+export const migrateObjectIndex = async () => {
+  const query: Query<ObjectIndex> = {
     $or: [
       { entityType: '' },
       { entityId: '' },

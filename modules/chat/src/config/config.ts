@@ -16,6 +16,11 @@ export default {
     format: 'Boolean',
     default: false,
   },
+  auditMode: {
+    doc: 'When audit is enabled, deleted rooms and messages are not actually deleted, but marked as deleted',
+    format: 'Boolean',
+    default: false,
+  },
   explicit_room_joins: {
     enabled: {
       doc: 'Defines whether users should explicitly accept an invitation before being introduced into a chat room',
