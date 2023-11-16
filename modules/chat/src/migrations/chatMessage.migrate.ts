@@ -3,7 +3,7 @@ import { ChatMessage } from '../models';
 
 export const migrateChatMessages = async () => {
   const query: Query<ChatMessage> = {
-    $or: [{ deleted: '' }, { deleted: { $exists: false } }],
+    $or: [{ deleted: { $exists: false } }],
   };
   let chatMessages = await ChatMessage.getInstance().findMany(query, undefined, 0, 100);
   while (chatMessages.length === 0) {
