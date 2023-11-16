@@ -1,4 +1,3 @@
-import moment from 'moment';
 import { isNil } from 'lodash';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { CustomEndpointsQuery } from '../../interfaces';
@@ -135,10 +134,7 @@ function _translateQuery(
   //   EQUAL_SET: 6, //'equal to any of the following'
   //   NEQUAL_SET: 7, //'not equal to any of the following'
   //   CONTAIN: 8, //'an array containing'
-  const isDate = moment(comparisonField, 'YYYY-MM-DDTHH:MM:SS.mmmZ', true).isValid();
-  if (isDate) {
-    comparisonField = { $date: comparisonField };
-  } else if (like) {
+  if (like) {
     if (caseSensitiveLike) {
       comparisonField = { $like: `%${comparisonField}%` };
     } else {
