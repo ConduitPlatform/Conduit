@@ -6,7 +6,7 @@ export const migrateChatMessages = async () => {
     deleted: { $exists: false },
   };
   let chatMessages = await ChatMessage.getInstance().findMany(query, undefined, 0, 100);
-  while (chatMessages.length === 0) {
+  while (chatMessages.length !== 0) {
     for (const chatMessage of chatMessages) {
       await ChatMessage.getInstance().findByIdAndUpdate(chatMessage._id, {
         deleted: false,
