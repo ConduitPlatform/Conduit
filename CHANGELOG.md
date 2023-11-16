@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.28...v0.16.0-alpha.29) (2023-11-16)
+
+
+### Features
+
+* **chat:** introduce auditMode, room deletions on leave and remove unique name requirement from rooms ([#794](https://github.com/ConduitPlatform/Conduit/issues/794)) ([1fc4484](https://github.com/ConduitPlatform/Conduit/commit/1fc4484124eff8de5ecfc02b5a12c1691383dc99))
+
+
+### Bug Fixes
+
+* **chat:** wrong migration query ([b02721e](https://github.com/ConduitPlatform/Conduit/commit/b02721e20308f3f21ab53cd1091f990231c935bf))
+* **chat:** wrong migration query ([d777ee8](https://github.com/ConduitPlatform/Conduit/commit/d777ee82b43235ef811c6df0b1dabbd55a6489b0))
+* **chat:** wrong migration query ([21d2e49](https://github.com/ConduitPlatform/Conduit/commit/21d2e49d1410e592fe9a91342e82624ca7fa9bb4))
+* **database:** custom endpoint date casting conflict with mongoose casts ([#795](https://github.com/ConduitPlatform/Conduit/issues/795)) ([5c2425c](https://github.com/ConduitPlatform/Conduit/commit/5c2425c7fd760d3ad4d8fb08a3eb03a9075c4783))
+* **storage:** authorization checks not consistent with db permissions ([2202583](https://github.com/ConduitPlatform/Conduit/commit/22025832de11e6c410f0d985c4e6b40fcab7a567))
+
 ## [0.16.0-alpha.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.28) (2023-11-14)
 
 
