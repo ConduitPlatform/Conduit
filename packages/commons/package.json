@@ -32,7 +32,7 @@
     "directory": "packages/commons"
   },
   "devDependencies": {
-    "@types/convict": "^6.1.1",
+    "@types/convict": "^6.1.6",
     "@types/express": "~4.17.17",
     "@types/is-natural-number": "^4.0.2",
     "@types/lodash": "^4.14.200",
