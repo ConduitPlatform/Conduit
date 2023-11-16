@@ -15,6 +15,34 @@ const schema: ConduitModel = {
       required: true,
     },
   ],
+  creator: {
+    type: TYPE.Relation,
+    model: 'User',
+  },
+  participantsLog: [
+    {
+      type: {
+        action: {
+          type: TYPE.String,
+          enum: ['add', 'remove', 'create', 'join', 'leave'],
+          required: true,
+        },
+        user: {
+          type: TYPE.Relation,
+          model: 'User',
+          required: true,
+        },
+        timestamp: {
+          type: TYPE.Date,
+          required: true,
+        },
+      },
+    },
+  ],
+  deleted: {
+    type: TYPE.Boolean,
+    default: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -33,11 +61,18 @@ const collectionName = undefined;
 
 export class ChatRoom extends ConduitActiveSchema<ChatRoom> {
   private static _instance: ChatRoom;
-  _id!: string;
-  name!: string;
-  participants!: string[] | User[];
-  createdAt!: Date;
-  updatedAt!: Date;
+  _id: string;
+  name: string;
+  creator: string | User;
+  participants: string[] | User[];
+  participantsLog: {
+    action: 'add' | 'remove' | 'create' | 'join' | 'leave';
+    user: string | User;
+    timestamp: Date;
+  }[];
+  deleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
     super(database, ChatRoom.name, schema, modelOptions, collectionName);
