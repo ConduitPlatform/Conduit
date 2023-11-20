@@ -1,22 +1,16 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { Query } from '@conduitplatform/grpc-sdk';
 import { ActorIndex } from '../models';
 
-export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
-  const count = await ActorIndex.getInstance().countDocuments({
-    $or: [{ entityType: '' }, { entityId: '' }],
-  });
-  if (count === 0) {
-    return;
-  }
-  let actorIndexes = await ActorIndex.getInstance().findMany(
-    {
-      $or: [{ entityType: '' }, { entityId: '' }],
-    },
-    undefined,
-    0,
-    100,
-  );
-  let iterator = 0;
+export const migrateActorIndex = async () => {
+  const query: Query<ActorIndex> = {
+    $or: [
+      { entityType: '' },
+      { entityId: '' },
+      { entityType: { $exists: false } },
+      { entityId: { $exists: false } },
+    ],
+  };
+  let actorIndexes = await ActorIndex.getInstance().findMany(query, undefined, 0, 100);
   while (actorIndexes.length > 0) {
     for (const actorIndex of actorIndexes) {
       await ActorIndex.getInstance().findByIdAndUpdate(actorIndex._id, {
@@ -27,13 +21,6 @@ export const migrateActorIndex = async (grpcSdk: ConduitGrpcSdk) => {
         relation: actorIndex.subject.split('#')[1],
       });
     }
-    actorIndexes = await ActorIndex.getInstance().findMany(
-      {
-        $or: [{ entityType: '' }, { entityId: '' }],
-      },
-      undefined,
-      ++iterator * 100,
-      100,
-    );
+    actorIndexes = await ActorIndex.getInstance().findMany(query, undefined, 0, 100);
   }
 };

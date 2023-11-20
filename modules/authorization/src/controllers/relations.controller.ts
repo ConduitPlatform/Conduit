@@ -50,9 +50,11 @@ export class RelationsController {
 
     relationResource = await Relationship.getInstance().create({
       subject: subject,
+      subjectId: subject.split(':')[1],
       subjectType: subject.split(':')[0],
       relation: relation,
       resource: object,
+      resourceId: object.split(':')[1],
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
@@ -92,9 +94,11 @@ export class RelationsController {
     const relations = resources.map(r => {
       return {
         subject,
+        subjectId: subject.split(':')[1],
         subjectType: subject.split(':')[0],
         relation,
         resource: r,
+        resourceId: r.split(':')[1],
         resourceType: r.split(':')[0],
         computedTuple: computeRelationTuple(subject, relation, r),
       };
@@ -200,14 +204,16 @@ export class RelationsController {
     limit = 10,
   ) {
     const query: {
-      subject?: string | { $regex: string; $options: string };
+      subject?: string;
+      subjectType?: string;
       relation?: string;
       resource?: string | { $regex: string; $options: string };
+      resourceType?: string;
     } = {};
     if (searchQuery.subject) {
       query['subject'] = searchQuery.subject;
     } else if (searchQuery.subjectType) {
-      query['subject'] = { $regex: `${searchQuery.subjectType}.*`, $options: 'i' };
+      query['subjectType'] = searchQuery.subjectType;
     }
     if (searchQuery.relation) {
       query['relation'] = searchQuery.relation;
@@ -215,7 +221,7 @@ export class RelationsController {
     if (searchQuery.resource) {
       query['resource'] = searchQuery.resource;
     } else if (searchQuery.resourceType) {
-      query['resource'] = { $regex: `${searchQuery.resourceType}.*`, $options: 'i' };
+      query['resourceType'] = searchQuery.resourceType;
     }
     return Promise.all([
       Relationship.getInstance().findMany(query, undefined, skip, limit),

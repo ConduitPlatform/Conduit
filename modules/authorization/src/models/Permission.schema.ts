@@ -22,7 +22,7 @@ const schema: ConduitModel = {
     },
   },
   resourceId: {
-    type: TYPE.ObjectId,
+    type: TYPE.String,
     required: true,
     default: '',
   },
@@ -41,7 +41,7 @@ const schema: ConduitModel = {
     },
   },
   subjectId: {
-    type: TYPE.ObjectId,
+    type: TYPE.String,
     required: true,
     default: '',
   },

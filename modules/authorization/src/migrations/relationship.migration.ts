@@ -1,22 +1,16 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import { Query } from '@conduitplatform/grpc-sdk';
 import { Relationship } from '../models';
 
-export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
-  const count = await Relationship.getInstance().countDocuments({
-    $or: [{ resourceType: '' }, { resourceId: '' }],
-  });
-  if (count === 0) {
-    return;
-  }
-  let relationships = await Relationship.getInstance().findMany(
-    {
-      $or: [{ resourceType: '' }, { resourceId: '' }],
-    },
-    undefined,
-    0,
-    100,
-  );
-  let iterator = 0;
+export const migrateRelationships = async () => {
+  const query: Query<Relationship> = {
+    $or: [
+      { resourceType: '' },
+      { resourceId: '' },
+      { resourceType: { $exists: false } },
+      { resourceId: { $exists: false } },
+    ],
+  };
+  let relationships = await Relationship.getInstance().findMany(query, undefined, 0, 100);
   while (relationships.length > 0) {
     for (const objectIndex of relationships) {
       await Relationship.getInstance().findByIdAndUpdate(objectIndex._id, {
@@ -26,13 +20,6 @@ export const migrateRelationships = async (grpcSdk: ConduitGrpcSdk) => {
         resourceId: objectIndex.resource.split(':')[1].split('#')[0],
       });
     }
-    relationships = await Relationship.getInstance().findMany(
-      {
-        $or: [{ resourceType: '' }, { resourceId: '' }],
-      },
-      undefined,
-      ++iterator * 100,
-      100,
-    );
+    relationships = await Relationship.getInstance().findMany(query, undefined, 0, 100);
   }
 };

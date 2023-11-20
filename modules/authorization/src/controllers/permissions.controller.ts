@@ -1,4 +1,4 @@
-import ConduitGrpcSdk, { RawQuery } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import {
   AccessListQueryParams,
   checkRelation,

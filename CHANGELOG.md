@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-alpha.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.28...v0.16.0-alpha.29) (2023-11-16)
+
+
+### Features
+
+* **chat:** introduce auditMode, room deletions on leave and remove unique name requirement from rooms ([#794](https://github.com/ConduitPlatform/Conduit/issues/794)) ([1fc4484](https://github.com/ConduitPlatform/Conduit/commit/1fc4484124eff8de5ecfc02b5a12c1691383dc99))
+
+
+### Bug Fixes
+
+* **chat:** wrong migration query ([b02721e](https://github.com/ConduitPlatform/Conduit/commit/b02721e20308f3f21ab53cd1091f990231c935bf))
+* **chat:** wrong migration query ([d777ee8](https://github.com/ConduitPlatform/Conduit/commit/d777ee82b43235ef811c6df0b1dabbd55a6489b0))
+* **chat:** wrong migration query ([21d2e49](https://github.com/ConduitPlatform/Conduit/commit/21d2e49d1410e592fe9a91342e82624ca7fa9bb4))
+* **database:** custom endpoint date casting conflict with mongoose casts ([#795](https://github.com/ConduitPlatform/Conduit/issues/795)) ([5c2425c](https://github.com/ConduitPlatform/Conduit/commit/5c2425c7fd760d3ad4d8fb08a3eb03a9075c4783))
+* **storage:** authorization checks not consistent with db permissions ([2202583](https://github.com/ConduitPlatform/Conduit/commit/22025832de11e6c410f0d985c4e6b40fcab7a567))
+
+## [0.16.0-alpha.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.28) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
+## [0.16.0-alpha.27](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.27) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
+## [0.16.0-alpha.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.25...v0.16.0-alpha.26) (2023-11-09)
+
+
+### Bug Fixes
+
+* **authentication:** admin team name change not checking name availability ([#786](https://github.com/ConduitPlatform/Conduit/issues/786)) ([c526a34](https://github.com/ConduitPlatform/Conduit/commit/c526a34da963f663bd6429374df827d95136560e))
+* **authentication:** error log not showing properly ([460904b](https://github.com/ConduitPlatform/Conduit/commit/460904bb964ceb972c64cd0ccbe098036c721424))
+
 ## [0.16.0-alpha.25](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.24...v0.16.0-alpha.25) (2023-11-01)
 
 
