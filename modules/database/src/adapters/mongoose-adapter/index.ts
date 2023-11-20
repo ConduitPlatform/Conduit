@@ -29,7 +29,7 @@ mongoose.plugin(castAggregation);
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
-  mongoose: Mongoose;
+  private readonly mongoose: Mongoose;
   connectionString: string;
   options: ConnectOptions = {
     minPoolSize: 5,
@@ -82,7 +82,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    let newSchema = model.schema;
+    const newSchema = model.schema;
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
@@ -333,7 +333,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   protected connect() {
-    this.mongoose = mongoose;
     ConduitGrpcSdk.Logger.log('Connecting to database...');
     this.mongoose
       .connect(this.connectionString, this.options)

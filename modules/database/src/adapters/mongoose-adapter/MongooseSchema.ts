@@ -155,7 +155,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     const parsedFilter = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
@@ -219,7 +219,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     return this.model
       .deleteOne(parsedQuery!)
       .exec()
-      .then(r => ({ deletedCount: r.deletedCount }));;
+      .then(r => ({ deletedCount: r.deletedCount }));
   }
 
   async deleteMany(
@@ -260,10 +260,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'read',
       options,
     );
-    if (isNil(filter)) {
+    if (isNil(parsedQuery)) {
       return [];
     }
-    let finalQuery = this.model.find(filter, options?.select);
+    let finalQuery = this.model.find(parsedQuery, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }
@@ -287,7 +287,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       select?: string;
       populate?: string[];
     },
-  ) {
+  ): Promise<any> {
     const { parsedQuery } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(query)),
       'read',
@@ -359,7 +359,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
 
   public calculatePopulates(population: string[]) {
     const populates: (string | PopulateOptions)[] = [];
-    population.forEach((r: string | string[], index: number) => {
+    population.forEach((r: string | string[]) => {
       const final = r.toString().trim();
       if (final.indexOf('.') !== -1) {
         let controlBool = true;
@@ -454,7 +454,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [p: string]: number };
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -468,7 +468,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       pipeline.push({ $limit: options?.limit });
     }
     if (!isNil(options?.sort)) {
-      pipeline.push({ $sort: this.parseSort(options?.sort) });
+      pipeline.push({ $sort: this.parseSort(options!.sort) });
     }
     return pipeline;
   }
@@ -515,7 +515,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [p: string]: number };
       populate?: string[];
       userId?: string;
       scope?: string;

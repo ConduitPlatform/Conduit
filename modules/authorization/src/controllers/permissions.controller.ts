@@ -67,7 +67,7 @@ export class PermissionsController {
     }
     // if the actor is the object itself, all permissions are provided
     if (subject === object) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+      RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }
 
@@ -75,13 +75,13 @@ export class PermissionsController {
       computedTuple,
     });
     if (permission) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+      RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }
 
     const index = await this.indexController.findIndex(subject, action, object);
 
-    await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
+    RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
 
     return index ?? false;
   }
