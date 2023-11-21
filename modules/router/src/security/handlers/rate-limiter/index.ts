@@ -24,6 +24,7 @@ export class RateLimiter {
   get limiter() {
     const self = this;
     return (req: any, res: any, next: any) => {
+      if (req.method === 'OPTIONS') return next();
       const ip =
         req.headers['cf-connecting-ip'] ||
         req.headers['x-original-forwarded-for'] ||
