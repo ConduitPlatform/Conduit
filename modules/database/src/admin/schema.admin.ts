@@ -23,6 +23,16 @@ import { SchemaConverter } from '../utils/SchemaConverter';
 import { parseSortParam } from '../handlers/utils';
 import escapeStringRegexp from 'escape-string-regexp';
 
+type ExportedCmsSchema = Pick<
+  ConduitDatabaseSchema,
+  'name' | 'fields' | 'modelOptions' | 'ownerModule' | 'collectionName'
+>;
+
+type ExportedCmsExtension = {
+  schemaName: string;
+  extension: Omit<DeclaredSchemaExtension, 'ownerModule'>;
+};
+
 export class SchemaAdmin {
   constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
@@ -32,25 +42,31 @@ export class SchemaAdmin {
   ) {}
 
   async exportSchemas(): Promise<UnparsedRouterResponse> {
-    const cmsSchemas = await this.database
+    const cmsSchemas: ExportedCmsSchema[] = await this.database
       .getSchemaModel('_DeclaredSchema')
       .model.findMany(
         { 'modelOptions.conduit.cms.enabled': true },
         {
-          select:
-            'name parentSchema fields extensions modelOptions ownerModule collectionName',
+          select: 'name fields modelOptions ownerModule collectionName',
           sort: {
             updatedAt: 1,
           },
         },
       );
-    const cndSchemas = await this.database
-      .getSchemaModel('_DeclaredSchema')
-      .model.findMany(
+    const cndSchemas: Pick<ConduitDatabaseSchema, 'name' | 'extensions'>[] =
+      await this.database.getSchemaModel('_DeclaredSchema').model.findMany(
         {
           $and: [
             { 'modelOptions.conduit.cms': { $exists: false } },
             { 'modelOptions.conduit.permissions.extendable': true },
+            { extensions: { $exists: true } },
+            {
+              $or: [
+                { parentSchema: { $exists: false } },
+                { parentSchema: { $eq: null } },
+                { parentSchema: { $eq: '' } },
+              ],
+            },
           ],
         },
         {
@@ -60,57 +76,69 @@ export class SchemaAdmin {
           },
         },
       );
+    const dbExtensions = cndSchemas.flatMap(schema => {
+      const dbExtension = schema.extensions.find(ext => ext.ownerModule === 'database');
+      if (!dbExtension) return [];
+      const { extensions: _, name: schemaName, ...rest } = schema;
+      const { ownerModule: __, ...extension } = dbExtension;
+      return { ...rest, schemaName, extension };
+    });
     return {
-      schemas: cmsSchemas.concat(cndSchemas).map((schema: ConduitDatabaseSchema) => ({
-        ...schema,
-        extensions: schema.extensions.filter(ext => ext.ownerModule === 'database'),
-      })),
+      schemas: cmsSchemas,
+      extensions: dbExtensions as ExportedCmsExtension[],
     };
   }
 
   async importSchemas(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const schemas = call.request.params.schemas;
+    const { schemas, extensions } = call.request.params as {
+      schemas: ExportedCmsSchema[];
+      extensions?: ExportedCmsExtension[];
+    };
+    const targetSchemas = [
+      ...schemas.map(s => s.name),
+      ...(extensions?.map(e => e.schemaName) ?? []),
+    ];
+    const models: ConduitDatabaseSchema[] = await this.database
+      .getSchemaModel('_DeclaredSchema')
+      .model.findMany({ name: { $in: targetSchemas } });
     for (const schema of schemas) {
-      const found = await this.database
-        .getSchemaModel('_DeclaredSchema')
-        .model.findOne({ name: schema.name });
-      const isCmsSchema = found
-        ? !!found.modelOptions.conduit.cms
-        : !!schema.modelOptions?.conduit?.cms;
-      if (isCmsSchema) {
-        const existingSchema = await this.database
-          .getSchemaModel('_DeclaredSchema')
-          .model.findOne({ name: schema.name });
-        const operation = isNil(existingSchema) ? 'create' : 'update';
-        const imported = schema.modelOptions.conduit.imported;
-        const modelOptions = SchemaConverter.getModelOptions({
-          cmsSchema: true,
-          existingModelOptions: schema.modelOptions,
-          importedSchema: imported,
-        });
-        try {
-          validateSchemaInput(schema.name, schema.fields, modelOptions);
-        } catch (err: unknown) {
-          throw new GrpcError(status.INTERNAL, (err as Error).message);
-        }
-        await this.schemaController.createSchema(
-          new ConduitSchema(
-            schema.name,
-            schema.fields,
-            modelOptions,
-            schema.collectionName,
-          ),
-          operation,
-          imported,
+      const model = models.find(m => m.name === schema.name);
+      if (model && model.ownerModule !== 'database') {
+        throw new GrpcError(
+          status.PERMISSION_DENIED,
+          `Cannot import '${schema.name}'. Schema already owned by a module!`,
         );
       }
-      const extension = (schema.extensions as DeclaredSchemaExtension[]).find(
-        ext => ext.ownerModule === 'database',
+      const operation = model ? 'update' : 'create';
+      const imported = !!(model ?? schema).modelOptions.conduit?.imported;
+      const modelOptions = SchemaConverter.getModelOptions({
+        cmsSchema: true,
+        existingModelOptions: (model ?? schema).modelOptions,
+        importedSchema: imported,
+      });
+      await this.schemaController.createSchema(
+        new ConduitSchema(
+          schema.name,
+          schema.fields,
+          modelOptions,
+          schema.collectionName,
+        ),
+        operation,
+        imported,
       );
+    }
+    for (const ext of extensions ?? []) {
+      const model = models.find(m => m.name === ext.schemaName);
+      if (!model) {
+        throw new GrpcError(
+          status.FAILED_PRECONDITION,
+          `Cannot create an extension for '${ext.schemaName}'. Schema doesn't exist!`,
+        );
+      }
       await this.database.setSchemaExtension(
-        schema.name,
+        ext.schemaName,
         'database',
-        extension?.fields ?? {},
+        ext.extension.fields,
       );
     }
     return 'Schemas imported successfully';
