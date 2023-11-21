@@ -339,7 +339,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter)) {
+    if (isNil(filter) && !isNil(query)) {
       return null;
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(

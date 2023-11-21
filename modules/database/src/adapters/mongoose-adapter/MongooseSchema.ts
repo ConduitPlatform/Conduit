@@ -305,14 +305,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    const filter = await this.getAuthorizedQuery(
       'read',
       parsedQuery,
       false,
       options?.userId,
       options?.scope,
     );
+    if (isNil(filter) && !isNil(parsedQuery)) {
+      return null;
+    }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
