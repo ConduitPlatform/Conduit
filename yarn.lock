@@ -3255,10 +3255,10 @@
     node-fetch "^2.6.0"
     url-parse "^1.4.3"
 
-"@opentelemetry/api@^1.0.1":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@opentelemetry/api/-/api-1.1.0.tgz#563539048255bbe1a5f4f586a4a10a1bb737f44a"
-  integrity sha512-hf+3bwuBwtXsugA2ULBc95qxrOqP2pOekLz34BJhcAKawt94vfeNyUKpYc0lZQ/3sCP6LqRa7UAdHA7i5UODzQ==
+"@opentelemetry/api@^1.0.1", "@opentelemetry/api@^1.4.0":
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/@opentelemetry/api/-/api-1.7.0.tgz#b139c81999c23e3c8d3c0a7234480e945920fc40"
+  integrity sha512-AdY5wvN0P2vXBi3b29hxZgSFvdhdxPB9+f0B6s//P9Q8nibRWeA3cHm8UmLpio9ABigkVHJ5NMPk+Mz8VCCyrw==
 
 "@parcel/watcher@2.0.4":
   version "2.0.4"
@@ -11638,11 +11638,12 @@ progress@^2.0.3:
   resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
 
-prom-client@^14.2.0:
-  version "14.2.0"
-  resolved "https://registry.yarnpkg.com/prom-client/-/prom-client-14.2.0.tgz#ca94504e64156f6506574c25fb1c34df7812cf11"
-  integrity sha512-sF308EhTenb/pDRPakm+WgiN+VdM/T1RaHj1x+MvAuT8UiQP8JmOEbxVqtkbfR4LrvOg5n7ic01kRBDGXjYikA==
+prom-client@^15.0.0:
+  version "15.0.0"
+  resolved "https://registry.yarnpkg.com/prom-client/-/prom-client-15.0.0.tgz#067da874a2aa5d2e21bd5cdba9f24a8178bdab6a"
+  integrity sha512-UocpgIrKyA2TKLVZDSfm8rGkL13C19YrQBAiG3xo3aDFWcHedxRxI3z+cIcucoxpSO0h5lff5iv/SXoxyeopeA==
   dependencies:
+    "@opentelemetry/api" "^1.4.0"
     tdigest "^0.1.1"
 
 promise-inflight@^1.0.1:
