@@ -199,7 +199,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
     return this.initialized;
   }
 
-  async register(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
+  async register(
+    call: ParsedRouterRequest,
+    callback: (response: UnparsedRouterResponse) => void,
+  ) {
     const teams = ConfigController.getInstance().config.teams;
     if (
       teams.enabled &&
@@ -226,7 +229,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
       isVerified: false,
     });
 
+    delete user.hashedPassword;
     this.grpcSdk.bus?.publish('authentication:register:user', JSON.stringify(user));
+    callback({ user });
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
@@ -267,8 +272,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
           ConduitGrpcSdk.Logger.error(err);
         });
     }
-    delete user.hashedPassword;
-    return { user };
   }
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
