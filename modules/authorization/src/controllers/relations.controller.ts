@@ -2,14 +2,25 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
+import { Queue } from 'bullmq';
+import { randomUUID } from 'crypto';
 
 export class RelationsController {
   private static _instance: RelationsController;
+  private queue: Queue;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
-  ) {}
+  ) {
+    this.queue = new Queue('indexes', {
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        db: parseInt(process.env.REDIS_DATABASE || '0'),
+      },
+    });
+  }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
@@ -58,7 +69,19 @@ export class RelationsController {
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    await this.indexController.constructRelationIndex(subject, relation, object);
+    await this.queue.add(
+      randomUUID(),
+      this.indexController.constructRelationIndex(subject, relation, object),
+      {
+        removeOnComplete: {
+          age: 3600, // keep up to 1 hour
+          count: 1000, // keep up to 1000 jobs
+        },
+        removeOnFail: {
+          age: 24 * 3600, // keep up to 24 hours
+        },
+      },
+    );
     return relationResource;
   }
 
