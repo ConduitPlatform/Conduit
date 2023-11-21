@@ -313,6 +313,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
+    if (isNil(parsedQuery)) return null;
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
