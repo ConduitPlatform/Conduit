@@ -662,7 +662,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   }
 
   parseStringToQuery(
-    query: Query | SingleDocQuery | MultiDocQuery,
+    query: Query | SingleDocQuery | MultiDocQuery | null,
   ): ParsedQuery | ParsedQuery[] {
     return typeof query === 'string' ? JSON.parse(query) : query;
   }
