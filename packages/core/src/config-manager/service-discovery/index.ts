@@ -4,6 +4,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   GrpcResponse,
   HealthCheckStatus,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import { IModuleConfig } from '../../interfaces/IModuleConfig';
 import { ServerWritableStream, status } from '@grpc/grpc-js';
@@ -130,7 +131,6 @@ export class ServiceDiscovery {
   }
 
   async _recoverModule(moduleName: string, moduleUrl: string) {
-    let healthStatus;
     let healthResponse;
     try {
       if (!this.grpcSdk.getModule(moduleName)) {
@@ -140,7 +140,7 @@ export class ServiceDiscovery {
     } catch (e) {
       throw new Error('Failed to register unresponsive module');
     }
-    healthStatus = healthResponse.status as unknown as HealthCheckStatus;
+    const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     ConduitGrpcSdk.Logger.log(
       `SD: registering: ${moduleName} ${moduleUrl} ${healthStatus}`,
     );
@@ -267,7 +267,7 @@ export class ServiceDiscovery {
       });
   }
 
-  setState(state: any) {
+  setState(state: Indexable) {
     this.grpcSdk
       .state!.setKey('config', JSON.stringify(state))
       .then(() => {
@@ -278,3 +278,4 @@ export class ServiceDiscovery {
       });
   }
 }
+f;
