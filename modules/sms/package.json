@@ -40,7 +40,7 @@
     "twilio": "4.10.0"
   },
   "devDependencies": {
-    "@types/bluebird": "^3.5.39",
+    "@types/bluebird": "^3.5.42",
     "@types/otp-generator": "^4.0.2",
     "@types/convict": "^6.1.6",
     "@types/lodash": "^4.14.200",
