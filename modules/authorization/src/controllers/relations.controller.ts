@@ -1,10 +1,12 @@
-import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { Cluster, Redis } from 'ioredis';
+import path from 'path';
+import { status } from '@grpc/grpc-js';
 
 export class RelationsController {
   private static _instance: RelationsController;
@@ -81,23 +83,19 @@ export class RelationsController {
         },
       },
     );
-    new Worker(
-      'indexes',
-      async job => {
-        await this.indexController.constructRelationIndex(
-          job.data.subject,
-          job.data.relation,
-          job.data.object,
-        );
-      },
-      { connection: this.redisConnection },
-    )
+    const processorFile = path.join(__dirname, 'constructRelationIndexWorker.js');
+    new Worker('indexes', processorFile, { connection: this.redisConnection })
       .on('completed', async job => {
         console.log('Job completed: ', job.id);
       })
       .on('failed', async (job, err) => {
-        if (job) console.log(`${job.id} has failed with ${err.message}`);
+        if (job)
+          throw new GrpcError(
+            status.INTERNAL,
+            `${job.id} has failed with ${err.message}`,
+          );
       });
+    await this.indexQueue.close();
     return relationResource;
   }
 

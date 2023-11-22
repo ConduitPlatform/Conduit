@@ -21,6 +21,18 @@ export class IndexController {
     throw new Error('No grpcSdk instance provided!');
   }
 
+  static async getStandaloneInstance(serverUrl?: string) {
+    if (IndexController._instance) return IndexController._instance;
+    if (!serverUrl) throw new Error('No serverUrl provided!');
+    const grpcSdk = new ConduitGrpcSdk(serverUrl, 'authorization');
+    await grpcSdk.initialize();
+    await grpcSdk.waitForExistence('database');
+    ObjectIndex.getInstance(grpcSdk.database!);
+    ActorIndex.getInstance(grpcSdk.database!);
+    ResourceDefinition.getInstance(grpcSdk.database!);
+    return (IndexController._instance = new IndexController(grpcSdk));
+  }
+
   async createOrUpdateObject(subject: string, entity: string) {
     const index = await ObjectIndex.getInstance().findOne({ subject, entity });
     if (!index) {
