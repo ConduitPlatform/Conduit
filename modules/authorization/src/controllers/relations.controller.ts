@@ -7,18 +7,15 @@ import { randomUUID } from 'crypto';
 
 export class RelationsController {
   private static _instance: RelationsController;
-  private queue: Queue;
+  private indexQueue: Queue;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
   ) {
-    this.queue = new Queue('indexes', {
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        db: parseInt(process.env.REDIS_DATABASE || '0'),
-      },
+    const redisConnection = this.grpcSdk.redisManager.getClient();
+    this.indexQueue = new Queue('indexes', {
+      connection: redisConnection,
     });
   }
 
@@ -69,7 +66,7 @@ export class RelationsController {
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    await this.queue.add(
+    await this.indexQueue.add(
       randomUUID(),
       this.indexController.constructRelationIndex(subject, relation, object),
       {
