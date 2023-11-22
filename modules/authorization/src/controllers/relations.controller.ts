@@ -2,20 +2,22 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
+import { Cluster, Redis } from 'ioredis';
 
 export class RelationsController {
   private static _instance: RelationsController;
   private indexQueue: Queue;
+  private readonly redisConnection: Redis | Cluster;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
   ) {
-    const redisConnection = this.grpcSdk.redisManager.getClient();
+    this.redisConnection = this.grpcSdk.redisManager.getClient();
     this.indexQueue = new Queue('indexes', {
-      connection: redisConnection,
+      connection: this.redisConnection,
     });
   }
 
@@ -68,7 +70,7 @@ export class RelationsController {
     });
     await this.indexQueue.add(
       randomUUID(),
-      this.indexController.constructRelationIndex(subject, relation, object),
+      { subject, relation, object },
       {
         removeOnComplete: {
           age: 3600, // keep up to 1 hour
@@ -79,6 +81,23 @@ export class RelationsController {
         },
       },
     );
+    new Worker(
+      'indexes',
+      async job => {
+        await this.indexController.constructRelationIndex(
+          job.data.subject,
+          job.data.relation,
+          job.data.object,
+        );
+      },
+      { connection: this.redisConnection },
+    )
+      .on('completed', async job => {
+        console.log('Job completed: ', job.id);
+      })
+      .on('failed', async (job, err) => {
+        if (job) console.log(`${job.id} has failed with ${err.message}`);
+      });
     return relationResource;
   }
 
