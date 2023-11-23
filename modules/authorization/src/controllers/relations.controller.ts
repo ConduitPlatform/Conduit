@@ -10,10 +10,7 @@ export class RelationsController {
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
-    private readonly indexQueueController = new QueueController(
-      grpcSdk,
-      'authorization-index-queue',
-    ),
+    private readonly indexQueueController = new QueueController(grpcSdk),
   ) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
