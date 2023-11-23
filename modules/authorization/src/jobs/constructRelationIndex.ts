@@ -1,5 +1,5 @@
-import { IndexController } from './index.controller';
 import { SandboxedJob } from 'bullmq';
+import { IndexController } from '../controllers';
 
 type ConstructRelationIndexWorkerData = {
   subject: string;
@@ -12,5 +12,5 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
   const indexController = await IndexController.getStandaloneInstance(
     process.env.CONDUIT_SERVER,
   );
-  await indexController.constructRelationIndex(subject, relation, object);
+  return await indexController.constructRelationIndex(subject, relation, object);
 };

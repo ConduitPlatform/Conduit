@@ -1,27 +1,20 @@
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
-import { Queue, Worker } from 'bullmq';
-import { randomUUID } from 'crypto';
-import { Cluster, Redis } from 'ioredis';
-import path from 'path';
-import { status } from '@grpc/grpc-js';
+import { QueueController } from './QueueController';
 
 export class RelationsController {
   private static _instance: RelationsController;
-  private indexQueue: Queue;
-  private readonly redisConnection: Redis | Cluster;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
-  ) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
-    this.indexQueue = new Queue('indexes', {
-      connection: this.redisConnection,
-    });
-  }
+    private readonly indexQueueController = new QueueController(
+      grpcSdk,
+      'authorization-index-queue',
+    ),
+  ) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
@@ -70,32 +63,7 @@ export class RelationsController {
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    await this.indexQueue.add(
-      randomUUID(),
-      { subject, relation, object },
-      {
-        removeOnComplete: {
-          age: 3600, // keep up to 1 hour
-          count: 1000, // keep up to 1000 jobs
-        },
-        removeOnFail: {
-          age: 24 * 3600, // keep up to 24 hours
-        },
-      },
-    );
-    const processorFile = path.join(__dirname, 'constructRelationIndexWorker.js');
-    new Worker('indexes', processorFile, { connection: this.redisConnection })
-      .on('completed', async job => {
-        console.log('Job completed: ', job.id);
-      })
-      .on('failed', async (job, err) => {
-        if (job)
-          throw new GrpcError(
-            status.INTERNAL,
-            `${job.id} has failed with ${err.message}`,
-          );
-      });
-    await this.indexQueue.close();
+    await this.indexQueueController.relationIndexesJob(subject, relation, object);
     return relationResource;
   }
 
