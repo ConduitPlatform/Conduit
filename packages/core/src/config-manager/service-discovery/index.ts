@@ -37,17 +37,15 @@ export class ServiceDiscovery {
   }
 
   beginMonitors() {
-    this.highAvailability();
-    this._serviceMonitor.beginMonitors();
+    this.highAvailability().then(() => this._serviceMonitor.beginMonitors());
   }
 
   async highAvailability() {
-    const loadedState = await this.grpcSdk.state!.getKey('config');
-    try {
-      if (!loadedState || loadedState.length === 0) return;
-      const state = JSON.parse(loadedState);
-      const success: IModuleConfig[] = [];
-      if (state.modules) {
+    await this.grpcSdk
+      .state!.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
+        const success: IModuleConfig[] = [];
+        if (!state.modules) return state;
         for (const module of state.modules) {
           try {
             await this._recoverModule(module.name, module.url);
@@ -60,14 +58,16 @@ export class ServiceDiscovery {
         }
         if (state.modules.length > success.length) {
           state.modules = success;
-          this.setState(state);
         }
-      } else {
-        return Promise.resolve();
-      }
-    } catch {
-      ConduitGrpcSdk.Logger.error('Failed to recover state');
-    }
+        return state;
+      })
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Recovered state');
+      })
+      .catch(() => {
+        ConduitGrpcSdk.Logger.error('Failed to recover state');
+      });
+
     this.grpcSdk.bus!.subscribe('config', (message: string) => {
       const parsedMessage = JSON.parse(message);
       if (parsedMessage.type === 'module-health') {
@@ -127,7 +127,6 @@ export class ServiceDiscovery {
       const modules = this._serviceRegistry.getModuleDetailsList();
       call.write({ modules });
     });
-    // todo this should close gracefully I guess.
   }
 
   async _recoverModule(moduleName: string, moduleUrl: string) {
@@ -220,7 +219,6 @@ export class ServiceDiscovery {
     }
   }
 
-  //todo not subscribed by anyone
   private publishModuleData(
     type: string,
     name: string,
@@ -240,9 +238,8 @@ export class ServiceDiscovery {
 
   private updateState(name: string, url: string) {
     this.grpcSdk
-      .state!.getKey('config')
-      .then(r => {
-        const state = !r || r.length === 0 ? {} : JSON.parse(r);
+      .state!.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
         if (!state.modules) state.modules = [];
         const module = state.modules.find((module: IModuleConfig) => {
           return module.url === url;
@@ -256,25 +253,13 @@ export class ServiceDiscovery {
             url,
           },
         ];
-
-        return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
+        return state;
       })
       .then(() => {
         ConduitGrpcSdk.Logger.log('Updated state');
       })
       .catch(() => {
-        ConduitGrpcSdk.Logger.error('Failed to recover state');
-      });
-  }
-
-  setState(state: Indexable) {
-    this.grpcSdk
-      .state!.setKey('config', JSON.stringify(state))
-      .then(() => {
-        ConduitGrpcSdk.Logger.log('Updated state');
-      })
-      .catch(() => {
-        ConduitGrpcSdk.Logger.error('Failed to recover state');
+        ConduitGrpcSdk.Logger.error('Failed to update state');
       });
   }
 }

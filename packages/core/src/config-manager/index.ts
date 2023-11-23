@@ -3,6 +3,7 @@ import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
   GrpcResponse,
+  Indexable,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -86,14 +87,11 @@ export default class ConfigManager implements IConfigManager {
     try {
       if (!loadedState || loadedState.length === 0) return;
       const state = JSON.parse(loadedState);
-      if (state.modules) {
-        for (const module of state.modules) {
-          if (module.configSchema) {
-            this.registerConfigRoutes(module.name, module.configSchema);
-          }
+      if (!state.modules) return Promise.resolve();
+      for (const module of state.modules) {
+        if (module.configSchema) {
+          this.registerConfigRoutes(module.name, module.configSchema);
         }
-      } else {
-        return Promise.resolve();
       }
     } catch {
       ConduitGrpcSdk.Logger.error('Failed to recover state');
@@ -263,17 +261,13 @@ export default class ConfigManager implements IConfigManager {
 
   private updateState(name: string, configSchema: convict.Config<any>) {
     this.grpcSdk
-      .state!.getKey('config')
-      .then(r => {
-        if (!r || r.length === 0) {
-          throw new Error('No config state found');
-        }
-        const state = JSON.parse(r);
+      .state!.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
         const module = state.modules.find((module: IModuleConfig) => {
           return module.name === name;
         });
         if (!module) {
-          throw new Error('Cannot update module state');
+          throw new Error('Config-manager: Cannot update module state');
         }
         state.modules = [
           ...state.modules.filter((module: IModuleConfig) => module.name !== name),
@@ -282,13 +276,14 @@ export default class ConfigManager implements IConfigManager {
             configSchema,
           },
         ];
-        return this.grpcSdk.state!.setKey('config', JSON.stringify(state));
+        return state;
       })
       .then(() => {
-        ConduitGrpcSdk.Logger.log('Updated state');
+        ConduitGrpcSdk.Logger.log('Config-manager: Updated state');
       })
-      .catch(() => {
-        ConduitGrpcSdk.Logger.error('Failed to recover state');
+      .catch(e => {
+        console.error(e);
+        ConduitGrpcSdk.Logger.error('Config-manager: Failed to recover state');
       });
   }
 }

@@ -1,4 +1,7 @@
-import ConduitGrpcSdk, { HealthCheckStatus } from '@conduitplatform/grpc-sdk';
+import ConduitGrpcSdk, {
+  HealthCheckResponse,
+  HealthCheckStatus,
+} from '@conduitplatform/grpc-sdk';
 import { ServiceRegistry } from './ServiceRegistry';
 import { linearBackoffTimeout } from '@conduitplatform/module-tools';
 import { EventEmitter } from 'events';
@@ -9,7 +12,6 @@ export class ServiceMonitor {
     [module: string]: { address: string; timestamp: number; status: HealthCheckStatus };
   } = {};
   private readonly _serviceRegistry = ServiceRegistry.getInstance();
-  private servingStatusUpdate: boolean = false;
   private monitorIntervalMs = 5000;
   private serviceReconnectionInitMs = 500;
   private serviceReconnectionRetries = 10;
@@ -61,7 +63,7 @@ export class ServiceMonitor {
     if (healthClient) {
       status = await healthClient
         .check({})
-        .then(res => res.status as unknown as HealthCheckStatus);
+        .then((res: HealthCheckResponse) => res.status as unknown as HealthCheckStatus);
     }
     const isRegistered = Object.keys(this.moduleHealth).includes(module);
     if (!isRegistered && status === HealthCheckStatus.SERVICE_UNKNOWN) return;
@@ -87,7 +89,6 @@ export class ServiceMonitor {
     // Deregister Unresponsive Module
     delete this.moduleHealth[moduleName];
     this._serviceRegistry.removeModule(moduleName);
-    this.servingStatusUpdate = true;
     this.reviveService(moduleName, moduleUrl);
   }
 
@@ -111,16 +112,12 @@ export class ServiceMonitor {
         `SD/health: update unregistered module ${moduleName} ${moduleUrl} ${moduleStatus}`,
       );
       this._serviceRegistry.updateModule(moduleName, module);
-      this.servingStatusUpdate = true;
     } else {
       const prevStatus = module.serving;
       ConduitGrpcSdk.Logger.log(
         `SD/health: update registered module ${moduleName} ${moduleUrl} to ${moduleStatus} from serving: ${prevStatus}`,
       );
       module.serving = moduleStatus === HealthCheckStatus.SERVING;
-      if (!this.servingStatusUpdate && prevStatus !== module.serving && broadcast) {
-        this.servingStatusUpdate = true;
-      }
     }
     this.grpcSdk.updateModuleHealth(
       moduleName,
@@ -184,9 +181,6 @@ export class ServiceMonitor {
         );
       }
     }
-    if (this.servingStatusUpdate) {
-      this.moduleRegister.emit('serving-modules-update');
-      this.servingStatusUpdate = false;
-    }
+    this.moduleRegister.emit('serving-modules-update');
   }
 }
