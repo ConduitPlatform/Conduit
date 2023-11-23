@@ -3,6 +3,10 @@ import { Cluster, Redis } from 'ioredis';
 import Redlock, { Lock } from 'redlock';
 import { Indexable } from '../interfaces';
 
+export enum KNOWN_LOCKS {
+  STATE_MODIFICATION = 'state_modification',
+}
+
 export class StateManager {
   private readonly redisClient: Redis | Cluster;
   private readonly redLock: Redlock;
@@ -38,7 +42,7 @@ export class StateManager {
   }
 
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {
-    const lock = await this.acquireLock('state_modification');
+    const lock = await this.acquireLock(KNOWN_LOCKS.STATE_MODIFICATION);
     try {
       const retrievedState = (await this.getState()) ?? '{}';
       const currentState = JSON.parse(retrievedState);
