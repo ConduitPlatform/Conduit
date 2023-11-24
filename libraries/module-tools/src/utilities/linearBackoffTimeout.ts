@@ -6,18 +6,25 @@
 import { clearTimeout } from 'timers';
 
 export function linearBackoffTimeout(
-  onTry: (timeout: NodeJS.Timeout) => void,
+  onTry: (stop: () => void) => void,
   delay: number,
   reps?: number,
   onFailure?: () => void,
 ) {
   const nextRep = () => reps === undefined || --reps > 0;
+  let stopSignal = false;
+  const stop = () => {
+    stopSignal = true;
+  };
   let timeout: NodeJS.Timeout | null;
   const invoker = async () => {
+    if (stopSignal) {
+      return timeout ? clearTimeout(timeout) : null;
+    }
     delay = Math.floor(delay * 2);
     if (delay > 0 && nextRep()) {
       timeout = setTimeout(invoker, delay);
-      onTry(timeout);
+      onTry(stop);
     } else {
       timeout = null;
       onFailure && onFailure();

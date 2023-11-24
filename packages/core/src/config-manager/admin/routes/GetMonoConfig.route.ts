@@ -3,14 +3,10 @@ import ConduitGrpcSdk, {
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
-
-import { RegisteredModule } from '@conduitplatform/commons';
 import { ConduitRoute } from '@conduitplatform/hermes';
+import { ServiceRegistry } from '../../service-discovery/ServiceRegistry';
 
-export function getMonoConfigRoute(
-  grpcSdk: ConduitGrpcSdk,
-  registeredModules: Map<string, RegisteredModule>,
-) {
+export function getMonoConfigRoute(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(
     {
       path: '/config',
@@ -26,7 +22,7 @@ export function getMonoConfigRoute(
       const sortedModules = [
         'core',
         'admin',
-        ...Array.from(registeredModules.keys()),
+        ...ServiceRegistry.getInstance().getRegisteredModules(),
       ].sort();
       for (const moduleName of sortedModules) {
         const moduleConfig = await grpcSdk.state!.getKey(`moduleConfigs.${moduleName}`);

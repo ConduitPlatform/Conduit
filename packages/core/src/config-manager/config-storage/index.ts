@@ -4,6 +4,7 @@ import * as models from '../models';
 import { ServiceDiscovery } from '../service-discovery';
 import { clearInterval } from 'timers';
 import { merge } from 'lodash';
+import { ServiceRegistry } from '../service-discovery/ServiceRegistry';
 
 export class ConfigStorage {
   toBeReconciled: string[] = [];
@@ -51,7 +52,7 @@ export class ConfigStorage {
     if (configDocs.length === 0) {
       // flush redis stored configuration to the database
       let moduleConfig;
-      for (const key of this.serviceDiscovery.registeredModules.keys()) {
+      for (const key of ServiceRegistry.getInstance().getRegisteredModules()) {
         try {
           moduleConfig = await this.getConfig(key, false);
           await models.Config.getInstance().create({ name: key, config: moduleConfig });
@@ -80,7 +81,7 @@ export class ConfigStorage {
       }
     }
     // Update Admin and all active modules
-    const registeredModules = Array.from(this.serviceDiscovery.registeredModules.keys());
+    const registeredModules = ServiceRegistry.getInstance().getRegisteredModules();
     const moduleConfigs = await models.Config.getInstance().findMany({});
     for (const config of moduleConfigs) {
       if (config.name === 'core') continue;
@@ -98,13 +99,16 @@ export class ConfigStorage {
   }
 
   reconcileMonitor() {
-    const reconciliationInterval = setInterval(() => {
-      if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
-        this.reconcile();
-      }
-      // add a random extra amount to mitigate race-conditions,
-      // between core instances
-    }, 1500 + Math.floor(Math.random() * 300));
+    const reconciliationInterval = setInterval(
+      () => {
+        if (this.grpcSdk.isAvailable('database') && this.toBeReconciled.length > 0) {
+          this.reconcile();
+        }
+        // add a random extra amount to mitigate race-conditions,
+        // between core instances
+      },
+      1500 + Math.floor(Math.random() * 300),
+    );
 
     process.on('exit', () => {
       clearInterval(reconciliationInterval);
