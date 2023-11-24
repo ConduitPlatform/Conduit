@@ -130,7 +130,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'edit',
       options,
     );
-    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(filterQuery)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
@@ -161,7 +161,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'edit',
       options,
     ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(filterQuery)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
@@ -192,7 +192,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'edit',
       options,
     ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter) && !isNil(parsedFilterQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedFilterQuery)) {
       return [];
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
@@ -215,7 +215,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'delete',
       options,
     );
-    if (isNil(parsedFilter) && !isNil(query)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -237,7 +237,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'delete',
       options,
     );
-    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -264,7 +264,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'read',
       options,
     );
-    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
       return [];
     }
     let finalQuery = this.model.find(parsedFilter ?? {}, options?.select);
@@ -300,7 +300,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isNil(parsedQuery)) {
+    if (isNil(filter) && !isEmpty(parsedQuery)) {
       return null;
     }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);

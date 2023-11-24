@@ -19,7 +19,7 @@ import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from 
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery, parseCreateRelations } from './parser';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { processCreateQuery, unwrap } from './utils/pathUtils';
 import {
   constructRelationInclusion,
@@ -341,7 +341,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isNil(query)) {
+    if (isNil(filter) && !isEmpty(query)) {
       return null;
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -412,7 +412,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.limit,
       options?.sort,
     );
-    if (isNil(filter) && !isNil(query)) {
+    if (isNil(filter) && !isEmpty(query)) {
       return [];
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -469,7 +469,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -501,7 +501,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -572,7 +572,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isNil(parsedFilterQuery)) {
+    if (isNil(parsedFilter) && !isEmpty(parsedFilterQuery)) {
       return [];
     }
     const parsingResult = parseQuery(
