@@ -24,7 +24,7 @@ export class PermissionsController {
     if (grpcSdk) {
       return (PermissionsController._instance = new PermissionsController(grpcSdk));
     }
-    throw new Error('Missing grpcSdk or indexController!');
+    throw new Error('No grpcSdk instance provided!');
   }
 
   async grantPermission(subject: string, action: string, resource: string) {

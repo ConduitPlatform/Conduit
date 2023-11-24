@@ -20,7 +20,7 @@ export class QueueController {
     if (grpcSdk) {
       return (QueueController._instance = new QueueController(grpcSdk));
     }
-    throw new Error('Missing grpcSdk!');
+    throw new Error('No grpcSdk instance provided!');
   }
 
   initializeRelationIndexQueue() {
