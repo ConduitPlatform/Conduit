@@ -7,20 +7,14 @@ import { QueueController } from './queue.controller';
 export class RelationsController {
   private static _instance: RelationsController;
 
-  private constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexController: IndexController,
-  ) {}
+  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk && indexController) {
-      return (RelationsController._instance = new RelationsController(
-        grpcSdk,
-        indexController,
-      ));
+    if (grpcSdk) {
+      return (RelationsController._instance = new RelationsController(grpcSdk));
     }
-    throw new Error('Missing grpcSdk or indexController!');
+    throw new Error('No grpcSdk instance provided!');
   }
 
   async createRelation(subject: string, relation: string, object: string) {
@@ -59,7 +53,7 @@ export class RelationsController {
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    await this.indexController.constructRelationIndex(subject, relation, object);
+    await IndexController.getInstance().constructRelationIndex(subject, relation, object);
     return relationResource;
   }
 
@@ -124,7 +118,7 @@ export class RelationsController {
       computedTuple: computeRelationTuple(subject, relation, object),
     });
 
-    await this.indexController.removeRelation(subject, relation, object);
+    await IndexController.getInstance().removeRelation(subject, relation, object);
 
     return;
   }
@@ -134,7 +128,7 @@ export class RelationsController {
     if (relationResources.length === 0) throw new Error('No relations found');
     await Relationship.getInstance().deleteMany(query);
     for (const relationResource of relationResources) {
-      await this.indexController.removeRelation(
+      await IndexController.getInstance().removeRelation(
         relationResource.subject,
         relationResource.relation,
         relationResource.resource,
@@ -147,7 +141,7 @@ export class RelationsController {
     const relationResource = await Relationship.getInstance().findOne({ _id: id });
     if (!relationResource) throw new Error('Relation does not exist');
     await Relationship.getInstance().deleteOne({ _id: id });
-    await this.indexController.removeRelation(
+    await IndexController.getInstance().removeRelation(
       relationResource.subject,
       relationResource.relation,
       relationResource.resource,
