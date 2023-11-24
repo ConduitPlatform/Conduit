@@ -1,14 +1,14 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
 import { RelationsController } from './relations.controller';
-import { QueueController } from './QueueController';
+import { QueueController } from './queue.controller';
 
 export class IndexController {
   private static _instance: IndexController;
 
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexQueueController = new QueueController(grpcSdk),
+    private readonly indexQueueController: QueueController,
   ) {}
 
   private _relationsController: RelationsController;
@@ -17,24 +17,15 @@ export class IndexController {
     this._relationsController = relationsController;
   }
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexQueueController?: QueueController) {
     if (IndexController._instance) return IndexController._instance;
-    if (grpcSdk) {
-      return (IndexController._instance = new IndexController(grpcSdk));
+    if (grpcSdk && indexQueueController) {
+      return (IndexController._instance = new IndexController(
+        grpcSdk,
+        indexQueueController,
+      ));
     }
-    throw new Error('No grpcSdk instance provided!');
-  }
-
-  static async getStandaloneInstance(serverUrl?: string) {
-    if (IndexController._instance) return IndexController._instance;
-    if (!serverUrl) throw new Error('No serverUrl provided!');
-    const grpcSdk = new ConduitGrpcSdk(serverUrl, 'authorization');
-    await grpcSdk.initialize();
-    await grpcSdk.waitForExistence('database');
-    ObjectIndex.getInstance(grpcSdk.database!);
-    ActorIndex.getInstance(grpcSdk.database!);
-    ResourceDefinition.getInstance(grpcSdk.database!);
-    return (IndexController._instance = new IndexController(grpcSdk));
+    throw new Error('No grpcSdk or queueController instance provided!');
   }
 
   async createOrUpdateObject(subject: string, entity: string) {

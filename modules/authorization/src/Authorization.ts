@@ -29,6 +29,7 @@ import {
   PermissionsController,
   RelationsController,
   ResourceController,
+  QueueController,
 } from './controllers';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
@@ -65,6 +66,7 @@ export default class Authorization extends ManagedModule<Config> {
   private relationsController: RelationsController;
   private resourceController: ResourceController;
   private database: DatabaseProvider;
+  private queueController: QueueController;
 
   constructor() {
     super('authorization');
@@ -83,7 +85,12 @@ export default class Authorization extends ManagedModule<Config> {
     } else {
       await this.registerSchemas();
       await runMigrations(this.grpcSdk);
-      this.indexController = IndexController.getInstance(this.grpcSdk);
+      this.queueController = QueueController.getInstance(this.grpcSdk);
+      this.queueController.addRelationIndexWorker();
+      this.indexController = IndexController.getInstance(
+        this.grpcSdk,
+        this.queueController,
+      );
       this.relationsController = RelationsController.getInstance(
         this.grpcSdk,
         this.indexController,

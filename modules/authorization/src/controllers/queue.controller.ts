@@ -7,14 +7,15 @@ import { Redis, Cluster } from 'ioredis';
 
 export class QueueController {
   private static _instance: QueueController;
-  private readonly authorizationQueue: Queue;
+  private readonly redisConnection: Redis | Cluster;
+  private authorizationQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    const redisConnection = this.grpcSdk.redisManager.getClient();
-    this.authorizationQueue = this.initializeRelationIndexQueue(redisConnection);
+    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    this.authorizationQueue = this.initializeRelationIndexQueue();
   }
 
-  getInstance(grpcSdk?: ConduitGrpcSdk) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (QueueController._instance) return QueueController._instance;
     if (grpcSdk) {
       return (QueueController._instance = new QueueController(grpcSdk));
@@ -22,17 +23,19 @@ export class QueueController {
     throw new Error('Missing grpcSdk!');
   }
 
-  initializeRelationIndexQueue(redisConnection: Redis | Cluster) {
-    const queue = new Queue('authorization-index-queue', {
-      connection: redisConnection,
+  initializeRelationIndexQueue() {
+    return new Queue('authorization-index-queue', {
+      connection: this.redisConnection,
     });
+  }
+
+  addRelationIndexWorker() {
     const processorFile = path.normalize(
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
     new Worker('authorization-index-queue', processorFile, {
-      connection: redisConnection,
+      connection: this.redisConnection,
     });
-    return queue;
   }
 
   async addRelationIndexJob(
