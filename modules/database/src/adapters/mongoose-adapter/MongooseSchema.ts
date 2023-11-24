@@ -249,7 +249,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [field: string]: -1 | 1 };
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -271,10 +271,10 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       finalQuery = finalQuery.limit(options!.limit!);
     }
     if (!isNil(options?.populate)) {
-      finalQuery = this.populate(finalQuery, options?.populate ?? []);
+      finalQuery = this.populate(finalQuery, options!.populate ?? []);
     }
     if (!isNil(options?.sort)) {
-      finalQuery = finalQuery.sort(this.parseSort(options?.sort));
+      finalQuery = finalQuery.sort(this.parseSort(options!.sort));
     }
     return finalQuery.lean().exec();
   }
@@ -288,15 +288,18 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    const { parsedQuery } = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(query)),
+    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    const filter = await this.getAuthorizedQuery(
       'read',
-      options,
+      parsedQuery,
+      false,
+      options?.userId,
+      options?.scope,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(filter) && !isNil(parsedQuery)) {
       throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
     }
-    let finalQuery = this.model.findOne(parsedQuery, options?.select);
+    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }

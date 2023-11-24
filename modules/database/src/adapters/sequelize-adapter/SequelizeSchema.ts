@@ -339,7 +339,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter)) {
+    if (isNil(filter) && !isNil(query)) {
       return null;
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -395,7 +395,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [field: string]: -1 | 1 };
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -432,13 +432,13 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       ),
     };
     if (!isNil(options?.skip) && !modified) {
-      findOptions.offset = options?.skip;
+      findOptions.offset = options!.skip;
     }
     if (!isNil(options?.limit) && !modified) {
-      findOptions.limit = options?.limit;
+      findOptions.limit = options!.limit;
     }
     if (!isNil(options?.sort)) {
-      findOptions.order = this.parseSort(options?.sort);
+      findOptions.order = this.parseSort(options!.sort);
     }
 
     return this.model.findAll(findOptions).then(docs => {
@@ -662,7 +662,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   }
 
   parseStringToQuery(
-    query: Query | SingleDocQuery | MultiDocQuery,
+    query: Query | SingleDocQuery | MultiDocQuery | null,
   ): ParsedQuery | ParsedQuery[] {
     return typeof query === 'string' ? JSON.parse(query) : query;
   }

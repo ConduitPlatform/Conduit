@@ -37,7 +37,7 @@
     "object-hash": "^3.0.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
-    "sequelize": "^6.31.0",
+    "sequelize": "^6.35.1",
     "sequelize-auto": "^0.8.8",
     "sqlite3": "^5.1.6"
   },
