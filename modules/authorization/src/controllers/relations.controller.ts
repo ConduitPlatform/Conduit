@@ -2,7 +2,6 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { checkRelation, computeRelationTuple } from '../utils';
 import { Relationship, ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
-import { QueueController } from './QueueController';
 
 export class RelationsController {
   private static _instance: RelationsController;
@@ -10,7 +9,6 @@ export class RelationsController {
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
-    private readonly indexQueueController = new QueueController(grpcSdk),
   ) {}
 
   static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
@@ -60,7 +58,7 @@ export class RelationsController {
       resourceType: object.split(':')[0],
       computedTuple: computeRelationTuple(subject, relation, object),
     });
-    await this.indexQueueController.relationIndexesJob(subject, relation, object);
+    await this.indexController.constructRelationIndex(subject, relation, object);
     return relationResource;
   }
 

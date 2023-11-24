@@ -1,11 +1,15 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
 import { RelationsController } from './relations.controller';
+import { QueueController } from './QueueController';
 
 export class IndexController {
   private static _instance: IndexController;
 
-  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
+  private constructor(
+    private readonly grpcSdk: ConduitGrpcSdk,
+    private readonly indexQueueController = new QueueController(grpcSdk),
+  ) {}
 
   private _relationsController: RelationsController;
 
@@ -122,7 +126,7 @@ export class IndexController {
       subject: object,
     });
     if (actors.length === 0) return;
-    await this.constructRelationIndexes(
+    await this.indexQueueController.addRelationIndexJob(
       actors.map(actor => ({
         subject: actor.subject,
         relation: actor.relation,
@@ -235,7 +239,7 @@ export class IndexController {
       subject: { $in: relationObjects },
     });
     if (actors.length === 0) return;
-    await this.constructRelationIndexes(
+    await this.indexQueueController.addRelationIndexJob(
       actors.map(actor => ({
         subject: actor.subject,
         relation: actor.relation,

@@ -7,10 +7,11 @@ import { Redis, Cluster } from 'ioredis';
 
 export class QueueController {
   private static _instance: QueueController;
-  private readonly redisConnection: Redis | Cluster;
+  private readonly authorizationQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    this.redisConnection = this.grpcSdk.redisManager.getClient();
+    const redisConnection = this.grpcSdk.redisManager.getClient();
+    this.authorizationQueue = this.initializeRelationIndexQueue(redisConnection);
   }
 
   getInstance(grpcSdk?: ConduitGrpcSdk) {
@@ -21,22 +22,31 @@ export class QueueController {
     throw new Error('Missing grpcSdk!');
   }
 
-  async relationIndexesJob(subject: string, relation: string, object: string) {
-    if (!subject || !relation || !object) {
-      throw new GrpcError(status.INVALID_ARGUMENT, 'Missing subject, relation or object');
-    }
-    const authorizationQueue = new Queue('authorization-index-queue', {
-      connection: this.redisConnection,
+  initializeRelationIndexQueue(redisConnection: Redis | Cluster) {
+    const queue = new Queue('authorization-index-queue', {
+      connection: redisConnection,
     });
     const processorFile = path.normalize(
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
     new Worker('authorization-index-queue', processorFile, {
-      connection: this.redisConnection,
+      connection: redisConnection,
     });
-    await authorizationQueue.add(
+    return queue;
+  }
+
+  async addRelationIndexJob(
+    relations: { subject: string; relation: string; object: string }[],
+  ) {
+    if (!relations.length) {
+      throw new GrpcError(
+        status.INVALID_ARGUMENT,
+        'Missing relations (subject, relation, object)',
+      );
+    }
+    await this.authorizationQueue.add(
       randomUUID(),
-      { subject, relation, object },
+      { relations },
       {
         removeOnComplete: {
           age: 3600,
