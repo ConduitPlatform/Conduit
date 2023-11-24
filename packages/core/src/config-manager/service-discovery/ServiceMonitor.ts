@@ -96,7 +96,6 @@ export class ServiceMonitor {
     moduleName: string,
     moduleUrl: string,
     moduleStatus: HealthCheckStatus,
-    broadcast = true,
   ) {
     if (moduleStatus === HealthCheckStatus.SERVICE_UNKNOWN) {
       return this.handleUnresponsiveModule(moduleName, moduleUrl, moduleStatus);

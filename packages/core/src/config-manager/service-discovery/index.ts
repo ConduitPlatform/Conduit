@@ -152,7 +152,7 @@ export class ServiceDiscovery {
       this.grpcSdk.createModuleClient(moduleName, moduleUrl);
     }
 
-    this._serviceMonitor.updateModuleHealth(moduleName, moduleUrl, healthStatus, true);
+    this._serviceMonitor.updateModuleHealth(moduleName, moduleUrl, healthStatus);
   }
 
   async _registerModule(
@@ -175,7 +175,7 @@ export class ServiceDiscovery {
       this.grpcSdk.createModuleClient(moduleName, moduleUrl);
     }
 
-    this._serviceMonitor.updateModuleHealth(moduleName, moduleUrl, healthStatus!, true);
+    this._serviceMonitor.updateModuleHealth(moduleName, moduleUrl, healthStatus!);
   }
 
   async registerModule(call: any, callback: GrpcResponse<{ result: boolean }>) {
