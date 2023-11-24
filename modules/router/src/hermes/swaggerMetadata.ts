@@ -47,8 +47,7 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
           userToken: [],
         }),
       );
-    }
-    if (route.input.middlewares?.includes('authMiddleware?')) {
+    } else if (route.input.middlewares?.includes('authMiddleware?')) {
       if (swaggerRouteDoc.security.length === 0) {
         swaggerRouteDoc.security.push({});
       }
