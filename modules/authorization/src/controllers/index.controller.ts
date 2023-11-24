@@ -8,12 +8,6 @@ export class IndexController {
 
   private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
-  private _relationsController: RelationsController;
-
-  set relationsController(relationsController: RelationsController) {
-    this._relationsController = relationsController;
-  }
-
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
     if (grpcSdk) {
@@ -307,7 +301,7 @@ export class IndexController {
         if (removedResources.length > 0) {
           for (const removedResource of removedResources) {
             await this.removeGeneralRelation(removedResource, relation, resource.name);
-            await this._relationsController.removeGeneralRelation(
+            await RelationsController.getInstance().removeGeneralRelation(
               removedResource,
               relation,
               resource.name,
