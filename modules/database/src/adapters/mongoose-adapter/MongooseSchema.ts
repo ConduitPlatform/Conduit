@@ -130,14 +130,14 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       'edit',
       options,
     );
-    if (isNil(parsedFilter) && !isEmpty(filterQuery)) {
+    if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
-    if (parsedQuery && parsedQuery.hasOwnProperty('$set')) {
+    if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
+    let finalQuery = this.model.findOneAndReplace(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -156,19 +156,19 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     },
   ): Promise<any> {
     const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
-    const parsedFilter = await this.getAuthorizedIdsQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parsedFilterQuery,
       'edit',
       options,
-    ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter) && !isEmpty(filterQuery)) {
+    );
+    if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
-    if (parsedQuery && parsedQuery.hasOwnProperty('$set')) {
+    if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndUpdate(parsedFilter ?? {}, parsedQuery ?? {}, {
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -186,20 +186,19 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
-    const parsedFilter = await this.getAuthorizedIdsQuery(
-      parsedFilterQuery,
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
       options,
-    ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter) && !isEmpty(parsedFilterQuery)) {
+    );
+    if (isNil(parsedFilter)) {
       return [];
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
-    if (parsedQuery && parsedQuery.hasOwnProperty('$set')) {
+    if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    return this.model.updateMany(parsedFilter ?? {}, parsedQuery ?? {}).exec();
+    return this.model.updateMany(parsedFilter, parsedQuery).exec();
   }
 
   async deleteOne(
@@ -209,13 +208,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
       options,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -231,17 +229,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
       options,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteMany(parsedFilter ?? {})
+      .deleteMany(parsedFilter)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -258,16 +255,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     const { parsedQuery: parsedFilter, modified } = await this.getAuthorizedIdsQuery(
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       'read',
       options,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedFilter ?? {}, options?.select);
+    let finalQuery = this.model.find(parsedFilter, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }
@@ -292,18 +288,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     const filter = await this.getAuthorizedQuery(
       'read',
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       false,
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isEmpty(parsedQuery)) {
+    if (isNil(filter)) {
       return null;
     }
-    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    let finalQuery = this.model.findOne(filter, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
@@ -350,10 +345,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
           .then(r => (!isEmpty(r) ? r[0].count : 0));
       }
     }
-    return this.model
-      .find(parsedQuery ?? {})
-      .countDocuments()
-      .exec();
+    return this.model.find(parsedQuery).countDocuments().exec();
   }
 
   async columnExistence(columns: string[]): Promise<boolean> {

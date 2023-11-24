@@ -6,10 +6,10 @@ import { isEmpty, isNil } from 'lodash';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 
-export type SingleDocQuery = string | Indexable | null;
-export type MultiDocQuery = string | Indexable[] | null;
+export type SingleDocQuery = string | Indexable;
+export type MultiDocQuery = string | Indexable[];
 export type Query = SingleDocQuery | MultiDocQuery;
-export type ParsedQuery = Indexable | null;
+export type ParsedQuery = Indexable;
 export type Doc = Indexable;
 export type Fields = Indexable;
 export type Schema = MongooseSchema | SequelizeSchema;

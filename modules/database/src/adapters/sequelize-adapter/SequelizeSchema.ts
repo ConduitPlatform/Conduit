@@ -19,7 +19,7 @@ import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from 
 import { SequelizeAdapter } from './index';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
 import { parseQuery, parseCreateRelations } from './parser';
-import { isEmpty, isNil } from 'lodash';
+import { isNil } from 'lodash';
 import { processCreateQuery, unwrap } from './utils/pathUtils';
 import {
   constructRelationInclusion,
@@ -145,68 +145,66 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         nest: true,
         transaction: t,
       });
-      if (parsedQuery) {
-        if (parsedQuery.hasOwnProperty('$inc')) {
-          const inc = parsedQuery['$inc'];
-          for (const key in inc) {
-            if (!inc.hasOwnProperty(key)) continue;
-            if (this.extractedRelations[key]) {
-              throw new Error(`Cannot increment relation: ${key}`);
-            }
-            if (inc[key] > 0) {
-              parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
-            } else {
-              parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
-            }
+      if (parsedQuery.hasOwnProperty('$inc')) {
+        const inc = parsedQuery['$inc'];
+        for (const key in inc) {
+          if (!inc.hasOwnProperty(key)) continue;
+          if (this.extractedRelations[key]) {
+            throw new Error(`Cannot increment relation: ${key}`);
           }
-          delete parsedQuery['$inc'];
-        }
-        if (Object.keys(parsedQuery).length === 0) {
-          return this.model
-            .findByPk(parsedId, {
-              nest: true,
-              include: constructRelationInclusion(this, options?.populate),
-            })
-            .then(doc => (doc ? doc.toJSON() : doc));
-        }
-        if (parsedQuery.hasOwnProperty('$push')) {
-          const push = parsedQuery['$push'];
-          for (const key in push) {
-            if (this.extractedRelations[key]) {
-              if (!Array.isArray(this.extractedRelations[key])) {
-                throw new Error(`Cannot push in non-array field: ${key}`);
-              }
-              let modelName = key.charAt(0).toUpperCase() + key.slice(1);
-              if (push[key]['$each']) {
-                if (!modelName.endsWith('s')) {
-                  modelName = modelName + 's';
-                }
-                parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
-              } else {
-                const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
-                parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
-              }
-              continue;
-            }
-            if (push[key]['$each']) {
-              parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
-            } else {
-              parentDoc[key] = [...parentDoc[key], push[key]];
-            }
+          if (inc[key] > 0) {
+            parsedQuery[key] = Sequelize.literal(`${key} + ${inc[key]}`);
+          } else {
+            parsedQuery[key] = Sequelize.literal(`${key} - ${Math.abs(inc[key])}`);
           }
-          await parentDoc.save();
-          delete parsedQuery['$push'];
         }
-        if (Object.keys(parsedQuery).length === 0) {
-          return this.model
-            .findByPk(parsedId, {
-              nest: true,
-            })
-            .then(doc => (doc ? doc.toJSON() : doc));
-        }
-        // process the update query after special conditions have been handled.
-        processCreateQuery(parsedQuery, this.objectPaths);
+        delete parsedQuery['$inc'];
       }
+      if (Object.keys(parsedQuery).length === 0) {
+        return this.model
+          .findByPk(parsedId, {
+            nest: true,
+            include: constructRelationInclusion(this, options?.populate),
+          })
+          .then(doc => (doc ? doc.toJSON() : doc));
+      }
+      if (parsedQuery.hasOwnProperty('$push')) {
+        const push = parsedQuery['$push'];
+        for (const key in push) {
+          if (this.extractedRelations[key]) {
+            if (!Array.isArray(this.extractedRelations[key])) {
+              throw new Error(`Cannot push in non-array field: ${key}`);
+            }
+            let modelName = key.charAt(0).toUpperCase() + key.slice(1);
+            if (push[key]['$each']) {
+              if (!modelName.endsWith('s')) {
+                modelName = modelName + 's';
+              }
+              parentDoc[`add${modelName}`](push[key]['$each'], parentDoc._id);
+            } else {
+              const actualRel = key.charAt(0).toUpperCase() + key.slice(1);
+              parentDoc[`add${actualRel}Id`](push[key], parentDoc._id);
+            }
+            continue;
+          }
+          if (push[key]['$each']) {
+            parentDoc[key] = [...parentDoc[key], ...push[key]['$each']];
+          } else {
+            parentDoc[key] = [...parentDoc[key], push[key]];
+          }
+        }
+        await parentDoc.save();
+        delete parsedQuery['$push'];
+      }
+      if (Object.keys(parsedQuery).length === 0) {
+        return this.model
+          .findByPk(parsedId, {
+            nest: true,
+          })
+          .then(doc => (doc ? doc.toJSON() : doc));
+      }
+      // process the update query after special conditions have been handled.
+      processCreateQuery(parsedQuery, this.objectPaths);
       incrementDbQueries();
       const relationObjects = extractRelationsModification(this, parsedQuery);
       await this.model.update(
@@ -254,9 +252,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     incrementDbQueries();
-    if (parsedQuery) {
-      processCreateQuery(parsedQuery, this.objectPaths);
-    }
+    processCreateQuery(parsedQuery, this.objectPaths);
     const relationObjects = extractRelationsModification(this, parsedQuery);
     let t: Transaction | undefined = options?.transaction;
     const transactionProvided = t !== undefined;
@@ -264,7 +260,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     const obj = await this.model
-      .create(parsedQuery ?? {}, { transaction: t })
+      .create(parsedQuery, { transaction: t })
       .then(doc => createWithPopulation(this, doc, relationObjects, t))
       .then(doc => {
         if (!transactionProvided) {
@@ -297,10 +293,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     const parsedQuery: ParsedQuery[] = this.parseStringToQuery(query) as ParsedQuery[];
     const t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     for (let i = 0; i < parsedQuery.length; i++) {
-      if (parsedQuery[i]) {
-        processCreateQuery(parsedQuery[i]!, this.objectPaths);
-        extractRelationsModification(this, parsedQuery[i]);
-      }
+      processCreateQuery(parsedQuery[i], this.objectPaths);
+      extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
       .bulkCreate(parsedQuery as Indexable[], { transaction: t })
@@ -341,7 +335,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isEmpty(query)) {
+    if (isNil(filter)) {
       return null;
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -412,7 +406,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.limit,
       options?.sort,
     );
-    if (isNil(filter) && !isEmpty(query)) {
+    if (isNil(filter)) {
       return [];
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -460,8 +454,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = this.parseStringToQuery(query);
-    const { filter, parsingResult } = parseQueryFilter(this, parsedQuery);
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+    );
     const parsedFilter = await this.getAuthorizedQuery(
       'delete',
       filter,
@@ -469,12 +465,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
       .findAll({
-        where: parsedFilter ?? {},
+        where: parsedFilter,
         include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(docs => {
@@ -492,8 +488,10 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery = this.parseStringToQuery(query);
-    const { filter, parsingResult } = parseQueryFilter(this, parsedQuery);
+    const { filter, parsingResult } = parseQueryFilter(
+      this,
+      this.parseStringToQuery(query),
+    );
     const parsedFilter = await this.getAuthorizedQuery(
       'delete',
       filter,
@@ -501,7 +499,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
@@ -564,7 +562,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const parsedFilterQuery: ParsedQuery = this.parseStringToQuery(query);
     const parsedFilter = await this.getAuthorizedQuery(
       'edit',
       this.parseStringToQuery(filterQuery),
@@ -572,7 +569,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter) && !isEmpty(parsedFilterQuery)) {
+    if (isNil(parsedFilter)) {
       return [];
     }
     const parsingResult = parseQuery(
