@@ -30,6 +30,7 @@
     "nice-grpc-client-middleware-retry": "^3",
     "prom-client": "^15.0.0",
     "protobufjs": "^7.2.4",
+    "redlock": "^5.0.0-beta.2",
     "winston": "^3.8.2",
     "winston-loki": "^6.0.7"
   },
