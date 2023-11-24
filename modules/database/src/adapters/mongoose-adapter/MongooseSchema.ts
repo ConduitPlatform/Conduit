@@ -124,22 +124,20 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    const parsedFilterQuery: Indexable | null = parseQuery(
-      this.parseStringToQuery(filterQuery),
-    );
+    const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
     const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parsedFilterQuery,
       'edit',
       options,
     );
-    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+    if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
+    let finalQuery = this.model.findOneAndReplace(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -157,22 +155,20 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    const parsedFilterQuery: Indexable | null = parseQuery(
-      this.parseStringToQuery(filterQuery),
-    );
-    const parsedFilter = await this.getAuthorizedIdsQuery(
+    const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parsedFilterQuery,
       'edit',
       options,
-    ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+    );
+    if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -190,15 +186,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const parsedFilter = await this.getAuthorizedIdsQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
       options,
-    ).then(r => r.parsedQuery);
+    );
     if (isNil(parsedFilter)) {
       return [];
     }
-    let parsedQuery: Indexable = this.parseStringToQuery(query);
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
@@ -212,16 +208,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery } = await this.getAuthorizedIdsQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(query)),
       'delete',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteOne(parsedQuery!)
+      .deleteOne(parsedFilter!)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -233,16 +229,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery } = await this.getAuthorizedIdsQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(query)),
       'delete',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteMany(parsedQuery)
+      .deleteMany(parsedFilter)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -259,15 +255,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery, modified } = await this.getAuthorizedIdsQuery(
+    const { parsedQuery: parsedFilter, modified } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(query)),
       'read',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedQuery, options?.select);
+    let finalQuery = this.model.find(parsedFilter, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }
@@ -292,18 +288,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     const filter = await this.getAuthorizedQuery(
       'read',
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       false,
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isNil(parsedQuery)) {
+    if (isNil(filter)) {
       return null;
     }
-    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    let finalQuery = this.model.findOne(filter, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
@@ -455,7 +450,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   }
 
   private constructAggregationPipeline(
-    parsedQuery: Indexable,
+    parsedQuery: ParsedQuery,
     authorizedQueryPipeline: object[],
     options?: {
       skip?: number;
@@ -516,7 +511,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   }
 
   private async getAuthorizedIdsQuery(
-    parsedQuery: Indexable,
+    parsedQuery: ParsedQuery,
     operation: string,
     options?: {
       skip?: number;

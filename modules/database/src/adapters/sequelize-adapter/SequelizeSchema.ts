@@ -168,7 +168,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
           })
           .then(doc => (doc ? doc.toJSON() : doc));
       }
-
       if (parsedQuery.hasOwnProperty('$push')) {
         const push = parsedQuery['$push'];
         for (const key in push) {
@@ -197,7 +196,6 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
         await parentDoc.save();
         delete parsedQuery['$push'];
       }
-
       if (Object.keys(parsedQuery).length === 0) {
         return this.model
           .findByPk(parsedId, {
@@ -262,9 +260,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       t = await this.sequelize.transaction({ type: Transaction.TYPES.IMMEDIATE });
     }
     const obj = await this.model
-      .create(parsedQuery, {
-        transaction: t,
-      })
+      .create(parsedQuery, { transaction: t })
       .then(doc => createWithPopulation(this, doc, relationObjects, t))
       .then(doc => {
         if (!transactionProvided) {
@@ -301,7 +297,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       extractRelationsModification(this, parsedQuery[i]);
     }
     const docs = await this.model
-      .bulkCreate(parsedQuery, { transaction: t })
+      .bulkCreate(parsedQuery as Indexable[], { transaction: t })
       .then(docs => {
         t.commit();
         return docs;
@@ -339,7 +335,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isNil(query)) {
+    if (isNil(filter)) {
       return null;
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -566,20 +562,19 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const parsedQuery: ParsedQuery = this.parseStringToQuery(query);
-    const parsedFilterQuery = await this.getAuthorizedQuery(
+    const parsedFilter = await this.getAuthorizedQuery(
       'edit',
       this.parseStringToQuery(filterQuery),
       true,
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilterQuery)) {
+    if (isNil(parsedFilter)) {
       return [];
     }
     const parsingResult = parseQuery(
       this.originalSchema,
-      parsedFilterQuery,
+      parsedFilter,
       this.adapter.sequelize.getDialect(),
       this.extractedRelations,
       {},
@@ -595,7 +590,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
     try {
       const data = await Promise.all(
         docs.map(doc =>
-          this.findByIdAndUpdate(doc._id, parsedQuery, {
+          this.findByIdAndUpdate(doc._id, parsedFilter, {
             populate: options?.populate,
             transaction: t,
           }),
