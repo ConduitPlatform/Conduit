@@ -50,7 +50,7 @@
     "@types/ali-oss": "^6.16.7",
     "@types/convict": "^6.1.6",
     "@types/lodash": "^4.14.200",
-    "@types/node": "20.8.10",
+    "@types/node": "20.9.5",
     "@types/uuid": "^9.0.5",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
