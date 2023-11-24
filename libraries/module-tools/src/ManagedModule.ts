@@ -9,9 +9,8 @@ import ConduitGrpcSdk, {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { merge } from './utilities';
+import { initializeSdk, merge } from './utilities';
 import { convictConfigParser } from './utilities/convictConfigParser';
-import { initializeSdk } from './utilities/initializeSdk';
 import { RoutingManager } from './routing';
 import { RoutingController } from './routing/RoutingController';
 import { ModuleLifecycleStage } from './interfaces/ModuleLifecycleStage';
