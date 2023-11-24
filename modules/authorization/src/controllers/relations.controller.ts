@@ -10,20 +10,14 @@ export class RelationsController {
   private constructor(
     private readonly grpcSdk: ConduitGrpcSdk,
     private readonly indexController: IndexController,
-    private readonly indexQueueController: QueueController,
   ) {}
 
-  static getInstance(
-    grpcSdk?: ConduitGrpcSdk,
-    indexController?: IndexController,
-    indexQueueController?: QueueController,
-  ) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk, indexController?: IndexController) {
     if (RelationsController._instance) return RelationsController._instance;
-    if (grpcSdk && indexController && indexQueueController) {
+    if (grpcSdk && indexController) {
       return (RelationsController._instance = new RelationsController(
         grpcSdk,
         indexController,
-        indexQueueController,
       ));
     }
     throw new Error('Missing grpcSdk or indexController!');
@@ -116,7 +110,7 @@ export class RelationsController {
       relation: r.relation,
       object: r.resource,
     }));
-    await this.indexQueueController.addRelationIndexJob(relationEntries);
+    await QueueController.getInstance().addRelationIndexJob(relationEntries);
     return relationDocs;
   }
 

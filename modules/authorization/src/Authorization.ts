@@ -87,14 +87,10 @@ export default class Authorization extends ManagedModule<Config> {
       await runMigrations(this.grpcSdk);
       this.queueController = QueueController.getInstance(this.grpcSdk);
       this.queueController.addRelationIndexWorker();
-      this.indexController = IndexController.getInstance(
-        this.grpcSdk,
-        this.queueController,
-      );
+      this.indexController = IndexController.getInstance(this.grpcSdk);
       this.relationsController = RelationsController.getInstance(
         this.grpcSdk,
         this.indexController,
-        this.queueController,
       );
       this.indexController.relationsController = this.relationsController;
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);

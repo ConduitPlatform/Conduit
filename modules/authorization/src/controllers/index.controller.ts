@@ -6,10 +6,7 @@ import { QueueController } from './queue.controller';
 export class IndexController {
   private static _instance: IndexController;
 
-  private constructor(
-    private readonly grpcSdk: ConduitGrpcSdk,
-    private readonly indexQueueController: QueueController,
-  ) {}
+  private constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   private _relationsController: RelationsController;
 
@@ -17,15 +14,12 @@ export class IndexController {
     this._relationsController = relationsController;
   }
 
-  static getInstance(grpcSdk?: ConduitGrpcSdk, indexQueueController?: QueueController) {
+  static getInstance(grpcSdk?: ConduitGrpcSdk) {
     if (IndexController._instance) return IndexController._instance;
-    if (grpcSdk && indexQueueController) {
-      return (IndexController._instance = new IndexController(
-        grpcSdk,
-        indexQueueController,
-      ));
+    if (grpcSdk) {
+      return (IndexController._instance = new IndexController(grpcSdk));
     }
-    throw new Error('No grpcSdk or queueController instance provided!');
+    throw new Error('No grpcSdk instance provided!');
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
@@ -117,7 +111,7 @@ export class IndexController {
       subject: object,
     });
     if (actors.length === 0) return;
-    await this.indexQueueController.addRelationIndexJob(
+    await QueueController.getInstance().addRelationIndexJob(
       actors.map(actor => ({
         subject: actor.subject,
         relation: actor.relation,
