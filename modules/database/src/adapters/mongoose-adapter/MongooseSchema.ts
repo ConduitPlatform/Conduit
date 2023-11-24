@@ -209,16 +209,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery } = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(query)),
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parsedQuery,
       'delete',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isNil(query)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteOne(parsedQuery!)
+      .deleteOne(parsedFilter!)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -230,16 +231,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery } = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(query)),
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parsedQuery,
       'delete',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteMany(parsedQuery)
+      .deleteMany(parsedFilter ?? {})
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -256,15 +258,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    const { parsedQuery, modified } = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(query)),
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
+    const { parsedQuery: parsedFilter, modified } = await this.getAuthorizedIdsQuery(
+      parsedQuery,
       'read',
       options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
       return [];
     }
-    let finalQuery = this.model.find(parsedQuery, options?.select);
+    let finalQuery = this.model.find(parsedFilter ?? {}, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }

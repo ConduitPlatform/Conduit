@@ -412,7 +412,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.limit,
       options?.sort,
     );
-    if (isNil(filter)) {
+    if (isNil(filter) && !isNil(query)) {
       return [];
     }
     const { filter: parsedFilter, parsingResult } = parseQueryFilter(
@@ -460,10 +460,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const { filter, parsingResult } = parseQueryFilter(
-      this,
-      this.parseStringToQuery(query),
-    );
+    const parsedQuery = this.parseStringToQuery(query);
+    const { filter, parsingResult } = parseQueryFilter(this, parsedQuery);
     const parsedFilter = await this.getAuthorizedQuery(
       'delete',
       filter,
@@ -471,12 +469,12 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter)) {
+    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
       .findAll({
-        where: parsedFilter,
+        where: parsedFilter ?? {},
         include: includeRelations(this, parsingResult.requiredRelations, []),
       })
       .then(docs => {
@@ -494,10 +492,8 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       scope?: string;
     },
   ) {
-    const { filter, parsingResult } = parseQueryFilter(
-      this,
-      this.parseStringToQuery(query),
-    );
+    const parsedQuery = this.parseStringToQuery(query);
+    const { filter, parsingResult } = parseQueryFilter(this, parsedQuery);
     const parsedFilter = await this.getAuthorizedQuery(
       'delete',
       filter,
@@ -505,7 +501,7 @@ export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
       options?.userId,
       options?.scope,
     );
-    if (isNil(parsedFilter)) {
+    if (isNil(parsedFilter) && !isNil(parsedQuery)) {
       return { deletedCount: 0 };
     }
     return this.model
