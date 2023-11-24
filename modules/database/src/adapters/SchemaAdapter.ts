@@ -6,12 +6,12 @@ import { isEmpty, isNil } from 'lodash';
 import { createHash } from 'crypto';
 import { Op } from 'sequelize';
 
-export type SingleDocQuery = string | Indexable;
-export type MultiDocQuery = string | Indexable[];
+export type SingleDocQuery = string | Indexable | null;
+export type MultiDocQuery = string | Indexable[] | null;
 export type Query = SingleDocQuery | MultiDocQuery;
-export type ParsedQuery = Indexable;
-export type Doc = ParsedQuery;
-export type Fields = ParsedQuery;
+export type ParsedQuery = Indexable | null;
+export type Doc = Indexable;
+export type Fields = Indexable;
 export type Schema = MongooseSchema | SequelizeSchema;
 
 export abstract class SchemaAdapter<T> {
@@ -123,7 +123,7 @@ export abstract class SchemaAdapter<T> {
 
   async getAuthorizedQuery(
     operation: string,
-    query: Indexable,
+    query: ParsedQuery,
     many: boolean = false,
     userId?: string,
     scope?: string,

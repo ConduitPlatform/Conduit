@@ -149,7 +149,7 @@ export async function getTransactionAndParsedQuery(
   } else {
     parsedQuery = query;
   }
-  if (parsedQuery.hasOwnProperty('$set')) {
+  if (parsedQuery && parsedQuery.hasOwnProperty('$set')) {
     parsedQuery = parsedQuery['$set'];
   }
   if (isNil(t)) {

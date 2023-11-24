@@ -15,9 +15,7 @@ function potentialNesting(field: any) {
 
 export function processCreateQuery(
   query: Indexable,
-  keyMapping: {
-    [key: string]: { parentKey: string; childKey: string };
-  },
+  keyMapping: { [key: string]: { parentKey: string; childKey: string } },
 ) {
   const foundKeys = [];
   for (const key in keyMapping) {
