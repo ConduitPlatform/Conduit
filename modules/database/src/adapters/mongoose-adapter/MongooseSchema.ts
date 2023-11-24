@@ -19,9 +19,7 @@ import {
 import { MongooseAdapter } from './index';
 import ConduitGrpcSdk, {
   ConduitSchema,
-  GrpcError,
   Indexable,
-  status,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isEmpty, isNil } from 'lodash';
@@ -126,13 +124,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ) {
-    const parsedFilter = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(filterQuery)),
+    const parsedFilterQuery: Indexable | null = parseQuery(
+      this.parseStringToQuery(filterQuery),
+    );
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parsedFilterQuery,
       'edit',
       options,
-    ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter)) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+    );
+    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
@@ -156,13 +157,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
+    const parsedFilterQuery: Indexable | null = parseQuery(
+      this.parseStringToQuery(filterQuery),
+    );
     const parsedFilter = await this.getAuthorizedIdsQuery(
-      parseQuery(this.parseStringToQuery(filterQuery)),
+      parsedFilterQuery,
       'edit',
       options,
     ).then(r => r.parsedQuery);
-    if (isNil(parsedFilter)) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+    if (isNil(parsedFilter) && !isNil(filterQuery)) {
+      throw new Error("Document doesn't exist or can't be modified by user.");
     }
     let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
@@ -297,7 +301,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       options?.scope,
     );
     if (isNil(filter) && !isNil(parsedQuery)) {
-      throw new GrpcError(status.PERMISSION_DENIED, 'Access denied');
+      return null;
     }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
