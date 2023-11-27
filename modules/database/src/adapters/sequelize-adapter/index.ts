@@ -275,6 +275,11 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     saveToDb: boolean = true,
     options?: { parentSchema: string },
   ): Promise<SequelizeSchema> {
+    for (const [key, value] of Object.entries(this.views)) {
+      if (value.originalSchema.name === schema.name) {
+        await this.deleteView(key);
+      }
+    }
     const compiledSchema = compileSchema(
       schema,
       this.registeredSchemas,
