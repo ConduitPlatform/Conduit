@@ -49,7 +49,7 @@ export function getPostgresAccessListQuery(
       ) as actors
       INNER JOIN (
           SELECT * FROM "cnd_ObjectIndex"
-          WHERE subjectType = '${objectType}' AND subjectPermission = '${action}'
+          WHERE "subjectType" = '${objectType}' AND "subjectPermission" = '${action}'
       ) as obj 
       ON actors.entity = obj.entity
     )
@@ -81,6 +81,6 @@ export function getSQLAccessListQuery(
           ) actors ON 1=1
           INNER JOIN (
               SELECT * FROM cnd_ObjectIndex
-              WHERE subjectType = '${objectType}' AND subjectPermission = '${action}'
+              WHERE "subjectType" = '${objectType}' AND "subjectPermission" = '${action}'
           ) objects ON actors.entity = objects.entity;`;
 }
