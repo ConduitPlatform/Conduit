@@ -65,6 +65,10 @@ message AllowedResourcesResponse {
   int32 count = 2;
 }
 
+message GetAuthorizedQueryResponse {
+  string query = 1;
+}
+
 message ResourceAccessListRequest {
   string subject = 1;
   string action = 2;
@@ -101,4 +105,5 @@ service Authorization {
   rpc Can(PermissionCheck) returns (Decision);
   rpc GetAllowedResources(AllowedResourcesRequest) returns (AllowedResourcesResponse);
   rpc CreateResourceAccessList(ResourceAccessListRequest) returns (google.protobuf.Empty);
+  rpc GetAuthorizedQuery(ResourceAccessListRequest) returns (GetAuthorizedQueryResponse);
 }

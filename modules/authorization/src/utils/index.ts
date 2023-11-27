@@ -31,56 +31,138 @@ export const computePermissionTuple = (
   return `${subject}#${relation}@${object}`;
 };
 
-export function getPostgresAccessListQuery(
-  objectTypeCollection: string,
-  computedTuple: string,
-  subject: string,
-  objectType: string,
-  action: string,
-) {
-  return `
-  SELECT s.* FROM "${objectTypeCollection}" as s 
-  INNER JOIN (
-    (
-      SELECT obj.entity
-      FROM (
-        SELECT * FROM "cnd_ActorIndex"         
-        WHERE subject = '${subject}'
-      ) as actors
-      INNER JOIN (
-          SELECT * FROM "cnd_ObjectIndex"
-          WHERE subjectType = '${objectType}' AND subjectPermission = '${action}'
-      ) as obj 
-      ON actors.entity = obj.entity
-    )
-    UNION (
-      SELECT "computedTuple" 
-      FROM "cnd_Permission"          
-      WHERE "computedTuple" LIKE '${computedTuple}%'
-    )
-  ) idx
-  ON  idx.entity LIKE '%' || TEXT(s._id) || '%'
-  `;
+export interface AccessListQueryParams {
+  objectTypeCollection: string;
+  computedTuple: string;
+  subject: string;
+  objectType: string;
+  action: string;
 }
 
-export function getSQLAccessListQuery(
-  objectTypeCollection: string,
-  computedTuple: string,
-  subject: string,
-  objectType: string,
-  action: string,
-) {
-  return `SELECT ${objectTypeCollection}.* FROM ${objectTypeCollection}
+export function getPostgresAccessListQuery(params: AccessListQueryParams) {
+  const { objectTypeCollection, computedTuple, subject, objectType, action } = params;
+  return `SELECT "${objectTypeCollection}".* FROM "${objectTypeCollection}"
           INNER JOIN (
-              SELECT * FROM cnd_Permission
-              WHERE computedTuple LIKE '${computedTuple}%'
-          ) permissions ON permissions.computedTuple = '${computedTuple}:' || ${objectTypeCollection}._id
+              SELECT * FROM "cnd_Permission"
+              WHERE "computedTuple" LIKE '${computedTuple}%'
+          ) permissions ON permissions."computedTuple" = '${computedTuple}:' || "${objectTypeCollection}"._id
           INNER JOIN (
-              SELECT * FROM cnd_ActorIndex
+              SELECT * FROM "cnd_ActorIndex"
               WHERE subject = '${subject}'
           ) actors ON 1=1
           INNER JOIN (
-              SELECT * FROM cnd_ObjectIndex
-              WHERE subjectType = '${objectType}' AND subjectPermission = '${action}'
+              SELECT * FROM "cnd_ObjectIndex"
+              WHERE subject LIKE '${objectType}:%#${action}'
           ) objects ON actors.entity = objects.entity;`;
+}
+
+export function getSQLAccessListQuery(params: AccessListQueryParams) {
+  const { objectTypeCollection, computedTuple, subject, objectType, action } = params;
+  return `SELECT ${objectTypeCollection}.* FROM ${objectTypeCollection}
+        INNER JOIN (
+            SELECT * FROM cnd_Permission
+            WHERE computedTuple LIKE '${computedTuple}%'
+        ) permissions ON permissions.computedTuple = '${computedTuple}:' || ${objectTypeCollection}._id
+        INNER JOIN (
+            SELECT * FROM cnd_ActorIndex
+            WHERE subject = '${subject}'
+        ) actors ON 1=1
+        INNER JOIN (
+            SELECT * FROM cnd_ObjectIndex
+            WHERE subject LIKE '${objectType}:%#${action}'
+        ) objects ON actors.entity = objects.entity;`;
+}
+
+export function getMongoAccessListQuery(params: AccessListQueryParams) {
+  const { subject, objectType, action } = params;
+  return [
+    // permissions lookup won't work this way
+    {
+      $lookup: {
+        from: 'cnd_permissions',
+        let: { x_id: { $toString: '$_id' } },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  '$computedTuple',
+                  { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
+                ],
+              },
+            },
+          },
+        ],
+        as: 'permissions',
+      },
+    },
+    {
+      $lookup: {
+        from: 'cnd_actorindexes',
+        let: {
+          subject: subject,
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ['$subject', '$$subject'],
+              },
+            },
+          },
+        ],
+        as: 'actors',
+      },
+    },
+    {
+      $lookup: {
+        from: 'cnd_objectindexes',
+        let: {
+          id_action: {
+            $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
+          },
+          entities: '$actors.entity',
+        },
+        pipeline: [
+          {
+            $match: {
+              $and: [
+                {
+                  $expr: {
+                    $eq: ['$subject', '$$id_action'],
+                  },
+                },
+                {
+                  $expr: {
+                    $in: ['$entity', '$$entities'],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        as: 'intersection',
+      },
+    },
+    {
+      $match: {
+        $or: [
+          {
+            'intersection.0': { $exists: true },
+          },
+          {
+            'permissions.0': { $exists: true },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        actors: 0,
+        objects: 0,
+        permissions: 0,
+        intersection: 0,
+      },
+    },
+  ];
 }

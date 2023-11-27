@@ -23,10 +23,13 @@ import { isNil } from 'lodash';
 
 const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
+const mongoose = require('mongoose');
+const castAggregation = require('mongoose-cast-aggregation');
+mongoose.plugin(castAggregation);
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   connected: boolean = false;
-  mongoose: Mongoose;
+  private readonly mongoose: Mongoose;
   connectionString: string;
   options: ConnectOptions = {
     minPoolSize: 5,
@@ -37,7 +40,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   constructor(connectionString: string) {
     super();
     this.connectionString = connectionString;
-    this.mongoose = new Mongoose();
+    this.mongoose = mongoose;
   }
 
   async retrieveForeignSchemas(): Promise<void> {
@@ -79,7 +82,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    let newSchema = model.schema;
+    const newSchema = model.schema;
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
@@ -330,7 +333,6 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   }
 
   protected connect() {
-    this.mongoose = new Mongoose();
     ConduitGrpcSdk.Logger.log('Connecting to database...');
     this.mongoose
       .connect(this.connectionString, this.options)

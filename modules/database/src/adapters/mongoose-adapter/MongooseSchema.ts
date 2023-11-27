@@ -1,6 +1,7 @@
 import {
   Model,
   Mongoose,
+  PipelineStage,
   PopulateOptions,
   Query as MongooseQuery,
   Schema,
@@ -21,7 +22,7 @@ import ConduitGrpcSdk, {
   Indexable,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
-import { cloneDeep, isNil } from 'lodash';
+import { cloneDeep, isEmpty, isNil } from 'lodash';
 import { parseQuery } from './parser';
 
 const EJSON = require('mongodb-extended-json');
@@ -71,7 +72,6 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
   ) {
     await this.createPermissionCheck(options?.userId, options?.scope);
     const parsedQuery = this.parseStringToQuery(query);
-
     const obj = await this.model.create(parsedQuery).then(r => r.toObject());
     await this.addPermissionToData(obj, options);
     return obj;
@@ -123,14 +123,12 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
       populate?: string[];
     },
-  ): Promise<any> {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+  ) {
+    const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parsedFilterQuery,
       'edit',
-      parsedFilter,
-      false,
-      options?.userId,
-      options?.scope,
+      options,
     );
     if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
@@ -139,7 +137,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndReplace(parsedFilter!, parsedQuery, {
+    let finalQuery = this.model.findOneAndReplace(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -157,13 +155,11 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+    const parsedFilterQuery = parseQuery(this.parseStringToQuery(filterQuery));
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parsedFilterQuery,
       'edit',
-      parsedFilter,
-      false,
-      options?.userId,
-      options?.scope,
+      options,
     );
     if (isNil(parsedFilter)) {
       throw new Error("Document doesn't exist or can't be modified by user.");
@@ -172,7 +168,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
-    let finalQuery = this.model.findOneAndUpdate(parsedFilter!, parsedQuery, {
+    let finalQuery = this.model.findOneAndUpdate(parsedFilter, parsedQuery, {
       new: true,
     });
     if (options?.populate !== undefined && options?.populate !== null) {
@@ -190,18 +186,15 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedFilter: Indexable | null = parseQuery(this.parseStringToQuery(filterQuery));
-    parsedFilter = await this.getAuthorizedQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(filterQuery)),
       'edit',
-      parsedFilter,
-      true,
-      options?.userId,
-      options?.scope,
+      options,
     );
     if (isNil(parsedFilter)) {
       return [];
     }
-    let parsedQuery: Indexable = this.parseStringToQuery(query);
+    let parsedQuery: ParsedQuery = this.parseStringToQuery(query);
     if (parsedQuery.hasOwnProperty('$set')) {
       parsedQuery = parsedQuery['$set'];
     }
@@ -215,19 +208,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
-      parsedQuery,
-      false,
-      options?.userId,
-      options?.scope,
+      options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteOne(parsedQuery!)
+      .deleteOne(parsedFilter!)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -239,19 +229,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const { parsedQuery: parsedFilter } = await this.getAuthorizedIdsQuery(
+      parseQuery(this.parseStringToQuery(query)),
       'delete',
-      parsedQuery,
-      true,
-      options?.userId,
-      options?.scope,
+      options,
     );
-    if (isNil(parsedQuery)) {
+    if (isNil(parsedFilter)) {
       return { deletedCount: 0 };
     }
     return this.model
-      .deleteMany(parsedQuery)
+      .deleteMany(parsedFilter)
       .exec()
       .then(r => ({ deletedCount: r.deletedCount }));
   }
@@ -267,20 +254,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       userId?: string;
       scope?: string;
     },
-  ): Promise<any> {
-    const { query: filter, modified } = await this.getPaginatedAuthorizedQuery(
-      'read',
+  ) {
+    const { parsedQuery: parsedFilter, modified } = await this.getAuthorizedIdsQuery(
       parseQuery(this.parseStringToQuery(query)),
-      options?.userId,
-      options?.scope,
-      options?.skip,
-      options?.limit,
-      options?.sort,
+      'read',
+      options,
     );
-    if (isNil(filter)) {
+    if (isNil(parsedFilter)) {
       return [];
     }
-    let finalQuery = this.model.find(filter, options?.select);
+    let finalQuery = this.model.find(parsedFilter, options?.select);
     if (!isNil(options?.skip) && !modified) {
       finalQuery = finalQuery.skip(options!.skip!);
     }
@@ -305,18 +288,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
     const filter = await this.getAuthorizedQuery(
       'read',
-      parsedQuery,
+      parseQuery(this.parseStringToQuery(query)),
       false,
       options?.userId,
       options?.scope,
     );
-    if (isNil(filter) && !isNil(parsedQuery)) {
+    if (isNil(filter)) {
       return null;
     }
-    let finalQuery = this.model.findOne(parsedQuery!, options?.select);
+    let finalQuery = this.model.findOne(filter, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);
     }
@@ -330,16 +312,39 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       scope?: string;
     },
   ) {
+    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     if (!isNil(options?.userId) || !isNil(options?.scope)) {
-      const view = await this.permissionCheck('read', options?.userId, options?.scope);
-      if (view) {
-        return view.countDocuments(query, {
-          userId: undefined,
-          scope: undefined,
-        });
+      const authorizedPipeline = await this.getAuthorizedPipeline(
+        'read',
+        options?.userId,
+        options?.scope,
+      );
+      if (!isEmpty(authorizedPipeline)) {
+        authorizedPipeline.push(
+          ...[
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                count: 1,
+              },
+            },
+          ],
+        );
+        const pipeline = this.constructAggregationPipeline(
+          parsedQuery,
+          authorizedPipeline,
+        );
+        return this.model
+          .aggregate(pipeline as PipelineStage[])
+          .then(r => (!isEmpty(r) ? r[0].count : 0));
       }
     }
-    const parsedQuery = parseQuery(this.parseStringToQuery(query));
     return this.model.find(parsedQuery).countDocuments().exec();
   }
 
@@ -356,7 +361,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
 
   public calculatePopulates(population: string[]) {
     const populates: (string | PopulateOptions)[] = [];
-    population.forEach((r: string | string[], index: number) => {
+    population.forEach((r: string | string[]) => {
       const final = r.toString().trim();
       if (final.indexOf('.') !== -1) {
         let controlBool = true;
@@ -442,5 +447,101 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
 
   private parseSort(sort: { [key: string]: number }): { [p: string]: SortOrder } {
     return sort as { [p: string]: SortOrder };
+  }
+
+  private constructAggregationPipeline(
+    parsedQuery: ParsedQuery,
+    authorizedQueryPipeline: object[],
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: { [p: string]: number };
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const pipeline = [{ $match: parsedQuery }, ...authorizedQueryPipeline];
+    if (!isNil(options?.skip)) {
+      pipeline.push({ $skip: options?.skip });
+    }
+    if (!isNil(options?.limit)) {
+      pipeline.push({ $limit: options?.limit });
+    }
+    if (!isNil(options?.sort)) {
+      pipeline.push({ $sort: this.parseSort(options!.sort) });
+    }
+    return pipeline;
+  }
+
+  private async getAuthorizedPipeline(
+    operation: string,
+    userId?: string,
+    scope?: string,
+  ) {
+    if (
+      !this.originalSchema.modelOptions.conduit?.authorization?.enabled ||
+      (isNil(userId) && isNil(scope))
+    ) {
+      return [];
+    }
+    const isAvailable = this.grpcSdk.isAvailable('authorization');
+    if (!isAvailable) {
+      throw new Error('Authorization service is not available');
+    }
+    if (scope) {
+      if (userId) {
+        const allowed = await this.grpcSdk.authorization?.can({
+          subject: `User:${userId}`,
+          actions: [operation],
+          resource: scope,
+        });
+        if (!allowed?.allow) {
+          throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
+        }
+      }
+    }
+    const query = await this.grpcSdk.authorization!.getAuthorizedQuery({
+      subject: scope ?? `User:${userId}`,
+      action: operation,
+      resourceType: this.originalSchema.name,
+    });
+    return query.mongoQuery;
+  }
+
+  private async getAuthorizedIdsQuery(
+    parsedQuery: ParsedQuery,
+    operation: string,
+    options?: {
+      skip?: number;
+      limit?: number;
+      select?: string;
+      sort?: { [p: string]: number };
+      populate?: string[];
+      userId?: string;
+      scope?: string;
+    },
+  ) {
+    const authorizedPipeline = await this.getAuthorizedPipeline(
+      operation,
+      options?.userId,
+      options?.scope,
+    );
+    if (isEmpty(authorizedPipeline)) {
+      return { parsedQuery, modified: false };
+    }
+    const pipeline = this.constructAggregationPipeline(
+      parsedQuery,
+      authorizedPipeline,
+      options,
+    );
+    const ids = await this.model
+      .aggregate(pipeline as PipelineStage[])
+      .then(r => r.map(r => r._id));
+    if (isEmpty(ids)) {
+      return { parsedQuery: null, modified: false };
+    }
+    return { parsedQuery: { _id: { $in: ids } }, modified: true };
   }
 }

@@ -1,7 +1,9 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import {
+  AccessListQueryParams,
   checkRelation,
   computePermissionTuple,
+  getMongoAccessListQuery,
   getPostgresAccessListQuery,
   getSQLAccessListQuery,
 } from '../utils';
@@ -65,7 +67,7 @@ export class PermissionsController {
     }
     // if the actor is the object itself, all permissions are provided
     if (subject === object) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+      RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }
 
@@ -73,13 +75,13 @@ export class PermissionsController {
       computedTuple,
     });
     if (permission) {
-      await RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
+      RuleCache.storeResolution(this.grpcSdk, computedTuple, true);
       return true;
     }
 
     const index = await this.indexController.findIndex(subject, action, object);
 
-    await RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
+    RuleCache.storeResolution(this.grpcSdk, computedTuple, index ?? false);
 
     return index ?? false;
   }
@@ -128,124 +130,35 @@ export class PermissionsController {
   }
 
   async createAccessList(subject: string, action: string, objectType: string) {
+    const query = await this.getAuthorizedQuery(subject, action, objectType);
+    await this.grpcSdk.database?.createView(
+      objectType,
+      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
+      ['Permission', 'ActorIndex', 'ObjectIndex'],
+      query,
+    );
+    return;
+  }
+
+  async getAuthorizedQuery(subject: string, action: string, objectType: string) {
     const computedTuple = `${subject}#${action}@${objectType}`;
     const objectTypeCollection = await this.grpcSdk
       .database!.getSchema(objectType)
       .then(r => r.collectionName);
     const dbType = await this.grpcSdk.database!.getDatabaseType().then(r => r.result);
-    await this.grpcSdk.database?.createView(
+    const params: AccessListQueryParams = {
+      objectTypeCollection,
+      computedTuple,
+      subject,
       objectType,
-      createHash('sha256').update(`${objectType}_${subject}_${action}`).digest('hex'),
-      ['Permission', 'ActorIndex', 'ObjectIndex'],
-      {
-        mongoQuery: [
-          // permissions lookup won't work this way
-          {
-            $lookup: {
-              from: 'cnd_permissions',
-              let: { x_id: { $toString: '$_id' } },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: [
-                        '$computedTuple',
-                        { $concat: [`${subject}#${action}@${objectType}:`, '$$x_id'] },
-                      ],
-                    },
-                  },
-                },
-              ],
-              as: 'permissions',
-            },
-          },
-          {
-            $lookup: {
-              from: 'cnd_actorindexes',
-              let: {
-                subject: subject,
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $eq: ['$subject', '$$subject'],
-                    },
-                  },
-                },
-              ],
-              as: 'actors',
-            },
-          },
-          {
-            $lookup: {
-              from: 'cnd_objectindexes',
-              let: {
-                id_action: {
-                  $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
-                },
-                entities: '$actors.entity',
-              },
-              pipeline: [
-                {
-                  $match: {
-                    $and: [
-                      {
-                        $expr: {
-                          $eq: ['$subject', '$$id_action'],
-                        },
-                      },
-                      {
-                        $expr: {
-                          $in: ['$entity', '$$entities'],
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-              as: 'intersection',
-            },
-          },
-          {
-            $match: {
-              $or: [
-                {
-                  'intersection.0': { $exists: true },
-                },
-                {
-                  'permissions.0': { $exists: true },
-                },
-              ],
-            },
-          },
-          {
-            $project: {
-              actors: 0,
-              objects: 0,
-              permissions: 0,
-              intersection: 0,
-            },
-          },
-        ],
-        sqlQuery:
-          dbType === 'PostgreSQL'
-            ? getPostgresAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              )
-            : getSQLAccessListQuery(
-                objectTypeCollection,
-                computedTuple,
-                subject,
-                objectType,
-                action,
-              ),
-      },
-    );
-    return;
+      action,
+    };
+    return {
+      mongoQuery: getMongoAccessListQuery(params),
+      sqlQuery:
+        dbType === 'PostgreSQL'
+          ? getPostgresAccessListQuery(params)
+          : getSQLAccessListQuery(params),
+    };
   }
 }

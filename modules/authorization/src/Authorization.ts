@@ -16,6 +16,7 @@ import {
   Decision,
   DeleteResourceRequest,
   FindRelationRequest,
+  GetAuthorizedQueryResponse,
   PermissionCheck,
   PermissionRequest,
   Relation,
@@ -56,6 +57,7 @@ export default class Authorization extends ManagedModule<Config> {
       getAllowedResources: this.getAllowedResources.bind(this),
       can: this.can.bind(this),
       createResourceAccessList: this.createResourceAccessList.bind(this),
+      getAuthorizedQuery: this.getAuthorizedQuery.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -203,6 +205,19 @@ export default class Authorization extends ManagedModule<Config> {
     const { subject, action, resourceType } = call.request;
     await this.permissionsController.createAccessList(subject, action, resourceType);
     callback(null);
+  }
+
+  async getAuthorizedQuery(
+    call: GrpcRequest<ResourceAccessListRequest>,
+    callback: GrpcResponse<GetAuthorizedQueryResponse>,
+  ) {
+    const { subject, action, resourceType } = call.request;
+    const query = await this.permissionsController.getAuthorizedQuery(
+      subject,
+      action,
+      resourceType,
+    );
+    callback(null, { query: JSON.stringify(query) });
   }
 
   async can(call: GrpcRequest<PermissionCheck>, callback: GrpcResponse<Decision>) {

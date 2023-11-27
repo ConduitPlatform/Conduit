@@ -9765,6 +9765,11 @@ mongodb@5.8.1, mongodb@^5.0.1:
   optionalDependencies:
     "@mongodb-js/saslprep" "^1.1.0"
 
+mongoose-cast-aggregation@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/mongoose-cast-aggregation/-/mongoose-cast-aggregation-0.3.1.tgz#92479e2156b42039a3323066f5840e9707927aed"
+  integrity sha512-20D7ce6S9QOEjvvtU5gmFzj7X+QAr0UH3M5BAbaWRkvGp4U/XtpH5ngkq8YpppW/mF6Gl+YQNL9s2chLk3DCrA==
+
 mongoose@7.5.0:
   version "7.5.0"
   resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-7.5.0.tgz#d10003ffc1ff876d761c7cbca6844ddd2aadd42f"

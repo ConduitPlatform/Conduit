@@ -32,6 +32,7 @@
     "mongodb-extended-json": "^1.11.0",
     "mongodb-schema": "^11.2.2",
     "mongoose": "7.5.0",
+    "mongoose-cast-aggregation": "^0.3.1",
     "mysql2": "^3.2.0",
     "object-hash": "^3.0.0",
     "pg": "^8.11.3",
@@ -50,9 +51,9 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "devDependencies": {
+    "@types/dottie": "^2.0.5",
     "@types/lodash": "^4.14.200",
     "@types/node": "20.8.10",
-    "@types/dottie": "^2.0.5",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",
