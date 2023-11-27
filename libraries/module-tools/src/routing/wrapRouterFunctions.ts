@@ -179,7 +179,7 @@ export function wrapRouterGrpcFunction(
         ConduitGrpcSdk.Logger.error(error.message ?? 'Something went wrong');
         callback({
           code: error.code ?? status.INTERNAL,
-          message: error.message ?? 'Something went wrong',
+          message: error.details ?? error.message ?? 'Something went wrong',
         });
       });
   };
