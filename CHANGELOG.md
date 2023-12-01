@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.29...v0.16.0-rc.0) (2023-12-01)
+
+
+### Features
+
+* **authorization:** Queue controller, construct indexes job ([#807](https://github.com/ConduitPlatform/Conduit/issues/807)) ([68bac6c](https://github.com/ConduitPlatform/Conduit/commit/68bac6cf5aab0dc1bf040618fb4b304af965752b))
+* **database:** add import/export extensions logic to existing endpoints ([#683](https://github.com/ConduitPlatform/Conduit/issues/683)) ([22c1e10](https://github.com/ConduitPlatform/Conduit/commit/22c1e100dede37541a36af609dc9f3e99068a9dc))
+
+
+### Bug Fixes
+
+* **authentication:** unconditional team admin endpoint registration ([#800](https://github.com/ConduitPlatform/Conduit/issues/800)) ([f21b166](https://github.com/ConduitPlatform/Conduit/commit/f21b1665c037d083b5acbf53a17d502b1a0b4cfd))
+* **authorization:** createView() sql queries failing due to unpreserved camel case olumn names ([#822](https://github.com/ConduitPlatform/Conduit/issues/822)) ([3286eec](https://github.com/ConduitPlatform/Conduit/commit/3286eec18d2520e9347bcb10ee50a230b7816386))
+* **database:** findOne() null query filters ([#806](https://github.com/ConduitPlatform/Conduit/issues/806)) ([5ba4e74](https://github.com/ConduitPlatform/Conduit/commit/5ba4e748073f355b00d0a013cbf953148813e62d)), closes [#805](https://github.com/ConduitPlatform/Conduit/issues/805)
+* **database:** gRPC findMany() empty sort handling ([#810](https://github.com/ConduitPlatform/Conduit/issues/810)) ([3b8ae1f](https://github.com/ConduitPlatform/Conduit/commit/3b8ae1f1d1e9be7b8e16d1a836eedc4dd883906a))
+* **database:** sql createSchemaFromAdapter() drop views on schema view exists constraint ([#823](https://github.com/ConduitPlatform/Conduit/issues/823)) ([1d3f808](https://github.com/ConduitPlatform/Conduit/commit/1d3f80819dfdc415e7ce4ec970d05692ffef6383))
+* missed null parsedQuery case ([#805](https://github.com/ConduitPlatform/Conduit/issues/805)) ([21628e0](https://github.com/ConduitPlatform/Conduit/commit/21628e0d714b23e2c9f382a4da5e8c139911df59))
+* **module-tools:** error message parsing from unexpected/unhandled errors ([#824](https://github.com/ConduitPlatform/Conduit/issues/824)) ([7cb3e8c](https://github.com/ConduitPlatform/Conduit/commit/7cb3e8c175f0cc78b61cee8abe95c933e8b5a7d5))
+* **module-tools:** module name not correctly converted for subscriptions ([#819](https://github.com/ConduitPlatform/Conduit/issues/819)) ([5898a8f](https://github.com/ConduitPlatform/Conduit/commit/5898a8f244e800f1eae025f899c398a46ac8ea28))
+* **router:** route Swagger doc missing non-global security headers ([#818](https://github.com/ConduitPlatform/Conduit/issues/818)) ([23a425c](https://github.com/ConduitPlatform/Conduit/commit/23a425caefd5c1b8f54103744df388b5e41a1949))
+
 ## [0.16.0-alpha.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.28...v0.16.0-alpha.29) (2023-11-16)
 
 
