@@ -35,7 +35,7 @@
     "lodash": "^4.17.21",
     "messagebird": "^4.0.1",
     "otp-generator": "^4.0.1",
-    "twilio": "4.10.0"
+    "twilio": "4.19.3"
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.42",
