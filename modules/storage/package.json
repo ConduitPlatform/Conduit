@@ -33,7 +33,7 @@
   "dependencies": {
     "@aws-sdk/client-iam": "^3.454.0",
     "@aws-sdk/client-s3": "^3.456.0",
-    "@aws-sdk/client-sts": "^3.454.0",
+    "@aws-sdk/client-sts": "^3.465.0",
     "@aws-sdk/s3-request-presigner": "^3.456.0",
     "@azure/storage-blob": "^12.13.0",
     "@conduitplatform/grpc-sdk": "*",
