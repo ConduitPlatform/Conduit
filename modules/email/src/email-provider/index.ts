@@ -1,7 +1,7 @@
 import Mail from 'nodemailer/lib/mailer';
 import { SentMessageInfo } from 'nodemailer';
 import { MailgunConfig } from './transports/mailgun/mailgun.config';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { MandrillConfig } from './transports/mandrill/mandrill.config';
 import { EmailBuilderClass } from './models/EmailBuilderClass';
 import { SendGridConfig } from './transports/sendgrid/sendgrid.config';
@@ -10,6 +10,7 @@ import { MailgunProvider } from './transports/mailgun/MailgunProvider';
 import { MandrillProvider } from './transports/mandrill/MandrilProvider';
 import { SendgridProvider } from './transports/sendgrid/SendgridProvider';
 import { SmtpProvider } from './transports/smtp/SmtpProvider';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export class EmailProvider {
   _transport?: EmailProviderClass;
@@ -17,7 +18,11 @@ export class EmailProvider {
 
   constructor(transport: string, transportSettings: any) {
     if (transport === 'mailgun') {
-      const { apiKey, domain, proxy, host } = transportSettings.mailgun;
+      const { apiKey, proxy, host } = transportSettings.mailgun;
+      let domain = ConfigController.getInstance().config.email.sendingDomain;
+      if (!isEmpty(transportSettings.mailgun.domain)) {
+        domain = transportSettings.mailgun.domain;
+      }
       if (isNil(apiKey) || isNil(domain) || isNil(host)) {
         throw new Error('Mailgun transport settings are missing');
       }
