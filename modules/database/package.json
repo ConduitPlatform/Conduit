@@ -32,7 +32,7 @@
     "mongodb-extended-json": "^1.11.0",
     "mongodb-schema": "^11.2.2",
     "mongoose": "7.5.0",
-    "mysql2": "^3.2.0",
+    "mysql2": "^3.6.5",
     "object-hash": "^3.0.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
