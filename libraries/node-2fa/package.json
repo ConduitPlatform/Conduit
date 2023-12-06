@@ -20,7 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/notp": "^2.0.3",
+    "@types/notp": "^2.0.5",
     "notp": "^2.0.3",
     "thirty-two": "^1.0.2",
     "tslib": "^2.6.2"

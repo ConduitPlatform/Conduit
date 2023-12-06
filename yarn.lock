@@ -3742,10 +3742,10 @@
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.1.tgz#d3357479a0fdfdd5907fe67e17e0a85c906e1301"
   integrity sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==
 
-"@types/notp@^2.0.3":
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/@types/notp/-/notp-2.0.3.tgz#1f13e13d4aa96605e5e0876c3962927abbcf0cd3"
-  integrity sha512-biFO/VNDdq/vH7PVN+WovqxhbRhvaA2daj1uAvMFKrcMQ12tfoSySud3vV8m9Zls6eM2FC8N9CpKbkLYJS1AAA==
+"@types/notp@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@types/notp/-/notp-2.0.5.tgz#adbf3c28b620d3ebc72fd8d8de2340bf79bb7ee1"
+  integrity sha512-ZsZS0PYUa6ZE4K3yOGerBvaxCp4ePf6ZmkFbPeilcqz2Ui/lmXox7KlRt7XZkXzqUgXhFLkc09ixyVmFLCU3gQ==
   dependencies:
     "@types/node" "*"
 
