@@ -3502,10 +3502,10 @@
   dependencies:
     "@types/ms" "*"
 
-"@types/dottie@^2.0.5":
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/@types/dottie/-/dottie-2.0.5.tgz#b173f016b84c9fb0da0bc62d6970db78847222b5"
-  integrity sha512-6lh3CsUe+tkKwH6prgCP/kCGPMyv9bYapqFr+c4BSM4gy1DHdaPbm0/owmFugSAAFiVTBrCRqAKni4KqQPFhXQ==
+"@types/dottie@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@types/dottie/-/dottie-2.0.7.tgz#e4a71bd2dcd16f95a80492cdfb7791aeb7133360"
+  integrity sha512-OHBdZVYmvA90RvyvPFueALVI9B9CMyKLP0sCEWcx8teoUgJ7X/t3fAC/14tbzRC1ORtbfA4FS0MJi6zvOK5fGw==
 
 "@types/express-serve-static-core@^4.17.30", "@types/express-serve-static-core@^4.17.33":
   version "4.17.34"
