@@ -19,7 +19,7 @@ export class EmailProvider {
   constructor(transport: string, transportSettings: any) {
     if (transport === 'mailgun') {
       const { apiKey, proxy, host } = transportSettings.mailgun;
-      let domain = ConfigController.getInstance().config.email.sendingDomain;
+      let domain = ConfigController.getInstance().config.sendingDomain;
       if (!isEmpty(transportSettings.mailgun.domain)) {
         domain = transportSettings.mailgun.domain;
       }
