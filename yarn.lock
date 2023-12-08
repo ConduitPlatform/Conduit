@@ -3574,10 +3574,10 @@
   dependencies:
     "@types/node" "*"
 
-"@types/is-natural-number@^4.0.2":
-  version "4.0.2"
-  resolved "https://registry.yarnpkg.com/@types/is-natural-number/-/is-natural-number-4.0.2.tgz#bddb050f08770b6a6b922382cbaab065a794e51d"
-  integrity sha512-iUeF9EgopURPjH/5ra9eq41eO4dnoyc/Hum+wGkxfguIBX6oDpQgV/NvyppHBjRDrJ9jNkx4oGdEmkrQyRpX2A==
+"@types/is-natural-number@^4.0.4":
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/@types/is-natural-number/-/is-natural-number-4.0.4.tgz#a853a9c312c033f28e1df0964ac37e20ea5b5c6c"
+  integrity sha512-OnRnZIfnpko7dYAA5vHcFh9FRmdg5GpfSIQaK7Cm6DHSTX6ycryOh9Mc3aGrLtsQDo9DsWlGucMuT02oDAGgCg==
 
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0", "@types/istanbul-lib-coverage@^2.0.1":
   version "2.0.4"
