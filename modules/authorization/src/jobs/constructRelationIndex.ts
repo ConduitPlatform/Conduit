@@ -10,8 +10,9 @@ type ConstructRelationIndexWorkerData = {
 module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => {
   const { relations } = job.data;
   if (!process.env.CONDUIT_SERVER) throw new Error('No serverUrl provided!');
-  const grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'authorization');
+  const grpcSdk = new ConduitGrpcSdk(process.env.CONDUIT_SERVER, 'authorization', false);
   await grpcSdk.initialize();
+  await grpcSdk.initializeEventBus();
   await grpcSdk.waitForExistence('database');
   ObjectIndex.getInstance(grpcSdk.database!);
   ActorIndex.getInstance(grpcSdk.database!);

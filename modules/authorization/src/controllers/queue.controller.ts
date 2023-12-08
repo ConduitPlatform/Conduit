@@ -33,8 +33,15 @@ export class QueueController {
     const processorFile = path.normalize(
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
-    new Worker('authorization-index-queue', processorFile, {
+    const worker = new Worker('authorization-index-queue', processorFile, {
       connection: this.redisConnection,
+      // autorun: true,
+    });
+    worker.on('completed', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
+    });
+    worker.on('error', (error: any) => {
+      ConduitGrpcSdk.Logger.info(`Job error:`, error);
     });
   }
 
