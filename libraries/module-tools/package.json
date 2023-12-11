@@ -41,7 +41,7 @@
     "@conduitplatform/grpc-sdk": "*",
     "@types/convict": "^6.1.6",
     "@types/express": "^4.17.17",
-    "@types/fs-extra": "^11.0.2",
+    "@types/fs-extra": "^11.0.4",
     "@types/google-protobuf": "^3.15.6",
     "@types/lodash": "^4.14.200",
     "@types/node": "20.10.3",
