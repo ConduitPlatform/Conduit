@@ -137,6 +137,8 @@ export class ServiceDiscovery {
         this.grpcSdk.createModuleClient(moduleName, moduleUrl);
       }
     } catch (e) {
+      ConduitGrpcSdk.Logger.error(`SD: failed to recover: ${moduleName} ${moduleUrl}`);
+      ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
       throw new Error('Failed to register unresponsive module');
     }
     const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
