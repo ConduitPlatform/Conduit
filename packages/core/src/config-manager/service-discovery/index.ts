@@ -54,7 +54,12 @@ export class ServiceDiscovery {
               url: module.url,
               ...(module.configSchema && { configSchema: module.configSchema }),
             });
-          } catch {}
+          } catch (e) {
+            ConduitGrpcSdk.Logger.error(
+              `SD: failed to recover: ${module.name} ${module.url}`,
+            );
+            ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
+          }
         }
         if (state.modules.length > success.length) {
           state.modules = success;
@@ -137,9 +142,7 @@ export class ServiceDiscovery {
         this.grpcSdk.createModuleClient(moduleName, moduleUrl);
       }
     } catch (e) {
-      ConduitGrpcSdk.Logger.error(`SD: failed to recover: ${moduleName} ${moduleUrl}`);
-      ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
-      throw new Error('Failed to register unresponsive module');
+      throw e;
     }
     const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     ConduitGrpcSdk.Logger.log(
