@@ -136,14 +136,12 @@ export class ServiceDiscovery {
 
   async _recoverModule(moduleName: string, moduleUrl: string) {
     let healthResponse;
-    try {
-      if (!this.grpcSdk.getModule(moduleName)) {
-        healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
-        this.grpcSdk.createModuleClient(moduleName, moduleUrl);
-      }
-    } catch (e) {
-      throw e;
+
+    if (!this.grpcSdk.getModule(moduleName)) {
+      healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
+      this.grpcSdk.createModuleClient(moduleName, moduleUrl);
     }
+
     const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     ConduitGrpcSdk.Logger.log(
       `SD: registering: ${moduleName} ${moduleUrl} ${healthStatus}`,
