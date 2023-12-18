@@ -54,7 +54,12 @@ export class ServiceDiscovery {
               url: module.url,
               ...(module.configSchema && { configSchema: module.configSchema }),
             });
-          } catch {}
+          } catch (e) {
+            ConduitGrpcSdk.Logger.error(
+              `SD: failed to recover: ${module.name} ${module.url}`,
+            );
+            ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
+          }
         }
         if (state.modules.length > success.length) {
           state.modules = success;
@@ -131,16 +136,12 @@ export class ServiceDiscovery {
 
   async _recoverModule(moduleName: string, moduleUrl: string) {
     let healthResponse;
-    try {
-      if (!this.grpcSdk.getModule(moduleName)) {
-        healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
-        this.grpcSdk.createModuleClient(moduleName, moduleUrl);
-      }
-    } catch (e) {
-      ConduitGrpcSdk.Logger.error(`SD: failed to recover: ${moduleName} ${moduleUrl}`);
-      ConduitGrpcSdk.Logger.error(`SD: recovery error: ${e}`);
-      throw new Error('Failed to register unresponsive module');
+
+    if (!this.grpcSdk.getModule(moduleName)) {
+      healthResponse = await this.grpcSdk.isModuleUp(moduleName, moduleUrl);
+      this.grpcSdk.createModuleClient(moduleName, moduleUrl);
     }
+
     const healthStatus = healthResponse.status as unknown as HealthCheckStatus;
     ConduitGrpcSdk.Logger.log(
       `SD: registering: ${moduleName} ${moduleUrl} ${healthStatus}`,
