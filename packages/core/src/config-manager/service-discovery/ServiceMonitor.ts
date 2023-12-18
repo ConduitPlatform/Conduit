@@ -169,15 +169,18 @@ export class ServiceMonitor {
 
   private async monitorModules() {
     for (const module of this._serviceRegistry.getRegisteredModules()) {
-      const registeredModule = this._serviceRegistry.getModule(module)!;
+      const registeredModule = this._serviceRegistry.getModule(module);
+      if (!registeredModule) continue;
       try {
         await this.healthCheckService(module, registeredModule.address);
       } catch (e) {
-        this.handleUnresponsiveModule(
-          module,
-          registeredModule.address,
-          HealthCheckStatus.SERVICE_UNKNOWN,
-        );
+        if (this._serviceRegistry.getModule(module)) {
+          this.handleUnresponsiveModule(
+            module,
+            registeredModule.address,
+            HealthCheckStatus.SERVICE_UNKNOWN,
+          );
+        }
       }
     }
     this.moduleRegister.emit('serving-modules-update');
