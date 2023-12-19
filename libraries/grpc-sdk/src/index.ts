@@ -274,9 +274,7 @@ export default class ConduitGrpcSdk {
       return this._initialize();
     }
     (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
-    await this.connectToCore().catch(err => {
-      process.exit(-1);
-    });
+    await this.connectToCore().catch(() => process.exit(-1));
     this._initialize();
   }
 
@@ -326,12 +324,12 @@ export default class ConduitGrpcSdk {
         emitter.emit(`module-connection-update:${m.moduleName}`, true);
       });
     });
-    emitter.on('core-status-update', modules => {
+    emitter.on('core-status-update', () => {
       this.connectToCore()
         .then(() => {
           this._initialize();
         })
-        .catch(err => {
+        .catch(() => {
           process.exit(-1);
         });
     });
