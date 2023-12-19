@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.15.19](https://github.com/ConduitPlatform/Conduit/compare/v0.15.18...v0.15.19) (2023-12-19)
+
+
+### Bug Fixes
+
+* **authentication:** oauth provider redirect URIs containing double query question marks ([#855](https://github.com/ConduitPlatform/Conduit/issues/855)) ([7cd62de](https://github.com/ConduitPlatform/Conduit/commit/7cd62de7e2e5bc0b654212ff3f2a61bbd3f4f1df))
+* grpc await promise transpilation, bump ecmascript target to es2018 ([#690](https://github.com/ConduitPlatform/Conduit/issues/690)) ([f5d1f61](https://github.com/ConduitPlatform/Conduit/commit/f5d1f613a4d4b597b6455ad066e61b84572afef3))
+
 ### [0.15.18](https://github.com/ConduitPlatform/Conduit/compare/v0.15.17...v0.15.18) (2023-06-12)
 
 
