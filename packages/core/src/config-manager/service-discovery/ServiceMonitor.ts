@@ -107,15 +107,15 @@ export class ServiceMonitor {
         address: moduleUrl,
         serving: moduleStatus === HealthCheckStatus.SERVING,
       };
-      ConduitGrpcSdk.Logger.log(
-        `SD/health: update unregistered module ${moduleName} ${moduleUrl} ${moduleStatus}`,
-      );
+      // ConduitGrpcSdk.Logger.log(
+      //   `SD/health: update unregistered module ${moduleName} ${moduleUrl} ${moduleStatus}`,
+      // );
       this._serviceRegistry.updateModule(moduleName, module);
     } else {
       const prevStatus = module.serving;
-      ConduitGrpcSdk.Logger.log(
-        `SD/health: update registered module ${moduleName} ${moduleUrl} to ${moduleStatus} from serving: ${prevStatus}`,
-      );
+      // ConduitGrpcSdk.Logger.log(
+      //   `SD/health: update registered module ${moduleName} ${moduleUrl} to ${moduleStatus} from serving: ${prevStatus}`,
+      // );
       module.serving = moduleStatus === HealthCheckStatus.SERVING;
     }
     this.grpcSdk.updateModuleHealth(
