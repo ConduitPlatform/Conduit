@@ -87,7 +87,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         code_challenge_method: this.settings.codeChallengeMethod,
       }),
     };
-    const baseUrl = this.settings.authorizeUrl;
+    const baseUrl = this.settings.authorizeUrl.endsWith('?')
+      ? this.settings.authorizeUrl.slice(0, -1)
+      : this.settings.authorizeUrl;
     const stateToken = await Token.getInstance()
       .create({
         tokenType: TokenType.STATE_TOKEN,

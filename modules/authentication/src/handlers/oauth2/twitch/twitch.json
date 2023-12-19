@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://id.twitch.tv/oauth2/authorize?",
+  "authorizeUrl": "https://id.twitch.tv/oauth2/authorize",
   "providerName": "twitch",
   "tokenUrl": "https://id.twitch.tv/oauth2/token",
   "grantType": "authorization_code",
