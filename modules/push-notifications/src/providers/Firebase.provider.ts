@@ -26,6 +26,7 @@ export class FirebaseProvider extends BaseNotificationProvider<IFirebaseSettings
     try {
       this.fcm = firebase.app(serviceAccount.projectId).messaging();
       this._initialized = true;
+      return;
     } catch (e) {
       this._initialized = false;
       ConduitGrpcSdk.Logger.error('Failed to initialize Firebase: method 1');
