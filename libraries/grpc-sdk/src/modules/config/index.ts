@@ -5,7 +5,7 @@ import {
   ConfigDefinition,
   ModuleHealthRequest,
   RegisterModuleRequest,
-} from '../../protoUtils/core';
+} from '../../protoUtils';
 import { Indexable } from '../../interfaces';
 import ConduitGrpcSdk from '../../index';
 import { ClusterOptions, RedisOptions } from 'ioredis';
@@ -24,6 +24,7 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
     super(moduleName, 'config', url, grpcToken);
     this.initializeClient(ConfigDefinition);
     this._serviceHealthStatusGetter = serviceHealthStatusGetter;
+    this.emitter.setMaxListeners(150);
   }
 
   getServerConfig() {
@@ -150,17 +151,19 @@ export class Config extends ConduitModule<typeof ConfigDefinition> {
   }
 
   async watchModules() {
-    const self = this;
-    this.emitter.setMaxListeners(150);
-    self.emitter.emit('serving-modules-update', await self.moduleList().catch());
+    if (!this.coreLive) {
+      this.coreLive = true;
+    }
+    this.emitter.emit('serving-modules-update', await this.moduleList().catch());
     try {
       const call = this.client!.watchModules({});
       for await (const data of call) {
-        self.emitter.emit('serving-modules-update', data.modules);
+        this.emitter.emit('serving-modules-update', data.modules);
       }
     } catch (error) {
-      self.coreLive = false;
+      this.coreLive = false;
       ConduitGrpcSdk.Logger.warn('Core unhealthy');
+      this.emitter.emit('core-status-update', HealthCheckStatus.UNKNOWN);
     }
   }
 }
