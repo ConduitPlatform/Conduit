@@ -2,9 +2,12 @@ import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../inte
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
-import { HealthCheckResponse, HealthDefinition } from '../protoUtils';
+import {
+  ConduitModuleDefinition,
+  HealthCheckResponse,
+  HealthDefinition,
+} from '../protoUtils';
 import { EventEmitter } from 'events';
-import { ConduitModuleDefinition } from '../protoUtils';
 import ConduitGrpcSdk from '../index';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
@@ -58,7 +61,11 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
-    if (this.channel) return;
+    if (this.channel) {
+      // used to make sure a connection attempt is made
+      this.channel.getConnectivityState(true);
+      return;
+    }
     // ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
