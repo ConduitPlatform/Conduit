@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?",
+  "authorizeUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
   "providerName": "microsoft",
   "tokenUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
   "responseMode": "query",

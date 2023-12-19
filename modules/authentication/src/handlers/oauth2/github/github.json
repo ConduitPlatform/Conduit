@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://github.com/login/oauth/authorize?",
+  "authorizeUrl": "https://github.com/login/oauth/authorize",
   "providerName": "github",
   "tokenUrl": "https://github.com/login/oauth/access_token",
   "responseType": "code"
