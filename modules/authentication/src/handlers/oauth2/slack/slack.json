@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://slack.com/oauth/authorize?",
+  "authorizeUrl": "https://slack.com/oauth/authorize",
   "providerName": "slack",
   "tokenUrl": "https://slack.com/api/oauth.access",
   "responseType": "code"
