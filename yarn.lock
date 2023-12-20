@@ -9674,9 +9674,9 @@ netmask@^1.0.6:
   integrity sha1-ICl+idhvb2QA8lDZ9Pa0wZRfzTU=
 
 nice-grpc-client-middleware-retry@^3:
-  version "3.1.3"
-  resolved "https://registry.yarnpkg.com/nice-grpc-client-middleware-retry/-/nice-grpc-client-middleware-retry-3.1.3.tgz#4f8d11a87f2cc5c6595c7fd8b9d9a96205cdb358"
-  integrity sha512-A5hyctxO0+uWKXXAApxdx/BL1rBN/1F/Hz2ksqorWz6l2/qvlwvYtVBi5oAxvDwJMF80r9bQTyFhhz0b/0VKZg==
+  version "3.1.6"
+  resolved "https://registry.yarnpkg.com/nice-grpc-client-middleware-retry/-/nice-grpc-client-middleware-retry-3.1.6.tgz#31ebf386e5f59f29cb4bdec5bdefa7cd6d4b0c36"
+  integrity sha512-aGbZfut0AEmDLYSKgjx2Tw+r4t8iPQ5NsbdEe1LLtv9qaMZTooyHm3pWNbDIQklyKJaC166JT1YqJxqtvuCjsg==
   dependencies:
     abort-controller-x "^0.4.0"
     nice-grpc-common "^2.0.2"
