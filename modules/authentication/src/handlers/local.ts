@@ -26,13 +26,8 @@ import {
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
   private initialized: boolean = false;
-  private clientValidation: boolean;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    grpcSdk.config.get('router').then(config => {
-      this.clientValidation = config.security.clientValidation;
-    });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
     const captchaConfig = ConfigController.getInstance().config.captcha;
@@ -126,8 +121,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-password',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's password (requires sudo access).
-                 If 2FA is enabled then a message will be returned asking for token input.`,
+        description: `Changes the user's password (requires sudo access).`,
         bodyParams: {
           newPassword: ConduitString.Required,
         },

@@ -139,12 +139,12 @@ export namespace AuthUtils {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
@@ -184,12 +184,12 @@ export namespace AuthUtils {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
