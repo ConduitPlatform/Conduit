@@ -69,33 +69,6 @@ export namespace AuthUtils {
     });
   }
 
-  export async function dbUserChecks(user: User, password: string) {
-    const dbUser: User | null = await User.getInstance().findOne(
-      { _id: user._id },
-      '+hashedPassword',
-    );
-    const isNilDbUser = isNil(dbUser);
-    if (isNilDbUser) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'User does not exist');
-    }
-    const isNilHashedPassword = isNil(dbUser.hashedPassword);
-    if (isNilHashedPassword) {
-      throw new GrpcError(
-        status.PERMISSION_DENIED,
-        'User does not use password authentication',
-      );
-    }
-
-    const passwordsMatch = await AuthUtils.checkPassword(
-      password,
-      dbUser.hashedPassword!,
-    );
-    if (!passwordsMatch) {
-      throw new GrpcError(status.UNAUTHENTICATED, 'Invalid password');
-    }
-    return dbUser;
-  }
-
   export function verify(token: string, secret: string): string | object | null {
     try {
       return jwt.verify(token, secret);
@@ -166,12 +139,12 @@ export namespace AuthUtils {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.subject.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {
@@ -211,12 +184,12 @@ export namespace AuthUtils {
     const { relations, search, sort, populate } = params;
     const skip = params.skip ?? 0;
     const limit = params.limit ?? 25;
-    let query: any = {
+    const query: Indexable = {
       _id: { $in: relations.relations.map(r => r.resource.split(':')[1]) },
     };
     if (!isNil(search)) {
       if (search.match(/^[a-fA-F0-9]{24}$/)) {
-        let included = relations.relations
+        const included = relations.relations
           .map(r => r.subject.split(':')[1])
           .includes(search);
         if (included) {

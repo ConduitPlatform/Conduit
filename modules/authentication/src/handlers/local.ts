@@ -26,13 +26,8 @@ import {
 export class LocalHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
   private initialized: boolean = false;
-  private clientValidation: boolean;
 
-  constructor(private readonly grpcSdk: ConduitGrpcSdk) {
-    grpcSdk.config.get('router').then(config => {
-      this.clientValidation = config.security.clientValidation;
-    });
-  }
+  constructor(private readonly grpcSdk: ConduitGrpcSdk) {}
 
   async declareRoutes(routingManager: RoutingManager): Promise<void> {
     const captchaConfig = ConfigController.getInstance().config.captcha;
@@ -126,10 +121,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
       {
         path: '/local/change-password',
         action: ConduitRouteActions.POST,
-        description: `Changes the user's password but requires the old password first.
-                 If 2FA is enabled then a message will be returned asking for token input.`,
+        description: `Changes the user's password (requires sudo access).`,
         bodyParams: {
-          oldPassword: ConduitString.Required,
           newPassword: ConduitString.Required,
         },
         middlewares: ['authMiddleware'],
@@ -393,21 +386,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'Re-login required to enter sudo mode',
       );
     }
-    const { oldPassword, newPassword } = call.request.params;
     const { user } = call.request.context;
-
-    if (oldPassword === newPassword) {
-      throw new GrpcError(
-        status.INVALID_ARGUMENT,
-        'The new password can not be the same as the old password',
-      );
-    }
-    const dbUser = await AuthUtils.dbUserChecks(user, oldPassword).catch(error => {
-      throw error;
-    });
+    const { newPassword } = call.request.bodyParams;
     const hashedPassword = await AuthUtils.hashPassword(newPassword);
-
-    await User.getInstance().findByIdAndUpdate(dbUser._id, { hashedPassword });
+    await User.getInstance().findByIdAndUpdate(user._id, { hashedPassword });
     return 'Password changed successfully';
   }
 
