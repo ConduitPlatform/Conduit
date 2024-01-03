@@ -19,7 +19,7 @@
     "@conduitplatform/grpc-sdk": "*",
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.6",
-    "@socket.io/redis-adapter": "^8.1.0",
+    "@socket.io/redis-adapter": "^8.2.1",
     "@types/object-hash": "^3.0.6",
     "body-parser": "^1.20.2",
     "cookie-parser": "~1.4.6",
