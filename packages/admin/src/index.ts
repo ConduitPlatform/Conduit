@@ -24,7 +24,7 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import { AdminMiddleware } from './models';
-import { getSwaggerMetadata, protoTemplate } from './hermes';
+import { getSwaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -33,7 +33,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProtoGenerator,
   ProxyRoute,
   ProxyRouteT,
   proxyToConduitRoute,
@@ -84,7 +83,6 @@ export default class AdminModule extends IConduitAdmin {
   ) {
     super(commons);
     this.grpcSdk = grpcSdk;
-    ProtoGenerator.getInstance(protoTemplate);
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,

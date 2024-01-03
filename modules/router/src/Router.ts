@@ -17,7 +17,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProtoGenerator,
   ProxyRoute,
   ProxyRouteT,
   proxyToConduitRoute,
@@ -27,7 +26,7 @@ import {
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
-import { protoTemplate, getSwaggerMetadata } from './hermes';
+import { getSwaggerMetadata } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
 import { AdminHandlers } from './admin';
@@ -78,7 +77,6 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     this.database = this.grpcSdk.databaseProvider!;
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
-    ProtoGenerator.getInstance(protoTemplate);
     this._internalRouter = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
