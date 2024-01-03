@@ -23,7 +23,10 @@ export class GrpcServer {
   private readonly server: ConduitGrpcServer;
   private readonly events: EventEmitter;
 
-  constructor(private readonly commons: ConduitCommons, private readonly port: number) {
+  constructor(
+    private readonly commons: ConduitCommons,
+    private readonly port: number,
+  ) {
     this.events = new EventEmitter();
     this.events.setMaxListeners(150);
     this.server = new ConduitGrpcServer(this.port.toString());
@@ -99,10 +102,7 @@ export class GrpcServer {
     this.initializeMetrics();
     this._grpcSdk
       .waitForExistence('database')
-      .then(() => this.commons.getConfigManager().registerAppConfig())
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+      .then(() => this.commons.getConfigManager().registerAppConfig());
     await this.commons
       .getConfigManager()
       .configurePackage(
