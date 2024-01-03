@@ -113,12 +113,7 @@ export default class AdminModule extends IConduitAdmin {
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
     );
-    this.grpcSdk
-      .waitForExistence('database')
-      .then(this.handleDatabase.bind(this))
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    this.grpcSdk.waitForExistence('database').then(this.handleDatabase.bind(this));
   }
 
   async subscribeToBusEvents() {
