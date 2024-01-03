@@ -3307,10 +3307,10 @@
   resolved "https://registry.yarnpkg.com/@socket.io/component-emitter/-/component-emitter-3.1.0.tgz#96116f2a912e0c02817345b3c10751069920d553"
   integrity sha512-+9jVqKhRSpsc591z5vX+X5Yyw+he/HCB4iQ/RYxw35CEPaY1gnsNE43nf9n9AaYjAQrTiI/mOwKUKdUs9vf7Xg==
 
-"@socket.io/redis-adapter@^8.1.0":
-  version "8.2.0"
-  resolved "https://registry.yarnpkg.com/@socket.io/redis-adapter/-/redis-adapter-8.2.0.tgz#ad6d62c39058546c37a578b0fd443417fbc7d26a"
-  integrity sha512-0P/wf0Jfz2vat86bGIUIqmiooWG5AuGOxd0jSsszvolrEuD20hn5gjh2XNnIKpRA/bEy8XyFYrziCBY6BRCB7A==
+"@socket.io/redis-adapter@^8.2.1":
+  version "8.2.1"
+  resolved "https://registry.yarnpkg.com/@socket.io/redis-adapter/-/redis-adapter-8.2.1.tgz#36f75afc518d0e1fa4fa7c29e6d042f53ee7563b"
+  integrity sha512-6Dt7EZgGSBP0qvXeOKGx7NnSr2tPMbVDfDyL97zerZo+v69hMfL99skMCL3RKZlWVqLyRme2T0wcy3udHhtOsg==
   dependencies:
     debug "~4.3.1"
     notepack.io "~3.0.1"
