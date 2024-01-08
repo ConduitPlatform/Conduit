@@ -51,7 +51,7 @@ export class ResourceHandler {
         },
       },
       new ConduitRouteReturnDefinition('GetResources', {
-        resources: [ResourceDefinition.getInstance().fields],
+        resources: [ResourceDefinition.name],
         count: ConduitNumber.Required,
       }),
       this.getResources.bind(this),
@@ -65,10 +65,7 @@ export class ResourceHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'Resource',
-        ResourceDefinition.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('Resource', ResourceDefinition.name),
       this.getResource.bind(this),
     );
     routingManager.route(

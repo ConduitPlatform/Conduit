@@ -29,10 +29,7 @@ export class RelationHandler {
           object: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'CreateRelation',
-        Relationship.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('CreateRelation', Relationship.name),
       this.createRelation.bind(this),
     );
     routingManager.route(
@@ -46,10 +43,7 @@ export class RelationHandler {
           resources: [ConduitString.Required],
         },
       },
-      new ConduitRouteReturnDefinition(
-        'CreateRelations',
-        Relationship.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('CreateRelations', Relationship.name),
       this.createRelations.bind(this),
     );
     routingManager.route(
@@ -61,7 +55,7 @@ export class RelationHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition('Relation', Relationship.getInstance().fields),
+      new ConduitRouteReturnDefinition('Relation', Relationship.name),
       this.getRelation.bind(this),
     );
     routingManager.route(
@@ -79,7 +73,7 @@ export class RelationHandler {
         },
       },
       new ConduitRouteReturnDefinition('GetRelations', {
-        relations: [Relationship.getInstance().fields],
+        relations: [Relationship.name],
         count: ConduitNumber.Required,
       }),
       this.getRelations.bind(this),
@@ -131,18 +125,18 @@ export class RelationHandler {
       ...(resource ?? {}),
     };
 
-    const found = await Relationship.getInstance().findMany(
+    const relations = await Relationship.getInstance().findMany(
       query,
       undefined,
       skip,
       limit,
       sort,
     );
-    if (isNil(found)) {
+    if (isNil(relations)) {
       throw new Error('Relations not found');
     }
     const count = await Relationship.getInstance().countDocuments(query);
-    return { found, count };
+    return { found: relations, count };
   }
 
   async deleteRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
