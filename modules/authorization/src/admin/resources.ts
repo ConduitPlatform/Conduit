@@ -136,18 +136,18 @@ export class ResourceHandler {
         query = { name: { $regex: `.*${nameSearch}.*`, $options: 'i' } };
       }
     }
-    const found = await ResourceDefinition.getInstance().findMany(
+    const resources = await ResourceDefinition.getInstance().findMany(
       query,
       undefined,
       skip,
       limit,
       sort,
     );
-    if (isNil(found)) {
+    if (isNil(resources)) {
       throw new Error('Resources not found');
     }
     const count = await ResourceDefinition.getInstance().countDocuments(query);
-    return { found, count };
+    return { resources, count };
   }
 
   async getResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
