@@ -21,7 +21,9 @@ export class ResourceController {
   }
 
   //todo check permission and relation content
-  async createResource(resource: any) {
+  async createResource(
+    resource: any,
+  ): ReturnType<ResourceController['updateResourceDefinition']> {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       name: resource.name,
     });
@@ -31,7 +33,11 @@ export class ResourceController {
     await this.validateResourceRelations(resource.relations, resource.name);
     await this.validateResourcePermissions(resource);
 
-    return await ResourceDefinition.getInstance().create(resource);
+    const res = await ResourceDefinition.getInstance().create({
+      ...resource,
+      version: 0,
+    });
+    return { resourceDefinition: res, status: 'processed' };
   }
 
   async validateResourceRelations(
@@ -98,9 +104,18 @@ export class ResourceController {
   async updateResourceDefinition(
     query: { _id: string } | { name: string },
     resource: any,
-  ) {
+  ): Promise<{
+    resourceDefinition: ResourceDefinition;
+    status: 'processed' | 'acknowledged' | 'ignored';
+  }> {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne(query);
     if (!resourceDefinition) throw new Error('Resource not found');
+
+    if (resource.version === undefined || resource.version < resourceDefinition.version) {
+      return { resourceDefinition, status: 'ignored' };
+    } else if (resource.version === resourceDefinition.version) {
+      return { resourceDefinition, status: 'acknowledged' };
+    }
 
     if (
       this.attributeCheck(resource.permissions) &&
@@ -120,10 +135,11 @@ export class ResourceController {
     }
     delete resource._id;
     delete resource.name;
-    return (await ResourceDefinition.getInstance().findByIdAndUpdate(
+    const res = (await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
     ))!;
+    return { resourceDefinition: res, status: 'processed' };
   }
 
   async deleteResource(name: string) {

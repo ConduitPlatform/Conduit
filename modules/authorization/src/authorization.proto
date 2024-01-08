@@ -6,6 +6,7 @@ message Resource {
   string name = 1;
   repeated Relation relations = 2;
   repeated Permission permissions = 3;
+  optional uint32 version = 4;
   message Relation {
     string name = 1;
     repeated string resourceType = 2;
@@ -14,6 +15,15 @@ message Resource {
     string name = 1;
     repeated string roles = 2;
   }
+}
+
+message ResourceModificationAcknowledgement {
+  enum Status {
+    PROCESSED = 0;
+    ACKNOWLEDGED = 1;
+    IGNORED = 2;
+  }
+  Status status = 1;
 }
 
 message Relation {
@@ -88,9 +98,9 @@ message Decision {
 }
 
 service Authorization {
-  rpc DefineResource(Resource) returns (google.protobuf.Empty);
+  rpc DefineResource(Resource) returns (ResourceModificationAcknowledgement);
   rpc DeleteResource(DeleteResourceRequest) returns (google.protobuf.Empty);
-  rpc UpdateResource(Resource) returns (google.protobuf.Empty);
+  rpc UpdateResource(Resource) returns (ResourceModificationAcknowledgement);
   rpc CreateRelation(Relation) returns (google.protobuf.Empty);
   rpc CreateRelations(CreateRelationsRequest) returns (google.protobuf.Empty);
   rpc DeleteRelation(Relation) returns (google.protobuf.Empty);
