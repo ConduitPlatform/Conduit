@@ -164,8 +164,8 @@ export class ResourceHandler {
     ) {
       throw new Error('Relations and permissions must be objects');
     }
-    const resource = await ResourceController.getInstance().updateResourceDefinitionById(
-      id,
+    const resource = await ResourceController.getInstance().updateResourceDefinition(
+      { _id: id },
       { relations, permissions },
     );
     this.grpcSdk.bus?.publish('authentication:update:resource', JSON.stringify(resource));

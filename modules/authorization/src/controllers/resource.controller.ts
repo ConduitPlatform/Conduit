@@ -26,7 +26,7 @@ export class ResourceController {
       name: resource.name,
     });
     if (resourceDefinition) {
-      return await this.updateResourceDefinition(resource.name, resource);
+      return await this.updateResourceDefinition({ name: resource.name }, resource);
     }
     await this.validateResourceRelations(resource.relations, resource.name);
     await this.validateResourcePermissions(resource);
@@ -95,8 +95,11 @@ export class ResourceController {
     return attr && Object.keys(attr).length !== 0;
   }
 
-  async updateResourceDefinition(name: string, resource: any) {
-    const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
+  async updateResourceDefinition(
+    query: { _id: string } | { name: string },
+    resource: any,
+  ) {
+    const resourceDefinition = await ResourceDefinition.getInstance().findOne(query);
     if (!resourceDefinition) throw new Error('Resource not found');
 
     if (
@@ -112,30 +115,6 @@ export class ResourceController {
       this.attributeCheck(resourceDefinition.relations) &&
       resource.relations !== resourceDefinition.relations
     ) {
-      await this.validateResourceRelations(resource.relations, resource.name);
-      await this.indexController.modifyRelations(resourceDefinition, resource);
-    }
-    delete resource._id;
-    delete resource.name;
-    return await ResourceDefinition.getInstance().findByIdAndUpdate(
-      resourceDefinition._id,
-      resource,
-    );
-  }
-
-  async updateResourceDefinitionById(
-    id: string,
-    resource: any,
-  ): Promise<ResourceDefinition> {
-    const resourceDefinition = await ResourceDefinition.getInstance().findOne({
-      _id: id,
-    });
-    if (!resourceDefinition) throw new Error('Resource not found');
-    if (resource.permissions !== resourceDefinition.permissions) {
-      await this.validateResourcePermissions(resource);
-      await this.indexController.modifyPermission(resourceDefinition, resource);
-    }
-    if (resource.relations !== resourceDefinition.relations) {
       await this.validateResourceRelations(resource.relations, resource.name);
       await this.indexController.modifyRelations(resourceDefinition, resource);
     }

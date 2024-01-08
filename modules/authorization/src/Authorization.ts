@@ -108,7 +108,10 @@ export default class Authorization extends ManagedModule<Config> {
   async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
     const { name, relations, permissions } = call.request;
     const resource = this.createResourceObject(name, relations, permissions);
-    await this.resourceController.updateResourceDefinition(resource.name, resource);
+    await this.resourceController.updateResourceDefinition(
+      { name: resource.name },
+      resource,
+    );
     callback(null, undefined);
   }
 
