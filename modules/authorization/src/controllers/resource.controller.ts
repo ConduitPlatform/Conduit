@@ -37,6 +37,7 @@ export class ResourceController {
       ...resource,
       version: 0,
     });
+    this.grpcSdk.bus?.publish('authorization:create:resource', JSON.stringify(res));
     return { resourceDefinition: res, status: 'processed' };
   }
 
@@ -139,6 +140,7 @@ export class ResourceController {
       resourceDefinition._id,
       resource,
     ))!;
+    this.grpcSdk.bus?.publish('authorization:update:resource', JSON.stringify(res));
     return { resourceDefinition: res, status: 'processed' };
   }
 

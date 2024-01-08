@@ -115,14 +115,12 @@ export class ResourceHandler {
     ) {
       throw new Error('Relations and permissions must be objects');
     }
-    const resource = await ResourceController.getInstance().createResource({
+    return ResourceController.getInstance().createResource({
       name,
       relations,
       permissions,
       version,
     });
-    this.grpcSdk.bus?.publish('authentication:create:resource', JSON.stringify(resource));
-    return resource;
   }
 
   async getResources(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -167,12 +165,10 @@ export class ResourceHandler {
     ) {
       throw new Error('Relations and permissions must be objects');
     }
-    const resource = await ResourceController.getInstance().updateResourceDefinition(
+    return ResourceController.getInstance().updateResourceDefinition(
       { _id: id },
       { relations, permissions, version },
     );
-    this.grpcSdk.bus?.publish('authentication:update:resource', JSON.stringify(resource));
-    return resource;
   }
 
   async deleteResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

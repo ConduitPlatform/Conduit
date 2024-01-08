@@ -100,30 +100,16 @@ export class RelationHandler {
 
   async createRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { subject, relation, object } = call.request.params;
-    const newRelation = await RelationsController.getInstance().createRelation(
-      subject,
-      relation,
-      object,
-    );
-    this.grpcSdk.bus?.publish(
-      'authentication:create:relation',
-      JSON.stringify(newRelation),
-    );
-    return newRelation;
+    return RelationsController.getInstance().createRelation(subject, relation, object);
   }
 
   async createRelations(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { subject, relation, resources } = call.request.params;
-    const newRelation = await RelationsController.getInstance().createRelations(
+    return RelationsController.getInstance().createRelations(
       subject,
       relation,
       resources,
     );
-    this.grpcSdk.bus?.publish(
-      'authentication:create:relation',
-      JSON.stringify(newRelation),
-    );
-    return newRelation;
   }
 
   async getRelation(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
