@@ -146,6 +146,7 @@ export class ResourceHandler {
     if (isNil(resources)) {
       throw new Error('Resources not found');
     }
+    resources.filter(r => isNil(r.version)).forEach(r => (r.version = 0));
     const count = await ResourceDefinition.getInstance().countDocuments(query);
     return { resources, count };
   }
