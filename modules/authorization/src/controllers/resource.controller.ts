@@ -2,7 +2,7 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { RelationsController } from './relations.controller';
-import { isNil } from 'lodash';
+import { isNil, isEqual, cloneDeep } from 'lodash';
 
 export class ResourceController {
   private static _instance: ResourceController;
@@ -116,6 +116,16 @@ export class ResourceController {
     if (isNil(resource.version) || resource.version < resourceDefinition.version) {
       return { resourceDefinition, status: 'ignored' };
     } else if (resource.version === resourceDefinition.version) {
+      const dbResource: Partial<ResourceDefinition> = cloneDeep(resourceDefinition);
+      delete dbResource._id;
+      delete dbResource.createdAt;
+      delete dbResource.updatedAt;
+      delete (dbResource as any).__v;
+      if (!isEqual(resource, dbResource)) {
+        throw new Error(
+          'Resource definition update failed. A divergent definition is already registered with the same version!',
+        );
+      }
       return { resourceDefinition, status: 'acknowledged' };
     }
 
