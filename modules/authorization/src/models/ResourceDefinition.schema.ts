@@ -45,6 +45,11 @@ const schema: ConduitModel = {
     type: TYPE.JSON,
     required: true,
   },
+  version: {
+    type: TYPE.Number,
+    required: true,
+    default: 0,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -67,6 +72,7 @@ export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> 
   name: string;
   relations: { [key: string]: string[] };
   permissions: { [key: string]: string[] };
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 

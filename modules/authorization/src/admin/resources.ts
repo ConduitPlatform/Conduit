@@ -29,12 +29,13 @@ export class ResourceHandler {
           name: ConduitString.Required,
           relations: ConduitJson.Required,
           permissions: ConduitJson.Required,
+          version: ConduitNumber.Optional,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'CreateResource',
-        ResourceDefinition.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('CreateResource', {
+        status: ConduitString.Required,
+        resourceDefinition: ResourceDefinition.name,
+      }),
       this.createResource.bind(this),
     );
     routingManager.route(
@@ -50,7 +51,7 @@ export class ResourceHandler {
         },
       },
       new ConduitRouteReturnDefinition('GetResources', {
-        resources: [ResourceDefinition.getInstance().fields],
+        resources: [ResourceDefinition.name],
         count: ConduitNumber.Required,
       }),
       this.getResources.bind(this),
@@ -64,10 +65,7 @@ export class ResourceHandler {
           id: ConduitString.Required,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'Resource',
-        ResourceDefinition.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('Resource', ResourceDefinition.name),
       this.getResource.bind(this),
     );
     routingManager.route(
@@ -81,12 +79,13 @@ export class ResourceHandler {
         bodyParams: {
           relations: ConduitJson.Required,
           permissions: ConduitJson.Required,
+          version: ConduitNumber.Optional,
         },
       },
-      new ConduitRouteReturnDefinition(
-        'PatchResource',
-        ResourceDefinition.getInstance().fields,
-      ),
+      new ConduitRouteReturnDefinition('PatchResource', {
+        status: ConduitString.Required,
+        resourceDefinition: ResourceDefinition.name,
+      }),
       this.patchResource.bind(this),
     );
     routingManager.route(
@@ -104,7 +103,7 @@ export class ResourceHandler {
   }
 
   async createResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { name, relations, permissions } = call.request.params;
+    const { name, relations, permissions, version } = call.request.params;
     if (
       typeof relations !== 'object' ||
       Array.isArray(relations) ||
@@ -113,13 +112,12 @@ export class ResourceHandler {
     ) {
       throw new Error('Relations and permissions must be objects');
     }
-    const resource = await ResourceController.getInstance().createResource({
+    return ResourceController.getInstance().createResource({
       name,
       relations,
       permissions,
+      version,
     });
-    this.grpcSdk.bus?.publish('authentication:create:resource', JSON.stringify(resource));
-    return resource!;
   }
 
   async getResources(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -135,18 +133,19 @@ export class ResourceHandler {
         query = { name: { $regex: `.*${nameSearch}.*`, $options: 'i' } };
       }
     }
-    const found = await ResourceDefinition.getInstance().findMany(
+    const resources = await ResourceDefinition.getInstance().findMany(
       query,
       undefined,
       skip,
       limit,
       sort,
     );
-    if (isNil(found)) {
+    if (isNil(resources)) {
       throw new Error('Resources not found');
     }
+    resources.filter(r => isNil(r.version)).forEach(r => (r.version = 0));
     const count = await ResourceDefinition.getInstance().countDocuments(query);
-    return { found, count };
+    return { resources, count };
   }
 
   async getResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -155,7 +154,7 @@ export class ResourceHandler {
   }
 
   async patchResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
-    const { id, relations, permissions } = call.request.params;
+    const { id, relations, permissions, version } = call.request.params;
     if (
       typeof relations !== 'object' ||
       Array.isArray(relations) ||
@@ -164,12 +163,10 @@ export class ResourceHandler {
     ) {
       throw new Error('Relations and permissions must be objects');
     }
-    const resource = await ResourceController.getInstance().updateResourceDefinitionById(
-      id,
-      { relations, permissions },
+    return ResourceController.getInstance().updateResourceDefinition(
+      { _id: id },
+      { relations, permissions, version },
     );
-    this.grpcSdk.bus?.publish('authentication:update:resource', JSON.stringify(resource));
-    return resource;
   }
 
   async deleteResource(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {

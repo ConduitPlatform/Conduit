@@ -54,6 +54,10 @@ export class RelationsController {
       computedTuple: computeRelationTuple(subject, relation, object),
     });
     await IndexController.getInstance().constructRelationIndex(subject, relation, object);
+    this.grpcSdk.bus?.publish(
+      'authorization:create:relation',
+      JSON.stringify(relationResource),
+    );
     return relationResource;
   }
 
@@ -105,6 +109,9 @@ export class RelationsController {
       object: r.resource,
     }));
     await QueueController.getInstance().addRelationIndexJob(relationEntries);
+    relationDocs.forEach(rel => {
+      this.grpcSdk.bus?.publish('authorization:create:relation', JSON.stringify(rel));
+    });
     return relationDocs;
   }
 
