@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.0...v0.16.0-rc.1) (2024-01-10)
+
+
+### Features
+
+* **authentication:** redirectUri overrides expansion ([#884](https://github.com/ConduitPlatform/Conduit/issues/884)) ([2ab2eb3](https://github.com/ConduitPlatform/Conduit/commit/2ab2eb3f9c5de07453666e6d835f63e440044616))
+* **authentication:** rm oldPassword body param from /local/change-password ([#863](https://github.com/ConduitPlatform/Conduit/issues/863)) ([75c7f4f](https://github.com/ConduitPlatform/Conduit/commit/75c7f4fec8a935bd46c5eac6be5e7cef7ad4dab5))
+* **authorization:** ResourceDefinition versioning, bus event pub fixes, admin API res signature fixes ([#881](https://github.com/ConduitPlatform/Conduit/issues/881)) ([30c2c86](https://github.com/ConduitPlatform/Conduit/commit/30c2c863322f6b5bc40b2c148125258dcaf7e26e))
+
+
+### Bug Fixes
+
+* **authentication:** OAuth provider redirect URIs containing double query question marks ([#855](https://github.com/ConduitPlatform/Conduit/issues/855)) ([6ce4173](https://github.com/ConduitPlatform/Conduit/commit/6ce4173530d110ae877e19ef7c72abe06c375501))
+* **authorization:** jobs not being processed correctly ([#841](https://github.com/ConduitPlatform/Conduit/issues/841)) ([80f4e64](https://github.com/ConduitPlatform/Conduit/commit/80f4e645a8a482a267a627db3a03fc685be7092d))
+* **core:** missing check for double removal of unresponsive module ([#850](https://github.com/ConduitPlatform/Conduit/issues/850)) ([74ba6d5](https://github.com/ConduitPlatform/Conduit/commit/74ba6d5db0541f606074d16929343bde0ee7ab4b))
+* **email:** wrong object access in email config ([d2c957e](https://github.com/ConduitPlatform/Conduit/commit/d2c957eecc8c18798daecf9cbd10e3739b70e631))
+* **grpc-sdk:** health check middleware injection ([#851](https://github.com/ConduitPlatform/Conduit/issues/851)) ([cb27906](https://github.com/ConduitPlatform/Conduit/commit/cb279068c6408b36339b381c837e8de7cca7e83a))
+* **grpc-sdk:** module connection not re-established after core shutdown ([#858](https://github.com/ConduitPlatform/Conduit/issues/858)) ([b7ce4b5](https://github.com/ConduitPlatform/Conduit/commit/b7ce4b59a6f7df438b37ecf652c92aa219d3bf48))
+* modules/authentication/package.json to reduce vulnerabilities ([#867](https://github.com/ConduitPlatform/Conduit/issues/867)) ([99ed9d0](https://github.com/ConduitPlatform/Conduit/commit/99ed9d008f44c42ebfcb1df6853df36e1da21102))
+* modules/router/package.json to reduce vulnerabilities ([#868](https://github.com/ConduitPlatform/Conduit/issues/868)) ([9b2c31c](https://github.com/ConduitPlatform/Conduit/commit/9b2c31c5e5e06b8419e0b51aedd493226a3b041f))
+
 ## [0.16.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.29...v0.16.0-rc.0) (2023-12-01)
 
 
