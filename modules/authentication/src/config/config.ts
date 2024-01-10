@@ -73,8 +73,14 @@ export default {
       },
     },
   },
-  customRedirectUris: {
-    format: 'Boolean',
-    default: false,
+  redirectUris: {
+    allowAny: {
+      format: 'Boolean',
+      default: false,
+    },
+    whitelistedUris: {
+      format: ['String'],
+      default: [],
+    },
   },
 };

@@ -9,11 +9,12 @@ import ConduitGrpcSdk, {
   SMS,
 } from '@conduitplatform/grpc-sdk';
 import { Team, Token, User } from '../models';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
 import { FetchMembersParams } from '../interfaces';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export namespace AuthUtils {
   export function randomToken(size = 64) {
@@ -231,5 +232,19 @@ export namespace AuthUtils {
         'members array contains invalid user ids',
       );
     }
+  }
+
+  export function validateRedirectUri(redirectUri?: string) {
+    if (!redirectUri || isEmpty(redirectUri)) return undefined;
+    type RedirectUris = { allowAny: boolean; whitelistedUris: string[] };
+    const { allowAny, whitelistedUris } = ConfigController.getInstance().config
+      .redirectUris as RedirectUris;
+    if (!allowAny && !whitelistedUris.includes(redirectUri)) {
+      throw new GrpcError(
+        status.ABORTED,
+        `Invalid redirectUri provided! Check the redirectUris section in Authentication's config.`,
+      );
+    }
+    return redirectUri;
   }
 }
