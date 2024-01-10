@@ -135,6 +135,11 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
+      ConduitGrpcSdk.Logger.warn(
+        `Config option redirectUris.allowAny shouldn't be used in production!`,
+      );
+    }
     if (!config.active) {
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);

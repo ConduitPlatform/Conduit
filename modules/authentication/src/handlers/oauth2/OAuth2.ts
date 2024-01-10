@@ -28,6 +28,7 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
+import { AuthUtils } from '../../utils';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy
@@ -160,14 +161,16 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
     const user = await this.createOrUpdateUser(payload, stateToken.data.invitationToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    const uri = stateToken.data.customRedirectUri;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
+      this.settings.finalRedirect;
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,
         clientId,
         config,
       },
-      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
+      redirectUri,
     );
   }
 
@@ -263,18 +266,12 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
         path: `/init/${this.providerName}`,
         description: `Begins ${this.capitalizeProvider()} authentication.`,
         action: ConduitRouteActions.GET,
-        queryParams: config.customRedirectUri
-          ? {
-              scopes: [ConduitString.Optional],
-              invitationToken: ConduitString.Optional,
-              captchaToken: ConduitString.Optional,
-              redirectUri: ConduitString.Optional,
-            }
-          : {
-              scopes: [ConduitString.Optional],
-              invitationToken: ConduitString.Optional,
-              captchaToken: ConduitString.Optional,
-            },
+        queryParams: {
+          scopes: [ConduitString.Optional],
+          invitationToken: ConduitString.Optional,
+          captchaToken: ConduitString.Optional,
+          redirectUri: ConduitString.Optional,
+        },
         middlewares:
           config.captcha.enabled && config.captcha.routes.oAuth2
             ? ['captchaMiddleware']

@@ -41,6 +41,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           password: ConduitString.Required,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          redirectUri: ConduitString.Optional,
         },
         middlewares:
           captchaConfig.enabled && captchaConfig.routes.register
@@ -82,6 +83,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           description: `Generates a password reset token and forwards a verification link to the user's email address.`,
           bodyParams: {
             email: ConduitString.Required,
+            redirectUri: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
@@ -138,6 +140,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         description: `Changes the user's email (requires sudo access).`,
         bodyParams: {
           newEmail: ConduitString.Required,
+          redirectUri: ConduitString.Optional,
         },
         middlewares: ['authMiddleware'],
       },
@@ -196,7 +199,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     call: ParsedRouterRequest,
     callback: (response: UnparsedRouterResponse) => void,
   ) {
-    const teams = ConfigController.getInstance().config.teams;
+    const config = ConfigController.getInstance().config;
+    const teams = config.teams;
     if (
       teams.enabled &&
       !teams.allowRegistrationWithoutInvite &&
@@ -228,14 +232,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     const serverConfig = await this.grpcSdk.config.get('router');
     const url = serverConfig.hostUrl;
-    if (
-      ConfigController.getInstance().config.local.verification.send_email &&
-      this.grpcSdk.isAvailable('email')
-    ) {
+    if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
+      const redirectUri =
+        AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
+        config.local.verification.redirect_uri;
       const verificationToken: Token = await Token.getInstance().create({
         tokenType: TokenType.VERIFICATION_TOKEN,
         user: user._id,
         token: uuid(),
+        data: { customRedirectUri: redirectUri },
       });
       const result = { verificationToken, hostUrl: url };
       const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
@@ -301,6 +306,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = call.request.params.email.toLowerCase();
     const config = ConfigController.getInstance().config;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
+      config.local.forgot_password_redirect_uri;
 
     const user: User | null = await User.getInstance().findOne({ email });
 
@@ -321,8 +329,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       token: uuid(),
     });
 
-    const appUrl = config.local.forgot_password_redirect_uri;
-    const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
+    const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
@@ -403,6 +410,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const newEmail = call.request.params.newEmail.toLowerCase();
     const { user } = call.request.context;
     const config = ConfigController.getInstance().config;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
+      config.local.verification.redirect_uri;
 
     const validation = await this.validate();
     if (!validation) {
@@ -426,7 +436,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (config.local.verification.required) {
       const verificationToken: Token | void = await AuthUtils.createToken(
         user._id,
-        { email: newEmail },
+        { email: newEmail, customRedirectUri: redirectUri },
         TokenType.CHANGE_EMAIL_TOKEN,
       ).catch(e => {
         ConduitGrpcSdk.Logger.error(e);
@@ -460,8 +470,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const verificationTokenParam = call.request.params.verificationToken;
 
-    const config = ConfigController.getInstance().config;
-
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
       {
         tokenType: TokenType.VERIFICATION_TOKEN,
@@ -475,10 +483,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'verifiedToken_' + verificationTokenParam,
       );
       if (redisToken) {
-        if (config.local.verification.redirect_uri)
-          return { redirect: config.local.verification.redirect_uri };
-
-        return 'Email verified';
+        const redirectUri = AuthUtils.validateRedirectUri(
+          JSON.parse(redisToken).customRedirectUri,
+        );
+        return redirectUri ? { redirect: redirectUri } : 'Email verified';
       } else {
         throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
       }
@@ -487,6 +495,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const user: User = verificationTokenDoc.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
 
+    const redirectUri = AuthUtils.validateRedirectUri(
+      verificationTokenDoc.data.customRedirectUri,
+    );
     const userPromise: Promise<User | null> = User.getInstance().findByIdAndUpdate(
       user._id,
       { isVerified: true },
@@ -494,7 +505,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const tokenPromise = Token.getInstance().deleteOne(verificationTokenDoc);
     await this.grpcSdk.state!.setKey(
       'verifiedToken_' + verificationTokenDoc.token,
-      '{}',
+      JSON.stringify(redirectUri ? { customRedirectUri: redirectUri } : {}),
       10 * 60 * 60 * 1000,
     );
 
@@ -502,10 +513,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.local.verification.redirect_uri) {
-      return { redirect: config.local.verification.redirect_uri };
-    }
-    return 'Email verified';
+    return redirectUri ? { redirect: redirectUri } : 'Email verified';
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
@@ -524,6 +532,8 @@ export class LocalHandlers implements IAuthenticationStrategy {
     }
     const user: User = token.user as User;
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
+    const redirectUri =
+      token.data.customRedirectUri ?? config.local.verification.redirect_uri;
     await Token.getInstance()
       .deleteMany({ user: user._id, tokenType: TokenType.CHANGE_EMAIL_TOKEN })
       .catch(e => {
@@ -532,10 +542,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(user._id as string, {
       email: token.data.email,
     });
-    if (config.local.verification.redirect_uri) {
-      return { redirect: config.local.verification.redirect_uri };
-    }
-    return 'Email changed successfully';
+    return redirectUri ? { redirect: redirectUri } : 'Email changed successfully';
   }
 
   async resendVerificationEmail(
