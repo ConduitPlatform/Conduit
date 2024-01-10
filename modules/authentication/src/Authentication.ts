@@ -27,10 +27,12 @@ import {
   GetTeamRequest,
   CreateTeamRequest,
   Team as GrpcTeam,
+  ModifyTeamMembersRequest,
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
 } from './protoTypes/authentication';
+import { Empty } from './protoTypes/google/protobuf/empty';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
@@ -59,6 +61,8 @@ export default class Authentication extends ManagedModule<Config> {
       createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
       validateAccessToken: this.validateAccessToken.bind(this),
+      addTeamMembers: this.addTeamMembers.bind(this),
+      removeTeamMembers: this.removeTeamMembers.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -381,6 +385,42 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     });
     return callback(null, { message: result as string });
+  }
+
+  async addTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const urlParams = { team: call.request.teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).addTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
+  }
+
+  async removeTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const urlParams = { team: call.request.teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).removeTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
   }
 
   async validateAccessToken(
