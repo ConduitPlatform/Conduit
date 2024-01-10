@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 package authentication;
 
 message UserLoginRequest {
@@ -59,6 +60,11 @@ message TeamDeleteResponse {
   string message = 1;
 }
 
+message ModifyTeamMembersRequest {
+  string teamId = 1;
+  repeated string memberIds = 2;
+}
+
 message ValidateAccessTokenRequest {
   string accessToken = 1;
   optional string path = 2;
@@ -83,5 +89,7 @@ service Authentication {
   rpc GetTeam(GetTeamRequest) returns (Team);
   rpc CreateTeam(CreateTeamRequest) returns (Team);
   rpc TeamDelete(TeamDeleteRequest) returns (TeamDeleteResponse);
+  rpc AddTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
+  rpc RemoveTeamMembers(ModifyTeamMembersRequest) returns (google.protobuf.Empty);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
 }
