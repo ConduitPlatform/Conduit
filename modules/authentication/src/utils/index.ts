@@ -241,7 +241,7 @@ export namespace AuthUtils {
       .redirectUris as RedirectUris;
     if (!allowAny && !whitelistedUris.includes(redirectUri)) {
       throw new GrpcError(
-        status.ABORTED,
+        status.PERMISSION_DENIED,
         `Invalid redirectUri provided! Check the redirectUris section in Authentication's config.`,
       );
     }
