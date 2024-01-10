@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -391,7 +391,14 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<ModifyTeamMembersRequest>,
     callback: GrpcCallback<Empty>,
   ) {
-    const urlParams = { team: call.request.teamId };
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { team: teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },
@@ -409,7 +416,14 @@ export default class Authentication extends ManagedModule<Config> {
     call: GrpcRequest<ModifyTeamMembersRequest>,
     callback: GrpcCallback<Empty>,
   ) {
-    const urlParams = { team: call.request.teamId };
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { team: teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },
