@@ -79,7 +79,10 @@ export default {
       default: false,
     },
     whitelistedUris: {
-      format: ['String'],
+      format: 'Array',
+      children: {
+        format: 'String',
+      },
       default: [],
     },
   },
