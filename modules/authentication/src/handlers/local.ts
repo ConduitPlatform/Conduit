@@ -82,6 +82,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
           description: `Generates a password reset token and forwards a verification link to the user's email address.`,
           bodyParams: {
             email: ConduitString.Required,
+            redirectUri: ConduitString.Optional,
           },
         },
         new ConduitRouteReturnDefinition('ForgotPasswordResponse', 'String'),
@@ -307,6 +308,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
   async forgotPassword(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = call.request.params.email.toLowerCase();
     const config = ConfigController.getInstance().config;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.bodyParams.redirectUri) ??
+      config.local.forgot_password_redirect_uri;
 
     const user: User | null = await User.getInstance().findOne({ email });
 
@@ -327,8 +331,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
       token: uuid(),
     });
 
-    const appUrl = config.local.forgot_password_redirect_uri;
-    const link = `${appUrl}?reset_token=${passwordResetTokenDoc.token}`;
+    const link = `${redirectUri}?reset_token=${passwordResetTokenDoc.token}`;
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
