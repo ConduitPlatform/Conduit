@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-
 import {
   ConduitString,
   ConfigController,

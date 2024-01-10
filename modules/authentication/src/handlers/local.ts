@@ -153,6 +153,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         urlParams: {
           verificationToken: ConduitString.Required,
         },
+        queryParams: {
+          redirectUri: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('VerifyEmailResponse', 'String'),
       this.verifyEmail.bind(this),
@@ -165,6 +168,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
         description: `A webhook used to verify an email address change. This bypasses the need for client id/secret.`,
         urlParams: {
           verificationToken: ConduitString.Required,
+        },
+        queryParams: {
+          redirectUri: ConduitString.Optional,
         },
       },
       new ConduitRouteReturnDefinition('VerifyChangeEmailResponse', 'String'),
@@ -459,8 +465,10 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
   async verifyEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const verificationTokenParam = call.request.params.verificationToken;
-
     const config = ConfigController.getInstance().config;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.queryParams.redirectUri) ??
+      config.local.verification.redirect_uri;
 
     const verificationTokenDoc: Token | null = await Token.getInstance().findOne(
       {
@@ -475,10 +483,7 @@ export class LocalHandlers implements IAuthenticationStrategy {
         'verifiedToken_' + verificationTokenParam,
       );
       if (redisToken) {
-        if (config.local.verification.redirect_uri)
-          return { redirect: config.local.verification.redirect_uri };
-
-        return 'Email verified';
+        return redirectUri ? { redirect: redirectUri } : 'Email verified';
       } else {
         throw new GrpcError(status.NOT_FOUND, 'Verification token not found');
       }
@@ -502,15 +507,15 @@ export class LocalHandlers implements IAuthenticationStrategy {
 
     this.grpcSdk.bus?.publish('authentication:verified:user', JSON.stringify(user));
 
-    if (config.local.verification.redirect_uri) {
-      return { redirect: config.local.verification.redirect_uri };
-    }
-    return 'Email verified';
+    return redirectUri ? { redirect: redirectUri } : 'Email verified';
   }
 
   async verifyChangeEmail(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const { verificationToken } = call.request.params.verificationToken;
     const config = ConfigController.getInstance().config;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(call.request.queryParams.redirectUri) ??
+      config.local.verification.redirect_uri;
     const token: Token | null = await Token.getInstance().findOne(
       {
         tokenType: TokenType.CHANGE_EMAIL_TOKEN,
@@ -532,10 +537,9 @@ export class LocalHandlers implements IAuthenticationStrategy {
     await User.getInstance().findByIdAndUpdate(user._id as string, {
       email: token.data.email,
     });
-    if (config.local.verification.redirect_uri) {
-      return { redirect: config.local.verification.redirect_uri };
-    }
-    return 'Email changed successfully';
+    return redirectUri
+      ? { redirect: config.local.verification.redirect_uri }
+      : 'Email changed successfully';
   }
 
   async resendVerificationEmail(
