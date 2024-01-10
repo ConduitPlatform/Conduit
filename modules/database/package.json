@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.200",
-    "@types/node": "20.10.3",
+    "@types/node": "20.10.8",
     "@types/dottie": "^2.0.7",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
