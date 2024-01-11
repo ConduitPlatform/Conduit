@@ -176,10 +176,11 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
+    const scopes = call.request.params?.scopes ?? this.defaultScopes;
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
-      clientId: call.request.params['clientId'],
-      scope: call.request.params?.scope,
+      clientId: this.settings.clientId,
+      scope: scopes,
     });
     const user = await this.createOrUpdateUser(
       payload,
@@ -190,7 +191,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     return TokenProvider.getInstance().provideUserTokens({
       user,
-      clientId: call.request.params['clientId'],
+      clientId: this.settings.clientId,
       config,
     });
   }
