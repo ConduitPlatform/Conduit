@@ -80,6 +80,7 @@ export class FacebookHandlers extends OAuth2<FacebookUser, OAuth2Settings> {
           access_token: ConduitString.Required,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          scopes: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('FacebookResponse', {
