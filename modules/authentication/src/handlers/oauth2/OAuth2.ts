@@ -191,7 +191,7 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
     return TokenProvider.getInstance().provideUserTokens({
       user,
-      clientId: this.settings.clientId,
+      clientId: call.request.context.clientId,
       config,
     });
   }

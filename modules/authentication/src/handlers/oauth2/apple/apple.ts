@@ -27,7 +27,6 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
 import { AuthUtils } from '../../../utils';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
@@ -139,10 +138,12 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     const redirectUri =
       AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
       this.settings.finalRedirect;
+    const conduitClientId = stateToken.data.clientId;
+
     return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
-        clientId,
+        clientId: conduitClientId,
         config,
       },
       redirectUri,
