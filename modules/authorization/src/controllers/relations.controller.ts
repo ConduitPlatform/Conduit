@@ -74,20 +74,22 @@ export class RelationsController {
       name: subject.split(':')[0],
     });
     if (!subjectResource) throw new Error('Subject resource not found');
-    await ResourceDefinition.getInstance()
-      .findOne({ name: resources[0].split(':')[0] })
-      .then(resourceDefinition => {
-        if (!resourceDefinition) {
-          throw new Error('Object resource definition not found');
-        }
-        if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
-        if (
-          !resourceDefinition.relations[relation] ||
-          resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
-        ) {
-          throw new Error('Relation not allowed');
-        }
-      });
+    const definitions = await ResourceDefinition.getInstance().findMany({
+      name: { $in: resources.map(resource => resource.split(':')[0]) },
+    });
+    for (const resource in resources) {
+      const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
+      if (!resourceDefinition) {
+        throw new Error('Object resource definition not found');
+      }
+      if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
+      if (
+        !resourceDefinition.relations[relation] ||
+        resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
+      ) {
+        throw new Error('Relation not allowed');
+      }
+    }
   }
 
   async createRelations(subject: string, relation: string, resources: string[]) {
