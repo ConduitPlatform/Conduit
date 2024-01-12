@@ -27,39 +27,54 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
   const possibleConnectionSubjects = [];
   const actorsToCreate = [];
   const relationObjects: string[] = [];
+  const actorLookup: any = {};
+  let namedObjectDefinitions: { [key: string]: ResourceDefinition } = {};
+  for (const definition of objectDefinitions) {
+    namedObjectDefinitions[definition.name] = definition;
+  }
   for (const r of relations) {
     relationObjects.push(r.object);
     const entity = `${r.object}#${r.relation}`;
-    const objectDefinition = objectDefinitions.find(
-      o => o.name === r.object.split(':')[0],
-    )!;
-    const permissions = Object.keys(objectDefinition.permissions);
-    for (const permission of permissions) {
-      const roles = objectDefinition.permissions[permission];
+    actorLookup[entity] = r;
+    const objectName = r.object.split(':')[0];
+    const permissions = Object.values(namedObjectDefinitions[objectName].permissions);
+    for (const roles of permissions) {
       for (const role of roles) {
         if (role.indexOf('->') !== -1 && role !== '*') {
           const [relatedSubject, action] = role.split('->');
-          if (r.relation === relatedSubject) {
+          if (
+            r.relation === relatedSubject &&
+            possibleConnectionSubjects.indexOf(`${r.subject}#${action}`) === -1
+          ) {
             possibleConnectionSubjects.push(`${r.subject}#${action}`);
           }
         }
       }
     }
-    const found = await ActorIndex.getInstance().findMany({
-      $and: [{ subject: r.subject }, { entity }],
+  }
+  const found = await ActorIndex.getInstance().findMany({
+    $and: [
+      {
+        subject: {
+          $in: [...Object.keys(actorLookup).map(key => actorLookup[key].subject)],
+        },
+      },
+      { entity: { $in: Object.keys(actorLookup) } },
+    ],
+  });
+  for (const entity in actorLookup) {
+    const r = actorLookup[entity];
+    const foundActor = found.find(a => a.subject === r.subject && a.entity === entity);
+    if (foundActor) continue;
+    actorsToCreate.push({
+      subject: r.subject,
+      subjectId: r.subject.split(':')[1].split('#')[0],
+      subjectType: r.subject.split(':')[0],
+      entity,
+      entityId: entity.split(':')[1].split('#')[0],
+      entityType: entity.split(':')[0],
+      relation: r.relation,
     });
-    const exists = found.find(f => f.entity === entity);
-    if (!exists) {
-      actorsToCreate.push({
-        subject: r.subject,
-        subjectId: r.subject.split(':')[1].split('#')[0],
-        subjectType: r.subject.split(':')[0],
-        entity,
-        entityId: entity.split(':')[1].split('#')[0],
-        entityType: entity.split(':')[0],
-        relation: r.relation,
-      });
-    }
   }
   await ActorIndex.getInstance().createMany(actorsToCreate);
   const possibleConnections = await ObjectIndex.getInstance().findMany({
@@ -116,15 +131,31 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
     i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
   );
   await ObjectIndex.getInstance().createMany(objectsToCreate);
+  //todo instead of blindly searching for actors, we should only search for actors that have the same permissions we just inherited
+  // todo create anchor points. ex. if you have relation X in object Y, you get permission Z in object A, because object Y has permission Z in object A and it's inherited
   const actors = await ActorIndex.getInstance().findMany({
     subject: { $in: relationObjects },
   });
   if (actors.length === 0) return;
-  await QueueController.getInstance().addRelationIndexJob(
-    actors.map(actor => ({
-      subject: actor.subject,
-      relation: actor.relation,
-      object: actor.entity.split('#')[0],
-    })),
-  );
+  // split into chunks of 500
+  const chunks = [];
+  for (let i = 0; i < actors.length; i += 100) {
+    chunks.push(actors.slice(i, i + 100));
+  }
+  for (const chunk of chunks) {
+    await QueueController.getInstance().addRelationIndexJob(
+      chunk.map(actor => ({
+        subject: actor.subject,
+        relation: actor.relation,
+        object: actor.entity.split('#')[0],
+      })),
+    );
+  }
+  // await QueueController.getInstance().addRelationIndexJob(
+  //   actors.map(actor => ({
+  //     subject: actor.subject,
+  //     relation: actor.relation,
+  //     object: actor.entity.split('#')[0],
+  //   })),
+  // );
 };
