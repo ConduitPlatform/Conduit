@@ -1,4 +1,6 @@
 //can be used both for relation checks and permission checks
+import { ObjectIndex } from '../models';
+
 export const checkRelation = (subject: string, relation: string, object: string) => {
   if (!subject.includes(':')) {
     throw new Error('Subject must be a valid resource identifier');
@@ -29,6 +31,24 @@ export const computePermissionTuple = (
   object: string,
 ) => {
   return `${subject}#${relation}@${object}`;
+};
+
+export const constructObjectIndex = (
+  subject: string,
+  permission: string,
+  role: string,
+  object: string,
+): Partial<ObjectIndex> => {
+  return {
+    subject: `${subject}#${permission}`,
+    subjectId: subject.split(':')[1],
+    subjectType: `${subject}#${permission}`.split(':')[0],
+    subjectPermission: `${object}#${permission}`.split('#')[1],
+    entity: `${object}#${role}`,
+    entityId: object.split(':')[1],
+    entityType: `${object}#${role}`.split(':')[0],
+    relation: `${object}#${role}`.split('#')[1],
+  };
 };
 
 export function getPostgresAccessListQuery(
