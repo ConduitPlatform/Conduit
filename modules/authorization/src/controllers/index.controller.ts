@@ -1,7 +1,8 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
 import { RelationsController } from './relations.controller';
-import { QueueController } from './queue.controller';
+import { constructObjectIndex } from '../utils';
+import _ from 'lodash';
 
 export class IndexController {
   private static _instance: IndexController;
@@ -36,6 +37,10 @@ export class IndexController {
     const objectDefinition = (await ResourceDefinition.getInstance().findOne({
       name: object.split(':')[0],
     }))!;
+
+    const subjectDefinition = (await ResourceDefinition.getInstance().findOne({
+      name: subject.split(':')[0],
+    }))!;
     // relations can only be created between actors and resources
     // object indexes represent relations between actors and permissions on resources
     // construct actor index
@@ -60,16 +65,7 @@ export class IndexController {
       const roles = objectDefinition.permissions[permission];
       for (const role of roles) {
         if (role.indexOf('->') === -1) {
-          obj.push({
-            subject: `${object}#${permission}`,
-            subjectId: object.split(':')[1],
-            subjectType: `${object}#${permission}`.split(':')[0],
-            subjectPermission: `${object}#${permission}`.split('#')[1],
-            entity: `${object}#${role}`,
-            entityId: object.split(':')[1],
-            entityType: `${object}#${role}`.split(':')[0],
-            relation: `${object}#${role}`.split('#')[1],
-          });
+          obj.push(constructObjectIndex(object, permission, role, object));
         } else if (role !== '*') {
           const [relatedSubject, action] = role.split('->');
           if (relation !== relatedSubject) continue;
@@ -77,16 +73,32 @@ export class IndexController {
             subject: `${subject}#${action}`,
           });
           for (const connection of possibleConnections) {
-            obj.push({
-              subject: `${object}#${permission}`,
-              subjectId: object.split(':')[1],
-              subjectType: `${object}#${permission}`.split(':')[0],
-              subjectPermission: `${object}#${permission}`.split('#')[1],
-              entity: connection.entity,
-              entityId: connection.entity.split(':')[1].split('#')[0],
-              entityType: connection.entity.split(':')[0],
-              relation: connection.entity.split('#')[1],
-            });
+            obj.push(
+              constructObjectIndex(
+                object,
+                permission,
+                connection.entity.split('#')[1],
+                connection.entity.split('#')[0],
+              ),
+            );
+          }
+          const subjectPermissions = Object.keys(subjectDefinition.permissions);
+          if (subjectPermissions.includes(action)) {
+            for (const role of subjectDefinition.permissions[action]) {
+              if (role.indexOf('->') === -1) {
+                obj.push({
+                  subject: `${object}#${permission}`,
+                  subjectId: object.split(':')[1],
+                  subjectType: `${object}#${permission}`.split(':')[0],
+                  subjectPermission: `${object}#${permission}`.split('#')[1],
+                  entity: `${subject}#${role}`,
+                  entityId: subject.split(':')[1],
+                  entityType: `${subject}#${role}`.split(':')[0],
+                  entityPermission: action,
+                  relation: `${subject}#${role}`.split('#')[1],
+                });
+              }
+            }
           }
         }
       }
@@ -101,17 +113,37 @@ export class IndexController {
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );
     await ObjectIndex.getInstance().createMany(toCreate);
-    const actors = await ActorIndex.getInstance().findMany({
-      subject: object,
-    });
-    if (actors.length === 0) return;
-    await QueueController.getInstance().addRelationIndexJob(
-      actors.map(actor => ({
-        subject: actor.subject,
-        relation: actor.relation,
-        object: actor.entity.split('#')[0],
-      })),
-    );
+
+    const achievedPermissions = [...new Set(obj.map(i => i.subjectPermission!))];
+    const objectsByPermission: { [key: string]: Partial<ObjectIndex>[] } = {};
+    for (const permission of achievedPermissions) {
+      objectsByPermission[permission] = obj.filter(
+        i => i.subjectPermission === permission,
+      );
+    }
+    for (const objectPermission in objectsByPermission) {
+      const childObj: Partial<ObjectIndex>[] = [];
+      const childIndexes = await ObjectIndex.getInstance().findMany({
+        subject: { $ne: `${object}#${objectPermission}` },
+        entityId: object.split(':')[1],
+        entityType: object.split(':')[0],
+        entityPermission: objectPermission,
+      });
+      for (const childIndex of childIndexes) {
+        let copy = _.omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
+        for (const childObject of objectsByPermission[objectPermission]) {
+          if (childObject.entityType === copy.entityType) continue;
+          childObj.push({
+            ...copy,
+            entity: childObject.entity,
+            entityId: childObject.entityId,
+            entityType: childObject.entityType,
+            entityPermission: childObject.entityPermission,
+          });
+        }
+      }
+      await ObjectIndex.getInstance().createMany(childObj);
+    }
   }
 
   async removeRelation(subject: string, relation: string, object: string) {
