@@ -78,11 +78,12 @@ export class IndexController {
         }
       }
     }
+    const possibleConnections = await ObjectIndex.getInstance().findMany({
+      subject: { $in: Object.keys(relatedPermissions).map(i => `${object}#${i}`) },
+    });
     for (const action in relatedPermissions) {
-      const possibleConnections = await ObjectIndex.getInstance().findMany({
-        subject: `${subject}#${action}`,
-      });
       for (const connection of possibleConnections) {
+        if (connection.subjectPermission !== action) continue;
         for (const permission of relatedPermissions[action]) {
           obj.push(
             constructObjectIndex(
@@ -94,6 +95,8 @@ export class IndexController {
           );
         }
       }
+    }
+    for (const action in relatedPermissions) {
       const subjectPermissions = Object.keys(subjectDefinition.permissions);
       if (subjectPermissions.includes(action)) {
         for (const role of subjectDefinition.permissions[action]) {
