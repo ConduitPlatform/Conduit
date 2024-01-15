@@ -130,7 +130,7 @@ export class IndexController {
         entityPermission: objectPermission,
       });
       for (const childIndex of childIndexes) {
-        let copy = _.omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
+        const copy = _.omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
         for (const childObject of objectsByPermission[objectPermission]) {
           if (childObject.entityType === copy.entityType) continue;
           childObj.push({
