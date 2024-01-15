@@ -19,6 +19,7 @@ import { Cookie } from '../interfaces';
 import { SwaggerRouterMetadata } from '../types';
 import { ConduitRoute, TypeRegistry } from '../classes';
 import { merge } from 'lodash';
+import { apiReference } from '@scalar/express-api-reference';
 
 const swaggerUi = require('swagger-ui-express');
 
@@ -319,6 +320,14 @@ export class RestController extends ConduitRouter {
     this._expressRouter!.use('/swagger', swaggerUi.serve);
     this._expressRouter!.get('/swagger', (req, res, next) =>
       swaggerUi.setup(self._swagger!.swaggerDoc)(req, res, next),
+    );
+    this._expressRouter!.use(
+      '/reference',
+      apiReference({
+        spec: {
+          content: self._swagger!.swaggerDoc,
+        },
+      }),
     );
     this._expressRouter!.get('/swagger.json', (req, res) => {
       res.send(JSON.stringify(this._swagger!.swaggerDoc));
