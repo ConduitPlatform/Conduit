@@ -44,10 +44,10 @@ export const constructObjectIndex = (
     subjectId: subject.split(':')[1],
     subjectType: `${subject}#${permission}`.split(':')[0],
     subjectPermission: `${object}#${permission}`.split('#')[1],
-    entity: `${object}#${role}`,
-    entityId: object.split(':')[1],
-    entityType: `${object}#${role}`.split(':')[0],
-    relation: `${object}#${role}`.split('#')[1],
+    entity: role === '*' ? '*' : `${object}#${role}`,
+    entityId: role === '*' ? '*' : object.split(':')[1],
+    entityType: role === '*' ? '*' : `${object}#${role}`.split(':')[0],
+    relation: role === '*' ? '*' : `${object}#${role}`.split('#')[1],
   };
 };
 
@@ -71,7 +71,7 @@ export function getPostgresAccessListQuery(
           SELECT * FROM "cnd_ObjectIndex"
           WHERE "subjectType" = '${objectType}' AND "subjectPermission" = '${action}'
       ) as obj 
-      ON actors.entity = obj.entity
+      ON actors.entity = obj.entity OR obj.entity = '*'
     )
     UNION (
       SELECT "computedTuple" 
@@ -102,5 +102,5 @@ export function getSQLAccessListQuery(
           INNER JOIN (
               SELECT * FROM cnd_ObjectIndex
               WHERE "subjectType" = '${objectType}' AND "subjectPermission" = '${action}'
-          ) objects ON actors.entity = objects.entity;`;
+          ) objects ON actors.entity = obj.entity OR obj.entity = '*';`;
 }

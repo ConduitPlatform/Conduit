@@ -26,9 +26,9 @@ export class IndexController {
         subjectId: subject.split(':')[1].split('#')[0],
         subjectPermission: subject.split('#')[1],
         entity,
-        entityId: entity.split(':')[1].split('#')[0],
-        entityType: entity.split(':')[0],
-        relation: entity.split('#')[1],
+        entityId: entity === '*' ? '*' : entity.split(':')[1].split('#')[0],
+        entityType: entity === '*' ? '*' : entity.split(':')[0],
+        relation: entity === '*' ? '*' : entity.split('#')[1],
       });
     }
   }
@@ -60,6 +60,7 @@ export class IndexController {
       });
     }
     const permissions = Object.keys(objectDefinition.permissions);
+    const relatedPermissions: { [key: string]: string[] } = {};
     const obj = [];
     for (const permission of permissions) {
       const roles = objectDefinition.permissions[permission];
@@ -69,40 +70,52 @@ export class IndexController {
         } else if (role !== '*') {
           const [relatedSubject, action] = role.split('->');
           if (relation !== relatedSubject) continue;
-          const possibleConnections = await ObjectIndex.getInstance().findMany({
-            subject: `${subject}#${action}`,
-          });
-          for (const connection of possibleConnections) {
-            obj.push(
-              constructObjectIndex(
-                object,
-                permission,
-                connection.entity.split('#')[1],
-                connection.entity.split('#')[0],
-              ),
-            );
+          if (!relatedPermissions[action]) {
+            relatedPermissions[action] = [permission];
+          } else if (!relatedPermissions[action].includes(permission)) {
+            relatedPermissions[action].push(permission);
           }
-          const subjectPermissions = Object.keys(subjectDefinition.permissions);
-          if (subjectPermissions.includes(action)) {
-            for (const role of subjectDefinition.permissions[action]) {
-              if (role.indexOf('->') === -1) {
-                obj.push({
-                  subject: `${object}#${permission}`,
-                  subjectId: object.split(':')[1],
-                  subjectType: `${object}#${permission}`.split(':')[0],
-                  subjectPermission: `${object}#${permission}`.split('#')[1],
-                  entity: `${subject}#${role}`,
-                  entityId: subject.split(':')[1],
-                  entityType: `${subject}#${role}`.split(':')[0],
-                  entityPermission: action,
-                  relation: `${subject}#${role}`.split('#')[1],
-                });
-              }
+        }
+      }
+    }
+    for (const action in relatedPermissions) {
+      const possibleConnections = await ObjectIndex.getInstance().findMany({
+        subject: `${subject}#${action}`,
+      });
+      for (const connection of possibleConnections) {
+        for (const permission of relatedPermissions[action]) {
+          obj.push(
+            constructObjectIndex(
+              object,
+              permission,
+              connection.entity.split('#')[1],
+              connection.entity.split('#')[0],
+            ),
+          );
+        }
+      }
+      const subjectPermissions = Object.keys(subjectDefinition.permissions);
+      if (subjectPermissions.includes(action)) {
+        for (const role of subjectDefinition.permissions[action]) {
+          if (role.indexOf('->') === -1) {
+            for (const permission of relatedPermissions[action]) {
+              obj.push({
+                subject: `${object}#${permission}`,
+                subjectId: object.split(':')[1],
+                subjectType: `${object}#${permission}`.split(':')[0],
+                subjectPermission: `${object}#${permission}`.split('#')[1],
+                entity: `${subject}#${role}`,
+                entityId: subject.split(':')[1],
+                entityType: `${subject}#${role}`.split(':')[0],
+                entityPermission: action,
+                relation: `${subject}#${role}`.split('#')[1],
+              });
             }
           }
         }
       }
     }
+
     const indexes = await ObjectIndex.getInstance().findMany({
       $and: [
         { subject: { $in: obj.map(i => i.subject) } },
@@ -183,6 +196,7 @@ export class IndexController {
     // remove all applicable actor indexes
     if (removedRoles.length > 0) {
       for (const removedRole of removedRoles) {
+        // todo missing '*' case
         if (removedRole.indexOf('->') === -1) {
           await ObjectIndex.getInstance().deleteMany({
             subject: {
