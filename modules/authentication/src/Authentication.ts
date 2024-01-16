@@ -398,7 +398,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'teamId must be a valid Team ID!',
       });
     }
-    const urlParams = { team: teamId };
+    const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },
@@ -423,7 +423,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'teamId must be a valid Team ID!',
       });
     }
-    const urlParams = { team: teamId };
+    const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },
