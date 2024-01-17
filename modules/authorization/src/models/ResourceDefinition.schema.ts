@@ -6,6 +6,7 @@ const schema: ConduitModel = {
   name: {
     type: TYPE.String,
     required: true,
+    unique: true,
   },
   /**
    * Example:
