@@ -59,6 +59,7 @@ export class IndexController {
         relation: relation,
       });
     }
+    if (!objectDefinition.permissions) return;
     const permissions = Object.keys(objectDefinition.permissions);
     const relatedPermissions: { [key: string]: string[] } = {};
     const obj = [];
@@ -96,23 +97,25 @@ export class IndexController {
         }
       }
     }
-    for (const action in relatedPermissions) {
+    if (subjectDefinition.permissions) {
       const subjectPermissions = Object.keys(subjectDefinition.permissions);
-      if (subjectPermissions.includes(action)) {
-        for (const role of subjectDefinition.permissions[action]) {
-          if (role.indexOf('->') === -1) {
-            for (const permission of relatedPermissions[action]) {
-              obj.push({
-                subject: `${object}#${permission}`,
-                subjectId: object.split(':')[1],
-                subjectType: `${object}#${permission}`.split(':')[0],
-                subjectPermission: `${object}#${permission}`.split('#')[1],
-                entity: `${subject}#${role}`,
-                entityId: subject.split(':')[1],
-                entityType: `${subject}#${role}`.split(':')[0],
-                entityPermission: action,
-                relation: `${subject}#${role}`.split('#')[1],
-              });
+      for (const action in relatedPermissions) {
+        if (subjectPermissions.includes(action)) {
+          for (const role of subjectDefinition.permissions[action]) {
+            if (role.indexOf('->') === -1) {
+              for (const permission of relatedPermissions[action]) {
+                obj.push({
+                  subject: `${object}#${permission}`,
+                  subjectId: object.split(':')[1],
+                  subjectType: `${object}#${permission}`.split(':')[0],
+                  subjectPermission: `${object}#${permission}`.split('#')[1],
+                  entity: `${subject}#${role}`,
+                  entityId: subject.split(':')[1],
+                  entityType: `${subject}#${role}`.split(':')[0],
+                  entityPermission: action,
+                  relation: `${subject}#${role}`.split('#')[1],
+                });
+              }
             }
           }
         }
@@ -213,7 +216,7 @@ export class IndexController {
           });
         } else {
           const [relatedSubject, action] = removedRole.split('->');
-          const removedResources = oldResource.relations[relatedSubject];
+          const removedResources = oldResource.relations?.[relatedSubject] ?? [];
           for (const removedResource of removedResources) {
             await ObjectIndex.getInstance().deleteMany({
               subject: {
@@ -247,7 +250,7 @@ export class IndexController {
           );
         } else {
           const [relatedSubject, action] = addedRole.split('->');
-          const addedResources = resource.relations[relatedSubject];
+          const addedResources = resource.relations?.[relatedSubject] ?? [];
 
           for (const addedResource of addedResources) {
             const possibleConnections = await ObjectIndex.getInstance().findMany({
