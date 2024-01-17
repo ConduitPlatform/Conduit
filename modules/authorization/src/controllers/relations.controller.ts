@@ -34,6 +34,9 @@ export class RelationsController {
         if (!resourceDefinition) {
           throw new Error('Object resource definition not found');
         }
+        if (!resourceDefinition.relations) {
+          throw new Error('Relation not allowed');
+        }
         if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
         if (
           !resourceDefinition.relations[relation] ||
@@ -81,6 +84,9 @@ export class RelationsController {
       const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
       if (!resourceDefinition) {
         throw new Error('Object resource definition not found');
+      }
+      if (!resourceDefinition.relations) {
+        throw new Error('Relation not allowed');
       }
       if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
       if (
