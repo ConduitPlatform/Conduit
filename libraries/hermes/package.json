@@ -57,6 +57,6 @@
     "@types/node": "20.10.3",
     "@types/object-hash": "^3.0.6",
     "rimraf": "^5.0.5",
-    "typescript": "~5.0.4"
+    "typescript": "~5.2.2"
   }
 }

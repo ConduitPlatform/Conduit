@@ -42,6 +42,6 @@
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
     "ts-proto": "^1.160.0",
-    "typescript": "~5.0.4"
+    "typescript": "~5.2.2"
   }
 }
