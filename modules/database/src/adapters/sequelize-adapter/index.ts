@@ -28,7 +28,7 @@ import {
 } from '../../interfaces';
 import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
 import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil, merge } from 'lodash';
+import { isNil } from 'lodash';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 
@@ -203,78 +203,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       : schema.name;
   }
 
-  private async processExtractedSchemas(
-    schema: ConduitDatabaseSchema,
-    extractedSchemas: Indexable,
-    associatedSchemas: { [key: string]: SequelizeSchema | SequelizeSchema[] },
-  ) {
-    for (const extractedSchema in extractedSchemas) {
-      const modelOptions = merge({}, schema.modelOptions, {
-        conduit: {
-          cms: {
-            enabled: false,
-            crudOperations: {
-              read: {
-                enabled: false,
-              },
-              create: {
-                enabled: false,
-              },
-              delete: {
-                enabled: false,
-              },
-              update: {
-                enabled: false,
-              },
-            },
-          },
-
-          permissions: {
-            extendable: false,
-            canCreate: false,
-            canModify: 'Nothing',
-            canDelete: false,
-          },
-        },
-      });
-      let modeledSchema;
-      let isArray = false;
-      if (Array.isArray(extractedSchemas[extractedSchema])) {
-        isArray = true;
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema][0],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      } else {
-        modeledSchema = new ConduitSchema(
-          `${schema.name}_${extractedSchema}`,
-          extractedSchemas[extractedSchema],
-          modelOptions,
-          `${schema.collectionName}_${extractedSchema}`,
-        );
-      }
-
-      modeledSchema.ownerModule = schema.ownerModule;
-      (modeledSchema as ConduitDatabaseSchema).compiledFields = modeledSchema.fields;
-      // check index compatibility
-      const sequelizeSchema = await this._createSchemaFromAdapter(
-        modeledSchema as ConduitDatabaseSchema,
-        false,
-        {
-          parentSchema: schema.name,
-        },
-      );
-      associatedSchemas[extractedSchema] = isArray ? [sequelizeSchema] : sequelizeSchema;
-    }
-  }
-
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
-    options?: { parentSchema: string },
+    isInstanceSync: boolean = false,
   ): Promise<SequelizeSchema> {
+    for (const [key, value] of Object.entries(this.views)) {
+      if (value.originalSchema.name === schema.name) {
+        await this.deleteView(key);
+      }
+    }
     const compiledSchema = compileSchema(
       schema,
       this.registeredSchemas,
@@ -304,13 +242,17 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
       objectPaths,
     );
 
-    const noSync = this.models[schema.name].originalSchema.modelOptions.conduit!.noSync;
+    const noSync =
+      this.models[schema.name].originalSchema.modelOptions.conduit!.noSync ||
+      isInstanceSync;
     // do not sync extracted schemas
-    if ((isNil(noSync) || !noSync) && !options) {
+    if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
+    } else {
+      this.models[schema.name].synced = true;
     }
     // do not store extracted schemas to db
-    if (!options && saveToDb) {
+    if (saveToDb && !isInstanceSync) {
       await this.compareAndStoreMigratedSchema(schema);
       await this.saveSchemaToDatabase(schema);
     }

@@ -84,27 +84,33 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
     newSchema.name = viewName;
     //@ts-ignore
     newSchema.collectionName = viewName;
-    const viewModel = new MongooseSchema(
-      this.grpcSdk,
-      this.mongoose,
-      newSchema,
-      model.originalSchema,
-      this,
-      true,
-    );
-    await viewModel.model.createCollection({
-      viewOn: model.originalSchema.collectionName,
-      pipeline: EJSON.parse(query.mongoQuery),
-    });
-    this.views[viewName] = viewModel;
-    const foundView = await this.models['Views'].findOne({ name: viewName });
-    if (isNil(foundView)) {
-      await this.models['Views'].create({
-        name: viewName,
-        originalSchema: modelName,
-        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
-        query,
+    try {
+      const viewModel = new MongooseSchema(
+        this.grpcSdk,
+        this.mongoose,
+        newSchema,
+        model.originalSchema,
+        this,
+        true,
+      );
+      await viewModel.model.createCollection({
+        viewOn: model.originalSchema.collectionName,
+        pipeline: EJSON.parse(query.mongoQuery),
       });
+      this.views[viewName] = viewModel;
+      const foundView = await this.models['Views'].findOne({ name: viewName });
+      if (isNil(foundView)) {
+        await this.models['Views'].create({
+          name: viewName,
+          originalSchema: modelName,
+          joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+          query,
+        });
+      }
+    } catch (e: any) {
+      if (!e.message.includes('Cannot overwrite')) {
+        throw e;
+      }
     }
   }
 
@@ -385,6 +391,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
+    isInstanceSync: boolean = false,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema, 'mongodb');
@@ -418,7 +425,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.saveSchemaToDatabase(schema);
     }
 
-    if (indexes) {
+    if (indexes && !isInstanceSync) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
     return this.models[schema.name];

@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://bitbucket.org/site/oauth2/authorize?",
+  "authorizeUrl": "https://bitbucket.org/site/oauth2/authorize",
   "providerName": "bitbucket",
   "tokenUrl": "https://bitbucket.org/site/oauth2/access_token",
   "responseType": "code",

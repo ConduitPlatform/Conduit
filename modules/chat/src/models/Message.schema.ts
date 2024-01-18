@@ -26,6 +26,10 @@ const schema: ConduitModel = {
       required: true,
     },
   ],
+  deleted: {
+    type: TYPE.Boolean,
+    default: false,
+  },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
 };
@@ -44,13 +48,14 @@ const collectionName = undefined;
 
 export class ChatMessage extends ConduitActiveSchema<ChatMessage> {
   private static _instance: ChatMessage;
-  _id!: string;
-  message!: string;
-  senderUser!: string | User;
-  room!: string | ChatRoom;
-  readBy!: string[] | User[];
-  createdAt!: Date;
-  updatedAt!: Date;
+  _id: string;
+  message: string;
+  senderUser: string | User;
+  room: string | ChatRoom;
+  readBy: string[] | User[];
+  deleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
     super(database, ChatMessage.name, schema, modelOptions, collectionName);

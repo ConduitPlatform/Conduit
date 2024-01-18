@@ -262,7 +262,7 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       skip?: number;
       limit?: number;
       select?: string;
-      sort?: any;
+      sort?: { [field: string]: -1 | 1 };
       populate?: string[];
       userId?: string;
       scope?: string;
@@ -282,16 +282,16 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
     }
     let finalQuery = this.model.find(filter, options?.select);
     if (!isNil(options?.skip) && !modified) {
-      finalQuery = finalQuery.skip(options?.skip!);
+      finalQuery = finalQuery.skip(options!.skip!);
     }
     if (!isNil(options?.limit) && !modified) {
-      finalQuery = finalQuery.limit(options?.limit!);
+      finalQuery = finalQuery.limit(options!.limit!);
     }
     if (!isNil(options?.populate)) {
-      finalQuery = this.populate(finalQuery, options?.populate ?? []);
+      finalQuery = this.populate(finalQuery, options!.populate ?? []);
     }
     if (!isNil(options?.sort)) {
-      finalQuery = finalQuery.sort(this.parseSort(options?.sort));
+      finalQuery = finalQuery.sort(this.parseSort(options!.sort));
     }
     return finalQuery.lean().exec();
   }
@@ -305,14 +305,17 @@ export class MongooseSchema extends SchemaAdapter<Model<any>> {
       populate?: string[];
     },
   ): Promise<any> {
-    let parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
-    parsedQuery = await this.getAuthorizedQuery(
+    const parsedQuery: Indexable | null = parseQuery(this.parseStringToQuery(query));
+    const filter = await this.getAuthorizedQuery(
       'read',
       parsedQuery,
       false,
       options?.userId,
       options?.scope,
     );
+    if (isNil(filter) && !isNil(parsedQuery)) {
+      return null;
+    }
     let finalQuery = this.model.findOne(parsedQuery!, options?.select);
     if (options?.populate !== undefined && options?.populate !== null) {
       finalQuery = this.populate(finalQuery, options?.populate);

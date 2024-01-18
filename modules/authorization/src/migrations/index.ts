@@ -6,9 +6,9 @@ import { migratePermission } from './permission.migration';
 
 export async function runMigrations(grpcSdk: ConduitGrpcSdk) {
   await Promise.all([
-    migrateObjectIndex(grpcSdk),
-    migrateActorIndex(grpcSdk),
-    migrateRelationships(grpcSdk),
-    migratePermission(grpcSdk),
+    migrateObjectIndex(),
+    migrateActorIndex(),
+    migrateRelationships(),
+    migratePermission(),
   ]);
 }

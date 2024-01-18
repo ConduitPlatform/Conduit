@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "POST",
-  "authorizeUrl": "https://www.reddit.com/api/v1/authorize?",
+  "authorizeUrl": "https://www.reddit.com/api/v1/authorize",
   "providerName": "reddit",
   "tokenUrl": "https://www.reddit.com/api/v1/access_token",
   "responseType": "code",

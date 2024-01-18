@@ -2,7 +2,11 @@ import { ConduitModule } from '../../classes/ConduitModule';
 import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat';
 
 export class Chat extends ConduitModule<typeof ChatDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'chat', url, grpcToken);
     this.initializeClient(ChatDefinition);
   }
@@ -16,6 +20,6 @@ export class Chat extends ConduitModule<typeof ChatDefinition> {
   }
 
   deleteRoom(id: string): Promise<Room> {
-    return this.client!.deleteRoom({ id });
+    return this.client!.deleteRoom({ _id: id });
   }
 }

@@ -27,7 +27,7 @@ import {
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isNil } from 'lodash';
+import { AuthUtils } from '../../../utils';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {
@@ -135,14 +135,18 @@ export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
     await Token.getInstance().deleteOne(stateToken);
     ConduitGrpcSdk.Metrics?.increment('logged_in_users_total');
 
-    const uri = stateToken.data.customRedirectUri;
+    const redirectUri =
+      AuthUtils.validateRedirectUri(stateToken.data.customRedirectUri) ??
+      this.settings.finalRedirect;
+    const conduitClientId = stateToken.data.clientId;
+
     return TokenProvider.getInstance()!.provideUserTokens(
       {
         user,
-        clientId,
+        clientId: conduitClientId,
         config,
       },
-      config.customRedirectUris && !isNil(uri) ? uri : this.settings.finalRedirect,
+      redirectUri,
     );
   }
 

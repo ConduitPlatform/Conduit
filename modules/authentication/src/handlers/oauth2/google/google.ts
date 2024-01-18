@@ -64,6 +64,7 @@ export class GoogleHandlers extends OAuth2<GoogleUser, OAuth2Settings> {
           expires_in: ConduitString.Optional,
           invitationToken: ConduitString.Optional,
           captchaToken: ConduitString.Optional,
+          scopes: [ConduitString.Optional],
         },
       },
       new ConduitRouteReturnDefinition('GoogleResponse', {

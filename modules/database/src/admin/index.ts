@@ -59,24 +59,26 @@ export class AdminHandlers {
       {
         path: '/schemas/export',
         action: ConduitRouteActions.GET,
-        description: `Export custom schemas.`,
+        description: `Exports CMS schemas and extensions. Only returns database-owned entries.`,
       },
       new ConduitRouteReturnDefinition('ExportSchemas', {
         schemas: [ConduitJson.Required],
+        extensions: [ConduitJson.Required],
       }),
-      this.schemaAdmin.exportCustomSchemas.bind(this.schemaAdmin),
+      this.schemaAdmin.exportSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {
         path: '/schemas/import',
         action: ConduitRouteActions.POST,
-        description: `Import custom schemas.`,
+        description: `Imports CMS schemas and extensions. Doesn't drop non-specified extensions.`,
         bodyParams: {
           schemas: { type: [TYPE.JSON], required: true },
+          extensions: { type: [TYPE.JSON], required: false },
         },
       },
       new ConduitRouteReturnDefinition('ImportSchemas', 'String'),
-      this.schemaAdmin.importCustomSchemas.bind(this.schemaAdmin),
+      this.schemaAdmin.importSchemas.bind(this.schemaAdmin),
     );
     this.routingManager.route(
       {

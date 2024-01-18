@@ -11,17 +11,21 @@ import { ValidationInterface } from '../../interfaces/ValidationInterface';
 import { ConduitRequest } from '@conduitplatform/hermes';
 
 export class ClientValidator {
-  prod = false;
   database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.database!;
-    const self = this;
-    this.grpcSdk.config.get('core').then(res => {
-      if (res.env === 'production') {
-        self.prod = true;
-      }
-    });
+  }
+
+  async isProd() {
+    const isProd = await this.grpcSdk.state?.getKey('isProd');
+    if (isNil(isProd)) {
+      const config = await ConfigController.getInstance().config;
+      const isProd = config.env === 'production';
+      await this.grpcSdk.state?.setKey('isProd', isProd ? 'true' : 'false', 5000);
+      return isProd;
+    }
+    return isProd === 'true';
   }
 
   async middleware(req: ConduitRequest, res: Response, next: NextFunction) {
@@ -38,7 +42,8 @@ export class ClientValidator {
       req.method === 'GET'
     ) {
       // disabled swagger and gql explorer access on production
-      if (this.prod) return next(ConduitError.unauthorized());
+      const isProd = await this.isProd();
+      if (isProd) return next(ConduitError.unauthorized());
       return next();
     }
 

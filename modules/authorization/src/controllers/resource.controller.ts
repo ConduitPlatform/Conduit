@@ -1,7 +1,8 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import { Relationship, ResourceDefinition } from '../models';
+import { ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { RelationsController } from './relations.controller';
+import { cloneDeep, isEqual, isNil } from 'lodash';
 
 export class ResourceController {
   private static _instance: ResourceController;
@@ -21,17 +22,24 @@ export class ResourceController {
   }
 
   //todo check permission and relation content
-  async createResource(resource: any) {
+  async createResource(
+    resource: any,
+  ): ReturnType<ResourceController['updateResourceDefinition']> {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({
       name: resource.name,
     });
     if (resourceDefinition) {
-      return await this.updateResourceDefinition(resource.name, resource);
+      return await this.updateResourceDefinition({ name: resource.name }, resource);
     }
     await this.validateResourceRelations(resource.relations, resource.name);
     await this.validateResourcePermissions(resource);
-
-    return await ResourceDefinition.getInstance().create(resource);
+    await this.indexController.reIndexResource(resource.name);
+    const res = await ResourceDefinition.getInstance().create({
+      ...resource,
+      version: 0,
+    });
+    this.grpcSdk.bus?.publish('authorization:create:resource', JSON.stringify(res));
+    return { resourceDefinition: res, status: 'processed' };
   }
 
   async validateResourceRelations(
@@ -95,64 +103,47 @@ export class ResourceController {
     return attr && Object.keys(attr).length !== 0;
   }
 
-  async updateResourceDefinition(name: string, resource: any) {
-    const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
-    if (!resourceDefinition) throw new Error('Resource not found');
-
-    if (
-      this.attributeCheck(resource.permissions) &&
-      this.attributeCheck(resourceDefinition.permissions) &&
-      resource.permissions !== resourceDefinition.permissions
-    ) {
-      await this.validateResourcePermissions(resource);
-      await this.indexController.modifyPermission(resourceDefinition, resource);
-    }
-    if (
-      this.attributeCheck(resource.relations) &&
-      this.attributeCheck(resourceDefinition.relations) &&
-      resource.relations !== resourceDefinition.relations
-    ) {
-      await this.validateResourceRelations(resource.relations, resource.name);
-      await this.indexController.modifyRelations(resourceDefinition, resource);
-    }
-    delete resource._id;
-    delete resource.name;
-    return await ResourceDefinition.getInstance().findByIdAndUpdate(
-      resourceDefinition._id,
-      resource,
-    );
-  }
-
-  async updateResourceDefinitionById(
-    id: string,
+  async updateResourceDefinition(
+    query: { _id: string } | { name: string },
     resource: any,
-  ): Promise<ResourceDefinition> {
-    const resourceDefinition = await ResourceDefinition.getInstance().findOne({
-      _id: id,
-    });
+  ): Promise<{
+    resourceDefinition: ResourceDefinition;
+    status: 'processed' | 'acknowledged' | 'ignored';
+  }> {
+    const resourceDefinition = await ResourceDefinition.getInstance().findOne(query);
     if (!resourceDefinition) throw new Error('Resource not found');
-    if (resource.permissions !== resourceDefinition.permissions) {
-      await this.validateResourcePermissions(resource);
-      await this.indexController.modifyPermission(resourceDefinition, resource);
+
+    if (isNil(resource.version) || resource.version < resourceDefinition.version) {
+      return { resourceDefinition, status: 'ignored' };
+    } else if (resource.version === resourceDefinition.version) {
+      const dbResource: Partial<ResourceDefinition> = cloneDeep(resourceDefinition);
+      delete dbResource._id;
+      delete dbResource.createdAt;
+      delete dbResource.updatedAt;
+      delete (dbResource as any).__v;
+      if (!isEqual(resource, dbResource)) {
+        throw new Error(
+          'Resource definition update failed. A divergent definition is already registered with the same version!',
+        );
+      }
+      return { resourceDefinition, status: 'acknowledged' };
     }
-    if (resource.relations !== resourceDefinition.relations) {
-      await this.validateResourceRelations(resource.relations, resource.name);
-      await this.indexController.modifyRelations(resourceDefinition, resource);
-    }
+    await this.validateResourcePermissions(resource);
+    await this.validateResourceRelations(resource.relations, resource.name);
+    await this.indexController.reIndexResource(resource.name);
     delete resource._id;
     delete resource.name;
-    return (await ResourceDefinition.getInstance().findByIdAndUpdate(
+    const res = (await ResourceDefinition.getInstance().findByIdAndUpdate(
       resourceDefinition._id,
       resource,
     ))!;
+    this.grpcSdk.bus?.publish('authorization:update:resource', JSON.stringify(res));
+    return { resourceDefinition: res, status: 'processed' };
   }
 
   async deleteResource(name: string) {
     const resourceDefinition = await ResourceDefinition.getInstance().findOne({ name });
     if (!resourceDefinition) throw new Error('Resource not found');
-    await Relationship.getInstance().deleteMany({
-      name: { $regex: `.*${resourceDefinition.name}.*`, $options: 'i' },
-    });
     await this.relationsController.removeResource(name);
     await this.indexController.removeResource(name);
     return await ResourceDefinition.getInstance().deleteOne({ name });

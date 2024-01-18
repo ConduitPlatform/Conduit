@@ -24,7 +24,7 @@ import * as middleware from './middleware';
 import * as adminRoutes from './routes';
 import * as models from './models';
 import { AdminMiddleware } from './models';
-import { protoTemplate, getSwaggerMetadata } from './hermes';
+import { getSwaggerMetadata } from './hermes';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -33,7 +33,6 @@ import {
   ConduitRoutingController,
   ConduitSocket,
   grpcToConduitRoute,
-  ProtoGenerator,
   ProxyRoute,
   ProxyRouteT,
   proxyToConduitRoute,
@@ -78,10 +77,12 @@ export default class AdminModule extends IConduitAdmin {
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
 
-  constructor(readonly commons: ConduitCommons, grpcSdk: ConduitGrpcSdk) {
+  constructor(
+    readonly commons: ConduitCommons,
+    grpcSdk: ConduitGrpcSdk,
+  ) {
     super(commons);
     this.grpcSdk = grpcSdk;
-    ProtoGenerator.getInstance(protoTemplate);
     this._router = new ConduitRoutingController(
       this.getHttpPort()!,
       this.getSocketPort()!,
@@ -110,12 +111,7 @@ export default class AdminModule extends IConduitAdmin {
         patchRouteMiddlewares: this.patchRouteMiddlewares.bind(this),
       },
     );
-    this.grpcSdk
-      .waitForExistence('database')
-      .then(this.handleDatabase.bind(this))
-      .catch(e => {
-        ConduitGrpcSdk.Logger.error(e.message);
-      });
+    this.grpcSdk.waitForExistence('database').then(this.handleDatabase.bind(this));
   }
 
   async subscribeToBusEvents() {
@@ -358,7 +354,7 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private async highAvailability() {
-    const r = await this.grpcSdk.state!.getKey('admin');
+    const r = await this.grpcSdk.state!.getState();
     const proxyRoutes = await models.AdminProxyRoute.getInstance().findMany({});
     if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) {
       this.cleanupRoutes();
@@ -430,10 +426,9 @@ export default class AdminModule extends IConduitAdmin {
     url: string,
     moduleName?: string,
   ) {
-    this.grpcSdk
-      .state!.getKey('admin')
-      .then(r => {
-        const state = !r || r.length === 0 ? {} : JSON.parse(r);
+    this.grpcSdk.state
+      ?.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
         if (!state.routes) state.routes = [];
         let index;
         (state.routes as Indexable[]).forEach((val, i) => {
@@ -450,7 +445,7 @@ export default class AdminModule extends IConduitAdmin {
             moduleName,
           });
         }
-        return this.grpcSdk.state!.setKey('admin', JSON.stringify(state));
+        return state;
       })
       .then(() => {
         this.publishAdminRouteData(routes, url, moduleName);

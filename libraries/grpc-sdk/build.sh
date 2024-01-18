@@ -13,6 +13,7 @@ protoc \
   --ts_proto_opt=esModuleInterop=true \
   --ts_proto_opt=outputServices=generic-definitions,exportCommonSymbols=false,useExactTypes=false \
   --ts_proto_out=./ \
+  --ts_proto_opt=snakeToCamel=false \
   ./*.proto
 
 # Initialize the content of the index.ts file

@@ -10,7 +10,11 @@ import {
 } from '../../protoUtils';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
-  constructor(private readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    private readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'authentication', url, grpcToken);
     this.initializeClient(AuthenticationDefinition);
   }
@@ -45,6 +49,14 @@ export class Authentication extends ConduitModule<typeof AuthenticationDefinitio
 
   teamDelete(teamId: string): Promise<TeamDeleteResponse> {
     return this.client!.teamDelete({ teamId });
+  }
+
+  addTeamMembers(teamId: string, memberIds: string[]) {
+    return this.client!.addTeamMembers({ teamId, memberIds });
+  }
+
+  removeTeamMembers(teamId: string, memberIds: string[]) {
+    return this.client!.removeTeamMembers({ teamId, memberIds });
   }
 
   validateAccessToken(

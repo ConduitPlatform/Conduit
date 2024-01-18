@@ -39,7 +39,7 @@ export class Team extends ConduitActiveSchema<Team> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, Team.name, schema, modelOptions, collectionName);
   }
 

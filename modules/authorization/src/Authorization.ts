@@ -23,12 +23,15 @@ import {
   Resource_Permission,
   Resource_Relation,
   ResourceAccessListRequest,
+  ResourceModificationAcknowledgement,
+  ResourceModificationAcknowledgement_Status,
 } from './protoTypes/authorization';
 import {
   IndexController,
   PermissionsController,
   RelationsController,
   ResourceController,
+  QueueController,
 } from './controllers';
 import { AdminHandlers } from './admin';
 import { status } from '@grpc/grpc-js';
@@ -65,6 +68,7 @@ export default class Authorization extends ManagedModule<Config> {
   private relationsController: RelationsController;
   private resourceController: ResourceController;
   private database: DatabaseProvider;
+  private queueController: QueueController;
 
   constructor() {
     super('authorization');
@@ -83,12 +87,10 @@ export default class Authorization extends ManagedModule<Config> {
     } else {
       await this.registerSchemas();
       await runMigrations(this.grpcSdk);
+      this.queueController = QueueController.getInstance(this.grpcSdk);
+      this.queueController.addRelationIndexWorker();
       this.indexController = IndexController.getInstance(this.grpcSdk);
-      this.relationsController = RelationsController.getInstance(
-        this.grpcSdk,
-        this.indexController,
-      );
-      this.indexController.relationsController = this.relationsController;
+      this.relationsController = RelationsController.getInstance(this.grpcSdk);
       this.permissionsController = PermissionsController.getInstance(this.grpcSdk);
       this.resourceController = ResourceController.getInstance(this.grpcSdk);
       this.adminRouter = new AdminHandlers(this.grpcServer, this.grpcSdk);
@@ -97,19 +99,42 @@ export default class Authorization extends ManagedModule<Config> {
     }
   }
 
-  async defineResource(call: GrpcRequest<Resource>, callback: GrpcResponse<null>) {
-    const { name, relations, permissions } = call.request;
-    const resource = this.createResourceObject(name, relations, permissions);
-    await this.resourceController.createResource(resource);
+  async defineResource(
+    call: GrpcRequest<Resource>,
+    callback: GrpcResponse<ResourceModificationAcknowledgement>,
+  ) {
+    const { name, relations, permissions, version } = call.request;
+    const resource = this.createResourceObject(name, relations, permissions, version);
+    const res = await this.resourceController.createResource(resource);
     ConduitGrpcSdk.Logger.info(`Resource ${name} created`);
-    callback(null, null);
+    callback(null, {
+      status:
+        res.status === 'processed'
+          ? ResourceModificationAcknowledgement_Status.PROCESSED
+          : res.status === 'acknowledged'
+          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+          : ResourceModificationAcknowledgement_Status.IGNORED,
+    });
   }
 
-  async updateResource(call: GrpcRequest<Resource>, callback: GrpcResponse<Empty>) {
-    const { name, relations, permissions } = call.request;
-    const resource = this.createResourceObject(name, relations, permissions);
-    await this.resourceController.updateResourceDefinition(resource.name, resource);
-    callback(null, undefined);
+  async updateResource(
+    call: GrpcRequest<Resource>,
+    callback: GrpcResponse<ResourceModificationAcknowledgement>,
+  ) {
+    const { name, relations, permissions, version } = call.request;
+    const resource = this.createResourceObject(name, relations, permissions, version);
+    const res = await this.resourceController.updateResourceDefinition(
+      { name: resource.name },
+      resource,
+    );
+    callback(null, {
+      status:
+        res.status === 'processed'
+          ? ResourceModificationAcknowledgement_Status.PROCESSED
+          : res.status === 'acknowledged'
+          ? ResourceModificationAcknowledgement_Status.ACKNOWLEDGED
+          : ResourceModificationAcknowledgement_Status.IGNORED,
+    });
   }
 
   async deleteResource(
@@ -244,13 +269,16 @@ export default class Authorization extends ManagedModule<Config> {
     name: string,
     relations: Resource_Relation[],
     permissions: Resource_Permission[],
+    version?: number,
   ) {
     const resource: {
       name: string;
       relations?: { [key: string]: string | string[] };
       permissions?: { [key: string]: string | string[] };
+      version?: number;
     } = {
       name,
+      version,
     };
     resource.relations = {};
     relations.forEach(relation => {

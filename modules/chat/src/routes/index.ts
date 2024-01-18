@@ -12,10 +12,11 @@ import ConduitGrpcSdk, {
 import {
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatMessage, ChatRoom, User } from '../models';
+import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils';
@@ -68,16 +69,12 @@ export class ChatRoutes {
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
-    const roomExists = await ChatRoom.getInstance()
-      .findOne({ name: roomName })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
-    if (!isNil(roomExists)) {
-      throw new GrpcError(status.ALREADY_EXISTS, `Room ${roomName} already exists`);
-    }
-    let room;
-    const query: Query<ChatRoom> = { name: roomName, participants: [user._id] };
+    let room: ChatRoom;
+    const query: Query<ChatRoom> = {
+      name: roomName,
+      creator: user._id,
+      participants: [user._id],
+    };
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
       room = await ChatRoom.getInstance()
@@ -85,6 +82,14 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      const participantsLog = await ChatParticipantsLog.getInstance().create({
+        user: user._id,
+        action: 'create',
+        chatRoom: room._id,
+      });
+      room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+        participantsLog: [participantsLog._id],
+      })) as ChatRoom;
       const serverConfig = await this.grpcSdk.config.get('router');
       await sendInvitations(
         usersToBeAdded,
@@ -104,10 +109,25 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany([
+        {
+          user: user._id,
+          action: 'create',
+          chatRoom: room._id,
+        },
+        ...users.map((userId: string) => ({
+          user: userId,
+          action: 'join' as 'join',
+          chatRoom: room._id,
+        })),
+      ]);
+      room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+        participantsLog: participantsLog.map(log => log._id),
+      })) as ChatRoom;
     }
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
-      JSON.stringify({ name: roomName, participants: room.participants }),
+      JSON.stringify({ _id: room._id, name: roomName, participants: room.participants }),
     );
     return { roomId: room._id };
   }
@@ -128,6 +148,9 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       },
     );
+    if (room.deleted) {
+      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+    }
     try {
       usersToBeAdded = await validateUsersInput(this.grpcSdk, users);
     } catch (e) {
@@ -158,9 +181,20 @@ export class ChatRoutes {
       });
       return ret!;
     } else {
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany(
+        users.map((userId: string) => ({
+          user: userId,
+          action: 'join' as 'join',
+          chatRoom: room._id,
+        })),
+      );
       await ChatRoom.getInstance()
         .findByIdAndUpdate(room._id, {
           participants: Array.from(new Set([...room.participants, ...users])),
+          participantsLog: [
+            ...room.participantsLog,
+            ...participantsLog.map(log => log._id),
+          ],
         })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
@@ -179,17 +213,47 @@ export class ChatRoutes {
         throw new GrpcError(status.INTERNAL, e.message);
       },
     );
+    if (room.deleted) {
+      throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+    }
 
     const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
-      await ChatRoom.getInstance()
-        .findByIdAndUpdate(room._id, room)
-        .catch((e: Error) => {
-          throw new GrpcError(status.INTERNAL, e.message);
-        });
-    }
+      const participantsLog = await ChatParticipantsLog.getInstance().create({
+        user: user._id,
+        action: 'leave' as 'leave',
+        chatRoom: room._id,
+      });
 
+      room.participantsLog.push(participantsLog);
+      if (
+        (room.participants.length === 1 &&
+          ConfigController.getInstance().config.deleteEmptyRooms) ||
+        room.participants.length === 0
+      ) {
+        if (ConfigController.getInstance().config.auditMode) {
+          await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+            ...room,
+            deleted: true,
+          });
+          await ChatMessage.getInstance().updateMany(
+            { room: room._id },
+            { deleted: true },
+          );
+        } else {
+          await ChatRoom.getInstance().deleteOne({ _id: room._id });
+          await ChatMessage.getInstance().deleteMany({ room: room._id });
+        }
+        this.grpcSdk.bus?.publish('chat:deleteRoom:ChatRoom', JSON.stringify({ roomId }));
+      } else {
+        await ChatRoom.getInstance()
+          .findByIdAndUpdate(room._id, room)
+          .catch((e: Error) => {
+            throw new GrpcError(status.INTERNAL, e.message);
+          });
+      }
+    }
     this.grpcSdk.bus?.publish(
       'chat:leaveRoom:ChatRoom',
       JSON.stringify({ roomId, user: user._id }),
@@ -205,11 +269,14 @@ export class ChatRoutes {
     let countPromise;
     if (isNil(roomId)) {
       const rooms = await ChatRoom.getInstance()
-        .findMany({ participants: user._id })
+        .findMany({ participants: user._id, deleted: false })
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      const query = { room: { $in: rooms.map((room: ChatRoom) => room._id) } };
+      const query = {
+        room: { $in: rooms.map((room: ChatRoom) => room._id) },
+        deleted: false,
+      };
       messagesPromise = ChatMessage.getInstance().findMany(
         query,
         undefined,
@@ -219,13 +286,19 @@ export class ChatRoutes {
       );
       countPromise = ChatMessage.getInstance().countDocuments(query);
     } else {
-      await this.fetchAndValidateRoomById(roomId, user._id).catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+      const room = await this.fetchAndValidateRoomById(roomId, user._id).catch(
+        (e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        },
+      );
+      if (room.deleted) {
+        throw new GrpcError(status.NOT_FOUND, "Room doesn't exist");
+      }
       messagesPromise = ChatMessage.getInstance()
         .findMany(
           {
             room: roomId,
+            deleted: false,
           },
           undefined,
           skip,
@@ -235,7 +308,10 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
-      countPromise = ChatMessage.getInstance().countDocuments({ room: roomId });
+      countPromise = ChatMessage.getInstance().countDocuments({
+        room: roomId,
+        deleted: false,
+      });
     }
 
     const [messages, count] = await Promise.all([messagesPromise, countPromise]).catch(
@@ -250,7 +326,7 @@ export class ChatRoutes {
     const { id } = call.request.params;
     const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
-      .findOne({ _id: id }, undefined, ['room'])
+      .findOne({ _id: id, deleted: false }, undefined, ['room'])
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -267,12 +343,19 @@ export class ChatRoutes {
     const { skip, limit, populate } = call.request.params;
     const { user } = call.request.context;
     const rooms = await ChatRoom.getInstance()
-      .findMany({ participants: user._id }, undefined, skip, limit, undefined, populate)
+      .findMany(
+        { participants: user._id, deleted: false },
+        undefined,
+        skip,
+        limit,
+        undefined,
+        populate,
+      )
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
     const roomsCount = await ChatRoom.getInstance()
-      .countDocuments({ participants: user._id })
+      .countDocuments({ participants: user._id, deleted: false })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -283,7 +366,7 @@ export class ChatRoutes {
     const { id, populate } = call.request.params;
     const { user } = call.request.context;
     const room = await ChatRoom.getInstance()
-      .findOne({ _id: id, participants: user._id }, undefined, populate)
+      .findOne({ _id: id, participants: user._id, deleted: false }, undefined, populate)
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -300,7 +383,7 @@ export class ChatRoutes {
     const { messageId } = call.request.params;
     const { user } = call.request.context;
     const message = await ChatMessage.getInstance()
-      .findOne({ _id: messageId })
+      .findOne({ _id: messageId, deleted: false })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -310,11 +393,20 @@ export class ChatRoutes {
         "Message does not exist or you don't have access",
       );
     }
-    await ChatMessage.getInstance()
-      .deleteOne({ _id: messageId })
-      .catch((e: Error) => {
-        throw new GrpcError(status.INTERNAL, e.message);
-      });
+    if (ConfigController.getInstance().config.auditMode) {
+      await ChatMessage.getInstance()
+        .findByIdAndUpdate(messageId, { deleted: true })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    } else {
+      await ChatMessage.getInstance()
+        .deleteOne({ _id: messageId })
+        .catch((e: Error) => {
+          throw new GrpcError(status.INTERNAL, e.message);
+        });
+    }
+
     this.grpcSdk.bus?.publish('chat:delete:ChatMessage', JSON.stringify(messageId));
     return 'Message deleted successfully';
   }
@@ -323,7 +415,7 @@ export class ChatRoutes {
     const { messageId, newMessage } = call.request.params;
     const { user } = call.request.context;
     const message: ChatMessage | null = await ChatMessage.getInstance()
-      .findOne({ _id: messageId })
+      .findOne({ _id: messageId, deleted: false })
       .catch((e: Error) => {
         throw new GrpcError(status.INTERNAL, e.message);
       });
@@ -355,7 +447,7 @@ export class ChatRoutes {
   async onMessage(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const { user } = call.request.context;
     const [roomId, message] = call.request.params;
-    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId, deleted: false });
 
     if (isNil(room) || !room.participants.includes(user._id)) {
       throw new GrpcError(
@@ -381,7 +473,7 @@ export class ChatRoutes {
   async onMessagesRead(call: ParsedSocketRequest): Promise<UnparsedSocketResponse> {
     const user: User = call.request.context.user;
     const [roomId] = call.request.params;
-    const room = await ChatRoom.getInstance().findOne({ _id: roomId });
+    const room = await ChatRoom.getInstance().findOne({ _id: roomId, deleted: false });
     if (isNil(room) || !(room.participants as string[]).includes(user._id)) {
       throw new GrpcError(
         status.INVALID_ARGUMENT,

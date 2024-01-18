@@ -2,6 +2,159 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.2...v0.16.0-rc.3) (2024-01-18)
+
+
+### Features
+
+* **core:** better logging for module state updates ([44599ef](https://github.com/ConduitPlatform/Conduit/commit/44599ef69514fbbdfb3ff6631bac21249a686451))
+
+
+### Bug Fixes
+
+* **authorization:** missing relation size check in reindex ([41e7d2d](https://github.com/ConduitPlatform/Conduit/commit/41e7d2dbc06fe9d4331e5d0791522e8679cd0281))
+
+## [0.16.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.1...v0.16.0-rc.2) (2024-01-18)
+
+
+### Features
+
+* **authentication:** Add/RemoveTeamMembers gRPC rpcs ([#885](https://github.com/ConduitPlatform/Conduit/issues/885)) ([9bbd18d](https://github.com/ConduitPlatform/Conduit/commit/9bbd18d35f8b0c6a2ca519c4f9e76acd0b36d172))
+
+
+### Bug Fixes
+
+* add catch at createView() ([#890](https://github.com/ConduitPlatform/Conduit/issues/890)) ([17f97e5](https://github.com/ConduitPlatform/Conduit/commit/17f97e5bc9829bce04af3bfb034730fb2f152cd3))
+* **authentication:** add/removeTeamMember rpc field mapping ([#894](https://github.com/ConduitPlatform/Conduit/issues/894)) ([c4d9ce3](https://github.com/ConduitPlatform/Conduit/commit/c4d9ce3883700e9c2873ac2579238d1d2501ee27))
+* **authentication:** apple strategy using provider ([8f379b6](https://github.com/ConduitPlatform/Conduit/commit/8f379b6be57ad609946af439abca0e74a64e7acd))
+* **authentication:** facebook and google native login missing scopes ([#887](https://github.com/ConduitPlatform/Conduit/issues/887)) ([470798e](https://github.com/ConduitPlatform/Conduit/commit/470798e47b919be331417811ad619c23bf991987))
+* **database:** high-availability issues especially on SQL dbs ([#899](https://github.com/ConduitPlatform/Conduit/issues/899)) ([db7c1f8](https://github.com/ConduitPlatform/Conduit/commit/db7c1f8ee16c32f0de5af68afbfc7a0afa68464c))
+* group field custom endpoints query bug ([#893](https://github.com/ConduitPlatform/Conduit/issues/893)) ([73be8c5](https://github.com/ConduitPlatform/Conduit/commit/73be8c510f1310d30d6749ce27b876045b429adc))
+
+## [0.16.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.0...v0.16.0-rc.1) (2024-01-10)
+
+
+### Features
+
+* **authentication:** redirectUri overrides expansion ([#884](https://github.com/ConduitPlatform/Conduit/issues/884)) ([2ab2eb3](https://github.com/ConduitPlatform/Conduit/commit/2ab2eb3f9c5de07453666e6d835f63e440044616))
+* **authentication:** rm oldPassword body param from /local/change-password ([#863](https://github.com/ConduitPlatform/Conduit/issues/863)) ([75c7f4f](https://github.com/ConduitPlatform/Conduit/commit/75c7f4fec8a935bd46c5eac6be5e7cef7ad4dab5))
+* **authorization:** ResourceDefinition versioning, bus event pub fixes, admin API res signature fixes ([#881](https://github.com/ConduitPlatform/Conduit/issues/881)) ([30c2c86](https://github.com/ConduitPlatform/Conduit/commit/30c2c863322f6b5bc40b2c148125258dcaf7e26e))
+
+
+### Bug Fixes
+
+* **authentication:** OAuth provider redirect URIs containing double query question marks ([#855](https://github.com/ConduitPlatform/Conduit/issues/855)) ([6ce4173](https://github.com/ConduitPlatform/Conduit/commit/6ce4173530d110ae877e19ef7c72abe06c375501))
+* **authorization:** jobs not being processed correctly ([#841](https://github.com/ConduitPlatform/Conduit/issues/841)) ([80f4e64](https://github.com/ConduitPlatform/Conduit/commit/80f4e645a8a482a267a627db3a03fc685be7092d))
+* **core:** missing check for double removal of unresponsive module ([#850](https://github.com/ConduitPlatform/Conduit/issues/850)) ([74ba6d5](https://github.com/ConduitPlatform/Conduit/commit/74ba6d5db0541f606074d16929343bde0ee7ab4b))
+* **email:** wrong object access in email config ([d2c957e](https://github.com/ConduitPlatform/Conduit/commit/d2c957eecc8c18798daecf9cbd10e3739b70e631))
+* **grpc-sdk:** health check middleware injection ([#851](https://github.com/ConduitPlatform/Conduit/issues/851)) ([cb27906](https://github.com/ConduitPlatform/Conduit/commit/cb279068c6408b36339b381c837e8de7cca7e83a))
+* **grpc-sdk:** module connection not re-established after core shutdown ([#858](https://github.com/ConduitPlatform/Conduit/issues/858)) ([b7ce4b5](https://github.com/ConduitPlatform/Conduit/commit/b7ce4b59a6f7df438b37ecf652c92aa219d3bf48))
+* modules/authentication/package.json to reduce vulnerabilities ([#867](https://github.com/ConduitPlatform/Conduit/issues/867)) ([99ed9d0](https://github.com/ConduitPlatform/Conduit/commit/99ed9d008f44c42ebfcb1df6853df36e1da21102))
+* modules/router/package.json to reduce vulnerabilities ([#868](https://github.com/ConduitPlatform/Conduit/issues/868)) ([9b2c31c](https://github.com/ConduitPlatform/Conduit/commit/9b2c31c5e5e06b8419e0b51aedd493226a3b041f))
+
+## [0.16.0-rc.0](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.29...v0.16.0-rc.0) (2023-12-01)
+
+
+### Features
+
+* **authorization:** Queue controller, construct indexes job ([#807](https://github.com/ConduitPlatform/Conduit/issues/807)) ([68bac6c](https://github.com/ConduitPlatform/Conduit/commit/68bac6cf5aab0dc1bf040618fb4b304af965752b))
+* **database:** add import/export extensions logic to existing endpoints ([#683](https://github.com/ConduitPlatform/Conduit/issues/683)) ([22c1e10](https://github.com/ConduitPlatform/Conduit/commit/22c1e100dede37541a36af609dc9f3e99068a9dc))
+
+
+### Bug Fixes
+
+* **authentication:** unconditional team admin endpoint registration ([#800](https://github.com/ConduitPlatform/Conduit/issues/800)) ([f21b166](https://github.com/ConduitPlatform/Conduit/commit/f21b1665c037d083b5acbf53a17d502b1a0b4cfd))
+* **authorization:** createView() sql queries failing due to unpreserved camel case olumn names ([#822](https://github.com/ConduitPlatform/Conduit/issues/822)) ([3286eec](https://github.com/ConduitPlatform/Conduit/commit/3286eec18d2520e9347bcb10ee50a230b7816386))
+* **database:** findOne() null query filters ([#806](https://github.com/ConduitPlatform/Conduit/issues/806)) ([5ba4e74](https://github.com/ConduitPlatform/Conduit/commit/5ba4e748073f355b00d0a013cbf953148813e62d)), closes [#805](https://github.com/ConduitPlatform/Conduit/issues/805)
+* **database:** gRPC findMany() empty sort handling ([#810](https://github.com/ConduitPlatform/Conduit/issues/810)) ([3b8ae1f](https://github.com/ConduitPlatform/Conduit/commit/3b8ae1f1d1e9be7b8e16d1a836eedc4dd883906a))
+* **database:** sql createSchemaFromAdapter() drop views on schema view exists constraint ([#823](https://github.com/ConduitPlatform/Conduit/issues/823)) ([1d3f808](https://github.com/ConduitPlatform/Conduit/commit/1d3f80819dfdc415e7ce4ec970d05692ffef6383))
+* missed null parsedQuery case ([#805](https://github.com/ConduitPlatform/Conduit/issues/805)) ([21628e0](https://github.com/ConduitPlatform/Conduit/commit/21628e0d714b23e2c9f382a4da5e8c139911df59))
+* **module-tools:** error message parsing from unexpected/unhandled errors ([#824](https://github.com/ConduitPlatform/Conduit/issues/824)) ([7cb3e8c](https://github.com/ConduitPlatform/Conduit/commit/7cb3e8c175f0cc78b61cee8abe95c933e8b5a7d5))
+* **module-tools:** module name not correctly converted for subscriptions ([#819](https://github.com/ConduitPlatform/Conduit/issues/819)) ([5898a8f](https://github.com/ConduitPlatform/Conduit/commit/5898a8f244e800f1eae025f899c398a46ac8ea28))
+* **router:** route Swagger doc missing non-global security headers ([#818](https://github.com/ConduitPlatform/Conduit/issues/818)) ([23a425c](https://github.com/ConduitPlatform/Conduit/commit/23a425caefd5c1b8f54103744df388b5e41a1949))
+
+## [0.16.0-alpha.29](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.28...v0.16.0-alpha.29) (2023-11-16)
+
+
+### Features
+
+* **chat:** introduce auditMode, room deletions on leave and remove unique name requirement from rooms ([#794](https://github.com/ConduitPlatform/Conduit/issues/794)) ([1fc4484](https://github.com/ConduitPlatform/Conduit/commit/1fc4484124eff8de5ecfc02b5a12c1691383dc99))
+
+
+### Bug Fixes
+
+* **chat:** wrong migration query ([b02721e](https://github.com/ConduitPlatform/Conduit/commit/b02721e20308f3f21ab53cd1091f990231c935bf))
+* **chat:** wrong migration query ([d777ee8](https://github.com/ConduitPlatform/Conduit/commit/d777ee82b43235ef811c6df0b1dabbd55a6489b0))
+* **chat:** wrong migration query ([21d2e49](https://github.com/ConduitPlatform/Conduit/commit/21d2e49d1410e592fe9a91342e82624ca7fa9bb4))
+* **database:** custom endpoint date casting conflict with mongoose casts ([#795](https://github.com/ConduitPlatform/Conduit/issues/795)) ([5c2425c](https://github.com/ConduitPlatform/Conduit/commit/5c2425c7fd760d3ad4d8fb08a3eb03a9075c4783))
+* **storage:** authorization checks not consistent with db permissions ([2202583](https://github.com/ConduitPlatform/Conduit/commit/22025832de11e6c410f0d985c4e6b40fcab7a567))
+
+## [0.16.0-alpha.28](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.28) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
+## [0.16.0-alpha.27](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.26...v0.16.0-alpha.27) (2023-11-14)
+
+
+### Bug Fixes
+
+* **authorization:** migration wrong iterator ([2a28d08](https://github.com/ConduitPlatform/Conduit/commit/2a28d081acf53ebfa8f1c62d0358ed49f68c22d2))
+* **authorization:** migrations not checking for missing fields properly ([b49949e](https://github.com/ConduitPlatform/Conduit/commit/b49949e658fefb43f5d7c7bbadf66bcf837b5e39))
+* **authorization:** missing subject/resource id in create relation ([1481f6e](https://github.com/ConduitPlatform/Conduit/commit/1481f6e1beb6f26d85cd4b5ad10b161e484cf38d))
+* **authorization:** wrong operator on matching pipeline ([930657d](https://github.com/ConduitPlatform/Conduit/commit/930657ded00732d66bf4776456b1fbcd5e92a2ed))
+
+## [0.16.0-alpha.26](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.25...v0.16.0-alpha.26) (2023-11-09)
+
+
+### Bug Fixes
+
+* **authentication:** admin team name change not checking name availability ([#786](https://github.com/ConduitPlatform/Conduit/issues/786)) ([c526a34](https://github.com/ConduitPlatform/Conduit/commit/c526a34da963f663bd6429374df827d95136560e))
+* **authentication:** error log not showing properly ([460904b](https://github.com/ConduitPlatform/Conduit/commit/460904bb964ceb972c64cd0ccbe098036c721424))
+
+## [0.16.0-alpha.25](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.24...v0.16.0-alpha.25) (2023-11-01)
+
+
+### Bug Fixes
+
+* **authentication:** not logging authn errors properly in oAuth2 ([68993af](https://github.com/ConduitPlatform/Conduit/commit/68993afa9c64130ce183dcfb4752f43c7cbdffef))
+* **hermes:** cumulative middleware context ([#771](https://github.com/ConduitPlatform/Conduit/issues/771)) ([65dbfac](https://github.com/ConduitPlatform/Conduit/commit/65dbfac5376b2f22c5dc2318637e2437bdeb86db))
+* model controller class constructor visibility ([#781](https://github.com/ConduitPlatform/Conduit/issues/781)) ([0cfe373](https://github.com/ConduitPlatform/Conduit/commit/0cfe3734b43865010ec3acc5ec564adca8ca23ba))
+
+## [0.16.0-alpha.24](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.23...v0.16.0-alpha.24) (2023-10-26)
+
+
+### Features
+
+* **chat:** add config to delete rooms when participants have left ([#764](https://github.com/ConduitPlatform/Conduit/issues/764)) ([1f7d31f](https://github.com/ConduitPlatform/Conduit/commit/1f7d31fa7a640426a1edb9ae05f3cc1750d410d0))
+
+
+### Bug Fixes
+
+* ts-proto snake_case to camelCase, Chat.gRPC.createRoom() empty id res field ([#770](https://github.com/ConduitPlatform/Conduit/issues/770)) ([510b2be](https://github.com/ConduitPlatform/Conduit/commit/510b2be597e44bb848f374c138c20b224f983211))
+
+## [0.16.0-alpha.23](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.22...v0.16.0-alpha.23) (2023-10-24)
+
+
+### Features
+
+* **authentication,grpc-sdk:** ValidateAccessToken gRPC method ([#729](https://github.com/ConduitPlatform/Conduit/issues/729)) ([8733eea](https://github.com/ConduitPlatform/Conduit/commit/8733eea2903633e060971daf2f7593a000c3c771))
+* **authentication:** configurable magicLink dispatch URI, magic token consumption endpoint ([#722](https://github.com/ConduitPlatform/Conduit/issues/722)) ([64d4714](https://github.com/ConduitPlatform/Conduit/commit/64d47142a0d534c24b4b72022a29e26ee572a1a5))
+* **router:** request rate limit configuration ([#760](https://github.com/ConduitPlatform/Conduit/issues/760)) ([5629cb3](https://github.com/ConduitPlatform/Conduit/commit/5629cb3736a182b220a2b840b4819793242af3e0))
+
+
+### Bug Fixes
+
+* **authentication:** sendMagicLink missing redirectUri, magic link hook invalid redirectUri param type ([#716](https://github.com/ConduitPlatform/Conduit/issues/716)) ([911d795](https://github.com/ConduitPlatform/Conduit/commit/911d795f6477ed549dd2882f2f371a88fa5bcf05))
+* **grpc-sdk:** push notifications responses type mismatch ([#731](https://github.com/ConduitPlatform/Conduit/issues/731)) ([2b981c5](https://github.com/ConduitPlatform/Conduit/commit/2b981c5230701d094f6b9f21e84769fc76a10b92))
+* **hermes,router,admin:** Swagger missing optional authMiddleware headers, conditional security client headers ([#728](https://github.com/ConduitPlatform/Conduit/issues/728)) ([0e074c0](https://github.com/ConduitPlatform/Conduit/commit/0e074c0dc97db6375c7d9cc276b2e011f2c8a00b))
+* **router:** disable rate limiter for sockets due to IP not being available ([#730](https://github.com/ConduitPlatform/Conduit/issues/730)) ([8d7c0d9](https://github.com/ConduitPlatform/Conduit/commit/8d7c0d90bee1c464eb37c46a3e242b85e5b0a1aa))
+
 ## [0.16.0-alpha.22](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-alpha.21...v0.16.0-alpha.22) (2023-10-09)
 
 

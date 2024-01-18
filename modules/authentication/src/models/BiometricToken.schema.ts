@@ -37,7 +37,7 @@ export class BiometricToken extends ConduitActiveSchema<BiometricToken> {
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, BiometricToken.name, schema, modelOptions, collectionName);
   }
 

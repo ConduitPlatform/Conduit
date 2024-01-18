@@ -5,7 +5,7 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import AppConfigSchema, { Config } from './config';
 import { AdminHandlers } from './admin';
@@ -27,10 +27,12 @@ import {
   GetTeamRequest,
   CreateTeamRequest,
   Team as GrpcTeam,
+  ModifyTeamMembersRequest,
   ValidateAccessTokenRequest,
   ValidateAccessTokenResponse,
   ValidateAccessTokenResponse_Status,
 } from './protoTypes/authentication';
+import { Empty } from './protoTypes/google/protobuf/empty';
 import { runMigrations } from './migrations';
 import metricsSchema from './metrics';
 import { TokenProvider } from './handlers/tokenProvider';
@@ -59,6 +61,8 @@ export default class Authentication extends ManagedModule<Config> {
       createTeam: this.createTeam.bind(this),
       teamDelete: this.teamDelete.bind(this),
       validateAccessToken: this.validateAccessToken.bind(this),
+      addTeamMembers: this.addTeamMembers.bind(this),
+      removeTeamMembers: this.removeTeamMembers.bind(this),
     },
   };
   protected metricsSchema = metricsSchema;
@@ -135,6 +139,11 @@ export default class Authentication extends ManagedModule<Config> {
 
   async onConfig() {
     const config = ConfigController.getInstance().config;
+    if (config.redirectUris.allowAny && process.env.NODE_ENV === 'production') {
+      ConduitGrpcSdk.Logger.warn(
+        `Config option redirectUris.allowAny shouldn't be used in production!`,
+      );
+    }
     if (!config.active) {
       this.destroyMonitors();
       this.updateHealth(HealthCheckStatus.NOT_SERVING);
@@ -376,6 +385,56 @@ export default class Authentication extends ManagedModule<Config> {
       return callback({ code: status.INTERNAL, message: (e as Error).message });
     });
     return callback(null, { message: result as string });
+  }
+
+  async addTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).addTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
+  }
+
+  async removeTeamMembers(
+    call: GrpcRequest<ModifyTeamMembersRequest>,
+    callback: GrpcCallback<Empty>,
+  ) {
+    const teamId = call.request.teamId;
+    if (isEmpty(teamId)) {
+      return callback({
+        code: status.INVALID_ARGUMENT,
+        message: 'teamId must be a valid Team ID!',
+      });
+    }
+    const urlParams = { teamId };
+    const bodyParams = { members: call.request.memberIds };
+    const request = createParsedRouterRequest(
+      { ...urlParams, ...bodyParams },
+      urlParams,
+      undefined,
+      bodyParams,
+    );
+    await new TeamsAdmin(this.grpcSdk).removeTeamMembers(request).catch(e => {
+      return callback({ code: status.INTERNAL, message: (e as Error).message });
+    });
+    return callback(null, {});
   }
 
   async validateAccessToken(

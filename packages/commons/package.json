@@ -18,7 +18,7 @@
     "@conduitplatform/grpc-sdk": "*",
     "@conduitplatform/module-tools": "*",
     "@conduitplatform/hermes": "*",
-    "@grpc/grpc-js": "^1.9.5"
+    "@grpc/grpc-js": "^1.9.7"
   },
   "directories": {
     "lib": "src"
@@ -32,13 +32,12 @@
     "directory": "packages/commons"
   },
   "devDependencies": {
-    "@types/convict": "^6.1.1",
+    "@types/convict": "^6.1.6",
     "@types/express": "~4.17.17",
-    "@types/ioredis": "^5.0.0",
-    "@types/is-natural-number": "^4.0.2",
-    "@types/lodash": "^4.14.199",
-    "@types/node": "18.15.11",
-    "@types/validator": "^13.11.2",
+    "@types/is-natural-number": "^4.0.4",
+    "@types/lodash": "^4.14.200",
+    "@types/node": "20.10.3",
+    "@types/validator": "^13.11.5",
     "express": "~4.18.2",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",

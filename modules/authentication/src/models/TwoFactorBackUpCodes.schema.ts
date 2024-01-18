@@ -35,7 +35,7 @@ export class TwoFactorBackUpCodes extends ConduitActiveSchema<TwoFactorBackUpCod
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, TwoFactorBackUpCodes.name, schema, modelOptions, collectionName);
   }
 

@@ -7,6 +7,7 @@ import {
   ConduitBoolean,
   ConduitNumber,
   ConduitString,
+  ConfigController,
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
@@ -14,6 +15,7 @@ import { UserAdmin } from './user';
 import { ServiceAdmin } from './service';
 import { TeamsAdmin } from './team';
 import { Service, User } from '../models';
+import { Config } from '../config';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;
@@ -211,8 +213,17 @@ export class AdminHandlers {
       }),
       this.serviceAdmin.renewToken.bind(this.serviceAdmin),
     );
-    await this.teamsAdmin.declareRoutes(this.routingManager);
 
-    this.routingManager.registerRoutes();
+    const config: Config = ConfigController.getInstance().config;
+    const teamsActivated =
+      config.teams.enabled && this.grpcSdk.isAvailable('authorization');
+    if (teamsActivated) {
+      this.teamsAdmin.declareRoutes(this.routingManager);
+    }
+
+    return this.routingManager.registerRoutes().catch((err: Error) => {
+      ConduitGrpcSdk.Logger.error('Failed to register admin routes for module');
+      ConduitGrpcSdk.Logger.error(err);
+    });
   }
 }

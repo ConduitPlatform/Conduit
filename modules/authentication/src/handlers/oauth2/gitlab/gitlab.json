@@ -2,7 +2,7 @@
   "accessTokenMethod": "POST",
   "providerName": "gitlab",
   "responseType": "code",
-  "authorizeUrl": "https://gitlab.com/oauth/authorize?",
+  "authorizeUrl": "https://gitlab.com/oauth/authorize",
   "tokenUrl": "https://gitlab.com/oauth/token",
   "grantType": "authorization_code"
 }

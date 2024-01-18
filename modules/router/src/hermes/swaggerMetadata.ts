@@ -6,7 +6,7 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
   securitySchemes: {
     clientId: {
-      name: 'clientid',
+      name: 'clientId',
       type: 'apiKey',
       in: 'header',
       description: 'A security client id, retrievable through [POST] /security/client',
@@ -37,6 +37,9 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   setExtraRouteHeaders(route: ConduitRoute, swaggerRouteDoc: Indexable): void {
     // https://swagger.io/docs/specification/authentication/#multiple
     if (route.input.middlewares?.includes('authMiddleware')) {
+      if (swaggerRouteDoc.security.length === 0) {
+        swaggerRouteDoc.security.push({});
+      }
       // Logical AND
       swaggerRouteDoc.security = swaggerRouteDoc.security.map(
         (originalSecEntry: { [field: string]: string }) => ({
@@ -44,8 +47,10 @@ export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
           userToken: [],
         }),
       );
-    }
-    if (route.input.middlewares?.includes('authMiddleware?')) {
+    } else if (route.input.middlewares?.includes('authMiddleware?')) {
+      if (swaggerRouteDoc.security.length === 0) {
+        swaggerRouteDoc.security.push({});
+      }
       // Logical OR
       swaggerRouteDoc.security.forEach(
         (originalSecEntry: { [field: string]: string }) => {

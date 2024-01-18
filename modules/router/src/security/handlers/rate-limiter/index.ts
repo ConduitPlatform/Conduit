@@ -1,21 +1,28 @@
 import { Cluster, Redis } from 'ioredis';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import ConduitGrpcSdk, { ConduitError } from '@conduitplatform/grpc-sdk';
+import { ConfigController } from '@conduitplatform/module-tools';
 
 export class RateLimiter {
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     const redisClient: Redis | Cluster = this.grpcSdk.redisManager.getClient({
       enableOfflineQueue: false,
     });
+    const config = ConfigController.getInstance().config.rateLimit;
     this._limiter = new RateLimiterRedis({
       storeClient: redisClient,
       keyPrefix: 'mainLimiter',
-      points: 50, // 10 requests
-      duration: 1, // per 1 second by IP
+      points: config.maxRequests,
+      duration: config.resetInterval,
       blockDuration: 10,
-      // inmemoryBlockOnConsumed: 10,
       execEvenly: false,
     });
+  }
+
+  updateConfig() {
+    const config = ConfigController.getInstance().config.rateLimit;
+    this._limiter.points = config.maxRequests;
+    this._limiter.duration = config.resetInterval;
   }
 
   private _limiter: RateLimiterRedis;
@@ -23,6 +30,7 @@ export class RateLimiter {
   get limiter() {
     const self = this;
     return (req: any, res: any, next: any) => {
+      if (req.method === 'OPTIONS') return next();
       const ip =
         req.headers['cf-connecting-ip'] ||
         req.headers['x-original-forwarded-for'] ||

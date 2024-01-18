@@ -19,11 +19,6 @@ export default {
         format: 'String',
         default: '',
       },
-      domain: {
-        doc: 'The domain for the emails',
-        format: 'String',
-        default: '',
-      },
       host: {
         doc: 'The host for email service',
         format: 'String',

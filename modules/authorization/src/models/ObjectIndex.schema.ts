@@ -1,4 +1,9 @@
-import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
+import {
+  ConduitModel,
+  DatabaseProvider,
+  MongoIndexType,
+  TYPE,
+} from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 
 /**
@@ -16,6 +21,14 @@ const schema: ConduitModel = {
   subject: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  subjectId: {
+    type: TYPE.String,
+    required: true,
+    default: '',
   },
   // organization
   subjectType: {
@@ -32,6 +45,14 @@ const schema: ConduitModel = {
   entity: {
     type: TYPE.String,
     required: true,
+    index: {
+      type: MongoIndexType.Ascending,
+    },
+  },
+  entityId: {
+    type: TYPE.String,
+    default: '',
+    required: true,
   },
   // organization
   entityType: {
@@ -39,11 +60,19 @@ const schema: ConduitModel = {
     required: true,
     default: '',
   },
+  entityPermission: {
+    type: TYPE.String,
+    default: '',
+  },
   // member
   relation: {
     type: TYPE.String,
     required: true,
     default: '',
+  },
+  inheritanceTree: {
+    type: [TYPE.String],
+    default: [],
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -65,15 +94,19 @@ export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   private static _instance: ObjectIndex;
   _id: string;
   subject: string;
+  subjectId: string;
   subjectType: string;
   subjectPermission: string;
   entity: string;
+  entityId: string;
   entityType: string;
+  entityPermission: string;
+  inheritanceTree: string[];
   relation: string;
   createdAt: Date;
   updatedAt: Date;
 
-  constructor(database: DatabaseProvider) {
+  private constructor(database: DatabaseProvider) {
     super(database, ObjectIndex.name, schema, schemaOptions, collectionName);
   }
 

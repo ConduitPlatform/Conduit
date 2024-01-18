@@ -105,20 +105,23 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
-    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
+    const isReplica = this.grpcSdk.isAvailable('database');
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
     let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model);
+      return this._activeAdapter.registerSystemSchema(model, isReplica);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await this._activeAdapter.recoverViewsFromDatabase();
-    await runMigrations(this._activeAdapter);
+    if (!isReplica) {
+      await runMigrations(this._activeAdapter);
+    }
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      return this._activeAdapter.registerSystemSchema(model).then(() => {
-        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
         }
       });
@@ -343,16 +346,19 @@ export default class DatabaseModule extends ManagedModule<void> {
   async findMany(call: GrpcRequest<FindRequest>, callback: GrpcResponse<QueryResponse>) {
     try {
       const { skip, limit, select, populate } = call.request;
-      const sort = call.request.sort as { [key: string]: -1 | 1 | number } | undefined;
-      if (sort) {
-        Object.keys(sort).forEach(field => {
-          if (sort[field] !== 1 && sort[field] !== -1) {
+      const _sort = call.request.sort as { [field: string]: -1 | 1 | number };
+      // gRPC undefined object field values fall back to  empty objects...
+      let sort: { [field: string]: -1 | 1 } | undefined = undefined;
+      if (_sort && !!Object.keys(_sort).length) {
+        Object.keys(_sort).forEach(field => {
+          if (_sort[field] !== 1 && _sort[field] !== -1) {
             return callback({
               code: status.INVALID_ARGUMENT,
-              message: `Invalid sort field value "${sort[field]}" in field "${field}", should be -1 or 1.`,
+              message: `Invalid sort field value "${_sort[field]}" in field "${field}", should be -1 or 1.`,
             });
           }
         });
+        sort = _sort as { [field: string]: -1 | 1 };
       }
       const schemaAdapter = this._activeAdapter.getSchemaModel(call.request.schemaName);
       const docs = await schemaAdapter.model.findMany(call.request.query, {

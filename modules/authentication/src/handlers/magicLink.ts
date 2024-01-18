@@ -9,7 +9,6 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-
 import {
   ConduitString,
   ConfigController,
@@ -20,6 +19,7 @@ import { status } from '@grpc/grpc-js';
 import { IAuthenticationStrategy } from '../interfaces';
 import { TokenProvider } from './tokenProvider';
 import { MagicLinkTemplate as magicLinkTemplate } from '../templates';
+import { AuthUtils } from '../utils';
 
 export class MagicLinkHandlers implements IAuthenticationStrategy {
   private emailModule: Email;
@@ -54,12 +54,10 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
         path: '/magic-link',
         action: ConduitRouteActions.POST,
         description: `Send magic link to a user.`,
-        bodyParams: config.customRedirectUris
-          ? {
-              email: ConduitString.Required,
-              redirectUri: ConduitString.Optional,
-            }
-          : { email: ConduitString.Required },
+        bodyParams: {
+          email: ConduitString.Required,
+          redirectUri: ConduitString.Optional,
+        },
       },
       new ConduitRouteReturnDefinition('MagicLinkSendResponse', 'String'),
       this.sendMagicLink.bind(this),
@@ -100,11 +98,9 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
 
   async sendMagicLink(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     const email = call.request.params.email.toLowerCase();
-    const config = ConfigController.getInstance().config;
-    const redirectUri =
-      config.customRedirectUris && !isEmpty(call.request.bodyParams.redirectUri)
-        ? call.request.bodyParams.redirectUri
-        : undefined;
+    const redirectUri = AuthUtils.validateRedirectUri(
+      call.request.bodyParams.redirectUri,
+    );
     const { clientId } = call.request.context;
     const user: User | null = await User.getInstance().findOne({ email });
     if (isNil(user)) throw new GrpcError(status.NOT_FOUND, 'User not found');
@@ -128,9 +124,8 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const config = ConfigController.getInstance().config;
     const { user, data } = await this.redeemMagicToken(verificationToken);
     const redirectUri =
-      config.customRedirectUris && data.redirectUri
-        ? data.redirectUri
-        : config.magic_link.redirect_uri.replace(/\/$/, '');
+      AuthUtils.validateRedirectUri(data.redirectUri) ??
+      config.magic_link.redirect_uri.replace(/\/$/, '');
     return TokenProvider.getInstance().provideUserTokens(
       {
         user,

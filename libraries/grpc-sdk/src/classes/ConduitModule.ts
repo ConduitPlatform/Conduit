@@ -2,9 +2,13 @@ import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../inte
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
-import { HealthCheckResponse, HealthDefinition } from '../protoUtils/grpc_health_check';
+import {
+  ConduitModuleDefinition,
+  HealthCheckResponse,
+  HealthDefinition,
+} from '../protoUtils';
 import { EventEmitter } from 'events';
-import { ConduitModuleDefinition } from '../protoUtils';
+import ConduitGrpcSdk from '../index';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;
@@ -57,19 +61,26 @@ export class ConduitModule<T extends CompatServiceDefinition> {
   }
 
   openConnection() {
-    if (this.channel) return;
+    if (this.channel) {
+      // used to make sure a connection attempt is made
+      this.channel.getConnectivityState(true);
+      return;
+    }
     // ConduitGrpcSdk.Logger.log(`Opening connection for ${this._serviceName}`);
     this.channel = createChannel(this._serviceUrl, undefined, {
       'grpc.max_receive_message_length': 1024 * 1024 * 100,
       'grpc.max_send_message_length': 1024 * 1024 * 100,
     });
-    const clientFactory = createClientFactory()
+    let clientFactory = createClientFactory()
       .use(
         this._grpcToken
           ? getGrpcSignedTokenInterceptor(this._grpcToken)
           : getModuleNameInterceptor(this._clientName),
       )
       .use(retryMiddleware);
+    for (const interceptor of ConduitGrpcSdk.interceptors) {
+      clientFactory = clientFactory.use(interceptor);
+    }
     this._client = clientFactory.create(this.type!, this.channel, {
       '*': {
         // https://grpc.github.io/grpc/core/md_doc_statuscodes.html

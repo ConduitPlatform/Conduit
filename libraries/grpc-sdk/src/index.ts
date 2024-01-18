@@ -274,19 +274,24 @@ export default class ConduitGrpcSdk {
       return this._initialize();
     }
     (this._core as unknown) = new Core(this.name, this.serverUrl, this._grpcToken);
+    await this.connectToCore().catch(() => process.exit(-1));
+    this._initialize();
+  }
+
+  async connectToCore() {
     ConduitGrpcSdk.Logger.log('Waiting for Core...');
     while (true) {
       try {
+        this.core.openConnection();
         const state = await this.core.check();
         if ((state as unknown as HealthCheckStatus) === HealthCheckStatus.SERVING) {
           ConduitGrpcSdk.Logger.log('Core connection established');
-          this._initialize();
-          break;
+          return;
         }
       } catch (err) {
         if ((err as GrpcError).code === status.PERMISSION_DENIED) {
           ConduitGrpcSdk.Logger.error(err as Error);
-          process.exit(-1);
+          throw err;
         }
         await sleep(1000);
       }
@@ -318,6 +323,15 @@ export default class ConduitGrpcSdk {
         }
         emitter.emit(`module-connection-update:${m.moduleName}`, true);
       });
+    });
+    emitter.on('core-status-update', () => {
+      this.connectToCore()
+        .then(() => {
+          this._initialize();
+        })
+        .catch(() => {
+          process.exit(-1);
+        });
     });
   }
 
@@ -528,8 +542,12 @@ export default class ConduitGrpcSdk {
   }
 
   private _initialize() {
-    if (this._initialized)
-      throw new Error("Module's grpc-sdk has already been initialized");
+    if (this._initialized) {
+      this._config?.openConnection();
+      this._admin?.openConnection();
+      this.config.watchModules().then();
+      return;
+    }
     (this._config as unknown) = new Config(
       this.name,
       this.serverUrl,

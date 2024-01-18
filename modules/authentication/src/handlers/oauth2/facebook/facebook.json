@@ -1,6 +1,6 @@
 {
   "accessTokenMethod": "GET",
-  "authorizeUrl": "https://www.facebook.com/v11.0/dialog/oauth?",
+  "authorizeUrl": "https://www.facebook.com/v11.0/dialog/oauth",
   "tokenUrl": "https://graph.facebook.com/v12.0/oauth/access_token",
   "responseType": "code"
 }
