@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.1...v0.16.0-rc.2) (2024-01-18)
+
+
+### Features
+
+* **authentication:** Add/RemoveTeamMembers gRPC rpcs ([#885](https://github.com/ConduitPlatform/Conduit/issues/885)) ([9bbd18d](https://github.com/ConduitPlatform/Conduit/commit/9bbd18d35f8b0c6a2ca519c4f9e76acd0b36d172))
+
+
+### Bug Fixes
+
+* add catch at createView() ([#890](https://github.com/ConduitPlatform/Conduit/issues/890)) ([17f97e5](https://github.com/ConduitPlatform/Conduit/commit/17f97e5bc9829bce04af3bfb034730fb2f152cd3))
+* **authentication:** add/removeTeamMember rpc field mapping ([#894](https://github.com/ConduitPlatform/Conduit/issues/894)) ([c4d9ce3](https://github.com/ConduitPlatform/Conduit/commit/c4d9ce3883700e9c2873ac2579238d1d2501ee27))
+* **authentication:** apple strategy using provider ([8f379b6](https://github.com/ConduitPlatform/Conduit/commit/8f379b6be57ad609946af439abca0e74a64e7acd))
+* **authentication:** facebook and google native login missing scopes ([#887](https://github.com/ConduitPlatform/Conduit/issues/887)) ([470798e](https://github.com/ConduitPlatform/Conduit/commit/470798e47b919be331417811ad619c23bf991987))
+* **database:** high-availability issues especially on SQL dbs ([#899](https://github.com/ConduitPlatform/Conduit/issues/899)) ([db7c1f8](https://github.com/ConduitPlatform/Conduit/commit/db7c1f8ee16c32f0de5af68afbfc7a0afa68464c))
+* group field custom endpoints query bug ([#893](https://github.com/ConduitPlatform/Conduit/issues/893)) ([73be8c5](https://github.com/ConduitPlatform/Conduit/commit/73be8c510f1310d30d6749ce27b876045b429adc))
+
 ## [0.16.0-rc.1](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.0...v0.16.0-rc.1) (2024-01-10)
 
 
