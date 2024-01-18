@@ -105,20 +105,23 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
-    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
+    const isReplica = this.grpcSdk.isAvailable('database');
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
     let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model);
+      return this._activeAdapter.registerSystemSchema(model, isReplica);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await this._activeAdapter.recoverViewsFromDatabase();
-    await runMigrations(this._activeAdapter);
+    if (!isReplica) {
+      await runMigrations(this._activeAdapter);
+    }
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      return this._activeAdapter.registerSystemSchema(model).then(() => {
-        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
         }
       });

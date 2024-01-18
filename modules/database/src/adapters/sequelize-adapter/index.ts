@@ -248,6 +248,8 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
     // do not sync extracted schemas
     if (isNil(noSync) || !noSync) {
       await this.models[schema.name].sync();
+    } else {
+      this.models[schema.name].synced = true;
     }
     // do not store extracted schemas to db
     if (saveToDb && !isInstanceSync) {

@@ -44,9 +44,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.legacyDeployment = await this.hasLegacyCollections();
   }
 
-  async registerSystemSchema(schema: ConduitSchema) {
+  async registerSystemSchema(schema: ConduitSchema, isReplica: boolean) {
     // @dirty-type-cast
-    await this.createSchemaFromAdapter(schema);
+    await this.createSchemaFromAdapter(schema, false, false, isReplica);
     this._systemSchemas.add(schema.name);
   }
 
@@ -282,7 +282,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model,
           !!model.modelOptions.conduit?.imported,
           true,
-          false,
+          true,
         );
       });
 
