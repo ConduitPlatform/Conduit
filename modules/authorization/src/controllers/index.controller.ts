@@ -45,13 +45,15 @@ export class IndexController {
         { resourceType: resource },
       ],
     });
-    await QueueController.getInstance().addRelationIndexJob(
-      relations.map(r => ({
-        subject: r.subject,
-        relation: r.relation,
-        object: r.resource,
-      })),
-    );
+    if (relations.length > 0) {
+      await QueueController.getInstance().addRelationIndexJob(
+        relations.map(r => ({
+          subject: r.subject,
+          relation: r.relation,
+          object: r.resource,
+        })),
+      );
+    }
   }
 
   async createOrUpdateObject(subject: string, entity: string) {
