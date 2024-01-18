@@ -178,25 +178,6 @@ export class RelationsController {
     });
   }
 
-  async removeGeneralRelation(
-    subjectResource: string,
-    relation: string,
-    objectResource: string,
-  ) {
-    // delete all relations that could be associated with resource
-    await Relationship.getInstance().deleteMany({
-      subject: {
-        $regex: `${subjectResource}.*`,
-        $options: 'i',
-      },
-      resource: {
-        $regex: `${objectResource}.*`,
-        $options: 'i',
-      },
-      relation: relation,
-    });
-  }
-
   async getRelation(subject: string, relation: string, object: string) {
     checkRelation(subject, relation, object);
     return await Relationship.getInstance().findOne({
