@@ -19,6 +19,10 @@ export class EventBus {
     this._clientSubscriber.on('ready', () => {
       ConduitGrpcSdk.Logger.log('The Bus is in the station...hehe');
     });
+    process.on('exit', () => {
+      this._clientSubscriber.quit();
+      this._clientPublisher.quit();
+    });
   }
 
   unsubscribe(subscriberId: string): void {

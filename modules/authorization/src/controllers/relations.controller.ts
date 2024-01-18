@@ -34,6 +34,9 @@ export class RelationsController {
         if (!resourceDefinition) {
           throw new Error('Object resource definition not found');
         }
+        if (!resourceDefinition.relations) {
+          throw new Error('Relation not allowed');
+        }
         if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
         if (
           !resourceDefinition.relations[relation] ||
@@ -62,7 +65,9 @@ export class RelationsController {
   }
 
   private async checkRelations(subject: string, relation: string, resources: string[]) {
-    checkRelation(subject, relation, resources[0]);
+    for (const resource of resources) {
+      checkRelation(subject, relation, resource);
+    }
     const computedTuples = resources.map(r => computeRelationTuple(subject, relation, r));
     const relationResources = await Relationship.getInstance().findMany({
       computedTuple: { $in: computedTuples },
@@ -72,20 +77,25 @@ export class RelationsController {
       name: subject.split(':')[0],
     });
     if (!subjectResource) throw new Error('Subject resource not found');
-    await ResourceDefinition.getInstance()
-      .findOne({ name: resources[0].split(':')[0] })
-      .then(resourceDefinition => {
-        if (!resourceDefinition) {
-          throw new Error('Object resource definition not found');
-        }
-        if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
-        if (
-          !resourceDefinition.relations[relation] ||
-          resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
-        ) {
-          throw new Error('Relation not allowed');
-        }
-      });
+    const definitions = await ResourceDefinition.getInstance().findMany({
+      name: { $in: resources.map(resource => resource.split(':')[0]) },
+    });
+    for (const resource in resources) {
+      const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
+      if (!resourceDefinition) {
+        throw new Error('Object resource definition not found');
+      }
+      if (!resourceDefinition.relations) {
+        throw new Error('Relation not allowed');
+      }
+      if (resourceDefinition.relations[relation].indexOf('*') !== -1) return;
+      if (
+        !resourceDefinition.relations[relation] ||
+        resourceDefinition.relations[relation].indexOf(subject.split(':')[0]) === -1
+      ) {
+        throw new Error('Relation not allowed');
+      }
+    }
   }
 
   async createRelations(subject: string, relation: string, resources: string[]) {
@@ -165,25 +175,6 @@ export class RelationsController {
         },
         { resourceType: name },
       ],
-    });
-  }
-
-  async removeGeneralRelation(
-    subjectResource: string,
-    relation: string,
-    objectResource: string,
-  ) {
-    // delete all relations that could be associated with resource
-    await Relationship.getInstance().deleteMany({
-      subject: {
-        $regex: `${subjectResource}.*`,
-        $options: 'i',
-      },
-      resource: {
-        $regex: `${objectResource}.*`,
-        $options: 'i',
-      },
-      relation: relation,
     });
   }
 

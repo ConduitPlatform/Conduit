@@ -6,6 +6,7 @@ const schema: ConduitModel = {
   name: {
     type: TYPE.String,
     required: true,
+    unique: true,
   },
   /**
    * Example:
@@ -43,7 +44,7 @@ const schema: ConduitModel = {
    */
   permissions: {
     type: TYPE.JSON,
-    required: true,
+    required: false,
   },
   version: {
     type: TYPE.Number,
@@ -70,8 +71,8 @@ export class ResourceDefinition extends ConduitActiveSchema<ResourceDefinition> 
   private static _instance: ResourceDefinition;
   _id: string;
   name: string;
-  relations: { [key: string]: string[] };
-  permissions: { [key: string]: string[] };
+  relations?: { [key: string]: string[] };
+  permissions?: { [key: string]: string[] };
   version: number;
   createdAt: Date;
   updatedAt: Date;

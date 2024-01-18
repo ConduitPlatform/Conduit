@@ -60,11 +60,19 @@ const schema: ConduitModel = {
     required: true,
     default: '',
   },
+  entityPermission: {
+    type: TYPE.String,
+    default: '',
+  },
   // member
   relation: {
     type: TYPE.String,
     required: true,
     default: '',
+  },
+  inheritanceTree: {
+    type: [TYPE.String],
+    default: [],
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -92,6 +100,8 @@ export class ObjectIndex extends ConduitActiveSchema<ObjectIndex> {
   entity: string;
   entityId: string;
   entityType: string;
+  entityPermission: string;
+  inheritanceTree: string[];
   relation: string;
   createdAt: Date;
   updatedAt: Date;

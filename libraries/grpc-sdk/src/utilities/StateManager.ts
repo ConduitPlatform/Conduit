@@ -31,6 +31,10 @@ export class StateManager {
       // attempted with the `using` API.
       automaticExtensionThreshold: 500, // time in ms
     });
+
+    process.on('exit', () => {
+      this.redisClient.quit();
+    });
   }
 
   async acquireLock(resource: string, ttl: number = 5000): Promise<Lock> {

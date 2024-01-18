@@ -176,7 +176,9 @@ export abstract class OAuth2<T, S extends OAuth2Settings>
 
   async authenticate(call: ParsedRouterRequest): Promise<UnparsedRouterResponse> {
     ConduitGrpcSdk.Metrics?.increment('login_requests_total');
-    const scopes = call.request.params?.scopes ?? this.defaultScopes;
+    const scopes = this.constructScopes(
+      call.request.params?.scopes ?? this.defaultScopes,
+    );
     const payload = await this.connectWithProvider({
       accessToken: call.request.params['access_token'],
       clientId: this.settings.clientId,
