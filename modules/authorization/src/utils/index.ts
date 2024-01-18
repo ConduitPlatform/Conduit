@@ -38,6 +38,7 @@ export const constructObjectIndex = (
   permission: string,
   role: string,
   object: string,
+  inheritanceTree: string[],
 ): Partial<ObjectIndex> => {
   return {
     subject: `${subject}#${permission}`,
@@ -48,6 +49,7 @@ export const constructObjectIndex = (
     entityId: role === '*' ? '*' : object.split(':')[1],
     entityType: role === '*' ? '*' : `${object}#${role}`.split(':')[0],
     relation: role === '*' ? '*' : `${object}#${role}`.split('#')[1],
+    inheritanceTree: inheritanceTree,
   };
 };
 
