@@ -44,9 +44,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.legacyDeployment = await this.hasLegacyCollections();
   }
 
-  async registerSystemSchema(schema: ConduitSchema) {
+  async registerSystemSchema(schema: ConduitSchema, isReplica: boolean) {
     // @dirty-type-cast
-    await this.createSchemaFromAdapter(schema);
+    await this.createSchemaFromAdapter(schema, false, false, isReplica);
     this._systemSchemas.add(schema.name);
   }
 
@@ -85,7 +85,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     await this.addExtensionsFromSchemaModel(schema, gRPC);
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
+    const createdSchema = await this._createSchemaFromAdapter(
+      schema,
+      !instanceSync,
+      instanceSync,
+    );
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -278,7 +282,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model,
           !!model.modelOptions.conduit?.imported,
           true,
-          false,
+          true,
         );
       });
 
@@ -377,6 +381,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
     saveToDb: boolean,
+    instanceSync: boolean,
   ): Promise<Schema>;
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {
