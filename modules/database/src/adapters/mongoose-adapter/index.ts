@@ -391,6 +391,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
+    isInstanceSync: boolean = false,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema, 'mongodb');
@@ -424,7 +425,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.saveSchemaToDatabase(schema);
     }
 
-    if (indexes) {
+    if (indexes && !isInstanceSync) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
     return this.models[schema.name];
