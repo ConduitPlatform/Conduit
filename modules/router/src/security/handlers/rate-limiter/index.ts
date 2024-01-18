@@ -19,6 +19,12 @@ export class RateLimiter {
     });
   }
 
+  updateConfig() {
+    const config = ConfigController.getInstance().config.rateLimit;
+    this._limiter.points = config.maxRequests;
+    this._limiter.duration = config.resetInterval;
+  }
+
   private _limiter: RateLimiterRedis;
 
   get limiter() {
