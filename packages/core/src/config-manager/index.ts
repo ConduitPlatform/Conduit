@@ -267,7 +267,7 @@ export default class ConfigManager implements IConfigManager {
           return module.name === name;
         });
         if (!module) {
-          throw new Error('Config-manager: Cannot update module state');
+          throw new Error(`Config-manager: ${name} not found in state`);
         }
         state.modules = [
           ...state.modules.filter((module: IModuleConfig) => module.name !== name),
@@ -279,11 +279,11 @@ export default class ConfigManager implements IConfigManager {
         return state;
       })
       .then(() => {
-        ConduitGrpcSdk.Logger.log('Config-manager: Updated state');
+        ConduitGrpcSdk.Logger.log(`Config-manager: Updated state for ${name}`);
       })
       .catch(e => {
-        console.error(e);
-        ConduitGrpcSdk.Logger.error('Config-manager: Failed to recover state');
+        ConduitGrpcSdk.Logger.error(e);
+        ConduitGrpcSdk.Logger.error(`Config-manager: Failed to update ${name} state`);
       });
   }
 }
