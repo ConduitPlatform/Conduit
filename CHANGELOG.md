@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.16.0-rc.3](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.2...v0.16.0-rc.3) (2024-01-18)
+
+
+### Features
+
+* **core:** better logging for module state updates ([44599ef](https://github.com/ConduitPlatform/Conduit/commit/44599ef69514fbbdfb3ff6631bac21249a686451))
+
+
+### Bug Fixes
+
+* **authorization:** missing relation size check in reindex ([41e7d2d](https://github.com/ConduitPlatform/Conduit/commit/41e7d2dbc06fe9d4331e5d0791522e8679cd0281))
+
 ## [0.16.0-rc.2](https://github.com/ConduitPlatform/Conduit/compare/v0.16.0-rc.1...v0.16.0-rc.2) (2024-01-18)
 
 
