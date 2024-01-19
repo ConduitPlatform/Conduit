@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   HealthCheckStatus,
   Indexable,
+  sleep,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
@@ -163,7 +164,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
-    await this.applyStoredMiddleware();
+    this.applyStoredMiddleware();
   }
 
   updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
@@ -248,7 +249,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       );
 
       this.updateState(call.request.routes, call.request.routerUrl);
-      await this.applyStoredMiddleware();
+      this.applyStoredMiddleware();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
@@ -501,6 +502,17 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   private async applyStoredMiddleware() {
+    const threshold = 10000;
+    const start = Date.now();
+    while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
+      await sleep(500);
+    }
+    if (this.grpcSdk.database?.active === false) {
+      ConduitGrpcSdk.Logger.error(
+        'Database is not active, cannot apply stored middleware',
+      );
+      return;
+    }
     for (const key of Object.keys(this._grpcRoutes)) {
       if (this.hasAppliedMiddleware.includes(key)) {
         continue;

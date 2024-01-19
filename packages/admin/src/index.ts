@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   IConduitLogger,
   Indexable,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -194,7 +195,7 @@ export default class AdminModule extends IConduitAdmin {
       );
       this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       if (this.databaseHandled) {
-        await this.applyStoredMiddleware();
+        this.applyStoredMiddleware();
       }
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -618,6 +619,17 @@ export default class AdminModule extends IConduitAdmin {
   }
 
   private async applyStoredMiddleware() {
+    const threshold = 10000;
+    const start = Date.now();
+    while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
+      await sleep(500);
+    }
+    if (this.grpcSdk.database?.active === false) {
+      ConduitGrpcSdk.Logger.error(
+        'Database is not active, cannot apply stored middleware',
+      );
+      return;
+    }
     for (const key of Object.keys(this._grpcRoutes)) {
       if (this.hasAppliedMiddleware.includes(key)) {
         continue;
