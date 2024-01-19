@@ -34,7 +34,7 @@ export class QueueController {
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
     const worker = new Worker('authorization-index-queue', processorFile, {
-      concurrency: 20,
+      concurrency: 5,
       connection: this.redisConnection,
       // autorun: true,
     });
