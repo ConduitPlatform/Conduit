@@ -80,7 +80,7 @@ export class RelationsController {
     const definitions = await ResourceDefinition.getInstance().findMany({
       name: { $in: resources.map(resource => resource.split(':')[0]) },
     });
-    for (const resource in resources) {
+    for (const resource of resources) {
       const resourceDefinition = definitions.find(d => d.name === resource.split(':')[0]);
       if (!resourceDefinition) {
         throw new Error('Object resource definition not found');
