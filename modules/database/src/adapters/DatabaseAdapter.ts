@@ -100,6 +100,31 @@ export abstract class DatabaseAdapter<T extends Schema> {
     return createdSchema;
   }
 
+  async createViewFromAdapter(
+    viewData: {
+      modelName: string;
+      viewName: string;
+      joinedSchemas: string[];
+      query: any;
+    },
+    instanceSync = false,
+  ) {
+    await this.createView(
+      viewData.modelName,
+      viewData.viewName,
+      viewData.joinedSchemas,
+      viewData.query,
+    );
+    if (!instanceSync) {
+      this.publishView(
+        viewData.modelName,
+        viewData.viewName,
+        viewData.joinedSchemas,
+        viewData.query,
+      );
+    }
+  }
+
   abstract getCollectionName(schema: ConduitSchema): string;
 
   /**
@@ -369,6 +394,22 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
   }
 
+  /**
+   * Publishes view for Database (multi-instance) synchronization
+   */
+  publishView(modelName: string, viewName: string, joinedSchemas: string[], query: any) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish(
+      'database:create:view',
+      JSON.stringify({
+        modelName,
+        viewName,
+        joinedSchemas,
+        query,
+      }),
+    );
+  }
+
   protected abstract connect(): void;
 
   protected abstract ensureConnected(): Promise<void>;
@@ -377,6 +418,8 @@ export abstract class DatabaseAdapter<T extends Schema> {
    * Checks whether DeclaredSchema collection name is unprefixed
    */
   protected abstract hasLegacyCollections(): Promise<boolean>;
+
+  abstract guaranteeView(viewName: string): Promise<T>;
 
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,

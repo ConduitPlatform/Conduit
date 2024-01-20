@@ -216,12 +216,12 @@ export default class DatabaseModule extends ManagedModule<void> {
    */
   async createView(call: GrpcRequest<CreateViewRequest>, callback: GrpcResponse<Empty>) {
     try {
-      await this._activeAdapter.createView(
-        call.request.schemaName,
-        call.request.viewName,
-        call.request.joinedSchemas,
-        call.request.query,
-      );
+      await this._activeAdapter.createViewFromAdapter({
+        modelName: call.request.schemaName,
+        viewName: call.request.viewName,
+        joinedSchemas: call.request.joinedSchemas,
+        query: call.request.query,
+      });
       callback(null); // @dirty-type-cast
     } catch (err) {
       callback({
@@ -815,6 +815,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
         delete (syncSchema as any).fieldHash;
         await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
+      });
+      this.grpcSdk.bus?.subscribe('database:create:view', async viewStr => {
+        const viewData = JSON.parse(viewStr);
+        await this._activeAdapter.createViewFromAdapter(viewData, true);
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);

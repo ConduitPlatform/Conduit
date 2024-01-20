@@ -70,20 +70,25 @@ export abstract class SchemaAdapter<T> {
           throw new Error(`User:${userId} is not allowed to ${operation} ${scope}`);
         }
       }
-      const view = this.adapter.views[this.transformViewName(model, scope, operation)];
+      const viewName = this.transformViewName(model, scope, operation);
+      let view = this.adapter.views[viewName];
       if (!view) {
         await this.guaranteeView(operation, userId, scope);
-        return this.adapter.views[this.transformViewName(model, scope, operation)];
+        view = this.adapter.views[viewName];
+        if (!view) {
+          view = await this.adapter.guaranteeView(viewName);
+        }
       }
       return view;
     } else {
-      const view =
-        this.adapter.views[this.transformViewName(model, 'User:' + userId!, operation)];
+      const viewName = this.transformViewName(model, 'User:' + userId!, operation);
+      let view = this.adapter.views[viewName];
       if (!view) {
         await this.guaranteeView(operation, userId);
-        return this.adapter.views[
-          this.transformViewName(model, 'User:' + userId!, operation)
-        ];
+        view = this.adapter.views[viewName];
+        if (!view) {
+          view = await this.adapter.guaranteeView(viewName);
+        }
       }
       return view;
     }
