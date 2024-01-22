@@ -65,7 +65,6 @@ export class AdminHandlers {
             return { subject: r.subject, relation: r.relation, object: r.resource };
           }),
         );
-        await QueueController.getInstance().waitForIdle();
         processed += relations.length;
         relations = await Relationship.getInstance().findMany(
           query,

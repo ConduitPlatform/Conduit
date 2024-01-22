@@ -1,7 +1,6 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, Relationship, ResourceDefinition } from '../models';
 import { constructObjectIndex } from '../utils';
-import _ from 'lodash';
 import { QueueController } from './queue.controller';
 
 export class IndexController {
@@ -77,9 +76,6 @@ export class IndexController {
       name: object.split(':')[0],
     }))!;
 
-    const subjectDefinition = (await ResourceDefinition.getInstance().findOne({
-      name: subject.split(':')[0],
-    }))!;
     // relations can only be created between actors and resources
     // object indexes represent relations between actors and permissions on resources
     // construct actor index
@@ -118,50 +114,6 @@ export class IndexController {
         }
       }
     }
-    const possibleConnections = await ObjectIndex.getInstance().findMany({
-      subject: { $in: Object.keys(relatedPermissions).map(i => `${subject}#${i}`) },
-    });
-    for (const action in relatedPermissions) {
-      for (const connection of possibleConnections) {
-        if (connection.subjectPermission !== action) continue;
-        for (const permission of relatedPermissions[action]) {
-          obj.push(
-            constructObjectIndex(
-              object,
-              permission,
-              connection.entity.split('#')[1],
-              connection.entity.split('#')[0],
-              [...connection.inheritanceTree, `${subject}#${relation}@${object}`],
-            ),
-          );
-        }
-      }
-    }
-    if (subjectDefinition.permissions) {
-      const subjectPermissions = Object.keys(subjectDefinition.permissions);
-      for (const action in relatedPermissions) {
-        if (subjectPermissions.includes(action)) {
-          for (const role of subjectDefinition.permissions[action]) {
-            if (role.indexOf('->') === -1) {
-              for (const permission of relatedPermissions[action]) {
-                obj.push({
-                  subject: `${object}#${permission}`,
-                  subjectId: object.split(':')[1],
-                  subjectType: `${object}#${permission}`.split(':')[0],
-                  subjectPermission: `${object}#${permission}`.split('#')[1],
-                  entity: `${subject}#${role}`,
-                  entityId: subject.split(':')[1],
-                  entityType: `${subject}#${role}`.split(':')[0],
-                  entityPermission: action,
-                  relation: `${subject}#${role}`.split('#')[1],
-                  inheritanceTree: [`${subject}#${relation}@${object}`],
-                });
-              }
-            }
-          }
-        }
-      }
-    }
 
     const indexes = await ObjectIndex.getInstance().findMany({
       $and: [
@@ -173,37 +125,14 @@ export class IndexController {
       i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
     );
     await ObjectIndex.getInstance().createMany(toCreate);
-
     const achievedPermissions = [...new Set(obj.map(i => i.subjectPermission!))];
-    const objectsByPermission: { [key: string]: Partial<ObjectIndex>[] } = {};
-    for (const permission of achievedPermissions) {
-      objectsByPermission[permission] = obj.filter(
-        i => i.subjectPermission === permission,
-      );
-    }
-    for (const objectPermission in objectsByPermission) {
-      const childObj: Partial<ObjectIndex>[] = [];
-      const childIndexes = await ObjectIndex.getInstance().findMany({
-        subject: { $ne: `${object}#${objectPermission}` },
-        entityId: object.split(':')[1],
-        entityType: object.split(':')[0],
-        entityPermission: objectPermission,
-      });
-      for (const childIndex of childIndexes) {
-        const copy = _.omit(childIndex, ['_id', 'createdAt', 'updatedAt', '__v']);
-        for (const childObject of objectsByPermission[objectPermission]) {
-          if (childObject.entityType === copy.entityType) continue;
-          childObj.push({
-            ...copy,
-            entity: childObject.entity,
-            entityId: childObject.entityId,
-            entityType: childObject.entityType,
-            entityPermission: childObject.entityPermission,
-          });
-        }
-      }
-      await ObjectIndex.getInstance().createMany(childObj);
-    }
+    await QueueController.getInstance().addPossibleConnectionJob(
+      object,
+      subject,
+      relation,
+      relatedPermissions,
+      achievedPermissions,
+    );
   }
 
   async removeRelation(subject: string, relation: string, object: string) {

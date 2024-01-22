@@ -9,10 +9,12 @@ export class QueueController {
   private static _instance: QueueController;
   private readonly redisConnection: Redis | Cluster;
   private authorizationQueue: Queue;
+  private connectionQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.redisConnection = this.grpcSdk.redisManager.getClient();
     this.authorizationQueue = this.initializeRelationIndexQueue();
+    this.connectionQueue = this.initializeConnectionQueue();
   }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
@@ -29,13 +31,46 @@ export class QueueController {
     });
   }
 
+  initializeConnectionQueue() {
+    return new Queue('authorization-connection-queue', {
+      connection: this.redisConnection,
+    });
+  }
+
   addRelationIndexWorker() {
     const processorFile = path.normalize(
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
     const worker = new Worker('authorization-index-queue', processorFile, {
-      concurrency: 20,
+      concurrency: 5,
       connection: this.redisConnection,
+      // autorun: true,
+    });
+    worker.on('active', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
+    });
+    worker.on('completed', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
+    });
+    worker.on('error', (error: any) => {
+      ConduitGrpcSdk.Logger.info(`Job error:`, error);
+    });
+  }
+
+  addConnectionWorker() {
+    const processorFile = path.normalize(
+      path.join(__dirname, '../jobs', 'processPossibleConnections.js'),
+    );
+    const worker = new Worker('authorization-connection-queue', processorFile, {
+      concurrency: 5,
+      connection: this.redisConnection,
+      removeOnComplete: {
+        age: 3600,
+        count: 1000,
+      },
+      removeOnFail: {
+        age: 24 * 3600,
+      },
       // autorun: true,
     });
     worker.on('active', (job: any) => {
@@ -65,18 +100,25 @@ export class QueueController {
           data: {
             relation: r,
           },
-          opts: {
-            removeOnComplete: {
-              age: 3600,
-              count: 1000,
-            },
-            removeOnFail: {
-              age: 24 * 3600,
-            },
-          },
         };
       }),
     );
+  }
+
+  async addPossibleConnectionJob(
+    object: string,
+    subject: string,
+    relation: string,
+    relatedPermissions: { [key: string]: string[] },
+    achievedPermissions: string[],
+  ) {
+    await this.connectionQueue.add(randomUUID(), {
+      object,
+      subject,
+      relation,
+      relatedPermissions,
+      achievedPermissions,
+    });
   }
 
   async waitForIdle() {
