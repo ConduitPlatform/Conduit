@@ -77,6 +77,7 @@ export default class AdminModule extends IConduitAdmin {
   } = {};
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
   constructor(
     readonly commons: ConduitCommons,
@@ -195,7 +196,7 @@ export default class AdminModule extends IConduitAdmin {
       );
       this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       if (this.databaseHandled) {
-        this.applyStoredMiddleware();
+        this.scheduleMiddlewareApply();
       }
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -476,7 +477,7 @@ export default class AdminModule extends IConduitAdmin {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.migrateSchemas();
-    await this.applyStoredMiddleware();
+    this.scheduleMiddlewareApply();
     this.databaseHandled = true;
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
@@ -616,6 +617,21 @@ export default class AdminModule extends IConduitAdmin {
         owner: moduleUrl,
       });
     }
+  }
+
+  scheduleMiddlewareApply() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this.applyStoredMiddleware();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
   }
 
   private async applyStoredMiddleware() {

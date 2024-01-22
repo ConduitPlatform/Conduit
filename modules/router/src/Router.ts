@@ -66,6 +66,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
   private hasAppliedMiddleware: string[] = [];
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     super('router');
@@ -164,7 +165,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
-    this.applyStoredMiddleware();
+    this.scheduleMiddlewareApply();
   }
 
   updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
@@ -249,7 +250,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       );
 
       this.updateState(call.request.routes, call.request.routerUrl);
-      this.applyStoredMiddleware();
+      this.scheduleMiddlewareApply();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
@@ -499,6 +500,21 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         owner: moduleUrl,
       });
     }
+  }
+
+  scheduleMiddlewareApply() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this.applyStoredMiddleware();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
   }
 
   private async applyStoredMiddleware() {
