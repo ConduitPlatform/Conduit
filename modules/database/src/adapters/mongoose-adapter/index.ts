@@ -79,7 +79,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    let newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
+    const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
