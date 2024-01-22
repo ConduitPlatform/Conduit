@@ -61,24 +61,22 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
   if (subjectDefinition.permissions) {
     const subjectPermissions = Object.keys(subjectDefinition.permissions);
     for (const action in relatedPermissions) {
-      if (subjectPermissions.includes(action)) {
-        for (const role of subjectDefinition.permissions[action]) {
-          if (role.indexOf('->') === -1) {
-            for (const permission of relatedPermissions[action]) {
-              obj.push({
-                subject: `${object}#${permission}`,
-                subjectId: object.split(':')[1],
-                subjectType: `${object}#${permission}`.split(':')[0],
-                subjectPermission: `${object}#${permission}`.split('#')[1],
-                entity: `${subject}#${role}`,
-                entityId: subject.split(':')[1],
-                entityType: `${subject}#${role}`.split(':')[0],
-                entityPermission: action,
-                relation: `${subject}#${role}`.split('#')[1],
-                inheritanceTree: [`${subject}#${relation}@${object}`],
-              });
-            }
-          }
+      if (!subjectPermissions.includes(action)) continue;
+      for (const role of subjectDefinition.permissions[action]) {
+        if (role.indexOf('->') !== -1) continue;
+        for (const permission of relatedPermissions[action]) {
+          obj.push({
+            subject: `${object}#${permission}`,
+            subjectId: object.split(':')[1],
+            subjectType: `${object}#${permission}`.split(':')[0],
+            subjectPermission: `${object}#${permission}`.split('#')[1],
+            entity: `${subject}#${role}`,
+            entityId: subject.split(':')[1],
+            entityType: `${subject}#${role}`.split(':')[0],
+            entityPermission: action,
+            relation: `${subject}#${role}`.split('#')[1],
+            inheritanceTree: [`${subject}#${relation}@${object}`],
+          });
         }
       }
     }
