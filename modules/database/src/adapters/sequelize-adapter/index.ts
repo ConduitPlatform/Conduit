@@ -96,6 +96,16 @@ export abstract class SequelizeAdapter extends DatabaseAdapter<SequelizeSchema> 
         });
     }
   }
+  async guaranteeView(viewName: string) {
+    const view = await this.models['Views'].findOne({
+      name: viewName,
+    });
+    if (!view) {
+      throw new Error('View not found');
+    }
+    await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
+    return this.views[viewName];
+  }
 
   async deleteView(viewName: string): Promise<void> {
     if (this.views[viewName]) {

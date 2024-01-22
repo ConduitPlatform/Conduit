@@ -79,7 +79,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    let newSchema = model.schema;
+    const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
@@ -88,7 +88,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const viewModel = new MongooseSchema(
         this.grpcSdk,
         this.mongoose,
-        newSchema,
+        newSchema as ConduitSchema,
         model.originalSchema,
         this,
         true,
@@ -112,6 +112,17 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         throw e;
       }
     }
+  }
+
+  async guaranteeView(viewName: string) {
+    const view = await this.models['Views'].findOne({
+      name: viewName,
+    });
+    if (!view) {
+      throw new Error('View not found');
+    }
+    await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
+    return this.views[viewName];
   }
 
   async deleteView(viewName: string): Promise<void> {
