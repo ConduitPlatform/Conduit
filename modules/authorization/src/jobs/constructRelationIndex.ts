@@ -1,7 +1,7 @@
 import { SandboxedJob } from 'bullmq';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ActorIndex, ObjectIndex, ResourceDefinition } from '../models';
-import { IndexController } from '../controllers';
+import { IndexController, QueueController } from '../controllers';
 
 let grpcSdk: ConduitGrpcSdk | undefined = undefined;
 
@@ -21,6 +21,7 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
     ActorIndex.getInstance(grpcSdk.database!);
     ResourceDefinition.getInstance(grpcSdk.database!);
     IndexController.getInstance(grpcSdk);
+    QueueController.getInstance(grpcSdk);
   }
   await IndexController.getInstance().constructRelationIndex(
     relation.subject,

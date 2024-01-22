@@ -127,8 +127,8 @@ export class IndexController {
     await ObjectIndex.getInstance().createMany(toCreate);
     const achievedPermissions = [...new Set(obj.map(i => i.subjectPermission!))];
     await QueueController.getInstance().addPossibleConnectionJob(
-      subject,
       object,
+      subject,
       relation,
       relatedPermissions,
       achievedPermissions,
