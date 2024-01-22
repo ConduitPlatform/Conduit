@@ -221,13 +221,6 @@ export class GraphQLController extends ConduitRouter {
     if (!this.routeChanged(route)) return;
     const key = `${route.input.action}-${route.input.path}`;
     const registered = this._registeredRoutes.has(key);
-    if (registered) {
-      const retrievedRoute = this._registeredRoutes.get(key);
-      route.input.middlewares = merge(
-        retrievedRoute!.input.middlewares,
-        route.input.middlewares!,
-      );
-    }
     this._registeredRoutes.set(key, route);
     if (!registered) {
       this.addConduitRoute(route);
