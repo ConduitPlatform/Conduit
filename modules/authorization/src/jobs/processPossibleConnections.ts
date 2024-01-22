@@ -83,15 +83,28 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
       }
     }
   }
+  // deduplicate obj array, deduplicate by subject and entity while also comparing inheritanceTree.
+  // Different trees should not be considered duplicate indexes.
+  const keys = obj.map(i => `${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`);
+  const unique = obj.filter(
+    (i, index) =>
+      keys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) === index,
+  );
 
   const indexes = await ObjectIndex.getInstance().findMany({
     $and: [
-      { subject: { $in: obj.map(i => i.subject) } },
-      { entity: { $in: obj.map(i => i.entity) } },
+      { subject: { $in: unique.map(i => i.subject) } },
+      { entity: { $in: unique.map(i => i.entity) } },
     ],
   });
-  const toCreate = obj.filter(
-    i => !indexes.find(j => j.subject === i.subject && j.entity === i.entity),
+  const toCreate = unique.filter(
+    i =>
+      !indexes.find(
+        j =>
+          j.subject === i.subject &&
+          j.entity === i.entity &&
+          j.inheritanceTree!.join('') === i.inheritanceTree!.join(''),
+      ),
   );
   await ObjectIndex.getInstance().createMany(toCreate);
 
@@ -120,9 +133,35 @@ module.exports = async (job: SandboxedJob<ConstructRelationIndexWorkerData>) => 
           entityId: childObject.entityId,
           entityType: childObject.entityType,
           entityPermission: childObject.entityPermission,
+          inheritanceTree: childObject.inheritanceTree!,
         });
       }
     }
-    await ObjectIndex.getInstance().createMany(childObj);
+    const childKeys = childObj.map(
+      i => `${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`,
+    );
+    // deduplicate childObj array
+    const childUnique = childObj.filter(
+      (i, index) =>
+        childKeys.indexOf(`${i.subject}#${i.entity}${i.inheritanceTree!.join('')}`) ===
+        index,
+    );
+    const childIndexes2 = await ObjectIndex.getInstance().findMany({
+      $and: [
+        { subject: { $in: childUnique.map(i => i.subject) } },
+        { entity: { $in: childUnique.map(i => i.entity) } },
+      ],
+    });
+    const childToCreate = childUnique.filter(
+      i =>
+        !childIndexes2.find(
+          j =>
+            j.subject === i.subject &&
+            j.entity === i.entity &&
+            j.inheritanceTree!.join('') === i.inheritanceTree!.join(''),
+        ),
+    );
+
+    await ObjectIndex.getInstance().createMany(childToCreate);
   }
 };
