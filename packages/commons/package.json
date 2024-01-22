@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@types/convict": "^6.1.6",
-    "@types/express": "~4.17.17",
+    "@types/express": "~4.17.21",
     "@types/is-natural-number": "^4.0.4",
     "@types/lodash": "^4.14.200",
     "@types/node": "20.10.3",
