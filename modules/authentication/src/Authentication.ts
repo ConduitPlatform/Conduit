@@ -282,7 +282,6 @@ export default class Authentication extends ManagedModule<Config> {
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
           email: user.email,
-          sender: 'no-reply',
           variables: {
             link,
           },

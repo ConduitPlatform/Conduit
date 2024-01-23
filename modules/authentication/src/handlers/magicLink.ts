@@ -185,7 +185,6 @@ export class MagicLinkHandlers implements IAuthenticationStrategy {
     const link = `${baseUrl}/${token.token}`;
     await this.emailModule.sendEmail('MagicLink', {
       email: user.email,
-      sender: 'no-reply',
       variables: {
         user,
         link,

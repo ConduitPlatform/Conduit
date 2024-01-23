@@ -8,5 +8,6 @@ export interface ISendEmailParams {
   sender: string;
   cc?: string[];
   replyTo?: string;
+  sendingDomain?: string;
   attachments?: string[];
 }

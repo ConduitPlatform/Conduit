@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash';
 import { EmailTemplate } from '../models';
 import { IRegisterTemplateParams, ISendEmailParams } from '../interfaces';
 import handlebars from 'handlebars';
@@ -7,6 +7,7 @@ import { CreateEmailTemplate } from '../email-provider/interfaces/CreateEmailTem
 import { UpdateEmailTemplate } from '../email-provider/interfaces/UpdateEmailTemplate';
 import { Attachment } from 'nodemailer/lib/mailer';
 import { Template } from '../email-provider/interfaces/Template';
+import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 
 export class EmailService {
   constructor(private emailer: EmailProvider) {}
@@ -63,7 +64,7 @@ export class EmailService {
     let subjectString = subject!;
     let bodyString = body!;
     let templateFound: EmailTemplate | null;
-
+    let senderAddress: string | undefined;
     if (template) {
       templateFound = await EmailTemplate.getInstance().findOne({ name: template });
       if (isNil(templateFound)) {
@@ -80,15 +81,38 @@ export class EmailService {
       if (!isNil(templateFound.subject) && isNil(subject)) {
         subjectString = handlebars.compile(templateFound.subject)(variables);
       }
+      if (!isEmpty(templateFound.sender)) {
+        senderAddress = templateFound.sender;
+      }
     }
 
-    if (!isNil(sender)) {
-      builder.setSender(sender);
-    } else if (!isNil(templateFound!.sender)) {
-      builder.setSender(templateFound!.sender);
-    } else {
-      throw new Error(`Sender must be provided!`);
+    if (isNil(senderAddress) || isEmpty(senderAddress)) {
+      if (!isEmpty(sender)) {
+        senderAddress = sender;
+      } else {
+        senderAddress = 'no-reply';
+      }
     }
+    if (isNil(params.sendingDomain) || isEmpty(params.sendingDomain)) {
+      if (senderAddress.includes('@')) {
+        ConduitGrpcSdk.Logger.warn(
+          `Sending domain is not set, attempting to send email with provided address: ${senderAddress}`,
+        );
+      } else {
+        throw new Error(
+          `Sending domain is not set, and sender address is not valid: ${senderAddress}`,
+        );
+      }
+    } else if (!senderAddress.includes(params.sendingDomain)) {
+      if (senderAddress.includes('@')) {
+        ConduitGrpcSdk.Logger.warn(
+          `You are trying to send email from ${senderAddress} but it does not match sending domain ${params.sendingDomain}`,
+        );
+      } else {
+        senderAddress = `${senderAddress}@${params.sendingDomain}`;
+      }
+    }
+    builder.setSender(senderAddress!);
 
     builder.setContent(bodyString);
     builder.setReceiver(email);

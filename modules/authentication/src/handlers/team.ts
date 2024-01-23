@@ -466,7 +466,6 @@ export class TeamsHandler implements IAuthenticationStrategy {
       await this.grpcSdk
         .emailProvider!.sendEmail('TeamInvite', {
           email: email,
-          sender: 'no-reply',
           variables: {
             link,
             teamName: team.name,

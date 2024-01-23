@@ -129,7 +129,7 @@ export class AdminHandlers {
       throw new GrpcError(status.NOT_FOUND, 'Template does not exist');
     }
 
-    ['name', 'subject', 'body'].forEach(key => {
+    ['name', 'subject', 'body', 'sender'].forEach(key => {
       if (call.request.params[key]) {
         // @ts-ignore
         templateDocument[key] = call.request.params[key];

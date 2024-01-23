@@ -247,7 +247,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
       await this.emailModule
         .sendEmail('EmailVerification', {
           email: user.email,
-          sender: 'no-reply',
           variables: {
             link,
           },
@@ -333,7 +332,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     if (config.local.verification.send_email && this.grpcSdk.isAvailable('email')) {
       await this.emailModule.sendEmail('ForgotPassword', {
         email: user.email,
-        sender: 'no-reply',
         variables: {
           link,
         },
@@ -451,7 +449,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
         await this.emailModule
           .sendEmail('ChangeEmailVerification', {
             email: newEmail,
-            sender: 'no-reply',
             variables: {
               link,
             },
@@ -583,7 +580,6 @@ export class LocalHandlers implements IAuthenticationStrategy {
     const link = `${result.hostUrl}/hook/authentication/verify-email/${result.token}`;
     await this.emailModule.sendEmail('EmailVerification', {
       email,
-      sender: 'no-reply',
       variables: {
         link,
       },
