@@ -24,7 +24,7 @@
   "license": "ISC",
   "devDependencies": {
     "@commitlint/cli": "^17.8.0",
-    "@commitlint/config-conventional": "^17.7.0",
+    "@commitlint/config-conventional": "^18.5.0",
     "@commitlint/config-lerna-scopes": "^17.4.2",
     "copyfiles": "^2.4.1",
     "cz-conventional-changelog": "^3.3.0",
