@@ -6,6 +6,7 @@ message RegisterTemplateRequest {
   string subject = 2;
   string body = 3;
   repeated string variables = 4;
+  optional string sender = 5;
 }
 
 message RegisterTemplateResponse {

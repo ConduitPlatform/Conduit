@@ -40,7 +40,7 @@ export class EmailService {
   }
 
   async registerTemplate(params: IRegisterTemplateParams) {
-    const { name, body, subject, variables } = params;
+    const { name, body, subject, variables, sender } = params;
 
     const existing = await EmailTemplate.getInstance().findOne({ name });
     if (!isNil(existing)) return existing;
@@ -49,6 +49,7 @@ export class EmailService {
       name,
       subject,
       body,
+      sender,
       variables,
     });
   }

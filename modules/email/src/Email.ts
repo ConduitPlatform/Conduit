@@ -96,6 +96,7 @@ export default class Email extends ManagedModule<Config> {
       subject: call.request.subject,
       body: call.request.body,
       variables: call.request.variables,
+      sender: call.request.sender,
     };
     let errorMessage: string | null = null;
     const template = await this.emailService

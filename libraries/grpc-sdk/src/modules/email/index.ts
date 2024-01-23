@@ -16,12 +16,14 @@ export class Email extends ConduitModule<typeof EmailDefinition> {
     subject: string;
     body: string;
     variables: string[];
+    sender?: string;
   }) {
     return this.client!.registerTemplate({
       name: template.name,
       subject: template.subject,
       body: template.body,
       variables: template.variables,
+      sender: template.sender,
     }).then(res => {
       return JSON.parse(res.template);
     });
