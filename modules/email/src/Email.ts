@@ -21,6 +21,7 @@ import {
 } from './protoTypes/email';
 import metricsSchema from './metrics';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
+import { ISendEmailParams } from './interfaces';
 
 export default class Email extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -95,6 +96,7 @@ export default class Email extends ManagedModule<Config> {
       subject: call.request.subject,
       body: call.request.body,
       variables: call.request.variables,
+      sender: call.request.sender,
     };
     let errorMessage: string | null = null;
     const template = await this.emailService
@@ -110,19 +112,21 @@ export default class Email extends ManagedModule<Config> {
     callback: GrpcCallback<SendEmailResponse>,
   ) {
     const template = call.request.templateName;
-    const params = {
-      email: call.request.params!.email,
-      variables: JSON.parse(call.request.params!.variables),
-      sender: call.request.params!.sender,
-      cc: call.request.params!.cc,
-      replyTo: call.request.params!.replyTo,
-      attachments: call.request.params!.attachments,
-    };
     const emailConfig: Config = await this.grpcSdk.config
       .get('email')
       .catch(() => ConduitGrpcSdk.Logger.error('Failed to get sending domain'));
-    params.sender = params.sender + `@${emailConfig?.sendingDomain ?? 'conduit.com'}`;
+    const params: ISendEmailParams = {
+      email: call.request.params!.email,
+      variables: JSON.parse(call.request.params!.variables),
+      sender: call.request.params!.sender ?? '',
+      cc: call.request.params!.cc,
+      replyTo: call.request.params!.replyTo,
+      attachments: call.request.params!.attachments,
+      sendingDomain: emailConfig?.sendingDomain ?? '',
+    };
+
     let errorMessage: string | null = null;
+
     const sentMessageInfo = await this.emailService
       .sendEmail(template, params)
       .catch((e: Error) => (errorMessage = e.message));

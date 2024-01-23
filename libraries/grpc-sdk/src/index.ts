@@ -439,14 +439,14 @@ export default class ConduitGrpcSdk {
         ? `${this.urlRemap['*']}:${moduleUrl.split(':')[1]}`
         : moduleUrl);
     if (this._availableModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new this._availableModules[moduleName](
         this.name,
         moduleUrl,
         this._grpcToken,
       );
     } else if (this._dynamicModules[moduleName]) {
-      // ConduitGrpcSdk.Logger.log(`Creating gRPC client for ${moduleName}`);
+      ConduitGrpcSdk.Logger.info(`Creating gRPC client for ${moduleName}`);
       this._modules[moduleName] = new ConduitModule(
         this.name,
         moduleName,
