@@ -1,0 +1,46 @@
+on:
+  release:
+    types:
+      - created
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    name: Build Conduit standalone
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to the Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Set env
+        run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
+      - name: Build conduit base
+        run: |
+          DEV=TRUE make all
+      - name: Build standalone
+        run: |
+          docker build -t ghcr.io/conduitplatform/conduit-standalone:latest -f ./standalone.Dockerfile .
+      - name: Push image
+        run: |
+          docker tag ghcr.io/conduitplatform/conduit-standalone:latest ghcr.io/conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
+          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduit-standalone:latest
+          docker tag ghcr.io/conduitplatform/conduit-standalone:latest conduit-standalone:${{ env.RELEASE_VERSION }}
+          docker push ghcr.io/conduitplatform/conduit-standalone:latest
+          docker push ghcr.io/conduitplatform/conduit-standalone:${{ env.RELEASE_VERSION }}
+          docker push conduit-standalone:latest
+          docker push conduit-standalone:${{ env.RELEASE_VERSION }}
