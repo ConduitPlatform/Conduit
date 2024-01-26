@@ -31,7 +31,7 @@ jobs:
         run: echo "RELEASE_VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/^v//')" >> $GITHUB_ENV
       - name: Build conduit base
         run: |
-          DEV=TRUE make all
+          docker build --no-cache -t conduit-base:latest -f ./Dockerfile .
       - name: Build standalone
         run: |
           docker build -t ghcr.io/conduitplatform/conduit-standalone:latest -f ./standalone.Dockerfile .
