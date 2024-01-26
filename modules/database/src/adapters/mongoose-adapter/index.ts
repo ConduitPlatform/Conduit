@@ -20,8 +20,8 @@ import {
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
 import { isNil } from 'lodash';
+import { EJSON } from 'bson';
 
-const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
@@ -79,7 +79,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       return;
     }
     const model = this.models[modelName];
-    let newSchema = model.schema;
+    const newSchema: Partial<ConduitSchema> = Object.assign({}, model.schema);
     //@ts-ignore
     newSchema.name = viewName;
     //@ts-ignore
@@ -88,30 +88,41 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       const viewModel = new MongooseSchema(
         this.grpcSdk,
         this.mongoose,
-        newSchema,
+        newSchema as ConduitSchema,
         model.originalSchema,
         this,
         true,
       );
+      this.views[viewName] = viewModel;
       await viewModel.model.createCollection({
         viewOn: model.originalSchema.collectionName,
         pipeline: EJSON.parse(query.mongoQuery),
       });
-      this.views[viewName] = viewModel;
-      const foundView = await this.models['Views'].findOne({ name: viewName });
-      if (isNil(foundView)) {
-        await this.models['Views'].create({
-          name: viewName,
-          originalSchema: modelName,
-          joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
-          query,
-        });
-      }
     } catch (e: any) {
       if (!e.message.includes('Cannot overwrite')) {
         throw e;
       }
     }
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
+    }
+  }
+
+  async guaranteeView(viewName: string) {
+    const view = await this.models['Views'].findOne({
+      name: viewName,
+    });
+    if (!view) {
+      throw new Error('View not found');
+    }
+    await this.createView(view.originalSchema, view.name, view.joinedSchemas, view.query);
+    return this.views[viewName];
   }
 
   async deleteView(viewName: string): Promise<void> {
@@ -391,6 +402,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
   protected async _createSchemaFromAdapter(
     schema: ConduitDatabaseSchema,
     saveToDb: boolean = true,
+    isInstanceSync: boolean = false,
   ): Promise<MongooseSchema> {
     let compiledSchema = JSON.parse(JSON.stringify(schema));
     validateFieldConstraints(compiledSchema, 'mongodb');
@@ -424,7 +436,7 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
       await this.saveSchemaToDatabase(schema);
     }
 
-    if (indexes) {
+    if (indexes && !isInstanceSync) {
       await this.createIndexes(schema.name, indexes, schema.ownerModule);
     }
     return this.models[schema.name];

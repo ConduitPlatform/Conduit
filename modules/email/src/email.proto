@@ -6,6 +6,7 @@ message RegisterTemplateRequest {
   string subject = 2;
   string body = 3;
   repeated string variables = 4;
+  optional string sender = 5;
 }
 
 message RegisterTemplateResponse {
@@ -18,7 +19,7 @@ message SendEmailRequest {
   message SendEmailParams {
     string email = 1;
     string variables = 2;
-    string sender = 3;
+    optional string sender = 3;
     repeated string cc = 4;
     optional string replyTo = 5;
     repeated string attachments = 6;

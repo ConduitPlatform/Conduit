@@ -282,7 +282,6 @@ export default class Authentication extends ManagedModule<Config> {
         const link = `${result.hostUrl}/hook/authentication/verify-email/${result.verificationToken.token}`;
         await this.grpcSdk.emailProvider!.sendEmail('EmailVerification', {
           email: user.email,
-          sender: 'no-reply',
           variables: {
             link,
           },
@@ -398,7 +397,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'teamId must be a valid Team ID!',
       });
     }
-    const urlParams = { team: teamId };
+    const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },
@@ -423,7 +422,7 @@ export default class Authentication extends ManagedModule<Config> {
         message: 'teamId must be a valid Team ID!',
       });
     }
-    const urlParams = { team: teamId };
+    const urlParams = { teamId };
     const bodyParams = { members: call.request.memberIds };
     const request = createParsedRouterRequest(
       { ...urlParams, ...bodyParams },

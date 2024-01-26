@@ -6,17 +6,10 @@ import { verify as hcaptchaVerify } from 'hcaptcha';
 import axios from 'axios';
 
 export class CaptchaValidator {
-  prod = false;
   database: DatabaseProvider;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.database = this.grpcSdk.database!;
-    const self = this;
-    this.grpcSdk.config.get('core').then(res => {
-      if (res.env === 'production') {
-        self.prod = true;
-      }
-    });
   }
 
   async recaptchaVerify(secret: string, token: string) {

@@ -40,7 +40,7 @@
   "devDependencies": {
     "@conduitplatform/grpc-sdk": "*",
     "@types/convict": "^6.1.6",
-    "@types/express": "^4.17.17",
+    "@types/express": "^4.17.21",
     "@types/fs-extra": "^11.0.4",
     "@types/google-protobuf": "^3.15.6",
     "@types/lodash": "^4.14.200",
@@ -48,10 +48,10 @@
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
     "ts-proto": "^1.160.0",
-    "typescript": "~5.0.4"
+    "typescript": "~5.2.2"
   },
   "peerDependencies": {
-    "@grpc/grpc-js": "^1.5.2",
+    "@grpc/grpc-js": "^1.9.7",
     "@conduitplatform/grpc-sdk": "*"
   }
 }

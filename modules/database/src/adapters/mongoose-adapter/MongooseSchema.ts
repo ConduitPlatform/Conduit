@@ -23,8 +23,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { cloneDeep, isNil } from 'lodash';
 import { parseQuery } from './parser';
-
-const EJSON = require('mongodb-extended-json');
+import { EJSON } from 'bson';
 
 export class MongooseSchema extends SchemaAdapter<Model<any>> {
   model: Model<any>;

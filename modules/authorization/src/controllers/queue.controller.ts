@@ -2,17 +2,19 @@ import path from 'path';
 import { Queue, Worker } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { status } from '@grpc/grpc-js';
-import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
-import { Redis, Cluster } from 'ioredis';
+import ConduitGrpcSdk, { GrpcError, sleep } from '@conduitplatform/grpc-sdk';
+import { Cluster, Redis } from 'ioredis';
 
 export class QueueController {
   private static _instance: QueueController;
   private readonly redisConnection: Redis | Cluster;
   private authorizationQueue: Queue;
+  private connectionQueue: Queue;
 
   constructor(private readonly grpcSdk: ConduitGrpcSdk) {
     this.redisConnection = this.grpcSdk.redisManager.getClient();
     this.authorizationQueue = this.initializeRelationIndexQueue();
+    this.connectionQueue = this.initializeConnectionQueue();
   }
 
   static getInstance(grpcSdk?: ConduitGrpcSdk) {
@@ -29,13 +31,50 @@ export class QueueController {
     });
   }
 
+  initializeConnectionQueue() {
+    return new Queue('authorization-connection-queue', {
+      connection: this.redisConnection,
+    });
+  }
+
   addRelationIndexWorker() {
     const processorFile = path.normalize(
       path.join(__dirname, '../jobs', 'constructRelationIndex.js'),
     );
     const worker = new Worker('authorization-index-queue', processorFile, {
+      concurrency: 5,
       connection: this.redisConnection,
       // autorun: true,
+    });
+    worker.on('active', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
+    });
+    worker.on('completed', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
+    });
+    worker.on('error', (error: any) => {
+      ConduitGrpcSdk.Logger.info(`Job error:`, error);
+    });
+  }
+
+  addConnectionWorker() {
+    const processorFile = path.normalize(
+      path.join(__dirname, '../jobs', 'processPossibleConnections.js'),
+    );
+    const worker = new Worker('authorization-connection-queue', processorFile, {
+      concurrency: 5,
+      connection: this.redisConnection,
+      removeOnComplete: {
+        age: 3600,
+        count: 1000,
+      },
+      removeOnFail: {
+        age: 24 * 3600,
+      },
+      // autorun: true,
+    });
+    worker.on('active', (job: any) => {
+      ConduitGrpcSdk.Logger.info(`Job ${job.id} started`);
     });
     worker.on('completed', (job: any) => {
       ConduitGrpcSdk.Logger.info(`Job ${job.id} completed`);
@@ -54,18 +93,40 @@ export class QueueController {
         'Missing relations (subject, relation, object)',
       );
     }
-    await this.authorizationQueue.add(
-      randomUUID(),
-      { relations },
-      {
-        removeOnComplete: {
-          age: 3600,
-          count: 1000,
-        },
-        removeOnFail: {
-          age: 24 * 3600,
-        },
-      },
+    await this.authorizationQueue.addBulk(
+      relations.map(r => {
+        return {
+          name: randomUUID(),
+          data: {
+            relation: r,
+          },
+        };
+      }),
     );
+  }
+
+  async addPossibleConnectionJob(
+    object: string,
+    subject: string,
+    relation: string,
+    relatedPermissions: { [key: string]: string[] },
+    achievedPermissions: string[],
+  ) {
+    await this.connectionQueue.add(randomUUID(), {
+      object,
+      subject,
+      relation,
+      relatedPermissions,
+      achievedPermissions,
+    });
+  }
+
+  async waitForIdle() {
+    let waitingCount = await this.authorizationQueue.count();
+    while (waitingCount > 0) {
+      await sleep(1000);
+      waitingCount = await this.authorizationQueue.count();
+    }
+    return;
   }
 }

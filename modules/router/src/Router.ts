@@ -7,6 +7,8 @@ import ConduitGrpcSdk, {
   GrpcError,
   GrpcRequest,
   HealthCheckStatus,
+  Indexable,
+  sleep,
   UntypedArray,
 } from '@conduitplatform/grpc-sdk';
 import path from 'path';
@@ -26,6 +28,7 @@ import {
 import { isNaN } from 'lodash';
 import AppConfigSchema, { Config } from './config';
 import * as models from './models';
+import { AppMiddleware } from './models';
 import { getSwaggerMetadata } from './hermes';
 import { runMigrations } from './migrations';
 import SecurityModule from './security';
@@ -39,7 +42,6 @@ import {
 import * as adminRoutes from './admin/routes';
 import metricsSchema from './metrics';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { AppMiddleware } from './models';
 
 export default class ConduitDefaultRouter extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -64,6 +66,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   private _sdkRoutes: { path: string; action: string }[] = [];
   private database: DatabaseProvider;
   private hasAppliedMiddleware: string[] = [];
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     super('router');
@@ -162,14 +165,13 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
         ConduitGrpcSdk.Logger.error(err as Error);
       }
     });
-    await this.applyStoredMiddleware();
+    this.scheduleMiddlewareApply();
   }
 
   updateState(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
     this.grpcSdk
-      .state!.getKey('router')
-      .then(r => {
-        const state = !r || r.length === 0 ? {} : JSON.parse(r);
+      .state!.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
         if (!state.routes) state.routes = [];
         let index;
         (state.routes as UntypedArray).forEach((val, i) => {
@@ -185,21 +187,19 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
             url,
           });
         }
-        return this.grpcSdk.state!.setKey('router', JSON.stringify(state));
+        return state;
       })
       .then(() => {
-        this.publishAdminRouteData(routes, url);
-        ConduitGrpcSdk.Logger.log('Updated state');
+        this.publishRouteData(routes, url);
+        ConduitGrpcSdk.Logger.log('Updated routes state');
       })
-      .catch(() => {
-        ConduitGrpcSdk.Logger.error('Failed to update state');
+      .catch(e => {
+        console.error(e);
+        ConduitGrpcSdk.Logger.error('Failed to update routes state');
       });
   }
 
-  publishAdminRouteData(
-    routes: RegisterConduitRouteRequest_PathDefinition[],
-    url: string,
-  ) {
+  publishRouteData(routes: RegisterConduitRouteRequest_PathDefinition[], url: string) {
     this.grpcSdk.bus!.publish(
       'router',
       JSON.stringify({
@@ -250,7 +250,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
       );
 
       this.updateState(call.request.routes, call.request.routerUrl);
-      await this.applyStoredMiddleware();
+      this.scheduleMiddlewareApply();
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
       return callback({ code: status.INTERNAL, message: 'Well that failed :/' });
@@ -391,7 +391,7 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
   }
 
   private async recoverFromState() {
-    const r = await this.grpcSdk.state!.getKey('router');
+    const r = await this.grpcSdk.state!.getState();
     const proxyRoutes = await models.RouterProxyRoute.getInstance().findMany({});
     if ((!r || r.length === 0) && (!proxyRoutes || proxyRoutes.length === 0)) return;
     if (r) {
@@ -502,7 +502,33 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     }
   }
 
+  scheduleMiddlewareApply() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this.applyStoredMiddleware();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
+  }
+
   private async applyStoredMiddleware() {
+    const threshold = 10000;
+    const start = Date.now();
+    while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
+      await sleep(500);
+    }
+    if (this.grpcSdk.database?.active === false) {
+      ConduitGrpcSdk.Logger.error(
+        'Database is not active, cannot apply stored middleware',
+      );
+      return;
+    }
     for (const key of Object.keys(this._grpcRoutes)) {
       if (this.hasAppliedMiddleware.includes(key)) {
         continue;
@@ -536,10 +562,11 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
     path: string,
     action: string,
   ) {
-    await this.grpcSdk
-      .state!.getKey('router')
-      .then(result => {
-        const stateRoutes = JSON.parse(result!).routes as {
+    this.grpcSdk
+      .state!.modifyState(async (existingState: Indexable) => {
+        const state = existingState ?? {};
+        if (!state.routes) state.routes = [];
+        const stateRoutes = state!.routes as {
           protofile: string;
           routes: RegisterConduitRouteRequest_PathDefinition[];
           url: string;
@@ -556,12 +583,14 @@ export default class ConduitDefaultRouter extends ManagedModule<Config> {
           }
           index++;
         }
-        return this.grpcSdk.state!.setKey(
-          'router',
-          JSON.stringify({ routes: stateRoutes }),
-        );
+        state.routes = stateRoutes;
+        return state;
       })
-      .catch(() => {
+      .then(() => {
+        ConduitGrpcSdk.Logger.log('Updated state for patched middleware');
+      })
+      .catch(e => {
+        console.error(e);
         throw new GrpcError(
           status.INTERNAL,
           'Failed to update state for patched middleware',

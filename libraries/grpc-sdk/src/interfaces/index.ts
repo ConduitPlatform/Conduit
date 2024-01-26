@@ -11,5 +11,6 @@ export * from './RawQuery';
 export * from './UntypedArray';
 export * from './Params';
 export * from './ConduitRouteReturn';
+export * from './ConduitSchemaExtension';
 export * from './IConduitLogger';
 export * from './IConduitMetrics';

@@ -2,7 +2,7 @@ import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import { ResourceDefinition } from '../models';
 import { IndexController } from './index.controller';
 import { RelationsController } from './relations.controller';
-import { isNil, isEqual, cloneDeep } from 'lodash';
+import { cloneDeep, isEqual, isNil } from 'lodash';
 
 export class ResourceController {
   private static _instance: ResourceController;
@@ -33,7 +33,7 @@ export class ResourceController {
     }
     await this.validateResourceRelations(resource.relations, resource.name);
     await this.validateResourcePermissions(resource);
-
+    await this.indexController.reIndexResource(resource.name);
     const res = await ResourceDefinition.getInstance().create({
       ...resource,
       version: 0,
@@ -128,23 +128,9 @@ export class ResourceController {
       }
       return { resourceDefinition, status: 'acknowledged' };
     }
-
-    if (
-      this.attributeCheck(resource.permissions) &&
-      this.attributeCheck(resourceDefinition.permissions) &&
-      resource.permissions !== resourceDefinition.permissions
-    ) {
-      await this.validateResourcePermissions(resource);
-      await this.indexController.modifyPermission(resourceDefinition, resource);
-    }
-    if (
-      this.attributeCheck(resource.relations) &&
-      this.attributeCheck(resourceDefinition.relations) &&
-      resource.relations !== resourceDefinition.relations
-    ) {
-      await this.validateResourceRelations(resource.relations, resource.name);
-      await this.indexController.modifyRelations(resourceDefinition, resource);
-    }
+    await this.validateResourcePermissions(resource);
+    await this.validateResourceRelations(resource.relations, resource.name);
+    await this.indexController.reIndexResource(resource.name);
     delete resource._id;
     delete resource.name;
     const res = (await ResourceDefinition.getInstance().findByIdAndUpdate(

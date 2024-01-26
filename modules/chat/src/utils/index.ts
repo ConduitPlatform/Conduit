@@ -65,7 +65,6 @@ export async function sendInvitations(
       await grpcSdk
         .emailProvider!.sendEmail('ChatRoomInvitation', {
           email: invitedUser.email,
-          sender: 'no-reply',
           variables: {
             acceptLink,
             declineLink,

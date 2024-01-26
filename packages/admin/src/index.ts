@@ -8,6 +8,7 @@ import ConduitGrpcSdk, {
   GrpcRequest,
   IConduitLogger,
   Indexable,
+  sleep,
 } from '@conduitplatform/grpc-sdk';
 import {
   ConduitCommons,
@@ -76,6 +77,7 @@ export default class AdminModule extends IConduitAdmin {
   } = {};
   private databaseHandled = false;
   private hasAppliedMiddleware: string[] = [];
+  private _refreshTimeout: NodeJS.Timeout | null = null;
 
   constructor(
     readonly commons: ConduitCommons,
@@ -194,7 +196,7 @@ export default class AdminModule extends IConduitAdmin {
       );
       this.updateState(call.request.routes, call.request.routerUrl, moduleName as string);
       if (this.databaseHandled) {
-        await this.applyStoredMiddleware();
+        this.scheduleMiddlewareApply();
       }
     } catch (err) {
       ConduitGrpcSdk.Logger.error(err as Error);
@@ -475,7 +477,7 @@ export default class AdminModule extends IConduitAdmin {
     await this.registerSchemas();
     await runMigrations(this.grpcSdk);
     await this.migrateSchemas();
-    await this.applyStoredMiddleware();
+    this.scheduleMiddlewareApply();
     this.databaseHandled = true;
     models.Admin.getInstance()
       .findOne({ username: 'admin' })
@@ -617,7 +619,33 @@ export default class AdminModule extends IConduitAdmin {
     }
   }
 
+  scheduleMiddlewareApply() {
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = null;
+    }
+    this._refreshTimeout = setTimeout(() => {
+      try {
+        this.applyStoredMiddleware();
+      } catch (err) {
+        ConduitGrpcSdk.Logger.error(err as Error);
+      }
+      this._refreshTimeout = null;
+    }, 3000);
+  }
+
   private async applyStoredMiddleware() {
+    const threshold = 10000;
+    const start = Date.now();
+    while (this.grpcSdk.database?.active === false && Date.now() - start < threshold) {
+      await sleep(500);
+    }
+    if (this.grpcSdk.database?.active === false) {
+      ConduitGrpcSdk.Logger.error(
+        'Database is not active, cannot apply stored middleware',
+      );
+      return;
+    }
     for (const key of Object.keys(this._grpcRoutes)) {
       if (this.hasAppliedMiddleware.includes(key)) {
         continue;

@@ -184,7 +184,7 @@ export class PermissionsController {
                 id_action: {
                   $concat: [`${objectType}:`, { $toString: '$_id' }, `#${action}`],
                 },
-                entities: '$actors.entity',
+                entities: { $concatArrays: ['$actors.entity', ['*']] },
               },
               pipeline: [
                 {

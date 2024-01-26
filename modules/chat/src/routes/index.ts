@@ -16,7 +16,7 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatMessage, ChatRoom, User } from '../models';
+import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils';
@@ -69,18 +69,11 @@ export class ChatRoutes {
     } catch (e) {
       throw new GrpcError(status.INTERNAL, (e as Error).message);
     }
-    let room;
+    let room: ChatRoom;
     const query: Query<ChatRoom> = {
       name: roomName,
       creator: user._id,
       participants: [user._id],
-      participantsLog: [
-        {
-          user: user._id,
-          action: 'create',
-          timestamp: new Date(new Date().getUTCMilliseconds()),
-        },
-      ],
     };
     const config = await this.grpcSdk.config.get('chat');
     if (config.explicit_room_joins.enabled) {
@@ -89,6 +82,14 @@ export class ChatRoutes {
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      const participantsLog = await ChatParticipantsLog.getInstance().create({
+        user: user._id,
+        action: 'create',
+        chatRoom: room._id,
+      });
+      room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+        participantsLog: [participantsLog._id],
+      })) as ChatRoom;
       const serverConfig = await this.grpcSdk.config.get('router');
       await sendInvitations(
         usersToBeAdded,
@@ -103,23 +104,26 @@ export class ChatRoutes {
       });
     } else {
       query['participants'] = Array.from(new Set([user._id, ...users]));
-      query['participantsLog'] = [
-        {
-          user: user._id,
-          action: 'create',
-          timestamp: new Date(new Date().getUTCMilliseconds()),
-        },
-        ...users.map((userId: string) => ({
-          user: userId,
-          action: 'join' as 'join',
-          timestamp: new Date(new Date().getUTCMilliseconds()),
-        })),
-      ];
       room = await ChatRoom.getInstance()
         .create(query)
         .catch((e: Error) => {
           throw new GrpcError(status.INTERNAL, e.message);
         });
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany([
+        {
+          user: user._id,
+          action: 'create',
+          chatRoom: room._id,
+        },
+        ...users.map((userId: string) => ({
+          user: userId,
+          action: 'join' as 'join',
+          chatRoom: room._id,
+        })),
+      ]);
+      room = (await ChatRoom.getInstance().findByIdAndUpdate(room._id, {
+        participantsLog: participantsLog.map(log => log._id),
+      })) as ChatRoom;
     }
     this.grpcSdk.bus?.publish(
       'chat:create:ChatRoom',
@@ -177,16 +181,19 @@ export class ChatRoutes {
       });
       return ret!;
     } else {
+      const participantsLog = await ChatParticipantsLog.getInstance().createMany(
+        users.map((userId: string) => ({
+          user: userId,
+          action: 'join' as 'join',
+          chatRoom: room._id,
+        })),
+      );
       await ChatRoom.getInstance()
         .findByIdAndUpdate(room._id, {
           participants: Array.from(new Set([...room.participants, ...users])),
           participantsLog: [
             ...room.participantsLog,
-            ...users.map((userId: string) => ({
-              user: userId,
-              action: 'join' as 'join',
-              timestamp: new Date(new Date().getUTCMilliseconds()),
-            })),
+            ...participantsLog.map(log => log._id),
           ],
         })
         .catch((e: Error) => {
@@ -213,11 +220,13 @@ export class ChatRoutes {
     const index = room.participants.indexOf(user._id);
     if (index > -1) {
       room.participants.splice(index, 1);
-      room.participantsLog.push({
+      const participantsLog = await ChatParticipantsLog.getInstance().create({
         user: user._id,
         action: 'leave' as 'leave',
-        timestamp: new Date(new Date().getUTCMilliseconds()),
+        chatRoom: room._id,
       });
+
+      room.participantsLog.push(participantsLog);
       if (
         (room.participants.length === 1 &&
           ConfigController.getInstance().config.deleteEmptyRooms) ||

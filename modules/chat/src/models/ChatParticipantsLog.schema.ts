@@ -1,34 +1,24 @@
 import { ConduitModel, DatabaseProvider, TYPE } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
 import { User } from './User.model';
-import { ChatParticipantsLog } from './ChatParticipantsLog.schema';
+import { ChatRoom } from './ChatRoom.schema';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
-  name: {
+  action: {
     type: TYPE.String,
+    enum: ['add', 'remove', 'create', 'join', 'leave'],
     required: true,
   },
-  participants: [
-    {
-      type: TYPE.Relation,
-      model: 'User',
-      required: true,
-    },
-  ],
-  creator: {
+  user: {
     type: TYPE.Relation,
     model: 'User',
+    required: true,
   },
-  participantsLog: [
-    {
-      type: TYPE.Relation,
-      model: 'ChatParticipantsLog',
-    },
-  ],
-  deleted: {
-    type: TYPE.Boolean,
-    default: false,
+  chatRoom: {
+    type: TYPE.Relation,
+    model: 'ChatRoom',
+    required: true,
   },
   createdAt: TYPE.Date,
   updatedAt: TYPE.Date,
@@ -46,27 +36,25 @@ const modelOptions = {
 } as const;
 const collectionName = undefined;
 
-export class ChatRoom extends ConduitActiveSchema<ChatRoom> {
-  private static _instance: ChatRoom;
+export class ChatParticipantsLog extends ConduitActiveSchema<ChatParticipantsLog> {
+  private static _instance: ChatParticipantsLog;
   _id: string;
-  name: string;
-  creator?: string | User;
-  participants: string[] | User[];
-  participantsLog: (string | ChatParticipantsLog)[];
-  deleted: boolean;
+  action: 'add' | 'remove' | 'create' | 'join' | 'leave';
+  user: string | User;
+  chatRoom: string | ChatRoom;
   createdAt: Date;
   updatedAt: Date;
 
   private constructor(database: DatabaseProvider) {
-    super(database, ChatRoom.name, schema, modelOptions, collectionName);
+    super(database, ChatParticipantsLog.name, schema, modelOptions, collectionName);
   }
 
   static getInstance(database?: DatabaseProvider) {
-    if (ChatRoom._instance) return ChatRoom._instance;
+    if (ChatParticipantsLog._instance) return ChatParticipantsLog._instance;
     if (!database) {
       throw new Error('No database instance provided!');
     }
-    ChatRoom._instance = new ChatRoom(database);
-    return ChatRoom._instance;
+    ChatParticipantsLog._instance = new ChatParticipantsLog(database);
+    return ChatParticipantsLog._instance;
   }
 }

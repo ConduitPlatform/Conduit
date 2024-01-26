@@ -44,9 +44,9 @@ export abstract class DatabaseAdapter<T extends Schema> {
     this.legacyDeployment = await this.hasLegacyCollections();
   }
 
-  async registerSystemSchema(schema: ConduitSchema) {
+  async registerSystemSchema(schema: ConduitSchema, isReplica: boolean) {
     // @dirty-type-cast
-    await this.createSchemaFromAdapter(schema);
+    await this.createSchemaFromAdapter(schema, false, false, isReplica);
     this._systemSchemas.add(schema.name);
   }
 
@@ -85,7 +85,11 @@ export abstract class DatabaseAdapter<T extends Schema> {
     await this.addExtensionsFromSchemaModel(schema, gRPC);
     stitchSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     const schemaUpdate = this.registeredSchemas.has(schema.name);
-    const createdSchema = await this._createSchemaFromAdapter(schema, !instanceSync);
+    const createdSchema = await this._createSchemaFromAdapter(
+      schema,
+      !instanceSync,
+      instanceSync,
+    );
     this.hashSchemaFields(schema as ConduitDatabaseSchema); // @dirty-type-cast
     if (!instanceSync && !schemaUpdate) {
       ConduitGrpcSdk.Metrics?.increment('registered_schemas_total', 1, {
@@ -94,6 +98,31 @@ export abstract class DatabaseAdapter<T extends Schema> {
     }
     if (!instanceSync) this.publishSchema(schema as ConduitDatabaseSchema); // @dirty-type-cast
     return createdSchema;
+  }
+
+  async createViewFromAdapter(
+    viewData: {
+      modelName: string;
+      viewName: string;
+      joinedSchemas: string[];
+      query: any;
+    },
+    instanceSync = false,
+  ) {
+    await this.createView(
+      viewData.modelName,
+      viewData.viewName,
+      viewData.joinedSchemas,
+      viewData.query,
+    );
+    if (!instanceSync) {
+      this.publishView(
+        viewData.modelName,
+        viewData.viewName,
+        viewData.joinedSchemas,
+        viewData.query,
+      );
+    }
   }
 
   abstract getCollectionName(schema: ConduitSchema): string;
@@ -278,7 +307,7 @@ export abstract class DatabaseAdapter<T extends Schema> {
           model,
           !!model.modelOptions.conduit?.imported,
           true,
-          false,
+          true,
         );
       });
 
@@ -365,6 +394,22 @@ export abstract class DatabaseAdapter<T extends Schema> {
     );
   }
 
+  /**
+   * Publishes view for Database (multi-instance) synchronization
+   */
+  publishView(modelName: string, viewName: string, joinedSchemas: string[], query: any) {
+    // @dirty-type-cast
+    this.grpcSdk.bus!.publish(
+      'database:create:view',
+      JSON.stringify({
+        modelName,
+        viewName,
+        joinedSchemas,
+        query,
+      }),
+    );
+  }
+
   protected abstract connect(): void;
 
   protected abstract ensureConnected(): Promise<void>;
@@ -374,9 +419,12 @@ export abstract class DatabaseAdapter<T extends Schema> {
    */
   protected abstract hasLegacyCollections(): Promise<boolean>;
 
+  abstract guaranteeView(viewName: string): Promise<T>;
+
   protected abstract _createSchemaFromAdapter(
     schema: ConduitSchema,
     saveToDb: boolean,
+    instanceSync: boolean,
   ): Promise<Schema>;
 
   protected async saveSchemaToDatabase(schema: ConduitSchema) {

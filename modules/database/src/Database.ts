@@ -105,20 +105,23 @@ export default class DatabaseModule extends ManagedModule<void> {
   }
 
   async onServerStart() {
-    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema);
-    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas);
+    const isReplica = this.grpcSdk.isAvailable('database');
+    await this._activeAdapter.registerSystemSchema(models.DeclaredSchema, isReplica);
+    await this._activeAdapter.registerSystemSchema(models.MigratedSchemas, isReplica);
     let modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
       if (['_DeclaredSchema', 'MigratedSchemas'].includes(model.name)) return [];
-      return this._activeAdapter.registerSystemSchema(model);
+      return this._activeAdapter.registerSystemSchema(model, isReplica);
     });
     await Promise.all(modelPromises);
     await this._activeAdapter.retrieveForeignSchemas();
     await this._activeAdapter.recoverSchemasFromDatabase();
     await this._activeAdapter.recoverViewsFromDatabase();
-    await runMigrations(this._activeAdapter);
+    if (!isReplica) {
+      await runMigrations(this._activeAdapter);
+    }
     modelPromises = Object.values(models).flatMap((model: ConduitSchema) => {
-      return this._activeAdapter.registerSystemSchema(model).then(() => {
-        if (this._activeAdapter.getDatabaseType() !== 'MongoDB') {
+      return this._activeAdapter.registerSystemSchema(model, isReplica).then(() => {
+        if (this._activeAdapter.getDatabaseType() !== 'MongoDB' && !isReplica) {
           return this._activeAdapter.syncSchema(model.name);
         }
       });
@@ -213,12 +216,12 @@ export default class DatabaseModule extends ManagedModule<void> {
    */
   async createView(call: GrpcRequest<CreateViewRequest>, callback: GrpcResponse<Empty>) {
     try {
-      await this._activeAdapter.createView(
-        call.request.schemaName,
-        call.request.viewName,
-        call.request.joinedSchemas,
-        call.request.query,
-      );
+      await this._activeAdapter.createViewFromAdapter({
+        modelName: call.request.schemaName,
+        viewName: call.request.viewName,
+        joinedSchemas: call.request.joinedSchemas,
+        query: call.request.query,
+      });
       callback(null); // @dirty-type-cast
     } catch (err) {
       callback({
@@ -812,6 +815,10 @@ export default class DatabaseModule extends ManagedModule<void> {
         const syncSchema: ConduitDatabaseSchema = JSON.parse(schemaStr); // @dirty-type-cast
         delete (syncSchema as any).fieldHash;
         await this._activeAdapter.createSchemaFromAdapter(syncSchema, false, false, true);
+      });
+      this.grpcSdk.bus?.subscribe('database:create:view', async viewStr => {
+        const viewData = JSON.parse(viewStr);
+        await this._activeAdapter.createViewFromAdapter(viewData, true);
       });
       this.grpcSdk.bus?.subscribe('database:delete:schema', async schemaName => {
         await this._activeAdapter.deleteSchema(schemaName, false, '', true);
