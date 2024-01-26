@@ -93,24 +93,24 @@ export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
         this,
         true,
       );
+      this.views[viewName] = viewModel;
       await viewModel.model.createCollection({
         viewOn: model.originalSchema.collectionName,
         pipeline: EJSON.parse(query.mongoQuery),
       });
-      this.views[viewName] = viewModel;
-      const foundView = await this.models['Views'].findOne({ name: viewName });
-      if (isNil(foundView)) {
-        await this.models['Views'].create({
-          name: viewName,
-          originalSchema: modelName,
-          joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
-          query,
-        });
-      }
     } catch (e: any) {
       if (!e.message.includes('Cannot overwrite')) {
         throw e;
       }
+    }
+    const foundView = await this.models['Views'].findOne({ name: viewName });
+    if (isNil(foundView)) {
+      await this.models['Views'].create({
+        name: viewName,
+        originalSchema: modelName,
+        joinedSchemas: [...new Set(joinedSchemas.concat(modelName))],
+        query,
+      });
     }
   }
 
