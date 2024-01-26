@@ -1,0 +1,39 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "modules/**"
+      - "libraries/grpc-sdk/**"
+      - "libraries/module-tools/**"
+      - "packages/module-tools/**"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    name: Build Conduit standalone
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build conduit base
+        run: |
+          DEV=TRUE make all
+      - name: Build standalone
+        run: |
+          docker build -t ghcr.io/conduitplatform/conduit-standalone:dev -f ./standalone.Dockerfile .
+      - name: Push image
+        run: |
+          docker push ghcr.io/conduitplatform/conduit-standalone:dev

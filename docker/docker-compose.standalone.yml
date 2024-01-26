@@ -1,0 +1,79 @@
+# ---------------------------------------- Instructions ----------------------------------------
+# This compose file deploys a "standalone" version of conduit with most modules
+# packaged in a single image. Loki and Prometheus are not deployed, since
+# metrics and logs can be viewed directly from the Docker daemon.
+#-------------------------------------------------------------------------------------------
+
+version: '3.9'
+networks:
+  default:
+    name: 'conduit'
+services:
+  # Default Services
+  conduit:
+    container_name: 'conduit'
+    image: 'docker.io/conduitplatform/conduit-standalone:${IMAGE_TAG}'
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - mongodb
+    ports:
+      - '${CORE_GRPC_PORT:-55152}:${CORE_GRPC_PORT:-55152}'
+      - '${CORE_ADMIN_HTTP_PORT:-3030}:3030'
+      - '${CORE_ADMIN_SOCKET_PORT:-3031}:3031'
+    environment:
+      REDIS_HOST: 'conduit-redis'
+      REDIS_PORT: '${REDIS_PORT:-6379}'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+      ADMIN_HTTP_PORT: '${ADMIN_HTTP_PORT:-3030}'
+      ADMIN_SOCKET_PORT: '${ADMIN_SOCKET_PORT:-3031}'
+      __DEFAULT_HOST_URL: '${ADMIN_DEFAULT_HOST_URL:-http://localhost:3030}'
+      GRPC_KEY: '${GRPC_KEY}'
+      DB_CONN_URI: '${DB_CONN_URI:-mongodb://conduit:pass@conduit-mongo:27017/conduit?authSource=admin}'
+    networks:
+      default:
+        aliases:
+          - conduit
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  ui:
+    container_name: 'conduit-ui'
+    image: 'docker.io/conduitplatform/conduit-ui:${UI_IMAGE_TAG}'
+    restart: unless-stopped
+    ports:
+      - '${UI_PORT:-8080}:8080'
+    environment:
+      CONDUIT_URL: 'http://conduit:3030'
+      MASTER_KEY: '${CORE_MASTER_KEY:-M4ST3RK3Y}'
+
+  # Dependencies
+  redis:
+    container_name: 'conduit-redis'
+    image: 'docker.io/library/redis:7.0.2'
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+
+  mongodb:
+    container_name: 'conduit-mongo'
+    image: 'docker.io/library/mongo:4.4.15'
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-27017}:27017'
+    environment:
+      MONGO_INITDB_DATABASE: 'conduit'
+      MONGO_INITDB_ROOT_USERNAME: '${DB_USER:-conduit}'
+      MONGO_INITDB_ROOT_PASSWORD: '${DB_PASS:-pass}'
+    profiles: ['mongodb']
+    networks:
+      default:
+        aliases:
+          - conduit-mongo
+    volumes:
+      - mongo:/data/db
+
+# Persistent Volumes
+volumes:
+  mongo:
+    external: false
