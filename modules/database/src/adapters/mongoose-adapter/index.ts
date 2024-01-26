@@ -20,8 +20,8 @@ import {
   introspectedSchemaCmsOptionsDefaults,
 } from '../../interfaces';
 import { isNil } from 'lodash';
+import { EJSON } from 'bson';
 
-const EJSON = require('mongodb-extended-json');
 const parseSchema = require('mongodb-schema');
 
 export class MongooseAdapter extends DatabaseAdapter<MongooseSchema> {
