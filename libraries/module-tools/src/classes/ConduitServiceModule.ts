@@ -2,7 +2,7 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { camelCase } from 'lodash';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import { GrpcServer } from './GrpcServer';
+import { GrpcServer } from './GrpcServer.js';
 import ConduitGrpcSdk, {
   GrpcCallback,
   GrpcRequest,
@@ -14,7 +14,7 @@ import ConduitGrpcSdk, {
   SetConfigRequest,
   SetConfigResponse,
 } from '@conduitplatform/grpc-sdk';
-import { RoutingManager } from '../routing';
+import { RoutingManager } from '../routing/index.js';
 
 export abstract class ConduitServiceModule {
   protected readonly _moduleName: string;

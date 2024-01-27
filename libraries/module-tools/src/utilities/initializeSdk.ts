@@ -2,11 +2,11 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
   IConduitLogger,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitLogger, setupLoki } from '../logging';
+import { ConduitLogger, setupLoki } from '../logging/index.js';
 import winston from 'winston';
 import path from 'path';
-import { ConduitMetrics } from '../metrics';
-import { clientMiddleware } from '../metrics/clientMiddleware';
+import { ConduitMetrics } from '../metrics/index.js';
+import { clientMiddleware } from '../metrics/clientMiddleware.js';
 
 export const initializeSdk = (
   coreUrl: string,

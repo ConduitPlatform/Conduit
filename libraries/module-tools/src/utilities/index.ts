@@ -1,3 +1,3 @@
-export * from './initializeSdk';
-export * from './linearBackoffTimeout';
-export * from './merge';
+export * from './initializeSdk.js';
+export * from './linearBackoffTimeout.js';
+export * from './merge.js';

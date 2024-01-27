@@ -8,8 +8,8 @@ import {
   ConduitRouteReturnDefinition,
   ConduitUrlParams,
 } from '@conduitplatform/grpc-sdk';
-import { RoutingManager } from './RoutingManager';
-import { RequestHandlers } from './wrapRouterFunctions';
+import { RoutingManager } from './RoutingManager.js';
+import { RequestHandlers } from './wrapRouterFunctions.js';
 
 export class RouteBuilder {
   private readonly _options!: ConduitRouteOptions;

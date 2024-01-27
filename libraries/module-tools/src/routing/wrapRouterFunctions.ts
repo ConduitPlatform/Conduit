@@ -6,7 +6,7 @@ import ConduitGrpcSdk, {
   UnparsedSocketResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { Status } from '@grpc/grpc-js/build/src/constants';
+import { Status } from '@grpc/grpc-js/build/src/constants.js';
 
 export type RouterRequestHandler = (
   call: ParsedRouterRequest,

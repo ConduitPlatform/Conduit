@@ -1,6 +1,6 @@
-import { RouteBuilder } from './RouteBuilder';
-import { RequestHandlers } from './wrapRouterFunctions';
-import { wrapFunctionsAsync } from './RoutingUtilities';
+import { RouteBuilder } from './RouteBuilder.js';
+import { RequestHandlers } from './wrapRouterFunctions.js';
+import { wrapFunctionsAsync } from './RoutingUtilities.js';
 import {
   Admin,
   ConduitMiddlewareOptions,
@@ -17,9 +17,9 @@ import {
   Router,
   SocketProtoDescription,
 } from '@conduitplatform/grpc-sdk';
-import { GrpcServer } from '../classes';
-import { ProxyRouteBuilder } from './ProxyRouteBuilder';
-import { RoutingController } from './RoutingController';
+import { GrpcServer } from '../classes/index.js';
+import { ProxyRouteBuilder } from './ProxyRouteBuilder.js';
+import { RoutingController } from './RoutingController.js';
 
 export class RoutingManager {
   private _moduleRoutes: {

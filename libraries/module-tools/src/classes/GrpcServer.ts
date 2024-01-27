@@ -1,4 +1,4 @@
-import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers';
+import { addServiceToServer, createServer, wrapGrpcFunctions } from '../helpers/index.js';
 import { Server } from '@grpc/grpc-js';
 import { isNil } from 'lodash';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
