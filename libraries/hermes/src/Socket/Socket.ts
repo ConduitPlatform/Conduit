@@ -4,7 +4,7 @@ import { Server as IOServer, ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Cluster, Redis } from 'ioredis';
 import { ConduitRouter } from '../Router.js';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import {
   ConduitSocket,
   EventResponse,

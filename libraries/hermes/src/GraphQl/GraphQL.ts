@@ -20,7 +20,7 @@ import ConduitGrpcSdk, {
 import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-import { isArray } from 'lodash';
+import { isArray } from 'lodash-es';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const cookiePlugin = require('./utils/cookie.plugin');

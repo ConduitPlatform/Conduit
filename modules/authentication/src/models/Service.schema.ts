@@ -36,7 +36,8 @@ const collectionName = undefined;
 export class Service extends ConduitActiveSchema<Service> {
   private static _instance: Service;
   _id: string;
-  name: string;
+  //todo rename
+  declare name: string;
   hashedToken: string;
   active: boolean;
   createdAt: Date;

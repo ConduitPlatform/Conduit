@@ -26,7 +26,7 @@ import {
 } from '../interfaces/index.js';
 import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes/index.js';
 
-const protoLoader = require('@grpc/proto-loader');
+import protoLoader from '@grpc/proto-loader';
 
 function getDescriptor() {
   const protoPath = path.resolve(__dirname, '../module.proto');

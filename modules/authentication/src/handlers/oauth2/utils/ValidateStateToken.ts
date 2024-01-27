@@ -1,7 +1,7 @@
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import moment from 'moment';
-import { Token } from '../../../models';
-import { isNil } from 'lodash';
+import { Token } from '../../../models/index.js';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 
 export async function validateStateToken(state: string): Promise<Token> {

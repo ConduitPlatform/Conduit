@@ -1,4 +1,4 @@
-import { OAuth2 } from '../OAuth2';
+import { OAuth2 } from '../OAuth2.js';
 import ConduitGrpcSdk, {
   ConduitRouteActions,
   ConduitRouteReturnDefinition,
@@ -6,28 +6,31 @@ import ConduitGrpcSdk, {
   Indexable,
   ParsedRouterRequest,
 } from '@conduitplatform/grpc-sdk';
-import * as appleParameters from '../apple/apple.json';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
-import { Payload } from '../interfaces/Payload';
+import appleParameters from '../apple/apple.json' assert { type: 'json' };
+import {
+  AppleOAuth2Settings,
+  AppleProviderConfig,
+  ConnectionParams,
+  Payload,
+} from '../interfaces/index.js';
 import axios from 'axios';
-import { AppleUser } from './apple.user';
+import { AppleUser } from './apple.user.js';
 import * as jwt from 'jsonwebtoken';
 import { Jwt, JwtHeader, JwtPayload } from 'jsonwebtoken';
-import { TokenProvider } from '../../tokenProvider';
-import { Token } from '../../../models';
+import { TokenProvider } from '../../tokenProvider.js';
+import { Token } from '../../../models/index.js';
 import { status } from '@grpc/grpc-js';
 import moment from 'moment';
 import jwksRsa from 'jwks-rsa';
 import qs from 'querystring';
-import { AppleOAuth2Settings } from '../interfaces/AppleOAuth2Settings';
-import { AppleProviderConfig } from '../interfaces/AppleProviderConfig';
-import { validateStateToken } from '../utils';
+
+import { validateStateToken } from '../utils/index.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { AuthUtils } from '../../../utils';
+import { AuthUtils } from '../../../utils/index.js';
 
 export class AppleHandlers extends OAuth2<AppleUser, AppleOAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { apple: AppleProviderConfig }) {

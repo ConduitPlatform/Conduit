@@ -1,5 +1,5 @@
 import { SwaggerParser } from './SwaggerParser.js';
-import { cloneDeep, isNil } from 'lodash';
+import { cloneDeep, isNil } from 'lodash-es';
 import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
 import { SwaggerRouterMetadata } from '../types/index.js';
 import { ConduitRoute } from '../classes/index.js';

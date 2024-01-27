@@ -11,11 +11,11 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { UserAdmin } from './user';
-import { ServiceAdmin } from './service';
-import { TeamsAdmin } from './team';
-import { Service, User } from '../models';
-import { Config } from '../config';
+import { UserAdmin } from './user.js';
+import { ServiceAdmin } from './service.js';
+import { TeamsAdmin } from './team.js';
+import { Service, User } from '../models/index.js';
+import { Config } from '../config/index.js';
 
 export class AdminHandlers {
   private readonly userAdmin: UserAdmin;

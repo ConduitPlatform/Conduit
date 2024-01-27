@@ -7,13 +7,13 @@ import {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { AuthUtils } from '../utils';
-import { AccessToken, Client, User } from '../models';
-import { isNil } from 'lodash';
+import { AuthUtils } from '../utils/index.js';
+import { AccessToken, Client, User } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { JwtPayload } from 'jsonwebtoken';
-import moment from 'moment/moment';
 import getToken = AuthUtils.getToken;
+import moment from 'moment';
 
 /*
  * Expects access token in 'Authorization' header or 'accessToken' cookie

@@ -8,12 +8,12 @@ import ConduitGrpcSdk, {
   Indexable,
   SMS,
 } from '@conduitplatform/grpc-sdk';
-import { Team, Token, User } from '../models';
-import { isEmpty, isNil } from 'lodash';
+import { Team, Token, User } from '../models/index.js';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { v4 as uuid } from 'uuid';
 import escapeStringRegexp from 'escape-string-regexp';
-import { FetchMembersParams } from '../interfaces';
+import { FetchMembersParams } from '../interfaces/index.js';
 import { ConfigController } from '@conduitplatform/module-tools';
 
 export namespace AuthUtils {

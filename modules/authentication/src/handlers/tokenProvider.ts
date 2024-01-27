@@ -1,12 +1,12 @@
 import ConduitGrpcSdk, { Indexable, Query } from '@conduitplatform/grpc-sdk';
-import { AccessToken, RefreshToken, User } from '../models';
-import moment from 'moment/moment';
-import { AuthUtils } from '../utils';
+import { AccessToken, RefreshToken, User } from '../models/index.js';
+import moment from 'moment';
+import { AuthUtils } from '../utils/index.js';
 import * as jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
-import { Config } from '../config';
-import { isNil } from 'lodash';
-import { Cookie } from '../interfaces';
+import { Config } from '../config/index.js';
+import { isNil } from 'lodash-es';
+import { Cookie } from '../interfaces/index.js';
 
 export interface TokenOptions {
   user: User;

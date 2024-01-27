@@ -1,4 +1,4 @@
-import { ProviderConfig } from './ProviderConfig';
+import { ProviderConfig } from './index.js';
 
 export interface AppleProviderConfig extends ProviderConfig {
   privateKey: string;

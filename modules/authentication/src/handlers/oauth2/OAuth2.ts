@@ -5,30 +5,32 @@ import ConduitGrpcSdk, {
   ParsedRouterRequest,
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { Token, User } from '../../models';
+import { Token, User } from '../../models/index.js';
 import axios from 'axios';
-import { Payload } from './interfaces/Payload';
-import { OAuth2Settings } from './interfaces/OAuth2Settings';
-import { RedirectOptions } from './interfaces/RedirectOptions';
-import { AuthParams } from './interfaces/AuthParams';
-import { ConnectionParams } from './interfaces/ConnectionParams';
-import { OAuthRequest } from './interfaces/MakeRequest';
-import { TokenProvider } from '../tokenProvider';
+import {
+  AuthParams,
+  ConnectionParams,
+  OAuth2Settings,
+  OAuthRequest,
+  Payload,
+  RedirectOptions,
+} from './interfaces/index.js';
+import { TokenProvider } from '../tokenProvider.js';
 
 import { v4 as uuid } from 'uuid';
 import { createHash } from 'crypto';
-import { TeamsHandler } from '../team';
-import { validateStateToken } from './utils';
-import { IAuthenticationStrategy } from '../../interfaces';
-import { TokenType } from '../../constants';
+import { TeamsHandler } from '../team.js';
+import { validateStateToken } from './utils/index.js';
+import { IAuthenticationStrategy } from '../../interfaces/index.js';
+import { TokenType } from '../../constants/index.js';
 import {
   ConduitString,
   ConfigController,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { AuthUtils } from '../../utils';
+import { AuthUtils } from '../../utils/index.js';
 
 export abstract class OAuth2<T, S extends OAuth2Settings>
   implements IAuthenticationStrategy

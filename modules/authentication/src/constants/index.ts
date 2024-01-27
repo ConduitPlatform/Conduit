@@ -1,4 +1,3 @@
-export * from './TokenSchema';
-export * from './TokenType';
-export * from './TokenType';
-export * from './Oauth2.default.schema';
+export * from './TokenSchema.js';
+export * from './TokenType.js';
+export * from './Oauth2.default.schema.js';

@@ -1,4 +1,4 @@
-import { AuthParams } from './AuthParams';
+import { AuthParams } from './index.js';
 
 export interface OAuthRequest {
   headers: { [key: string]: string | number | boolean };

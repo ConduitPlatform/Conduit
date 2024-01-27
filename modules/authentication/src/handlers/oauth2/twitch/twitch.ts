@@ -1,12 +1,14 @@
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import axios from 'axios';
-import { TwitchUser } from './twitch.user';
-import * as twitchParameters from './twitch.json';
-import { OAuth2 } from '../OAuth2';
-import { OAuth2Settings } from '../interfaces/OAuth2Settings';
-import { ProviderConfig } from '../interfaces/ProviderConfig';
-import { Payload } from '../interfaces/Payload';
-import { ConnectionParams } from '../interfaces/ConnectionParams';
+import { TwitchUser } from './twitch.user.js';
+import twitchParameters from './twitch.json' assert { type: 'json' };
+import { OAuth2 } from '../OAuth2.js';
+import {
+  ConnectionParams,
+  OAuth2Settings,
+  Payload,
+  ProviderConfig,
+} from '../interfaces/index.js';
 
 export class TwitchHandlers extends OAuth2<TwitchUser, OAuth2Settings> {
   constructor(grpcSdk: ConduitGrpcSdk, config: { twitch: ProviderConfig }) {
