@@ -33,7 +33,7 @@
     "@types/node": "20.10.3",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.5",
-    "ts-proto": "^1.160.0",
+    "ts-proto": "^1.167.1",
     "typescript": "~5.2.2"
   }
 }
