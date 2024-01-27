@@ -1,10 +1,10 @@
-import { SwaggerParser } from './SwaggerParser';
+import { SwaggerParser } from './SwaggerParser.js';
 import { cloneDeep, isNil } from 'lodash';
 import { ConduitModel, ConduitRouteActions, Indexable } from '@conduitplatform/grpc-sdk';
-import { SwaggerRouterMetadata } from '../types';
-import { ConduitRoute } from '../classes';
-import { importDbTypes } from '../utils/types';
-import { processSwaggerParams } from './SimpleTypeParamUtils';
+import { SwaggerRouterMetadata } from '../types/index.js';
+import { ConduitRoute } from '../classes/index.js';
+import { importDbTypes } from '../utils/types.js';
+import { processSwaggerParams } from './SimpleTypeParamUtils.js';
 
 export class SwaggerGenerator {
   private _swaggerDoc: Indexable;

@@ -1,4 +1,4 @@
-import { Cookie } from '../../interfaces';
+import { Cookie } from '../../interfaces/index.js';
 
 module.exports = {
   requestDidStart() {

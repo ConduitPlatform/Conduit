@@ -23,8 +23,8 @@ import {
   ProxyRouteT,
   RouteT,
   SocketProtoDescription,
-} from '../interfaces';
-import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes';
+} from '../interfaces/index.js';
+import { ConduitRoute, instanceOfConduitProxy, ProxyRoute } from '../classes/index.js';
 
 const protoLoader = require('@grpc/proto-loader');
 

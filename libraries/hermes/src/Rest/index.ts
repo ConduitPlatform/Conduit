@@ -1,2 +1,2 @@
-export * from './Rest';
-export * from './Swagger';
+export * from './Rest.js';
+export * from './Swagger.js';

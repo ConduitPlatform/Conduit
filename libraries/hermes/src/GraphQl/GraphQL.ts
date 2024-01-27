@@ -1,14 +1,14 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { GraphQlParser, ParseResult } from './GraphQlParser';
-import { findPopulation } from './utils/TypeUtils';
+import { GraphQlParser, ParseResult } from './GraphQlParser.js';
+import { findPopulation } from './utils/TypeUtils.js';
 import { GraphQLJSONObject } from 'graphql-type-json';
 import { GraphQLScalarType, Kind } from 'graphql';
-import { createHashKey, extractCachingGql } from '../cache.utils';
+import { createHashKey, extractCachingGql } from '../cache.utils.js';
 import moment from 'moment';
-import { processParams } from './utils/SimpleTypeParamUtils';
-import { importDbTypes } from '../utils/types';
-import { ConduitRouter } from '../Router';
-import { errorHandler } from './utils/Request.utils';
+import { processParams } from './utils/SimpleTypeParamUtils.js';
+import { importDbTypes } from '../utils/types.js';
+import { ConduitRouter } from '../Router.js';
+import { errorHandler } from './utils/Request.utils.js';
 import ConduitGrpcSdk, {
   ConduitModel,
   ConduitReturn,
@@ -17,10 +17,10 @@ import ConduitGrpcSdk, {
   Indexable,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { ConduitRoute, TypeRegistry } from '../classes';
+import { ConduitRoute, TypeRegistry } from '../classes/index.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
-import { merge, isArray } from 'lodash';
+import { isArray } from 'lodash';
 
 const { parseResolveInfo } = require('graphql-parse-resolve-info');
 const cookiePlugin = require('./utils/cookie.plugin');

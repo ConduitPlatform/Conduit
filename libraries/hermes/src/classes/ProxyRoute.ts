@@ -1,5 +1,5 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { ProxyRouteOptions } from '../interfaces';
+import { ProxyRouteOptions } from '../interfaces/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
 export class ProxyRoute {
