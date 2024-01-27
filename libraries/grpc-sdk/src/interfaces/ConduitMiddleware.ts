@@ -1,4 +1,4 @@
-import { ConduitRouteActions } from './Route';
+import { ConduitRouteActions } from './Route.js';
 
 export interface ConduitMiddlewareOptions {
   action?: ConduitRouteActions;

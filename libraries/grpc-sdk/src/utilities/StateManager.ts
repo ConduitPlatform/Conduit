@@ -1,7 +1,7 @@
-import { RedisManager } from './RedisManager';
+import { RedisManager } from './RedisManager.js';
 import { Cluster, Redis } from 'ioredis';
 import Redlock, { Lock } from 'redlock';
-import { Indexable } from '../interfaces';
+import { Indexable } from '../interfaces/index.js';
 
 export enum KNOWN_LOCKS {
   STATE_MODIFICATION = 'state_modification',
@@ -13,7 +13,7 @@ export class StateManager {
 
   constructor(redisManager: RedisManager, name: string) {
     this.redisClient = redisManager.getClient({ keyPrefix: name + '_' });
-    this.redLock = new Redlock([this.redisClient], {
+    this.redLock = new Redlock([this.redisClient as any], {
       // The expected clock drift; for more details see:
       // http://redis.io/topics/distlock
       driftFactor: 0.01, // multiplied by lock ttl to determine drift time
@@ -29,7 +29,7 @@ export class StateManager {
       retryJitter: 200, // time in ms
       // The minimum remaining time on a lock before an extension is automatically
       // attempted with the `using` API.
-      automaticExtensionThreshold: 500, // time in ms
+      // automaticExtensionThreshold: 500, // time in ms
     });
 
     process.on('exit', () => {
@@ -42,7 +42,7 @@ export class StateManager {
   }
 
   async releaseLock(lock: Lock) {
-    await lock.release();
+    await lock.unlock();
   }
 
   async modifyState(modifier: (state: Indexable) => Promise<Indexable>) {

@@ -1,14 +1,18 @@
-import { ConduitModule } from '../../classes';
+import { ConduitModule } from '../../classes/index.js';
 import {
   RegisterConduitRouteRequest,
   RegisterConduitRouteRequest_PathDefinition,
   RouterDefinition,
   SocketData,
-} from '../../protoUtils/router';
-import { ConduitRouteActions } from '../../interfaces';
+} from '../../protoUtils/router.js';
+import { ConduitRouteActions } from '../../interfaces/index.js';
 
 export class Router extends ConduitModule<typeof RouterDefinition> {
-  constructor(readonly moduleName: string, url: string, grpcToken?: string) {
+  constructor(
+    readonly moduleName: string,
+    url: string,
+    grpcToken?: string,
+  ) {
     super(moduleName, 'router', url, grpcToken);
     this.initializeClient(RouterDefinition);
   }

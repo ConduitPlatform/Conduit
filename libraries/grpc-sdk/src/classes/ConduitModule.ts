@@ -1,4 +1,7 @@
-import { getGrpcSignedTokenInterceptor, getModuleNameInterceptor } from '../interceptors';
+import {
+  getGrpcSignedTokenInterceptor,
+  getModuleNameInterceptor,
+} from '../interceptors/index.js';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
 import { Channel, Client, createChannel, createClientFactory } from 'nice-grpc';
 import { retryMiddleware } from 'nice-grpc-client-middleware-retry';
@@ -6,9 +9,9 @@ import {
   ConduitModuleDefinition,
   HealthCheckResponse,
   HealthDefinition,
-} from '../protoUtils';
+} from '../protoUtils/index.js';
 import { EventEmitter } from 'events';
-import ConduitGrpcSdk from '../index';
+import ConduitGrpcSdk from '../index.js';
 
 export class ConduitModule<T extends CompatServiceDefinition> {
   protected channel?: Channel;

@@ -1,5 +1,5 @@
-import { ConduitModule } from '../../classes/ConduitModule';
-import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat';
+import { ConduitModule } from '../../classes/index.js';
+import { ChatDefinition, Room, SendMessageRequest } from '../../protoUtils/chat.js';
 
 export class Chat extends ConduitModule<typeof ChatDefinition> {
   constructor(

@@ -1,2 +1,2 @@
-export * from './moduleName';
-export * from './grpcSignedToken';
+export * from './moduleName.js';
+export * from './grpcSignedToken.js';

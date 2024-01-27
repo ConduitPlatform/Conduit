@@ -1,4 +1,4 @@
-import { ConduitReturn } from './Route';
+import { ConduitReturn } from './Route.js';
 
 /**
  * Supports:

@@ -1,4 +1,4 @@
-import { ConduitModule } from '../../classes';
+import { ConduitModule } from '../../classes/index.js';
 import {
   AuthenticationDefinition,
   TeamDeleteResponse,
@@ -7,7 +7,7 @@ import {
   UserLoginResponse,
   Team,
   ValidateAccessTokenResponse,
-} from '../../protoUtils';
+} from '../../protoUtils/index.js';
 
 export class Authentication extends ConduitModule<typeof AuthenticationDefinition> {
   constructor(

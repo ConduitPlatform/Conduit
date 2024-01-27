@@ -11,23 +11,29 @@ import {
   Router,
   SMS,
   Storage,
-} from './modules';
+} from './modules/index.js';
 import Crypto from 'crypto';
-import { EventBus, getJsonEnv, RedisManager, sleep, StateManager } from './utilities';
+import {
+  EventBus,
+  getJsonEnv,
+  RedisManager,
+  sleep,
+  StateManager,
+} from './utilities/index.js';
 import { CompatServiceDefinition } from 'nice-grpc/lib/service-definitions';
-import { checkModuleHealth, ConduitModule } from './classes';
+import { checkModuleHealth, ConduitModule } from './classes/index.js';
 import { Client } from 'nice-grpc';
 import { status } from '@grpc/grpc-js';
+import { GrpcError, HealthCheckStatus } from './types/index.js';
+import { createSigner } from 'fast-jwt';
+import { ClusterOptions, RedisOptions } from 'ioredis';
+import { IConduitLogger, IConduitMetrics } from './interfaces/index.js';
 import {
   ConduitModuleDefinition,
   HealthCheckResponse_ServingStatus,
   HealthDefinition,
   ModuleListResponse_ModuleResponse,
-} from './protoUtils';
-import { GrpcError, HealthCheckStatus } from './types';
-import { createSigner } from 'fast-jwt';
-import { ClusterOptions, RedisOptions } from 'ioredis';
-import { IConduitLogger, IConduitMetrics } from './interfaces';
+} from './protoUtils/index.js';
 
 type UrlRemap = { [url: string]: string };
 
@@ -565,11 +571,11 @@ export default class ConduitGrpcSdk {
   }
 }
 
-export * from './interfaces';
-export * from './classes';
-export * from './modules';
-export * from './constants';
-export * from './types';
-export * from './utilities';
-export * from './protoUtils';
+export * from './interfaces/index.js';
+export * from './classes/index.js';
+export * from './modules/index.js';
+export * from './constants/index.js';
+export * from './types/index.js';
+export * from './utilities/index.js';
+export * from './protoUtils/index.js';
 export * from '@grpc/grpc-js';
