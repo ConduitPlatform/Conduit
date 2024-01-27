@@ -57,7 +57,7 @@
     "cross-env": "^7.0.3",
     "rimraf": "^5.0.5",
     "smtp-server": "^3.11.0",
-    "ts-proto": "^1.160.0",
+    "ts-proto": "^1.167.1",
     "typescript": "~5.2.2"
   }
 }
