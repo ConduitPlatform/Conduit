@@ -156,7 +156,9 @@ export default class AdminModule extends IConduitAdmin {
     this._router.registerMiddleware(helmet(), false);
     this._router.registerMiddleware((req: Request, res: Response, next: NextFunction) => {
       if (
-        (req.url.startsWith('/graphql') || req.url.startsWith('/swagger')) &&
+        (req.url.startsWith('/graphql') ||
+          req.url.startsWith('/swagger') ||
+          req.url.startsWith('/reference')) &&
         req.method === 'GET'
       ) {
         res.removeHeader('Content-Security-Policy');

@@ -38,7 +38,9 @@ export class ClientValidator {
 
     // check gql explorer and swagger access
     if (
-      (req.url === '/graphql' || req.url.startsWith('/swagger')) &&
+      (req.url === '/graphql' ||
+        req.url.startsWith('/swagger') ||
+        req.url.startsWith('/reference')) &&
       req.method === 'GET'
     ) {
       // disabled swagger and gql explorer access on production

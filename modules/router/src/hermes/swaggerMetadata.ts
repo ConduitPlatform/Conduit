@@ -5,19 +5,24 @@ import { ConduitRoute, SwaggerRouterMetadata } from '@conduitplatform/hermes';
 export const getSwaggerMetadata: () => SwaggerRouterMetadata = () => ({
   urlPrefix: '',
   securitySchemes: {
-    clientId: {
-      name: 'clientId',
-      type: 'apiKey',
-      in: 'header',
-      description: 'A security client id, retrievable through [POST] /security/client',
-    },
-    clientSecret: {
-      name: 'clientSecret',
-      type: 'apiKey',
-      in: 'header',
-      description:
-        'A security client secret, retrievable through [POST] /security/client',
-    },
+    ...(ConfigController.getInstance().config.security.clientValidation
+      ? {
+          clientId: {
+            name: 'clientId',
+            type: 'apiKey',
+            in: 'header',
+            description:
+              'A security client id, retrievable through [POST] /security/client',
+          },
+          clientSecret: {
+            name: 'clientSecret',
+            type: 'apiKey',
+            in: 'header',
+            description:
+              'A security client secret, retrievable through [POST] /security/client',
+          },
+        }
+      : {}),
     userToken: {
       type: 'http',
       scheme: 'bearer',

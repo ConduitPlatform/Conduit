@@ -22,6 +22,7 @@ async function requestExcluded(req: ConduitRequest, conduit: ConduitCommons) {
   if (await isDev(conduit)) {
     if (req.originalUrl.indexOf('/graphql') === 0 && req.method === 'GET') return true;
     if (req.originalUrl.indexOf('/swagger') === 0) return true;
+    if (req.originalUrl.indexOf('/reference') === 0) return true;
   }
   // REST
   if (excludedRestRoutes.includes(req.path)) return true;
