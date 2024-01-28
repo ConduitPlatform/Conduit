@@ -12,7 +12,7 @@ module.exports = {
       script: './modules/database/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55153',
+        GRPC_PORT: '55160',
         SERVICE_URL: '0.0.0.0:55153',
       },
     },
@@ -21,7 +21,7 @@ module.exports = {
       script: './modules/router/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55167',
+        GRPC_PORT: '55161',
         SERVICE_URL: '0.0.0.0:55167',
       },
     },
@@ -30,7 +30,7 @@ module.exports = {
       script: './modules/authentication/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55154',
+        GRPC_PORT: '55162',
         SERVICE_URL: '0.0.0.0:55154',
       },
     },
@@ -39,7 +39,7 @@ module.exports = {
       script: './modules/authorization/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55177',
+        GRPC_PORT: '55169',
         SERVICE_URL: '0.0.0.0:55177',
       },
     },
@@ -48,7 +48,7 @@ module.exports = {
       script: './modules/email/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55155',
+        GRPC_PORT: '55164',
         SERVICE_URL: '0.0.0.0:55155',
       },
     },
@@ -57,7 +57,7 @@ module.exports = {
       script: './modules/storage/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55158',
+        GRPC_PORT: '55168',
         SERVICE_URL: '0.0.0.0:55158',
       },
     },
@@ -66,7 +66,7 @@ module.exports = {
       script: './modules/push-notifications/dist/index.js',
       env: {
         CONDUIT_SERVER: '0.0.0.0:55152',
-        GRPC_PORT: '55159',
+        GRPC_PORT: '55166',
         SERVICE_URL: '0.0.0.0:55159',
       },
     },
