@@ -7,8 +7,8 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString, GrpcServer, RoutingManager } from '@conduitplatform/module-tools';
 import { status } from '@grpc/grpc-js';
-import { isNil } from 'lodash';
-import { ISmsProvider } from '../interfaces/ISmsProvider';
+import { isNil } from 'lodash-es';
+import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 
 export class AdminHandlers {
   private provider: ISmsProvider | undefined;

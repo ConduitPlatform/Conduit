@@ -1,4 +1,4 @@
-import { ISmsProvider } from '../interfaces/ISmsProvider';
+import { ISmsProvider } from '../interfaces/ISmsProvider.js';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
 import messagebird from 'messagebird';
 
