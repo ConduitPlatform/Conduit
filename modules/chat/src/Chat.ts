@@ -12,7 +12,7 @@ import { ChatRoutes } from './routes/index.js';
 import * as models from './models/index.js';
 import { validateUsersInput } from './utils/index.js';
 import path from 'path';
-import { isArray, isNil } from 'lodash';
+import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { runMigrations } from './migrations/index.js';
 import {

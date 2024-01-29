@@ -17,7 +17,7 @@ import {
   RoutingManager,
 } from '@conduitplatform/module-tools';
 import { ChatMessage, ChatParticipantsLog, ChatRoom, User } from '../models/index.js';
-import { isArray, isNil } from 'lodash';
+import { isArray, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import { sendInvitations, validateUsersInput } from '../utils/index.js';
 import { InvitationRoutes } from './InvitationRoutes.js';

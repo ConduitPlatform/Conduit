@@ -1,4 +1,4 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { GrpcError, UntypedArray } from '@conduitplatform/grpc-sdk';
 import { ChatRoom, InvitationToken, User } from '../models/index.js';
