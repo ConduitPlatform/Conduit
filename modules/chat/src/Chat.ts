@@ -6,22 +6,22 @@ import ConduitGrpcSdk, {
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
 
-import AppConfigSchema, { Config } from './config';
-import { AdminHandlers } from './admin';
-import { ChatRoutes } from './routes';
-import * as models from './models';
-import { validateUsersInput } from './utils';
+import AppConfigSchema, { Config } from './config/index.js';
+import { AdminHandlers } from './admin/index.js';
+import { ChatRoutes } from './routes/index.js';
+import * as models from './models/index.js';
+import { validateUsersInput } from './utils/index.js';
 import path from 'path';
 import { isArray, isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
-import { runMigrations } from './migrations';
+import { runMigrations } from './migrations/index.js';
 import {
   CreateRoomRequest,
   DeleteRoomRequest,
   Room,
   SendMessageRequest,
-} from './protoTypes/chat';
-import metricsSchema from './metrics';
+} from './protoTypes/chat.js';
+import metricsSchema from './metrics/index.js';
 import {
   ConduitActiveSchema,
   ConfigController,

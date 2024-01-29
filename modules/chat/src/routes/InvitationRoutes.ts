@@ -10,7 +10,7 @@ import {
   ConduitString,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { ChatRoom, InvitationToken } from '../models';
+import { ChatRoom, InvitationToken } from '../models/index.js';
 import { isNil } from 'lodash';
 import { status } from '@grpc/grpc-js';
 

@@ -1,5 +1,5 @@
 import { Query } from '@conduitplatform/grpc-sdk';
-import { ChatMessage } from '../models';
+import { ChatMessage } from '../models/index.js';
 
 export const migrateChatMessages = async () => {
   const query: Query<ChatMessage> = {
