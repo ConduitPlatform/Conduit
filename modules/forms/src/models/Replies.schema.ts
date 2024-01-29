@@ -36,10 +36,10 @@ const collectionName = undefined;
 
 export class FormReplies extends ConduitActiveSchema<FormReplies> {
   private static _instance: FormReplies;
-  _id!: string;
-  form!: string | Forms;
-  data!: any;
-  possibleSpam!: boolean;
+  _id: string;
+  form: string | Forms;
+  data: { [key: string]: NonNullable<unknown> };
+  possibleSpam: boolean;
   createdAt: Date;
   updatedAt: Date;
 
