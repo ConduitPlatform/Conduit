@@ -1,2 +1,2 @@
-export * from './operation.enum';
-export * from './location.enum';
+export * from './operation.enum.js';
+export * from './location.enum.js';

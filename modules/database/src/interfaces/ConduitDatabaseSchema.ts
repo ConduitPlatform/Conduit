@@ -3,13 +3,13 @@ import {
   ConduitSchema,
   ConduitSchemaOptions,
 } from '@conduitplatform/grpc-sdk';
-import { DeclaredSchemaExtension } from './DeclaredSchemaExtension';
+import { DeclaredSchemaExtension } from './DeclaredSchemaExtension.js';
 import {
   MultiDocQuery,
   ParsedQuery,
   Schema,
   SchemaAdapter,
-} from '../adapters/SchemaAdapter';
+} from '../adapters/SchemaAdapter.js';
 
 export class ConduitDatabaseSchema extends ConduitSchema {
   extensions: DeclaredSchemaExtension[];

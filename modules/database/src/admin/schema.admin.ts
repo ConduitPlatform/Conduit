@@ -6,21 +6,21 @@ import ConduitGrpcSdk, {
   UnparsedRouterResponse,
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { isEmpty, isNil, merge } from 'lodash';
-import { validatePermissions, validateSchemaInput } from '../utils/utilities';
-import { SchemaController } from '../controllers/cms/schema.controller';
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
+import { isEmpty, isNil, merge } from 'lodash-es';
+import { validatePermissions, validateSchemaInput } from '../utils/utilities.js';
+import { SchemaController } from '../controllers/cms/schema.controller.js';
+import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
 import {
   _ConduitSchema,
   ConduitDatabaseSchema,
   DeclaredSchemaExtension,
   ParsedQuery,
-} from '../interfaces';
-import { SchemaConverter } from '../utils/SchemaConverter';
-import { parseSortParam } from '../handlers/utils';
+} from '../interfaces/index.js';
+import { SchemaConverter } from '../utils/SchemaConverter.js';
+import { parseSortParam } from '../handlers/utils.js';
 import escapeStringRegexp from 'escape-string-regexp';
 
 type ExportedCmsSchema = Pick<

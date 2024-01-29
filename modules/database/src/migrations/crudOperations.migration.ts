@@ -1,8 +1,8 @@
 import { ConduitSchema } from '@conduitplatform/grpc-sdk';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { isBoolean } from 'lodash';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { isBoolean } from 'lodash-es';
 
 export async function migrateCrudOperations(
   adapter: DatabaseAdapter<MongooseSchema | SequelizeSchema>,

@@ -4,9 +4,9 @@ import ConduitGrpcSdk, {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { RequestHandlers, RouteBuilder } from '@conduitplatform/module-tools';
-import { PopulatedCustomEndpoint } from '../../interfaces';
-import { isNil } from 'lodash';
-import { LocationEnum } from '../../enums';
+import { PopulatedCustomEndpoint } from '../../interfaces/index.js';
+import { isNil } from 'lodash-es';
+import { LocationEnum } from '../../enums/index.js';
 
 function getOperation(op: number) {
   switch (op) {

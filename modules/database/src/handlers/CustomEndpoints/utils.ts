@@ -1,6 +1,6 @@
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { CustomEndpointsQuery } from '../../interfaces';
+import { CustomEndpointsQuery } from '../../interfaces/index.js';
 
 interface Inputs {
   name: string;

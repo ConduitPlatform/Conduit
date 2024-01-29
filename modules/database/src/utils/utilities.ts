@@ -7,7 +7,7 @@ import {
   isObject,
   isPlainObject,
   isString,
-} from 'lodash';
+} from 'lodash-es';
 import {
   ConduitModel,
   ConduitModelOptionsPermModifyType as ValidModifyPermValues,
@@ -16,7 +16,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 
-const deepdash = require('deepdash/standalone');
+import * as deepdash from 'deepdash/standalone';
 
 type CrudOperations = {
   create?: { enabled?: boolean; authenticated?: boolean };

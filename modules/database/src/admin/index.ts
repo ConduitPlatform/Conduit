@@ -12,16 +12,16 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema';
-import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema';
-import { DatabaseAdapter } from '../adapters/DatabaseAdapter';
-import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin';
-import { DocumentsAdmin } from './documents.admin';
-import { SchemaAdmin } from './schema.admin';
-import { SchemaController } from '../controllers/cms/schema.controller';
-import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller';
-import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models';
-import { ConduitOptions } from '../interfaces';
+import { SequelizeSchema } from '../adapters/sequelize-adapter/SequelizeSchema.js';
+import { MongooseSchema } from '../adapters/mongoose-adapter/MongooseSchema.js';
+import { DatabaseAdapter } from '../adapters/DatabaseAdapter.js';
+import { CustomEndpointsAdmin } from './customEndpoints/customEndpoints.admin.js';
+import { DocumentsAdmin } from './documents.admin.js';
+import { SchemaAdmin } from './schema.admin.js';
+import { SchemaController } from '../controllers/cms/schema.controller.js';
+import { CustomEndpointController } from '../controllers/customEndpoints/customEndpoint.controller.js';
+import { CustomEndpoints, DeclaredSchema, PendingSchemas } from '../models/index.js';
+import { ConduitOptions } from '../interfaces/index.js';
 
 export class AdminHandlers {
   private readonly schemaAdmin: SchemaAdmin;

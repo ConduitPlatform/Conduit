@@ -1,9 +1,9 @@
-import { ParsedQuery } from '../../../interfaces';
+import { ParsedQuery } from '../../../interfaces/index.js';
 import { Indexable } from '@conduitplatform/grpc-sdk';
 import { Op, WhereOptions } from 'sequelize';
-import { cloneDeep, isArray, isBoolean, isNil, isNumber, isString } from 'lodash';
-import { SequelizeSchema } from '../SequelizeSchema';
-import { preprocessQuery } from '../utils/pathUtils';
+import { cloneDeep, isArray, isBoolean, isNil, isNumber, isString } from 'lodash-es';
+import { SequelizeSchema } from '../SequelizeSchema.js';
+import { preprocessQuery } from '../utils/pathUtils.js';
 
 function arrayHandler(
   schema: Indexable,

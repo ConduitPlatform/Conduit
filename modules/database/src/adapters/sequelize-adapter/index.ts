@@ -13,22 +13,22 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 import { SequelizeAuto } from 'sequelize-auto';
-import { DatabaseAdapter } from '../DatabaseAdapter';
-import { SequelizeSchema } from './SequelizeSchema';
+import { DatabaseAdapter } from '../DatabaseAdapter.js';
+import { SequelizeSchema } from './SequelizeSchema.js';
 import {
   checkIfPostgresOptions,
   compileSchema,
   resolveRelatedSchemas,
   tableFetch,
-} from './utils';
-import { sqlIntroSchemaConverter } from '../../introspection/sequelize/utils';
+} from './utils/index.js';
+import { sqlIntroSchemaConverter } from '../../introspection/sequelize/utils.js';
 import {
   ConduitDatabaseSchema,
   introspectedSchemaCmsOptionsDefaults,
-} from '../../interfaces';
-import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter';
-import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter';
-import { isNil } from 'lodash';
+} from '../../interfaces/index.js';
+import { sqlSchemaConverter } from './sql-adapter/SqlSchemaConverter.js';
+import { pgSchemaConverter } from './postgres-adapter/PgSchemaConverter.js';
+import { isNil } from 'lodash-es';
 
 const sqlSchemaName = process.env.SQL_SCHEMA ?? 'public';
 

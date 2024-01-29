@@ -14,27 +14,32 @@ import {
   Query,
   SchemaAdapter,
   SingleDocQuery,
-} from '../../interfaces';
-import { extractRelations, getTransactionAndParsedQuery, sqlTypesProcess } from './utils';
-import { SequelizeAdapter } from './index';
+} from '../../interfaces/index.js';
+import {
+  extractRelations,
+  getTransactionAndParsedQuery,
+  sqlTypesProcess,
+} from './utils/index.js';
+import { SequelizeAdapter } from './index.js';
 import ConduitGrpcSdk, { Indexable } from '@conduitplatform/grpc-sdk';
-import { parseQuery, parseCreateRelations } from './parser';
-import { isNil } from 'lodash';
-import { processCreateQuery, unwrap } from './utils/pathUtils';
+import { parseQuery, parseCreateRelations } from './parser/index.js';
+import { isNil } from 'lodash-es';
+import { processCreateQuery, unwrap } from './utils/pathUtils.js';
 import {
   constructRelationInclusion,
   createWithPopulation,
   extractRelationsModification,
   includeRelations,
   parseQueryFilter,
-} from './utils/query';
+} from './utils/query.js';
 
 const incrementDbQueries = () =>
   ConduitGrpcSdk.Metrics?.increment('database_queries_total');
 
 export class SequelizeSchema extends SchemaAdapter<ModelStatic<any>> {
   model: ModelStatic<any>;
-  fieldHash: string;
+  //todo rename
+  declare fieldHash: string;
   excludedFields: string[];
   synced: boolean;
   readonly idField;

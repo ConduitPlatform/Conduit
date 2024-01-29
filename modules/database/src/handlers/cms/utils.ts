@@ -1,9 +1,9 @@
 import { GrpcError, Indexable, ParsedRouterRequest } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
-import { DatabaseAdapter } from '../../adapters/DatabaseAdapter';
-import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema';
-import { Doc, Schema } from '../../interfaces';
+import { DatabaseAdapter } from '../../adapters/DatabaseAdapter.js';
+import { MongooseSchema } from '../../adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from '../../adapters/sequelize-adapter/SequelizeSchema.js';
+import { Doc, Schema } from '../../interfaces/index.js';
 
 export function findSchema(
   call: ParsedRouterRequest,

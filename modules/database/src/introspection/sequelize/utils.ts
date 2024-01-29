@@ -1,5 +1,5 @@
 import { Indexable, TYPE } from '@conduitplatform/grpc-sdk';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { Sequelize } from 'sequelize';
 
 /**

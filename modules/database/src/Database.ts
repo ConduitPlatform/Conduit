@@ -6,9 +6,9 @@ import ConduitGrpcSdk, {
   GrpcResponse,
   HealthCheckStatus,
 } from '@conduitplatform/grpc-sdk';
-import { AdminHandlers } from './admin';
-import { DatabaseRoutes } from './routes';
-import * as models from './models';
+import { AdminHandlers } from './admin/index.js';
+import { DatabaseRoutes } from './routes/index.js';
+import * as models from './models/index.js';
 import {
   ColumnExistenceRequest,
   ColumnExistenceResponse,
@@ -28,26 +28,30 @@ import {
   Schema as SchemaDto,
   UpdateManyRequest,
   UpdateRequest,
-} from './protoTypes/database';
-import { CreateSchemaExtensionRequest, SchemaResponse, SchemasResponse } from './types';
-import { DatabaseAdapter } from './adapters/DatabaseAdapter';
-import { MongooseAdapter } from './adapters/mongoose-adapter';
-import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema';
-import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema';
-import { ConduitDatabaseSchema, IView, Schema } from './interfaces';
-import { canCreate, canDelete, canModify } from './permissions';
-import { runMigrations } from './migrations';
-import { SchemaController } from './controllers/cms/schema.controller';
-import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller';
-import { SchemaConverter } from './utils/SchemaConverter';
+} from './protoTypes/database.js';
+import {
+  CreateSchemaExtensionRequest,
+  SchemaResponse,
+  SchemasResponse,
+} from './types.js';
+import { DatabaseAdapter } from './adapters/DatabaseAdapter.js';
+import { MongooseAdapter } from './adapters/mongoose-adapter/index.js';
+import { MongooseSchema } from './adapters/mongoose-adapter/MongooseSchema.js';
+import { SequelizeSchema } from './adapters/sequelize-adapter/SequelizeSchema.js';
+import { ConduitDatabaseSchema, IView, Schema } from './interfaces/index.js';
+import { canCreate, canDelete, canModify } from './permissions/index.js';
+import { runMigrations } from './migrations/index.js';
+import { SchemaController } from './controllers/cms/schema.controller.js';
+import { CustomEndpointController } from './controllers/customEndpoints/customEndpoint.controller.js';
+import { SchemaConverter } from './utils/SchemaConverter.js';
 import { status } from '@grpc/grpc-js';
 import path from 'path';
-import metricsSchema from './metrics';
-import { isNil } from 'lodash';
-import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter';
-import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter';
+import metricsSchema from './metrics/index.js';
+import { isNil } from 'lodash-es';
+import { PostgresAdapter } from './adapters/sequelize-adapter/postgres-adapter/index.js';
+import { SQLAdapter } from './adapters/sequelize-adapter/sql-adapter/index.js';
 import { ManagedModule } from '@conduitplatform/module-tools';
-import { Empty } from './protoTypes/google/protobuf/empty';
+import { Empty } from './protoTypes/google/protobuf/empty.js';
 
 export default class DatabaseModule extends ManagedModule<void> {
   configSchema = undefined;

@@ -1,8 +1,8 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
-import { ParsedQuery } from '../../../interfaces';
+import { ParsedQuery } from '../../../interfaces/index.js';
 import { Types } from 'mongoose';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export function parseQuery(query: ParsedQuery): ParsedQuery {
   if (Array.isArray(query)) {

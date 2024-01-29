@@ -1,4 +1,4 @@
-import { Schema } from '../interfaces';
+import { Schema } from '../interfaces/index.js';
 import ConduitGrpcSdk, { GrpcError } from '@conduitplatform/grpc-sdk';
 import { status } from '@grpc/grpc-js';
 

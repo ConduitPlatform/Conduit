@@ -7,12 +7,17 @@ import ConduitGrpcSdk, {
   RawSQLQuery,
   TYPE,
 } from '@conduitplatform/grpc-sdk';
-import { _ConduitSchema, ConduitDatabaseSchema, IView, Schema } from '../interfaces';
-import { stitchSchema, validateExtensionFields } from './utils/extensions';
+import {
+  _ConduitSchema,
+  ConduitDatabaseSchema,
+  IView,
+  Schema,
+} from '../interfaces/index.js';
+import { stitchSchema, validateExtensionFields } from './utils/extensions.js';
 import { status } from '@grpc/grpc-js';
-import { isEqual, isNil } from 'lodash';
+import { isEqual, isNil } from 'lodash-es';
 import ObjectHash from 'object-hash';
-import * as systemModels from '../models';
+import * as systemModels from '../models/index.js';
 
 export abstract class DatabaseAdapter<T extends Schema> {
   registeredSchemas: Map<string, ConduitDatabaseSchema>;
