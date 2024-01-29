@@ -100,7 +100,7 @@ export class AuthenticationRoutes {
 
     await Promise.all(
       (Object.keys(oauth2) as (keyof OAuthHandler)[]).map((key: keyof OAuthHandler) => {
-        const handler: OAuth2<unknown, OAuth2Settings> = new (oauth2[key] as any)(
+        const handler: OAuth2<unknown, OAuth2Settings> = new oauth2[key](
           this.grpcSdk,
           config,
         );
