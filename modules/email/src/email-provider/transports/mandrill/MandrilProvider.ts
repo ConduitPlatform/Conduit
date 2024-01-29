@@ -9,7 +9,7 @@ import { getHandleBarsValues } from '../../utils/index.js';
 import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js';
 
-// @ts-ignore
+// @ts-expect-error
 import mandrillTransport from 'nodemailer-mandrill-transport';
 
 export class MandrillProvider extends EmailProviderClass {
@@ -33,14 +33,14 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async getTemplateInfo(template_name: string): Promise<Template> {
-    const response: MandrillTemplate = await new Promise<any>(
+    const response: MandrillTemplate = await new Promise<MandrillTemplate>(
       resolve =>
         this._mandrillSdk?.templates.info(
           {
             key: this.apiKey,
             name: template_name,
           },
-          resolve,
+          resolve as (json: Object) => void,
         ),
     );
     return {
@@ -81,7 +81,7 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async updateTemplate(data: UpdateEmailTemplate) {
-    const response = await new Promise<any>(
+    const response = await new Promise<{ slug: string }>(
       resolve =>
         this._mandrillSdk?.templates.update(
           {
@@ -90,7 +90,7 @@ export class MandrillProvider extends EmailProviderClass {
             code: data.body,
             subject: data.subject,
           },
-          resolve,
+          resolve as (json: Object) => void,
         ),
     );
 
@@ -98,14 +98,14 @@ export class MandrillProvider extends EmailProviderClass {
   }
 
   async deleteTemplate(id: string) {
-    const response = await new Promise<any>(
+    const response = await new Promise<{ slug: string }>(
       resolve =>
         this._mandrillSdk?.templates.delete(
           {
             key: this.apiKey,
             name: id,
           },
-          resolve,
+          resolve as (json: Object) => void,
         ),
     );
 
