@@ -10,6 +10,7 @@ import { UpdateEmailTemplate } from '../../interfaces/UpdateEmailTemplate.js';
 import { MandrillTemplate } from '../../interfaces/mandrill/MandrillTemplate.js';
 
 // @ts-expect-error
+// missing typings for nodemailer-mandrill-transport
 import mandrillTransport from 'nodemailer-mandrill-transport';
 
 export class MandrillProvider extends EmailProviderClass {
@@ -40,7 +41,7 @@ export class MandrillProvider extends EmailProviderClass {
             key: this.apiKey,
             name: template_name,
           },
-          resolve as (json: Object) => void,
+          resolve as (json: object) => void,
         ),
     );
     return {
@@ -90,7 +91,7 @@ export class MandrillProvider extends EmailProviderClass {
             code: data.body,
             subject: data.subject,
           },
-          resolve as (json: Object) => void,
+          resolve as (json: object) => void,
         ),
     );
 
@@ -105,7 +106,7 @@ export class MandrillProvider extends EmailProviderClass {
             key: this.apiKey,
             name: id,
           },
-          resolve as (json: Object) => void,
+          resolve as (json: object) => void,
         ),
     );
 
