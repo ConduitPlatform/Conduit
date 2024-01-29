@@ -4,7 +4,10 @@ import { randomUUID } from 'crypto';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, { GrpcError, sleep } from '@conduitplatform/grpc-sdk';
 import { Cluster, Redis } from 'ioredis';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export class QueueController {
   private static _instance: QueueController;
   private readonly redisConnection: Redis | Cluster;
