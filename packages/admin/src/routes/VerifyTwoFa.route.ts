@@ -5,7 +5,7 @@ import {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { verify2Fa } from '../utils/auth';
+import { verify2Fa } from '../utils/auth.js';
 
 export function verifyTwoFaRoute() {
   return new ConduitRoute(

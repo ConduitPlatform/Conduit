@@ -1,6 +1,6 @@
 import { Indexable } from '@conduitplatform/grpc-sdk';
 
-const deepdash = require('deepdash/standalone');
+import * as deepdash from 'deepdash/standalone';
 
 export default function parseConfigSchema(schema: Indexable) {
   delete schema.doc;

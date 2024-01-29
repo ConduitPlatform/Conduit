@@ -1,4 +1,4 @@
-import { isNaN, isNil } from 'lodash';
+import { isNaN, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import ConduitGrpcSdk, {
   ConduitError,
@@ -17,15 +17,15 @@ import {
   RegisterAdminRouteRequest,
   RegisterAdminRouteRequest_PathDefinition,
 } from '@conduitplatform/commons';
-import { hashPassword } from './utils/auth';
-import { runMigrations } from './migrations';
-import AdminConfigRawSchema from './config';
-import AppConfigSchema, { Config as ConfigSchema } from './config';
-import * as middleware from './middleware';
-import * as adminRoutes from './routes';
-import * as models from './models';
-import { AdminMiddleware } from './models';
-import { getSwaggerMetadata } from './hermes';
+import { hashPassword } from './utils/auth.js';
+import { runMigrations } from './migrations/index.js';
+import AdminConfigRawSchema from './config/index.js';
+import AppConfigSchema, { Config as ConfigSchema } from './config/index.js';
+import * as middleware from './middleware/index.js';
+import * as adminRoutes from './routes/index.js';
+import * as models from './models/index.js';
+import { AdminMiddleware } from './models/index.js';
+import { getSwaggerMetadata } from './hermes/index.js';
 import path from 'path';
 import {
   ConduitMiddleware,
@@ -42,9 +42,9 @@ import {
 import convict from 'convict';
 import { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
-import { generateConfigDefaults } from './utils/config';
-import metricsSchema from './metrics';
-import * as adminProxyRoutes from './routes/proxy';
+import { generateConfigDefaults } from './utils/config.js';
+import metricsSchema from './metrics/index.js';
+import * as adminProxyRoutes from './routes/proxy/index.js';
 import cors from 'cors';
 import { ConfigController, GrpcServer, merge } from '@conduitplatform/module-tools';
 

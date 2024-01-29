@@ -6,9 +6,9 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitString } from '@conduitplatform/module-tools';
-import { AdminProxyRoute } from '../../models';
-import AdminModule from '../../index';
-import { getProxies } from '../../utils';
+import { AdminProxyRoute } from '../../models/index.js';
+import AdminModule from '../../index.js';
+import { getProxies } from '../../utils/index.js';
 
 export function createProxyRoute(adminModule: AdminModule) {
   return new ConduitRoute(

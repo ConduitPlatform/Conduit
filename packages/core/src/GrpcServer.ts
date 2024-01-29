@@ -11,10 +11,10 @@ import {
 import AdminModule from '@conduitplatform/admin';
 import { EventEmitter } from 'events';
 import path from 'path';
-import AppConfigSchema from './config';
-import CoreConfigSchema from './config/config';
+import AppConfigSchema from './config/index.js';
+import CoreConfigSchema from './config/config.js';
 import { ServerWritableStream } from '@grpc/grpc-js';
-import ConfigManager from './config-manager';
+import ConfigManager from './config-manager/index.js';
 import convict from 'convict';
 
 const CORE_SERVICES = ['Config', 'Admin'];

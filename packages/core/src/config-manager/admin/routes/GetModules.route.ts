@@ -5,9 +5,9 @@ import {
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { isNil } from 'lodash';
+import { isNil } from 'lodash-es';
 import { ConduitBoolean, ConduitString } from '@conduitplatform/module-tools';
-import { ServiceRegistry } from '../../service-discovery/ServiceRegistry';
+import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
 
 export function getModulesRoute() {
   return new ConduitRoute(

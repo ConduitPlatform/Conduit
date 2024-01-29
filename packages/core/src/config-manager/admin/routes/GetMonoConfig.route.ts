@@ -4,7 +4,7 @@ import ConduitGrpcSdk, {
 } from '@conduitplatform/grpc-sdk';
 import { ConduitJson } from '@conduitplatform/module-tools';
 import { ConduitRoute } from '@conduitplatform/hermes';
-import { ServiceRegistry } from '../../service-discovery/ServiceRegistry';
+import { ServiceRegistry } from '../../service-discovery/ServiceRegistry.js';
 
 export function getMonoConfigRoute(grpcSdk: ConduitGrpcSdk) {
   return new ConduitRoute(

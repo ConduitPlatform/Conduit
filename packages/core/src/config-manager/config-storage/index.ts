@@ -1,10 +1,10 @@
 import { ConduitCommons } from '@conduitplatform/commons';
 import ConduitGrpcSdk from '@conduitplatform/grpc-sdk';
-import * as models from '../models';
-import { ServiceDiscovery } from '../service-discovery';
+import * as models from '../models/index.js';
+import { ServiceDiscovery } from '../service-discovery/index.js';
 import { clearInterval } from 'timers';
-import { merge } from 'lodash';
-import { ServiceRegistry } from '../service-discovery/ServiceRegistry';
+import { merge } from 'lodash-es';
+import { ServiceRegistry } from '../service-discovery/ServiceRegistry.js';
 
 export class ConfigStorage {
   toBeReconciled: string[] = [];

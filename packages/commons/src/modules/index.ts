@@ -1,3 +1,3 @@
-export * from './Core';
-export * from './Admin';
-export * from './Config';
+export * from './Core/index.js';
+export * from './Admin/index.js';
+export * from './Config/index.js';

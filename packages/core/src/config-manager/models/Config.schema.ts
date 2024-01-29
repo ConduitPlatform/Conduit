@@ -26,7 +26,8 @@ const collectionName = undefined;
 export class Config extends ConduitActiveSchema<Config> {
   private static _instance: Config;
   _id!: string;
-  name!: string;
+  //todo rename
+  declare name: string;
   config!: any;
 
   private constructor(database: DatabaseProvider) {

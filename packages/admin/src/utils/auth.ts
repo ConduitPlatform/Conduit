@@ -2,8 +2,8 @@ import * as jwt from 'jsonwebtoken';
 import { compare, hash } from 'bcrypt';
 import { GrpcError } from '@conduitplatform/grpc-sdk';
 import { ConfigController } from '@conduitplatform/module-tools';
-import { Admin, AdminTwoFactorSecret } from '../models';
-import { isNil } from 'lodash';
+import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
 import * as twoFactor from '@conduitplatform/node-2fa';
 

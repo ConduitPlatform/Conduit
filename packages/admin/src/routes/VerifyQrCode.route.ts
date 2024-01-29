@@ -4,11 +4,11 @@ import {
   GrpcError,
   ConduitRouteReturnDefinition,
 } from '@conduitplatform/grpc-sdk';
-import { isEmpty, isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash-es';
 import { ConduitRoute } from '@conduitplatform/hermes';
 import { status } from '@grpc/grpc-js';
-import { Admin, AdminTwoFactorSecret } from '../models';
-import { verifyTwoFactorToken } from '../utils/auth';
+import { Admin, AdminTwoFactorSecret } from '../models/index.js';
+import { verifyTwoFactorToken } from '../utils/auth.js';
 import { ConduitString } from '@conduitplatform/module-tools';
 
 export function verifyQrCodeRoute() {

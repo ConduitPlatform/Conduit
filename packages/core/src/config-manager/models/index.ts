@@ -1,1 +1,1 @@
-export * from './Config.schema';
+export * from './Config.schema.js';
