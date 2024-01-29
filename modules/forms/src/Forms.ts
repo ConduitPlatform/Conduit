@@ -11,10 +11,6 @@ import * as models from './models/index.js';
 import { runMigrations } from './migrations/index.js';
 import metricsSchema from './metrics/index.js';
 import { ConfigController, ManagedModule } from '@conduitplatform/module-tools';
-import { fileURLToPath } from 'node:url';
-import path from 'path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export default class Forms extends ManagedModule<Config> {
   configSchema = AppConfigSchema;
@@ -35,7 +31,7 @@ export default class Forms extends ManagedModule<Config> {
     this.database = this.grpcSdk.database!;
     await runMigrations(this.grpcSdk);
     await this.registerSchemas();
-    await this.grpcSdk.monitorModule('email', serving => {
+    this.grpcSdk.monitorModule('email', serving => {
       if (serving && ConfigController.getInstance().config.active) {
         this.onConfig()
           .then()
