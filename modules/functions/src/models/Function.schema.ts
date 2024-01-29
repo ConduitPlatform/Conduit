@@ -5,7 +5,7 @@ import {
   TYPE,
 } from '@conduitplatform/grpc-sdk';
 import { ConduitActiveSchema } from '@conduitplatform/module-tools';
-import { IWebInputsInterface } from '../interfaces/IWebInputs.interface';
+import { IWebInputsInterface } from '../interfaces/IWebInputs.interface.js';
 
 const schema: ConduitModel = {
   _id: TYPE.ObjectId,
@@ -54,7 +54,8 @@ const collectionName = undefined;
 export class Functions extends ConduitActiveSchema<Functions> {
   private static _instance: Functions;
   _id!: string;
-  name!: string;
+  //todo rename
+  declare name: string;
   functionCode!: string;
   functionType!: 'request' | 'webhook' | 'middleware' | 'socket' | 'event' | 'cron';
 

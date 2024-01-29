@@ -15,13 +15,13 @@ import {
   GrpcServer,
   RoutingManager,
 } from '@conduitplatform/module-tools';
-import { isEmpty, isNil } from 'lodash';
+import { isEmpty, isNil } from 'lodash-es';
 import { status } from '@grpc/grpc-js';
-import { FunctionExecutions, Functions } from '../models';
-import { FunctionController } from '../controllers/function.controller';
+import { FunctionExecutions, Functions } from '../models/index.js';
+import { FunctionController } from '../controllers/function.controller.js';
 import { VMScript } from 'vm2';
 
-const escapeStringRegexp = require('escape-string-regexp');
+import escapeStringRegexp from 'escape-string-regexp';
 
 export class AdminHandlers {
   private readonly routingManager: RoutingManager;

@@ -1,2 +1,2 @@
-export * from './Function.schema';
-export * from './FunctionExecutions.schema';
+export * from './Function.schema.js';
+export * from './FunctionExecutions.schema.js';
