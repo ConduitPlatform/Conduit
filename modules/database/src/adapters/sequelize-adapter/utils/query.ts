@@ -1,4 +1,4 @@
-import { ParsedQuery, Query } from '../../SchemaAdapter.js';
+import { ParsedQuery } from '../../SchemaAdapter.js';
 import { isNil } from 'lodash-es';
 import { parseQuery } from '../parser/index.js';
 import { SequelizeSchema } from '../SequelizeSchema.js';
